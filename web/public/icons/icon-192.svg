@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="gradRev" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="35%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#00f0ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glowBolt" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="192" height="192" rx="40" fill="#0a0a0f"/>
+
+  <!-- Ambient glow -->
+  <circle cx="96" cy="96" r="72" fill="url(#bgGlow)"/>
+
+  <!-- Outer hexagonal frame -->
+  <polygon points="96,18 164,57 164,135 96,174 28,135 28,57"
+           fill="none" stroke="url(#grad)" stroke-width="1.5" stroke-linejoin="round"
+           opacity="0.35" filter="url(#glow)"/>
+
+  <!-- Inner hexagonal frame (dashed circuit pattern) -->
+  <polygon points="96,32 150,62 150,130 96,160 42,130 42,62"
+           fill="none" stroke="url(#grad)" stroke-width="0.5"
+           opacity="0.12" stroke-dasharray="4 8"/>
+
+  <!-- Circuit nodes at hex vertices -->
+  <g filter="url(#glow)">
+    <circle cx="96" cy="18" r="2" fill="#00f0ff" opacity="0.7"/>
+    <circle cx="164" cy="57" r="2" fill="#00f0ff" opacity="0.5"/>
+    <circle cx="164" cy="135" r="2" fill="#a855f7" opacity="0.5"/>
+    <circle cx="96" cy="174" r="2" fill="#a855f7" opacity="0.7"/>
+    <circle cx="28" cy="135" r="2" fill="#a855f7" opacity="0.5"/>
+    <circle cx="28" cy="57" r="2" fill="#00f0ff" opacity="0.5"/>
+  </g>
+
+  <!-- Circuit trace extensions -->
+  <g stroke-width="0.8" opacity="0.25" stroke-linecap="round">
+    <line x1="96" y1="18" x2="96" y2="8" stroke="#00f0ff"/>
+    <line x1="164" y1="57" x2="172" y2="53" stroke="#00f0ff"/>
+    <line x1="164" y1="135" x2="172" y2="139" stroke="#a855f7"/>
+    <line x1="96" y1="174" x2="96" y2="184" stroke="#a855f7"/>
+    <line x1="28" y1="135" x2="20" y2="139" stroke="#a855f7"/>
+    <line x1="28" y1="57" x2="20" y2="53" stroke="#00f0ff"/>
+  </g>
+
+  <!-- Upper sync arc -->
+  <path d="M 48 88 A 54 36 0 0 1 144 88"
+        fill="none" stroke="url(#grad)" stroke-width="2.5" stroke-linecap="round"
+        opacity="0.7" filter="url(#glow)"/>
+  <polygon points="144,88 136,80 137,94" fill="#a855f7" opacity="0.85" filter="url(#glow)"/>
+
+  <!-- Lower sync arc -->
+  <path d="M 144 104 A 54 36 0 0 1 48 104"
+        fill="none" stroke="url(#gradRev)" stroke-width="2.5" stroke-linecap="round"
+        opacity="0.7" filter="url(#glow)"/>
+  <polygon points="48,104 56,112 55,98" fill="#00f0ff" opacity="0.85" filter="url(#glow)"/>
+
+  <!-- Data flow dots on arcs -->
+  <circle cx="72" cy="72" r="1.5" fill="#00f0ff" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="120" cy="72" r="1.5" fill="#a855f7" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="120" cy="120" r="1.5" fill="#a855f7" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="72" cy="120" r="1.5" fill="#00f0ff" opacity="0.5" filter="url(#glow)"/>
+
+  <!-- Lightning bolt -->
+  <path d="M 108 34 L 82 92 L 100 92 L 86 158 L 116 100 L 98 100 Z"
+        fill="url(#grad)" filter="url(#glowBolt)" opacity="0.95"/>
+
+  <!-- Bolt highlight edge -->
+  <path d="M 108 34 L 82 92 L 100 92 L 86 158"
+        fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.25"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

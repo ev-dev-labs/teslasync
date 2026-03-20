@@ -1,0 +1,340 @@
+# Default values for teslasync.
+# Override with: helm install teslasync ./helm/teslasync -f my-values.yaml
+
+# -- Global image settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# -- Additional image pull secrets
+imagePullSecrets: []
+
+# -- Override the release name
+nameOverride: ""
+fullnameOverride: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backend service (Go)
+# ─────────────────────────────────────────────────────────────────────────────
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-org/teslasync
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frontend service (Nginx)
+# ─────────────────────────────────────────────────────────────────────────────
+web:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/your-org/teslasync-web
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
+  podAnnotations: {}
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Service Account
+# ─────────────────────────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ingress (standard Kubernetes)
+# ─────────────────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: teslasync.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: web
+  tls: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Traefik IngressRoute (alternative to standard Ingress)
+# Set enabled: true and configure routes when using Traefik as your ingress
+# controller. Both the web frontend and the backend API can share one
+# IngressRoute with separate Host()/PathPrefix() match rules.
+# ─────────────────────────────────────────────────────────────────────────────
+ingressRoute:
+  enabled: false
+  namespace: ""
+  annotations: {}
+  entryPoints:
+    - websecure
+  routes:
+    # Web frontend (Nginx)
+    - match: Host(`teslasync.example.com`)
+      kind: Rule
+      middlewares: []
+      services:
+        - name: ""   # leave empty → set to <release>-web at deploy time
+          port: 80
+    # Backend API (Go)
+    - match: "Host(`teslasync.example.com`) && PathPrefix(`/api`)"
+      kind: Rule
+      middlewares: []
+      services:
+        - name: ""   # leave empty → set to <release>-backend at deploy time
+          port: 8080
+  tls:
+    enabled: false
+    secretName: teslasync-tls
+    certResolver: ""
+    domains: []
+    # - main: teslasync.example.com
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TeslaSync application configuration
+# ─────────────────────────────────────────────────────────────────────────────
+config:
+  logLevel: info
+  pollInterval: "30s"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tesla API credentials
+# ─────────────────────────────────────────────────────────────────────────────
+tesla:
+  clientId: ""
+  clientSecret: ""
+  redirectUri: "http://localhost:8080/api/v1/auth/callback"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PostgreSQL (TimescaleDB)
+#
+# Set enabled: true  → an embedded TimescaleDB pod is deployed.
+# Set enabled: false → supply connection details via postgresql.external.
+# ─────────────────────────────────────────────────────────────────────────────
+postgresql:
+  enabled: true
+
+  image: timescale/timescaledb:latest-pg16
+
+  auth:
+    username: teslasync
+    password: teslasync
+    database: teslasync
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  # External PostgreSQL — used when postgresql.enabled is false.
+  external:
+    host: ""
+    port: 5432
+    username: ""
+    password: ""
+    database: ""
+    sslMode: "disable"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Redis
+#
+# Set enabled: true  → an embedded Redis pod is deployed.
+# Set enabled: false → supply connection details via redis.external.
+# ─────────────────────────────────────────────────────────────────────────────
+redis:
+  enabled: true
+
+  image: redis:7-alpine
+
+  command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+
+  service:
+    type: ClusterIP
+    port: 6379
+
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 192Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
+
+  # External Redis — used when redis.enabled is false.
+  external:
+    host: ""
+    port: 6379
+    password: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MQTT (Mosquitto)
+#
+# Set enabled: true  → an embedded Mosquitto pod is deployed.
+# Set enabled: false → supply connection details via mqtt.external.
+# ─────────────────────────────────────────────────────────────────────────────
+mqtt:
+  enabled: true
+
+  image: eclipse-mosquitto:2
+
+  service:
+    type: ClusterIP
+    port: 1883
+    websocketPort: 9001
+
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 25m
+      memory: 16Mi
+
+  # External MQTT — used when mqtt.enabled is false.
+  external:
+    host: ""
+    port: 1883
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Grafana
+#
+# Set enabled: true  → an embedded Grafana pod is deployed.
+# Set enabled: false → supply connection details via grafana.external.
+# ─────────────────────────────────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+  image: grafana/grafana:10.4.0
+
+  adminUser: admin
+  adminPassword: teslasync
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+  # External Grafana — used when grafana.enabled is false.
+  external:
+    host: ""
+    port: 3000

@@ -1,0 +1,65 @@
+name: Release Notification
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    name: Post Release Summary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release summary
+        id: summary
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          PREV_TAG=$(git tag --sort=-v:refname | grep -A1 "^${TAG}$" | tail -1)
+          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$TAG" ]; then
+            COMMIT_COUNT=$(git rev-list --count "$TAG")
+            CHANGES="Initial release with $COMMIT_COUNT commits"
+          else
+            COMMIT_COUNT=$(git rev-list --count "${PREV_TAG}..${TAG}")
+            CHANGES=$(git log --oneline "${PREV_TAG}..${TAG}" | head -20)
+          fi
+
+          {
+            echo "body<<EOF"
+            echo "## 🚀 Release ${TAG} Published"
+            echo ""
+            echo "**Release:** [$TAG](${{ github.event.release.html_url }})"
+            echo "**Commits since last release:** $COMMIT_COUNT"
+            echo "**Pre-release:** ${{ github.event.release.prerelease }}"
+            echo ""
+            echo "### Docker Images"
+            echo "- \`ghcr.io/${{ github.repository }}:${TAG#v}\`"
+            echo "- \`ghcr.io/${{ github.repository }}-web:${TAG#v}\`"
+            echo ""
+            echo "### Changes"
+            echo "\`\`\`"
+            echo "$CHANGES"
+            echo "\`\`\`"
+            echo ""
+            echo "### Release Notes"
+            echo "${{ github.event.release.body }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create summary issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Release ${{ github.event.release.tag_name }} published`,
+              body: `${{ steps.summary.outputs.body }}`,
+              labels: ['release']
+            });

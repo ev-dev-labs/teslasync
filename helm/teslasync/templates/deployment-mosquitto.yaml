@@ -1,0 +1,62 @@
+{{- if .Values.mqtt.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-mosquitto
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mosquitto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mosquitto
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mosquitto
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      containers:
+        - name: mosquitto
+          image: {{ .Values.mqtt.image | quote }}
+          ports:
+            - name: mqtt
+              containerPort: 1883
+              protocol: TCP
+            - name: websocket
+              containerPort: 9001
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 5
+          {{- with .Values.mqtt.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.mqtt.persistence.enabled }}
+          volumeMounts:
+            - name: mosquitto-data
+              mountPath: /mosquitto/data
+          {{- end }}
+      {{- if .Values.mqtt.persistence.enabled }}
+      volumes:
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: {{ include "teslasync.fullname" . }}-mosquitto-data
+      {{- end }}
+{{- end }}

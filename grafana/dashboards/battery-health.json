@@ -1,0 +1,151 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 2,
+  "id": null,
+  "links": [
+    { "title": "Vehicle Overview", "url": "/d/teslasync-overview/vehicle-overview", "type": "link" },
+    { "title": "Charges", "url": "/d/teslasync-charges/charges", "type": "link" }
+  ],
+  "panels": [
+    {
+      "title": "Battery Health",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "#EF4444", "value": null }, { "color": "#F59E0B", "value": 70 }, { "color": "#22C55E", "value": 85 }, { "color": "#06B6D4", "value": 95 }] } } },
+      "targets": [{ "rawSql": "SELECT health_score FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Current SOC",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "#EF4444", "value": null }, { "color": "#F59E0B", "value": 20 }, { "color": "#22C55E", "value": 50 }, { "color": "#06B6D4", "value": 80 }] } } },
+      "targets": [{ "rawSql": "SELECT battery_level FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Capacity",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT capacity_kwh FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Estimated Degradation",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 8, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND((100 - health_score)::numeric, 1) FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Rated Range",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND(rated_range::numeric) FROM positions WHERE vehicle_id = $vehicle_id AND battery_level >= 95 ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Odometer",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND(odometer::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Energy Charged",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Cycle Count Est.",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND(COALESCE(SUM(charge_energy_added), 0) / NULLIF((SELECT capacity_kwh FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1), 0)) FROM charging_sessions WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "AC Energy",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND (charger_type IS NULL OR charger_type != 'DC')", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "DC Energy",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND charger_type = 'DC'", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Battery Capacity Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "custom": { "fillOpacity": 15, "gradientMode": "scheme", "pointSize": 8, "showPoints": "always" }, "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT created_at AS time, capacity_kwh AS \"Capacity\" FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Health Score Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 70, "max": 100, "custom": { "fillOpacity": 15, "gradientMode": "scheme", "pointSize": 8, "showPoints": "always" }, "color": { "mode": "continuous-GrYlRd" } } },
+      "targets": [{ "rawSql": "SELECT created_at AS time, health_score AS \"Health\" FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Battery Capacity by Mileage",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 15 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "custom": { "fillOpacity": 10, "pointSize": 8, "showPoints": "always" }, "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT bs.odometer_km AS time, bs.capacity_kwh AS \"Capacity\" FROM battery_snapshots bs WHERE bs.vehicle_id = $vehicle_id ORDER BY bs.odometer_km", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Charging Patterns Impact",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 15 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10, "drawStyle": "bars" } }, "overrides": [{ "matcher": { "id": "byName", "options": "AC Sessions" }, "properties": [{ "id": "color", "value": { "fixedColor": "#22C55E", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "DC Sessions" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F59E0B", "mode": "fixed" } }] }] },
+      "targets": [
+        { "rawSql": "SELECT date_trunc('week', start_time) AS time, COUNT(*) FILTER (WHERE charger_type IS NULL OR charger_type != 'DC') AS \"AC Sessions\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" },
+        { "rawSql": "SELECT date_trunc('week', start_time) AS time, COUNT(*) FILTER (WHERE charger_type = 'DC') AS \"DC Sessions\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Battery Snapshots",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Capacity" }, "properties": [{ "id": "unit", "value": "kwatth" }] },
+          { "matcher": { "id": "byName", "options": "Health" }, "properties": [{ "id": "unit", "value": "percent" }, { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "gradient" } }, { "id": "min", "value": 70 }, { "id": "max", "value": 100 }] },
+          { "matcher": { "id": "byName", "options": "Odometer" }, "properties": [{ "id": "unit", "value": "km" }] },
+          { "matcher": { "id": "byName", "options": "Max Range" }, "properties": [{ "id": "unit", "value": "km" }] }
+        ]
+      },
+      "targets": [{ "rawSql": "SELECT created_at AS \"Date\", capacity_kwh AS \"Capacity\", health_score AS \"Health\", odometer_km AS \"Odometer\", max_range_km AS \"Max Range\" FROM battery_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC", "format": "table", "refId": "A" }]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["teslasync", "battery"],
+  "templating": { "list": [{ "current": {}, "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" }, "definition": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "name": "vehicle_id", "label": "Vehicle", "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "type": "query", "refresh": 1 }] },
+  "time": { "from": "now-1y", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Battery Health",
+  "uid": "teslasync-battery-health"
+}

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+data:
+  DATABASE_HOST: {{ include "teslasync.postgresql.host" . | quote }}
+  DATABASE_PORT: {{ include "teslasync.postgresql.port" . | quote }}
+  DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}
+  DATABASE_NAME: {{ include "teslasync.postgresql.database" . | quote }}
+  DATABASE_SSL_MODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
+  MQTT_HOST: {{ include "teslasync.mqtt.host" . | quote }}
+  MQTT_PORT: {{ include "teslasync.mqtt.port" . | quote }}
+  REDIS_HOST: {{ include "teslasync.redis.host" . | quote }}
+  REDIS_PORT: {{ include "teslasync.redis.port" . | quote }}
+  GRAFANA_HOST: {{ include "teslasync.grafana.host" . | quote }}
+  GRAFANA_PORT: {{ include "teslasync.grafana.port" . | quote }}
+  TESLA_REDIRECT_URI: {{ .Values.tesla.redirectUri | quote }}
+  POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}

@@ -1,0 +1,376 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  --neon-cyan: #00f0ff;
+  --neon-blue: #4f46e5;
+  --neon-purple: #a855f7;
+  --tesla-red: #e31937;
+  /* Mode-aware vars — overridden by ThemeProvider */
+  --bg: #0a0a0f;
+  --surface-1: #0f1019;
+  --surface-2: #151621;
+  --surface-3: #1a1b2e;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  /* Dynamic color theme vars — overridden by ThemeProvider */
+  --theme-primary: #00f0ff;
+  --theme-primary-rgb: 0, 240, 255;
+  --theme-accent: #4f46e5;
+  --theme-accent-rgb: 79, 70, 229;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.35);
+}
+
+/* === GLASS MORPHISM === */
+@layer components {
+  .glass-panel {
+    @apply relative overflow-hidden rounded-2xl;
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(135deg, rgba(128,128,128,0.04) 0%, rgba(128,128,128,0.01) 100%);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  }
+
+  .glass-panel-hover {
+    @apply glass-panel transition-all duration-300;
+  }
+  .glass-panel-hover:hover {
+    border-color: rgba(0, 240, 255, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 240, 255, 0.05), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .glass-card {
+    @apply rounded-xl p-5;
+    border: 1px solid var(--glass-border);
+    background: var(--surface-2);
+    backdrop-filter: blur(12px);
+  }
+
+  .glass-input {
+    @apply w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200;
+    border: 1px solid var(--glass-border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+  }
+  .glass-input::placeholder {
+    color: var(--text-muted);
+  }
+  .glass-input:focus {
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 15px rgba(var(--theme-primary-rgb), 0.15);
+  }
+
+  .glass-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium
+      transition-all duration-200 cursor-pointer;
+    border: 1px solid var(--glass-border);
+    background: var(--surface-2);
+    color: var(--text-primary);
+  }
+  .glass-button:hover {
+    background: var(--surface-3);
+    border-color: var(--theme-primary);
+  }
+
+  .neon-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
+      transition-all duration-200 cursor-pointer;
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
+    color: white;
+    box-shadow: 0 0 20px rgba(var(--theme-primary-rgb), 0.2);
+  }
+  .neon-button:hover {
+    box-shadow: 0 0 30px rgba(var(--theme-primary-rgb), 0.35);
+    transform: translateY(-1px);
+  }
+
+  .neon-button-red {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
+      transition-all duration-200 cursor-pointer;
+    background: linear-gradient(135deg, #e31937, #ff4060);
+    color: white;
+    box-shadow: 0 0 20px rgba(227, 25, 55, 0.2);
+  }
+  .neon-button-red:hover {
+    box-shadow: 0 0 30px rgba(227, 25, 55, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .stat-value {
+    @apply text-3xl font-bold tracking-tight;
+    color: var(--text-primary);
+  }
+
+  .neon-text-cyan {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  }
+
+  .neon-text-red {
+    color: var(--tesla-red);
+    text-shadow: 0 0 10px rgba(227, 25, 55, 0.3);
+  }
+
+  .neon-dot {
+    @apply h-2 w-2 rounded-full;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold tracking-tight;
+    color: var(--text-primary);
+  }
+
+  .metric-label {
+    @apply text-xs font-medium uppercase tracking-wider;
+    color: var(--text-muted);
+  }
+}
+
+/* === LEAFLET OVERRIDES === */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 1rem;
+  background: var(--bg);
+}
+.leaflet-control-zoom {
+  border: none !important;
+}
+.leaflet-control-zoom a {
+  background: var(--surface-1) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--glass-border) !important;
+  backdrop-filter: blur(12px);
+}
+.leaflet-control-attribution {
+  background: var(--surface-1) !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+}
+.leaflet-tile-pane {
+  filter: saturate(0.3) brightness(0.4) contrast(1.2);
+}
+:root.light-mode .leaflet-tile-pane {
+  filter: none;
+}
+
+/* === RECHARTS OVERRIDES === */
+.recharts-cartesian-grid line {
+  stroke: var(--glass-border) !important;
+}
+.recharts-text {
+  fill: var(--text-muted) !important;
+  font-size: 11px !important;
+}
+
+/* === ANIMATIONS === */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes orbit {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px currentColor; }
+  50% { box-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+}
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes glow-line {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+.glow-line {
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.15), transparent);
+  background-size: 200% 100%;
+  animation: glow-line 3s ease-in-out infinite;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.scale-in {
+  animation: scale-in 0.2s ease-out forwards;
+}
+
+/* Glass panel glow on active states */
+.glass-glow-cyan { box-shadow: 0 0 20px rgba(0, 240, 255, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+.glass-glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+.glass-glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+.glass-glow-amber { box-shadow: 0 0 20px rgba(245, 158, 11, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+.glass-glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+
+/* ========================================
+   LIGHT MODE GLOBAL OVERRIDES
+   When ThemeProvider applies .light-mode to :root,
+   override Tailwind's hardcoded dark-mode colors
+   ======================================== */
+
+:root.light-mode {
+  /* Ensure Tailwind text-white becomes dark text */
+  --tw-text-opacity: 1;
+}
+
+/* Override white text → dark in light mode */
+:root.light-mode .text-white {
+  color: #0f172a !important;
+}
+:root.light-mode .text-white\/90,
+:root.light-mode .text-white\/80,
+:root.light-mode .text-white\/70,
+:root.light-mode .text-white\/60 {
+  color: #1e293b !important;
+}
+
+/* Override gray text shades for light mode readability */
+:root.light-mode .text-gray-300 {
+  color: #334155 !important;
+}
+:root.light-mode .text-gray-400 {
+  color: #475569 !important;
+}
+:root.light-mode .text-gray-500 {
+  color: #64748b !important;
+}
+:root.light-mode .text-gray-600 {
+  color: #475569 !important;
+}
+
+/* Override white bg translucent panels */
+:root.light-mode .bg-white\/\[0\.02\],
+:root.light-mode .bg-white\/\[0\.03\],
+:root.light-mode .bg-white\/\[0\.04\],
+:root.light-mode .bg-white\/\[0\.06\],
+:root.light-mode .bg-white\/\[0\.08\] {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Override white border translucent */
+:root.light-mode .border-white\/5,
+:root.light-mode .border-white\/\[0\.05\],
+:root.light-mode .border-white\/\[0\.06\],
+:root.light-mode .border-white\/\[0\.08\],
+:root.light-mode .border-white\/10,
+:root.light-mode .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Override white ring translucent */
+:root.light-mode .ring-white\/\[0\.06\],
+:root.light-mode .ring-white\/\[0\.08\] {
+  --tw-ring-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Override hover bg */
+:root.light-mode .hover\:bg-white\/5:hover,
+:root.light-mode .hover\:bg-white\/\[0\.04\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.06\]:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Override hover border */
+:root.light-mode .hover\:border-white\/10:hover,
+:root.light-mode .hover\:border-white\/15:hover,
+:root.light-mode .hover\:border-white\/20:hover {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Glass panels in light mode - subtle shadow instead of dark glass */
+:root.light-mode .glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+:root.light-mode .glass-card {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Scrollbar in light mode */
+:root.light-mode ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+:root.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Shimmer in light mode */
+:root.light-mode .shimmer {
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.04), transparent);
+  background-size: 200% 100%;
+}
+
+/* Select/option override for light mode */
+:root.light-mode select option {
+  background: white;
+  color: #0f172a;
+}

@@ -1,0 +1,25 @@
+# Backend (Go)
+/internal/ @teslasync-labs/backend
+/cmd/ @teslasync-labs/backend
+go.mod @teslasync-labs/maintainers
+go.sum @teslasync-labs/maintainers
+Dockerfile @teslasync-labs/maintainers
+
+# Frontend (React)
+/web/ @teslasync-labs/frontend
+Dockerfile.web @teslasync-labs/maintainers
+
+# Helm Chart
+/helm/ @teslasync-labs/devops
+
+# CI/CD
+/.github/ @teslasync-labs/maintainers
+
+# Documentation
+/docs/ @teslasync-labs/docs
+
+# Grafana
+/grafana/ @teslasync-labs/devops
+
+# Database Migrations
+/migrations/ @teslasync-labs/backend

@@ -1,0 +1,88 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 2,
+  "id": null,
+  "links": [
+    { "title": "Drives", "url": "/d/teslasync-drives/drives", "type": "link" },
+    { "title": "Charging", "url": "/d/teslasync-charges/charges", "type": "link" }
+  ],
+  "panels": [
+    {
+      "title": "Avg Efficiency (Wh/km)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "watt", "decimals": 0, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(energy_used_kwh)*1000/NULLIF(SUM(distance_km),0))::numeric), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND distance_km > 0 AND $__timeFilter(date)", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Energy Used (kWh)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(energy_used_kwh)::numeric, 1), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND $__timeFilter(date)", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Distance (km)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance_km)::numeric), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND $__timeFilter(date)", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Cost per 100km",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(cs.cost)*100/NULLIF(SUM(dm.distance_km),0))::numeric, 2), 0) FROM daily_mileage dm LEFT JOIN charging_sessions cs ON cs.vehicle_id = dm.vehicle_id AND DATE(cs.start_time) = dm.date WHERE dm.vehicle_id = $vehicle_id AND $__timeFilter(dm.date)", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Daily Efficiency (Wh/km)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "watt", "custom": { "drawStyle": "line", "fillOpacity": 20 }, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT date AS time, ROUND((energy_used_kwh*1000/NULLIF(distance_km,0))::numeric) AS efficiency FROM daily_mileage WHERE vehicle_id = $vehicle_id AND distance_km > 0 AND $__timeFilter(date) ORDER BY date", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Speed vs Efficiency",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "points", "pointSize": 6 }, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT d.start_date AS time, d.speed_max FROM drives d WHERE d.vehicle_id = $vehicle_id AND d.distance > 0 AND d.speed_max > 0 AND $__timeFilter(d.start_date) ORDER BY d.start_date", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Temperature vs Efficiency",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "points", "pointSize": 6 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "outside_temp" }, "properties": [{ "id": "color", "value": { "fixedColor": "#06b6d4" } }] },
+          { "matcher": { "id": "byName", "options": "efficiency" }, "properties": [{ "id": "color", "value": { "fixedColor": "#f59e0b" } }] }
+        ]
+      },
+      "targets": [{ "rawSql": "SELECT p.created_at AS time, p.outside_temp, ROUND((d.distance / NULLIF(ABS(d.start_battery_level - d.end_battery_level), 0) * 100)::numeric) AS efficiency FROM drives d JOIN positions p ON p.vehicle_id = d.vehicle_id AND p.created_at BETWEEN d.start_date AND COALESCE(d.end_date, NOW()) WHERE d.vehicle_id = $vehicle_id AND d.distance > 5 AND $__timeFilter(d.start_date) ORDER BY p.created_at", "format": "time_series", "refId": "A" }]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "vehicle_id",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
+        "refresh": 1
+      }
+    ]
+  },
+  "time": { "from": "now-90d", "to": "now" },
+  "title": "Efficiency",
+  "uid": "teslasync-efficiency"
+}

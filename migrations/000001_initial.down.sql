@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS software_updates;
+DROP TABLE IF EXISTS geofences;
+DROP TABLE IF EXISTS addresses;
+DROP TABLE IF EXISTS charging_sessions;
+DROP TABLE IF EXISTS drives;
+DROP TABLE IF EXISTS positions;
+DROP TABLE IF EXISTS vehicles;

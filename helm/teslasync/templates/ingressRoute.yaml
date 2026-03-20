@@ -1,0 +1,56 @@
+{{- if .Values.ingressRoute.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "teslasync.fullname" . }}
+  namespace: {{ .Values.ingressRoute.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+  {{- with .Values.ingressRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+    {{- toYaml .Values.ingressRoute.entryPoints | nindent 4 }}
+  routes:
+  {{- range .Values.ingressRoute.routes }}
+    - match: {{ .match }}
+      kind: {{ .kind | default "Rule" }}
+      {{- if .middlewares }}
+      middlewares:
+      {{- range .middlewares }}
+        - name: {{ .name }}
+          {{- if .namespace }}
+          namespace: {{ .namespace }}
+          {{- end }}
+      {{- end }}
+      {{- end }}
+      services:
+      {{- range .services }}
+        - name: {{ .name | default (printf "%s" (include "teslasync.fullname" $)) }}
+          port: {{ .port }}
+      {{- end }}
+  {{- end }}
+  {{- if .Values.ingressRoute.tls.enabled }}
+  tls:
+    {{- if .Values.ingressRoute.tls.secretName }}
+    secretName: {{ .Values.ingressRoute.tls.secretName }}
+    {{- end }}
+    {{- if .Values.ingressRoute.tls.certResolver }}
+    certResolver: {{ .Values.ingressRoute.tls.certResolver }}
+    {{- end }}
+    {{- if .Values.ingressRoute.tls.domains }}
+    domains:
+    {{- range .Values.ingressRoute.tls.domains }}
+      - main: {{ .main }}
+        {{- if .sans }}
+        sans:
+          {{- range .sans }}
+          - {{ . }}
+          {{- end }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

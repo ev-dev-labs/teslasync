@@ -1,0 +1,163 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 2,
+  "id": null,
+  "links": [
+    { "title": "Fleet Overview", "url": "/d/teslasync-fleet-overview/fleet-overview", "type": "link" },
+    { "title": "Charges", "url": "/d/teslasync-charges/charges", "type": "link" },
+    { "title": "Drives", "url": "/d/teslasync-drives-detail/drives", "type": "link" }
+  ],
+  "panels": [
+    {
+      "title": "Current Battery",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "#EF4444", "value": null }, { "color": "#F59E0B", "value": 20 }, { "color": "#22C55E", "value": 50 }, { "color": "#06B6D4", "value": 80 }] } } },
+      "targets": [{ "rawSql": "SELECT battery_level FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Rated Range",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND(rated_range::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Ideal Range",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 4, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND(ideal_range::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Odometer",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT ROUND(odometer::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Inside Temp",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 8, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT inside_temp FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Drives",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Distance",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Energy",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Cost",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Software Version",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT version FROM software_updates WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Vehicle State",
+      "type": "stat",
+      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 3 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "#22C55E", "mode": "fixed" }, "mappings": [{ "type": "value", "options": { "online": { "color": "green", "text": "Online" }, "asleep": { "color": "blue", "text": "Asleep" }, "driving": { "color": "yellow", "text": "Driving" }, "charging": { "color": "orange", "text": "Charging" }, "offline": { "color": "red", "text": "Offline" } } }] } },
+      "targets": [{ "rawSql": "SELECT state FROM vehicles WHERE id = $vehicle_id", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Battery Level Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 15, "gradientMode": "scheme" }, "color": { "mode": "continuous-GrYlRd" } } },
+      "targets": [{ "rawSql": "SELECT created_at AS time, battery_level AS \"Battery %\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Range Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "rawSql": "SELECT created_at AS time, rated_range AS \"Rated Range\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" },
+        { "rawSql": "SELECT created_at AS time, ideal_range AS \"Ideal Range\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Speed & Power",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10 } }, "overrides": [{ "matcher": { "id": "byName", "options": "Speed" }, "properties": [{ "id": "unit", "value": "velocitykmh" }, { "id": "custom.axisPlacement", "value": "left" }] }, { "matcher": { "id": "byName", "options": "Power" }, "properties": [{ "id": "unit", "value": "kwatt" }, { "id": "custom.axisPlacement", "value": "right" }] }] },
+      "targets": [
+        { "rawSql": "SELECT created_at AS time, speed AS \"Speed\" FROM positions WHERE vehicle_id = $vehicle_id AND speed > 0 AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" },
+        { "rawSql": "SELECT created_at AS time, power AS \"Power\" FROM positions WHERE vehicle_id = $vehicle_id AND speed > 0 AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Temperature",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "rawSql": "SELECT created_at AS time, inside_temp AS \"Inside\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" },
+        { "rawSql": "SELECT created_at AS time, outside_temp AS \"Outside\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "B" }
+      ]
+    },
+    {
+      "title": "Vehicle Map",
+      "type": "geomap",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "options": {
+        "basemap": { "type": "carto", "config": { "theme": "dark" } },
+        "layers": [{ "type": "markers", "config": { "style": { "size": { "fixed": 5 }, "color": { "field": "Speed", "fixed": "#06B6D4" } } } }],
+        "view": { "id": "fit" }
+      },
+      "targets": [{ "rawSql": "SELECT latitude, longitude, speed AS \"Speed\", battery_level AS \"Battery\", created_at AS time FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY created_at", "format": "table", "refId": "A" }]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["teslasync"],
+  "templating": { "list": [{ "current": {}, "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" }, "definition": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "name": "vehicle_id", "label": "Vehicle", "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "type": "query", "refresh": 1 }] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Vehicle Overview",
+  "uid": "teslasync-overview"
+}
+

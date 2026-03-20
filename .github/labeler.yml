@@ -1,0 +1,43 @@
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.go"
+          - "go.*"
+          - "internal/**"
+          - "cmd/**"
+          - "pkg/**"
+          - "Dockerfile"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "web/**"
+          - "Dockerfile.web"
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Dockerfile"
+          - "Dockerfile.web"
+          - "docker-compose*.yml"
+
+helm:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "helm/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+
+grafana:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "grafana/**"

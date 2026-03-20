@@ -1,0 +1,32 @@
+name: Cleanup Old Packages
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup-backend:
+    name: Cleanup Backend Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: teslasync
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: true
+
+  cleanup-web:
+    name: Cleanup Web Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: teslasync-web
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: true

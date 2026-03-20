@@ -1,0 +1,68 @@
+# Binaries
+bin/
+*.exe
+
+# Go
+coverage.out
+vendor/
+
+# Frontend
+web/node_modules/
+web/dist/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/
+grafana_data/
+mosquitto_data/
+redis_data/
+
+# Temporary
+tmp/
+*.log
+
+# Plan tracking
+.plan/
+
+# Helm
+helm/teslasync/charts/
+*.tgz
+
+# Docs build output
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs/node_modules/
+
+# Test coverage
+*.out
+coverage/
+
+# Go debug
+__debug_bin*
+dlv
+
+# Python (for any scripts)
+__pycache__/
+*.pyc
+.venv/
+
+# Terraform (future)
+.terraform/
+*.tfstate*
+
+# Secrets
+*.pem
+*.key

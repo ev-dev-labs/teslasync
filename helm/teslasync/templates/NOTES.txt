@@ -1,0 +1,97 @@
+Thank you for installing {{ .Chart.Name }} v{{ .Chart.AppVersion }}!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TeslaSync — Tesla Vehicle Data Logger
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Release   : {{ .Release.Name }}
+Namespace : {{ .Release.Namespace }}
+
+Components deployed:
+  ✓ Backend (Go)      — {{ include "teslasync.backend.image" . }}
+{{- if .Values.web.enabled }}
+  ✓ Web (Nginx)       — {{ include "teslasync.web.image" . }}
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+  ✓ TimescaleDB       — bundled ({{ .Values.postgresql.image }})
+{{- else }}
+  • PostgreSQL         — external ({{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }})
+{{- end }}
+{{- if .Values.redis.enabled }}
+  ✓ Redis             — bundled ({{ .Values.redis.image }})
+{{- else }}
+  • Redis              — external ({{ .Values.redis.external.host }}:{{ .Values.redis.external.port }})
+{{- end }}
+{{- if .Values.mqtt.enabled }}
+  ✓ Mosquitto (MQTT)  — bundled ({{ .Values.mqtt.image }})
+{{- else }}
+  • MQTT               — external ({{ .Values.mqtt.external.host }}:{{ .Values.mqtt.external.port }})
+{{- end }}
+{{- if .Values.grafana.enabled }}
+  ✓ Grafana           — bundled ({{ .Values.grafana.image }})
+{{- else }}
+  • Grafana            — external ({{ .Values.grafana.external.host }}:{{ .Values.grafana.external.port }})
+{{- end }}
+
+──────────────────────────────────────────────────────
+  Accessing the services
+──────────────────────────────────────────────────────
+{{- if .Values.ingress.enabled }}
+
+  Access via Ingress:
+  {{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+  {{- end }}
+{{- else if .Values.ingressRoute.enabled }}
+
+  Access via Traefik IngressRoute (check your route match rules).
+{{- else }}
+
+  Ingress is disabled. Use port-forward to access locally:
+
+  # Backend API
+  kubectl port-forward -n {{ .Release.Namespace }} \
+    svc/{{ include "teslasync.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+  {{- if .Values.web.enabled }}
+  # Web frontend
+  kubectl port-forward -n {{ .Release.Namespace }} \
+    svc/{{ include "teslasync.fullname" . }}-web {{ .Values.web.service.port }}:{{ .Values.web.service.port }}
+  {{- end }}
+
+  {{- if .Values.grafana.enabled }}
+  # Grafana
+  kubectl port-forward -n {{ .Release.Namespace }} \
+    svc/{{ include "teslasync.fullname" . }}-grafana {{ .Values.grafana.service.port }}:{{ .Values.grafana.service.port }}
+  {{- end }}
+
+  Then open:
+    Backend API : http://localhost:{{ .Values.service.port }}/healthz
+    {{- if .Values.web.enabled }}
+    Web UI      : http://localhost:{{ .Values.web.service.port }}
+    {{- end }}
+    {{- if .Values.grafana.enabled }}
+    Grafana     : http://localhost:{{ .Values.grafana.service.port }}  ({{ .Values.grafana.adminUser }} / <secret>)
+    {{- end }}
+{{- end }}
+
+──────────────────────────────────────────────────────
+  Next steps
+──────────────────────────────────────────────────────
+
+  1. Set your Tesla API credentials:
+     --set tesla.clientId=<ID> --set tesla.clientSecret=<SECRET>
+
+  2. Change default passwords before exposing to the network:
+     --set postgresql.auth.password=<STRONG_PASSWORD>
+     --set grafana.adminPassword=<STRONG_PASSWORD>
+
+──────────────────────────────────────────────────────
+  Troubleshooting
+──────────────────────────────────────────────────────
+
+  View all logs:
+    kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }} --prefix -f
+
+  Check pod status:
+    kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}

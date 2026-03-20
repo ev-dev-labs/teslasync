@@ -1,0 +1,9 @@
+.git
+.github
+.gitignore
+*.md
+LICENSE
+helm/
+grafana/
+web/node_modules
+web/dist

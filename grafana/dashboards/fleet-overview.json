@@ -1,0 +1,141 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 2,
+  "id": null,
+  "links": [
+    { "title": "Vehicle Overview", "url": "/d/teslasync-overview/vehicle-overview", "type": "link" },
+    { "title": "Charges", "url": "/d/teslasync-charges/charges", "type": "link" },
+    { "title": "Drives", "url": "/d/teslasync-drives-detail/drives", "type": "link" },
+    { "title": "Battery Health", "url": "/d/teslasync-battery-health/battery-health", "type": "link" }
+  ],
+  "panels": [
+    {
+      "title": "Fleet Size",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "#06B6D4", "mode": "fixed" }, "thresholds": { "steps": [{ "color": "#06B6D4", "value": null }] } } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS \"Vehicles\" FROM vehicles", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Avg Fleet Battery",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "#EF4444", "value": null }, { "color": "#F59E0B", "value": 20 }, { "color": "#22C55E", "value": 50 }] } } },
+      "targets": [{ "rawSql": "SELECT ROUND(AVG(battery_level)) FROM (SELECT DISTINCT ON (vehicle_id) battery_level FROM positions ORDER BY vehicle_id, created_at DESC) t", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Fleet Distance",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance)::numeric, 1), 0) FROM drives", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Energy Charged",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Charging Cost",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "fixedColor": "#E31937", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Total Drives",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Vehicle Fleet Status",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": {
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Battery" }, "properties": [{ "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "gradient" } }, { "id": "min", "value": 0 }, { "id": "max", "value": 100 }, { "id": "unit", "value": "percent" }] }
+        ]
+      },
+      "targets": [{ "rawSql": "SELECT v.display_name AS \"Vehicle\", v.model AS \"Model\", v.state AS \"State\", p.battery_level AS \"Battery\", ROUND(p.odometer::numeric) AS \"Odometer (km)\", ROUND(p.rated_range::numeric) AS \"Range (km)\", p.inside_temp AS \"Inside C\", p.outside_temp AS \"Outside C\" FROM vehicles v LEFT JOIN LATERAL (SELECT * FROM positions WHERE vehicle_id = v.id ORDER BY created_at DESC LIMIT 1) p ON true ORDER BY v.display_name", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Distance by Vehicle",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [{ "rawSql": "SELECT v.display_name AS metric, COALESCE(ROUND(SUM(d.distance)::numeric, 1), 0) AS value FROM vehicles v LEFT JOIN drives d ON d.vehicle_id = v.id GROUP BY v.display_name ORDER BY value DESC", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Energy by Vehicle",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [{ "rawSql": "SELECT v.display_name AS metric, COALESCE(ROUND(SUM(cs.charge_energy_added)::numeric, 1), 0) AS value FROM vehicles v LEFT JOIN charging_sessions cs ON cs.vehicle_id = v.id GROUP BY v.display_name ORDER BY value DESC", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Daily Fleet Distance",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "km", "custom": { "fillOpacity": 20, "gradientMode": "scheme", "stacking": { "mode": "normal" } } } },
+      "targets": [{ "rawSql": "SELECT dm.date AS time, v.display_name AS metric, dm.distance_km AS value FROM daily_mileage dm JOIN vehicles v ON v.id = dm.vehicle_id WHERE dm.date >= $__timeFrom()::date AND dm.date <= $__timeTo()::date ORDER BY dm.date", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Daily Charging Cost",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "fillOpacity": 20, "gradientMode": "scheme", "stacking": { "mode": "normal" } } } },
+      "targets": [{ "rawSql": "SELECT DATE(cs.start_date) AS time, v.display_name AS metric, ROUND(SUM(cs.cost)::numeric, 2) AS value FROM charging_sessions cs JOIN vehicles v ON v.id = cs.vehicle_id WHERE cs.start_date >= $__timeFrom() AND cs.start_date <= $__timeTo() GROUP BY DATE(cs.start_date), v.display_name ORDER BY time", "format": "time_series", "refId": "A" }]
+    },
+    {
+      "title": "Recent Drives",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "targets": [{ "rawSql": "SELECT v.display_name AS \"Vehicle\", d.start_date AS \"Date\", ROUND(d.distance::numeric, 1) AS \"Dist (km)\", ROUND(d.duration_min::numeric) AS \"Min\", d.speed_max AS \"Max km/h\", d.start_battery_level || ' > ' || d.end_battery_level || '%' AS \"Battery\" FROM drives d JOIN vehicles v ON v.id = d.vehicle_id ORDER BY d.start_date DESC LIMIT 15", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Recent Charges",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "targets": [{ "rawSql": "SELECT v.display_name AS \"Vehicle\", cs.start_date AS \"Date\", ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh\", cs.start_battery_level || ' > ' || cs.end_battery_level || '%' AS \"Battery\", ROUND(cs.cost::numeric, 2) AS \"Cost\", CASE WHEN cs.fast_charger_type != '' THEN 'DC' ELSE 'AC' END AS \"Type\" FROM charging_sessions cs JOIN vehicles v ON v.id = cs.vehicle_id ORDER BY cs.start_date DESC LIMIT 15", "format": "table", "refId": "A" }]
+    },
+    {
+      "title": "Fleet Map",
+      "type": "geomap",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
+      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "options": {
+        "basemap": { "type": "carto", "config": { "theme": "dark" } },
+        "layers": [{ "type": "markers", "config": { "style": { "size": { "fixed": 10 }, "color": { "fixed": "#06B6D4" } }, "showLegend": true } }],
+        "view": { "id": "fit" }
+      },
+      "targets": [{ "rawSql": "SELECT p.latitude, p.longitude, v.display_name AS \"Vehicle\", p.battery_level || '%' AS \"Battery\", p.created_at AS time FROM vehicles v LEFT JOIN LATERAL (SELECT * FROM positions WHERE vehicle_id = v.id ORDER BY created_at DESC LIMIT 1) p ON true WHERE p.latitude IS NOT NULL", "format": "table", "refId": "A" }]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["teslasync", "fleet"],
+  "templating": { "list": [] },
+  "time": { "from": "now-90d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Fleet Overview",
+  "uid": "teslasync-fleet-overview"
+}
+

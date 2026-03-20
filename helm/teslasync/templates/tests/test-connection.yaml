@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "teslasync.fullname" . }}-test-connection"
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-backend
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing backend health endpoint..."
+          wget --spider --timeout=5 http://{{ include "teslasync.fullname" . }}:{{ .Values.service.port }}/healthz
+          echo "Backend: OK"
+    {{- if .Values.web.enabled }}
+    - name: test-web
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing web frontend..."
+          wget --spider --timeout=5 http://{{ include "teslasync.fullname" . }}-web:{{ .Values.web.service.port }}/
+          echo "Web: OK"
+    {{- end }}
