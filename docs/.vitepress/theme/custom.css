@@ -591,7 +591,118 @@ body::before {
   .VPHero .name {
     font-size: 2rem !important;
   }
+  .VPHero .text {
+    font-size: 1rem !important;
+  }
+  .VPHero .tagline {
+    font-size: 0.9rem !important;
+  }
+  .VPHero .actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .VPHero .actions .VPButton {
+    width: 100% !important;
+    text-align: center !important;
+  }
   body::before {
     display: none;
+  }
+  .vp-doc h1 {
+    font-size: 1.6rem !important;
+  }
+  .vp-doc h2 {
+    font-size: 1.2rem !important;
+  }
+  .vp-doc table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .vp-doc div[class*="language-"] {
+    border-radius: 8px !important;
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+  }
+  .mermaid {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mermaid svg {
+    min-width: 500px;
+  }
+  .VPFeature {
+    padding: 16px !important;
+  }
+  .VPFeature .icon {
+    font-size: 1.5rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .VPHero .name {
+    font-size: 1.5rem !important;
+  }
+  .VPHero {
+    padding: 40px 16px !important;
+  }
+  .vp-doc {
+    font-size: 14px !important;
+  }
+}
+
+/* ── Diagram Click-to-Enlarge Hints ── */
+.mermaid {
+  cursor: zoom-in;
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+.mermaid:hover {
+  box-shadow: 0 0 0 2px var(--vp-c-brand-1), 0 4px 20px rgba(0, 240, 255, 0.15);
+}
+
+.mermaid::after {
+  content: '🔍 Click to enlarge';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 11px;
+  color: var(--vp-c-text-3);
+  background: var(--vp-c-bg-soft);
+  padding: 2px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.mermaid:hover::after {
+  opacity: 1;
+}
+
+/* Images also enlargeable */
+.vp-doc img {
+  cursor: zoom-in;
+  transition: box-shadow 0.3s ease;
+  border-radius: 8px;
+}
+
+.vp-doc img:hover {
+  box-shadow: 0 0 0 2px var(--vp-c-brand-1), 0 4px 16px rgba(0, 240, 255, 0.1);
+}
+
+/* Touch-friendly tap targets */
+@media (pointer: coarse) {
+  .VPSidebarItem .link {
+    padding: 10px 12px !important;
+    min-height: 44px !important;
+  }
+  .VPNavBarTitle .title {
+    min-height: 44px !important;
+  }
+  .DocSearch-Button {
+    min-height: 44px !important;
   }
 }
