@@ -1,12 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDrive, getVehiclePositions, getVehicle } from '../api'
-import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
+import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
-  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight,
+  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -76,6 +76,23 @@ export default function DriveDetail() {
   const startPos = trail[0] as [number, number] | undefined
   const endPos = trail[trail.length - 1] as [number, number] | undefined
   const centerPos = startPos ?? [0, 0]
+
+  // Speed-colored trail segments
+  const speedSegments: { positions: LatLngExpression[]; color: string }[] = []
+  const filteredPositions = drivePositions.filter(p => p.latitude && p.longitude)
+  for (let i = 1; i < filteredPositions.length; i++) {
+    const prev = filteredPositions[i - 1]
+    const curr = filteredPositions[i]
+    const speed = curr.speed ?? 0
+    let color = '#10b981'
+    if (speed >= 100) color = '#ef4444'
+    else if (speed >= 60) color = '#f59e0b'
+    else if (speed >= 30) color = '#00f0ff'
+    speedSegments.push({
+      positions: [[prev.latitude, prev.longitude], [curr.latitude, curr.longitude]],
+      color,
+    })
+  }
 
   // Build comprehensive chart data from positions
   const chartData = drivePositions.map((p, _i) => ({
@@ -177,6 +194,13 @@ export default function DriveDetail() {
     )
   }
 
+  const handleShare = () => {
+    const batteryFrom = drive.start_battery_level ?? '?'
+    const batteryTo = drive.end_battery_level ?? '?'
+    const summary = `🚗 Drove ${drive.distance.toFixed(1)} km in ${Math.round(drive.duration_min)} min at ${consumptionWhKm > 0 ? Math.round(consumptionWhKm) : '?'} Wh/km efficiency. Battery: ${batteryFrom}%→${batteryTo}%. Max speed: ${maxSpeed.toFixed(0)} km/h`
+    navigator.clipboard.writeText(summary)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -196,6 +220,13 @@ export default function DriveDetail() {
               {drive.end_date && ` → ${new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </p>
           </div>
+          <button
+            onClick={handleShare}
+            className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all"
+            title="Share drive summary"
+          >
+            <Share2 className="h-5 w-5" />
+          </button>
         </div>
       </FadeIn>
 
@@ -209,6 +240,20 @@ export default function DriveDetail() {
             <RadialGauge value={drive.duration_min} max={Math.max(drive.duration_min * 1.5, 60)} label="Duration" unit="min" color="#f59e0b" size={110} />
             {efficiency && <RadialGauge value={Number(efficiency)} max={30} label="Efficiency" unit="%/100km" color="#10b981" size={110} />}
             <RadialGauge value={consumptionWhKm} max={Math.max(consumptionWhKm * 1.5, 300)} label="Consumption" unit="Wh/km" color="#ef4444" size={110} />
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Drive Timeline Bar */}
+      <FadeIn delay={0.06}>
+        <GlassPanel className="p-4">
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
+            <span className="flex items-center gap-1 text-neon-green"><Flag className="h-3 w-3" />{new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="text-[var(--text-muted)]">{Math.floor(drive.duration_min / 60)}h {Math.round(drive.duration_min % 60)}m</span>
+            <span className="flex items-center gap-1 text-neon-red"><Flag className="h-3 w-3" />{drive.end_date ? new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In progress'}</span>
+          </div>
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+            <div className="h-full rounded-full" style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #00f0ff)' }} />
           </div>
         </GlassPanel>
       </FadeIn>
@@ -291,33 +336,115 @@ export default function DriveDetail() {
         </GlassPanel>
       </FadeIn>
 
+      {/* Energy Summary */}
+      <FadeIn delay={0.09}>
+        <GlassPanel className="p-5">
+          <h3 className="section-title flex items-center gap-2 mb-4">
+            <BatteryCharging className="h-4 w-4 text-neon-green" /> Energy Summary
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Consumed</p>
+              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${(energyConsumedWh / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh)} Wh`}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Recovered</p>
+              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${(energyRecoveredWh / 1000).toFixed(2)} kWh` : `${Math.round(energyRecoveredWh)} Wh`}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Net Consumption</p>
+              <p className="text-lg font-bold text-neon-cyan">{(energyConsumedWh - energyRecoveredWh) > 1000 ? `${((energyConsumedWh - energyRecoveredWh) / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh - energyRecoveredWh)} Wh`}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Efficiency</p>
+              <p className="text-lg font-bold text-neon-purple">{consumptionWhKm > 0 ? `${Math.round(consumptionWhKm)} Wh/km` : '—'}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Battery Used</p>
+              <p className="text-lg font-bold text-neon-amber">
+                {drive.start_battery_level != null && drive.end_battery_level != null ? `${drive.start_battery_level - drive.end_battery_level}%` : '—'}
+                <span className="text-xs text-[var(--text-muted)] ml-1">{drive.start_battery_level ?? '?'}% → {drive.end_battery_level ?? '?'}%</span>
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Range Used</p>
+              <p className="text-lg font-bold text-neon-green">{drive.start_range_km != null && drive.end_range_km != null ? `${Math.round(drive.start_range_km - drive.end_range_km)} km` : '—'}</p>
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
       {/* Route Map */}
-      {trail.length > 1 && (
-        <FadeIn delay={0.1}>
-          <GlassPanel className="overflow-hidden">
-            <div className="p-4 pb-0">
-              <h3 className="section-title flex items-center gap-2 mb-3">
-                <MapPin className="h-4 w-4 text-neon-cyan" /> Route
-              </h3>
+      <FadeIn delay={0.1}>
+        <GlassPanel className="overflow-hidden">
+          <div className="p-4 pb-0">
+            <h3 className="section-title flex items-center gap-2 mb-3">
+              <MapPin className="h-4 w-4 text-neon-cyan" /> Route
+            </h3>
+          </div>
+          <div className="h-96">
+            <MapContainer center={centerPos as [number, number]} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              />
+              {speedSegments.map((seg, i) => (
+                <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
+              ))}
+              {startPos && (
+                <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
+                  <Popup><span className="text-xs font-bold">Start</span><br /><span className="text-xs">{new Date(drive.start_date).toLocaleString()}</span></Popup>
+                </CircleMarker>
+              )}
+              {endPos && (
+                <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
+                  <Popup><span className="text-xs font-bold">End</span><br /><span className="text-xs">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</span></Popup>
+                </CircleMarker>
+              )}
+            </MapContainer>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 text-xs">
+            <span className="flex items-center gap-1.5 text-neon-green"><Flag className="h-3 w-3" /> Start: {new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            {trail.length > 1 && (
+              <div className="flex items-center gap-3 text-[var(--text-muted)]">
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#10b981' }} /> &lt;30</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#00f0ff' }} /> 30-60</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#f59e0b' }} /> 60-100</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#ef4444' }} /> &gt;100</span>
+                <span>km/h</span>
+              </div>
+            )}
+            {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Journey Details */}
+      <FadeIn delay={0.11}>
+        <GlassPanel className="p-5">
+          <h3 className="section-title flex items-center gap-2 mb-4">
+            <Navigation className="h-4 w-4 text-neon-cyan" /> Journey Details
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-neon-green mb-1">
+                <MapPin className="h-4 w-4" /> Start
+              </div>
+              <p className="font-bold text-[var(--text-primary)]">{startPos ? `${startPos[0].toFixed(4)}, ${startPos[1].toFixed(4)}` : 'Unknown'}</p>
+              <p className="text-xs text-[var(--text-muted)]">{new Date(drive.start_date).toLocaleString()}</p>
+              <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(drive.start_range_km)} km` : '—'}</p>
             </div>
-            <div className="h-96">
-              <MapContainer center={centerPos as [number, number]} zoom={13} scrollWheelZoom className="h-full w-full">
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                />
-                <Polyline positions={trail} pathOptions={{ color: '#00f0ff', weight: 4, opacity: 0.8 }} />
-                {startPos && <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }} />}
-                {endPos && <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }} />}
-              </MapContainer>
+            <div>
+              <div className="flex items-center gap-2 text-neon-red mb-1">
+                <Flag className="h-4 w-4" /> Destination
+              </div>
+              <p className="font-bold text-[var(--text-primary)]">{endPos ? `${endPos[0].toFixed(4)}, ${endPos[1].toFixed(4)}` : 'Unknown'}</p>
+              <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</p>
+              <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(drive.end_range_km)} km` : '—'}</p>
             </div>
-            <div className="flex items-center justify-between px-4 py-3 text-xs">
-              <span className="flex items-center gap-1.5 text-neon-green"><Flag className="h-3 w-3" /> Start: {new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
-            </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          </div>
+        </GlassPanel>
+      </FadeIn>
 
       {/* === CHARTS SECTION === */}
       {chartData.length > 1 && (
