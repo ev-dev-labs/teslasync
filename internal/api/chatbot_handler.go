@@ -49,14 +49,14 @@ func (h *ChatbotHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	// Save user message
 	userMsg := &models.ChatMessage{SessionID: body.SessionID, Role: "user", Content: body.Message}
-	h.chat.SaveMessage(r.Context(), userMsg)
+	_ = h.chat.SaveMessage(r.Context(), userMsg)
 
 	// Generate response by interpreting the query
 	response := h.processQuery(r.Context(), body.Message)
 
 	// Save assistant message
 	assistantMsg := &models.ChatMessage{SessionID: body.SessionID, Role: "assistant", Content: response}
-	h.chat.SaveMessage(r.Context(), assistantMsg)
+	_ = h.chat.SaveMessage(r.Context(), assistantMsg)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"response":   response,
@@ -187,7 +187,9 @@ func (h *ChatbotHandler) queryDriveCount(ctx context.Context, days int) string {
 func (h *ChatbotHandler) queryTotalDistance(ctx context.Context, days int) string {
 	var dist float64
 	since := time.Now().AddDate(0, 0, -days)
-	h.db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(distance), 0) FROM drives WHERE start_date >= $1`, since).Scan(&dist)
+	if err := h.db.Pool.QueryRow(ctx, `SELECT COALESCE(SUM(distance), 0) FROM drives WHERE start_date >= $1`, since).Scan(&dist); err != nil {
+		return "I couldn't retrieve distance data right now."
+	}
 	return fmt.Sprintf("Total distance driven in the last **%d days**: **%.1f km** (%.1f miles).",
 		days, dist, dist*0.621371)
 }
@@ -195,12 +197,16 @@ func (h *ChatbotHandler) queryTotalDistance(ctx context.Context, days int) strin
 func (h *ChatbotHandler) queryEfficiency(ctx context.Context, days int) string {
 	var totalEnergy, totalDist float64
 	since := time.Now().AddDate(0, 0, -days)
-	h.db.Pool.QueryRow(ctx,
+	if err := h.db.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(charge_energy_added), 0) FROM charging_sessions WHERE start_date >= $1`, since,
-	).Scan(&totalEnergy)
-	h.db.Pool.QueryRow(ctx,
+	).Scan(&totalEnergy); err != nil {
+		return "I couldn't retrieve efficiency data right now."
+	}
+	if err := h.db.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(distance), 0) FROM drives WHERE start_date >= $1`, since,
-	).Scan(&totalDist)
+	).Scan(&totalDist); err != nil {
+		return "I couldn't retrieve efficiency data right now."
+	}
 	if totalDist == 0 {
 		return fmt.Sprintf("No driving data in the last %d days to calculate efficiency.", days)
 	}
@@ -227,7 +233,9 @@ func (h *ChatbotHandler) queryBatteryStatus(ctx context.Context) string {
 		var name string
 		var battery *int
 		var rng *float64
-		rows.Scan(&name, &battery, &rng)
+		if err := rows.Scan(&name, &battery, &rng); err != nil {
+			continue
+		}
 		if name == "" {
 			name = "Unknown"
 		}
@@ -251,9 +259,11 @@ func (h *ChatbotHandler) queryChargingSummary(ctx context.Context, days int) str
 	var count int
 	var energy float64
 	since := time.Now().AddDate(0, 0, -days)
-	h.db.Pool.QueryRow(ctx,
+	if err := h.db.Pool.QueryRow(ctx,
 		`SELECT COUNT(*), COALESCE(SUM(charge_energy_added), 0) FROM charging_sessions WHERE start_date >= $1`, since,
-	).Scan(&count, &energy)
+	).Scan(&count, &energy); err != nil {
+		return "I couldn't retrieve charging data right now."
+	}
 	return fmt.Sprintf("In the last **%d days**: **%d charging session%s** adding **%.1f kWh** total.",
 		days, count, plural(count), energy)
 }
@@ -261,9 +271,11 @@ func (h *ChatbotHandler) queryChargingSummary(ctx context.Context, days int) str
 func (h *ChatbotHandler) queryChargingCost(ctx context.Context, days int) string {
 	var cost float64
 	since := time.Now().AddDate(0, 0, -days)
-	h.db.Pool.QueryRow(ctx,
+	if err := h.db.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(cost), 0) FROM charging_sessions WHERE start_date >= $1`, since,
-	).Scan(&cost)
+	).Scan(&cost); err != nil {
+		return "I couldn't retrieve charging cost data right now."
+	}
 	return fmt.Sprintf("Total charging cost in the last **%d days**: **$%.2f**.", days, cost)
 }
 
@@ -327,8 +339,12 @@ func (h *ChatbotHandler) queryLastCharge(ctx context.Context) string {
 
 func (h *ChatbotHandler) queryAlerts(ctx context.Context) string {
 	var total, unread int
-	h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts`).Scan(&total)
-	h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts WHERE read = false`).Scan(&unread)
+	if err := h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts`).Scan(&total); err != nil {
+		return "I couldn't retrieve alert data right now."
+	}
+	if err := h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts WHERE read = false`).Scan(&unread); err != nil {
+		return "I couldn't retrieve alert data right now."
+	}
 	return fmt.Sprintf("You have **%d alert%s** total, **%d unread**.", total, plural(total), unread)
 }
 
@@ -342,7 +358,9 @@ func (h *ChatbotHandler) queryGeofences(ctx context.Context) string {
 	for rows.Next() {
 		var name string
 		var radius float64
-		rows.Scan(&name, &radius)
+		if err := rows.Scan(&name, &radius); err != nil {
+			continue
+		}
 		lines = append(lines, fmt.Sprintf("- **%s** (%.0fm radius)", name, radius))
 	}
 	if len(lines) == 0 {
@@ -360,7 +378,9 @@ func (h *ChatbotHandler) queryVehicleStates(ctx context.Context) string {
 	var lines []string
 	for rows.Next() {
 		var name, state string
-		rows.Scan(&name, &state)
+		if err := rows.Scan(&name, &state); err != nil {
+			continue
+		}
 		if name == "" {
 			name = "Unknown"
 		}

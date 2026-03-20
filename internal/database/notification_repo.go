@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/teslasync/teslasync/internal/models"
@@ -59,7 +60,9 @@ func (r *NotificationRepo) GetChannel(ctx context.Context, id int64) (*models.No
 		return nil, err
 	}
 	ch.Config = make(map[string]string)
-	json.Unmarshal(cfgJSON, &ch.Config)
+	if err := json.Unmarshal(cfgJSON, &ch.Config); err != nil {
+		return nil, fmt.Errorf("unmarshalling config: %w", err)
+	}
 	return ch, nil
 }
 
@@ -80,7 +83,9 @@ func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.Notifi
 			return nil, err
 		}
 		ch.Config = make(map[string]string)
-		json.Unmarshal(cfgJSON, &ch.Config)
+		if err := json.Unmarshal(cfgJSON, &ch.Config); err != nil {
+			return nil, fmt.Errorf("unmarshalling config: %w", err)
+		}
 		channels = append(channels, ch)
 	}
 	return channels, rows.Err()
@@ -150,15 +155,27 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 	stats := make(map[string]interface{})
 
 	var total, sent, failed, pending int64
-	r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs`).Scan(&total)
-	r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='sent'`).Scan(&sent)
-	r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='failed'`).Scan(&failed)
-	r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='pending'`).Scan(&pending)
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs`).Scan(&total); err != nil {
+		return nil, err
+	}
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='sent'`).Scan(&sent); err != nil {
+		return nil, err
+	}
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='failed'`).Scan(&failed); err != nil {
+		return nil, err
+	}
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='pending'`).Scan(&pending); err != nil {
+		return nil, err
+	}
 
 	var channels int64
-	r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_channels`).Scan(&channels)
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_channels`).Scan(&channels); err != nil {
+		return nil, err
+	}
 	var enabled int64
-	r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_channels WHERE enabled=true`).Scan(&enabled)
+	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_channels WHERE enabled=true`).Scan(&enabled); err != nil {
+		return nil, err
+	}
 
 	stats["total_sent"] = total
 	stats["sent"] = sent
