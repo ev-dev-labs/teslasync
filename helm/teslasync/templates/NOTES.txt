@@ -13,7 +13,7 @@ Components deployed:
   ✓ Web (Nginx)       — {{ include "teslasync.web.image" . }}
 {{- end }}
 {{- if .Values.postgresql.enabled }}
-  ✓ TimescaleDB       — bundled ({{ .Values.postgresql.image }})
+  ✓ PostgreSQL 17     — bundled ({{ .Values.postgresql.image }})
 {{- else }}
   • PostgreSQL         — external ({{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }})
 {{- end }}
