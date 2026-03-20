@@ -12,7 +12,7 @@
       "title": "Total Vehicles",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "decimals": 0, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM vehicles", "format": "table", "refId": "A" }]
     },
@@ -20,7 +20,7 @@
       "title": "Total Distance (km)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance_km)::numeric), 0) FROM daily_mileage WHERE $__timeFilter(date)", "format": "table", "refId": "A" }]
     },
@@ -28,7 +28,7 @@
       "title": "Total Energy (kWh)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(energy_added_kwh)::numeric, 1), 0) FROM charging_sessions WHERE $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -36,7 +36,7 @@
       "title": "Total Drives",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "decimals": 0, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives WHERE $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -44,7 +44,7 @@
       "title": "Total Charges",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "decimals": 0, "color": { "fixedColor": "#ec4899", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM charging_sessions WHERE $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -52,7 +52,7 @@
       "title": "Total Cost",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#06b6d4", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions WHERE $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -60,7 +60,7 @@
       "title": "State Distribution",
       "type": "piechart",
       "gridPos": { "h": 10, "w": 8, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": {},
         "overrides": [
@@ -78,7 +78,7 @@
       "title": "Vehicle Comparison (Distance km)",
       "type": "barchart",
       "gridPos": { "h": 10, "w": 16, "x": 8, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "color": { "mode": "palette-classic" } } },
       "options": { "orientation": "horizontal", "showValue": "always" },
       "targets": [{ "rawSql": "SELECT COALESCE(v.display_name, v.vin) AS vehicle, ROUND(SUM(dm.distance_km)::numeric) AS distance, ROUND(SUM(dm.energy_used_kwh)::numeric, 1) AS energy_kwh FROM daily_mileage dm JOIN vehicles v ON v.id = dm.vehicle_id WHERE $__timeFilter(dm.date) GROUP BY v.display_name, v.vin ORDER BY distance DESC", "format": "table", "refId": "A" }]
@@ -87,7 +87,7 @@
       "title": "Monthly Charging Trend",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "barWidthFactor": 0.6 } },
         "overrides": [
@@ -101,7 +101,7 @@
       "title": "Monthly Mileage Trend",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 12, "x": 12, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60 } },
         "overrides": [
@@ -115,7 +115,7 @@
       "title": "Battery Health by Vehicle",
       "type": "gauge",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 60 }, { "color": "green", "value": 80 }] } } },
       "targets": [{ "rawSql": "SELECT COALESCE(v.display_name, v.vin) AS metric, ROUND((latest.rated_range / NULLIF(max_range.max_rated, 0) * 100)::numeric, 1) AS health FROM vehicles v JOIN LATERAL (SELECT rated_battery_range_km AS rated_range FROM positions WHERE vehicle_id = v.id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1) latest ON true JOIN LATERAL (SELECT MAX(rated_battery_range_km) AS max_rated FROM positions WHERE vehicle_id = v.id AND rated_battery_range_km IS NOT NULL) max_range ON true ORDER BY health", "format": "table", "refId": "A" }]
     },
@@ -123,7 +123,7 @@
       "title": "Top Locations by Visits",
       "type": "barchart",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } },
       "options": { "orientation": "horizontal", "showValue": "always" },
       "targets": [{ "rawSql": "SELECT COALESCE(name, address, 'Unknown') AS location, visit_count FROM visited_locations ORDER BY visit_count DESC LIMIT 10", "format": "table", "refId": "A" }]

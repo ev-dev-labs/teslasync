@@ -12,7 +12,7 @@
       "title": "Average Tire Pressure (bar)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "pressurepsi", "decimals": 1, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT ROUND(AVG((front_left+front_right+rear_left+rear_right)/4)::numeric, 1) FROM tire_pressure_snapshots WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at)", "format": "table", "refId": "A" }]
     },
@@ -20,7 +20,7 @@
       "title": "Low Pressure Events",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM tire_pressure_snapshots WHERE vehicle_id = $vehicle_id AND (front_left < 2.5 OR front_right < 2.5 OR rear_left < 2.5 OR rear_right < 2.5) AND $__timeFilter(created_at)", "format": "table", "refId": "A" }]
     },
@@ -28,7 +28,7 @@
       "title": "Readings Count",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM tire_pressure_snapshots WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at)", "format": "table", "refId": "A" }]
     },
@@ -36,7 +36,7 @@
       "title": "Latest Reading",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT created_at FROM tire_pressure_snapshots WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
     },
@@ -44,7 +44,7 @@
       "title": "Tire Pressure Over Time",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "unit": "pressurepsi", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
         "overrides": [
@@ -60,7 +60,7 @@
       "title": "Pressure Imbalance (Max - Min per reading)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "pressurepsi", "custom": { "drawStyle": "bars", "fillOpacity": 50 }, "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT created_at AS time, GREATEST(front_left,front_right,rear_left,rear_right) - LEAST(front_left,front_right,rear_left,rear_right) AS imbalance FROM tire_pressure_snapshots WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY created_at", "format": "time_series", "refId": "A" }]
     }
@@ -70,7 +70,7 @@
       {
         "name": "vehicle_id",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
         "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
         "refresh": 1
       }

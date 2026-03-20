@@ -12,7 +12,7 @@
       "title": "Total Trips",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -20,7 +20,7 @@
       "title": "Total Trip Distance (km)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_distance_km)::numeric), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -28,7 +28,7 @@
       "title": "Total Energy (kWh)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_energy_kwh)::numeric, 1), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -36,7 +36,7 @@
       "title": "Total Trip Cost",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_cost)::numeric, 2), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -44,7 +44,7 @@
       "title": "Trip Distance Over Time",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "custom": { "drawStyle": "bars", "fillOpacity": 60 }, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT start_date AS time, total_distance_km FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date", "format": "time_series", "refId": "A" }]
     },
@@ -52,7 +52,7 @@
       "title": "All Trips",
       "type": "table",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "targets": [{ "rawSql": "SELECT COALESCE(name, 'Trip #' || id::text) AS name, start_date, end_date, ROUND(total_distance_km::numeric, 1) AS distance_km, ROUND(total_energy_kwh::numeric, 1) AS energy_kwh, ROUND(total_cost::numeric, 2) AS cost, drive_count, charge_count FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
     }
   ],
@@ -61,7 +61,7 @@
       {
         "name": "vehicle_id",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
         "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
         "refresh": 1
       }

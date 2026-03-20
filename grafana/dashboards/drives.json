@@ -13,7 +13,7 @@
       "title": "Total Drives",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -21,7 +21,7 @@
       "title": "Total Distance",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 1, "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -29,7 +29,7 @@
       "title": "Total Duration",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time))/3600)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id AND end_time IS NOT NULL AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -37,7 +37,7 @@
       "title": "Avg Speed",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "velocitykmh", "decimals": 0, "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(avg_speed)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -45,7 +45,7 @@
       "title": "Max Speed",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "velocitykmh", "decimals": 0, "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(MAX(max_speed)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -53,7 +53,7 @@
       "title": "Avg Efficiency",
       "type": "gauge",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "Wh/km", "min": 100, "max": 300, "thresholds": { "steps": [{ "color": "#22C55E", "value": null }, { "color": "#F59E0B", "value": 170 }, { "color": "#EF4444", "value": 220 }] } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(CASE WHEN distance > 0 THEN (start_rated_range - end_rated_range) * 1000 / NULLIF(distance, 0) ELSE NULL END)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND distance > 0 AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
     },
@@ -61,7 +61,7 @@
       "title": "Drives",
       "type": "table",
       "gridPos": { "h": 14, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": {},
         "overrides": [
@@ -81,7 +81,7 @@
       "title": "Daily Distance",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "custom": { "fillOpacity": 30, "gradientMode": "scheme", "drawStyle": "bars" }, "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT date_trunc('day', start_time) AS time, SUM(distance) AS \"Distance\" FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
     },
@@ -89,7 +89,7 @@
       "title": "Speed Distribution",
       "type": "histogram",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
       "options": { "bucketSize": 10 },
       "targets": [{ "rawSql": "SELECT avg_speed AS \"Average Speed (km/h)\" FROM drives WHERE vehicle_id = $vehicle_id AND avg_speed > 0 AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
@@ -98,7 +98,7 @@
       "title": "Drive Map",
       "type": "geomap",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "options": {
         "basemap": { "type": "carto", "config": { "theme": "dark" } },
         "layers": [{ "type": "route", "config": { "style": { "color": { "fixed": "#06B6D4" }, "lineWidth": 2 } } }],
@@ -109,7 +109,7 @@
   ],
   "schemaVersion": 39,
   "tags": ["teslasync", "drives"],
-  "templating": { "list": [{ "current": {}, "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" }, "definition": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "name": "vehicle_id", "label": "Vehicle", "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "type": "query", "refresh": 1 }] },
+  "templating": { "list": [{ "current": {}, "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" }, "definition": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "name": "vehicle_id", "label": "Vehicle", "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "type": "query", "refresh": 1 }] },
   "time": { "from": "now-30d", "to": "now" },
   "timepicker": {},
   "timezone": "browser",

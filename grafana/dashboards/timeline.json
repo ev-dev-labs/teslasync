@@ -11,7 +11,7 @@
       "title": "Total State Changes",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -19,7 +19,7 @@
       "title": "Time Driving",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric/60, 1), 0) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND state = 'driving' AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -27,7 +27,7 @@
       "title": "Time Charging",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric/60, 1), 0) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND state = 'charging' AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -35,7 +35,7 @@
       "title": "Time Asleep",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#6366f1", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric/60, 1), 0) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND state = 'asleep' AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -43,7 +43,7 @@
       "title": "State Distribution (Pie)",
       "type": "piechart",
       "gridPos": { "h": 10, "w": 8, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h" } },
       "targets": [{ "rawSql": "SELECT state, ROUND(SUM(duration_min)/60) AS hours FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY state ORDER BY hours DESC", "format": "table", "refId": "A" }]
     },
@@ -51,7 +51,7 @@
       "title": "Daily State Breakdown (Stacked)",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 16, "x": 8, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "unit": "h", "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } } },
         "overrides": [
@@ -70,7 +70,7 @@
       "title": "Recent State Changes",
       "type": "table",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "targets": [{ "rawSql": "SELECT state, start_date, end_date, ROUND(duration_min::numeric, 1) AS duration_min FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
     }
   ],
@@ -79,7 +79,7 @@
       {
         "name": "vehicle_id",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
         "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
         "refresh": 1
       }

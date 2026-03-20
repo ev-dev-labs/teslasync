@@ -12,7 +12,7 @@
       "title": "Avg Drain Rate (%/hr)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2, "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(drain_rate_pct_per_hour)::numeric/100, 4), 0) FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -20,7 +20,7 @@
       "title": "Total Range Lost (km)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(range_lost_km)::numeric, 1), 0) FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -28,7 +28,7 @@
       "title": "Total Idle Hours",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#06b6d4", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_hours)::numeric, 1), 0) FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -36,7 +36,7 @@
       "title": "Events Count",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(*) FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -44,7 +44,7 @@
       "title": "Sentry ON Avg Drain",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2, "color": { "fixedColor": "#ec4899", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(drain_rate_pct_per_hour)::numeric/100, 4), 0) FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND sentry_mode = TRUE AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -52,7 +52,7 @@
       "title": "Sentry OFF Avg Drain",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 2, "color": { "fixedColor": "#22c55e", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(drain_rate_pct_per_hour)::numeric/100, 4), 0) FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND sentry_mode = FALSE AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
@@ -60,7 +60,7 @@
       "title": "Drain Rate Over Time",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "unit": "percent", "custom": { "drawStyle": "bars", "fillOpacity": 60 }, "color": { "fixedColor": "#EF4444", "mode": "fixed" } }
       },
@@ -70,7 +70,7 @@
       "title": "Duration vs Drain Rate (Sentry Mode Comparison)",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "points", "pointSize": 8, "fillOpacity": 60 } },
         "overrides": [
@@ -87,7 +87,7 @@
       "title": "Drain Events Table",
       "type": "table",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "targets": [{ "rawSql": "SELECT start_date, end_date, start_battery, end_battery, battery_lost, range_lost_km, duration_hours, drain_rate_pct_per_hour, outside_temp_avg, sentry_mode FROM vampire_drain_events WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
     }
   ],
@@ -96,7 +96,7 @@
       {
         "name": "vehicle_id",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
         "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
         "refresh": 1
       }

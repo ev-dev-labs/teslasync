@@ -11,7 +11,7 @@
       "title": "Unique Locations",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COUNT(DISTINCT address_id) FROM visited_locations WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
     },
@@ -19,7 +19,7 @@
       "title": "Total Visits",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(SUM(visit_count), 0) FROM visited_locations WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
     },
@@ -27,7 +27,7 @@
       "title": "Total Time at Locations",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 0, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_duration_min)/60), 0) FROM visited_locations WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
     },
@@ -35,7 +35,7 @@
       "title": "Most Visited (name)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT a.display_name FROM visited_locations vl JOIN addresses a ON a.id = vl.address_id WHERE vl.vehicle_id = $vehicle_id ORDER BY vl.visit_count DESC LIMIT 1", "format": "table", "refId": "A" }]
     },
@@ -43,7 +43,7 @@
       "title": "Top Visited Locations",
       "type": "barchart",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "options": { "orientation": "horizontal" },
       "targets": [{ "rawSql": "SELECT a.display_name AS location, vl.visit_count FROM visited_locations vl JOIN addresses a ON a.id = vl.address_id WHERE vl.vehicle_id = $vehicle_id ORDER BY vl.visit_count DESC LIMIT 20", "format": "table", "refId": "A" }]
@@ -52,7 +52,7 @@
       "title": "All Visited Locations",
       "type": "table",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "targets": [{ "rawSql": "SELECT a.display_name AS location, vl.visit_count, ROUND(vl.total_duration_min::numeric / 60, 1) AS total_hours, vl.last_visited FROM visited_locations vl JOIN addresses a ON a.id = vl.address_id WHERE vl.vehicle_id = $vehicle_id ORDER BY vl.visit_count DESC LIMIT 100", "format": "table", "refId": "A" }]
     }
   ],
@@ -61,7 +61,7 @@
       {
         "name": "vehicle_id",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
         "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
         "refresh": 1
       }

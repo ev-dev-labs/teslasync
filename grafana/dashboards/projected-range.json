@@ -12,7 +12,7 @@
       "title": "Current Range (km)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT rated_battery_range_km FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
     },
@@ -20,7 +20,7 @@
       "title": "Range When New (km)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT MAX(rated_battery_range_km) FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL", "format": "table", "refId": "A" }]
     },
@@ -28,7 +28,7 @@
       "title": "Degradation (%)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 20 }] } } },
       "targets": [{ "rawSql": "SELECT ROUND((1 - (SELECT rated_battery_range_km FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1)::numeric / NULLIF((SELECT MAX(rated_battery_range_km) FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL), 0)) * 100, 1)", "format": "table", "refId": "A" }]
     },
@@ -36,7 +36,7 @@
       "title": "Battery Health (%)",
       "type": "gauge",
       "gridPos": { "h": 4, "w": 5, "x": 15, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "min": 0, "max": 100, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 60 }, { "color": "green", "value": 80 }] } } },
       "targets": [{ "rawSql": "SELECT ROUND(((SELECT rated_battery_range_km FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1)::numeric / NULLIF((SELECT MAX(rated_battery_range_km) FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL), 0)) * 100, 1)", "format": "table", "refId": "A" }]
     },
@@ -44,7 +44,7 @@
       "title": "Avg Daily Mileage (km)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 1, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(distance_km)::numeric, 1), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND distance_km > 0 AND $__timeFilter(date)", "format": "table", "refId": "A" }]
     },
@@ -52,7 +52,7 @@
       "title": "Historical Range Trend",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "unit": "km", "custom": { "drawStyle": "line", "fillOpacity": 15 } },
         "overrides": [
@@ -66,7 +66,7 @@
       "title": "Range at Full Charge Over Time",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
       "targets": [{ "rawSql": "SELECT end_date AS time, ROUND((end_rated_range_km * 100 / NULLIF(end_battery_level, 0))::numeric) AS full_charge_range FROM charging_sessions WHERE vehicle_id = $vehicle_id AND end_battery_level >= 80 AND end_rated_range_km > 0 AND $__timeFilter(end_date) ORDER BY end_date", "format": "time_series", "refId": "A" }]
     },
@@ -74,7 +74,7 @@
       "title": "12-Month Range Projection",
       "type": "timeseries",
       "gridPos": { "h": 10, "w": 12, "x": 12, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": {
         "defaults": { "unit": "km", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
         "overrides": [
@@ -90,7 +90,7 @@
       {
         "name": "vehicle_id",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
+        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
         "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
         "refresh": 1
       }
