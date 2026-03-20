@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'TeslaSync Docs',
   description: 'Documentation for TeslaSync - Tesla Fleet Intelligence Platform',
   base: '/teslasync/',
@@ -100,4 +101,16 @@ export default defineConfig({
       level: [2, 3],
     },
   },
-})
+
+  mermaid: {
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#00f0ff',
+      primaryTextColor: '#e4e4ef',
+      primaryBorderColor: '#00f0ff',
+      lineColor: '#10b981',
+      secondaryColor: '#141430',
+      tertiaryColor: '#0f0f2a',
+    },
+  },
+}))
