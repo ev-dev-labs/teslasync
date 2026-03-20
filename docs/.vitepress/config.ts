@@ -91,7 +91,7 @@ export default withMermaid(defineConfig({
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2024 TeslaSync Contributors',
+      copyright: `Copyright © 2024-${new Date().getFullYear()} TeslaSync Contributors`,
     },
 
     search: {
