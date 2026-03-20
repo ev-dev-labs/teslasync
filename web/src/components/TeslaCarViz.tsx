@@ -17,6 +17,7 @@ interface TeslaCarVizProps {
 }
 
 /** Parse a vehicle.model string like "Model 3 P", "Model Y", "Cybertruck" into a TeslaModel key */
+// eslint-disable-next-line react-refresh/only-export-components
 export function parseModelKey(modelStr?: string): TeslaModel {
   if (!modelStr) return 'model3'
   const s = modelStr.toLowerCase().replace(/\s+/g, '')
