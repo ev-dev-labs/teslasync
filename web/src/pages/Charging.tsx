@@ -588,6 +588,20 @@ export default function Charging() {
             </div>
           </FadeIn>
           <StaggerContainer className="space-y-3">
+            {/* Find Charging Stations link */}
+            <FadeIn>
+              <a
+                href="https://openchargemap.org/site/poi/search"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all mb-3"
+                style={{ background: 'var(--surface-2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}
+              >
+                <Plug className="h-4 w-4" />
+                Find Charging Stations Nearby (OpenChargeMap)
+                <ChevronRight className="h-3.5 w-3.5 ml-auto" />
+              </a>
+            </FadeIn>
             {filteredSessions.map((s: ChargingSession) => (
               <StaggerItem key={s.id}><SessionCard session={s} /></StaggerItem>
             ))}

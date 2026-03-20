@@ -39,58 +39,6 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
   )
 }
 
-function GasSavingsCalculator({ totalDistanceKm, totalElectricityCost }: { totalDistanceKm: number; totalElectricityCost: number }) {
-  const [gasPrice, setGasPrice] = useState(1.50)
-  const [gasConsumption, setGasConsumption] = useState(8)
-
-  const gasCost = totalDistanceKm * (gasConsumption / 100) * gasPrice
-  const savings = gasCost - totalElectricityCost
-  const litersAvoided = totalDistanceKm * (gasConsumption / 100)
-  const co2Avoided = litersAvoided * 2.31
-
-  return (
-    <GlassPanel className="p-6">
-      <h3 className="section-title mb-6 flex items-center gap-2">
-        <Fuel className="h-4 w-4 text-neon-green" /> Gas Savings Calculator
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Gas Price ($/L)</label>
-            <input
-              type="number" step="0.1" min="0" value={gasPrice}
-              onChange={e => setGasPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="w-full rounded-lg px-3 py-2 text-sm font-medium"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}
-            />
-          </div>
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Avg Gas Car Consumption (L/100km)</label>
-            <input
-              type="number" step="0.5" min="0" value={gasConsumption}
-              onChange={e => setGasConsumption(Math.max(0, parseFloat(e.target.value) || 0))}
-              className="w-full rounded-lg px-3 py-2 text-sm font-medium"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}
-            />
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div className="p-4 rounded-xl bg-neon-green/5 border border-neon-green/10">
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">You Saved</p>
-            <p className="text-2xl font-bold text-neon-green">${savings > 0 ? savings.toFixed(2) : '0.00'}</p>
-            <p className="text-xs text-[var(--text-secondary)] mt-1">compared to a gas car</p>
-          </div>
-          <div className="p-4 rounded-xl bg-neon-cyan/5 border border-neon-cyan/10">
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">CO₂ Avoided</p>
-            <p className="text-2xl font-bold text-neon-cyan">{co2Avoided.toFixed(0)} <span className="text-sm font-normal">kg</span></p>
-            <p className="text-xs text-[var(--text-secondary)] mt-1">{litersAvoided.toFixed(0)}L of gas not burned</p>
-          </div>
-        </div>
-      </div>
-    </GlassPanel>
-  )
-}
-
 export default function Energy() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -436,12 +384,72 @@ export default function Energy() {
               </GlassPanel>
             </FadeIn>
           )}
+          {/* Environmental Impact Card */}
+          <FadeIn delay={0.25}>
+            <GlassPanel className="p-5 mt-6">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Leaf className="h-4 w-4 text-neon-green" /> Environmental Impact
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(() => {
+                  const co2PerLiter = 2.31
+                  const avgGasConsumption = 8 // L/100km
+                  const litersAvoided = totalDistance * avgGasConsumption / 100
+                  const co2Avoided = litersAvoided * co2PerLiter
+                  const treesEquiv = co2Avoided / 22 // ~22kg CO2 per tree per year
+                  const gallonsSaved = litersAvoided / 3.78541
 
-          {/* Gas Savings Calculator */}
-          <FadeIn delay={0.35}>
-            <GasSavingsCalculator totalDistanceKm={totalDistance} totalElectricityCost={totalCost} />
+                  return [
+                    { label: 'CO₂ Avoided', value: `${co2Avoided.toFixed(0)} kg`, sub: 'vs gasoline car', color: '#10b981' },
+                    { label: 'Equiv. Trees Planted', value: treesEquiv.toFixed(1), sub: 'for one year', color: '#22c55e' },
+                    { label: 'Gas Gallons Saved', value: gallonsSaved.toFixed(0), sub: `${litersAvoided.toFixed(0)} liters`, color: '#f59e0b' },
+                    { label: 'Gas Cost Avoided', value: `$${(litersAvoided * 1.5).toFixed(0)}`, sub: 'at $1.50/L avg', color: '#8b5cf6' },
+                  ].map(card => (
+                    <div key={card.label} className="text-center">
+                      <p className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</p>
+                      <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>{card.label}</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">{card.sub}</p>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </GlassPanel>
           </FadeIn>
         </>
+      )}
+      {/* Cost per km/mi Trend */}
+      {stats && stats.daily_breakdown && stats.daily_breakdown.length > 0 && (
+        <FadeIn delay={0.35}>
+          <GlassPanel className="p-5">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Fuel className="h-4 w-4 text-neon-green" /> Cost per km Trend
+            </h3>
+            <div className="h-48 sm:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={(() => {
+                  const months: Record<string, { energy: number; distance: number; cost: number }> = {}
+                  stats.daily_breakdown.forEach(d => {
+                    const month = d.date.slice(0, 7)
+                    if (!months[month]) months[month] = { energy: 0, distance: 0, cost: 0 }
+                    months[month].energy += d.energy_kwh
+                    months[month].distance += d.distance_km
+                    months[month].cost += d.energy_kwh * (totalDistance > 0 ? totalCost / totalEnergy : 0.12)
+                  })
+                  return Object.entries(months).map(([month, data]) => ({
+                    month,
+                    costPerKm: data.distance > 0 ? (data.cost / data.distance) : 0,
+                  }))
+                })()}>
+                  {chartGrid}
+                  <XAxis dataKey="month" tick={axisTickSm} />
+                  <YAxis tick={axisTickSm} tickFormatter={(v: number) => `$${v.toFixed(3)}`} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="costPerKm" name="Cost/km ($)" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
       )}
     </div>
   )

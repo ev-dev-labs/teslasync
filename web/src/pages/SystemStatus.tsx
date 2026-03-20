@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
+import { getAuditLogs, AuditLog } from '../api'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
-  CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive, Layers,
+  CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
+  Shield, Gauge,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
-import { getDatabaseInfo, getSystemInfo, type DatabaseInfo, type SystemInfoData } from '../api'
 import clsx from 'clsx'
 
 interface ComponentInfo {
@@ -136,6 +137,106 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
   )
 }
 
+function RateLimitGauge() {
+  const maxReqs = 100
+  const windowMin = 1
+  const usagePct = 0 // Display-only: we don't track live usage client-side
+  const barColor = usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#10b981'
+
+  return (
+    <FadeIn delay={0.2}>
+      <GlassPanel className="p-5">
+        <h3 className="section-title flex items-center gap-2 mb-4">
+          <Gauge className="h-4 w-4 text-neon-amber" /> API Rate Limit
+        </h3>
+        <div className="flex items-center gap-6">
+          <div className="flex-1">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
+              <span>0 req/min</span>
+              <span className="font-semibold text-[var(--text-primary)]">{maxReqs} req/min</span>
+            </div>
+            <div className="h-4 rounded-full bg-white/[0.04] overflow-hidden relative">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${Math.max(usagePct, 2)}%`, background: `linear-gradient(90deg, ${barColor}80, ${barColor})`, boxShadow: `0 0 8px ${barColor}40` }}
+              />
+              {[25, 50, 75].map(mark => (
+                <div key={mark} className="absolute top-0 h-full w-px bg-white/10" style={{ left: `${mark}%` }} />
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-2 text-[10px] text-[var(--text-muted)]">
+              <span>Window: {windowMin} minute</span>
+              <span>Per-IP rate limiting via httprate</span>
+            </div>
+          </div>
+          <div className="text-center shrink-0">
+            <p className="text-3xl font-bold text-[var(--text-primary)]">{maxReqs}</p>
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Max / min</p>
+          </div>
+        </div>
+      </GlassPanel>
+    </FadeIn>
+  )
+}
+
+function AuditLogTable() {
+  const { data: logs, isLoading } = useQuery({ queryKey: ['audit-logs'], queryFn: () => getAuditLogs(30), refetchInterval: 30_000 })
+
+  const actionColor: Record<string, string> = {
+    create: '#10b981',
+    update: '#f59e0b',
+    delete: '#ef4444',
+    command: '#a855f7',
+  }
+
+  return (
+    <FadeIn delay={0.25}>
+      <GlassPanel className="p-5">
+        <h3 className="section-title flex items-center gap-2 mb-4">
+          <Shield className="h-4 w-4 text-neon-purple" /> Audit Log
+        </h3>
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
+          </div>
+        ) : logs && logs.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider border-b border-white/[0.06]">
+                  <th className="py-2 text-left">Time</th>
+                  <th className="py-2 text-left">Action</th>
+                  <th className="py-2 text-left">Resource</th>
+                  <th className="py-2 text-left">Details</th>
+                  <th className="py-2 text-left">IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((l: AuditLog) => (
+                  <tr key={l.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{new Date(l.created_at).toLocaleString()}</td>
+                    <td className="py-2">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                        style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>
+                        {l.action}
+                      </span>
+                    </td>
+                    <td className="py-2 text-[var(--text-secondary)]">{l.resource}</td>
+                    <td className="py-2 text-[var(--text-muted)] max-w-xs truncate">{l.details}</td>
+                    <td className="py-2 text-[var(--text-muted)] font-mono">{l.ip}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)] text-center py-4">No audit log entries yet</p>
+        )}
+      </GlassPanel>
+    </FadeIn>
+  )
+}
+
 export default function SystemStatus() {
   const [refreshing, setRefreshing] = useState(false)
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
@@ -172,18 +273,6 @@ export default function SystemStatus() {
       return { ok: res.ok, status: res.status, body }
     },
     refetchInterval: 15_000,
-  })
-
-  const { data: dbInfo } = useQuery<DatabaseInfo>({
-    queryKey: ['database-info'],
-    queryFn: getDatabaseInfo,
-    refetchInterval: 30_000,
-  })
-
-  const { data: sysInfo } = useQuery<SystemInfoData>({
-    queryKey: ['system-info'],
-    queryFn: getSystemInfo,
-    refetchInterval: 30_000,
   })
 
   useEffect(() => {
@@ -322,56 +411,6 @@ export default function SystemStatus() {
         </StaggerContainer>
       )}
 
-      {/* Database & Runtime Info */}
-      <FadeIn delay={0.12}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {dbInfo && (
-            <>
-              <GlassPanel className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-neon-cyan/10">
-                  <Database className="h-5 w-5 text-neon-cyan" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Database Size</p>
-                  <p className="text-sm font-bold text-[var(--text-primary)]">{dbInfo.database_size}</p>
-                </div>
-              </GlassPanel>
-              <GlassPanel className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-neon-purple/10">
-                  <Layers className="h-5 w-5 text-neon-purple" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Tables</p>
-                  <p className="text-sm font-bold text-[var(--text-primary)]"><AnimatedNumber value={dbInfo.table_count} /></p>
-                </div>
-              </GlassPanel>
-            </>
-          )}
-          {sysInfo && (
-            <>
-              <GlassPanel className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-neon-green/10">
-                  <Activity className="h-5 w-5 text-neon-green" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Goroutines</p>
-                  <p className="text-sm font-bold text-[var(--text-primary)]"><AnimatedNumber value={sysInfo.goroutines} /></p>
-                </div>
-              </GlassPanel>
-              <GlassPanel className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-neon-amber/10">
-                  <Clock className="h-5 w-5 text-neon-amber" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Uptime</p>
-                  <p className="text-sm font-bold text-[var(--text-primary)]">{sysInfo.uptime_seconds < 3600 ? `${Math.floor(sysInfo.uptime_seconds / 60)}m` : `${Math.floor(sysInfo.uptime_seconds / 3600)}h ${Math.floor((sysInfo.uptime_seconds % 3600) / 60)}m`}</p>
-                </div>
-              </GlassPanel>
-            </>
-          )}
-        </div>
-      </FadeIn>
-
       {/* System Info */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-5">
@@ -384,11 +423,6 @@ export default function SystemStatus() {
               { label: 'Auto Refresh', value: '15 seconds', icon: RefreshCw },
               { label: 'Last Check', value: lastChecked.toLocaleTimeString(), icon: Clock },
               { label: 'Connection', value: navigator.onLine ? 'Online' : 'Offline', icon: navigator.onLine ? Wifi : WifiOff },
-              ...(sysInfo ? [
-                { label: 'Go Version', value: sysInfo.go_version, icon: Cpu },
-                { label: 'Platform', value: `${sysInfo.os}/${sysInfo.arch}`, icon: HardDrive },
-                { label: 'App Version', value: `v${sysInfo.version}`, icon: Server },
-              ] : []),
             ].map(item => (
               <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
@@ -401,6 +435,12 @@ export default function SystemStatus() {
           </div>
         </GlassPanel>
       </FadeIn>
+
+      {/* API Rate Limit Display */}
+      <RateLimitGauge />
+
+      {/* Audit Logs */}
+      <AuditLogTable />
     </div>
   )
 }

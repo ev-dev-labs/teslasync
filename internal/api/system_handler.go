@@ -2,47 +2,72 @@ package api
 
 import (
 	"net/http"
-	"runtime"
-	"time"
 
+	"github.com/teslasync/teslasync/internal/config"
 	"github.com/teslasync/teslasync/internal/database"
+	"github.com/teslasync/teslasync/internal/resilience"
 )
 
-var startTime = time.Now()
-
-// version is the application version, set at build time or defaulted.
-var version = "2.0.0"
-
-// DatabaseSize returns database size and table count information.
-func DatabaseSize(db *database.DB) http.HandlerFunc {
+// MigrationStatus returns the current database migration version.
+func MigrationStatus(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var size string
-		err := db.Pool.QueryRow(r.Context(),
-			"SELECT pg_size_pretty(pg_database_size(current_database()))").Scan(&size)
+		var version uint
+		var dirty bool
+		err := db.Pool.QueryRow(r.Context(), "SELECT version, dirty FROM schema_migrations LIMIT 1").Scan(&version, &dirty)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to get database size")
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"version": 0,
+				"dirty":   false,
+				"error":   err.Error(),
+			})
 			return
 		}
-
-		var tableCount int
-		_ = db.Pool.QueryRow(r.Context(),
-			"SELECT count(*) FROM information_schema.tables WHERE table_schema='public'").Scan(&tableCount)
-
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"database_size": size,
-			"table_count":   tableCount,
+			"version": version,
+			"dirty":   dirty,
 		})
 	}
 }
 
-// SystemInfo returns system runtime information.
-func SystemInfo(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"version":        version,
-		"go_version":     runtime.Version(),
-		"os":             runtime.GOOS,
-		"arch":           runtime.GOARCH,
-		"goroutines":     runtime.NumGoroutine(),
-		"uptime_seconds": time.Since(startTime).Seconds(),
-	})
+// ConfigValidation checks that essential configuration values are set.
+func ConfigValidation(cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		issues := []string{}
+		if cfg.Tesla.ClientID == "" {
+			issues = append(issues, "TESLA_CLIENT_ID not set")
+		}
+		if cfg.Tesla.ClientSecret == "" {
+			issues = append(issues, "TESLA_CLIENT_SECRET not set")
+		}
+		if cfg.Database.Host == "" {
+			issues = append(issues, "DATABASE_HOST not set")
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"valid":  len(issues) == 0,
+			"issues": issues,
+		})
+	}
+}
+
+// HealthHistoryHandler returns the last N health check snapshots.
+func HealthHistoryHandler(health *resilience.HealthMonitor) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		history := health.GetHealthHistory()
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"history": history,
+			"count":   len(history),
+		})
+	}
+}
+
+// DegradedStatusHandler returns whether the system is in degraded mode.
+func DegradedStatusHandler(health *resilience.HealthMonitor) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		degraded := health.IsDegraded()
+		overall := health.OverallStatus()
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"degraded": degraded,
+			"overall":  overall.String(),
+		})
+	}
 }

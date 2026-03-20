@@ -175,7 +175,7 @@ export interface BatteryReport {
 export interface Alert {
   id: number
   vehicle_id: number
-  type: 'geofence_exit' | 'geofence_enter' | 'low_battery' | 'charging_complete' | 'sentry_event' | 'speed_limit' | 'temperature' | 'software_update' | 'vehicle_unlocked' | 'tire_pressure_low'
+  type: 'geofence_exit' | 'geofence_enter' | 'low_battery' | 'charging_complete' | 'sentry_event' | 'speed_limit' | 'temperature' | 'software_update'
   severity: 'info' | 'warning' | 'critical'
   title: string
   message: string
@@ -619,48 +619,35 @@ export const getStateSummary = (vehicleId: number, days = 30, start?: string) =>
 export const getDailyStateBreakdown = (vehicleId: number, days = 30, start?: string) =>
   request<DailyStateBreakdown[]>(`/states/daily?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)
 
-// === Import ===
-
-/** Response type from CSV import endpoints. */
-export interface ImportResult {
-  imported: number
-  errors: number
+// === API Keys ===
+export interface APIKey {
+  id: number
+  name: string
+  key_prefix: string
+  permissions: string
+  last_used_at?: string
+  created_at: string
+  expires_at?: string
 }
 
-/** Imports drive data from a CSV file. */
-export const importDrives = (file: File): Promise<ImportResult> => {
-  const formData = new FormData()
-  formData.append('file', file)
-  return resilientFetch<ImportResult>('/import/drives', { method: 'POST', body: formData })
+export interface APIKeyCreateResponse extends APIKey {
+  key: string
 }
 
-/** Imports charging data from a CSV file. */
-export const importCharging = (file: File): Promise<ImportResult> => {
-  const formData = new FormData()
-  formData.append('file', file)
-  return resilientFetch<ImportResult>('/import/charging', { method: 'POST', body: formData })
+export const getAPIKeys = () => request<APIKey[]>('/api-keys')
+export const createAPIKey = (data: { name: string; permissions: string }) =>
+  request<APIKeyCreateResponse>('/api-keys', { method: 'POST', body: JSON.stringify(data) })
+export const deleteAPIKey = (id: number) => request<void>(`/api-keys/${id}`, { method: 'DELETE' })
+export const revokeAPIKey = (id: number) => request<void>(`/api-keys/${id}/revoke`, { method: 'POST' })
+
+// === Audit Logs ===
+export interface AuditLog {
+  id: number
+  action: string
+  resource: string
+  details: string
+  ip: string
+  created_at: string
 }
 
-// === System ===
-
-/** Database size and table count information. */
-export interface DatabaseInfo {
-  database_size: string
-  table_count: number
-}
-
-/** Fetches database size and table count. */
-export const getDatabaseInfo = () => request<DatabaseInfo>('/system/database')
-
-/** System runtime information. */
-export interface SystemInfoData {
-  version: string
-  go_version: string
-  os: string
-  arch: string
-  goroutines: number
-  uptime_seconds: number
-}
-
-/** Fetches system runtime info (version, uptime, goroutines, etc.). */
-export const getSystemInfo = () => request<SystemInfoData>('/system/info')
+export const getAuditLogs = (limit = 50) => request<AuditLog[]>(`/system/audit?limit=${limit}`)

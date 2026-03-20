@@ -6,7 +6,7 @@ import {
 } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
 import {
-  BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge, ArrowUp, ArrowDown
+  BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -188,7 +188,7 @@ export default function Statistics() {
                 <Pie data={statePie} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
                   {statePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
-                <Legend wrapperStyle={{ fontSize: 10 }} formatter={(val: string, entry: { payload?: { value?: number } }) => `${val} (${formatDuration(entry?.payload?.value ?? 0)})`} />
+                <Legend wrapperStyle={{ fontSize: 10 }} formatter={(val: string, entry: any) => `${val} (${formatDuration(entry?.payload?.value ?? 0)})`} />
                 <Tooltip formatter={(val: number) => formatDuration(val)} />
               </PieChart>
             </ResponsiveContainer>
@@ -256,61 +256,56 @@ export default function Statistics() {
         </GlassPanel>
       )}
 
-      {/* Year-over-Year Comparison */}
-      {chargingTrend.length > 12 && (() => {
-        const now = new Date()
-        const thisYear = now.getFullYear()
-        const lastYear = thisYear - 1
-        const thisYearData = chargingTrend.filter(m => m.month.startsWith(String(thisYear)))
-        const lastYearData = chargingTrend.filter(m => m.month.startsWith(String(lastYear)))
-        if (lastYearData.length === 0) return null
-        const tyEnergy = thisYearData.reduce((s, m) => s + m.energy, 0)
-        const lyEnergy = lastYearData.reduce((s, m) => s + m.energy, 0)
-        const tyCost = thisYearData.reduce((s, m) => s + m.cost, 0)
-        const lyCost = lastYearData.reduce((s, m) => s + m.cost, 0)
-        const tySessions = thisYearData.reduce((s, m) => s + m.sessions, 0)
-        const lySessions = lastYearData.reduce((s, m) => s + m.sessions, 0)
-        const tySavings = thisYearData.reduce((s, m) => s + m.savings, 0)
-        const lySavings = lastYearData.reduce((s, m) => s + m.savings, 0)
-
-        const pctChange = (curr: number, prev: number) => prev > 0 ? ((curr - prev) / prev) * 100 : 0
-
-        const metrics = [
-          { label: 'Energy', thisVal: `${tyEnergy.toFixed(0)} kWh`, lastVal: `${lyEnergy.toFixed(0)} kWh`, change: pctChange(tyEnergy, lyEnergy), color: '#00f0ff' },
-          { label: 'Cost', thisVal: `$${tyCost.toFixed(0)}`, lastVal: `$${lyCost.toFixed(0)}`, change: pctChange(tyCost, lyCost), color: '#f59e0b', invertColor: true },
-          { label: 'Sessions', thisVal: `${tySessions}`, lastVal: `${lySessions}`, change: pctChange(tySessions, lySessions), color: '#a855f7' },
-          { label: 'Savings', thisVal: `$${tySavings.toFixed(0)}`, lastVal: `$${lySavings.toFixed(0)}`, change: pctChange(tySavings, lySavings), color: '#10b981' },
-        ]
-
-        return (
-          <GlassPanel className="p-6 mt-6">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Year-over-Year Comparison ({lastYear} vs {thisYear})
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {metrics.map(m => {
-                const isPositive = m.change > 0
-                const arrowColor = m.invertColor
-                  ? (isPositive ? '#ef4444' : '#10b981')
-                  : (isPositive ? '#10b981' : '#ef4444')
-                return (
-                  <div key={m.label} className="text-center p-3 rounded-xl" style={{ background: 'var(--surface-2)' }}>
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">{m.label}</p>
-                    <p className="text-lg font-bold" style={{ color: m.color }}>{m.thisVal}</p>
-                    <p className="text-[11px] text-[var(--text-secondary)]">vs {m.lastVal}</p>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      {isPositive ? <ArrowUp className="h-3 w-3" style={{ color: arrowColor }} /> : <ArrowDown className="h-3 w-3" style={{ color: arrowColor }} />}
-                      <span className="text-xs font-semibold" style={{ color: arrowColor }}>
-                        {Math.abs(m.change).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </GlassPanel>
-        )
-      })()}
+      {/* Vehicle Comparison Matrix */}
+      {vehicleComp.length > 1 && (
+        <GlassPanel className="p-6">
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <BarChart3 className="h-4 w-4 text-neon-purple" /> Vehicle Comparison Matrix
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider border-b border-white/[0.06]" style={{ color: 'var(--text-muted)' }}>
+                  <th className="py-2 text-left">Vehicle</th>
+                  <th className="py-2 text-right">Distance (km)</th>
+                  <th className="py-2 text-right">Drives</th>
+                  <th className="py-2 text-right">Energy (kWh)</th>
+                  <th className="py-2 text-right">Efficiency (Wh/km)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const maxDist = Math.max(...vehicleComp.map(v => v.distance), 1)
+                  const minDist = Math.min(...vehicleComp.map(v => v.distance))
+                  const maxDrives = Math.max(...vehicleComp.map(v => v.drives), 1)
+                  const minDrives = Math.min(...vehicleComp.map(v => v.drives))
+                  const maxEnergy = Math.max(...vehicleComp.map(v => v.energy), 1)
+                  const minEnergy = Math.min(...vehicleComp.map(v => v.energy))
+                  const bestEff = Math.min(...vehicleComp.map(v => v.efficiency || Infinity))
+                  const worstEff = Math.max(...vehicleComp.map(v => v.efficiency || 0))
+                  return vehicleComp.map(v => (
+                    <tr key={v.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                      <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{v.name}</td>
+                      <td className="py-2 text-right font-mono" style={{ color: v.distance === maxDist ? '#10b981' : v.distance === minDist && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
+                        {v.distance.toFixed(1)}
+                      </td>
+                      <td className="py-2 text-right font-mono" style={{ color: v.drives === maxDrives ? '#10b981' : v.drives === minDrives && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
+                        {v.drives}
+                      </td>
+                      <td className="py-2 text-right font-mono" style={{ color: v.energy === maxEnergy ? '#10b981' : v.energy === minEnergy && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
+                        {v.energy.toFixed(1)}
+                      </td>
+                      <td className="py-2 text-right font-mono" style={{ color: v.efficiency === bestEff ? '#10b981' : v.efficiency === worstEff && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
+                        {(v.efficiency || 0).toFixed(0)}
+                      </td>
+                    </tr>
+                  ))
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </GlassPanel>
+      )}
     </FadeIn>
   )
 }

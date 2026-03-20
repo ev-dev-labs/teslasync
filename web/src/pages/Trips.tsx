@@ -2,11 +2,84 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTrips } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter } from '../components/ui'
-import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download, DollarSign } from 'lucide-react'
+import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
 import { exportAsCSV, exportAsJSON } from '../lib/export'
+
+function TripPlanner({ avgEfficiency, distanceUnit, convertDistance }: {
+  avgEfficiency: number
+  distanceUnit: string
+  convertDistance: (km: number) => number
+}) {
+  const [distance, setDistance] = useState('')
+  const [battery, setBattery] = useState('80')
+  const batteryCapacity = 75 // kWh typical Tesla battery
+
+  const distKm = distanceUnit === 'mi'
+    ? parseFloat(distance || '0') * 1.60934
+    : parseFloat(distance || '0')
+  const eff = avgEfficiency > 0 ? avgEfficiency : 150 // Wh/km
+  const energyNeeded = distKm * eff / 1000 // kWh
+  const currentEnergy = (parseFloat(battery || '0') / 100) * batteryCapacity
+  const remainingEnergy = currentEnergy - energyNeeded
+  const remainingPct = (remainingEnergy / batteryCapacity) * 100
+  const canMakeIt = remainingEnergy > 0
+
+  return (
+    <GlassPanel className="p-4 sm:p-6 mb-6">
+      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+        <Navigation className="h-4 w-4 text-neon-cyan" /> Plan a Trip
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Distance ({distanceUnit})</label>
+          <input
+            type="number"
+            value={distance}
+            onChange={e => setDistance(e.target.value)}
+            placeholder={`e.g. 200`}
+            className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Current Battery (%)</label>
+          <input
+            type="number"
+            value={battery}
+            onChange={e => setBattery(e.target.value)}
+            min="0"
+            max="100"
+            className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-[var(--text-muted)] mb-1 block">Est. Efficiency</label>
+          <p className="px-3 py-2 text-sm text-[var(--text-secondary)]">{eff.toFixed(0)} Wh/km</p>
+        </div>
+      </div>
+      {distance && parseFloat(distance) > 0 && (
+        <div className="glass-card p-3 rounded-lg">
+          {canMakeIt ? (
+            <p className="text-sm text-neon-green font-medium">
+              ✅ You can make this trip with ~{remainingPct.toFixed(0)}% battery remaining ({remainingEnergy.toFixed(1)} kWh left)
+            </p>
+          ) : (
+            <p className="text-sm text-neon-red font-medium">
+              ⚠️ You&apos;ll need to charge. Estimated deficit: {Math.abs(remainingEnergy).toFixed(1)} kWh ({Math.abs(remainingPct).toFixed(0)}% short)
+            </p>
+          )}
+          <p className="text-[10px] text-[var(--text-muted)] mt-1">
+            Energy needed: {energyNeeded.toFixed(1)} kWh for {convertDistance(distKm).toFixed(0)} {distanceUnit}
+          </p>
+        </div>
+      )}
+    </GlassPanel>
+  )
+}
 
 function formatDuration(startDate: string, endDate: string | null): string {
   if (!endDate) return 'In progress'
@@ -146,6 +219,9 @@ export default function Trips() {
         </GlassPanel>
       )}
 
+      {/* Trip Planner */}
+      <TripPlanner avgEfficiency={totalDist > 0 ? totalEnergy / totalDist * 1000 : 150} distanceUnit={distanceUnit} convertDistance={convertDistance} />
+
       {/* Trip List */}
       <GlassPanel className="p-4 sm:p-6">
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>All Trips</h3>
@@ -156,14 +232,8 @@ export default function Trips() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredTrips.map(trip => {
-              const costPerKm = trip.total_distance_km > 0 ? trip.total_cost / convertDistance(trip.total_distance_km) : 0
-              // Gas equivalent: 8L/100km at $1.50/L
-              const gasEquivCost = trip.total_distance_km * 0.08 * 1.50
-              const savings = gasEquivCost - trip.total_cost
-              return (
-              <div key={trip.id} className="glass-card p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {filteredTrips.map(trip => (
+              <div key={trip.id} className="glass-card p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,240,255,0.1)' }}>
                     <Route className="h-5 w-5 text-neon-cyan" />
@@ -202,30 +272,8 @@ export default function Trips() {
                     </div>
                   )}
                 </div>
-                </div>
-                {/* Cost Breakdown */}
-                {trip.total_distance_km > 0 && (
-                  <div className="mt-2 pt-2 border-t border-white/5 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px]">
-                    <span className="flex items-center gap-1 text-[var(--text-secondary)]">
-                      <DollarSign className="h-3 w-3 text-neon-amber" />
-                      Energy: ${trip.total_cost.toFixed(2)}
-                    </span>
-                    <span className="text-[var(--text-secondary)]">
-                      ${costPerKm.toFixed(3)}/{distanceUnit}
-                    </span>
-                    <span className="text-[var(--text-muted)]">
-                      Gas equiv: ${gasEquivCost.toFixed(2)}
-                    </span>
-                    {savings > 0 && (
-                      <span className="text-neon-green font-semibold">
-                        Saved ${savings.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
-              )
-            })}
+            ))}
           </div>
         )}
       </GlassPanel>

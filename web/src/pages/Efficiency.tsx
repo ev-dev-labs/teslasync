@@ -347,6 +347,42 @@ export default function Efficiency() {
       {/* Consumption Summary */}
       {consumptionStats && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
+
+          {/* Weather Impact Info Card */}
+          <GlassPanel className="p-4 sm:p-6">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Thermometer className="h-4 w-4 text-neon-amber" /> Weather Impact on Efficiency
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                <span className="text-lg">❄️</span>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Cold Weather (&lt;5°C)</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Can reduce range by 20–40%. Battery heating, cabin heating, and increased rolling resistance all contribute.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                <span className="text-lg">🔥</span>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Hot Weather (&gt;35°C)</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Can reduce range by 10–20%. A/C cooling demands and battery thermal management use extra energy.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+                <span className="text-lg">🌤️</span>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Ideal Temperature (15–25°C)</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Optimal range. Minimal HVAC load and ideal battery chemistry performance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </GlassPanel>
           <GlassPanel className="p-4 sm:p-6">
             <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <BarChart3 className="h-4 w-4 text-neon-purple" /> Driving Efficiency Summary
@@ -388,6 +424,37 @@ export default function Efficiency() {
           </GlassPanel>
         </div>
       )}
+
+      {/* Fleet Efficiency Leaderboard */}
+      {analytics?.vehicle_comparison && analytics.vehicle_comparison.length > 1 && (
+        <FadeIn delay={0.3}>
+          <GlassPanel className="p-5">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Gauge className="h-4 w-4 text-neon-amber" /> Fleet Efficiency Leaderboard
+            </h3>
+            <div className="space-y-2">
+              {[...analytics.vehicle_comparison]
+                .sort((a, b) => (a.efficiency || Infinity) - (b.efficiency || Infinity))
+                .map((v, rank) => {
+                  const best = rank === 0
+                  return (
+                    <div key={v.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className={`text-lg font-bold w-8 text-center ${best ? 'text-neon-amber' : 'text-[var(--text-muted)]'}`}>
+                        {best ? '👑' : `#${rank + 1}`}
+                      </span>
+                      <span className="text-sm font-medium text-[var(--text-primary)] flex-1">{v.name}</span>
+                      <span className="text-sm font-mono text-neon-cyan">{(v.efficiency || 0).toFixed(0)} Wh/km</span>
+                      {v.efficiency > 0 && (
+                        <span className="text-[10px] text-[var(--text-muted)]">({(1000 / v.efficiency).toFixed(1)} km/kWh)</span>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
     </FadeIn>
   )
 }

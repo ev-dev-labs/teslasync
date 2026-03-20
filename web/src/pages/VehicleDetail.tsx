@@ -1,5 +1,5 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus } from '../api'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
@@ -7,7 +7,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
-  Cpu, BatteryCharging, ChevronRight, Pencil,
+  Cpu, BatteryCharging, ChevronRight, User, Wrench, AlertCircle,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -33,6 +33,31 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
   )
 }
 
+function VehicleModelSilhouette({ model }: { model?: string }) {
+  const m = (model ?? '').toLowerCase()
+  const isSUV = m.includes('model y') || m.includes('model x') || m.includes('my') || m.includes('mx')
+
+  if (isSUV) {
+    return (
+      <svg viewBox="0 0 200 80" className="w-full max-w-[200px] opacity-30" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M20,60 L30,55 L45,40 L55,28 L75,22 L120,20 L155,22 L165,30 L175,42 L180,60" strokeLinecap="round" />
+        <circle cx="50" cy="62" r="10" />
+        <circle cx="155" cy="62" r="10" />
+        <line x1="20" y1="60" x2="180" y2="60" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 200 80" className="w-full max-w-[200px] opacity-30" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M20,55 L35,50 L55,35 L75,25 L120,23 L150,25 L165,35 L175,50 L180,55" strokeLinecap="round" />
+      <circle cx="50" cy="58" r="10" />
+      <circle cx="155" cy="58" r="10" />
+      <line x1="20" y1="55" x2="180" y2="55" />
+    </svg>
+  )
+}
+
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
   return (
@@ -47,6 +72,90 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   )
 }
 
+function DriverAssignment({ vehicleId }: { vehicleId: number }) {
+  const storageKey = `teslasync-driver-${vehicleId}`
+  const [driver, setDriver] = useState(() => localStorage.getItem(storageKey) ?? '')
+  const [editing, setEditing] = useState(false)
+
+  const save = (value: string) => {
+    setDriver(value)
+    localStorage.setItem(storageKey, value)
+    setEditing(false)
+  }
+
+  return (
+    <GlassPanel className="p-5">
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+        <User className="h-4 w-4 text-neon-cyan" /> Assigned Driver
+      </h3>
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input type="text" defaultValue={driver} autoFocus
+            className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-[var(--text-primary)] focus:outline-none focus:border-neon-cyan/40"
+            onKeyDown={e => { if (e.key === 'Enter') save((e.target as HTMLInputElement).value) }}
+            placeholder="Driver name" />
+          <button onClick={() => { const input = document.querySelector('input[placeholder="Driver name"]') as HTMLInputElement; save(input?.value ?? '') }}
+            className="glass-button text-xs">Save</button>
+          <button onClick={() => setEditing(false)} className="text-xs text-[var(--text-muted)]">Cancel</button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-[var(--text-secondary)]">{driver || 'No driver assigned'}</span>
+          <button onClick={() => setEditing(true)} className="text-xs text-neon-cyan hover:underline">
+            {driver ? 'Change' : 'Assign'}
+          </button>
+        </div>
+      )}
+    </GlassPanel>
+  )
+}
+
+function MaintenanceSchedule({ odometer }: { odometer: number }) {
+  const items = [
+    { name: 'Tire Rotation', intervalKm: 10000, icon: '🛞' },
+    { name: 'Cabin Air Filter', intervalKm: 20000, icon: '🌬️' },
+    { name: 'Brake Fluid Check', intervalKm: 40000, icon: '🛑' },
+  ]
+
+  return (
+    <GlassPanel className="p-5">
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+        <Wrench className="h-4 w-4 text-neon-amber" /> Maintenance Schedule
+      </h3>
+      <div className="space-y-3">
+        {items.map(item => {
+          const currentCycleKm = odometer % item.intervalKm
+          const dueInKm = item.intervalKm - currentCycleKm
+          const overdue = dueInKm <= 0
+          const nearDue = dueInKm < item.intervalKm * 0.1
+
+          return (
+            <div key={item.name} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <span className="text-lg">{item.icon}</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{item.name}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Every {(item.intervalKm / 1000).toFixed(0)}K km</p>
+              </div>
+              {overdue ? (
+                <span className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold bg-neon-red/10 text-neon-red">
+                  <AlertCircle className="h-3 w-3" /> Overdue by {Math.abs(dueInKm).toFixed(0)} km
+                </span>
+              ) : (
+                <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${nearDue ? 'bg-neon-amber/10 text-neon-amber' : 'bg-neon-green/10 text-neon-green'}`}>
+                  Due in {dueInKm.toFixed(0)} km
+                </span>
+              )}
+            </div>
+          )
+        })}
+        {odometer > 0 && (
+          <p className="text-[10px] text-[var(--text-muted)] text-center mt-2">Based on current odometer: {Math.round(odometer).toLocaleString()} km</p>
+        )}
+      </div>
+    </GlassPanel>
+  )
+}
+
 export default function VehicleDetail() {
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
@@ -55,24 +164,6 @@ export default function VehicleDetail() {
     queryKey: ['vehicle', vehicleId],
     queryFn: () => getVehicle(vehicleId),
   })
-
-  // Feature 5: Vehicle nickname editor
-  const [isEditingName, setIsEditingName] = useState(false)
-  const [nickname, setNickname] = useState('')
-  const nicknameInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (vehicle) setNickname(vehicle.display_name || vehicle.vin || '')
-  }, [vehicle])
-
-  useEffect(() => {
-    if (isEditingName && nicknameInputRef.current) nicknameInputRef.current.focus()
-  }, [isEditingName])
-
-  const saveNickname = () => {
-    setIsEditingName(false)
-    // Optimistic UI update — the nickname is stored in local state only
-  }
 
   const { data: stateData, refetch: refetchState } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
@@ -122,25 +213,9 @@ export default function VehicleDetail() {
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              {isEditingName ? (
-                <input
-                  ref={nicknameInputRef}
-                  value={nickname}
-                  onChange={e => setNickname(e.target.value)}
-                  onBlur={saveNickname}
-                  onKeyDown={e => { if (e.key === 'Enter') saveNickname() }}
-                  className="text-3xl font-bold tracking-tight text-[var(--text-primary)] bg-transparent border-b-2 border-neon-cyan/50 outline-none"
-                />
-              ) : (
-                <h1
-                  className="text-3xl font-bold tracking-tight text-[var(--text-primary)] cursor-pointer group flex items-center gap-2"
-                  onClick={() => setIsEditingName(true)}
-                  title="Click to edit nickname"
-                >
-                  {nickname || vehicle?.vin || 'Vehicle'}
-                  <Pencil className="h-4 w-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                </h1>
-              )}
+              <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+                {vehicle?.display_name || vehicle?.vin || 'Vehicle'}
+              </h1>
               <StatusBadge status={status as 'online' | 'offline' | 'asleep' | 'driving' | 'charging' | 'updating'} size="md" />
             </div>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">
@@ -408,12 +483,23 @@ export default function VehicleDetail() {
               </GlassPanel>
             </FadeIn>
           </div>
+
+          {/* Driver Assignment */}
+          <FadeIn delay={0.2}>
+            <DriverAssignment vehicleId={vehicleId} />
+          </FadeIn>
+
+          {/* Maintenance Schedule */}
+          <FadeIn delay={0.25}>
+            <MaintenanceSchedule odometer={state?.odometer ?? 0} />
+          </FadeIn>
         </>
       ) : (
         <FadeIn delay={0.1}>
           <GlassPanel className="p-12 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]" />
-            <div className="relative">
+            <div className="relative flex flex-col items-center">
+              <VehicleModelSilhouette model={vehicle?.model} />
               <TeslaCarViz batteryLevel={50} isCharging={false} isLocked={true} isClimateOn={false} sentryMode={false} speed={0} model={parseModelKey(vehicle?.model)} size="sm" />
               <p className="text-white/80 font-medium mt-4">No live state available</p>
               <p className="text-sm text-[var(--text-muted)] mt-1">The vehicle may be asleep. Try waking it to fetch current data.</p>

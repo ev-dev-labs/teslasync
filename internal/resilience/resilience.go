@@ -45,17 +45,87 @@ type Component struct {
 	TotalChecks   int64           `json:"total_checks"`
 }
 
+// HealthSnapshot captures the system health at a point in time.
+type HealthSnapshot struct {
+	Timestamp  time.Time                    `json:"timestamp"`
+	Overall    string                       `json:"overall"`
+	Components map[string]ComponentStatus   `json:"components"`
+}
+
+const healthHistorySize = 100
+
 // HealthMonitor tracks the status of all system components.
 type HealthMonitor struct {
 	mu         sync.RWMutex
 	components map[string]*Component
+	history    []HealthSnapshot
+	historyIdx int
+	historyFull bool
 }
 
 // NewHealthMonitor creates a new system health monitor.
 func NewHealthMonitor() *HealthMonitor {
 	return &HealthMonitor{
 		components: make(map[string]*Component),
+		history:    make([]HealthSnapshot, healthHistorySize),
 	}
+}
+
+// recordSnapshot stores a health snapshot in the ring buffer.
+func (hm *HealthMonitor) recordSnapshot() {
+	snap := HealthSnapshot{
+		Timestamp:  time.Now(),
+		Overall:    hm.overallStatusLocked().String(),
+		Components: make(map[string]ComponentStatus, len(hm.components)),
+	}
+	for name, comp := range hm.components {
+		snap.Components[name] = comp.Status
+	}
+	hm.history[hm.historyIdx] = snap
+	hm.historyIdx = (hm.historyIdx + 1) % healthHistorySize
+	if hm.historyIdx == 0 {
+		hm.historyFull = true
+	}
+}
+
+// GetHealthHistory returns the last N health snapshots (up to 100).
+func (hm *HealthMonitor) GetHealthHistory() []HealthSnapshot {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+
+	var result []HealthSnapshot
+	if hm.historyFull {
+		result = make([]HealthSnapshot, healthHistorySize)
+		copy(result, hm.history[hm.historyIdx:])
+		copy(result[healthHistorySize-hm.historyIdx:], hm.history[:hm.historyIdx])
+	} else {
+		result = make([]HealthSnapshot, hm.historyIdx)
+		copy(result, hm.history[:hm.historyIdx])
+	}
+	return result
+}
+
+// IsDegraded returns true if any component is not in a healthy state.
+func (hm *HealthMonitor) IsDegraded() bool {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+	for _, comp := range hm.components {
+		if comp.Status != StatusHealthy {
+			return true
+		}
+	}
+	return false
+}
+
+// overallStatusLocked returns worst status (must be called with lock held).
+func (hm *HealthMonitor) overallStatusLocked() ComponentStatus {
+	worst := StatusHealthy
+	for _, c := range hm.components {
+		if c.Status > worst {
+			worst = c.Status
+		}
+	}
+	return worst
 }
 
 // Register registers a component for health tracking.
@@ -81,6 +151,7 @@ func (hm *HealthMonitor) RecordSuccess(name string) {
 	c.LastCheck = time.Now()
 	c.LastError = ""
 	c.TotalChecks++
+	hm.recordSnapshot()
 }
 
 // RecordFailure marks a failed check for a component.
@@ -103,6 +174,7 @@ func (hm *HealthMonitor) RecordFailure(name string, err error) {
 	} else if c.ConsecFails >= 2 {
 		c.Status = StatusDegraded
 	}
+	hm.recordSnapshot()
 }
 
 // GetStatus returns the current status of all components.

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/teslasync/teslasync/internal/database"
@@ -10,6 +11,19 @@ import (
 	"github.com/teslasync/teslasync/internal/resilience"
 	"github.com/teslasync/teslasync/internal/tesla"
 )
+
+// startupComplete tracks whether the application has finished initialization.
+var startupComplete atomic.Bool
+
+// MarkStartupComplete should be called after DB migration and initial sync.
+func MarkStartupComplete() {
+	startupComplete.Store(true)
+}
+
+// IsStartupComplete returns whether the startup process is finished.
+func IsStartupComplete() bool {
+	return startupComplete.Load()
+}
 
 // HealthHandler returns a simple health check.
 func HealthHandler(db *database.DB) http.HandlerFunc {
@@ -22,9 +36,17 @@ func HealthHandler(db *database.DB) http.HandlerFunc {
 	}
 }
 
-// ReadyHandler checks if the service is ready (DB + Tesla auth).
+// ReadyHandler checks if the service is ready (startup complete + DB + Tesla auth).
 func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !IsStartupComplete() {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+				"status": "not_ready",
+				"reason": "startup in progress",
+			})
+			return
+		}
+
 		checks := map[string]string{}
 
 		if err := db.Health(r.Context()); err != nil {

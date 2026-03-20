@@ -86,6 +86,10 @@ func main() {
 	})
 	log.Info().Msg("vehicle poller started (resilient mode)")
 
+	// Mark startup as complete after DB migration + worker start
+	api.MarkStartupComplete()
+	log.Info().Msg("startup complete — readiness probe active")
+
 	// Maintenance worker — periodic data retention cleanup
 	resilience.SafeGoLoop(ctx, "maintenance-worker", func(loopCtx context.Context) {
 		worker.StartMaintenanceWorker(loopCtx, db, cfg)

@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Car,
@@ -27,67 +27,16 @@ import {
   Target,
   Navigation,
   Activity,
-  ChevronUp,
-  History,
-  Keyboard,
 } from 'lucide-react'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
-import { Breadcrumb } from './Breadcrumb'
 import Logo from './Logo'
+import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState } from '../api'
-
-const RECENT_PAGES_KEY = 'teslasync-recent-pages'
-const MAX_RECENT = 5
-
-interface RecentPage {
-  path: string
-  label: string
-}
-
-const pathLabels: Record<string, string> = {
-  '/': 'Dashboard', '/live': 'Live Map', '/vehicles': 'Vehicles',
-  '/drives': 'Drives', '/charging': 'Charging', '/analytics': 'Analytics',
-  '/energy': 'Energy', '/battery': 'Battery Health', '/settings': 'Settings',
-  '/commands': 'Commands', '/alerts': 'Alerts', '/geofences': 'Geofences',
-  '/notifications': 'Notifications', '/chatbot': 'Chatbot',
-  '/tire-pressure': 'Tire Pressure', '/software-updates': 'Software Updates',
-  '/vampire-drain': 'Vampire Drain', '/locations': 'Locations',
-  '/timeline': 'Timeline', '/mileage': 'Mileage',
-  '/projected-range': 'Projected Range', '/efficiency': 'Efficiency',
-  '/trips': 'Trips', '/statistics': 'Statistics',
-  '/system-status': 'System Status', '/roadmap': 'Roadmap',
-}
-
-const navigationShortcuts: Record<string, string> = {
-  'd': '/',
-  'l': '/live',
-  'v': '/vehicles',
-  'c': '/charging',
-  'a': '/analytics',
-  's': '/settings',
-  'g': '/geofences',
-  'e': '/energy',
-  'n': '/notifications',
-}
-
-const shortcutDescriptions: [string, string][] = [
-  ['Ctrl/⌘ + K', 'Command Palette'],
-  ['D', 'Dashboard'],
-  ['L', 'Live Map'],
-  ['V', 'Vehicles'],
-  ['C', 'Charging'],
-  ['A', 'Analytics'],
-  ['S', 'Settings'],
-  ['G', 'Geofences'],
-  ['E', 'Energy'],
-  ['N', 'Notifications'],
-  ['?', 'Keyboard Shortcuts'],
-]
 
 const navSections = [
   {
@@ -150,15 +99,7 @@ const navSections = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [showShortcutHelp, setShowShortcutHelp] = useState(false)
-  const [showScrollTop, setShowScrollTop] = useState(false)
-  const [recentPages, setRecentPages] = useState<RecentPage[]>(() => {
-    try { return JSON.parse(localStorage.getItem(RECENT_PAGES_KEY) || '[]') }
-    catch { return [] }
-  })
   const location = useLocation()
-  const navigate = useNavigate()
-  const mainRef = useRef<HTMLElement>(null)
   const [now, setNow] = useState(Date.now())
 
   // Live data for sidebar
@@ -178,58 +119,6 @@ export default function Layout() {
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(t)
-  }, [])
-
-  // Feature 1 & 10: Global keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-
-      if (e.key === '?') {
-        e.preventDefault()
-        setShowShortcutHelp(prev => !prev)
-        return
-      }
-
-      const path = navigationShortcuts[e.key.toLowerCase()]
-      if (path) {
-        e.preventDefault()
-        navigate(path)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [navigate])
-
-  // Feature 4: Track recent pages
-  useEffect(() => {
-    const label = pathLabels[location.pathname]
-    if (!label) return
-    setRecentPages(prev => {
-      const filtered = prev.filter(p => p.path !== location.pathname)
-      const next = [{ path: location.pathname, label }, ...filtered].slice(0, MAX_RECENT)
-      localStorage.setItem(RECENT_PAGES_KEY, JSON.stringify(next))
-      return next
-    })
-  }, [location.pathname])
-
-  // Feature 12: Scroll-to-top visibility
-  const handleScroll = useCallback(() => {
-    if (mainRef.current) {
-      setShowScrollTop(mainRef.current.scrollTop > 300)
-    }
-  }, [])
-
-  useEffect(() => {
-    const el = mainRef.current
-    if (!el) return
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    return () => el.removeEventListener('scroll', handleScroll)
-  }, [handleScroll])
-
-  const scrollToTop = useCallback(() => {
-    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
   const uptimeStr = (() => {
@@ -331,23 +220,6 @@ export default function Layout() {
               </div>
             </div>
           ))}
-
-          {/* Feature 4: Recent Pages */}
-          {recentPages.length > 1 && (
-            <div>
-              <p className="mb-2 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)] flex items-center gap-1.5">
-                <History className="h-3 w-3" /> Recent
-              </p>
-              <div className="space-y-0.5">
-                {recentPages.slice(1).map(({ path, label }) => (
-                  <NavLink key={path} to={path} onClick={() => setSidebarOpen(false)}
-                    className="flex items-center gap-3 rounded-xl px-4 py-1.5 text-[12px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          )}
         </nav>
 
         {/* Bottom status */}
@@ -393,9 +265,8 @@ export default function Layout() {
         </header>
 
         <ServiceStatusBanner />
-        <main ref={mainRef} className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
-            <Breadcrumb />
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -414,69 +285,8 @@ export default function Layout() {
       {/* Command Palette */}
       <CommandPalette />
 
-      {/* Feature 12: Scroll-to-top button */}
-      <AnimatePresence>
-        {showScrollTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={scrollToTop}
-            className="fixed bottom-6 right-6 z-40 rounded-full p-3 shadow-lg transition-colors"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)' }}
-            title="Scroll to top"
-          >
-            <ChevronUp className="h-5 w-5" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Feature 10: Keyboard Shortcut Help Modal */}
-      <AnimatePresence>
-        {showShortcutHelp && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowShortcutHelp(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className="glass-panel w-full max-w-md mx-4 p-6"
-              style={{ background: 'var(--surface-1)', border: '1px solid var(--glass-border)' }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Keyboard className="h-5 w-5" style={{ color: 'var(--theme-primary)' }} />
-                  <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Keyboard Shortcuts</h2>
-                </div>
-                <button onClick={() => setShowShortcutHelp(false)} className="rounded-lg p-1 hover:bg-white/[0.06] transition-colors">
-                  <X className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                {shortcutDescriptions.map(([key, desc]) => (
-                  <div key={key} className="flex items-center justify-between gap-2 py-1">
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{desc}</span>
-                    <kbd className="rounded px-1.5 py-0.5 text-[10px] font-mono"
-                      style={{ background: 'var(--surface-3)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}>
-                      {key}
-                    </kbd>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-[10px] text-center" style={{ color: 'var(--text-muted)' }}>
-                Press <kbd className="rounded px-1 py-0.5 font-mono" style={{ background: 'var(--surface-3)', border: '1px solid var(--glass-border)' }}>?</kbd> or <kbd className="rounded px-1 py-0.5 font-mono" style={{ background: 'var(--surface-3)', border: '1px solid var(--glass-border)' }}>Esc</kbd> to close
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Onboarding Wizard */}
+      <OnboardingWizard />
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getDrive, getVehiclePositions, getVehicle } from '../api'
 import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
@@ -6,7 +7,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
-  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight,
+  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -43,6 +44,7 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; col
 export default function DriveDetail() {
   const { id } = useParams<{ id: string }>()
   const driveId = Number(id)
+  const [shareMsg, setShareMsg] = useState('')
 
   const { data: drive } = useQuery({
     queryKey: ['drive', driveId],
@@ -197,6 +199,23 @@ export default function DriveDetail() {
               {drive.end_date && ` → ${new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </p>
           </div>
+          <button
+            onClick={() => {
+              const eff = drive.distance > 0 && drive.start_battery_level != null && drive.end_battery_level != null
+                ? ((drive.start_battery_level - drive.end_battery_level) * 0.75 * 1000 / drive.distance).toFixed(0)
+                : '?'
+              const text = `🚗 Drove ${drive.distance.toFixed(1)} km in ${Math.floor(drive.duration_min / 60)}h ${Math.round(drive.duration_min % 60)}m at ${eff} Wh/km efficiency with my Tesla!`
+              navigator.clipboard.writeText(text).then(() => {
+                setShareMsg('Copied!')
+                setTimeout(() => setShareMsg(''), 2000)
+              })
+            }}
+            className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--glass-border)' }}
+          >
+            <Share2 className="h-4 w-4" />
+            {shareMsg || 'Share'}
+          </button>
         </div>
       </FadeIn>
 
