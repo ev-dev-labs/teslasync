@@ -17,7 +17,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
   const { enabled = true, onVehicleUpdate, onAlert, onConnected, onDisconnected } = options
   const [connected, setConnected] = useState(false)
   const sourceRef = useRef<EventSource | null>(null)
-  const reconnectTimer = useRef<number>()
+  const reconnectTimer = useRef<number>(undefined)
   const backoffRef = useRef(1000) // start at 1s, max 30s
 
   const connect = useCallback(() => {
