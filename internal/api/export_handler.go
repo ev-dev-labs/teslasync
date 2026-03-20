@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 	"github.com/teslasync/teslasync/internal/database"
 )
 
@@ -78,16 +79,22 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Disposition", "attachment; filename=teslasync-drives.json")
-		json.NewEncoder(w).Encode(allDrives)
+		if err := json.NewEncoder(w).Encode(allDrives); err != nil {
+			log.Error().Err(err).Msg("encode error")
+			return
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-drives.csv")
 	cw := csv.NewWriter(w)
-	cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"})
+	if err := cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"}); err != nil {
+		log.Error().Err(err).Msg("csv write error")
+		return
+	}
 	for _, d := range allDrives {
-		cw.Write([]string{
+		if err := cw.Write([]string{
 			strconv.FormatInt(d.ID, 10),
 			strconv.FormatInt(d.VehicleID, 10),
 			d.StartDate,
@@ -95,7 +102,10 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 			fmt.Sprintf("%.2f", d.Distance),
 			fmt.Sprintf("%.1f", d.Duration),
 			fmt.Sprintf("%.1f", d.SpeedMax),
-		})
+		}); err != nil {
+			log.Error().Err(err).Msg("csv write error")
+			return
+		}
 	}
 	cw.Flush()
 }
@@ -147,16 +157,22 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Disposition", "attachment; filename=teslasync-charging.json")
-		json.NewEncoder(w).Encode(allSessions)
+		if err := json.NewEncoder(w).Encode(allSessions); err != nil {
+			log.Error().Err(err).Msg("encode error")
+			return
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-charging.csv")
 	cw := csv.NewWriter(w)
-	cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"})
+	if err := cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"}); err != nil {
+		log.Error().Err(err).Msg("csv write error")
+		return
+	}
 	for _, s := range allSessions {
-		cw.Write([]string{
+		if err := cw.Write([]string{
 			strconv.FormatInt(s.ID, 10),
 			strconv.FormatInt(s.VehicleID, 10),
 			s.StartDate,
@@ -166,7 +182,10 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 			strconv.Itoa(s.EndBattery),
 			fmt.Sprintf("%.1f", s.ChargerPower),
 			fmt.Sprintf("%.1f", s.Duration),
-		})
+		}); err != nil {
+			log.Error().Err(err).Msg("csv write error")
+			return
+		}
 	}
 	cw.Flush()
 }

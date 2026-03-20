@@ -3,10 +3,11 @@ import { getAlerts, markAlertRead, getAlertRules, updateAlertRule, Alert, AlertR
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
-  Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
-  Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings, CheckCircle, Clock, Pencil
+  Bell, BellOff, AlertTriangle, Info, AlertCircle, AlertOctagon, MapPin, Battery,
+  Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings, CheckCircle, Clock, Pencil,
+  Search, VolumeX, Lock
 } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useToast } from '../components/Toast'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
@@ -14,7 +15,7 @@ import clsx from 'clsx'
 const severityConfig = {
   info: { icon: Info, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20', dot: 'bg-neon-cyan', hex: '#00f0ff' },
   warning: { icon: AlertTriangle, color: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', dot: 'bg-neon-amber', hex: '#f59e0b' },
-  critical: { icon: AlertCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20', dot: 'bg-neon-red', hex: '#ef4444' },
+  critical: { icon: AlertOctagon, color: 'text-neon-red', bg: 'bg-neon-red/10', border: 'border-neon-red/20', dot: 'bg-neon-red', hex: '#ef4444' },
 }
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -26,6 +27,51 @@ const typeIcons: Record<string, React.ElementType> = {
   speed_limit: Gauge,
   temperature: Thermometer,
   software_update: Settings,
+  vehicle_unlocked: Lock,
+  tire_pressure_low: AlertCircle,
+}
+
+const allAlertTypes = [
+  'low_battery', 'charging_complete', 'geofence_enter', 'geofence_exit',
+  'sentry_event', 'speed_limit', 'temperature', 'software_update',
+  'vehicle_unlocked', 'tire_pressure_low',
+] as const
+
+// --- Muted alerts helpers ---
+const MUTED_STORAGE_KEY = 'teslasync-muted-alerts'
+
+interface MutedAlerts {
+  [vehicleId_alertType: string]: number // expiresAt timestamp
+}
+
+function getMutedAlerts(): MutedAlerts {
+  try {
+    const raw = localStorage.getItem(MUTED_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as MutedAlerts
+    const now = Date.now()
+    const cleaned: MutedAlerts = {}
+    for (const [key, expiresAt] of Object.entries(parsed)) {
+      if (expiresAt > now) cleaned[key] = expiresAt
+    }
+    return cleaned
+  } catch {
+    return {}
+  }
+}
+
+function setMutedAlerts(muted: MutedAlerts): void {
+  localStorage.setItem(MUTED_STORAGE_KEY, JSON.stringify(muted))
+}
+
+function muteAlertKey(vehicleId: number, alertType: string): string {
+  return `${vehicleId}_${alertType}`
+}
+
+function isAlertMuted(alert: Alert, muted: MutedAlerts): boolean {
+  const key = muteAlertKey(alert.vehicle_id, alert.type)
+  const expiresAt = muted[key]
+  return expiresAt !== undefined && expiresAt > Date.now()
 }
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
@@ -43,27 +89,30 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   )
 }
 
-function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void }) {
+function AlertCard({ alert, onMarkRead, onMute, isMuted }: { alert: Alert; onMarkRead: () => void; onMute: () => void; isMuted: boolean }) {
   const sev = severityConfig[alert.severity]
-  const Icon = typeIcons[alert.type] || Bell
-  const timeAgo = getTimeAgo(alert.created_at)
+  const TypeIcon = typeIcons[alert.type] || Bell
+  const SevIcon = sev.icon
 
   return (
     <div className={clsx(
       'glass-panel p-4 flex items-start gap-4 transition-all duration-200 group',
-      !alert.read && `${sev.border} ${sev.bg.replace('/10', '/5')}`
+      isMuted && 'opacity-50',
+      !alert.read && !isMuted && `${sev.border} ${sev.bg.replace('/10', '/5')}`
     )}>
       {/* Timeline connector dot */}
       <div className="flex flex-col items-center gap-1 shrink-0">
         <div className={clsx('rounded-xl p-2.5 ring-1', sev.bg, sev.border)}>
-          <Icon className={clsx('h-4 w-4', sev.color)} />
+          <TypeIcon className={clsx('h-4 w-4', sev.color)} />
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className={clsx('text-sm font-medium', alert.read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
+            <p className={clsx('text-sm font-medium flex items-center gap-1.5', alert.read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
+              <SevIcon className={clsx('h-3.5 w-3.5 shrink-0', sev.color)} />
               {alert.title}
+              {isMuted && <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-[var(--text-muted)] font-semibold ml-1">muted</span>}
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2">{alert.message}</p>
           </div>
@@ -72,11 +121,16 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
           )}
         </div>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-[10px] text-gray-600 flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{timeAgo}</span>
+          <span className="text-[10px] text-gray-600 flex items-center gap-1" title={new Date(alert.created_at).toLocaleString()}>
+            <Clock className="h-2.5 w-2.5" />{getTimeAgo(alert.created_at)}
+          </span>
           <span className={clsx('text-[10px] px-1.5 py-0.5 rounded-full font-medium', sev.bg, sev.color)}>
             {alert.severity}
           </span>
           <span className="text-[10px] text-gray-600">{alert.type.replace(/_/g, ' ')}</span>
+          <button onClick={onMute} className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-amber transition-colors opacity-0 group-hover:opacity-100" title={isMuted ? 'Unmute this alert type' : 'Mute this alert type for 24h'}>
+            <VolumeX className="h-3 w-3" /> {isMuted ? 'Unmute' : 'Mute 24h'}
+          </button>
           {!alert.read && (
             <button onClick={onMarkRead} className="ml-auto flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors opacity-0 group-hover:opacity-100">
               <Eye className="h-3 w-3" /> Mark read
@@ -308,6 +362,10 @@ export default function Alerts() {
   const toast = useToast()
   const [tab, setTab] = useState<'alerts' | 'rules'>('alerts')
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all')
+  const [searchText, setSearchText] = useState('')
+  const [severityFilter, setSeverityFilter] = useState<'all' | 'info' | 'warning' | 'critical'>('all')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [mutedAlerts, setMutedAlertsState] = useState<MutedAlerts>(() => getMutedAlerts())
 
   const { data: alerts, isLoading: alertsLoading } = useQuery({
     queryKey: ['alerts'],
@@ -340,11 +398,43 @@ export default function Alerts() {
     },
   })
 
-  const filteredAlerts = alerts?.filter(a => {
-    if (filter === 'unread') return !a.read
-    if (filter === 'critical') return a.severity === 'critical'
-    return true
-  }) ?? []
+  const handleMuteToggle = useCallback((alert: Alert) => {
+    const key = muteAlertKey(alert.vehicle_id, alert.type)
+    const updated = { ...mutedAlerts }
+    if (isAlertMuted(alert, updated)) {
+      delete updated[key]
+      toast.info(`Unmuted ${alert.type.replace(/_/g, ' ')} alerts`)
+    } else {
+      updated[key] = Date.now() + 24 * 60 * 60 * 1000
+      toast.info(`Muted ${alert.type.replace(/_/g, ' ')} alerts for 24h`)
+    }
+    setMutedAlerts(updated)
+    setMutedAlertsState(updated)
+  }, [mutedAlerts, toast])
+
+  const activeMuteCount = useMemo(() => {
+    const now = Date.now()
+    return Object.values(mutedAlerts).filter(exp => exp > now).length
+  }, [mutedAlerts])
+
+  const filteredAlerts = useMemo(() => {
+    let list = alerts ?? []
+    // Quick filter tabs
+    if (filter === 'unread') list = list.filter(a => !a.read)
+    if (filter === 'critical') list = list.filter(a => a.severity === 'critical')
+    // Severity dropdown
+    if (severityFilter !== 'all') list = list.filter(a => a.severity === severityFilter)
+    // Type dropdown
+    if (typeFilter !== 'all') list = list.filter(a => a.type === typeFilter)
+    // Text search
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase()
+      list = list.filter(a => a.title.toLowerCase().includes(q) || a.message.toLowerCase().includes(q))
+    }
+    // Filter out muted alerts
+    list = list.filter(a => !isAlertMuted(a, mutedAlerts))
+    return list
+  }, [alerts, filter, severityFilter, typeFilter, searchText, mutedAlerts])
 
   const unreadCount = alerts?.filter(a => !a.read).length ?? 0
   const criticalCount = alerts?.filter(a => a.severity === 'critical' && !a.read).length ?? 0
@@ -408,6 +498,12 @@ export default function Alerts() {
         subtitle="Monitor events, configure alert rules, and stay informed"
         actions={
           <div className="flex items-center gap-3">
+            {activeMuteCount > 0 && (
+              <span className="flex items-center gap-1.5 rounded-full bg-neon-amber/10 px-3 py-1 text-xs font-medium text-neon-amber">
+                <VolumeX className="h-3 w-3" />
+                {activeMuteCount} muted
+              </span>
+            )}
             {unreadCount > 0 && (
               <span className="flex items-center gap-1.5 rounded-full bg-neon-cyan/10 px-3 py-1 text-xs font-medium text-neon-cyan">
                 <span className="h-1.5 w-1.5 rounded-full bg-neon-cyan animate-pulse" />
@@ -416,7 +512,7 @@ export default function Alerts() {
             )}
             {criticalCount > 0 && (
               <span className="flex items-center gap-1.5 rounded-full bg-neon-red/10 px-3 py-1 text-xs font-medium text-neon-red">
-                <AlertCircle className="h-3 w-3" />
+                <AlertOctagon className="h-3 w-3" />
                 {criticalCount} critical
               </span>
             )}
@@ -540,17 +636,56 @@ export default function Alerts() {
       {tab === 'alerts' && (
         <>
           <FadeIn delay={0.05}>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-[var(--text-muted)]" />
-              <TabNav
-                tabs={[
-                  { key: 'all', label: `All (${totalCount})` },
-                  { key: 'unread', label: `Unread (${unreadCount})` },
-                  { key: 'critical', label: `Critical (${criticalCount})` },
-                ]}
-                active={filter}
-                onChange={k => setFilter(k as 'all' | 'unread' | 'critical')}
-              />
+            <div className="space-y-3">
+              {/* Search and filter bar */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    value={searchText}
+                    onChange={e => setSearchText(e.target.value)}
+                    placeholder="Search alerts..."
+                    className="w-full rounded-lg border pl-9 pr-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <select
+                  value={severityFilter}
+                  onChange={e => setSeverityFilter(e.target.value as 'all' | 'info' | 'warning' | 'critical')}
+                  className="rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
+                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                >
+                  <option value="all">All Severities</option>
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="critical">Critical</option>
+                </select>
+                <select
+                  value={typeFilter}
+                  onChange={e => setTypeFilter(e.target.value)}
+                  className="rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
+                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                >
+                  <option value="all">All Types</option>
+                  {allAlertTypes.map(t => (
+                    <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Quick filter tabs */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-[var(--text-muted)]" />
+                <TabNav
+                  tabs={[
+                    { key: 'all', label: `All (${totalCount})` },
+                    { key: 'unread', label: `Unread (${unreadCount})` },
+                    { key: 'critical', label: `Critical (${criticalCount})` },
+                  ]}
+                  active={filter}
+                  onChange={k => setFilter(k as 'all' | 'unread' | 'critical')}
+                />
+              </div>
             </div>
           </FadeIn>
 
@@ -562,7 +697,12 @@ export default function Alerts() {
             <StaggerContainer className="space-y-2">
               {filteredAlerts.map(a => (
                 <StaggerItem key={a.id}>
-                  <AlertCard alert={a} onMarkRead={() => markReadMut.mutate(a.id)} />
+                  <AlertCard
+                    alert={a}
+                    onMarkRead={() => markReadMut.mutate(a.id)}
+                    onMute={() => handleMuteToggle(a)}
+                    isMuted={isAlertMuted(a, mutedAlerts)}
+                  />
                 </StaggerItem>
               ))}
             </StaggerContainer>
