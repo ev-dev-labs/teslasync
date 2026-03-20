@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: TeslaSync PostgreSQL
+    uid: DS_TESLASYNC_POSTGRESQL
     type: postgres
     access: proxy
     url: ${POSTGRES_HOST}:${POSTGRES_PORT}
