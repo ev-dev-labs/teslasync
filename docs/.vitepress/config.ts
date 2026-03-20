@@ -14,6 +14,7 @@ export default withMermaid(defineConfig({
     ['meta', { name: 'og:type', content: 'website' }],
     ['meta', { name: 'og:title', content: 'TeslaSync Docs' }],
     ['meta', { name: 'og:description', content: 'Documentation for TeslaSync - Tesla Fleet Intelligence Platform' }],
+    ['script', { src: '/teslasync/particles.js', defer: 'true' }],
   ],
 
   themeConfig: {
