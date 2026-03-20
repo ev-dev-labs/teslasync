@@ -106,3 +106,104 @@ jobs:
             ${{ env.WEB_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  publish-helm:
+    name: Publish Helm Chart
+    needs: auto-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Package chart
+        run: |
+          helm package helm/teslasync \
+            --version ${{ needs.auto-release.outputs.version }} \
+            --app-version ${{ needs.auto-release.outputs.version }}
+
+      - name: Push chart to OCI registry
+        run: helm push teslasync-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
+
+  create-release:
+    name: Create GitHub Release
+    needs: [auto-release, publish-images, publish-helm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          TAG="${{ needs.auto-release.outputs.new_tag }}"
+          VERSION="${{ needs.auto-release.outputs.version }}"
+          PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TAG}$" | head -1)
+
+          if [ -n "$PREV" ]; then
+            CHANGELOG=$(git log "${PREV}..HEAD" --pretty=format:"- %s (@%an)" --no-merges)
+            COMPARE="**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (@%an)" --no-merges -20)
+            COMPARE=""
+          fi
+
+          cat > release-notes.md << NOTES_EOF
+          ## 🚀 TeslaSync ${TAG}
+
+          ### 📦 Docker Images
+
+          \`\`\`bash
+          # Backend API
+          docker pull ghcr.io/${{ github.repository }}-api:${VERSION}
+
+          # Web Frontend
+          docker pull ghcr.io/${{ github.repository }}-web:${VERSION}
+          \`\`\`
+
+          ### ⎈ Helm Chart
+
+          \`\`\`bash
+          helm install teslasync oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync --version ${VERSION}
+          \`\`\`
+
+          ### 🐳 Docker Compose
+
+          Update your \`docker-compose.yml\` image tags to \`${VERSION}\`:
+          \`\`\`yaml
+          services:
+            teslasync:
+              image: ghcr.io/${{ github.repository }}-api:${VERSION}
+            web:
+              image: ghcr.io/${{ github.repository }}-web:${VERSION}
+          \`\`\`
+
+          ### 📝 Changes
+
+          ${CHANGELOG}
+
+          ${COMPARE}
+
+          ### 📋 Assets
+
+          | Asset | Tag |
+          |-------|-----|
+          | Backend Image | \`ghcr.io/${{ github.repository }}-api:${VERSION}\` |
+          | Web Image | \`ghcr.io/${{ github.repository }}-web:${VERSION}\` |
+          | Helm Chart | \`oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync:${VERSION}\` |
+          NOTES_EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.auto-release.outputs.new_tag }}
+          name: TeslaSync ${{ needs.auto-release.outputs.new_tag }}
+          body_path: release-notes.md
+          generate_release_notes: false
