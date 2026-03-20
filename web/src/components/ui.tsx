@@ -3,6 +3,18 @@ import { type ReactNode } from 'react'
 import clsx from 'clsx'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar } from 'lucide-react'
 
+// === Sort header for table column sorting ===
+
+export function SortHeader({ label, active, dir, onClick }: { label: string; active: boolean; dir: 'asc' | 'desc'; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex items-center gap-1 text-[11px] font-medium hover:text-[var(--theme-primary)]"
+      style={{ color: active ? 'var(--theme-primary)' : 'var(--text-secondary)' }}>
+      {label}
+      {active && <span>{dir === 'asc' ? '↑' : '↓'}</span>}
+    </button>
+  )
+}
+
 // === Animated containers ===
 
 /** Fades in children with a slide-up animation. Optional delay for stagger orchestration. */

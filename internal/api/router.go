@@ -77,6 +77,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	mileageHandler := NewMileageHandler(db)
 	tripHandler := NewTripHandler(db)
 	vehicleStateHandler := NewVehicleStateHandler(db)
+	importHandler := NewImportHandler(db)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -212,6 +213,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Export
 		r.Get("/export/{type}", NewExportHandler(db))
+
+		// Import
+		r.Post("/import/drives", importHandler.ImportDrives)
+		r.Post("/import/charging", importHandler.ImportCharging)
+
+		// Export Notification Logs
+		r.Get("/export/notifications", ExportNotificationLogs(db))
+
+		// System
+		r.Get("/system/database", DatabaseSize(db))
+		r.Get("/system/info", SystemInfo)
 	})
 
 	// Serve frontend static files (SPA)

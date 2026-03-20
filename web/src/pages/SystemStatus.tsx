@@ -2,10 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
-  CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
+  CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive, Layers,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
+import { getDatabaseInfo, getSystemInfo, type DatabaseInfo, type SystemInfoData } from '../api'
 import clsx from 'clsx'
 
 interface ComponentInfo {
@@ -173,6 +174,18 @@ export default function SystemStatus() {
     refetchInterval: 15_000,
   })
 
+  const { data: dbInfo } = useQuery<DatabaseInfo>({
+    queryKey: ['database-info'],
+    queryFn: getDatabaseInfo,
+    refetchInterval: 30_000,
+  })
+
+  const { data: sysInfo } = useQuery<SystemInfoData>({
+    queryKey: ['system-info'],
+    queryFn: getSystemInfo,
+    refetchInterval: 30_000,
+  })
+
   useEffect(() => {
     if (dataUpdatedAt) setLastChecked(new Date(dataUpdatedAt))
   }, [dataUpdatedAt])
@@ -309,6 +322,56 @@ export default function SystemStatus() {
         </StaggerContainer>
       )}
 
+      {/* Database & Runtime Info */}
+      <FadeIn delay={0.12}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {dbInfo && (
+            <>
+              <GlassPanel className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-cyan/10">
+                  <Database className="h-5 w-5 text-neon-cyan" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Database Size</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{dbInfo.database_size}</p>
+                </div>
+              </GlassPanel>
+              <GlassPanel className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-purple/10">
+                  <Layers className="h-5 w-5 text-neon-purple" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Tables</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]"><AnimatedNumber value={dbInfo.table_count} /></p>
+                </div>
+              </GlassPanel>
+            </>
+          )}
+          {sysInfo && (
+            <>
+              <GlassPanel className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-green/10">
+                  <Activity className="h-5 w-5 text-neon-green" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Goroutines</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]"><AnimatedNumber value={sysInfo.goroutines} /></p>
+                </div>
+              </GlassPanel>
+              <GlassPanel className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-neon-amber/10">
+                  <Clock className="h-5 w-5 text-neon-amber" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Uptime</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{sysInfo.uptime_seconds < 3600 ? `${Math.floor(sysInfo.uptime_seconds / 60)}m` : `${Math.floor(sysInfo.uptime_seconds / 3600)}h ${Math.floor((sysInfo.uptime_seconds % 3600) / 60)}m`}</p>
+                </div>
+              </GlassPanel>
+            </>
+          )}
+        </div>
+      </FadeIn>
+
       {/* System Info */}
       <FadeIn delay={0.15}>
         <GlassPanel className="p-5">
@@ -321,6 +384,11 @@ export default function SystemStatus() {
               { label: 'Auto Refresh', value: '15 seconds', icon: RefreshCw },
               { label: 'Last Check', value: lastChecked.toLocaleTimeString(), icon: Clock },
               { label: 'Connection', value: navigator.onLine ? 'Online' : 'Offline', icon: navigator.onLine ? Wifi : WifiOff },
+              ...(sysInfo ? [
+                { label: 'Go Version', value: sysInfo.go_version, icon: Cpu },
+                { label: 'Platform', value: `${sysInfo.os}/${sysInfo.arch}`, icon: HardDrive },
+                { label: 'App Version', value: `v${sysInfo.version}`, icon: Server },
+              ] : []),
             ].map(item => (
               <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                 <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
