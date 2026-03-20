@@ -374,3 +374,33 @@ body {
   background: white;
   color: #0f172a;
 }
+
+/* === PRINT STYLES (Feature 5) === */
+@media print {
+  nav, aside, .sidebar, .command-palette, button, .toast-container { display: none !important; }
+  main { margin: 0 !important; padding: 1rem !important; width: 100% !important; }
+  .glass-panel, .glass-card { background: white !important; border: 1px solid #ddd !important; backdrop-filter: none !important; }
+  * { color: #000 !important; }
+  .recharts-wrapper { page-break-inside: avoid; }
+}
+
+/* === DARK MODE AUTO-SWITCH (Feature 6) === */
+@media (prefers-color-scheme: light) {
+  :root:not(.light-mode):not([style*="--bg"]) {
+    --bg: #f8fafc;
+    --surface-1: #ffffff;
+    --surface-2: #f1f5f9;
+    --surface-3: #e2e8f0;
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    color-scheme: light;
+  }
+}
+
+/* === TABLE ROW HOVER (Feature 11) === */
+tr:hover td {
+  background: var(--surface-2) !important;
+  transition: background 0.15s ease;
+}

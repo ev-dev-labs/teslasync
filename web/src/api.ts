@@ -618,3 +618,49 @@ export const getStateSummary = (vehicleId: number, days = 30, start?: string) =>
 /** Fetches daily state breakdown showing minutes in each state per day. */
 export const getDailyStateBreakdown = (vehicleId: number, days = 30, start?: string) =>
   request<DailyStateBreakdown[]>(`/states/daily?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)
+
+// === Import ===
+
+/** Response type from CSV import endpoints. */
+export interface ImportResult {
+  imported: number
+  errors: number
+}
+
+/** Imports drive data from a CSV file. */
+export const importDrives = (file: File): Promise<ImportResult> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return resilientFetch<ImportResult>('/import/drives', { method: 'POST', body: formData })
+}
+
+/** Imports charging data from a CSV file. */
+export const importCharging = (file: File): Promise<ImportResult> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return resilientFetch<ImportResult>('/import/charging', { method: 'POST', body: formData })
+}
+
+// === System ===
+
+/** Database size and table count information. */
+export interface DatabaseInfo {
+  database_size: string
+  table_count: number
+}
+
+/** Fetches database size and table count. */
+export const getDatabaseInfo = () => request<DatabaseInfo>('/system/database')
+
+/** System runtime information. */
+export interface SystemInfoData {
+  version: string
+  go_version: string
+  os: string
+  arch: string
+  goroutines: number
+  uptime_seconds: number
+}
+
+/** Fetches system runtime info (version, uptime, goroutines, etc.). */
+export const getSystemInfo = () => request<SystemInfoData>('/system/info')
