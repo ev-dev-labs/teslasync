@@ -15,7 +15,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Total Distance",
@@ -23,7 +23,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "decimals": 1, "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Total Duration",
@@ -31,7 +31,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (end_time - start_time))/3600)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id AND end_time IS NOT NULL AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (end_date - start_date))/3600)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id AND end_date IS NOT NULL AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Avg Speed",
@@ -39,7 +39,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "velocitykmh", "decimals": 0, "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(avg_speed)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(avg_speed)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Max Speed",
@@ -47,7 +47,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "velocitykmh", "decimals": 0, "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(MAX(max_speed)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(MAX(max_speed)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Avg Efficiency",
@@ -55,7 +55,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "Wh/km", "min": 100, "max": 300, "thresholds": { "steps": [{ "color": "#22C55E", "value": null }, { "color": "#F59E0B", "value": 170 }, { "color": "#EF4444", "value": 220 }] } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(CASE WHEN distance > 0 THEN (start_rated_range - end_rated_range) * 1000 / NULLIF(distance, 0) ELSE NULL END)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND distance > 0 AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(CASE WHEN distance > 0 THEN (start_rated_range - end_rated_range) * 1000 / NULLIF(distance, 0) ELSE NULL END)::numeric), 0) FROM drives WHERE vehicle_id = $vehicle_id AND distance > 0 AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Drives",
@@ -75,7 +75,7 @@
         ]
       },
       "options": { "sortBy": [{ "displayName": "Date", "desc": true }] },
-      "targets": [{ "rawSql": "SELECT d.start_time AS \"Date\", COALESCE(sa.display_name, sa.city, 'Unknown') AS \"From\", COALESCE(ea.display_name, ea.city, 'Unknown') AS \"To\", TO_CHAR(COALESCE(d.end_time, NOW()) - d.start_time, 'HH24:MI') AS \"Duration\", d.distance AS \"Distance\", ROUND(d.avg_speed::numeric) AS \"Avg Speed\", ROUND(d.max_speed::numeric) AS \"Max Speed\", d.start_battery_level AS \"Start %\", d.end_battery_level AS \"End %\", ROUND((d.start_rated_range - d.end_rated_range)::numeric) AS \"Range Used\", d.outside_temp_avg AS \"Temp\" FROM drives d LEFT JOIN addresses sa ON d.start_address_id = sa.id LEFT JOIN addresses ea ON d.end_address_id = ea.id WHERE d.vehicle_id = $vehicle_id AND $__timeFilter(d.start_time) ORDER BY d.start_time DESC", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT d.start_date AS \"Date\", COALESCE(sa.display_name, sa.city, 'Unknown') AS \"From\", COALESCE(ea.display_name, ea.city, 'Unknown') AS \"To\", TO_CHAR(COALESCE(d.end_date, NOW()) - d.start_date, 'HH24:MI') AS \"Duration\", d.distance AS \"Distance\", ROUND(d.avg_speed::numeric) AS \"Avg Speed\", ROUND(d.max_speed::numeric) AS \"Max Speed\", d.start_battery_level AS \"Start %\", d.end_battery_level AS \"End %\", ROUND((d.start_rated_range - d.end_rated_range)::numeric) AS \"Range Used\", d.outside_temp_avg AS \"Temp\" FROM drives d LEFT JOIN addresses sa ON d.start_address_id = sa.id LEFT JOIN addresses ea ON d.end_address_id = ea.id WHERE d.vehicle_id = $vehicle_id AND $__timeFilter(d.start_date) ORDER BY d.start_date DESC", "format": "table", "refId": "A" }]
     },
     {
       "title": "Daily Distance",
@@ -83,7 +83,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "custom": { "fillOpacity": 30, "gradientMode": "scheme", "drawStyle": "bars" }, "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT date_trunc('day', start_time) AS time, SUM(distance) AS \"Distance\" FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT date_trunc('day', start_date) AS time, SUM(distance) AS \"Distance\" FROM drives WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
     },
     {
       "title": "Speed Distribution",
@@ -92,7 +92,7 @@
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
       "options": { "bucketSize": 10 },
-      "targets": [{ "rawSql": "SELECT avg_speed AS \"Average Speed (km/h)\" FROM drives WHERE vehicle_id = $vehicle_id AND avg_speed > 0 AND $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT avg_speed AS \"Average Speed (km/h)\" FROM drives WHERE vehicle_id = $vehicle_id AND avg_speed > 0 AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Drive Map",

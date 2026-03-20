@@ -38,7 +38,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(cs.cost)*100/NULLIF(SUM(dm.distance_km),0))::numeric, 2), 0) FROM daily_mileage dm LEFT JOIN charging_sessions cs ON cs.vehicle_id = dm.vehicle_id AND DATE(cs.start_time) = dm.date WHERE dm.vehicle_id = $vehicle_id AND $__timeFilter(dm.date)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(cs.cost)*100/NULLIF(SUM(dm.distance_km),0))::numeric, 2), 0) FROM daily_mileage dm LEFT JOIN charging_sessions cs ON cs.vehicle_id = dm.vehicle_id AND DATE(cs.start_date) = dm.date WHERE dm.vehicle_id = $vehicle_id AND $__timeFilter(dm.date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Daily Efficiency (Wh/km)",

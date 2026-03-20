@@ -114,7 +114,7 @@
       "type": "table",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "targets": [{ "rawSql": "SELECT v.display_name AS \"Vehicle\", cs.start_date AS \"Date\", ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh\", cs.start_battery_level || ' > ' || cs.end_battery_level || '%' AS \"Battery\", ROUND(cs.cost::numeric, 2) AS \"Cost\", CASE WHEN cs.fast_charger_type != '' THEN 'DC' ELSE 'AC' END AS \"Type\" FROM charging_sessions cs JOIN vehicles v ON v.id = cs.vehicle_id ORDER BY cs.start_date DESC LIMIT 15", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT v.display_name AS \"Vehicle\", cs.start_date AS \"Date\", ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh\", cs.start_battery_level || ' > ' || cs.end_battery_level || '%' AS \"Battery\", ROUND(cs.cost::numeric, 2) AS \"Cost\", CASE WHEN cs.fast_fast_charger_type != '' THEN 'DC' ELSE 'AC' END AS \"Type\" FROM charging_sessions cs JOIN vehicles v ON v.id = cs.vehicle_id ORDER BY cs.start_date DESC LIMIT 15", "format": "table", "refId": "A" }]
     },
     {
       "title": "Fleet Map",

@@ -78,7 +78,7 @@
       "gridPos": { "h": 3, "w": 4, "x": 20, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND (charger_type IS NULL OR charger_type != 'DC')", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND (fast_charger_type IS NULL OR fast_charger_type != 'DC')", "format": "table", "refId": "A" }]
     },
     {
       "title": "DC Energy",
@@ -86,7 +86,7 @@
       "gridPos": { "h": 3, "w": 4, "x": 20, "y": 3 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND charger_type = 'DC'", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND fast_charger_type = 'DC'", "format": "table", "refId": "A" }]
     },
     {
       "title": "Battery Capacity Over Time",
@@ -119,8 +119,8 @@
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10, "drawStyle": "bars" } }, "overrides": [{ "matcher": { "id": "byName", "options": "AC Sessions" }, "properties": [{ "id": "color", "value": { "fixedColor": "#22C55E", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "DC Sessions" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F59E0B", "mode": "fixed" } }] }] },
       "targets": [
-        { "rawSql": "SELECT date_trunc('week', start_time) AS time, COUNT(*) FILTER (WHERE charger_type IS NULL OR charger_type != 'DC') AS \"AC Sessions\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" },
-        { "rawSql": "SELECT date_trunc('week', start_time) AS time, COUNT(*) FILTER (WHERE charger_type = 'DC') AS \"DC Sessions\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "B" }
+        { "rawSql": "SELECT date_trunc('week', start_date) AS time, COUNT(*) FILTER (WHERE fast_charger_type IS NULL OR fast_charger_type != 'DC') AS \"AC Sessions\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" },
+        { "rawSql": "SELECT date_trunc('week', start_date) AS time, COUNT(*) FILTER (WHERE fast_charger_type = 'DC') AS \"DC Sessions\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "B" }
       ]
     },
     {

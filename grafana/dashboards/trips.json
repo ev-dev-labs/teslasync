@@ -30,7 +30,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_energy_kwh)::numeric, 1), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_charge_energy_added)::numeric, 1), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Total Trip Cost",
@@ -53,7 +53,7 @@
       "type": "table",
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "targets": [{ "rawSql": "SELECT COALESCE(name, 'Trip #' || id::text) AS name, start_date, end_date, ROUND(total_distance_km::numeric, 1) AS distance_km, ROUND(total_energy_kwh::numeric, 1) AS energy_kwh, ROUND(total_cost::numeric, 2) AS cost, drive_count, charge_count FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(name, 'Trip #' || id::text) AS name, start_date, end_date, ROUND(total_distance_km::numeric, 1) AS distance_km, ROUND(total_charge_energy_added::numeric, 1) AS charge_energy_added, ROUND(total_cost::numeric, 2) AS cost, drive_count, charge_count FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
     }
   ],
   "templating": {

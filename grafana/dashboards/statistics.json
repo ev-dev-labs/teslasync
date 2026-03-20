@@ -30,7 +30,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(energy_added_kwh)::numeric, 1), 0) FROM charging_sessions WHERE $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(energy_added_kwh)::numeric, 1), 0) FROM charging_sessions WHERE $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Total Drives",
@@ -46,7 +46,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "decimals": 0, "color": { "fixedColor": "#ec4899", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM charging_sessions WHERE $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COUNT(*) FROM charging_sessions WHERE $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Total Cost",
@@ -54,7 +54,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#06b6d4", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions WHERE $__timeFilter(start_time)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions WHERE $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "State Distribution",
@@ -72,7 +72,7 @@
         ]
       },
       "options": { "legend": { "displayMode": "table", "placement": "right" }, "pieType": "donut", "reduceOptions": { "calcs": ["sum"] } },
-      "targets": [{ "rawSql": "SELECT state, COUNT(*) AS count FROM vehicle_states WHERE $__timeFilter(start_time) GROUP BY state ORDER BY count DESC", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT state, COUNT(*) AS count FROM vehicle_states WHERE $__timeFilter(start_date) GROUP BY state ORDER BY count DESC", "format": "table", "refId": "A" }]
     },
     {
       "title": "Vehicle Comparison (Distance km)",
@@ -81,7 +81,7 @@
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "km", "color": { "mode": "palette-classic" } } },
       "options": { "orientation": "horizontal", "showValue": "always" },
-      "targets": [{ "rawSql": "SELECT COALESCE(v.display_name, v.vin) AS vehicle, ROUND(SUM(dm.distance_km)::numeric) AS distance, ROUND(SUM(dm.energy_used_kwh)::numeric, 1) AS energy_kwh FROM daily_mileage dm JOIN vehicles v ON v.id = dm.vehicle_id WHERE $__timeFilter(dm.date) GROUP BY v.display_name, v.vin ORDER BY distance DESC", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(v.display_name, v.vin) AS vehicle, ROUND(SUM(dm.distance_km)::numeric) AS distance, ROUND(SUM(dm.energy_used_kwh)::numeric, 1) AS charge_energy_added FROM daily_mileage dm JOIN vehicles v ON v.id = dm.vehicle_id WHERE $__timeFilter(dm.date) GROUP BY v.display_name, v.vin ORDER BY distance DESC", "format": "table", "refId": "A" }]
     },
     {
       "title": "Monthly Charging Trend",
@@ -91,11 +91,11 @@
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "barWidthFactor": 0.6 } },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "energy_kwh" }, "properties": [{ "id": "unit", "value": "kwatth" }, { "id": "color", "value": { "fixedColor": "#10b981" } }] },
+          { "matcher": { "id": "byName", "options": "charge_energy_added" }, "properties": [{ "id": "unit", "value": "kwatth" }, { "id": "color", "value": { "fixedColor": "#10b981" } }] },
           { "matcher": { "id": "byName", "options": "cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "color", "value": { "fixedColor": "#f59e0b" } }, { "id": "custom.axisPlacement", "value": "right" }] }
         ]
       },
-      "targets": [{ "rawSql": "SELECT DATE_TRUNC('month', start_time) AS time, ROUND(SUM(energy_added_kwh)::numeric, 1) AS energy_kwh, ROUND(SUM(cost)::numeric, 2) AS cost FROM charging_sessions WHERE $__timeFilter(start_time) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT DATE_TRUNC('month', start_date) AS time, ROUND(SUM(energy_added_kwh)::numeric, 1) AS charge_energy_added, ROUND(SUM(cost)::numeric, 2) AS cost FROM charging_sessions WHERE $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
     },
     {
       "title": "Monthly Mileage Trend",
