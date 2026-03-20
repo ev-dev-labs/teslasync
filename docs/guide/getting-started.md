@@ -36,7 +36,7 @@ Tesla API access requires an active Tesla account with at least one vehicle link
 ## Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/TeslaSync.git
+git clone https://github.com/teslasync-labs/TeslaSync.git
 cd TeslaSync
 ```
 

@@ -188,7 +188,7 @@ export default function Statistics() {
                 <Pie data={statePie} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
                   {statePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
-                <Legend wrapperStyle={{ fontSize: 10 }} formatter={(val: string, entry: any) => `${val} (${formatDuration(entry?.payload?.value ?? 0)})`} />
+                <Legend wrapperStyle={{ fontSize: 10 }} formatter={(val: string, entry: { payload?: { value?: number } }) => `${val} (${formatDuration(entry?.payload?.value ?? 0)})`} />
                 <Tooltip formatter={(val: number) => formatDuration(val)} />
               </PieChart>
             </ResponsiveContainer>

@@ -77,11 +77,11 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/your-org/TeslaSync' },
+      { icon: 'github', link: 'https://github.com/teslasync-labs/TeslaSync' },
     ],
 
     editLink: {
-      pattern: 'https://github.com/your-org/TeslaSync/edit/main/docs/:path',
+      pattern: 'https://github.com/teslasync-labs/TeslaSync/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 
