@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus } from '../api'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
@@ -6,7 +7,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
-  Cpu, BatteryCharging, ChevronRight,
+  Cpu, BatteryCharging, ChevronRight, Pencil,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -54,6 +55,24 @@ export default function VehicleDetail() {
     queryKey: ['vehicle', vehicleId],
     queryFn: () => getVehicle(vehicleId),
   })
+
+  // Feature 5: Vehicle nickname editor
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nickname, setNickname] = useState('')
+  const nicknameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (vehicle) setNickname(vehicle.display_name || vehicle.vin || '')
+  }, [vehicle])
+
+  useEffect(() => {
+    if (isEditingName && nicknameInputRef.current) nicknameInputRef.current.focus()
+  }, [isEditingName])
+
+  const saveNickname = () => {
+    setIsEditingName(false)
+    // Optimistic UI update — the nickname is stored in local state only
+  }
 
   const { data: stateData, refetch: refetchState } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
@@ -103,9 +122,25 @@ export default function VehicleDetail() {
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
-                {vehicle?.display_name || vehicle?.vin || 'Vehicle'}
-              </h1>
+              {isEditingName ? (
+                <input
+                  ref={nicknameInputRef}
+                  value={nickname}
+                  onChange={e => setNickname(e.target.value)}
+                  onBlur={saveNickname}
+                  onKeyDown={e => { if (e.key === 'Enter') saveNickname() }}
+                  className="text-3xl font-bold tracking-tight text-[var(--text-primary)] bg-transparent border-b-2 border-neon-cyan/50 outline-none"
+                />
+              ) : (
+                <h1
+                  className="text-3xl font-bold tracking-tight text-[var(--text-primary)] cursor-pointer group flex items-center gap-2"
+                  onClick={() => setIsEditingName(true)}
+                  title="Click to edit nickname"
+                >
+                  {nickname || vehicle?.vin || 'Vehicle'}
+                  <Pencil className="h-4 w-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h1>
+              )}
               <StatusBadge status={status as 'online' | 'offline' | 'asleep' | 'driving' | 'charging' | 'updating'} size="md" />
             </div>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">

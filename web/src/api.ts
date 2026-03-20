@@ -175,7 +175,7 @@ export interface BatteryReport {
 export interface Alert {
   id: number
   vehicle_id: number
-  type: 'geofence_exit' | 'geofence_enter' | 'low_battery' | 'charging_complete' | 'sentry_event' | 'speed_limit' | 'temperature' | 'software_update'
+  type: 'geofence_exit' | 'geofence_enter' | 'low_battery' | 'charging_complete' | 'sentry_event' | 'speed_limit' | 'temperature' | 'software_update' | 'vehicle_unlocked' | 'tire_pressure_low'
   severity: 'info' | 'warning' | 'critical'
   title: string
   message: string
