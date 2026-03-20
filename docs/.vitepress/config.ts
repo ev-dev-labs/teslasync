@@ -3,12 +3,12 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'TeslaSync Docs',
   description: 'Documentation for TeslaSync - Tesla Fleet Intelligence Platform',
-  base: '/TeslaSync/',
+  base: '/teslasync/',
 
   ignoreDeadLinks: true,
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/TeslaSync/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/teslasync/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#00f0ff' }],
     ['meta', { name: 'og:type', content: 'website' }],
     ['meta', { name: 'og:title', content: 'TeslaSync Docs' }],
@@ -77,11 +77,11 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/teslasync-labs/TeslaSync' },
+      { icon: 'github', link: 'https://github.com/teslasync-labs/teslasync' },
     ],
 
     editLink: {
-      pattern: 'https://github.com/teslasync-labs/TeslaSync/edit/main/docs/:path',
+      pattern: 'https://github.com/teslasync-labs/teslasync/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 
