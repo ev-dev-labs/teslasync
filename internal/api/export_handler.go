@@ -78,16 +78,16 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Disposition", "attachment; filename=teslasync-drives.json")
-		json.NewEncoder(w).Encode(allDrives)
+		_ = json.NewEncoder(w).Encode(allDrives)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-drives.csv")
 	cw := csv.NewWriter(w)
-	cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"})
+	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "distance", "duration_min", "speed_max"})
 	for _, d := range allDrives {
-		cw.Write([]string{
+		_ = cw.Write([]string{
 			strconv.FormatInt(d.ID, 10),
 			strconv.FormatInt(d.VehicleID, 10),
 			d.StartDate,
@@ -147,16 +147,16 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *databas
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Disposition", "attachment; filename=teslasync-charging.json")
-		json.NewEncoder(w).Encode(allSessions)
+		_ = json.NewEncoder(w).Encode(allSessions)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=teslasync-charging.csv")
 	cw := csv.NewWriter(w)
-	cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"})
+	_ = cw.Write([]string{"id", "vehicle_id", "start_date", "end_date", "energy_added_kwh", "start_battery", "end_battery", "charger_power", "duration_min"})
 	for _, s := range allSessions {
-		cw.Write([]string{
+		_ = cw.Write([]string{
 			strconv.FormatInt(s.ID, 10),
 			strconv.FormatInt(s.VehicleID, 10),
 			s.StartDate,

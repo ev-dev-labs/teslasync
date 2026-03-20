@@ -30,19 +30,6 @@ func NewAnalyticsHandler(db *database.DB) *AnalyticsHandler {
 	}
 }
 
-// helper to dereference optional float64 pointers safely
-func derefF(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
-func derefI(p *int) int {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
 func derefS(p *string) string {
 	if p == nil {
 		return ""
@@ -113,8 +100,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	var chargeEnergies []float64
 	var chargeCosts []float64
 	var chargeStartBat []int
-	var chargeEndBat []int
-	hourChargeCounts := make([]int, 24)          // charges per hour
+	hourChargeCounts:= make([]int, 24)          // charges per hour
 	hourChargeEnergy := make([]float64, 24)
 	var monthlyChargeAgg = make(map[string]map[string]interface{}) // month -> {energy, cost, sessions, avg_power}
 	var chargeEfficiencies []float64 // energyAdded vs energyUsed
@@ -237,9 +223,6 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				chargeCosts = append(chargeCosts, *s.Cost)
 			}
 			chargeStartBat = append(chargeStartBat, s.StartBatteryLevel)
-			if s.EndBatteryLevel != nil {
-				chargeEndBat = append(chargeEndBat, *s.EndBatteryLevel)
-			}
 
 			// Charge efficiency
 			if s.ChargeEnergyUsed != nil && *s.ChargeEnergyUsed > 0 {

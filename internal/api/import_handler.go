@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -232,13 +231,13 @@ func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", "attachment; filename=teslasync-notifications.csv")
 		cw := csv.NewWriter(w)
-		cw.Write([]string{"id", "channel_id", "title", "message", "status", "error", "created_at", "sent_at"})
+		_ = cw.Write([]string{"id", "channel_id", "title", "message", "status", "error", "created_at", "sent_at"})
 		for _, l := range logs {
 			sentAt := ""
 			if l.SentAt != nil {
 				sentAt = l.SentAt.Format("2006-01-02T15:04:05Z")
 			}
-			cw.Write([]string{
+			_ = cw.Write([]string{
 				strconv.FormatInt(l.ID, 10),
 				strconv.FormatInt(l.ChannelID, 10),
 				l.Title,
@@ -253,16 +252,4 @@ func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
 	}
 }
 
-// formatSize converts bytes to a human-readable string.
-func formatSize(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-}
+
