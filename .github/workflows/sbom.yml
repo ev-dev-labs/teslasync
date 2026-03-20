@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Sign backend image
         run: |
-          IMAGE="ghcr.io/${{ github.repository }}:${{ github.ref_name }}"
+          IMAGE="ghcr.io/${{ github.repository }}-api:${{ github.ref_name }}"
           cosign sign --yes "${IMAGE}"
       - name: Sign web image
         run: |
