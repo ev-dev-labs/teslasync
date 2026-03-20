@@ -135,7 +135,7 @@ print(monthly)
 
 ### Using with Grafana
 
-Export data as JSON and create custom Grafana dashboards, or query the database directly — Grafana is pre-configured with a TimescaleDB datasource.
+Export data as JSON and create custom Grafana dashboards, or query the database directly — Grafana is pre-configured with a PostgreSQL datasource.
 
 ## Database Direct Access
 

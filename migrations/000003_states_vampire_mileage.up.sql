@@ -90,4 +90,4 @@ CREATE TABLE IF NOT EXISTS tire_pressure_snapshots (
     rear_right    DOUBLE PRECISION,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-SELECT create_hypertable('tire_pressure_snapshots', 'created_at', if_not_exists => TRUE, migrate_data => TRUE);
+-- tire_pressure_snapshots uses a standard table (low volume, no partitioning needed)

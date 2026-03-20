@@ -8,7 +8,7 @@ In development, you typically run:
 
 - **Backend (Go)** — Directly with `go run` or `make run` on port 8080
 - **Frontend (React)** — Vite dev server on port 5173 with API proxy to the backend
-- **PostgreSQL + TimescaleDB** — Via Docker (or local install)
+- **PostgreSQL** — Via Docker (or local install)
 - **Mosquitto** — Via Docker (or local install)
 - **Redis** — Optional, via Docker
 
@@ -39,15 +39,14 @@ docker compose up -d postgres mosquitto redis
 docker compose exec postgres pg_isready -U teslasync
 ```
 
-Alternatively, you can run PostgreSQL with TimescaleDB locally:
+Alternatively, you can run PostgreSQL locally:
 
 ```bash
-# Install TimescaleDB extension
-# See: https://docs.timescale.com/self-hosted/latest/install/
+# Install PostgreSQL 17
+# See: https://www.postgresql.org/download/
 
 # Create the database
 createdb teslasync
-psql teslasync -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
 ```
 
 ## Backend Development
@@ -225,8 +224,10 @@ SELECT * FROM positions ORDER BY created_at DESC LIMIT 10;
 SELECT id, vehicle_id, distance, duration_min, start_date
 FROM drives ORDER BY start_date DESC LIMIT 10;
 
--- Check TimescaleDB hypertables
-SELECT * FROM timescaledb_information.hypertables;
+-- Check partitioned tables
+SELECT inhrelid::regclass AS partition_name
+FROM pg_inherits
+WHERE inhparent = 'positions'::regclass;
 ```
 
 ## MQTT Debugging
@@ -252,7 +253,7 @@ teslasync/vehicles/5YJ3E1EA5KF123456/speed 0
 
 ## Grafana Development
 
-Grafana is pre-configured with dashboards and a TimescaleDB datasource:
+Grafana is pre-configured with dashboards and a PostgreSQL datasource:
 
 ```bash
 # Start Grafana
@@ -317,11 +318,11 @@ export default defineConfig({
 })
 ```
 
-### TimescaleDB extension not found
+### PostgreSQL connection issues
 
 ```sql
--- Enable the extension manually
-CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- Verify the database is accessible
+SELECT version();
 ```
 
 ### MQTT connection refused

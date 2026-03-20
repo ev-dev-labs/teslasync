@@ -1,6 +1,6 @@
 # Analytics & Charts
 
-TeslaSync provides rich analytics across your fleet with interactive charts, trend analysis, and comparative reports — all powered by [Recharts](https://recharts.org/) and backed by TimescaleDB.
+TeslaSync provides rich analytics across your fleet with interactive charts, trend analysis, and comparative reports — all powered by [Recharts](https://recharts.org/) and backed by PostgreSQL.
 
 ## Fleet Analytics
 
@@ -240,7 +240,7 @@ Access Grafana at [http://localhost:3001](http://localhost:3001) (default login:
 
 ### Custom Dashboards
 
-Create custom dashboards in Grafana using the pre-configured TimescaleDB datasource:
+Create custom dashboards in Grafana using the pre-configured PostgreSQL datasource:
 
 ```sql
 -- Example: Battery level over time

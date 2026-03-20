@@ -267,7 +267,7 @@ helm uninstall teslasync
        ▼                           ▼
 ┌──────────────┐          ┌────────────────┐
 │  PostgreSQL  │          │     Redis      │
-│ (TimescaleDB)│          │   (caching)    │
+│   (PG 17)    │          │   (caching)    │
 └──────────────┘          └────────────────┘
        │
        ▼

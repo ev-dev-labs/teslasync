@@ -184,15 +184,15 @@ tesla:
   redirectUri: "http://localhost:8080/api/v1/auth/callback"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PostgreSQL (TimescaleDB)
+# PostgreSQL
 #
-# Set enabled: true  → an embedded TimescaleDB pod is deployed.
+# Set enabled: true  → an embedded PostgreSQL 17 pod is deployed.
 # Set enabled: false → supply connection details via postgresql.external.
 # ─────────────────────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
 
-  image: timescale/timescaledb:latest-pg16
+  image: postgres:17-alpine
 
   auth:
     username: teslasync

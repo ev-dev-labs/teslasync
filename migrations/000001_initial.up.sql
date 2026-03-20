@@ -1,6 +1,3 @@
--- Enable TimescaleDB extension for time-series optimization
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-
 -- Vehicles table
 CREATE TABLE IF NOT EXISTS vehicles (
     id              BIGSERIAL PRIMARY KEY,
@@ -17,7 +14,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Positions hypertable (time-series optimized)
+-- Positions table (natively partitioned by time for efficient range queries)
 CREATE TABLE IF NOT EXISTS positions (
     id              BIGSERIAL,
     vehicle_id      BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
@@ -37,10 +34,11 @@ CREATE TABLE IF NOT EXISTS positions (
     is_climate_on   BOOLEAN,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id, created_at)
-);
+) PARTITION BY RANGE (created_at);
 
--- Convert positions to TimescaleDB hypertable for time-series performance
-SELECT create_hypertable('positions', 'created_at', migrate_data => true, if_not_exists => true);
+-- positions is now a partitioned table
+-- Partitions will be created automatically by the maintenance worker
+CREATE TABLE IF NOT EXISTS positions_default PARTITION OF positions DEFAULT;
 
 -- Drives table
 CREATE TABLE IF NOT EXISTS drives (

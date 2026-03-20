@@ -33,7 +33,7 @@ Common issues and their solutions when running TeslaSync.
 2. Check PostgreSQL logs: `docker compose logs postgres`
 3. Verify credentials: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` in `.env`
 4. For external databases, verify `POSTGRES_HOST` and `POSTGRES_PORT`
-5. Check if TimescaleDB extension is installed: `docker compose exec postgres psql -U teslasync -c "SELECT default_version FROM pg_available_extensions WHERE name = 'timescaledb';"`
+5. Check PostgreSQL is accepting connections: `docker compose exec postgres psql -U teslasync -c "SELECT version();"`
 
 ## Performance Issues
 
@@ -55,7 +55,7 @@ Common issues and their solutions when running TeslaSync.
 1. Enable Redis caching — ensure Redis is running: `docker compose ps redis`
 2. Reduce the default date range for analytics queries
 3. Add database indexes for frequently queried columns (check migration files)
-4. TimescaleDB chunk interval may need tuning for your data volume
+4. Consider adding indexes for frequently queried columns (check migration files)
 
 ### Port Conflicts (Windows)
 
