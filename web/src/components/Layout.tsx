@@ -35,6 +35,7 @@ import clsx from 'clsx'
 import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
 import Logo from './Logo'
+import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState } from '../api'
 
 const navSections = [
@@ -283,6 +284,9 @@ export default function Layout() {
 
       {/* Command Palette */}
       <CommandPalette />
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard />
     </div>
   )
 }

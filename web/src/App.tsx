@@ -34,6 +34,8 @@ const Trips = lazy(() => import('./pages/Trips'))
 const Statistics = lazy(() => import('./pages/Statistics'))
 const SystemStatus = lazy(() => import('./pages/SystemStatus'))
 const Roadmap = lazy(() => import('./pages/Roadmap'))
+const APIKeysPage = lazy(() => import('./pages/APIKeys'))
+const Changelog = lazy(() => import('./pages/Changelog'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -77,6 +79,8 @@ export default function App() {
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
+        <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
+        <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
       </Route>
     </Routes>
   )

@@ -542,6 +542,40 @@ export default function Dashboard() {
             </FadeIn>
           )}
 
+          {/* ============ VEHICLE HEALTH SCORES ============ */}
+          {vehicles && vehicles.length > 0 && (
+            <FadeIn delay={0.22}>
+              <h3 className="section-title flex items-center gap-2 mb-3">
+                <Activity className="h-4 w-4 text-neon-green" /> Vehicle Health Scores
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {vehicles.map(v => {
+                  const vState = v.id === primaryVehicle?.id ? primaryState : otherStates?.[v.id]
+                  // Composite health: battery (40%) + tire (20%) + errors (20%) + software (20%)
+                  const batteryScore = vState ? Math.min(vState.battery_level, 100) : 50
+                  const tireScore = 80 // Default good since no real-time tire data
+                  const errorScore = v.healthy ? 100 : 40
+                  const softwareScore = vState?.software_version ? 90 : 60
+                  const healthScore = Math.round(batteryScore * 0.4 + tireScore * 0.2 + errorScore * 0.2 + softwareScore * 0.2)
+                  const healthColor = healthScore >= 80 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444'
+                  return (
+                    <GlassPanel key={v.id} className="p-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: `${healthColor}15`, color: healthColor, border: `2px solid ${healthColor}40` }}>
+                        {healthScore}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{v.display_name || v.vin}</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">
+                          🔋 {batteryScore}% · 🛞 {tireScore}% · ⚡ {errorScore}% · 📱 {softwareScore}%
+                        </p>
+                      </div>
+                    </GlassPanel>
+                  )
+                })}
+              </div>
+            </FadeIn>
+          )}
+
           {/* ============ QUICK NAVIGATION ============ */}
           <FadeIn delay={0.25}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
