@@ -2,6 +2,9 @@ package api
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -199,7 +202,7 @@ func (h *NotificationHandler) TestChannel(w http.ResponseWriter, r *http.Request
 	if status == "sent" {
 		logEntry.SentAt = &now
 	}
-	h.repo.CreateLog(r.Context(), logEntry)
+	_ = h.repo.CreateLog(r.Context(), logEntry)
 
 	if sendErr != nil {
 		writeJSON(w, http.StatusOK, map[string]interface{}{"success": false, "error": sendErr.Error()})
@@ -242,7 +245,7 @@ func sendNotification(ch *models.NotificationChannel, title, message string) err
 	case "telegram":
 		return sendTelegram(ch.Config["bot_token"], ch.Config["chat_id"], title, message)
 	case "webhook":
-		return sendWebhook(ch.Config["url"], ch.Config["method"], title, message)
+		return sendWebhookWithSecret(ch.Config["url"], ch.Config["method"], ch.Config["webhook_secret"], title, message)
 	case "ntfy":
 		return sendNtfy(ch.Config["server_url"], ch.Config["topic"], title, message)
 	case "email":
@@ -292,6 +295,10 @@ func sendTelegram(botToken, chatID, title, message string) error {
 }
 
 func sendWebhook(url, method, title, message string) error {
+	return sendWebhookWithSecret(url, method, "", title, message)
+}
+
+func sendWebhookWithSecret(url, method, secret, title, message string) error {
 	if url == "" {
 		return fmt.Errorf("webhook url not configured")
 	}
@@ -305,6 +312,12 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if secret != "" {
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(body)
+		sig := hex.EncodeToString(mac.Sum(nil))
+		req.Header.Set("X-TeslaSync-Signature", sig)
+	}
 	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
 	if err != nil {
 		return err

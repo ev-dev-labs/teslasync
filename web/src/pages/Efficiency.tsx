@@ -57,6 +57,28 @@ export default function Efficiency() {
     distance: d.distance_km,
   }))
 
+  // Compute linear trendline using least squares regression
+  const trendline = useMemo(() => {
+    const data = dailyEfficiency.filter(d => d.efficiency > 0)
+    if (data.length < 3) return { slope: 0, improving: false, pctPerMonth: 0, trendData: dailyEfficiency }
+    const n = data.length
+    const sumX = data.reduce((s, _, i) => s + i, 0)
+    const sumY = data.reduce((s, d) => s + d.efficiency, 0)
+    const sumXY = data.reduce((s, d, i) => s + i * d.efficiency, 0)
+    const sumX2 = data.reduce((s, _, i) => s + i * i, 0)
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+    const intercept = (sumY - slope * sumX) / n
+    const avgEff = sumY / n
+    // Negative slope = efficiency improving (lower Wh/km is better)
+    const improving = slope < 0
+    const pctPerMonth = avgEff > 0 ? Math.abs(slope * 30 / avgEff * 100) : 0
+    const trendData = dailyEfficiency.map((d, i) => ({
+      ...d,
+      trend: intercept + slope * i,
+    }))
+    return { slope, improving, pctPerMonth, trendData }
+  }, [dailyEfficiency])
+
   // Speed vs efficiency from drives
   const speedEffData = (drives ?? [])
     .filter(d => d.distance > 0 && d.speed_max && d.start_range_km && d.end_range_km && d.start_battery_level && d.end_battery_level)
@@ -189,12 +211,19 @@ export default function Efficiency() {
 
       {/* Daily Efficiency Trend */}
       <GlassPanel className="p-4 sm:p-6 mb-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend (Wh/km)</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend (Wh/km)</h3>
+          {dailyEfficiency.length >= 3 && (
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${trendline.improving ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'}`}>
+              Trend: {trendline.improving ? 'improving' : 'worsening'} {trendline.pctPerMonth.toFixed(1)}%/month
+            </span>
+          )}
+        </div>
         {dailyEfficiency.length === 0 ? (
           <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No efficiency data</div>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={dailyEfficiency}>
+            <AreaChart data={trendline.trendData}>
               <defs>
                 <linearGradient id="effGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
@@ -206,6 +235,9 @@ export default function Efficiency() {
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
               <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name="Efficiency (Wh/km)" />
+              {trendline.trendData.some(d => 'trend' in d) && (
+                <Area type="monotone" dataKey="trend" stroke={trendline.improving ? '#10b981' : '#ef4444'} fill="none" strokeWidth={2} strokeDasharray="6 3" name="Trendline" dot={false} />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -315,6 +347,42 @@ export default function Efficiency() {
       {/* Consumption Summary */}
       {consumptionStats && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
+
+          {/* Weather Impact Info Card */}
+          <GlassPanel className="p-4 sm:p-6">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Thermometer className="h-4 w-4 text-neon-amber" /> Weather Impact on Efficiency
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                <span className="text-lg">❄️</span>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Cold Weather (&lt;5°C)</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Can reduce range by 20–40%. Battery heating, cabin heating, and increased rolling resistance all contribute.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                <span className="text-lg">🔥</span>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Hot Weather (&gt;35°C)</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Can reduce range by 10–20%. A/C cooling demands and battery thermal management use extra energy.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+                <span className="text-lg">🌤️</span>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Ideal Temperature (15–25°C)</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Optimal range. Minimal HVAC load and ideal battery chemistry performance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </GlassPanel>
           <GlassPanel className="p-4 sm:p-6">
             <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <BarChart3 className="h-4 w-4 text-neon-purple" /> Driving Efficiency Summary
@@ -356,6 +424,37 @@ export default function Efficiency() {
           </GlassPanel>
         </div>
       )}
+
+      {/* Fleet Efficiency Leaderboard */}
+      {analytics?.vehicle_comparison && analytics.vehicle_comparison.length > 1 && (
+        <FadeIn delay={0.3}>
+          <GlassPanel className="p-5">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Gauge className="h-4 w-4 text-neon-amber" /> Fleet Efficiency Leaderboard
+            </h3>
+            <div className="space-y-2">
+              {[...analytics.vehicle_comparison]
+                .sort((a, b) => (a.efficiency || Infinity) - (b.efficiency || Infinity))
+                .map((v, rank) => {
+                  const best = rank === 0
+                  return (
+                    <div key={v.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      <span className={`text-lg font-bold w-8 text-center ${best ? 'text-neon-amber' : 'text-[var(--text-muted)]'}`}>
+                        {best ? '👑' : `#${rank + 1}`}
+                      </span>
+                      <span className="text-sm font-medium text-[var(--text-primary)] flex-1">{v.name}</span>
+                      <span className="text-sm font-mono text-neon-cyan">{(v.efficiency || 0).toFixed(0)} Wh/km</span>
+                      {v.efficiency > 0 && (
+                        <span className="text-[10px] text-[var(--text-muted)]">({(1000 / v.efficiency).toFixed(1)} km/kWh)</span>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
     </FadeIn>
   )
 }

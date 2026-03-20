@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // Config holds all application configuration.
 type Config struct {
-	Port      int
-	LogLevel  string
-	Database  DatabaseConfig
-	Tesla     TeslaConfig
-	MQTT      MQTTConfig
-	Worker    WorkerConfig
-	Redis     RedisConfig
-	Auth      AuthConfig
-	Retention RetentionConfig
+	Port        int
+	LogLevel    string
+	LogPackages map[string]string
+	Database    DatabaseConfig
+	Tesla       TeslaConfig
+	MQTT        MQTTConfig
+	Worker      WorkerConfig
+	Redis       RedisConfig
+	Auth        AuthConfig
+	Retention   RetentionConfig
 }
 
 type DatabaseConfig struct {
@@ -100,8 +102,9 @@ type RetentionConfig struct {
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:     envInt("TESLASYNC_PORT", 4000),
-		LogLevel: envStr("TESLASYNC_LOG_LEVEL", "info"),
+		Port:        envInt("TESLASYNC_PORT", 4000),
+		LogLevel:    envStr("TESLASYNC_LOG_LEVEL", "info"),
+		LogPackages: parseLogPackages(envStr("LOG_PACKAGES", "")),
 
 		Database: DatabaseConfig{
 			Host:            envStr("DATABASE_HOST", "localhost"),
@@ -196,4 +199,21 @@ func envDuration(key string, fallback time.Duration) time.Duration {
 		}
 	}
 	return fallback
+}
+
+// parseLogPackages parses a comma-separated "pkg=level" string into a map.
+// Example: "api=debug,worker=info,mqtt=warn"
+func parseLogPackages(val string) map[string]string {
+	result := make(map[string]string)
+	if val == "" {
+		return result
+	}
+	for _, pair := range strings.Split(val, ",") {
+		pair = strings.TrimSpace(pair)
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) == 2 {
+			result[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		}
+	}
+	return result
 }

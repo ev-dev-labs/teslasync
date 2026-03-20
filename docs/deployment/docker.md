@@ -19,7 +19,7 @@ TeslaSync's `docker-compose.yml` orchestrates 6 services:
 
 ```bash
 # Clone and configure
-git clone https://github.com/your-org/TeslaSync.git
+git clone https://github.com/teslasync-labs/TeslaSync.git
 cd TeslaSync
 cp .env.example .env
 # Edit .env with your Tesla credentials

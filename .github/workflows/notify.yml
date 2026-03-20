@@ -13,7 +13,7 @@ jobs:
     name: Post Release Summary
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -39,7 +39,7 @@ jobs:
             echo "**Pre-release:** ${{ github.event.release.prerelease }}"
             echo ""
             echo "### Docker Images"
-            echo "- \`ghcr.io/${{ github.repository }}:${TAG#v}\`"
+            echo "- \`ghcr.io/${{ github.repository }}-api:${TAG#v}\`"
             echo "- \`ghcr.io/${{ github.repository }}-web:${TAG#v}\`"
             echo ""
             echo "### Changes"

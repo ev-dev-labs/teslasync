@@ -618,3 +618,36 @@ export const getStateSummary = (vehicleId: number, days = 30, start?: string) =>
 /** Fetches daily state breakdown showing minutes in each state per day. */
 export const getDailyStateBreakdown = (vehicleId: number, days = 30, start?: string) =>
   request<DailyStateBreakdown[]>(`/states/daily?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)
+
+// === API Keys ===
+export interface APIKey {
+  id: number
+  name: string
+  key_prefix: string
+  permissions: string
+  last_used_at?: string
+  created_at: string
+  expires_at?: string
+}
+
+export interface APIKeyCreateResponse extends APIKey {
+  key: string
+}
+
+export const getAPIKeys = () => request<APIKey[]>('/api-keys')
+export const createAPIKey = (data: { name: string; permissions: string }) =>
+  request<APIKeyCreateResponse>('/api-keys', { method: 'POST', body: JSON.stringify(data) })
+export const deleteAPIKey = (id: number) => request<void>(`/api-keys/${id}`, { method: 'DELETE' })
+export const revokeAPIKey = (id: number) => request<void>(`/api-keys/${id}/revoke`, { method: 'POST' })
+
+// === Audit Logs ===
+export interface AuditLog {
+  id: number
+  action: string
+  resource: string
+  details: string
+  ip: string
+  created_at: string
+}
+
+export const getAuditLogs = (limit = 50) => request<AuditLog[]>(`/system/audit?limit=${limit}`)

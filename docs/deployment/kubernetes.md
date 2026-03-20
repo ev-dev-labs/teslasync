@@ -48,12 +48,12 @@ The `values.yaml` file contains all configurable parameters. Here are the most i
 ```yaml
 # Image configuration
 image:
-  repository: ghcr.io/your-org/teslasync
+  repository: ghcr.io/teslasync-labs/teslasync
   tag: latest
   pullPolicy: IfNotPresent
 
 webImage:
-  repository: ghcr.io/your-org/teslasync-web
+  repository: ghcr.io/teslasync-labs/teslasync-web
   tag: latest
   pullPolicy: IfNotPresent
 

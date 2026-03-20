@@ -384,7 +384,72 @@ export default function Energy() {
               </GlassPanel>
             </FadeIn>
           )}
+          {/* Environmental Impact Card */}
+          <FadeIn delay={0.25}>
+            <GlassPanel className="p-5 mt-6">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                <Leaf className="h-4 w-4 text-neon-green" /> Environmental Impact
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(() => {
+                  const co2PerLiter = 2.31
+                  const avgGasConsumption = 8 // L/100km
+                  const litersAvoided = totalDistance * avgGasConsumption / 100
+                  const co2Avoided = litersAvoided * co2PerLiter
+                  const treesEquiv = co2Avoided / 22 // ~22kg CO2 per tree per year
+                  const gallonsSaved = litersAvoided / 3.78541
+
+                  return [
+                    { label: 'CO₂ Avoided', value: `${co2Avoided.toFixed(0)} kg`, sub: 'vs gasoline car', color: '#10b981' },
+                    { label: 'Equiv. Trees Planted', value: treesEquiv.toFixed(1), sub: 'for one year', color: '#22c55e' },
+                    { label: 'Gas Gallons Saved', value: gallonsSaved.toFixed(0), sub: `${litersAvoided.toFixed(0)} liters`, color: '#f59e0b' },
+                    { label: 'Gas Cost Avoided', value: `$${(litersAvoided * 1.5).toFixed(0)}`, sub: 'at $1.50/L avg', color: '#8b5cf6' },
+                  ].map(card => (
+                    <div key={card.label} className="text-center">
+                      <p className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</p>
+                      <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>{card.label}</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">{card.sub}</p>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </GlassPanel>
+          </FadeIn>
         </>
+      )}
+      {/* Cost per km/mi Trend */}
+      {stats && stats.daily_breakdown && stats.daily_breakdown.length > 0 && (
+        <FadeIn delay={0.35}>
+          <GlassPanel className="p-5">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <Fuel className="h-4 w-4 text-neon-green" /> Cost per km Trend
+            </h3>
+            <div className="h-48 sm:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={(() => {
+                  const months: Record<string, { energy: number; distance: number; cost: number }> = {}
+                  stats.daily_breakdown.forEach(d => {
+                    const month = d.date.slice(0, 7)
+                    if (!months[month]) months[month] = { energy: 0, distance: 0, cost: 0 }
+                    months[month].energy += d.energy_kwh
+                    months[month].distance += d.distance_km
+                    months[month].cost += d.energy_kwh * (totalDistance > 0 ? totalCost / totalEnergy : 0.12)
+                  })
+                  return Object.entries(months).map(([month, data]) => ({
+                    month,
+                    costPerKm: data.distance > 0 ? (data.cost / data.distance) : 0,
+                  }))
+                })()}>
+                  {chartGrid}
+                  <XAxis dataKey="month" tick={axisTickSm} />
+                  <YAxis tick={axisTickSm} tickFormatter={(v: number) => `$${v.toFixed(3)}`} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="costPerKm" name="Cost/km ($)" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
       )}
     </div>
   )
