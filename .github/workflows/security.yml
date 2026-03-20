@@ -22,18 +22,10 @@ jobs:
       - name: Build backend image
         run: docker build -t teslasync:scan -f Dockerfile .
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@v0.28.0
-        with:
-          image-ref: teslasync:scan
-          format: sarif
-          output: trivy-backend.sarif
-          severity: CRITICAL,HIGH
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        continue-on-error: true
-        if: always()
-        with:
-          sarif_file: trivy-backend.sarif
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image --severity CRITICAL,HIGH --exit-code 0 \
+            --format table teslasync:scan
 
   trivy-web:
     name: Trivy - Web Image
@@ -43,18 +35,10 @@ jobs:
       - name: Build web image
         run: docker build -t teslasync-web:scan -f Dockerfile.web .
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@v0.28.0
-        with:
-          image-ref: teslasync-web:scan
-          format: sarif
-          output: trivy-web.sarif
-          severity: CRITICAL,HIGH
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        continue-on-error: true
-        if: always()
-        with:
-          sarif_file: trivy-web.sarif
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image --severity CRITICAL,HIGH --exit-code 0 \
+            --format table teslasync-web:scan
 
   trivy-filesystem:
     name: Trivy - Source Code
@@ -62,19 +46,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.28.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: sarif
-          output: trivy-fs.sarif
-          severity: CRITICAL,HIGH
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        continue-on-error: true
-        if: always()
-        with:
-          sarif_file: trivy-fs.sarif
+        run: |
+          docker run --rm -v "$(pwd):/src" -w /src \
+            aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 0 \
+            --format table .
 
   helm-security:
     name: Helm Chart Security
