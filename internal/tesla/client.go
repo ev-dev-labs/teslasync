@@ -85,6 +85,16 @@ func (c *Client) HasValidToken() bool {
 	return c.accessToken != "" && time.Now().Before(c.expiresAt)
 }
 
+// ExpiresWithin returns true if the token will expire within the given duration.
+func (c *Client) ExpiresWithin(d time.Duration) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.accessToken != "" && time.Until(c.expiresAt) < d
+}
+
+// ErrUnauthorized is returned when the Tesla API rejects the current token.
+var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
+
 // doRequest performs an authenticated API request through the circuit breaker.
 func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
 	result, err := c.cb.Execute(func() (interface{}, error) {
@@ -112,6 +122,9 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 			return nil, fmt.Errorf("read body: %w", err)
 		}
 
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, ErrUnauthorized
+		}
 		if resp.StatusCode == http.StatusTooManyRequests {
 			return nil, fmt.Errorf("rate limited (429)")
 		}
