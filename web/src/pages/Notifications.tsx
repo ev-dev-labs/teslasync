@@ -5,7 +5,7 @@ import {
   Bell, Plus, Trash2, TestTube, ToggleLeft, ToggleRight,
   Send, MessageSquare, Mail, Webhook, Hash, Megaphone, Smartphone,
   CheckCircle, XCircle, Clock, BarChart3, X, Pencil, ChevronDown, ChevronUp,
-  Loader2,
+  Loader2, Download,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -255,15 +255,24 @@ export default function Notifications() {
 
       {/* Delivery Log toggle */}
       <FadeIn delay={0.15}>
-        <button
-          onClick={() => setShowLogs(!showLogs)}
-          className="flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          <BarChart3 className="h-4 w-4" />
-          Delivery Log
-          {showLogs ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowLogs(!showLogs)}
+            className="flex items-center gap-2 text-sm font-medium transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Delivery Log
+            {showLogs ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          <a
+            href="/api/v1/export/notifications?format=csv"
+            download="teslasync-notifications.csv"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-neon-green/10 text-neon-green hover:bg-neon-green/20 border border-neon-green/20 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" /> Export Logs CSV
+          </a>
+        </div>
       </FadeIn>
 
       {/* Delivery Log table */}

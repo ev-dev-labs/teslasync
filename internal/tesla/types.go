@@ -74,6 +74,10 @@ type VehicleState struct {
 	Locked          bool    `json:"locked"`
 	SentryMode      bool    `json:"sentry_mode"`
 	SoftwareUpdate  SoftwareUpdateState `json:"software_update"`
+	TpmsPressureFL  *float64 `json:"tpms_pressure_fl"`
+	TpmsPressureFR  *float64 `json:"tpms_pressure_fr"`
+	TpmsPressureRL  *float64 `json:"tpms_pressure_rl"`
+	TpmsPressureRR  *float64 `json:"tpms_pressure_rr"`
 	Timestamp       int64   `json:"timestamp"`
 }
 

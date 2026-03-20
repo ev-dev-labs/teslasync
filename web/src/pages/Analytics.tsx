@@ -84,7 +84,7 @@ export default function Analytics() {
     queryFn: () => getFleetAnalytics(30, startDate),
   })
 
-  const comparison = analytics?.vehicle_comparison ?? []
+  const comparison = useMemo(() => analytics?.vehicle_comparison ?? [], [analytics])
   const da = analytics?.drive_analytics
   const ca = analytics?.charging_analytics
   const bt = analytics?.battery_trend ?? []
