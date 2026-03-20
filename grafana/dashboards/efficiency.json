@@ -1,88 +1,543 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Drives", "url": "/d/teslasync-drives/drives", "type": "link" },
-    { "title": "Charging", "url": "/d/teslasync-charges/charges", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Avg Efficiency (Wh/km)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(((SUM(start_range_km - end_range_km) * 1000) / NULLIF(SUM(distance), 0))::numeric, 1) AS \"Wh/km\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg Wh/km (Period)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "watt", "decimals": 0, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(energy_used_kwh)*1000/NULLIF(SUM(distance_km),0))::numeric), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND distance_km > 0 AND $__timeFilter(date)", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Total Energy Used (kWh)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(MIN(((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0)))::numeric, 1) AS \"Wh/km\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5",
+          "refId": "A"
+        }
+      ],
+      "title": "Best Efficiency",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(energy_used_kwh)::numeric, 1), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND $__timeFilter(date)", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Total Distance (km)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(MAX(((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0)))::numeric, 1) AS \"Wh/km\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5",
+          "refId": "A"
+        }
+      ],
+      "title": "Worst Efficiency",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance_km)::numeric), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND $__timeFilter(date)", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Cost per 100km",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(AVG(outside_temp_avg)::numeric, 1) AS \"°C\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND outside_temp_avg IS NOT NULL",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg Outside Temp",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(cs.cost)*100/NULLIF(SUM(dm.distance_km),0))::numeric, 2), 0) FROM daily_mileage dm LEFT JOIN charging_sessions cs ON cs.vehicle_id = dm.vehicle_id AND DATE(cs.start_date) = dm.date WHERE dm.vehicle_id = $vehicle_id AND $__timeFilter(dm.date)", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Daily Efficiency (Wh/km)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(start_date, '1d') AS time,\n  ROUND(((SUM(start_range_km - end_range_km) * 1000) / NULLIF(SUM(distance), 0))::numeric, 1) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 1\nGROUP BY time ORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Efficiency Over Time (Wh/km)",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "watt", "custom": { "drawStyle": "line", "fillOpacity": 20 }, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT date AS time, ROUND((energy_used_kwh*1000/NULLIF(distance_km,0))::numeric) AS efficiency FROM daily_mileage WHERE vehicle_id = $vehicle_id AND distance_km > 0 AND $__timeFilter(date) ORDER BY date", "format": "time_series", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Speed vs Efficiency",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  start_date AS time,\n  ROUND((distance / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"Avg Speed km/h\",\n  ROUND(((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0))::numeric, 1) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5\nORDER BY start_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Speed vs Efficiency (per drive)",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "points", "pointSize": 6 }, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT d.start_date AS time, d.speed_max FROM drives d WHERE d.vehicle_id = $vehicle_id AND d.distance > 0 AND d.speed_max > 0 AND $__timeFilter(d.start_date) ORDER BY d.start_date", "format": "time_series", "refId": "A" }]
+      "transparent": false
     },
     {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  start_date AS time,\n  ROUND(outside_temp_avg::numeric, 1) AS \"Temp °C\",\n  ROUND(((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0))::numeric, 1) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5 AND outside_temp_avg IS NOT NULL\nORDER BY start_date",
+          "refId": "A"
+        }
+      ],
       "title": "Temperature vs Efficiency",
       "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": {
-        "defaults": { "custom": { "drawStyle": "points", "pointSize": 6 } },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "outside_temp" }, "properties": [{ "id": "color", "value": { "fixedColor": "#06b6d4" } }] },
-          { "matcher": { "id": "byName", "options": "efficiency" }, "properties": [{ "id": "color", "value": { "fixedColor": "#f59e0b" } }] }
-        ]
-      },
-      "targets": [{ "rawSql": "SELECT p.created_at AS time, p.outside_temp, ROUND((d.distance / NULLIF(ABS(d.start_battery_level - d.end_battery_level), 0) * 100)::numeric) AS efficiency FROM drives d JOIN positions p ON p.vehicle_id = d.vehicle_id AND p.created_at BETWEEN d.start_date AND COALESCE(d.end_date, NOW()) WHERE d.vehicle_id = $vehicle_id AND d.distance > 5 AND $__timeFilter(d.start_date) ORDER BY p.created_at", "format": "time_series", "refId": "A" }]
+      "transparent": false
     }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
   ],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
         "name": "vehicle_id",
-        "type": "query",
-        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
-        "refresh": 1
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
-  "time": { "from": "now-90d", "to": "now" },
-  "title": "Efficiency",
-  "uid": "teslasync-efficiency"
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync — Driving Efficiency",
+  "uid": "teslasync-efficiency",
+  "version": 1,
+  "weekStart": ""
 }

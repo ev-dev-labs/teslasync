@@ -1,91 +1,298 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Vehicle Overview", "url": "/d/teslasync-vehicle/vehicle-overview", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Total State Changes",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Time Driving",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric/60, 1), 0) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND state = 'driving' AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Time Charging",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric/60, 1), 0) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND state = 'charging' AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Time Asleep",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "fixedColor": "#6366f1", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(duration_min)::numeric/60, 1), 0) FROM vehicle_states WHERE vehicle_id = $vehicle_id AND state = 'asleep' AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "State Distribution (Pie)",
-      "type": "piechart",
-      "gridPos": { "h": 10, "w": 8, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "h" } },
-      "targets": [{ "rawSql": "SELECT state, ROUND(SUM(duration_min)/60) AS hours FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY state ORDER BY hours DESC", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Daily State Breakdown (Stacked)",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 16, "x": 8, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
       "fieldConfig": {
-        "defaults": { "unit": "h", "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } } },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "driving" }, "properties": [{ "id": "color", "value": { "fixedColor": "#00f0ff" } }] },
-          { "matcher": { "id": "byName", "options": "charging" }, "properties": [{ "id": "color", "value": { "fixedColor": "#10b981" } }] },
-          { "matcher": { "id": "byName", "options": "asleep" }, "properties": [{ "id": "color", "value": { "fixedColor": "#6366f1" } }] },
-          { "matcher": { "id": "byName", "options": "online" }, "properties": [{ "id": "color", "value": { "fixedColor": "#3b82f6" } }] },
-          { "matcher": { "id": "byName", "options": "offline" }, "properties": [{ "id": "color", "value": { "fixedColor": "#4b5563" } }] }
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "options": {
+                "asleep": {
+                  "color": "blue",
+                  "index": 0,
+                  "text": "Asleep"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "online": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "Online"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "driving": {
+                  "color": "orange",
+                  "index": 2,
+                  "text": "Driving"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "charging": {
+                  "color": "yellow",
+                  "index": 3,
+                  "text": "Charging"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "offline": {
+                  "color": "dark-gray",
+                  "index": 4,
+                  "text": "Offline"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "suspended": {
+                  "color": "purple",
+                  "index": 5,
+                  "text": "Suspended"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "auto",
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  start_date AS \"time\",\n  state AS \"State\"\nFROM vehicle_states\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nORDER BY start_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Vehicle State Timeline",
+      "type": "state-timeline",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
         ]
       },
       "targets": [
-        { "rawSql": "SELECT date_trunc('day', start_date) AS time, ROUND(SUM(CASE WHEN state='driving' THEN duration_min ELSE 0 END)/60) AS driving, ROUND(SUM(CASE WHEN state='charging' THEN duration_min ELSE 0 END)/60) AS charging, ROUND(SUM(CASE WHEN state='asleep' THEN duration_min ELSE 0 END)/60) AS asleep, ROUND(SUM(CASE WHEN state='online' THEN duration_min ELSE 0 END)/60) AS online, ROUND(SUM(CASE WHEN state='offline' THEN duration_min ELSE 0 END)/60) AS offline FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY date_trunc('day', start_date) ORDER BY time", "format": "time_series", "refId": "A" }
-      ]
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  state AS \"State\",\n  COUNT(*) AS \"Count\",\n  ROUND(SUM(duration_min)::numeric) AS \"Total Minutes\",\n  ROUND((SUM(duration_min) / 60)::numeric, 1) AS \"Total Hours\"\nFROM vehicle_states\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nGROUP BY state\nORDER BY \"Total Minutes\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "State Duration Breakdown",
+      "type": "table",
+      "transparent": false
     },
     {
-      "title": "Recent State Changes",
-      "type": "table",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "targets": [{ "rawSql": "SELECT state, start_date, end_date, ROUND(duration_min::numeric, 1) AS duration_min FROM vehicle_states WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "percent"
+          ],
+          "displayMode": "table",
+          "placement": "right"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT state AS \"State\", SUM(duration_min) AS \"Minutes\"\nFROM vehicle_states\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY state ORDER BY \"Minutes\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "State Distribution",
+      "type": "piechart",
+      "transparent": false
     }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
   ],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
         "name": "vehicle_id",
-        "type": "query",
-        "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
-        "refresh": 1
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
-  "time": { "from": "now-30d", "to": "now" },
-  "title": "Timeline",
-  "uid": "teslasync-timeline"
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync — State Timeline",
+  "uid": "teslasync-timeline",
+  "version": 1,
+  "weekStart": ""
 }

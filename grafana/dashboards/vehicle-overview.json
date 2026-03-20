@@ -1,163 +1,941 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Fleet Overview", "url": "/d/teslasync-fleet-overview/fleet-overview", "type": "link" },
-    { "title": "Charges", "url": "/d/teslasync-charges/charges", "type": "link" },
-    { "title": "Drives", "url": "/d/teslasync-drives-detail/drives", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Current Battery",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT battery_level AS \"Battery\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Level",
       "type": "gauge",
-      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "color": "#EF4444", "value": null }, { "color": "#F59E0B", "value": 20 }, { "color": "#22C55E", "value": 50 }, { "color": "#06B6D4", "value": 80 }] } } },
-      "targets": [{ "rawSql": "SELECT battery_level FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "km"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(rated_range::numeric, 1) AS \"Range km\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
       "title": "Rated Range",
       "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT ROUND(rated_range::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Ideal Range",
-      "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 4, "y": 3 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT ROUND(ideal_range::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
-    },
-    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "km"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(odometer::numeric, 1) AS \"Odometer km\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
       "title": "Odometer",
       "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT ROUND(odometer::numeric) FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Inside Temp",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT state AS \"State\" FROM vehicles WHERE id = ${vehicle_id} LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Current State",
       "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 8, "y": 3 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "celsius", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT inside_temp FROM positions WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Total Drives",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(outside_temp::numeric, 1) AS \"°C\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature",
       "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM drives WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Total Distance",
-      "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 3 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "km", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(distance)::numeric, 1), 0) FROM drives WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Energy",
-      "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Cost",
-      "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 3 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "id": 6,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT version AS \"Version\" FROM software_updates WHERE vehicle_id = ${vehicle_id} AND status = 'installed' ORDER BY installed_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
       "title": "Software Version",
       "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT version FROM software_updates WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
+      "transparent": false
     },
     {
-      "title": "Vehicle State",
-      "type": "stat",
-      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 3 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#22C55E", "mode": "fixed" }, "mappings": [{ "type": "value", "options": { "online": { "color": "green", "text": "Online" }, "asleep": { "color": "blue", "text": "Asleep" }, "driving": { "color": "yellow", "text": "Driving" }, "charging": { "color": "orange", "text": "Charging" }, "offline": { "color": "red", "text": "Offline" } } }] } },
-      "targets": [{ "rawSql": "SELECT state FROM vehicles WHERE id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Battery Level Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 15, "gradientMode": "scheme" }, "color": { "mode": "continuous-GrYlRd" } } },
-      "targets": [{ "rawSql": "SELECT created_at AS time, battery_level AS \"Battery %\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" }]
-    },
-    {
-      "title": "Range Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "km", "custom": { "fillOpacity": 10 } } },
-      "targets": [
-        { "rawSql": "SELECT created_at AS time, rated_range AS \"Rated Range\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" },
-        { "rawSql": "SELECT created_at AS time, ideal_range AS \"Ideal Range\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "B" }
-      ]
-    },
-    {
-      "title": "Speed & Power",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10 } }, "overrides": [{ "matcher": { "id": "byName", "options": "Speed" }, "properties": [{ "id": "unit", "value": "velocitykmh" }, { "id": "custom.axisPlacement", "value": "left" }] }, { "matcher": { "id": "byName", "options": "Power" }, "properties": [{ "id": "unit", "value": "kwatt" }, { "id": "custom.axisPlacement", "value": "right" }] }] },
-      "targets": [
-        { "rawSql": "SELECT created_at AS time, speed AS \"Speed\" FROM positions WHERE vehicle_id = $vehicle_id AND speed > 0 AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" },
-        { "rawSql": "SELECT created_at AS time, power AS \"Power\" FROM positions WHERE vehicle_id = $vehicle_id AND speed > 0 AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "B" }
-      ]
-    },
-    {
-      "title": "Temperature",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "celsius", "custom": { "fillOpacity": 10 } } },
-      "targets": [
-        { "rawSql": "SELECT created_at AS time, inside_temp AS \"Inside\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "A" },
-        { "rawSql": "SELECT created_at AS time, outside_temp AS \"Outside\" FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY time", "format": "time_series", "refId": "B" }
-      ]
-    },
-    {
-      "title": "Vehicle Map",
-      "type": "geomap",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "options": {
-        "basemap": { "type": "carto", "config": { "theme": "dark" } },
-        "layers": [{ "type": "markers", "config": { "style": { "size": { "fixed": 5 }, "color": { "field": "Speed", "fixed": "#06B6D4" } } } }],
-        "view": { "id": "fit" }
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "targets": [{ "rawSql": "SELECT latitude, longitude, speed AS \"Speed\", battery_level AS \"Battery\", created_at AS time FROM positions WHERE vehicle_id = $vehicle_id AND $__timeFilter(created_at) ORDER BY created_at", "format": "table", "refId": "A" }]
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 6
+      },
+      "id": 7,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Drives",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "km"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 6
+      },
+      "id": 8,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(distance)::numeric, 1) AS \"km\" FROM drives WHERE vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Distance",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 6
+      },
+      "id": 9,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"Charges\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Charges",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 6
+      },
+      "id": 10,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(charge_energy_added)::numeric, 1) AS \"kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Energy Charged",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD",
+          "decimals": 2
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 6
+      },
+      "id": 11,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(cost)::numeric, 2) AS \"$\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Charging Cost",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 6
+      },
+      "id": 12,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND((SUM(charge_energy_added) * 1000 / NULLIF(SUM(d.distance), 0))::numeric, 1) AS \"Wh/km\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg Efficiency",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 13,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT display_name AS \"Name\", model AS \"Model\", trim_badging AS \"Trim\", vin AS \"VIN\",\n  exterior_color AS \"Color\", wheel_type AS \"Wheels\", state AS \"State\",\n  created_at AS \"Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Vehicle Info",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 14,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT d.start_date AS \"Date\",\n  COALESCE(sa.display_name, 'Unknown') AS \"From\",\n  COALESCE(ea.display_name, 'Unknown') AS \"To\",\n  ROUND(d.distance::numeric, 1) AS \"Distance km\",\n  ROUND(d.duration_min::numeric) AS \"Duration min\",\n  d.start_battery_level AS \"Start %\",\n  d.end_battery_level AS \"End %\"\nFROM drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_date DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Last Drive",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 15,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT cs.start_date AS \"Date\",\n  COALESCE(a.display_name, 'Unknown') AS \"Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh\",\n  cs.start_battery_level AS \"Start %\",\n  cs.end_battery_level AS \"End %\",\n  ROUND(cs.duration_min::numeric) AS \"Duration min\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.start_date DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Last Charge",
+      "type": "table",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
-  "tags": ["teslasync"],
-  "templating": { "list": [{ "current": {}, "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" }, "definition": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "name": "vehicle_id", "label": "Vehicle", "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "type": "query", "refresh": 1 }] },
-  "time": { "from": "now-7d", "to": "now" },
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
   "timepicker": {},
-  "timezone": "browser",
-  "title": "Vehicle Overview",
-  "uid": "teslasync-overview"
+  "timezone": "",
+  "title": "TeslaSync — Vehicle Overview",
+  "uid": "teslasync-vehicle-overview",
+  "version": 1,
+  "weekStart": ""
 }
-

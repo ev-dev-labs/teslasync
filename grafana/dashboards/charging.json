@@ -1,124 +1,116 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Fleet Overview", "url": "/d/teslasync-fleet-overview/fleet-overview", "type": "link" },
-    { "title": "Charging Stats", "url": "/d/teslasync-charging-stats/charging-stats", "type": "link" },
-    { "title": "Battery Health", "url": "/d/teslasync-battery-health/battery-health", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Total Energy Added",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "kwatth", "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Cost",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "fixedColor": "#EF4444", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(cost)::numeric, 2), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Avg Duration",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "m", "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (end_date - start_date))/60)::numeric), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND end_date IS NOT NULL AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Sessions Count",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#A855F7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Avg Cost/kWh",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 3, "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND((SUM(cost)/NULLIF(SUM(charge_energy_added),0))::numeric, 3), 0) FROM charging_sessions WHERE vehicle_id = $vehicle_id AND cost > 0 AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "AC vs DC",
-      "type": "piechart",
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "options": { "legend": { "placement": "right" }, "pieType": "donut" },
-      "fieldConfig": { "overrides": [{ "matcher": { "id": "byName", "options": "AC" }, "properties": [{ "id": "color", "value": { "fixedColor": "#22C55E", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "DC" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F59E0B", "mode": "fixed" } }] }] },
-      "targets": [{ "rawSql": "SELECT CASE WHEN fast_charger_type = 'DC' THEN 'DC' ELSE 'AC' END AS metric, COUNT(*) AS value FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY 1", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Charging Sessions",
-      "type": "table",
-      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
       "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "Cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 2 }] },
-          { "matcher": { "id": "byName", "options": "kWh Added" }, "properties": [{ "id": "unit", "value": "kwatth" }, { "id": "decimals", "value": 1 }] },
-          { "matcher": { "id": "byName", "options": "Cost/kWh" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 3 }] },
-          { "matcher": { "id": "byName", "options": "Max Power" }, "properties": [{ "id": "unit", "value": "kwatt" }] },
-          { "matcher": { "id": "byName", "options": "Range +" }, "properties": [{ "id": "unit", "value": "km" }] },
-          { "matcher": { "id": "byName", "options": "Start %" }, "properties": [{ "id": "unit", "value": "percent" }] },
-          { "matcher": { "id": "byName", "options": "End %" }, "properties": [{ "id": "unit", "value": "percent" }] },
-          { "matcher": { "id": "byName", "options": "Temp" }, "properties": [{ "id": "unit", "value": "celsius" }] }
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
         ]
       },
-      "options": { "sortBy": [{ "displayName": "Date", "desc": true }] },
-      "targets": [{ "rawSql": "SELECT cs.start_date AS \"Date\", COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\", COALESCE(cs.fast_charger_type, 'AC') AS \"Type\", TO_CHAR(COALESCE(cs.end_date, NOW()) - cs.start_date, 'HH24:MI') AS \"Duration\", cs.cost AS \"Cost\", cs.charge_energy_added AS \"kWh Added\", CASE WHEN cs.charge_energy_added > 0 AND cs.cost > 0 THEN ROUND((cs.cost / cs.charge_energy_added)::numeric, 3) ELSE NULL END AS \"Cost/kWh\", cs.charger_power AS \"Max Power\", cs.temperature AS \"Temp\", ROUND((cs.end_rated_range - cs.start_rated_range)::numeric) AS \"Range +\", cs.start_battery_level AS \"Start %\", cs.end_battery_level AS \"End %\" FROM charging_sessions cs LEFT JOIN addresses a ON cs.address_id = a.id WHERE cs.vehicle_id = $vehicle_id AND $__timeFilter(cs.start_date) ORDER BY cs.start_date DESC", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Energy Added Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "kwatth", "custom": { "fillOpacity": 30, "gradientMode": "scheme", "drawStyle": "bars" }, "color": { "fixedColor": "#22C55E", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT date_trunc('day', start_date) AS time, SUM(charge_energy_added) AS \"Energy Added\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
-    },
-    {
-      "title": "Charging Cost Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "fillOpacity": 30, "gradientMode": "scheme", "drawStyle": "bars" }, "color": { "fixedColor": "#F59E0B", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT date_trunc('day', start_date) AS time, SUM(cost) AS \"Cost\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND cost > 0 AND $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
-    },
-    {
-      "title": "Charge Rate Distribution (Start %)",
-      "type": "histogram",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#06B6D4", "mode": "fixed" } } },
-      "options": { "bucketSize": 10 },
-      "targets": [{ "rawSql": "SELECT start_battery_level AS \"Start Battery %\" FROM charging_sessions WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Max Power by Charger Type",
-      "type": "barchart",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
-      "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
-      "fieldConfig": { "defaults": { "unit": "kwatt", "color": { "mode": "palette-classic" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\", MAX(cs.charger_power) AS \"Max Power\" FROM charging_sessions cs LEFT JOIN addresses a ON cs.address_id = a.id WHERE cs.vehicle_id = $vehicle_id AND $__timeFilter(cs.start_date) GROUP BY 1 ORDER BY 2 DESC LIMIT 10", "format": "table", "refId": "A" }]
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  cs.start_date AS \"Date\",\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh Added\",\n  ROUND(cs.cost::numeric, 2) AS \"Cost $\",\n  cs.start_battery_level AS \"Start %\",\n  cs.end_battery_level AS \"End %\",\n  ROUND(cs.charger_power::numeric) AS \"Power kW\",\n  COALESCE(cs.fast_charger_type, 'AC') AS \"Type\",\n  COALESCE(cs.fast_charger_brand, '-') AS \"Brand\",\n  ROUND(cs.duration_min::numeric) AS \"Duration min\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.start_date)\nORDER BY cs.start_date DESC\nLIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "Charging Session History",
+      "type": "table",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
-  "tags": ["teslasync", "charging"],
-  "templating": { "list": [{ "current": {}, "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" }, "definition": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "name": "vehicle_id", "label": "Vehicle", "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY display_name", "type": "query", "refresh": 1 }] },
-  "time": { "from": "now-30d", "to": "now" },
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
   "timepicker": {},
-  "timezone": "browser",
-  "title": "Charges",
-  "uid": "teslasync-charges"
+  "timezone": "",
+  "title": "TeslaSync — Charging History",
+  "uid": "teslasync-charging",
+  "version": 1,
+  "weekStart": ""
 }
