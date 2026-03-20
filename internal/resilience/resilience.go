@@ -130,6 +130,33 @@ func (hm *HealthMonitor) OverallStatus() ComponentStatus {
 	return worst
 }
 
+// IsDegraded returns true if any component is not healthy.
+func (hm *HealthMonitor) IsDegraded() bool {
+	return hm.OverallStatus() != StatusHealthy
+}
+
+// HealthSnapshot represents a point-in-time health check result.
+type HealthSnapshot struct {
+	Timestamp time.Time                  `json:"timestamp"`
+	Overall   ComponentStatus            `json:"overall"`
+	Components map[string]ComponentStatus `json:"components"`
+}
+
+// GetHealthHistory returns recent health snapshots (placeholder — returns current state).
+func (hm *HealthMonitor) GetHealthHistory() []HealthSnapshot {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+	snap := HealthSnapshot{
+		Timestamp:  time.Now(),
+		Overall:    hm.OverallStatus(),
+		Components: make(map[string]ComponentStatus),
+	}
+	for name, c := range hm.components {
+		snap.Components[name] = c.Status
+	}
+	return []HealthSnapshot{snap}
+}
+
 // RetryConfig configures retry behavior.
 type RetryConfig struct {
 	MaxAttempts int

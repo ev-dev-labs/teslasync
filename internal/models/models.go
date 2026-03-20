@@ -2,6 +2,28 @@ package models
 
 import "time"
 
+// APIKey represents a user-generated API key for external integrations.
+type APIKey struct {
+	ID          int64      `json:"id" db:"id"`
+	Name        string     `json:"name" db:"name"`
+	KeyHash     string     `json:"-" db:"key_hash"`
+	KeyPrefix   string     `json:"key_prefix" db:"key_prefix"`
+	Permissions string     `json:"permissions" db:"permissions"`
+	LastUsedAt  *time.Time `json:"last_used_at" db:"last_used_at"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	ExpiresAt   *time.Time `json:"expires_at" db:"expires_at"`
+}
+
+// AuditLog represents a record of a mutation action for auditing.
+type AuditLog struct {
+	ID        int64     `json:"id" db:"id"`
+	Action    string    `json:"action" db:"action"`
+	Resource  string    `json:"resource" db:"resource"`
+	Details   string    `json:"details" db:"details"`
+	IP        string    `json:"ip" db:"ip"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
 // Vehicle represents a tracked Tesla vehicle.
 type Vehicle struct {
 	ID            int64     `json:"id" db:"id"`
