@@ -162,7 +162,7 @@ export default function Drives() {
       if (b) b.count++
     })
     return buckets.map(b => ({ range: b.range + ` ${distanceUnit}`, count: b.count }))
-  }, [drives, distanceUnit])
+  }, [drives])
 
   // Speed vs Efficiency scatter
   const scatterData = useMemo(() => {

@@ -16,14 +16,11 @@ import (
 	"github.com/teslasync/teslasync/internal/tesla"
 )
 
-// vehicleHealth tracks per-vehicle polling state for backoff and alert dedup.
+// vehicleHealth tracks per-vehicle polling state for backoff.
 type vehicleHealth struct {
-	consecFails       int
-	lastError         time.Time
-	backoffUntil      time.Time
-	prevChargingState string
-	unlockedAlertSent bool
-	lastSWVersion     string
+	consecFails int
+	lastError   time.Time
+	backoffUntil time.Time
 }
 
 // Worker polls Tesla API for vehicle data and stores it.
@@ -34,7 +31,6 @@ type Worker struct {
 	driveRepo   *database.DriveRepo
 	chargeRepo  *database.ChargingRepo
 	tokenRepo   *database.TokenRepo
-	alertRepo   *database.AlertRepo
 	teslaClient *tesla.Client
 	mqttClient  *mqtt.Client
 	cfg         config.WorkerConfig
@@ -58,7 +54,6 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		driveRepo:     database.NewDriveRepo(db),
 		chargeRepo:    database.NewChargingRepo(db),
 		tokenRepo:     database.NewTokenRepo(db),
-		alertRepo:     database.NewAlertRepo(db),
 		teslaClient:   tc,
 		mqttClient:    mc,
 		cfg:           cfg,
@@ -284,9 +279,6 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	// Track charging sessions
 	w.trackCharging(ctx, vehicle, data)
 
-	// Check alert conditions
-	w.checkAlerts(ctx, vehicle, data)
-
 	// Publish to MQTT
 	w.publishVehicleData(vehicle, data)
 
@@ -410,166 +402,4 @@ func (w *Worker) publishVehicleData(vehicle *models.Vehicle, data *tesla.Vehicle
 		return
 	}
 	w.mqttClient.PublishVehicleData(vehicle.VIN, data)
-}
-
-// getOrCreateHealth returns the vehicleHealth entry for a vehicle, creating one if absent.
-// Caller must hold w.mu.
-func (w *Worker) getOrCreateHealth(vehicleID int64) *vehicleHealth {
-	vh, ok := w.vehicleHealth[vehicleID]
-	if !ok {
-		vh = &vehicleHealth{}
-		w.vehicleHealth[vehicleID] = vh
-	}
-	return vh
-}
-
-// checkAlerts evaluates alert conditions after a successful poll.
-func (w *Worker) checkAlerts(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	w.mu.Lock()
-	vh := w.getOrCreateHealth(vehicle.ID)
-	w.mu.Unlock()
-
-	w.checkLowBattery(ctx, vehicle, data)
-	w.checkChargingComplete(ctx, vehicle, data, vh)
-	w.checkVehicleUnlocked(ctx, vehicle, data, vh)
-	w.checkTirePressure(ctx, vehicle, data)
-	w.checkSoftwareUpdate(ctx, vehicle, data, vh)
-}
-
-// checkLowBattery creates an alert when battery level drops below threshold.
-func (w *Worker) checkLowBattery(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	const threshold = 20
-	if data.ChargeState.BatteryLevel < threshold {
-		alert := &models.Alert{
-			VehicleID: &vehicle.ID,
-			Type:      "low_battery",
-			Severity:  "warning",
-			Title:     "Low Battery",
-			Message:   fmt.Sprintf("Battery at %d%% — consider charging soon", data.ChargeState.BatteryLevel),
-		}
-		if err := w.alertRepo.Create(ctx, alert); err != nil {
-			log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to create low battery alert")
-		}
-	}
-}
-
-// checkChargingComplete detects charging-to-complete/disconnected transitions.
-func (w *Worker) checkChargingComplete(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse, vh *vehicleHealth) {
-	currentState := data.ChargeState.ChargingState
-	defer func() {
-		w.mu.Lock()
-		vh.prevChargingState = currentState
-		w.mu.Unlock()
-	}()
-
-	w.mu.Lock()
-	prev := vh.prevChargingState
-	w.mu.Unlock()
-
-	if prev == "Charging" && (currentState == "Complete" || currentState == "Disconnected") {
-		alert := &models.Alert{
-			VehicleID: &vehicle.ID,
-			Type:      "charging_complete",
-			Severity:  "info",
-			Title:     "Charging Complete",
-			Message:   fmt.Sprintf("Charged to %d%%, %.1f kWh added", data.ChargeState.BatteryLevel, data.ChargeState.ChargeEnergyAdded),
-		}
-		if err := w.alertRepo.Create(ctx, alert); err != nil {
-			log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to create charging complete alert")
-		}
-	}
-}
-
-// checkVehicleUnlocked alerts when a parked vehicle is unlocked (once per session).
-func (w *Worker) checkVehicleUnlocked(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse, vh *vehicleHealth) {
-	isParked := data.DriveState.Speed == nil || *data.DriveState.Speed == 0
-	isUnlocked := !data.VehicleState.Locked
-
-	if isParked && isUnlocked {
-		w.mu.Lock()
-		alreadySent := vh.unlockedAlertSent
-		w.mu.Unlock()
-
-		if !alreadySent {
-			alert := &models.Alert{
-				VehicleID: &vehicle.ID,
-				Type:      "vehicle_unlocked",
-				Severity:  "warning",
-				Title:     "Vehicle Left Unlocked",
-				Message:   "Vehicle is parked and unlocked",
-			}
-			if err := w.alertRepo.Create(ctx, alert); err != nil {
-				log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to create unlocked alert")
-			}
-			w.mu.Lock()
-			vh.unlockedAlertSent = true
-			w.mu.Unlock()
-		}
-	} else {
-		w.mu.Lock()
-		vh.unlockedAlertSent = false
-		w.mu.Unlock()
-	}
-}
-
-// checkTirePressure alerts when any tire pressure is below 30 PSI.
-func (w *Worker) checkTirePressure(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	type tireInfo struct {
-		label    string
-		pressure *float64
-	}
-	tires := []tireInfo{
-		{"Front-left", data.VehicleState.TpmsPressureFL},
-		{"Front-right", data.VehicleState.TpmsPressureFR},
-		{"Rear-left", data.VehicleState.TpmsPressureRL},
-		{"Rear-right", data.VehicleState.TpmsPressureRR},
-	}
-
-	const threshold = 30.0
-	for _, t := range tires {
-		if t.pressure != nil && *t.pressure < threshold {
-			alert := &models.Alert{
-				VehicleID: &vehicle.ID,
-				Type:      "tire_pressure_low",
-				Severity:  "warning",
-				Title:     "Low Tire Pressure",
-				Message:   fmt.Sprintf("%s: %.1f PSI (below %.0f PSI threshold)", t.label, *t.pressure, threshold),
-			}
-			if err := w.alertRepo.Create(ctx, alert); err != nil {
-				log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to create tire pressure alert")
-			}
-			break // one alert per poll cycle
-		}
-	}
-}
-
-// checkSoftwareUpdate alerts when a new software update is available.
-func (w *Worker) checkSoftwareUpdate(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse, vh *vehicleHealth) {
-	su := data.VehicleState.SoftwareUpdate
-	if su.Status != "available" || su.Version == "" {
-		return
-	}
-
-	w.mu.Lock()
-	lastVersion := vh.lastSWVersion
-	w.mu.Unlock()
-
-	if su.Version == lastVersion {
-		return
-	}
-
-	alert := &models.Alert{
-		VehicleID: &vehicle.ID,
-		Type:      "software_update",
-		Severity:  "info",
-		Title:     "Software Update Available",
-		Message:   fmt.Sprintf("Version %s is available for download", su.Version),
-	}
-	if err := w.alertRepo.Create(ctx, alert); err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to create software update alert")
-	}
-
-	w.mu.Lock()
-	vh.lastSWVersion = su.Version
-	w.mu.Unlock()
 }

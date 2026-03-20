@@ -84,7 +84,7 @@ export default function Analytics() {
     queryFn: () => getFleetAnalytics(30, startDate),
   })
 
-  const comparison = useMemo(() => analytics?.vehicle_comparison ?? [], [analytics])
+  const comparison = analytics?.vehicle_comparison ?? []
   const da = analytics?.drive_analytics
   const ca = analytics?.charging_analytics
   const bt = analytics?.battery_trend ?? []
@@ -327,90 +327,6 @@ export default function Analytics() {
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
-                  </GlassPanel>
-                </FadeIn>
-              )}
-
-              {/* Fleet Cost Report */}
-              <FadeIn delay={0.35}>
-                <GlassPanel className="p-4 sm:p-6">
-                  <h3 className="section-title mb-4 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-neon-amber" /> Fleet Cost Report
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Total Fleet Cost</p>
-                      <p className="text-xl font-bold text-neon-green">${totalCost.toFixed(2)}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Cost per Vehicle</p>
-                      <p className="text-xl font-bold text-[var(--text-primary)]">${comparison.length > 0 ? (totalCost / comparison.length).toFixed(2) : '0.00'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 text-center">
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Cost per km</p>
-                      <p className="text-xl font-bold text-[var(--text-primary)]">${totalDistance > 0 ? (totalCost / totalDistance).toFixed(4) : '0.00'}</p>
-                    </div>
-                  </div>
-                  {comparison.length > 0 && (
-                    <div className="space-y-2">
-                      {comparison.map((v, i) => {
-                        const vCost = safe(v.distance) > 0 && totalDistance > 0 ? (totalCost * safe(v.distance) / totalDistance) : 0
-                        return (
-                          <div key={v.id} className="flex items-center gap-3">
-                            <span className="text-xs text-[var(--text-secondary)] w-24 truncate">{v.name}</span>
-                            <div className="flex-1 h-3 rounded-full bg-white/[0.04] overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${totalCost > 0 ? (vCost / totalCost * 100) : 0}%`, background: NEON_COLORS[i % NEON_COLORS.length] }} />
-                            </div>
-                            <span className="text-xs font-medium text-[var(--text-primary)] w-16 text-right">${vCost.toFixed(2)}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </GlassPanel>
-              </FadeIn>
-
-              {/* Usage Anomaly Detection */}
-              {da && (
-                <FadeIn delay={0.4}>
-                  <GlassPanel className="p-4 sm:p-6">
-                    <h3 className="section-title mb-4 flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-neon-red" /> Usage Anomalies
-                    </h3>
-                    {(() => {
-                      const dailyTrend = da.daily_trend ?? []
-                      const avgDist = dailyTrend.length > 0 ? dailyTrend.reduce((s, d) => s + safe(d.distance), 0) / dailyTrend.length : 0
-                      const avgEff = safe(analytics?.avg_efficiency_wh_km)
-                      const anomalies: { date: string; type: string; detail: string; color: string }[] = []
-                      dailyTrend.forEach(d => {
-                        if (safe(d.distance) > avgDist * 2 && avgDist > 0) {
-                          anomalies.push({ date: d.date, type: 'High Distance', detail: `${safe(d.distance).toFixed(0)} km (avg: ${avgDist.toFixed(0)} km)`, color: '#f59e0b' })
-                        }
-                      })
-                      const hourly = da.hourly_pattern ?? []
-                      const nightDrives = hourly.filter(h => h.hour >= 0 && h.hour < 5).reduce((s, h) => s + safe(h.drives), 0)
-                      if (nightDrives > 0) {
-                        anomalies.push({ date: 'Period', type: 'Night Driving', detail: `${nightDrives} drives between 12am-5am`, color: '#a855f7' })
-                      }
-                      if (avgEff > 0) {
-                        const poorEff = comparison.filter(v => safe(v.efficiency) > avgEff * 1.5)
-                        poorEff.forEach(v => {
-                          anomalies.push({ date: 'Ongoing', type: 'Poor Efficiency', detail: `${v.name}: ${safe(v.efficiency).toFixed(0)} Wh/km (avg: ${avgEff.toFixed(0)})`, color: '#ef4444' })
-                        })
-                      }
-                      if (anomalies.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No anomalies detected — your fleet is running normally ✅</p>
-                      return (
-                        <div className="space-y-2">
-                          {anomalies.slice(0, 10).map((a, i) => (
-                            <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${a.color}15`, color: a.color }}>{a.type}</span>
-                              <span className="text-xs text-[var(--text-secondary)] flex-1">{a.detail}</span>
-                              <span className="text-[10px] text-[var(--text-muted)]">{a.date}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    })()}
                   </GlassPanel>
                 </FadeIn>
               )}

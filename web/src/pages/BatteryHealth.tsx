@@ -218,43 +218,6 @@ export default function BatteryHealth() {
             </GlassPanel>
           </FadeIn>
 
-          {/* Battery Cycle Counter */}
-          <FadeIn delay={0.07}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title flex items-center gap-2 mb-4">
-                <Activity className="h-4 w-4 text-neon-purple" /> Battery Cycle Counter
-              </h3>
-              <div className="flex items-center gap-8">
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-neon-purple">{cycles}</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">Total Cycles</p>
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[var(--text-secondary)]">{cycles} of ~1,500 rated cycles</span>
-                    <span className="text-[var(--text-muted)]">{((cycles / 1500) * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="h-3 rounded-full bg-white/5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.min((cycles / 1500) * 100, 100)}%`,
-                        background: cycles < 500 ? '#10b981' : cycles < 1000 ? '#f59e0b' : '#ef4444',
-                        boxShadow: `0 0 6px ${cycles < 500 ? '#10b98140' : cycles < 1000 ? '#f59e0b40' : '#ef444440'}`,
-                      }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-2">
-                    <span>Remaining: ~{Math.max(1500 - cycles, 0)} cycles</span>
-                    <span className={cycles < 500 ? 'text-neon-green' : cycles < 1000 ? 'text-neon-amber' : 'text-neon-red'}>
-                      {cycles < 500 ? 'Excellent' : cycles < 1000 ? 'Good' : 'High Usage'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </GlassPanel>
-          </FadeIn>
-
           {/* Smart Insights */}
           <FadeIn delay={0.1}>
             <div className="space-y-2">

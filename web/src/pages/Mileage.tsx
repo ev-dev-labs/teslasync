@@ -100,68 +100,6 @@ export default function Mileage() {
         </div>
       )}
 
-      {/* Distance Milestones */}
-      {stats && (() => {
-        const totalKm = stats.total_distance
-        const milestones = [
-          { km: 1000, label: '1K' }, { km: 5000, label: '5K' }, { km: 10000, label: '10K' },
-          { km: 25000, label: '25K' }, { km: 50000, label: '50K' }, { km: 100000, label: '100K' },
-        ]
-        const nextIdx = milestones.findIndex(m => totalKm < m.km)
-        const nextMilestone = nextIdx >= 0 ? milestones[nextIdx] : null
-        const prevKm = nextIdx > 0 ? milestones[nextIdx - 1].km : 0
-        const progress = nextMilestone ? ((totalKm - prevKm) / (nextMilestone.km - prevKm)) * 100 : 100
-        return (
-          <GlassPanel className="p-4 sm:p-6 mb-6">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Distance Milestones</h3>
-            <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4">
-              {milestones.map((m, i) => {
-                const achieved = totalKm >= m.km
-                return (
-                  <div key={m.km} className="flex flex-col items-center flex-1">
-                    <div className={`h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold border-2 transition-all ${
-                      achieved
-                        ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan'
-                        : 'bg-white/5 border-white/10 text-[var(--text-muted)]'
-                    }`}>
-                      {achieved ? '✓' : m.label}
-                    </div>
-                    <span className="text-[9px] sm:text-[10px] text-[var(--text-muted)] mt-1">{m.label} km</span>
-                    {i < milestones.length - 1 && (
-                      <div className="hidden" />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            {/* Connecting line */}
-            <div className="relative h-1.5 rounded-full bg-white/5 mx-4 mb-3">
-              <div
-                className="absolute left-0 top-0 h-full rounded-full bg-neon-cyan"
-                style={{
-                  width: `${Math.min(((milestones.findIndex(m => totalKm < m.km) >= 0 ? milestones.findIndex(m => totalKm < m.km) : milestones.length) / milestones.length) * 100, 100)}%`,
-                  boxShadow: '0 0 6px rgba(0,240,255,0.4)',
-                }}
-              />
-            </div>
-            {nextMilestone && (
-              <div className="text-center">
-                <p className="text-xs text-[var(--text-secondary)]">
-                  Next: <span className="text-neon-cyan font-semibold">{nextMilestone.label} km</span>
-                  {' — '}{(nextMilestone.km - totalKm).toFixed(0)} km to go ({progress.toFixed(0)}%)
-                </p>
-                <div className="h-2 rounded-full bg-white/5 mx-auto max-w-xs mt-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-neon-cyan/60 to-neon-cyan"
-                    style={{ width: `${Math.min(progress, 100)}%`, boxShadow: '0 0 4px rgba(0,240,255,0.3)' }}
-                  />
-                </div>
-              </div>
-            )}
-          </GlassPanel>
-        )
-      })()}
-
       {/* Daily Mileage Area Chart */}
       <GlassPanel className="p-4 sm:p-6 mb-6">
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Mileage</h3>

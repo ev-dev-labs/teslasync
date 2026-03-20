@@ -1,9 +1,6 @@
 package api
 
 import (
-	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -12,33 +9,6 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog/log"
 )
-
-type contextKey string
-
-const correlationIDKey contextKey = "correlation_id"
-
-// generateCorrelationID creates a random hex string for request tracing.
-func generateCorrelationID() string {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
-	return hex.EncodeToString(b)
-}
-
-// CorrelationID middleware injects or propagates a correlation ID header for
-// structured request tracing across services.
-func CorrelationID(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := r.Header.Get("X-Correlation-ID")
-		if id == "" {
-			id = generateCorrelationID()
-		}
-		w.Header().Set("X-Correlation-ID", id)
-		ctx := context.WithValue(r.Context(), correlationIDKey, id)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
 
 // LoggerMiddleware logs HTTP requests using zerolog.
 func LoggerMiddleware(next http.Handler) http.Handler {

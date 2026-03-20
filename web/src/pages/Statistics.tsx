@@ -255,57 +255,6 @@ export default function Statistics() {
           </ResponsiveContainer>
         </GlassPanel>
       )}
-
-      {/* Vehicle Comparison Matrix */}
-      {vehicleComp.length > 1 && (
-        <GlassPanel className="p-6">
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <BarChart3 className="h-4 w-4 text-neon-purple" /> Vehicle Comparison Matrix
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider border-b border-white/[0.06]" style={{ color: 'var(--text-muted)' }}>
-                  <th className="py-2 text-left">Vehicle</th>
-                  <th className="py-2 text-right">Distance (km)</th>
-                  <th className="py-2 text-right">Drives</th>
-                  <th className="py-2 text-right">Energy (kWh)</th>
-                  <th className="py-2 text-right">Efficiency (Wh/km)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const maxDist = Math.max(...vehicleComp.map(v => v.distance), 1)
-                  const minDist = Math.min(...vehicleComp.map(v => v.distance))
-                  const maxDrives = Math.max(...vehicleComp.map(v => v.drives), 1)
-                  const minDrives = Math.min(...vehicleComp.map(v => v.drives))
-                  const maxEnergy = Math.max(...vehicleComp.map(v => v.energy), 1)
-                  const minEnergy = Math.min(...vehicleComp.map(v => v.energy))
-                  const bestEff = Math.min(...vehicleComp.map(v => v.efficiency || Infinity))
-                  const worstEff = Math.max(...vehicleComp.map(v => v.efficiency || 0))
-                  return vehicleComp.map(v => (
-                    <tr key={v.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                      <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{v.name}</td>
-                      <td className="py-2 text-right font-mono" style={{ color: v.distance === maxDist ? '#10b981' : v.distance === minDist && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
-                        {v.distance.toFixed(1)}
-                      </td>
-                      <td className="py-2 text-right font-mono" style={{ color: v.drives === maxDrives ? '#10b981' : v.drives === minDrives && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
-                        {v.drives}
-                      </td>
-                      <td className="py-2 text-right font-mono" style={{ color: v.energy === maxEnergy ? '#10b981' : v.energy === minEnergy && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
-                        {v.energy.toFixed(1)}
-                      </td>
-                      <td className="py-2 text-right font-mono" style={{ color: v.efficiency === bestEff ? '#10b981' : v.efficiency === worstEff && vehicleComp.length > 1 ? '#ef4444' : 'var(--text-secondary)' }}>
-                        {(v.efficiency || 0).toFixed(0)}
-                      </td>
-                    </tr>
-                  ))
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </GlassPanel>
-      )}
     </FadeIn>
   )
 }

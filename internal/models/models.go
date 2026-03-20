@@ -325,28 +325,6 @@ type Trip struct {
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
 }
 
-// APIKey represents an API key for programmatic access.
-type APIKey struct {
-	ID          int64      `json:"id" db:"id"`
-	Name        string     `json:"name" db:"name"`
-	KeyHash     string     `json:"-" db:"key_hash"`
-	KeyPrefix   string     `json:"key_prefix" db:"key_prefix"`
-	Permissions string     `json:"permissions" db:"permissions"` // "read", "read-write", "admin"
-	LastUsedAt  *time.Time `json:"last_used_at" db:"last_used_at"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
-	ExpiresAt   *time.Time `json:"expires_at" db:"expires_at"`
-}
-
-// AuditLog represents an action audit trail entry.
-type AuditLog struct {
-	ID        int64     `json:"id"`
-	Action    string    `json:"action"`   // "create", "update", "delete", "command"
-	Resource  string    `json:"resource"` // "vehicle", "geofence", "alert_rule", etc.
-	Details   string    `json:"details"`
-	IP        string    `json:"ip"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 // VehicleStateRecord represents a vehicle state change record from the DB.
 type VehicleStateRecord struct {
 	ID          int64      `json:"id" db:"id"`

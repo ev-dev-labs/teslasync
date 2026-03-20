@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVampireDrainEvents, getVampireDrainStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter } from '../components/ui'
 import { Moon, BatteryWarning, Shield, TrendingDown, Clock, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ScatterChart, Scatter, ZAxis, Legend, CartesianGrid
+  ScatterChart, Scatter, ZAxis, Legend
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
@@ -65,33 +65,6 @@ export default function VampireDrain() {
     temp: e.outside_temp_avg ?? 20,
     sentry: e.sentry_mode,
   }))
-
-  // Drain correlation: sentry ON vs OFF by temperature range
-  const drainCorrelation = useMemo(() => {
-    if (!events || events.length === 0) return []
-    const tempRanges = [
-      { min: -Infinity, max: 10, label: 'Cold (<10°C)' },
-      { min: 10, max: 25, label: 'Mild (10-25°C)' },
-      { min: 25, max: Infinity, label: 'Hot (>25°C)' },
-    ]
-    return tempRanges.map(range => {
-      const inRange = events.filter(e => {
-        const temp = e.outside_temp_avg ?? 20
-        return temp >= range.min && temp < range.max
-      })
-      const sentryOn = inRange.filter(e => e.sentry_mode)
-      const sentryOff = inRange.filter(e => !e.sentry_mode)
-      const avgOn = sentryOn.length > 0 ? sentryOn.reduce((s, e) => s + e.drain_rate_pct_per_hour, 0) / sentryOn.length : 0
-      const avgOff = sentryOff.length > 0 ? sentryOff.reduce((s, e) => s + e.drain_rate_pct_per_hour, 0) / sentryOff.length : 0
-      return {
-        range: range.label,
-        sentryOn: parseFloat(avgOn.toFixed(3)),
-        sentryOff: parseFloat(avgOff.toFixed(3)),
-        countOn: sentryOn.length,
-        countOff: sentryOff.length,
-      }
-    }).filter(d => d.countOn > 0 || d.countOff > 0)
-  }, [events])
 
   return (
     <FadeIn>
@@ -208,34 +181,6 @@ export default function VampireDrain() {
               <Scatter name="Sentry Off" data={sentryData.filter(d => !d.sentry)} fill="#10b981" />
             </ScatterChart>
           </ResponsiveContainer>
-        </GlassPanel>
-      )}
-
-      {/* Drain Correlation: Sentry Mode × Temperature */}
-      {drainCorrelation.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Drain Rate: Sentry Mode × Temperature
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={drainCorrelation} {...chartAnimation}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="range" tick={axisTickSm} />
-              <YAxis tick={axisTickSm} label={{ value: '%/hr', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }} />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
-              <Bar dataKey="sentryOn" name="Sentry ON" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sentryOff" name="Sentry OFF" fill="#10b981" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="grid grid-cols-3 gap-3 mt-3 text-center">
-            {drainCorrelation.map(d => (
-              <div key={d.range} className="text-[10px] text-[var(--text-muted)]">
-                <p className="font-medium text-[var(--text-secondary)]">{d.range}</p>
-                <p>ON: {d.countOn} events · OFF: {d.countOff} events</p>
-              </div>
-            ))}
-          </div>
         </GlassPanel>
       )}
 

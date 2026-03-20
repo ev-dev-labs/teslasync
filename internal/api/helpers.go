@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 )
 
 // JSON helper to write JSON responses.
@@ -15,9 +14,7 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	if data != nil {
-		if err := json.NewEncoder(w).Encode(data); err != nil {
-			log.Error().Err(err).Msg("encode response")
-		}
+		json.NewEncoder(w).Encode(data)
 	}
 }
 
@@ -59,7 +56,15 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	})
 }
 
-// Pagination helperextracts limit/offset from query params.
+// writeErrorCode writes a JSON error response with a custom error code.
+func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
+	writeJSON(w, status, map[string]string{
+		"error": msg,
+		"code":  code,
+	})
+}
+
+// Pagination helper extracts limit/offset from query params.
 func pagination(r *http.Request) (limit, offset int) {
 	limit = 50
 	offset = 0

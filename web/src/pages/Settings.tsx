@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, AppSettings, Vehicle } from '../api'
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Clock, Mail } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -20,50 +20,6 @@ function SettingField({ label, children }: { label: string; children: React.Reac
     <div>
       <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">{label}</label>
       {children}
-    </div>
-  )
-}
-
-function FleetDigestSettings() {
-  const [enabled, setEnabled] = useState(() => localStorage.getItem('teslasync-digest-enabled') === 'true')
-  const [email, setEmail] = useState(() => localStorage.getItem('teslasync-digest-email') ?? '')
-  const [frequency, setFrequency] = useState(() => localStorage.getItem('teslasync-digest-frequency') ?? 'weekly')
-
-  const save = () => {
-    localStorage.setItem('teslasync-digest-enabled', String(enabled))
-    localStorage.setItem('teslasync-digest-email', email)
-    localStorage.setItem('teslasync-digest-frequency', frequency)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-[var(--text-secondary)]">Enable email digest</span>
-        <button
-          onClick={() => { const next = !enabled; setEnabled(next); localStorage.setItem('teslasync-digest-enabled', String(next)) }}
-          className={clsx('relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-            enabled ? 'bg-neon-cyan' : 'bg-white/10')}
-        >
-          <span className={clsx('inline-block h-4 w-4 rounded-full bg-white transition-transform', enabled ? 'translate-x-6' : 'translate-x-1')} />
-        </button>
-      </div>
-      {enabled && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SettingField label="Email Address">
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} onBlur={save}
-              placeholder="you@example.com"
-              className="glass-input w-full px-3 py-2.5 text-sm" />
-          </SettingField>
-          <SettingField label="Frequency">
-            <select value={frequency} onChange={e => { setFrequency(e.target.value); localStorage.setItem('teslasync-digest-frequency', e.target.value) }}
-              className="glass-input w-full px-3 py-2.5 text-sm">
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </SettingField>
-        </div>
-      )}
     </div>
   )
 }
@@ -533,66 +489,6 @@ export default function Settings() {
               Clear filters
             </button>
           )}
-        </GlassPanel>
-      </FadeIn>
-
-      {/* Session Info Display */}
-      <FadeIn delay={0.18}>
-        <GlassPanel className="p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-green/10 text-neon-green ring-1 ring-neon-green/20">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">Active Session</h2>
-              <p className="text-xs text-[var(--text-muted)]">Current connection and token status</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Connected Since</p>
-              <p className="text-sm font-medium text-[var(--text-primary)]">{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
-            </div>
-            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Token Expires</p>
-              {auth?.expires_at ? (
-                <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{new Date(auth.expires_at).toLocaleString()}</p>
-                  <p className="text-[10px] text-[var(--text-muted)]">
-                    {(() => {
-                      const diff = new Date(auth.expires_at).getTime() - Date.now()
-                      if (diff <= 0) return 'Expired'
-                      const hrs = Math.floor(diff / 3600000)
-                      const mins = Math.floor((diff % 3600000) / 60000)
-                      return `${hrs}h ${mins}m remaining`
-                    })()}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-[var(--text-muted)]">N/A</p>
-              )}
-            </div>
-            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">API Version</p>
-              <p className="text-sm font-medium text-[var(--text-primary)]">v1</p>
-            </div>
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* Fleet Digest */}
-      <FadeIn delay={0.19}>
-        <GlassPanel className="p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-purple/10 text-neon-purple ring-1 ring-neon-purple/20">
-              <Mail className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">Fleet Digest</h2>
-              <p className="text-xs text-[var(--text-muted)]">Receive periodic fleet summary reports via email</p>
-            </div>
-          </div>
-          <FleetDigestSettings />
         </GlassPanel>
       </FadeIn>
 
