@@ -35,7 +35,7 @@ helm install teslasync oci://ghcr.io/teslasync/charts/teslasync \
 ### From Source
 
 ```bash
-git clone https://github.com/your-org/teslasync.git
+git clone https://github.com/teslasync-labs/teslasync.git
 cd teslasync
 helm install teslasync ./helm/teslasync -f my-values.yaml
 ```
@@ -55,11 +55,11 @@ The following table lists all configurable parameters and their default values.
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Backend replicas | `1` |
-| `image.repository` | Backend image repository | `ghcr.io/your-org/teslasync` |
+| `image.repository` | Backend image repository | `ghcr.io/teslasync-labs/teslasync` |
 | `image.pullPolicy` | Backend image pull policy | `IfNotPresent` |
 | `image.tag` | Backend image tag (defaults to chart appVersion) | `""` |
 | `web.enabled` | Enable frontend deployment | `true` |
-| `web.image.repository` | Frontend image repository | `ghcr.io/your-org/teslasync-web` |
+| `web.image.repository` | Frontend image repository | `ghcr.io/teslasync-labs/teslasync-web` |
 | `web.image.pullPolicy` | Frontend image pull policy | `IfNotPresent` |
 | `web.image.tag` | Frontend image tag | `""` |
 | `web.replicaCount` | Frontend replicas | `1` |

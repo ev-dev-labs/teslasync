@@ -11,7 +11,7 @@ hero:
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/your-org/TeslaSync
+      link: https://github.com/teslasync-labs/TeslaSync
 
 features:
   - icon: 🚗
@@ -82,7 +82,7 @@ TeslaSync is a next-generation Tesla fleet intelligence platform built from the 
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-org/TeslaSync.git
+git clone https://github.com/teslasync-labs/TeslaSync.git
 cd TeslaSync
 cp .env.example .env
 # Edit .env with your Tesla API credentials
