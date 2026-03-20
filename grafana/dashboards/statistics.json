@@ -30,7 +30,7 @@
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(energy_added_kwh)::numeric, 1), 0) FROM charging_sessions WHERE $__timeFilter(start_date)", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(charge_energy_added)::numeric, 1), 0) FROM charging_sessions WHERE $__timeFilter(start_date)", "format": "table", "refId": "A" }]
     },
     {
       "title": "Total Drives",
@@ -95,7 +95,7 @@
           { "matcher": { "id": "byName", "options": "cost" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "color", "value": { "fixedColor": "#f59e0b" } }, { "id": "custom.axisPlacement", "value": "right" }] }
         ]
       },
-      "targets": [{ "rawSql": "SELECT DATE_TRUNC('month', start_date) AS time, ROUND(SUM(energy_added_kwh)::numeric, 1) AS charge_energy_added, ROUND(SUM(cost)::numeric, 2) AS cost FROM charging_sessions WHERE $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT DATE_TRUNC('month', start_date) AS time, ROUND(SUM(charge_energy_added)::numeric, 1) AS charge_energy_added, ROUND(SUM(cost)::numeric, 2) AS cost FROM charging_sessions WHERE $__timeFilter(start_date) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
     },
     {
       "title": "Monthly Mileage Trend",
@@ -117,7 +117,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "decimals": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 60 }, { "color": "green", "value": 80 }] } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(v.display_name, v.vin) AS metric, ROUND((latest.rated_range / NULLIF(max_range.max_rated, 0) * 100)::numeric, 1) AS health FROM vehicles v JOIN LATERAL (SELECT rated_battery_range_km AS rated_range FROM positions WHERE vehicle_id = v.id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1) latest ON true JOIN LATERAL (SELECT MAX(rated_battery_range_km) AS max_rated FROM positions WHERE vehicle_id = v.id AND rated_battery_range_km IS NOT NULL) max_range ON true ORDER BY health", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(v.display_name, v.vin) AS metric, ROUND((latest.rated_range / NULLIF(max_range.max_rated, 0) * 100)::numeric, 1) AS health FROM vehicles v JOIN LATERAL (SELECT rated_range AS rated_range FROM positions WHERE vehicle_id = v.id AND rated_range IS NOT NULL ORDER BY created_at DESC LIMIT 1) latest ON true JOIN LATERAL (SELECT MAX(rated_range) AS max_rated FROM positions WHERE vehicle_id = v.id AND rated_range IS NOT NULL) max_range ON true ORDER BY health", "format": "table", "refId": "A" }]
     },
     {
       "title": "Top Locations by Visits",
@@ -126,7 +126,7 @@
       "datasource": { "type": "postgres", "uid": "DS_TESLASYNC_POSTGRESQL" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } },
       "options": { "orientation": "horizontal", "showValue": "always" },
-      "targets": [{ "rawSql": "SELECT COALESCE(name, address, 'Unknown') AS location, visit_count FROM visited_locations ORDER BY visit_count DESC LIMIT 10", "format": "table", "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COALESCE(a.display_name, a.city, 'Unknown') AS location, vl.visit_count FROM visited_locations vl LEFT JOIN addresses a ON vl.address_id = a.id ORDER BY visit_count DESC LIMIT 10", "format": "table", "refId": "A" }]
     }
   ],
   "templating": { "list": [] },
