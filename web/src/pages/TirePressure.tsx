@@ -56,6 +56,140 @@ function PressureGauge({ label, value, min = 30, max = 50 }: { label: string; va
   )
 }
 
+function TireCarVisualization({ fl, fr, rl, rr }: { fl: number | null; fr: number | null; rl: number | null; rr: number | null }) {
+  const getStatus = (psi: number | null): 'green' | 'amber' | 'red' => {
+    if (psi === null || psi === 0) return 'amber'
+    if (psi < 30 || psi > 50) return 'red'
+    if (psi < 35 || psi > 45) return 'amber'
+    return 'green'
+  }
+  const statusColors = { green: '#10b981', amber: '#f59e0b', red: '#ef4444' } as const
+  const getColor = (psi: number | null) => statusColors[getStatus(psi)]
+  const allNormal = [fl, fr, rl, rr].every(v => v !== null && v >= 35 && v <= 45)
+  const fmt = (psi: number | null) => (psi !== null && psi > 0 ? psi.toFixed(1) : '--')
+
+  const tires = [
+    { psi: fl, cx: 95, cy: 160, label: 'FRONT L', side: 'left' as const },
+    { psi: fr, cx: 305, cy: 160, label: 'FRONT R', side: 'right' as const },
+    { psi: rl, cx: 95, cy: 430, label: 'REAR L', side: 'left' as const },
+    { psi: rr, cx: 305, cy: 430, label: 'REAR R', side: 'right' as const },
+  ]
+
+  return (
+    <svg viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: 500 }} role="img" aria-label="Tire pressure vehicle visualization">
+      <style>{`
+        .tcv-spin{animation:tcvSpin .8s linear infinite}
+        .tcv-flow{animation:tcvFlow 1.2s linear infinite}
+        .tcv-glow{animation:tcvGlow 3s ease-in-out infinite}
+        @keyframes tcvSpin{to{stroke-dashoffset:-12}}
+        @keyframes tcvFlow{to{stroke-dashoffset:-8}}
+        @keyframes tcvGlow{0%,100%{opacity:.4}50%{opacity:1}}
+      `}</style>
+      <defs>
+        <linearGradient id="tcvStroke" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#06b6d4" /><stop offset="100%" stopColor="#10b981" />
+        </linearGradient>
+        <linearGradient id="tcvBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1e293b" stopOpacity="0.85" /><stop offset="100%" stopColor="#0f172a" stopOpacity="0.95" />
+        </linearGradient>
+        <linearGradient id="tcvGlass" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.2" /><stop offset="100%" stopColor="#06b6d4" stopOpacity="0.05" />
+        </linearGradient>
+        <filter id="tcvGlowF">
+          <feGaussianBlur stdDeviation="4" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* Car body */}
+      <path d="M200,78 C245,78 270,100 274,135 L278,210 L280,370 L277,445 C274,495 252,518 200,522 C148,518 126,495 123,445 L120,370 L122,210 L126,135 C130,100 155,78 200,78Z" fill="url(#tcvBody)" stroke="url(#tcvStroke)" strokeWidth="2" />
+      <line x1="135" y1="220" x2="265" y2="220" stroke="#334155" strokeWidth="0.8" opacity="0.4" />
+      <line x1="132" y1="380" x2="268" y2="380" stroke="#334155" strokeWidth="0.8" opacity="0.4" />
+
+      {/* Windshield */}
+      <path d="M165,128 C170,105 182,92 200,88 C218,92 230,105 235,128 L240,168 L160,168Z" fill="url(#tcvGlass)" stroke="#22d3ee" strokeWidth="1" strokeOpacity="0.3" />
+      {/* Rear window */}
+      <path d="M160,440 L240,440 L235,478 C230,498 218,508 200,512 C182,508 170,498 165,478Z" fill="url(#tcvGlass)" stroke="#22d3ee" strokeWidth="1" strokeOpacity="0.3" />
+
+      {/* Headlights */}
+      <ellipse cx="140" cy="118" rx="10" ry="5" fill="#fbbf24" className="tcv-glow" filter="url(#tcvGlowF)" />
+      <ellipse cx="260" cy="118" rx="10" ry="5" fill="#fbbf24" className="tcv-glow" filter="url(#tcvGlowF)" />
+
+      {/* Taillights */}
+      <ellipse cx="145" cy="490" rx="8" ry="4" fill="#ef4444" opacity="0.6" filter="url(#tcvGlowF)">
+        <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite" />
+      </ellipse>
+      <ellipse cx="255" cy="490" rx="8" ry="4" fill="#ef4444" opacity="0.6" filter="url(#tcvGlowF)">
+        <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite" />
+      </ellipse>
+
+      {/* Side mirrors */}
+      <ellipse cx="115" cy="175" rx="8" ry="5" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+      <ellipse cx="285" cy="175" rx="8" ry="5" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+
+      {/* Tires with pulse rings, data lines, and PSI labels */}
+      {tires.map(t => {
+        const c = getColor(t.psi)
+        const isL = t.side === 'left'
+        return (
+          <g key={t.label}>
+            {/* Pulse rings */}
+            <circle cx={t.cx} cy={t.cy} fill="none" stroke={c} strokeWidth="1.5" r="22" opacity="0">
+              <animate attributeName="r" values="22;42" dur="2s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.6;0" dur="2s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={t.cx} cy={t.cy} fill="none" stroke={c} strokeWidth="1" r="22" opacity="0">
+              <animate attributeName="r" values="22;48" dur="2s" begin="0.6s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.4;0" dur="2s" begin="0.6s" repeatCount="indefinite" />
+            </circle>
+
+            {/* Data line: tire → car body */}
+            <line x1={isL ? t.cx + 15 : t.cx - 15} y1={t.cy} x2={isL ? 125 : 275} y2={t.cy} stroke={c} strokeWidth="1" strokeDasharray="4 4" opacity="0.5" className="tcv-flow" />
+
+            {/* Tire rectangle */}
+            <rect x={t.cx - 15} y={t.cy - 30} width={30} height={60} rx={8} fill="#111827" stroke={c} strokeWidth="2" />
+            {/* Spinning tread overlay */}
+            <rect x={t.cx - 15} y={t.cy - 30} width={30} height={60} rx={8} fill="none" stroke={c} strokeWidth="1.5" strokeDasharray="6 6" opacity="0.4" className="tcv-spin" />
+            {/* Tread lines */}
+            {[-18, -6, 6, 18].map(dy => (
+              <line key={dy} x1={t.cx - 10} y1={t.cy + dy} x2={t.cx + 10} y2={t.cy + dy} stroke={c} strokeWidth="1" opacity="0.2" />
+            ))}
+
+            {/* Connecting line: label → tire */}
+            <line x1={isL ? 60 : 340} y1={t.cy} x2={isL ? t.cx - 15 : t.cx + 15} y2={t.cy} stroke={c} strokeWidth="0.8" strokeDasharray="3 3" opacity="0.35" className="tcv-flow" />
+
+            {/* PSI label box */}
+            <rect x={isL ? 4 : 340} y={t.cy - 22} width={56} height={44} rx={8} fill="#0f172a" stroke={c} strokeWidth="1.2" opacity="0.9" />
+            <text x={isL ? 32 : 368} y={t.cy - 4} textAnchor="middle" fontSize="15" fontWeight="bold" fill={c} fontFamily="system-ui,sans-serif">{fmt(t.psi)}</text>
+            <text x={isL ? 32 : 368} y={t.cy + 12} textAnchor="middle" fontSize="7" fill="#9ca3af" fontFamily="system-ui,sans-serif">{t.label}</text>
+          </g>
+        )
+      })}
+
+      {/* Center HUD */}
+      <rect x="165" y="268" width="70" height="62" rx="10" fill="#0f172a" stroke="#22d3ee" strokeWidth="1" opacity="0.8" />
+      <text x="200" y="288" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">TPMS</text>
+      <text x="200" y="306" textAnchor="middle" fontSize="7" fontWeight="600" fill={allNormal ? '#10b981' : '#f59e0b'} fontFamily="system-ui,sans-serif">{allNormal ? 'ALL NORMAL' : 'WARNING'}</text>
+      <circle cx="200" cy="320" r="3" fill={allNormal ? '#10b981' : '#f59e0b'}>
+        <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
+      </circle>
+
+      {/* Tesla T logo */}
+      <text x="200" y="258" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#22d3ee" opacity="0.4" fontFamily="system-ui,sans-serif">
+        {'T'}
+        <animate attributeName="opacity" values="0.2;0.5;0.2" dur="4s" repeatCount="indefinite" />
+      </text>
+
+      {/* Scanner line */}
+      <line x1="130" y1="100" x2="270" y2="100" stroke="#22d3ee" strokeWidth="1.5" opacity="0">
+        <animate attributeName="y1" values="100;500" dur="4s" repeatCount="indefinite" />
+        <animate attributeName="y2" values="100;500" dur="4s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0;0.2;0.2;0" dur="4s" repeatCount="indefinite" />
+      </line>
+    </svg>
+  )
+}
+
 export default function TirePressure() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -103,6 +237,19 @@ export default function TirePressure() {
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
           <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
           <p className="text-sm text-neon-red">One or more tires have low pressure. Check and inflate to recommended levels.</p>
+        </div>
+      )}
+
+      {!loadingLatest && latest && (
+        <div className="mb-8">
+          <GlassPanel className="p-6 flex justify-center">
+            <TireCarVisualization
+              fl={latest.front_left}
+              fr={latest.front_right}
+              rl={latest.rear_left}
+              rr={latest.rear_right}
+            />
+          </GlassPanel>
         </div>
       )}
 
