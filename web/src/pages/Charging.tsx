@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getChargingSessions, ChargingSession, Vehicle } from '../api'
@@ -192,6 +192,22 @@ export default function Charging() {
       if (!s.cost || s.cost === 0) { bucket.freeCount++; bucket.freeEnergy += s.charge_energy_added }
     })
     return { ac, dc, total: { energy: ac.energy + dc.energy, cost: ac.cost + dc.cost, freeEnergy: ac.freeEnergy + dc.freeEnergy, freeCount: ac.freeCount + dc.freeCount } }
+  }, [sessions])
+
+  // Charging heatmap: 7 days × 24 hours
+  const chargingHeatmap = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null
+    const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0))
+    sessions.forEach(s => {
+      const d = new Date(s.start_date)
+      const day = d.getDay() // 0=Sun
+      const hour = d.getHours()
+      // Shift so Mon=0
+      const adjDay = (day + 6) % 7
+      grid[adjDay][hour]++
+    })
+    const maxVal = Math.max(...grid.flat(), 1)
+    return { grid, maxVal }
   }, [sessions])
 
   // Filtered + sorted sessions
@@ -454,6 +470,56 @@ export default function Charging() {
                   <Bar dataKey="count" name="Sessions" fill="#f59e0b" fillOpacity={0.6} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Charging Heatmap */}
+      {chargingHeatmap && (
+        <FadeIn delay={0.22}>
+          <GlassPanel className="p-4 sm:p-6">
+            <h3 className="section-title mb-4 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-neon-cyan" /> Charging Frequency Heatmap
+              <span className="text-xs text-[var(--text-muted)] font-normal ml-2">Sessions by hour &amp; day</span>
+            </h3>
+            <div className="overflow-x-auto">
+              <div className="inline-grid gap-[2px]" style={{ gridTemplateColumns: `auto repeat(24, 1fr)` }}>
+                {/* Hour headers */}
+                <div />
+                {Array.from({ length: 24 }, (_, h) => (
+                  <div key={h} className="text-[9px] text-[var(--text-muted)] text-center w-5 sm:w-6">{h}</div>
+                ))}
+                {/* Grid rows */}
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, d) => (
+                  <React.Fragment key={day}>
+                    <div className="text-[10px] text-[var(--text-muted)] pr-2 flex items-center">{day}</div>
+                    {Array.from({ length: 24 }, (_, h) => {
+                      const count = chargingHeatmap.grid[d][h]
+                      const intensity = count / chargingHeatmap.maxVal
+                      return (
+                        <div
+                          key={`${day}-${h}`}
+                          className="w-5 h-5 sm:w-6 sm:h-6 rounded-sm"
+                          style={{
+                            background: count === 0
+                              ? 'rgba(255,255,255,0.03)'
+                              : `rgba(0, 240, 255, ${0.15 + intensity * 0.85})`,
+                          }}
+                          title={`${day} ${h}:00 — ${count} session${count !== 1 ? 's' : ''}`}
+                        />
+                      )
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3 text-[10px] text-[var(--text-muted)]">
+              <span>Less</span>
+              {[0, 0.25, 0.5, 0.75, 1].map((v, i) => (
+                <div key={i} className="w-4 h-4 rounded-sm" style={{ background: v === 0 ? 'rgba(255,255,255,0.03)' : `rgba(0, 240, 255, ${0.15 + v * 0.85})` }} />
+              ))}
+              <span>More</span>
             </div>
           </GlassPanel>
         </FadeIn>

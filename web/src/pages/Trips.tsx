@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTrips } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter } from '../components/ui'
-import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download } from 'lucide-react'
+import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
@@ -156,8 +156,14 @@ export default function Trips() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredTrips.map(trip => (
-              <div key={trip.id} className="glass-card p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {filteredTrips.map(trip => {
+              const costPerKm = trip.total_distance_km > 0 ? trip.total_cost / convertDistance(trip.total_distance_km) : 0
+              // Gas equivalent: 8L/100km at $1.50/L
+              const gasEquivCost = trip.total_distance_km * 0.08 * 1.50
+              const savings = gasEquivCost - trip.total_cost
+              return (
+              <div key={trip.id} className="glass-card p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,240,255,0.1)' }}>
                     <Route className="h-5 w-5 text-neon-cyan" />
@@ -196,8 +202,30 @@ export default function Trips() {
                     </div>
                   )}
                 </div>
+                </div>
+                {/* Cost Breakdown */}
+                {trip.total_distance_km > 0 && (
+                  <div className="mt-2 pt-2 border-t border-white/5 flex flex-wrap items-center gap-3 sm:gap-4 text-[10px]">
+                    <span className="flex items-center gap-1 text-[var(--text-secondary)]">
+                      <DollarSign className="h-3 w-3 text-neon-amber" />
+                      Energy: ${trip.total_cost.toFixed(2)}
+                    </span>
+                    <span className="text-[var(--text-secondary)]">
+                      ${costPerKm.toFixed(3)}/{distanceUnit}
+                    </span>
+                    <span className="text-[var(--text-muted)]">
+                      Gas equiv: ${gasEquivCost.toFixed(2)}
+                    </span>
+                    {savings > 0 && (
+                      <span className="text-neon-green font-semibold">
+                        Saved ${savings.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </GlassPanel>

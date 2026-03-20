@@ -39,6 +39,58 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
   )
 }
 
+function GasSavingsCalculator({ totalDistanceKm, totalElectricityCost }: { totalDistanceKm: number; totalElectricityCost: number }) {
+  const [gasPrice, setGasPrice] = useState(1.50)
+  const [gasConsumption, setGasConsumption] = useState(8)
+
+  const gasCost = totalDistanceKm * (gasConsumption / 100) * gasPrice
+  const savings = gasCost - totalElectricityCost
+  const litersAvoided = totalDistanceKm * (gasConsumption / 100)
+  const co2Avoided = litersAvoided * 2.31
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-6 flex items-center gap-2">
+        <Fuel className="h-4 w-4 text-neon-green" /> Gas Savings Calculator
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Gas Price ($/L)</label>
+            <input
+              type="number" step="0.1" min="0" value={gasPrice}
+              onChange={e => setGasPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+              className="w-full rounded-lg px-3 py-2 text-sm font-medium"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Avg Gas Car Consumption (L/100km)</label>
+            <input
+              type="number" step="0.5" min="0" value={gasConsumption}
+              onChange={e => setGasConsumption(Math.max(0, parseFloat(e.target.value) || 0))}
+              className="w-full rounded-lg px-3 py-2 text-sm font-medium"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}
+            />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="p-4 rounded-xl bg-neon-green/5 border border-neon-green/10">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">You Saved</p>
+            <p className="text-2xl font-bold text-neon-green">${savings > 0 ? savings.toFixed(2) : '0.00'}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">compared to a gas car</p>
+          </div>
+          <div className="p-4 rounded-xl bg-neon-cyan/5 border border-neon-cyan/10">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">CO₂ Avoided</p>
+            <p className="text-2xl font-bold text-neon-cyan">{co2Avoided.toFixed(0)} <span className="text-sm font-normal">kg</span></p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">{litersAvoided.toFixed(0)}L of gas not burned</p>
+          </div>
+        </div>
+      </div>
+    </GlassPanel>
+  )
+}
+
 export default function Energy() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -384,6 +436,11 @@ export default function Energy() {
               </GlassPanel>
             </FadeIn>
           )}
+
+          {/* Gas Savings Calculator */}
+          <FadeIn delay={0.35}>
+            <GasSavingsCalculator totalDistanceKm={totalDistance} totalElectricityCost={totalCost} />
+          </FadeIn>
         </>
       )}
     </div>
