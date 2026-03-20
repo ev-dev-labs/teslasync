@@ -4,7 +4,6 @@
  * Provides reusable tooltip, axis tick styles, gradient definitions, and chart wrapper
  * components that automatically adapt to the active theme and display mode.
  */
-/* eslint-disable react-refresh/only-export-components */
 import { CartesianGrid } from 'recharts'
 
 // ── Neon color palette used across all charts ──

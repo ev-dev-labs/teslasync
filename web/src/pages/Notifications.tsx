@@ -401,7 +401,7 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
     setError('')
     setTestResult(null)
     if (!name.trim()) { setError('Name is required'); return }
-    isEdit ? updateMut.mutate() : createMut.mutate()
+    if (isEdit) { updateMut.mutate() } else { createMut.mutate() }
   }
 
   return (
