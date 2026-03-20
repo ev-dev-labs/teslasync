@@ -35,6 +35,7 @@ export default defineConfig({
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'Local Development', link: '/guide/local-development' },
             { text: 'Architecture', link: '/guide/architecture' },
+            { text: 'API Reference', link: '/guide/api-endpoints' },
             { text: 'Diagrams', link: '/guide/diagrams' },
             { text: 'Technology Stack', link: '/guide/technology' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },

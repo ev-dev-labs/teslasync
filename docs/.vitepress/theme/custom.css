@@ -1,0 +1,151 @@
+/* ============================================
+   TeslaSync — Automotive-Inspired Animations
+   ============================================ */
+
+/* Subtle road lines animation on the hero section */
+.VPHero {
+  position: relative;
+  overflow: hidden;
+}
+
+.VPHero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 49%,
+      rgba(0, 240, 255, 0.03) 49%,
+      rgba(0, 240, 255, 0.03) 51%,
+      transparent 51%
+    );
+  animation: roadScroll 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes roadScroll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100px); }
+}
+
+/* Glowing accent on feature cards */
+.VPFeature {
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0, 240, 255, 0.15);
+}
+
+/* Subtle dashboard gauge animation on headings */
+.VPDoc h1::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, #00f0ff, #10b981, transparent);
+  border-radius: 2px;
+  animation: gaugeExpand 1.5s ease-out;
+}
+
+@keyframes gaugeExpand {
+  from { width: 0; opacity: 0; }
+  to { width: 60px; opacity: 1; }
+}
+
+/* Speed lines on sidebar nav items */
+.VPSidebar .VPSidebarItem .link {
+  position: relative;
+}
+
+.VPSidebar .VPSidebarItem .link:hover::before {
+  content: '\203A';
+  position: absolute;
+  left: -12px;
+  color: #00f0ff;
+  animation: speedIndicator 0.3s ease-out;
+}
+
+@keyframes speedIndicator {
+  from { transform: translateX(-8px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Pulsing dot on active nav */
+.VPSidebar .is-active > .link {
+  position: relative;
+}
+
+.VPSidebar .is-active > .link::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(0, 240, 255, 0.6); }
+  50% { opacity: 0.6; box-shadow: 0 0 12px rgba(0, 240, 255, 0.8); }
+}
+
+/* Speedometer-style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00f0ff, #10b981);
+  border-radius: 3px;
+}
+
+/* Tachometer accent on code blocks */
+.vp-doc div[class*="language-"] {
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, #00f0ff, #10b981, transparent) 1;
+}
+
+/* Subtle breathing glow on the logo */
+.VPNavBarTitle .logo {
+  animation: logoGlow 3s ease-in-out infinite;
+}
+
+@keyframes logoGlow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.3)); }
+  50% { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)); }
+}
+
+/* Dashboard-style table headers */
+.vp-doc table th {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(16, 185, 129, 0.05));
+  border-bottom: 2px solid rgba(0, 240, 255, 0.2);
+}
+
+/* Smooth page transitions */
+.VPContent {
+  animation: fadeSlideIn 0.3s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
