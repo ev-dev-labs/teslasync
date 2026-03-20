@@ -86,6 +86,18 @@ function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return p
 }
 
+// --- Token Refresh on 401 ---
+
+let _refreshing: Promise<void> | null = null
+
+async function refreshTokenOnce(): Promise<void> {
+  if (_refreshing) return _refreshing
+  _refreshing = fetch('/api/v1/auth/refresh', { method: 'POST' })
+    .then(res => { if (!res.ok) throw new Error('refresh failed') })
+    .finally(() => { _refreshing = null })
+  return _refreshing
+}
+
 // --- Resilient Fetch ---
 
 interface ResilientOptions extends RequestInit {
@@ -173,6 +185,17 @@ async function _doFetch<T>(
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }))
         const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status)
+
+        // 401 Unauthorized — attempt automatic token refresh and retry once
+        if (res.status === 401 && attempt === 0) {
+          try {
+            await refreshTokenOnce()
+            continue // retry the request with fresh token
+          } catch {
+            recordFailure()
+            throw new ApiError('Session expired. Please reconnect your Tesla account in Settings.', 401)
+          }
+        }
 
         // Non-retryable errors: don't retry
         if (!apiErr.retryable) {

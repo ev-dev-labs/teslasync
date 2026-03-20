@@ -130,24 +130,35 @@ func (w *Worker) loadTokens(ctx context.Context) error {
 }
 
 func (w *Worker) refreshTokenIfNeeded(ctx context.Context) {
-	if !w.teslaClient.HasValidToken() {
-		log.Info().Msg("token expired, refreshing")
-		tokenResp, err := w.teslaClient.RefreshTokens(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to refresh token")
-			return
-		}
-
-		expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-		token := &models.Token{
-			AccessToken:  tokenResp.AccessToken,
-			RefreshToken: tokenResp.RefreshToken,
-			ExpiresAt:    expiresAt,
-		}
-		if err := w.tokenRepo.Upsert(ctx, token); err != nil {
-			log.Error().Err(err).Msg("failed to persist refreshed token")
-		}
+	// Refresh if token is expired OR will expire within 5 minutes
+	if !w.teslaClient.HasValidToken() || w.teslaClient.ExpiresWithin(5*time.Minute) {
+		log.Info().Msg("token expired or expiring soon, refreshing")
+		w.doRefreshToken(ctx)
 	}
+}
+
+// doRefreshToken performs the actual token refresh and persists the new token.
+func (w *Worker) doRefreshToken(ctx context.Context) bool {
+	tokenResp, err := w.teslaClient.RefreshTokens(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to refresh token")
+		return false
+	}
+
+	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	token := &models.Token{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		ExpiresAt:    expiresAt,
+	}
+	if err := w.tokenRepo.Upsert(ctx, token); err != nil {
+		log.Error().Err(err).Msg("failed to persist refreshed token")
+		return false
+	}
+
+	w.teslaClient.SetTokens(tokenResp.AccessToken, tokenResp.RefreshToken, expiresAt)
+	log.Info().Time("expires_at", expiresAt).Msg("token refreshed successfully")
+	return true
 }
 
 func (w *Worker) pollAllVehicles(ctx context.Context) {
@@ -225,7 +236,21 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 		w.recordVehicleSuccess(vehicle.ID) // Asleep is not a failure
 		return
 	}
-	if err != nil {
+	if errors.Is(err, tesla.ErrUnauthorized) {
+		logger.Warn().Msg("received 401 — attempting token refresh")
+		if w.doRefreshToken(ctx) {
+			// Retry once after successful refresh
+			data, err = w.teslaClient.GetVehicleData(ctx, vehicle.VehicleID)
+			if err != nil {
+				logger.Warn().Err(err).Msg("retry after token refresh still failed")
+				w.recordVehicleFailure(vehicle.ID)
+				return
+			}
+		} else {
+			w.recordVehicleFailure(vehicle.ID)
+			return
+		}
+	} else if err != nil {
 		logger.Warn().Err(err).Msg("failed to get vehicle data")
 		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, vehicle.State, false); err != nil {
 			logger.Error().Err(err).Msg("failed to mark vehicle unhealthy")
