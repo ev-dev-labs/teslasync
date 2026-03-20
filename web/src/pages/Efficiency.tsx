@@ -57,6 +57,28 @@ export default function Efficiency() {
     distance: d.distance_km,
   }))
 
+  // Compute linear trendline using least squares regression
+  const trendline = useMemo(() => {
+    const data = dailyEfficiency.filter(d => d.efficiency > 0)
+    if (data.length < 3) return { slope: 0, improving: false, pctPerMonth: 0, trendData: dailyEfficiency }
+    const n = data.length
+    const sumX = data.reduce((s, _, i) => s + i, 0)
+    const sumY = data.reduce((s, d) => s + d.efficiency, 0)
+    const sumXY = data.reduce((s, d, i) => s + i * d.efficiency, 0)
+    const sumX2 = data.reduce((s, _, i) => s + i * i, 0)
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+    const intercept = (sumY - slope * sumX) / n
+    const avgEff = sumY / n
+    // Negative slope = efficiency improving (lower Wh/km is better)
+    const improving = slope < 0
+    const pctPerMonth = avgEff > 0 ? Math.abs(slope * 30 / avgEff * 100) : 0
+    const trendData = dailyEfficiency.map((d, i) => ({
+      ...d,
+      trend: intercept + slope * i,
+    }))
+    return { slope, improving, pctPerMonth, trendData }
+  }, [dailyEfficiency])
+
   // Speed vs efficiency from drives
   const speedEffData = (drives ?? [])
     .filter(d => d.distance > 0 && d.speed_max && d.start_range_km && d.end_range_km && d.start_battery_level && d.end_battery_level)
@@ -189,12 +211,19 @@ export default function Efficiency() {
 
       {/* Daily Efficiency Trend */}
       <GlassPanel className="p-4 sm:p-6 mb-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend (Wh/km)</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend (Wh/km)</h3>
+          {dailyEfficiency.length >= 3 && (
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${trendline.improving ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'}`}>
+              Trend: {trendline.improving ? 'improving' : 'worsening'} {trendline.pctPerMonth.toFixed(1)}%/month
+            </span>
+          )}
+        </div>
         {dailyEfficiency.length === 0 ? (
           <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No efficiency data</div>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={dailyEfficiency}>
+            <AreaChart data={trendline.trendData}>
               <defs>
                 <linearGradient id="effGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.3} />
@@ -206,6 +235,9 @@ export default function Efficiency() {
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
               <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name="Efficiency (Wh/km)" />
+              {trendline.trendData.some(d => 'trend' in d) && (
+                <Area type="monotone" dataKey="trend" stroke={trendline.improving ? '#10b981' : '#ef4444'} fill="none" strokeWidth={2} strokeDasharray="6 3" name="Trendline" dot={false} />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         )}

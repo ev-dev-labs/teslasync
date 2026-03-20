@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import {
   getVehicles, getAuthStatus, getVehicleState, getDrives, getChargingSessions,
   getFleetAnalytics, getAlerts, Vehicle, VehicleState, getVehicleStatus,
+  getStateSummary,
 } from '../api'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
@@ -139,6 +140,13 @@ export default function Dashboard() {
       return Object.fromEntries(entries) as Record<number, VehicleState | null>
     },
     enabled: otherVehicles.length > 0,
+  })
+
+  // State summary for utilization gauge
+  const { data: stateSummary } = useQuery({
+    queryKey: ['state-summary-dashboard', primaryVehicle?.id],
+    queryFn: () => getStateSummary(primaryVehicle!.id, 30),
+    enabled: !!primaryVehicle,
   })
 
   const onlineCount = vehicles?.filter(v => v.state === 'online').length ?? 0
@@ -417,6 +425,53 @@ export default function Dashboard() {
               </GlassPanel>
             </StaggerItem>
           </StaggerContainer>
+
+          {/* ============ VEHICLE UTILIZATION GAUGE ============ */}
+          {stateSummary && stateSummary.length > 0 && (() => {
+            const drivingMin = stateSummary.filter(s => s.state === 'driving').reduce((sum, s) => sum + s.total_min, 0)
+            const totalMin = stateSummary.reduce((sum, s) => sum + s.total_min, 0)
+            const utilPct = totalMin > 0 ? (drivingMin / totalMin) * 100 : 0
+            const parkedPct = 100 - utilPct
+            const drivingHrs = (drivingMin / 60).toFixed(1)
+            const totalHrs = (totalMin / 60).toFixed(0)
+            const drivingDash = (utilPct / 100) * 251.3
+            const parkedDash = (parkedPct / 100) * 251.3
+            return (
+              <FadeIn delay={0.12}>
+                <GlassPanel className="p-5">
+                  <div className="flex items-center gap-6">
+                    <div className="relative flex-shrink-0">
+                      <svg width="100" height="100" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#6b7280" strokeWidth="8"
+                          strokeDasharray={`${parkedDash} ${251.3 - parkedDash}`}
+                          strokeDashoffset={-drivingDash}
+                          transform="rotate(-90 50 50)" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#00f0ff" strokeWidth="8"
+                          strokeDasharray={`${drivingDash} ${251.3 - drivingDash}`}
+                          strokeLinecap="round"
+                          transform="rotate(-90 50 50)"
+                          style={{ filter: 'drop-shadow(0 0 4px rgba(0,240,255,0.4))' }} />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-lg font-bold text-neon-cyan">{utilPct.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Vehicle Utilization</h3>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        {drivingHrs} hours driving / {totalHrs} hours total (30d)
+                      </p>
+                      <div className="flex items-center gap-4 mt-2 text-[10px]">
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[#00f0ff]" />Driving</span>
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-500" />Parked</span>
+                      </div>
+                    </div>
+                  </div>
+                </GlassPanel>
+              </FadeIn>
+            )
+          })()}
 
           {/* ============ CONTENT GRID: Activity + Charts + Battery ============ */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

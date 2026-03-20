@@ -7,7 +7,7 @@ The TeslaSync documentation site is built with [VitePress](https://vitepress.dev
 1. A push to `main` that modifies files in the `docs/` directory triggers the workflow.
 2. GitHub Actions builds the VitePress site.
 3. The built static files are deployed to GitHub Pages.
-4. The docs are available at `https://your-org.github.io/TeslaSync/`.
+4. The docs are available at `https://teslasync-labs.github.io/TeslaSync/`.
 
 ## GitHub Actions Workflow
 
@@ -93,7 +93,7 @@ export default defineConfig({
 })
 ```
 
-This ensures all assets and links work correctly when served from `https://your-org.github.io/TeslaSync/`.
+This ensures all assets and links work correctly when served from `https://teslasync-labs.github.io/TeslaSync/`.
 
 ::: tip Custom Domain
 If you're using a custom domain (e.g., `docs.teslasync.com`), set `base: '/'` and configure the domain in your GitHub Pages settings.
@@ -105,7 +105,7 @@ After pushing changes to `docs/`:
 
 1. Go to the **Actions** tab in your repository.
 2. Find the "Deploy Docs" workflow run.
-3. Once it completes, visit `https://your-org.github.io/TeslaSync/`.
+3. Once it completes, visit `https://teslasync-labs.github.io/TeslaSync/`.
 
 ## Adding New Pages
 
@@ -193,7 +193,7 @@ npm run docs:build
 Ensure the `base` option in `config.ts` matches your repository name:
 
 ```ts
-// For https://your-org.github.io/TeslaSync/
+// For https://teslasync-labs.github.io/TeslaSync/
 base: '/TeslaSync/'
 
 // For a custom domain like docs.teslasync.com

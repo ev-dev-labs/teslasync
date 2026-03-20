@@ -199,7 +199,7 @@ func (h *NotificationHandler) TestChannel(w http.ResponseWriter, r *http.Request
 	if status == "sent" {
 		logEntry.SentAt = &now
 	}
-	h.repo.CreateLog(r.Context(), logEntry)
+	_ = h.repo.CreateLog(r.Context(), logEntry)
 
 	if sendErr != nil {
 		writeJSON(w, http.StatusOK, map[string]interface{}{"success": false, "error": sendErr.Error()})

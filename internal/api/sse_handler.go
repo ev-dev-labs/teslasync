@@ -104,7 +104,7 @@ func SSEHandler(hub *EventHub) http.HandlerFunc {
 				if !ok {
 					return
 				}
-				w.Write(msg)
+				_, _ = w.Write(msg)
 				flusher.Flush()
 			case <-ticker.C:
 				fmt.Fprintf(w, "event: heartbeat\ndata: {\"time\":\"%s\"}\n\n", time.Now().UTC().Format(time.RFC3339))

@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
+import { DriveScore } from '../components/DriveScore'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -197,6 +198,11 @@ export default function DriveDetail() {
             </p>
           </div>
         </div>
+      </FadeIn>
+
+      {/* Drive Score */}
+      <FadeIn delay={0.03}>
+        <DriveScore drive={drive} />
       </FadeIn>
 
       {/* Hero Gauges */}
