@@ -40,6 +40,7 @@ export default defineConfig({
             { text: 'Technology Stack', link: '/guide/technology' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
             { text: 'FAQ', link: '/guide/faq' },
+            { text: 'Roadmap', link: '/guide/roadmap' },
           ],
         },
       ],
