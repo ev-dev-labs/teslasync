@@ -469,16 +469,16 @@ export default function Settings() {
   const [chargingHours, setChargingHours] = useState(2)
 
   const billingEstimate = useMemo(() => {
-    const sleepHours = 8
-    const idleHours = Math.max(0, 24 - drivingHours - chargingHours - sleepHours)
-    const drivingRequests = drivingHours * 3600 / 30 * 30
-    const chargingRequests = chargingHours * 3600 / 120 * 30
-    const idleRequests = idleHours * 3600 / 300 * 30
-    const sleepRequests = sleepHours * 3600 / 1800 * 30
-    const totalRequests = drivingRequests + chargingRequests + idleRequests + sleepRequests
-    const costPerRequest = 0.00222
+    // Status checks via ListVehicles: 1 call per 15min = 96/day × 30 = 2,880/month
+    const statusChecks = Math.round(24 * 3600 / 900 * 30)
+    const drivingRequests = drivingHours * 3600 / 120 * 30
+    const chargingRequests = chargingHours * 3600 / 600 * 30
+    const idleRequests = 0 // covered by status checks, no extra vehicle_data calls for idle
+    const sleepRequests = 0 // never polled
+    const totalRequests = statusChecks + drivingRequests + chargingRequests + idleRequests + sleepRequests
+    const costPerRequest = 0.002
     const monthlyCost = totalRequests * costPerRequest
-    return { totalRequests: Math.round(totalRequests), monthlyCost, drivingRequests: Math.round(drivingRequests), chargingRequests: Math.round(chargingRequests), idleRequests: Math.round(idleRequests), sleepRequests: Math.round(sleepRequests) }
+    return { totalRequests: Math.round(totalRequests), monthlyCost, statusChecks: Math.round(statusChecks), drivingRequests: Math.round(drivingRequests), chargingRequests: Math.round(chargingRequests), idleRequests: Math.round(idleRequests), sleepRequests: Math.round(sleepRequests) }
   }, [drivingHours, chargingHours])
 
   function buildExportUrl(type: string, format: string) {
@@ -826,10 +826,11 @@ export default function Settings() {
               </SettingField>
             </div>
             <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 text-sm space-y-1">
-              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Driving (30s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.drivingRequests.toLocaleString()} req</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Charging (120s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.chargingRequests.toLocaleString()} req</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Idle (300s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.idleRequests.toLocaleString()} req</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Sleep (1800s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.sleepRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Status checks (15min, ListVehicles)</span><span className="text-[var(--text-primary)]">{billingEstimate.statusChecks.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Driving (120s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.drivingRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Charging (600s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.chargingRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Idle (no extra polls)</span><span className="text-[var(--text-primary)]">{billingEstimate.idleRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Sleep (never polled)</span><span className="text-[var(--text-primary)]">{billingEstimate.sleepRequests.toLocaleString()} req</span></div>
               <div className="flex justify-between border-t border-white/5 pt-1 mt-1">
                 <span className="text-[var(--text-primary)] font-medium">Total / vehicle / month</span>
                 <span className="text-[var(--text-primary)] font-medium">{billingEstimate.totalRequests.toLocaleString()} req</span>
@@ -844,7 +845,7 @@ export default function Settings() {
           </div>
 
           <p className="text-xs text-[var(--text-muted)]">
-            Adaptive polling reduces costs by ~95% vs fixed 30s polling. Intervals: driving=30s, charging=120s, idle=300s, sleep=1800s.
+            Cost-optimized polling uses ListVehicles (1 call for all cars) every 15 min, then vehicle_data only for driving (120s) and charging (600s). Sleeping/offline vehicles are never polled. Designed to stay under $10/month free credit for 1 vehicle.
           </p>
         </GlassPanel>
       </FadeIn>

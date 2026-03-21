@@ -69,20 +69,26 @@ The default pool settings (5–25 connections) are suitable for most single-inst
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `WORKER_POLL_INTERVAL` | duration | `300s` | Polling interval for online/idle vehicles |
-| `WORKER_SLEEP_POLL_INTERVAL` | duration | `1800s` | Polling interval for sleeping/offline vehicles |
-| `WORKER_DRIVING_POLL_INTERVAL` | duration | `30s` | Polling interval when vehicle is actively driving |
+| `WORKER_POLL_INTERVAL` | duration | `900s` | Polling interval for online/idle vehicles (vehicle_data calls) |
+| `WORKER_SLEEP_POLL_INTERVAL` | duration | `0` | Polling interval for sleeping/offline vehicles (0 = never poll) |
+| `WORKER_DRIVING_POLL_INTERVAL` | duration | `120s` | Polling interval when vehicle is actively driving |
+| `WORKER_CHARGING_POLL_INTERVAL` | duration | `600s` | Polling interval when vehicle is charging |
+| `WORKER_STATUS_CHECK_INTERVAL` | duration | `900s` | How often to call ListVehicles to check all vehicle states |
 | `WORKER_SLEEP_POLL_MULT` | int | `4` | Legacy multiplier for sleeping vehicles (superseded by adaptive polling) |
 | `WORKER_STREAMING` | bool | `false` | Enable Tesla Streaming API (experimental) |
 
-::: tip Adaptive Polling
-TeslaSync uses adaptive polling to minimize API costs. The worker automatically adjusts the polling interval based on vehicle state:
-- **Driving**: every 30s (real-time data needed)
-- **Charging**: every 120s (battery level changes slowly)
-- **Online/Idle**: every 300s (vehicle is awake but parked)
-- **Asleep/Offline**: every 1800s (don't wake the car)
+::: tip Cost-Optimized Polling
+TeslaSync uses a two-tier polling strategy to minimize API costs and stay within the $10/month free credit:
 
-Before making the expensive `vehicle_data` API call, the worker first checks the vehicle's basic status using the cheaper vehicle endpoint. If the vehicle is asleep, the full data request is skipped entirely.
+**Tier 1 — Status check (every 15 min):** A single `ListVehicles` API call returns the state of ALL vehicles. No per-vehicle API calls needed. Sleeping/offline vehicles are never polled further.
+
+**Tier 2 — Data fetch (only for active vehicles):**
+- **Driving**: every 120s (GPS and speed data)
+- **Charging**: every 600s (battery level changes slowly)
+- **Online/Idle**: covered by the 15-min status check, no extra `vehicle_data` calls
+- **Asleep/Offline**: never polled (0 API calls)
+
+This approach eliminates the expensive per-vehicle `GetVehicleStatus` call and avoids waking sleeping cars entirely.
 :::
 
 ### Redis (Cache)
@@ -194,46 +200,72 @@ Duration values accept Go-style duration strings:
 
 ## Tesla Fleet API Billing Optimization
 
-Tesla's Fleet API charges per `vehicle_data` request. Each developer account receives a **$10/month free credit**, which covers approximately **4,500 requests/month** (~150/day).
+Tesla's Fleet API charges per request. Each developer account receives a **$10/month free credit**, which covers approximately **5,000 data requests/month** (~166/day) at $0.002/request.
+
+### Pricing
+
+| Request Type | Cost | Example |
+|-------------|------|---------|
+| Data request (`vehicle_data`, `vehicles/{id}`) | $0.002 | Full vehicle snapshot |
+| Wake | $0.02 | Wake a sleeping car |
+| Command | $0.001 | Lock, climate, etc. |
+| Streaming signal | $0.0000067 | Per telemetry signal |
 
 ### Why This Matters
 
 | Polling Strategy | Requests/Day | Requests/Month | Est. Cost/Month |
 |-----------------|-------------|----------------|-----------------|
-| Fixed 30s (old default) | 2,880 | 86,400 | ~$192 |
-| Fixed 5min | 288 | 8,640 | ~$19 |
-| **Adaptive (current)** | **~140** | **~4,200** | **~$9** ✅ |
+| Fixed 30s (old default) | 2,880 | 86,400 | ~$172 |
+| Per-vehicle status + data (previous) | ~352 | ~10,560 | ~$21 |
+| **ListVehicles + selective data (current)** | **~126** | **~3,780** | **~$7.56** ✅ |
 
-### How Adaptive Polling Works
+### How Cost-Optimized Polling Works
 
-TeslaSync automatically adjusts polling frequency based on what the vehicle is doing:
+TeslaSync uses a two-tier approach:
 
-| Vehicle State | Poll Interval | Rationale |
-|--------------|---------------|-----------|
-| **Driving** | 30s | Need real-time speed, location, battery data |
-| **Charging** | 120s | Battery level changes slowly (~1% every few minutes) |
-| **Online/Idle** | 300s (5 min) | Vehicle is awake but parked, minimal changes |
-| **Asleep/Offline** | 1800s (30 min) | Avoid waking the car (wake = extra API call) |
+1. **ListVehicles** (1 API call every 15 min): Returns all vehicle states in a single request. No per-vehicle status calls needed.
+2. **GetVehicleData** (only for active vehicles): Only called for vehicles that are driving or charging.
+
+| Vehicle State | Poll Interval | API Calls | Rationale |
+|--------------|---------------|-----------|-----------|
+| **Driving** | 120s | `vehicle_data` | GPS, speed, battery data at reasonable granularity |
+| **Charging** | 600s (10 min) | `vehicle_data` | Battery level changes ~1% every few minutes |
+| **Online/Idle** | — | None (status only) | State known from ListVehicles |
+| **Asleep/Offline** | — | None | Never polled, never woken |
 
 ### Cost Estimation
 
-For a typical usage pattern (1h driving, 2h charging, 13h idle, 8h sleep per day):
+For a typical usage pattern (1h driving/day on 20 days, 4h charging/day on 25 days):
 
-| State | Requests/Day | Requests/Month |
-|-------|-------------|----------------|
-| Driving (1h × 30s) | 120 | 3,600 |
-| Charging (2h × 120s) | 60 | 1,800 |
-| Idle (13h × 300s) | 156 | 4,680 |
-| Sleep (8h × 1800s) | 16 | 480 |
-| **Total** | **352** | **~10,560** |
+| Component | Calculation | Requests/Month | Cost/Month |
+|-----------|------------|----------------|------------|
+| Status checks (ListVehicles) | 96/day × 30 | 2,880 | $5.76 |
+| Driving (120s, 1h/day, 20 days) | 30/session × 20 | 600 | $1.20 |
+| Charging (600s, 4h/day, 25 days) | 24/session × 25 | 600 | $1.20 |
+| Idle | 0 (covered by status) | 0 | $0.00 |
+| Sleep | 0 (never polled) | 0 | $0.00 |
+| **Total (1 vehicle)** | | **4,080** | **$8.16** ✅ |
 
-At ~$0.00222/request, this costs approximately **$23/month per vehicle**. With the $10 credit, you'd pay **~$13/month** for a single vehicle.
+### Multi-Vehicle Cost Table
+
+| Vehicles | Status (15min) | Driving (2min) | Charging (10min) | Est. Monthly |
+|----------|---------------|----------------|-------------------|-------------|
+| 1 | $5.76 | $1.20 | $1.20 | $8.16 |
+| 2 | $5.76 | $2.40 | $2.40 | $10.56 |
+| 3 | $5.76 | $3.60 | $3.60 | $12.96 |
+
+::: warning Multi-Vehicle Users
+2+ vehicles will exceed the $10/month free credit. To stay within budget:
+- Increase `WORKER_DRIVING_POLL_INTERVAL` (e.g., `180s` or `300s`)
+- Increase `WORKER_CHARGING_POLL_INTERVAL` (e.g., `900s`)
+- Add a payment method to your Tesla developer account
+:::
 
 ::: tip Staying Within Free Credit
-To stay within the $10/month free credit (~4,500 requests):
-- Reduce `WORKER_DRIVING_POLL_INTERVAL` to `60s` if you don't need 30s granularity
-- Drive less than 1h/day or increase idle interval to `600s`
+To stay within the $10/month free credit (~5,000 requests) with 1 vehicle:
+- The default intervals are already optimized for this budget
 - Use the **API Usage Estimate** card in Settings to monitor your usage
+- If you drive less than 1h/day, costs will be well under $10
 :::
 
 ### Monitoring API Usage
@@ -244,10 +276,10 @@ The `/api/v1/system/api-usage` endpoint returns real-time usage statistics:
 {
   "total_requests": 1234,
   "skipped_polls": 5678,
-  "estimated_cost": 2.74,
-  "cost_per_request": 0.00222,
+  "estimated_cost": 2.47,
+  "cost_per_request": 0.002,
   "monthly_credit": 10.0,
-  "estimated_remaining": 7.26
+  "estimated_remaining": 7.53
 }
 ```
 
