@@ -57,6 +57,8 @@ spec:
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
           volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
             - name: nginx-cache
               mountPath: /var/cache/nginx
             - name: nginx-run
@@ -64,6 +66,9 @@ spec:
             - name: nginx-tmp
               mountPath: /tmp
       volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-nginx
         - name: nginx-cache
           emptyDir: {}
         - name: nginx-run
