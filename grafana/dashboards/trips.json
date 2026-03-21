@@ -1,73 +1,116 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Drives", "url": "/d/teslasync-drives/drives", "type": "link" },
-    { "title": "Mileage", "url": "/d/teslasync-mileage/mileage", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Total Trips",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Trip Distance (km)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_distance_km)::numeric), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Energy (kWh)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "kwatth", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_energy_kwh)::numeric, 1), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Trip Cost",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_cost)::numeric, 2), 0) FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Trip Distance Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "km", "custom": { "drawStyle": "bars", "fillOpacity": 60 }, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT start_date AS time, total_distance_km FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date", "format": "time_series", "refId": "A" }]
-    },
-    {
-      "title": "All Trips",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  t.name AS \"Trip Name\",\n  t.start_date AS \"Start Date\",\n  t.end_date AS \"End Date\",\n  ROUND(t.total_distance_km::numeric, 1) AS \"Distance km\",\n  ROUND(t.total_energy_kwh::numeric, 1) AS \"Energy kWh\",\n  ROUND(t.total_cost::numeric, 2) AS \"Cost $\",\n  t.drive_count AS \"Drives\",\n  t.charge_count AS \"Charges\",\n  ROUND((t.total_energy_kwh * 1000 / NULLIF(t.total_distance_km, 0))::numeric, 1) AS \"Wh/km\"\nFROM trips t\nWHERE t.vehicle_id = ${vehicle_id}\nORDER BY t.start_date DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ],
+      "title": "Trip History",
       "type": "table",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "targets": [{ "rawSql": "SELECT COALESCE(name, 'Trip #' || id::text) AS name, start_date, end_date, ROUND(total_distance_km::numeric, 1) AS distance_km, ROUND(total_energy_kwh::numeric, 1) AS energy_kwh, ROUND(total_cost::numeric, 2) AS cost, drive_count, charge_count FROM trips WHERE vehicle_id = $vehicle_id AND $__timeFilter(start_date) ORDER BY start_date DESC LIMIT 100", "format": "table", "refId": "A" }]
+      "transparent": false
     }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
   ],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
         "name": "vehicle_id",
-        "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
-        "refresh": 1
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
-  "time": { "from": "now-1y", "to": "now" },
-  "title": "Trips",
-  "uid": "teslasync-trips"
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync — Trip History",
+  "uid": "teslasync-trips",
+  "version": 1,
+  "weekStart": ""
 }

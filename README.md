@@ -80,7 +80,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Rate Limiting** — Configurable per-IP rate limiting
 - **Prometheus Metrics** — `/metrics` endpoint for monitoring
 - **Structured Logging** — JSON logs via zerolog
-- **TimescaleDB** — Time-series optimized hypertables for position data
+- **PostgreSQL 17** — Natively partitioned tables for position data
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **Redis Caching** — Fast lookups for vehicle state and sessions
 - **7-Channel Notifications** — Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
@@ -115,7 +115,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
           │              │              │              │
  ┌────────┴────┐ ┌───────┴─────┐ ┌─────┴─────┐ ┌─────┴─────┐
  │ PostgreSQL  │ │   Redis 7   │ │ Mosquitto  │ │   Tesla   │
- │ TimescaleDB │ │   Cache     │ │ MQTT 2     │ │ Fleet API │
+ │ (PG 17)     │ │   Cache     │ │ MQTT 2     │ │ Fleet API │
  └─────────────┘ └─────────────┘ └───────────┘ └───────────┘
 ```
 
@@ -125,7 +125,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 |-------|-----------|
 | **Backend** | Go 1.22 · Chi router · pgx/v5 · zerolog · gobreaker |
 | **Frontend** | React 18 · TypeScript · Vite 5 · Tailwind CSS · Recharts · Leaflet · Framer Motion |
-| **Database** | PostgreSQL 16 + TimescaleDB |
+| **Database** | PostgreSQL 17 with native partitioning |
 | **Cache** | Redis 7 |
 | **Messaging** | MQTT (Mosquitto 2) |
 | **Monitoring** | Grafana 10.4 · Prometheus |
@@ -153,7 +153,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-This starts 6 services: Go API server, React web UI, PostgreSQL + TimescaleDB, Redis, MQTT, and Grafana.
+This starts 6 services: Go API server, React web UI, PostgreSQL 17, Redis, MQTT, and Grafana.
 
 ### 3. Access
 

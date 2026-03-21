@@ -65,7 +65,7 @@ services:
           memory: 32M
 
   postgres:
-    image: timescale/timescaledb:latest-pg16
+    image: postgres:17-alpine
     container_name: teslasync-postgres
     restart: unless-stopped
     ports:

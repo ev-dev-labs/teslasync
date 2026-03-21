@@ -34,7 +34,7 @@ Set `TESLA_API_BASE_URL` to the endpoint for your region.
 | `TESLASYNC_LOG_LEVEL` | string | `info` | Log verbosity: `trace`, `debug`, `info`, `warn`, `error` |
 | `TESLASYNC_DEV` | bool | `false` | Enable development mode (pretty-printed console logs) |
 
-### Database (PostgreSQL + TimescaleDB)
+### Database (PostgreSQL)
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|

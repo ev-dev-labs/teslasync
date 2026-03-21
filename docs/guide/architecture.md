@@ -25,7 +25,7 @@ graph TB
     end
 
     subgraph External["External Services"]
-        PG["PostgreSQL + TimescaleDB (Port 5432)"]
+        PG["PostgreSQL 17 (Port 5432)"]
         Mosquitto["Mosquitto MQTT (Port 1883)"]
         Redis["Redis Cache (Port 6379)"]
         Grafana["Grafana (Port 3001)"]
@@ -169,13 +169,13 @@ Topic Structure:
 
 ## Database Design
 
-### TimescaleDB Hypertables
+### Native Partitioning
 
-The `positions` table is a TimescaleDB hypertable, which automatically partitions data by time for efficient range queries:
+The `positions` table uses PostgreSQL 17 native range partitioning, which automatically organizes data by time for efficient range queries:
 
 ```sql
 -- Created in migration 001
-SELECT create_hypertable('positions', 'created_at');
+CREATE TABLE positions (...) PARTITION BY RANGE (created_at);
 ```
 
 This means queries like "get positions for vehicle X between date A and B" are extremely fast, even with millions of rows.
@@ -262,7 +262,7 @@ The schema spans 5 migrations and 21+ tables. Column names, types, and constrain
 | `created_at` | `TIMESTAMPTZ` | First sync timestamp |
 | `updated_at` | `TIMESTAMPTZ` | Last update timestamp |
 
-#### `positions` *(TimescaleDB Hypertable)*
+#### `positions` *(Partitioned Table)*
 
 Partitioned by `created_at` for fast time-range queries over millions of rows.
 
@@ -284,7 +284,7 @@ Partitioned by `created_at` for fast time-range queries over millions of rows.
 | `outside_temp` | `DOUBLE PRECISION` | Ambient temperature °C |
 | `fan_status` | `INTEGER` | HVAC fan speed |
 | `is_climate_on` | `BOOLEAN` | Climate control active |
-| `created_at` | `TIMESTAMPTZ` | Timestamp (hypertable partition key) |
+| `created_at` | `TIMESTAMPTZ` | Timestamp (partition key) |
 
 #### `drives`
 
@@ -407,7 +407,7 @@ Temporal versioning — when `cost_per_kwh` changes, old rates are preserved so 
 | `avg_cell_temp_c` | `DOUBLE PRECISION` | Average cell temperature °C |
 | `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
 
-#### `tire_pressure_snapshots` *(TimescaleDB Hypertable)*
+#### `tire_pressure_snapshots`
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -417,7 +417,7 @@ Temporal versioning — when `cost_per_kwh` changes, old rates are preserved so 
 | `front_right` | `DOUBLE PRECISION` | Front-right pressure (bar) |
 | `rear_left` | `DOUBLE PRECISION` | Rear-left pressure (bar) |
 | `rear_right` | `DOUBLE PRECISION` | Rear-right pressure (bar) |
-| `created_at` | `TIMESTAMPTZ` | Timestamp (hypertable partition key) |
+| `created_at` | `TIMESTAMPTZ` | Timestamp |
 
 #### `vampire_drain_events`
 

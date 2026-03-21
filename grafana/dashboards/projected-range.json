@@ -1,102 +1,308 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Battery Health", "url": "/d/teslasync-battery/battery-health", "type": "link" },
-    { "title": "Mileage", "url": "/d/teslasync-mileage/mileage", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Current Range (km)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT rated_battery_range_km FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Range When New (km)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "km", "decimals": 0, "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT MAX(rated_battery_range_km) FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Degradation (%)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "color": { "fixedColor": "#f59e0b", "mode": "fixed" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 20 }] } } },
-      "targets": [{ "rawSql": "SELECT ROUND((1 - (SELECT rated_battery_range_km FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1)::numeric / NULLIF((SELECT MAX(rated_battery_range_km) FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL), 0)) * 100, 1)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Battery Health (%)",
-      "type": "gauge",
-      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "min": 0, "max": 100, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 60 }, { "color": "green", "value": 80 }] } } },
-      "targets": [{ "rawSql": "SELECT ROUND(((SELECT rated_battery_range_km FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL ORDER BY created_at DESC LIMIT 1)::numeric / NULLIF((SELECT MAX(rated_battery_range_km) FROM positions WHERE vehicle_id = $vehicle_id AND rated_battery_range_km IS NOT NULL), 0)) * 100, 1)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Avg Daily Mileage (km)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "km", "decimals": 1, "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(AVG(distance_km)::numeric, 1), 0) FROM daily_mileage WHERE vehicle_id = $vehicle_id AND distance_km > 0 AND $__timeFilter(date)", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Historical Range Trend",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": {
-        "defaults": { "unit": "km", "custom": { "drawStyle": "line", "fillOpacity": 15 } },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "rated_range" }, "properties": [{ "id": "color", "value": { "fixedColor": "#00f0ff" } }] },
-          { "matcher": { "id": "byName", "options": "ideal_range" }, "properties": [{ "id": "color", "value": { "fixedColor": "#10b981" } }] }
-        ]
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "targets": [{ "rawSql": "SELECT DATE_TRUNC('day', created_at) AS time, ROUND(MAX(rated_battery_range_km)::numeric) AS rated_range, ROUND(MAX(ideal_battery_range_km)::numeric) AS ideal_range FROM positions WHERE vehicle_id = $vehicle_id AND battery_level >= 95 AND rated_battery_range_km IS NOT NULL AND $__timeFilter(created_at) GROUP BY 1 ORDER BY 1", "format": "time_series", "refId": "A" }]
-    },
-    {
-      "title": "Range at Full Charge Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "km", "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT end_date AS time, ROUND((end_rated_range_km * 100 / NULLIF(end_battery_level, 0))::numeric) AS full_charge_range FROM charging_sessions WHERE vehicle_id = $vehicle_id AND end_battery_level >= 80 AND end_rated_range_km > 0 AND $__timeFilter(end_date) ORDER BY end_date", "format": "time_series", "refId": "A" }]
-    },
-    {
-      "title": "12-Month Range Projection",
-      "type": "timeseries",
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
       "fieldConfig": {
-        "defaults": { "unit": "km", "custom": { "drawStyle": "line", "fillOpacity": 10 } },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "projected" }, "properties": [{ "id": "color", "value": { "fixedColor": "#a855f7" } }, { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 5] } }] },
-          { "matcher": { "id": "byName", "options": "actual" }, "properties": [{ "id": "color", "value": { "fixedColor": "#00f0ff" } }] }
-        ]
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "km"
+        },
+        "overrides": []
       },
-      "targets": [{ "rawSql": "WITH monthly_range AS (SELECT DATE_TRUNC('month', created_at) AS month, ROUND(MAX(rated_battery_range_km)::numeric) AS max_range FROM positions WHERE vehicle_id = $vehicle_id AND battery_level >= 95 AND rated_battery_range_km IS NOT NULL GROUP BY 1 ORDER BY 1), trend AS (SELECT REGR_SLOPE(max_range, EXTRACT(EPOCH FROM month)) AS slope, REGR_INTERCEPT(max_range, EXTRACT(EPOCH FROM month)) AS intercept FROM monthly_range) SELECT mr.month AS time, mr.max_range AS actual, ROUND((t.slope * EXTRACT(EPOCH FROM mr.month) + t.intercept)::numeric) AS projected FROM monthly_range mr, trend t UNION ALL SELECT (MAX(mr.month) + (gs.n || ' month')::interval) AS time, NULL AS actual, ROUND((t.slope * EXTRACT(EPOCH FROM MAX(mr.month) + (gs.n || ' month')::interval) + t.intercept)::numeric) AS projected FROM monthly_range mr, trend t, generate_series(1,12) gs(n) GROUP BY gs.n, t.slope, t.intercept ORDER BY 1", "format": "time_series", "refId": "A" }]
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  created_at AS time,\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level = 100\nORDER BY created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Rated Range Over Time",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"Battery %\",\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Level vs Rated Range",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "km"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(AVG(rated_range / NULLIF(battery_level, 0) * 100)::numeric, 1) AS \"Projected Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Projected Full-Charge Range",
+      "type": "timeseries",
+      "transparent": false
     }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
   ],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
         "name": "vehicle_id",
-        "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
-        "refresh": 1
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
-  "time": { "from": "now-1y", "to": "now" },
-  "title": "Projected Range",
-  "uid": "teslasync-projected-range"
+  "time": {
+    "from": "now-365d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync — Range Projection",
+  "uid": "teslasync-projected-range",
+  "version": 1,
+  "weekStart": ""
 }

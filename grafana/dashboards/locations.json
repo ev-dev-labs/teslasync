@@ -1,73 +1,116 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Drives", "url": "/d/teslasync-drives/drives", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Unique Locations",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(DISTINCT address_id) FROM visited_locations WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Visits",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(SUM(visit_count), 0) FROM visited_locations WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Time at Locations",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "unit": "h", "decimals": 0, "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(ROUND(SUM(total_duration_min)/60), 0) FROM visited_locations WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Most Visited (name)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT a.display_name FROM visited_locations vl JOIN addresses a ON a.id = vl.address_id WHERE vl.vehicle_id = $vehicle_id ORDER BY vl.visit_count DESC LIMIT 1", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Top Visited Locations",
-      "type": "barchart",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "options": { "orientation": "horizontal" },
-      "targets": [{ "rawSql": "SELECT a.display_name AS location, vl.visit_count FROM visited_locations vl JOIN addresses a ON a.id = vl.address_id WHERE vl.vehicle_id = $vehicle_id ORDER BY vl.visit_count DESC LIMIT 20", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "All Visited Locations",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\",\n  a.city AS \"City\",\n  a.state AS \"State\",\n  vl.visit_count AS \"Visits\",\n  ROUND(vl.total_duration_min::numeric) AS \"Total Minutes\",\n  ROUND((vl.total_duration_min / 60)::numeric, 1) AS \"Total Hours\",\n  vl.last_visited AS \"Last Visited\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Visited Locations",
       "type": "table",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "targets": [{ "rawSql": "SELECT a.display_name AS location, vl.visit_count, ROUND(vl.total_duration_min::numeric / 60, 1) AS total_hours, vl.last_visited FROM visited_locations vl JOIN addresses a ON a.id = vl.address_id WHERE vl.vehicle_id = $vehicle_id ORDER BY vl.visit_count DESC LIMIT 100", "format": "table", "refId": "A" }]
+      "transparent": false
     }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
   ],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
         "name": "vehicle_id",
-        "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
-        "refresh": 1
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
-  "time": { "from": "now-1y", "to": "now" },
-  "title": "Visited Locations",
-  "uid": "teslasync-locations"
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync — Visited Locations",
+  "uid": "teslasync-locations",
+  "version": 1,
+  "weekStart": ""
 }

@@ -40,7 +40,7 @@ With default settings (15-second polling), approximately:
 
 ### Can I run TeslaSync without Docker?
 Yes, but it requires manual setup:
-1. Install PostgreSQL 16 with TimescaleDB extension
+1. Install PostgreSQL 17
 2. Install Redis 7
 3. Install Mosquitto 2 (optional, for MQTT)
 4. Build the Go backend: `go build -o teslasync ./cmd/server`
@@ -48,7 +48,7 @@ Yes, but it requires manual setup:
 6. Serve the frontend with Nginx or another web server
 
 ### Can I use an external database?
-Yes. Set `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in your `.env` to point to your external PostgreSQL instance. Ensure the TimescaleDB extension is installed.
+Yes. Set `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in your `.env` to point to your external PostgreSQL instance.
 
 ## Features
 

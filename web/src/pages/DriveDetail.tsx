@@ -1,12 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDrive, getVehiclePositions, getVehicle } from '../api'
-import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
+import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
-  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight,
+  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
+import { useUnits } from '../hooks/useUnits'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -42,6 +43,7 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; col
 export default function DriveDetail() {
   const { id } = useParams<{ id: string }>()
   const driveId = Number(id)
+  const u = useUnits()
 
   const { data: drive } = useQuery({
     queryKey: ['drive', driveId],
@@ -77,22 +79,39 @@ export default function DriveDetail() {
   const endPos = trail[trail.length - 1] as [number, number] | undefined
   const centerPos = startPos ?? [0, 0]
 
+  // Speed-colored trail segments
+  const speedSegments: { positions: LatLngExpression[]; color: string }[] = []
+  const filteredPositions = drivePositions.filter(p => p.latitude && p.longitude)
+  for (let i = 1; i < filteredPositions.length; i++) {
+    const prev = filteredPositions[i - 1]
+    const curr = filteredPositions[i]
+    const speed = curr.speed ?? 0
+    let color = '#10b981'
+    if (speed >= 100) color = '#ef4444'
+    else if (speed >= 60) color = '#f59e0b'
+    else if (speed >= 30) color = '#00f0ff'
+    speedSegments.push({
+      positions: [[prev.latitude, prev.longitude], [curr.latitude, curr.longitude]],
+      color,
+    })
+  }
+
   // Build comprehensive chart data from positions
   const chartData = drivePositions.map((p, _i) => ({
     time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    speed: p.speed ?? 0,
+    speed: u.speedVal(p.speed ?? 0),
     battery: p.battery_level,
     elevation: p.elevation ?? 0,
     power: p.power ?? 0,
-    insideTemp: p.inside_temp ?? null,
-    outsideTemp: p.outside_temp ?? null,
-    idealRange: p.ideal_range ?? null,
-    ratedRange: p.rated_range ?? null,
-    odometer: p.odometer,
+    insideTemp: p.inside_temp != null ? u.tempVal(p.inside_temp) : null,
+    outsideTemp: p.outside_temp != null ? u.tempVal(p.outside_temp) : null,
+    idealRange: p.ideal_range != null ? u.distanceVal(p.ideal_range) : null,
+    ratedRange: p.rated_range != null ? u.distanceVal(p.rated_range) : null,
+    odometer: p.odometer != null ? u.distanceVal(p.odometer) : p.odometer,
   }))
 
   // === Computed Stats ===
-  const maxSpeed = drive?.speed_max ?? Math.max(...chartData.map(d => d.speed), 0)
+  const maxSpeed = drive?.speed_max != null ? u.speedVal(drive.speed_max) : Math.max(...chartData.map(d => d.speed), 0)
   const movingSpeeds = chartData.filter(d => d.speed > 0).map(d => d.speed)
   const minSpeed = movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0
   const avgSpeed = chartData.length > 0 ? chartData.reduce((s, d) => s + d.speed, 0) / chartData.length : 0
@@ -134,15 +153,23 @@ export default function DriveDetail() {
   const endRange = chartData.length > 0 ? (chartData[chartData.length - 1].idealRange ?? chartData[chartData.length - 1].ratedRange) : null
 
   // Speed histogram
-  const speedBuckets = [
-    { range: '0-20', min: 0, max: 20, count: 0 },
-    { range: '20-40', min: 20, max: 40, count: 0 },
-    { range: '40-60', min: 40, max: 60, count: 0 },
-    { range: '60-80', min: 60, max: 80, count: 0 },
-    { range: '80-100', min: 80, max: 100, count: 0 },
-    { range: '100-120', min: 100, max: 120, count: 0 },
-    { range: '120+', min: 120, max: 999, count: 0 },
+  const speedBucketDefs = [
+    { minKmh: 0, maxKmh: 20 },
+    { minKmh: 20, maxKmh: 40 },
+    { minKmh: 40, maxKmh: 60 },
+    { minKmh: 60, maxKmh: 80 },
+    { minKmh: 80, maxKmh: 100 },
+    { minKmh: 100, maxKmh: 120 },
+    { minKmh: 120, maxKmh: 999 },
   ]
+  const speedBuckets = speedBucketDefs.map(b => ({
+    range: b.maxKmh === 999
+      ? `${Math.round(u.speedVal(b.minKmh))}+`
+      : `${Math.round(u.speedVal(b.minKmh))}-${Math.round(u.speedVal(b.maxKmh))}`,
+    min: u.speedVal(b.minKmh),
+    max: u.speedVal(b.maxKmh),
+    count: 0,
+  }))
   chartData.forEach(d => {
     const bucket = speedBuckets.find(b => d.speed >= b.min && d.speed < b.max)
     if (bucket) bucket.count++
@@ -154,7 +181,7 @@ export default function DriveDetail() {
   }))
 
   const efficiency = drive && drive.distance > 0 && drive.start_battery_level != null && drive.end_battery_level != null
-    ? ((drive.start_battery_level - drive.end_battery_level) / drive.distance * 10).toFixed(1)
+    ? ((drive.start_battery_level - drive.end_battery_level) / u.distanceVal(drive.distance) * 10).toFixed(1)
     : null
 
   if (!drive) {
@@ -177,6 +204,13 @@ export default function DriveDetail() {
     )
   }
 
+  const handleShare = () => {
+    const batteryFrom = drive.start_battery_level ?? '?'
+    const batteryTo = drive.end_battery_level ?? '?'
+    const summary = `🚗 Drove ${u.distance(drive.distance)} in ${Math.round(drive.duration_min)} min at ${consumptionWhKm > 0 ? u.efficiency(consumptionWhKm) : '?'} efficiency. Battery: ${batteryFrom}%→${batteryTo}%. Max speed: ${maxSpeed.toFixed(0)} ${u.speedUnit}`
+    navigator.clipboard.writeText(summary)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -196,6 +230,13 @@ export default function DriveDetail() {
               {drive.end_date && ` → ${new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </p>
           </div>
+          <button
+            onClick={handleShare}
+            className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all"
+            title="Share drive summary"
+          >
+            <Share2 className="h-5 w-5" />
+          </button>
         </div>
       </FadeIn>
 
@@ -204,21 +245,35 @@ export default function DriveDetail() {
         <GlassPanel className="p-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/[0.02] to-neon-purple/[0.02]" />
           <div className="relative flex flex-wrap items-center gap-6 lg:gap-10 justify-center">
-            <RadialGauge value={drive.distance} max={Math.max(drive.distance * 1.5, 100)} label="Distance" unit="km" color="#00f0ff" size={110} />
-            <RadialGauge value={maxSpeed} max={250} label="Max Speed" unit="km/h" color="#a855f7" size={110} />
+            <RadialGauge value={u.distanceVal(drive.distance)} max={Math.max(u.distanceVal(drive.distance) * 1.5, 100)} label="Distance" unit={u.distanceUnit} color="#00f0ff" size={110} />
+            <RadialGauge value={maxSpeed} max={u.speedVal(250)} label="Max Speed" unit={u.speedUnit} color="#a855f7" size={110} />
             <RadialGauge value={drive.duration_min} max={Math.max(drive.duration_min * 1.5, 60)} label="Duration" unit="min" color="#f59e0b" size={110} />
-            {efficiency && <RadialGauge value={Number(efficiency)} max={30} label="Efficiency" unit="%/100km" color="#10b981" size={110} />}
-            <RadialGauge value={consumptionWhKm} max={Math.max(consumptionWhKm * 1.5, 300)} label="Consumption" unit="Wh/km" color="#ef4444" size={110} />
+            {efficiency && <RadialGauge value={Number(efficiency)} max={30} label="Efficiency" unit={u.isMetric ? '%/100km' : '%/100mi'} color="#10b981" size={110} />}
+            <RadialGauge value={u.efficiencyVal(consumptionWhKm)} max={Math.max(u.efficiencyVal(consumptionWhKm) * 1.5, 300)} label="Consumption" unit={u.efficiencyUnit} color="#ef4444" size={110} />
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Drive Timeline Bar */}
+      <FadeIn delay={0.06}>
+        <GlassPanel className="p-4">
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
+            <span className="flex items-center gap-1 text-neon-green"><Flag className="h-3 w-3" />{new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="text-[var(--text-muted)]">{Math.floor(drive.duration_min / 60)}h {Math.round(drive.duration_min % 60)}m</span>
+            <span className="flex items-center gap-1 text-neon-red"><Flag className="h-3 w-3" />{drive.end_date ? new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In progress'}</span>
+          </div>
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+            <div className="h-full rounded-full" style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #00f0ff)' }} />
           </div>
         </GlassPanel>
       </FadeIn>
 
       {/* Stat Cards — 2 rows of 4 */}
       <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-        <StaggerItem><StatCard icon={Route} color="#00f0ff" value={<AnimatedNumber value={drive.distance} decimals={1} suffix=" km" />} label="Distance" /></StaggerItem>
+        <StaggerItem><StatCard icon={Route} color="#00f0ff" value={<AnimatedNumber value={u.distanceVal(drive.distance)} decimals={1} suffix={' ' + u.distanceUnit} />} label="Distance" /></StaggerItem>
         <StaggerItem><StatCard icon={Clock} color="#f59e0b" value={`${Math.floor(drive.duration_min / 60)}h ${Math.round(drive.duration_min % 60)}m`} label="Duration" /></StaggerItem>
-        <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={maxSpeed} suffix=" km/h" />} label="Max Speed" /></StaggerItem>
-        <StaggerItem><StatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={avgSpeed} decimals={0} suffix=" km/h" />} label="Avg Speed" /></StaggerItem>
+        <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={maxSpeed} suffix={' ' + u.speedUnit} />} label="Max Speed" /></StaggerItem>
+        <StaggerItem><StatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={avgSpeed} decimals={0} suffix={' ' + u.speedUnit} />} label="Avg Speed" /></StaggerItem>
         <StaggerItem><StatCard icon={Battery} color="#10b981" value={`${drive.start_battery_level ?? '?'}% → ${drive.end_battery_level ?? '?'}%`} label="Battery" /></StaggerItem>
         <StaggerItem><StatCard icon={Zap} color="#f59e0b" value={`${powerMax.toFixed(0)} kW`} label="Max Power" /></StaggerItem>
         <StaggerItem><StatCard icon={Zap} color="#06b6d4" value={`${powerMin.toFixed(0)} kW`} label="Max Regen" /></StaggerItem>
@@ -235,13 +290,13 @@ export default function DriveDetail() {
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Odometer (From → To)</p>
               <p className="text-lg font-bold text-neon-cyan">
-                {odometerStart > 0 ? `${Math.round(odometerStart)} → ${Math.round(odometerEnd)}` : '—'} <span className="text-xs text-[var(--text-muted)]">km</span>
+                {odometerStart > 0 ? `${Math.round(odometerStart)} → ${Math.round(odometerEnd)}` : '—'} <span className="text-xs text-[var(--text-muted)]">{u.distanceUnit}</span>
               </p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Range (Start → End)</p>
               <p className="text-lg font-bold text-neon-green">
-                {startRange != null ? `${Math.round(startRange)} → ${endRange != null ? Math.round(endRange) : '?'}` : '—'} <span className="text-xs text-[var(--text-muted)]">km</span>
+                {startRange != null ? `${Math.round(startRange)} → ${endRange != null ? Math.round(endRange) : '?'}` : '—'} <span className="text-xs text-[var(--text-muted)]">{u.distanceUnit}</span>
               </p>
             </div>
             <div className="text-center">
@@ -261,7 +316,7 @@ export default function DriveDetail() {
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Consumption</p>
-              <p className="text-lg font-bold text-neon-purple">{consumptionWhKm > 0 ? `${Math.round(consumptionWhKm)}` : '—'} <span className="text-xs text-[var(--text-muted)]">Wh/km</span></p>
+              <p className="text-lg font-bold text-neon-purple">{consumptionWhKm > 0 ? `${Math.round(u.efficiencyVal(consumptionWhKm))}` : '—'} <span className="text-xs text-[var(--text-muted)]">{u.efficiencyUnit}</span></p>
             </div>
           </div>
           {(avgInsideTemp !== null || avgOutsideTemp !== null || drive.inside_temp_avg !== null) && (
@@ -269,13 +324,13 @@ export default function DriveDetail() {
               {(drive.outside_temp_avg ?? avgOutsideTemp) !== null && (
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Outside Temp</p>
-                  <p className="text-lg font-bold text-blue-400">{((drive.outside_temp_avg ?? avgOutsideTemp) as number).toFixed(1)}°C</p>
+                  <p className="text-lg font-bold text-blue-400">{u.temp((drive.outside_temp_avg ?? avgOutsideTemp) as number)}</p>
                 </div>
               )}
               {(drive.inside_temp_avg ?? avgInsideTemp) !== null && (
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Inside Temp</p>
-                  <p className="text-lg font-bold text-orange-400">{((drive.inside_temp_avg ?? avgInsideTemp) as number).toFixed(1)}°C</p>
+                  <p className="text-lg font-bold text-orange-400">{u.temp((drive.inside_temp_avg ?? avgInsideTemp) as number)}</p>
                 </div>
               )}
               <div className="text-center">
@@ -284,40 +339,122 @@ export default function DriveDetail() {
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">Min Speed</p>
-                <p className="text-lg font-bold text-gray-300">{minSpeed > 0 ? `${minSpeed.toFixed(0)} km/h` : '0 km/h'}</p>
+                <p className="text-lg font-bold text-gray-300">{minSpeed > 0 ? `${minSpeed.toFixed(0)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
               </div>
             </div>
           )}
         </GlassPanel>
       </FadeIn>
 
+      {/* Energy Summary */}
+      <FadeIn delay={0.09}>
+        <GlassPanel className="p-5">
+          <h3 className="section-title flex items-center gap-2 mb-4">
+            <BatteryCharging className="h-4 w-4 text-neon-green" /> Energy Summary
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Consumed</p>
+              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${(energyConsumedWh / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh)} Wh`}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Recovered</p>
+              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${(energyRecoveredWh / 1000).toFixed(2)} kWh` : `${Math.round(energyRecoveredWh)} Wh`}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Net Consumption</p>
+              <p className="text-lg font-bold text-neon-cyan">{(energyConsumedWh - energyRecoveredWh) > 1000 ? `${((energyConsumedWh - energyRecoveredWh) / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh - energyRecoveredWh)} Wh`}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Efficiency</p>
+              <p className="text-lg font-bold text-neon-purple">{consumptionWhKm > 0 ? `${Math.round(u.efficiencyVal(consumptionWhKm))} ${u.efficiencyUnit}` : '—'}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Battery Used</p>
+              <p className="text-lg font-bold text-neon-amber">
+                {drive.start_battery_level != null && drive.end_battery_level != null ? `${drive.start_battery_level - drive.end_battery_level}%` : '—'}
+                <span className="text-xs text-[var(--text-muted)] ml-1">{drive.start_battery_level ?? '?'}% → {drive.end_battery_level ?? '?'}%</span>
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-muted)] mb-1">Range Used</p>
+              <p className="text-lg font-bold text-neon-green">{drive.start_range_km != null && drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km - drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
       {/* Route Map */}
-      {trail.length > 1 && (
-        <FadeIn delay={0.1}>
-          <GlassPanel className="overflow-hidden">
-            <div className="p-4 pb-0">
-              <h3 className="section-title flex items-center gap-2 mb-3">
-                <MapPin className="h-4 w-4 text-neon-cyan" /> Route
-              </h3>
+      <FadeIn delay={0.1}>
+        <GlassPanel className="overflow-hidden">
+          <div className="p-4 pb-0">
+            <h3 className="section-title flex items-center gap-2 mb-3">
+              <MapPin className="h-4 w-4 text-neon-cyan" /> Route
+            </h3>
+          </div>
+          <div className="h-96">
+            <MapContainer center={centerPos as [number, number]} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
+              <TileLayer
+                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              />
+              {speedSegments.map((seg, i) => (
+                <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
+              ))}
+              {startPos && (
+                <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
+                  <Popup><span className="text-xs font-bold">Start</span><br /><span className="text-xs">{new Date(drive.start_date).toLocaleString()}</span></Popup>
+                </CircleMarker>
+              )}
+              {endPos && (
+                <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
+                  <Popup><span className="text-xs font-bold">End</span><br /><span className="text-xs">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</span></Popup>
+                </CircleMarker>
+              )}
+            </MapContainer>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 text-xs">
+            <span className="flex items-center gap-1.5 text-neon-green"><Flag className="h-3 w-3" /> Start: {new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            {trail.length > 1 && (
+              <div className="flex items-center gap-3 text-[var(--text-muted)]">
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#10b981' }} /> &lt;{Math.round(u.speedVal(30))}</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#00f0ff' }} /> {Math.round(u.speedVal(30))}-{Math.round(u.speedVal(60))}</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#f59e0b' }} /> {Math.round(u.speedVal(60))}-{Math.round(u.speedVal(100))}</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#ef4444' }} /> &gt;{Math.round(u.speedVal(100))}</span>
+                <span>{u.speedUnit}</span>
+              </div>
+            )}
+            {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Journey Details */}
+      <FadeIn delay={0.11}>
+        <GlassPanel className="p-5">
+          <h3 className="section-title flex items-center gap-2 mb-4">
+            <Navigation className="h-4 w-4 text-neon-cyan" /> Journey Details
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-neon-green mb-1">
+                <MapPin className="h-4 w-4" /> Start
+              </div>
+              <p className="font-bold text-[var(--text-primary)]">{startPos ? `${startPos[0].toFixed(4)}, ${startPos[1].toFixed(4)}` : 'Unknown'}</p>
+              <p className="text-xs text-[var(--text-muted)]">{new Date(drive.start_date).toLocaleString()}</p>
+              <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>
-            <div className="h-96">
-              <MapContainer center={centerPos as [number, number]} zoom={13} scrollWheelZoom className="h-full w-full">
-                <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                />
-                <Polyline positions={trail} pathOptions={{ color: '#00f0ff', weight: 4, opacity: 0.8 }} />
-                {startPos && <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }} />}
-                {endPos && <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }} />}
-              </MapContainer>
+            <div>
+              <div className="flex items-center gap-2 text-neon-red mb-1">
+                <Flag className="h-4 w-4" /> Destination
+              </div>
+              <p className="font-bold text-[var(--text-primary)]">{endPos ? `${endPos[0].toFixed(4)}, ${endPos[1].toFixed(4)}` : 'Unknown'}</p>
+              <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</p>
+              <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>
-            <div className="flex items-center justify-between px-4 py-3 text-xs">
-              <span className="flex items-center gap-1.5 text-neon-green"><Flag className="h-3 w-3" /> Start: {new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
-            </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          </div>
+        </GlassPanel>
+      </FadeIn>
 
       {/* === CHARTS SECTION === */}
       {chartData.length > 1 && (
@@ -337,12 +474,12 @@ export default function DriveDetail() {
                     <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
-                    <Area yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" fill="#a855f7" fillOpacity={0.05} strokeWidth={2} name="Speed km/h" />
+                    <Area yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" fill="#a855f7" fillOpacity={0.05} strokeWidth={2} name={'Speed ' + u.speedUnit} />
                     {chartData.some(d => d.idealRange !== null) && (
-                      <Line yAxisId="speed" type="monotone" dataKey="idealRange" stroke="#10b981" strokeWidth={1.5} dot={false} name="Range (ideal) km" strokeDasharray="4 2" />
+                      <Line yAxisId="speed" type="monotone" dataKey="idealRange" stroke="#10b981" strokeWidth={1.5} dot={false} name={'Range (ideal) ' + u.distanceUnit} strokeDasharray="4 2" />
                     )}
                     {chartData.some(d => d.ratedRange !== null) && (
-                      <Line yAxisId="speed" type="monotone" dataKey="ratedRange" stroke="#06b6d4" strokeWidth={1} dot={false} name="Range (rated) km" strokeDasharray="2 2" />
+                      <Line yAxisId="speed" type="monotone" dataKey="ratedRange" stroke="#06b6d4" strokeWidth={1} dot={false} name={'Range (rated) ' + u.distanceUnit} strokeDasharray="2 2" />
                     )}
                     <Line yAxisId="power" type="monotone" dataKey="power" stroke="#f59e0b" strokeWidth={1.5} dot={false} name="Power kW" />
                     <ReferenceLine yAxisId="power" y={0} stroke="rgba(255,255,255,0.1)" />
@@ -410,10 +547,10 @@ export default function DriveDetail() {
                         <Tooltip content={<ChartTooltip />} />
                         <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
                         {outsideTemps.length > 0 && (
-                          <Line type="monotone" dataKey="outsideTemp" stroke="#3b82f6" strokeWidth={2} dot={false} name="Outside °C" connectNulls />
+                          <Line type="monotone" dataKey="outsideTemp" stroke="#3b82f6" strokeWidth={2} dot={false} name={'Outside ' + u.tempUnit} connectNulls />
                         )}
                         {insideTemps.length > 0 && (
-                          <Line type="monotone" dataKey="insideTemp" stroke="#f97316" strokeWidth={2} dot={false} name="Inside °C" connectNulls />
+                          <Line type="monotone" dataKey="insideTemp" stroke="#f97316" strokeWidth={2} dot={false} name={'Inside ' + u.tempUnit} connectNulls />
                         )}
                       </LineChart>
                     </ResponsiveContainer>
@@ -431,7 +568,7 @@ export default function DriveDetail() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={speedHistData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} label={{ value: 'km/h', fill: 'var(--text-muted)', fontSize: 10, position: 'insideBottom', offset: -5 }} />
+                      <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} label={{ value: u.speedUnit, fill: 'var(--text-muted)', fontSize: 10, position: 'insideBottom', offset: -5 }} />
                       <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                       <Tooltip content={<ChartTooltip />} />
                       <Bar dataKey="pct" fill="#a855f7" name="% of drive" radius={[4, 4, 0, 0]} />

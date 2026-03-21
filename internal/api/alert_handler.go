@@ -88,3 +88,56 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	rule, _ := h.alertRuleRepo.GetByID(r.Context(), id)
 	writeJSON(w, http.StatusOK, rule)
 }
+
+func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name      string  `json:"name"`
+		Type      string  `json:"type"`
+		Enabled   bool    `json:"enabled"`
+		Threshold float64 `json:"threshold"`
+		Severity  string  `json:"severity"`
+		VehicleID *int64  `json:"vehicle_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Name == "" || body.Type == "" {
+		writeError(w, http.StatusBadRequest, "name and type are required")
+		return
+	}
+
+	rule := &models.AlertRule{
+		Name:      body.Name,
+		Type:      body.Type,
+		Enabled:   body.Enabled,
+		Threshold: body.Threshold,
+	}
+	if body.VehicleID != nil {
+		rule.VehicleID = body.VehicleID
+	}
+
+	if err := h.alertRuleRepo.Create(r.Context(), rule); err != nil {
+		log.Error().Err(err).Msg("failed to create alert rule")
+		writeError(w, http.StatusInternalServerError, "failed to create alert rule")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, rule)
+}
+
+func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
+	id, err := urlParamInt64(r, "ruleID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid rule ID")
+		return
+	}
+
+	if err := h.alertRuleRepo.Delete(r.Context(), id); err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("failed to delete alert rule")
+		writeError(w, http.StatusInternalServerError, "failed to delete alert rule")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}

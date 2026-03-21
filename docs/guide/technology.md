@@ -31,8 +31,7 @@ A comprehensive overview of the technologies powering TeslaSync, including ratio
 
 | Technology | Version | Purpose | Why |
 |-----------|---------|---------|-----|
-| **PostgreSQL** | 16 | Primary database | ACID compliance, JSONB support, excellent query optimizer, mature ecosystem |
-| **TimescaleDB** | latest | Time-series extension | Automatic partitioning (hypertables) for positions data — 10-100x faster range queries on millions of rows |
+| **PostgreSQL** | 17 | Primary database | ACID compliance, JSONB support, native partitioning for time-series data, excellent query optimizer, mature ecosystem |
 | **Redis** | 7 | Cache & sessions | Sub-millisecond reads, LRU eviction, append-only persistence for durability |
 
 ## Integration
@@ -40,7 +39,7 @@ A comprehensive overview of the technologies powering TeslaSync, including ratio
 | Technology | Version | Purpose | Why |
 |-----------|---------|---------|-----|
 | **Mosquitto** | 2 | MQTT broker | Lightweight pub/sub messaging for home automation integration (Home Assistant, Node-RED) |
-| **Grafana** | 10.4 | Dashboards | 16 pre-built dashboards with PostgreSQL/TimescaleDB datasource, alerting, and annotations |
+| **Grafana** | 10.4 | Dashboards | 16 pre-built dashboards with PostgreSQL datasource, alerting, and annotations |
 
 ## Infrastructure
 

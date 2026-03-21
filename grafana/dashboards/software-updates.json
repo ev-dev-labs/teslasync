@@ -1,72 +1,116 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "editable": true,
-  "graphTooltip": 2,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    { "title": "Vehicle Overview", "url": "/d/teslasync-vehicle/vehicle-overview", "type": "link" }
-  ],
+  "links": [],
   "panels": [
     {
-      "title": "Current Version",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT version FROM software_updates WHERE vehicle_id = $vehicle_id AND status = 'installed' ORDER BY installed_at DESC LIMIT 1", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Total Updates",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#10b981", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM software_updates WHERE vehicle_id = $vehicle_id", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Installed Count",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#a855f7", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM software_updates WHERE vehicle_id = $vehicle_id AND status = 'installed'", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Pending Updates",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "color": { "fixedColor": "#f59e0b", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COUNT(*) FROM software_updates WHERE vehicle_id = $vehicle_id AND status NOT IN ('installed')", "format": "table", "refId": "A" }]
-    },
-    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  su.version AS \"Version\",\n  su.status AS \"Status\",\n  su.installed_at AS \"Installed At\",\n  su.scheduled_at AS \"Scheduled At\",\n  su.created_at AS \"First Seen\"\nFROM software_updates su\nWHERE su.vehicle_id = ${vehicle_id}\nORDER BY su.created_at DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ],
       "title": "Software Update History",
       "type": "table",
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "targets": [{ "rawSql": "SELECT version, status, scheduled_at, installed_at, created_at FROM software_updates WHERE vehicle_id = $vehicle_id ORDER BY created_at DESC LIMIT 100", "format": "table", "refId": "A" }]
-    },
-    {
-      "title": "Updates Timeline",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
-      "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "points", "pointSize": 10 }, "color": { "fixedColor": "#00f0ff", "mode": "fixed" } } },
-      "targets": [{ "rawSql": "SELECT COALESCE(installed_at, created_at) AS time, 1 AS update_count FROM software_updates WHERE vehicle_id = $vehicle_id AND $__timeFilter(COALESCE(installed_at, created_at)) ORDER BY time", "format": "time_series", "refId": "A" }]
+      "transparent": false
     }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
   ],
   "templating": {
     "list": [
       {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
         "name": "vehicle_id",
-        "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_TESLASYNC_POSTGRESQL}" },
-        "query": "SELECT id AS __value, COALESCE(display_name, vin) AS __text FROM vehicles ORDER BY id",
-        "refresh": 1
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
-  "time": { "from": "now-1y", "to": "now" },
-  "title": "Software Updates",
-  "uid": "teslasync-software-updates"
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync — Software Updates",
+  "uid": "teslasync-software-updates",
+  "version": 1,
+  "weekStart": ""
 }

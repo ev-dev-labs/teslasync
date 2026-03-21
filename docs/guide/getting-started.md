@@ -18,7 +18,7 @@ For local development without Docker, you'll also need:
 |------|----------------|---------|
 | [Go](https://go.dev/dl/) | 1.22+ | Backend compilation |
 | [Node.js](https://nodejs.org/) | 20 LTS | Frontend build tooling |
-| [PostgreSQL](https://www.postgresql.org/) | 16+ | Database (with TimescaleDB extension) |
+| [PostgreSQL](https://www.postgresql.org/) | 17+ | Database |
 
 ### Tesla Developer Account
 
@@ -78,7 +78,7 @@ This will start:
 |---------|------|-------------|
 | **web** | [localhost:3000](http://localhost:3000) | React frontend (Nginx) |
 | **teslasync** | [localhost:8080](http://localhost:8080) | Go API server |
-| **postgres** | localhost:5432 | TimescaleDB database |
+| **postgres** | localhost:5432 | PostgreSQL database |
 | **grafana** | [localhost:3001](http://localhost:3001) | Monitoring dashboards |
 | **mosquitto** | localhost:1883 | MQTT broker |
 | **redis** | localhost:6379 | Cache layer |

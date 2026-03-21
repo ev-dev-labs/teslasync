@@ -73,7 +73,7 @@ TeslaSync is a next-generation Tesla fleet intelligence platform built from the 
 |-------|-----------|
 | **Backend** | Go 1.22 · Chi router · pgx · zerolog |
 | **Frontend** | React 18 · TypeScript · Vite · Tailwind CSS |
-| **Database** | PostgreSQL 16 + TimescaleDB |
+| **Database** | PostgreSQL 17 with native partitioning |
 | **Messaging** | MQTT (Mosquitto) |
 | **Cache** | Redis 7 |
 | **Monitoring** | Grafana 10.4 · Prometheus |

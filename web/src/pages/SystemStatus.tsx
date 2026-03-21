@@ -70,7 +70,7 @@ function getComponentIcon(name: string) {
 
 function getComponentLabel(name: string): string {
   switch (name) {
-    case 'database': return 'PostgreSQL + TimescaleDB'
+    case 'database': return 'PostgreSQL 17'
     case 'tesla_api': return 'Tesla Fleet API'
     case 'mqtt': return 'MQTT (Mosquitto)'
     case 'redis': return 'Redis Cache'

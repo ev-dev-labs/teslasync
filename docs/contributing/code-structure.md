@@ -224,7 +224,7 @@ Migrations are in `migrations/` using the `golang-migrate` format:
 000005_notifications.up.sql    # Notification channels, logs, chat, tire pressure
 ```
 
-Migrations run automatically on backend startup. The `positions` table is a TimescaleDB hypertable for efficient time-series queries.
+Migrations run automatically on backend startup. The `positions` table uses native PostgreSQL partitioning for efficient time-series queries.
 
 ## Build System
 

@@ -10,7 +10,7 @@ TeslaSync's `docker-compose.yml` orchestrates 6 services:
 |---------|-------|------|--------|---------|
 | **teslasync** | Custom (Dockerfile) | 8080 | 128M–512M | Go API server + worker |
 | **web** | Custom (Dockerfile.web) | 3000 | 32M–128M | React SPA via Nginx |
-| **postgres** | timescale/timescaledb:latest-pg16 | 5432 | 256M–1G | TimescaleDB database |
+| **postgres** | postgres:17-alpine | 5432 | 256M–1G | PostgreSQL database |
 | **grafana** | grafana/grafana:10.4.0 | 3001 | 64M–256M | Monitoring dashboards |
 | **mosquitto** | eclipse-mosquitto:2 | 1883, 9001 | 16M–64M | MQTT broker |
 | **redis** | redis:7-alpine | 6379 | 32M–192M | Cache layer |
@@ -75,11 +75,11 @@ EXPOSE 80
 
 The Nginx configuration handles SPA routing (all non-file routes serve `index.html`).
 
-### PostgreSQL + TimescaleDB
+### PostgreSQL
 
 ```yaml
 postgres:
-  image: timescale/timescaledb:latest-pg16
+  image: postgres:17-alpine
   environment:
     POSTGRES_USER: ${POSTGRES_USER:-teslasync}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teslasync}
@@ -96,7 +96,7 @@ The `postgres_data` volume ensures your data survives container restarts. **Neve
 
 ### Grafana
 
-Pre-configured with 5 dashboards and a TimescaleDB datasource:
+Pre-configured with 5 dashboards and a PostgreSQL datasource:
 
 ```yaml
 grafana:

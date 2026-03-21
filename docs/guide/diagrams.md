@@ -13,7 +13,7 @@ graph TB
             API["teslasync<br/>Go Backend<br/>:8080"]
         end
         subgraph Data["Data Layer"]
-            PG["PostgreSQL 16<br/>+ TimescaleDB<br/>:5432"]
+            PG["PostgreSQL 17<br/>:5432"]
             Redis["Redis 7<br/>Cache / Sessions<br/>:6379"]
         end
         subgraph Integration["Integration Layer"]
@@ -78,7 +78,7 @@ graph LR
     end
 
     subgraph Storage["Persistence"]
-        Positions["positions<br/>(hypertable)"]
+        Positions["positions<br/>(partitioned)"]
         Drives["drives<br/>charging_sessions"]
         States["vehicle_states"]
         Metrics["battery_snapshots<br/>tire_pressure"]
