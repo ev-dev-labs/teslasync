@@ -95,3 +95,15 @@ func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRul
 	}
 	return ar, err
 }
+
+func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) error {
+	query := `INSERT INTO alert_rules (name, type, enabled, threshold, vehicle_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, created_at, updated_at`
+	return r.db.Pool.QueryRow(ctx, query, rule.Name, rule.Type, rule.Enabled, rule.Threshold, rule.VehicleID).
+		Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
+}
+
+func (r *AlertRuleRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.Pool.Exec(ctx, `DELETE FROM alert_rules WHERE id = $1`, id)
+	return err
+}

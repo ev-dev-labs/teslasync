@@ -144,7 +144,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", alertHandler.List)
 			r.Post("/{alertID}/read", alertHandler.MarkRead)
 			r.Get("/rules", alertHandler.ListRules)
+			r.Post("/rules", alertHandler.CreateRule)
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
+			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 		})
 
 		// Analytics
