@@ -724,3 +724,13 @@ export interface SearchResult {
 
 /** Searches across vehicles, drives, and locations by query string. */
 export const getSearch = (q: string) => request<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`)
+
+// === Backup ===
+
+export interface BackupStats {
+  database_size: string
+  table_count: number
+  row_counts: Record<string, number>
+}
+
+export const getBackupStats = () => request<BackupStats>('/system/backup/stats')

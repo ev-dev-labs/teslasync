@@ -33,6 +33,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(chimw.RealIP)
 	r.Use(LoggerMiddleware)
 	r.Use(RecoveryMiddleware) // Enhanced recovery that logs panics as structured errors
+	r.Use(PrometheusMiddleware)
 	r.Use(chimw.Compress(5))
 	r.Use(chimw.Timeout(30 * time.Second))
 
@@ -83,6 +84,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	webhookHandler := NewWebhookHandler(db)
 	userHandler := NewUserHandler(db, cfg.Auth.JWTSecret)
 	searchHandler := NewSearchHandler(db)
+	backupHandler := NewBackupHandler(db)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -91,6 +93,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Get("/api/v1/system/health", ExtendedHealthCheck(db, health))
 	r.Get("/api/v1/system/api-usage", APIUsageHandler())
 	r.Get("/api/v1/system/compression-stats", CompressionStatsHandler(db))
+	r.Get("/api/v1/system/backup", backupHandler.ExportData)
+	r.Get("/api/v1/system/backup/stats", backupHandler.BackupStats)
 
 	// Metrics
 	r.Handle("/metrics", MetricsHandler())

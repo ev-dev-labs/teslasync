@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getAPIUsage, AppSettings, Vehicle } from '../api'
+import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getAPIUsage, getBackupStats, AppSettings, Vehicle } from '../api'
 import { useState, useEffect, useMemo } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check, Zap, Users, Lock, Trash2, AlertTriangle } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check, Zap, Users, Lock, Trash2, AlertTriangle, Database } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -146,6 +146,95 @@ function UserManagementSection() {
           </div>
         </div>
       </div>
+    </GlassPanel>
+  )
+}
+
+function BackupSection() {
+  const { data: stats, isLoading } = useQuery({ queryKey: ['backup-stats'], queryFn: getBackupStats })
+  const [downloading, setDownloading] = useState(false)
+  const [lastBackup, setLastBackup] = useState<string | null>(() => localStorage.getItem('teslasync-last-backup'))
+  const toast = useToast()
+
+  const totalRows = stats?.row_counts ? Object.values(stats.row_counts).reduce((a, b) => a + b, 0) : 0
+  const estimatedSize = totalRows > 0 ? `~${Math.max(1, Math.round(totalRows * 0.5 / 1024))} MB` : '—'
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const res = await fetch('/api/v1/system/backup')
+      if (!res.ok) throw new Error('Backup failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `teslasync-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      const now = new Date().toISOString()
+      localStorage.setItem('teslasync-last-backup', now)
+      setLastBackup(now)
+      toast.success('Backup downloaded', 'Your database backup has been saved')
+    } catch {
+      toast.error('Backup failed', 'Could not download the backup file')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <GlassPanel className="p-6 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20">
+          <Database className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Backup</h2>
+          <p className="text-xs text-[var(--text-muted)]">Export your TeslaSync database for safekeeping</p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2"><Skeleton className="h-4 w-48" /><Skeleton className="h-4 w-36" /></div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Database Size</p>
+            <p className="text-sm font-mono text-neon-cyan">{stats?.database_size ?? '—'}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Tables</p>
+            <p className="text-sm font-mono text-[var(--text-primary)]">{stats?.table_count ?? '—'}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Est. Backup Size</p>
+            <p className="text-sm font-mono text-[var(--text-primary)]">{estimatedSize}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Last Backup</p>
+            <p className="text-sm font-mono text-[var(--text-primary)]">{lastBackup ? new Date(lastBackup).toLocaleDateString() : 'Never'}</p>
+          </div>
+        </div>
+      )}
+
+      {stats?.row_counts && (
+        <div className="text-xs text-[var(--text-muted)] flex flex-wrap gap-x-4 gap-y-1">
+          {Object.entries(stats.row_counts).map(([table, count]) => (
+            <span key={table}><span className="text-[var(--text-secondary)]">{table}:</span> {count.toLocaleString()}</span>
+          ))}
+        </div>
+      )}
+
+      <button
+        onClick={handleDownload}
+        disabled={downloading}
+        className="glass-button flex items-center gap-2 text-sm px-4 py-2"
+      >
+        {downloading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        {downloading ? 'Downloading…' : 'Download Backup'}
+      </button>
     </GlassPanel>
   )
 }
@@ -930,6 +1019,11 @@ export default function Settings() {
       {/* Privacy Controls */}
       <FadeIn delay={0.21}>
         <PrivacySection />
+      </FadeIn>
+
+      {/* Backup */}
+      <FadeIn delay={0.215}>
+        <BackupSection />
       </FadeIn>
 
       {/* System Info */}

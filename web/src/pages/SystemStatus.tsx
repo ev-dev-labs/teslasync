@@ -491,6 +491,52 @@ function CompressionStatsPanel() {
   )
 }
 
+function RateLimitsPanel() {
+  const limits = [
+    { route: 'General API', limit: '100 req/min', description: 'Per-IP rate limit for all endpoints' },
+    { route: 'Tesla Vehicle Data', limit: '60 req/min', description: 'Tesla Fleet API device data limit' },
+    { route: 'Tesla Wakes', limit: '3 req/min', description: 'Vehicle wake command limit' },
+    { route: 'Tesla Commands', limit: '30 req/min', description: 'Vehicle command limit' },
+    { route: 'Webhook Inbound', limit: '30 req/min', description: 'External webhook reception rate' },
+  ]
+
+  return (
+    <FadeIn delay={0.12}>
+      <GlassPanel className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-amber/10 text-neon-amber ring-1 ring-neon-amber/20">
+            <Gauge className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Rate Limits</h3>
+            <p className="text-[11px] text-[var(--text-muted)]">Request throttling configured per route</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-white/5">
+                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Route</th>
+                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Limit</th>
+                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {limits.map(l => (
+                <tr key={l.route} className="border-b border-white/[0.03] last:border-0">
+                  <td className="py-2.5 px-3 text-[var(--text-primary)] font-medium">{l.route}</td>
+                  <td className="py-2.5 px-3"><span className="font-mono text-neon-cyan">{l.limit}</span></td>
+                  <td className="py-2.5 px-3 text-[var(--text-muted)]">{l.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </GlassPanel>
+    </FadeIn>
+  )
+}
+
 function AuditLogTable() {
   const { data: logs, isLoading } = useQuery({ queryKey: ['audit-logs'], queryFn: () => getAuditLogs(30), refetchInterval: 30_000 })
 
@@ -756,6 +802,9 @@ export default function SystemStatus() {
 
       {/* Data Compression Stats */}
       <CompressionStatsPanel />
+
+      {/* Rate Limits */}
+      <RateLimitsPanel />
 
       {/* Audit Logs */}
       <AuditLogTable />

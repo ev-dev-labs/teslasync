@@ -1,12 +1,96 @@
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getVehiclePositions, getGeofences, getDrives, Vehicle, VehicleState, Position, getVehicleStatus } from '../api'
-import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker, useMapEvents } from 'react-leaflet'
 import { LatLngExpression, divIcon } from 'leaflet'
 import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForward, Zap, Shield, Lock, Eye } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import clsx from 'clsx'
+
+interface ChargerInfo {
+  ID: number
+  AddressInfo: {
+    Title: string
+    AddressLine1: string
+    Latitude: number
+    Longitude: number
+  }
+  NumberOfPoints: number | null
+  Connections?: Array<{
+    ConnectionTypeID?: number
+    PowerKW?: number
+  }>
+}
+
+type ChargerFilter = 'all' | 'supercharger' | 'ccs' | 'chademo'
+
+const CHARGER_FILTER_LABELS: Record<ChargerFilter, string> = {
+  all: 'All',
+  supercharger: 'Supercharger',
+  ccs: 'CCS',
+  chademo: 'CHAdeMO',
+}
+
+// Connection type IDs from OpenChargeMap
+const CHARGER_CONNECTION_IDS: Record<string, number[]> = {
+  supercharger: [30, 27], // Tesla Supercharger / Tesla connector
+  ccs: [33, 32],          // CCS (Type 1 & 2)
+  chademo: [2],           // CHAdeMO
+}
+
+function filterChargers(chargers: ChargerInfo[], filter: ChargerFilter): ChargerInfo[] {
+  if (filter === 'all') return chargers
+  const ids = CHARGER_CONNECTION_IDS[filter] ?? []
+  return chargers.filter(c =>
+    c.Connections?.some(conn => ids.includes(conn.ConnectionTypeID ?? 0))
+  )
+}
+
+const fetchChargers = async (lat: number, lng: number): Promise<ChargerInfo[]> => {
+  const res = await fetch(
+    `https://api.openchargemap.io/v3/poi/?output=json&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM&maxresults=50&compact=true&verbose=false`
+  )
+  return res.json()
+}
+
+function ChargerLayer({ chargers }: { chargers: ChargerInfo[] }) {
+  return (
+    <>
+      {chargers.map(c => (
+        <CircleMarker
+          key={c.ID}
+          center={[c.AddressInfo.Latitude, c.AddressInfo.Longitude]}
+          radius={6}
+          pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.8 }}
+        >
+          <Popup>
+            <div style={{ color: 'var(--text-primary)', fontSize: '12px' }}>
+              <b>{c.AddressInfo.Title}</b><br />
+              {c.AddressInfo.AddressLine1}<br />
+              {c.NumberOfPoints} connectors<br />
+              {c.Connections?.[0]?.PowerKW && `${c.Connections[0].PowerKW} kW`}
+            </div>
+          </Popup>
+        </CircleMarker>
+      ))}
+    </>
+  )
+}
+
+function MapCenterWatcher({ onCenterChange }: { onCenterChange: (lat: number, lng: number) => void }) {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useMapEvents({
+    moveend(e) {
+      const center = e.target.getCenter()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        onCenterChange(center.lat, center.lng)
+      }, 500)
+    },
+  })
+  return null
+}
 
 function createVehicleIcon(status: string, heading: number = 0) {
   const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
@@ -84,6 +168,10 @@ export default function LiveMap() {
   const [replayMode, setReplayMode] = useState(false)
   const [replayIdx, setReplayIdx] = useState(0)
   const [replayPlaying, setReplayPlaying] = useState(false)
+  const [showChargers, setShowChargers] = useState(false)
+  const [chargers, setChargers] = useState<ChargerInfo[]>([])
+  const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all')
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
   const replayTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const vehicleStates = useQuery({
@@ -161,6 +249,25 @@ export default function LiveMap() {
     }
     return () => { if (replayTimer.current) clearInterval(replayTimer.current) }
   }, [replayPlaying, replayMode, trailPositions.length])
+
+  // Fetch chargers when toggle is on and map center changes
+  useEffect(() => {
+    if (!showChargers) {
+      setChargers([])
+      return
+    }
+    const lat = mapCenter?.lat ?? (Array.isArray(center) ? (center as number[])[0] : 37.7749)
+    const lng = mapCenter?.lng ?? (Array.isArray(center) ? (center as number[])[1] : -122.4194)
+    let cancelled = false
+    fetchChargers(lat, lng).then(data => {
+      if (!cancelled) setChargers(data)
+    }).catch(() => {
+      if (!cancelled) setChargers([])
+    })
+    return () => { cancelled = true }
+  }, [showChargers, mapCenter, center])
+
+  const filteredChargers = filterChargers(chargers, chargerFilter)
 
   const selectedState = selectedId ? states[selectedId] : null
   const replayPos = replayMode && trailPositions[replayIdx] ? trailPositions[replayIdx] : null
@@ -331,7 +438,45 @@ export default function LiveMap() {
                 />
               </>
             )}
+
+            {/* Charger markers */}
+            {showChargers && <ChargerLayer chargers={filteredChargers} />}
+
+            {/* Watch map center for charger fetching */}
+            <MapCenterWatcher onCenterChange={(lat, lng) => setMapCenter({ lat, lng })} />
           </MapContainer>
+
+          {/* Charger controls overlay */}
+          <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
+            <button
+              onClick={() => setShowChargers(!showChargers)}
+              className={clsx(
+                'glass-panel px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer',
+                showChargers ? 'text-neon-green border-neon-green/30' : 'text-[var(--text-secondary)]'
+              )}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              {showChargers ? `⚡ ${filteredChargers.length} chargers nearby` : 'Show Chargers'}
+            </button>
+            {showChargers && (
+              <div className="glass-panel p-2 flex flex-wrap gap-1">
+                {(Object.keys(CHARGER_FILTER_LABELS) as ChargerFilter[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setChargerFilter(f)}
+                    className={clsx(
+                      'px-2 py-1 rounded text-[10px] font-medium transition-all cursor-pointer',
+                      chargerFilter === f
+                        ? 'bg-neon-green/20 text-neon-green'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                    )}
+                  >
+                    {CHARGER_FILTER_LABELS[f]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Speed legend overlay */}
           {selectedId && trailPositions.length > 1 && !replayMode && (
