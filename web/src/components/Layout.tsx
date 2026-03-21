@@ -31,12 +31,63 @@ import {
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
 import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState } from '../api'
+import { useRealtimeEvents, type SSEConnectionStatus } from '../hooks/useRealtimeEvents'
+
+const navI18nKeys: Record<string, string> = {
+  'Dashboard': 'nav.dashboard',
+  'Live Map': 'nav.liveMap',
+  'Fleet': 'nav.vehicles',
+  'Drives': 'nav.drives',
+  'Charging': 'nav.charging',
+  'Energy': 'nav.energy',
+  'Battery Health': 'nav.battery',
+  'Analytics': 'nav.analytics',
+  'Efficiency': 'nav.efficiency',
+  'Mileage': 'nav.mileage',
+  'Timeline': 'nav.timeline',
+  'Locations': 'nav.locations',
+  'Trips': 'nav.trips',
+  'Tire Pressure': 'nav.tirePressure',
+  'Vampire Drain': 'nav.vampireDrain',
+  'Software Updates': 'nav.softwareUpdates',
+  'Projected Range': 'nav.projectedRange',
+  'Statistics': 'nav.statistics',
+  'Alerts': 'nav.alerts',
+  'Commands': 'nav.commands',
+  'Geofences': 'nav.geofences',
+  'Notifications': 'nav.notifications',
+  'Settings': 'nav.settings',
+}
+
+function SSEStatusDot({ status, reconnectCount }: { status: SSEConnectionStatus; reconnectCount: number }) {
+  const colorClass =
+    status === 'connected' ? 'bg-neon-green' :
+    status === 'reconnecting' ? 'bg-amber-400' :
+    'bg-red-500'
+  const shadowColor =
+    status === 'connected' ? 'rgba(16,185,129,0.5)' :
+    status === 'reconnecting' ? 'rgba(251,191,36,0.5)' :
+    'rgba(239,68,68,0.5)'
+  const label =
+    status === 'connected' ? `SSE Connected${reconnectCount > 0 ? ` (reconnected ${reconnectCount}×)` : ''}` :
+    status === 'reconnecting' ? 'SSE Reconnecting' :
+    'SSE Disconnected'
+
+  return (
+    <span
+      title={label}
+      className={clsx('inline-block h-2 w-2 rounded-full shrink-0', colorClass, status === 'reconnecting' && 'animate-pulse')}
+      style={{ boxShadow: `0 0 6px ${shadowColor}` }}
+    />
+  )
+}
 
 const navSections = [
   {
@@ -101,6 +152,10 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const [now, setNow] = useState(Date.now())
+  const { t } = useTranslation()
+
+  // SSE connection status
+  const { status: sseStatus, reconnectCount } = useRealtimeEvents()
 
   // Live data for sidebar
   const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000 })
@@ -212,7 +267,7 @@ export default function Layout() {
                         <Icon className={clsx('h-[18px] w-[18px] transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_6px_currentColor]' : 'opacity-40 group-hover:opacity-80')} />
                       </span>
                       <span className={clsx('relative z-10 transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-                        {label}
+                        {navI18nKeys[label] ? t(navI18nKeys[label]) : label}
                       </span>
                       {/* Badge for Alerts */}
                       {to === '/alerts' && unreadAlerts > 0 && (
@@ -262,6 +317,7 @@ export default function Layout() {
               <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
             </div>
             <SystemHealthDot />
+            <SSEStatusDot status={sseStatus} reconnectCount={reconnectCount} />
           </div>
         </div>
       </aside>

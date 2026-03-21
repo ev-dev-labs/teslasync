@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getAPIUsage, AppSettings, Vehicle } from '../api'
 import { useState, useEffect, useMemo } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check, Zap, Users } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check, Zap, Users, Lock, Trash2, AlertTriangle } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -144,6 +144,160 @@ function UserManagementSection() {
             <p className="text-lg font-bold text-neon-purple">24h</p>
             <p className="text-[10px] text-[var(--text-muted)]">Token Expiry</p>
           </div>
+        </div>
+      </div>
+    </GlassPanel>
+  )
+}
+
+function PrivacySection() {
+  const [anonymizeLocations, setAnonymizeLocations] = useState(
+    () => localStorage.getItem('teslasync-anonymize-locations') === 'true'
+  )
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const toast = useToast()
+
+  const retentionDays = 90
+  const dataRetentionDays = 365
+
+  function handleExportAll() {
+    setExporting(true)
+    fetch('/api/v1/export/all?format=json')
+      .then(res => {
+        if (!res.ok) throw new Error('Export failed')
+        return res.blob()
+      })
+      .then(blob => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `teslasync-data-export-${new Date().toISOString().slice(0, 10)}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success('Export complete', 'Your data has been downloaded')
+      })
+      .catch(() => {
+        toast.error('Export failed', 'Could not export data. Please try again.')
+      })
+      .finally(() => setExporting(false))
+  }
+
+  return (
+    <GlassPanel className="p-6 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-purple/10 text-neon-purple ring-1 ring-neon-purple/20">
+          <Lock className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Privacy Controls</h2>
+          <p className="text-xs text-[var(--text-muted)]">Manage data privacy, exports, and retention</p>
+        </div>
+      </div>
+
+      {/* Anonymize Location Data */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/5">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-[var(--text-primary)]">Anonymize Location Names</p>
+          <p className="text-xs text-[var(--text-muted)]">Replace actual addresses with generic labels in exports</p>
+        </div>
+        <button
+          onClick={() => {
+            const v = !anonymizeLocations
+            setAnonymizeLocations(v)
+            localStorage.setItem('teslasync-anonymize-locations', String(v))
+          }}
+          className={clsx('relative w-11 h-6 rounded-full transition-colors shrink-0 ml-4', anonymizeLocations ? 'bg-neon-purple' : 'bg-gray-600')}
+        >
+          <span className={clsx('absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform', anonymizeLocations && 'translate-x-5')} />
+        </button>
+      </div>
+
+      {/* Export All Data (GDPR) */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/5">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-[var(--text-primary)]">Export All My Data</p>
+          <p className="text-xs text-[var(--text-muted)]">Downloads a JSON file with all vehicles, drives, charges, and positions</p>
+        </div>
+        <button
+          onClick={handleExportAll}
+          disabled={exporting}
+          className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-white/5 transition-colors disabled:opacity-40 shrink-0 ml-4"
+        >
+          <Download className={clsx('h-4 w-4', exporting && 'animate-spin')} />
+          {exporting ? 'Exporting...' : 'Export'}
+        </button>
+      </div>
+
+      {/* Delete All Data */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-red-500/10">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-red-400">Delete All Data</p>
+          <p className="text-xs text-[var(--text-muted)]">Permanently delete all stored data. This action cannot be undone.</p>
+        </div>
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled
+          className="flex items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ml-4"
+          title="API endpoint not yet available"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </button>
+      </div>
+      <p className="text-[10px] text-[var(--text-muted)] italic">
+        Data purge requires DELETE /api/v1/data/purge endpoint (not yet implemented).
+      </p>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass-card p-6 max-w-sm w-full mx-4 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Delete All Data?</h3>
+                  <p className="text-xs text-[var(--text-muted)]">This action is irreversible</p>
+                </div>
+              </div>
+              <p className="text-sm text-[var(--text-secondary)]">
+                All vehicles, drives, charges, positions, and settings will be permanently deleted.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => setShowDeleteConfirm(false)} className="glass-button px-4 py-2 text-sm">Cancel</button>
+                <button disabled className="flex items-center gap-2 rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2 text-sm text-red-400 disabled:opacity-40 disabled:cursor-not-allowed" title="API endpoint not yet available">
+                  <Trash2 className="h-4 w-4" /> Delete Everything
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Data Retention Display */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+          <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Position Data Retention</p>
+          <p className="text-lg font-semibold text-[var(--text-primary)]">{retentionDays} days</p>
+        </div>
+        <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+          <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mb-1">General Data Retention</p>
+          <p className="text-lg font-semibold text-[var(--text-primary)]">{dataRetentionDays} days</p>
         </div>
       </div>
     </GlassPanel>
@@ -771,6 +925,11 @@ export default function Settings() {
       {/* User Management */}
       <FadeIn delay={0.2}>
         <UserManagementSection />
+      </FadeIn>
+
+      {/* Privacy Controls */}
+      <FadeIn delay={0.21}>
+        <PrivacySection />
       </FadeIn>
 
       {/* System Info */}
