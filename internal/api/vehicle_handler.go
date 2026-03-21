@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/teslasync/teslasync/internal/database"
@@ -14,23 +16,37 @@ type VehicleHandler struct {
 	vehicleRepo  *database.VehicleRepo
 	positionRepo *database.PositionRepo
 	teslaClient  *tesla.Client
+	cache        *database.Cache
 }
 
-func NewVehicleHandler(db *database.DB, tc *tesla.Client) *VehicleHandler {
+func NewVehicleHandler(db *database.DB, tc *tesla.Client, cache *database.Cache) *VehicleHandler {
 	return &VehicleHandler{
 		vehicleRepo:  database.NewVehicleRepo(db),
 		positionRepo: database.NewPositionRepo(db),
 		teslaClient:  tc,
+		cache:        cache,
 	}
 }
 
 func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
-	vehicles, err := h.vehicleRepo.GetAll(r.Context())
+	ctx := r.Context()
+	cacheKey := "vehicles:all"
+
+	var vehicles []*models.Vehicle
+	if h.cache.Get(ctx, cacheKey, &vehicles) {
+		writeJSON(w, http.StatusOK, vehicles)
+		return
+	}
+
+	var err error
+	vehicles, err = h.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list vehicles")
 		writeError(w, http.StatusInternalServerError, "failed to list vehicles")
 		return
 	}
+
+	h.cache.Set(ctx, cacheKey, vehicles, 60*time.Second)
 	writeJSON(w, http.StatusOK, vehicles)
 }
 
@@ -66,6 +82,7 @@ func (h *VehicleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to delete vehicle")
 		return
 	}
+	h.cache.Delete(context.Background(), "vehicles:all")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -108,6 +125,8 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 		"synced":  len(synced),
 		"vehicles": synced,
 	})
+	// Invalidate vehicle list cache after sync
+	h.cache.Delete(context.Background(), "vehicles:all")
 }
 
 func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {

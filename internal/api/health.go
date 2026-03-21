@@ -27,7 +27,9 @@ func HealthHandler(db *database.DB) http.HandlerFunc {
 	}
 }
 
-// ReadyHandler checks if the service is ready (DB + Tesla auth).
+// ReadyHandler checks if the service is ready to serve traffic.
+// It verifies database connectivity, migration completion, and (when Tesla
+// auth is configured) that at least one vehicle poll has succeeded.
 func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		checks := map[string]string{}
@@ -38,14 +40,36 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 			checks["database"] = "ok"
 		}
 
-		if tc.HasValidToken() {
-			checks["tesla_auth"] = "ok"
+		// Verify migrations are applied and not dirty
+		if migrated, err := db.MigrationsComplete(r.Context()); err != nil {
+			checks["migrations"] = "unknown"
+		} else if !migrated {
+			checks["migrations"] = "incomplete"
 		} else {
-			checks["tesla_auth"] = "no_token"
+			checks["migrations"] = "ok"
+		}
+
+		// When Tesla auth is configured, verify at least one poll has succeeded
+		if tc.IsConfigured() {
+			if tc.HasValidToken() {
+				checks["tesla_auth"] = "ok"
+			} else {
+				checks["tesla_auth"] = "no_token"
+			}
+
+			if hasPos, err := db.HasPositions(r.Context()); err != nil {
+				checks["vehicle_poll"] = "unknown"
+			} else if hasPos {
+				checks["vehicle_poll"] = "ok"
+			} else {
+				checks["vehicle_poll"] = "no_data"
+			}
+		} else {
+			checks["tesla_auth"] = "not_configured"
 		}
 
 		for _, v := range checks {
-			if v != "ok" && v != "no_token" {
+			if v == "unhealthy" || v == "incomplete" {
 				writeJSON(w, http.StatusServiceUnavailable, checks)
 				return
 			}

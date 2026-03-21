@@ -38,6 +38,7 @@ export default withMermaid(defineConfig({
             { text: 'Local Development', link: '/guide/local-development' },
             { text: 'Architecture', link: '/guide/architecture' },
             { text: 'API Reference', link: '/guide/api-endpoints' },
+            { text: 'API Spec (OpenAPI)', link: '/teslasync/openapi.yaml' },
             { text: 'Diagrams', link: '/guide/diagrams' },
             { text: 'Technology Stack', link: '/guide/technology' },
             { text: 'Fleet Telemetry', link: '/guide/fleet-telemetry' },

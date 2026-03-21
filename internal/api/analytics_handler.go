@@ -18,15 +18,17 @@ type AnalyticsHandler struct {
 	chargingRepo   *database.ChargingRepo
 	batteryRepo    *database.BatterySnapshotRepo
 	positionRepo   *database.PositionRepo
+	cache          *database.Cache
 }
 
-func NewAnalyticsHandler(db *database.DB) *AnalyticsHandler {
+func NewAnalyticsHandler(db *database.DB, cache *database.Cache) *AnalyticsHandler {
 	return &AnalyticsHandler{
 		vehicleRepo:  database.NewVehicleRepo(db),
 		driveRepo:    database.NewDriveRepo(db),
 		chargingRepo: database.NewChargingRepo(db),
 		batteryRepo:  database.NewBatterySnapshotRepo(db),
 		positionRepo: database.NewPositionRepo(db),
+		cache:        cache,
 	}
 }
 
@@ -38,6 +40,17 @@ func derefS(p *string) string {
 }
 
 func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
+	// Build cache key from query parameters
+	days := r.URL.Query().Get("days")
+	start := r.URL.Query().Get("start")
+	cacheKey := "analytics:fleet:" + days + ":" + start
+
+	var cached map[string]interface{}
+	if h.cache.Get(r.Context(), cacheKey, &cached) {
+		writeJSON(w, http.StatusOK, cached)
+		return
+	}
+
 	var cutoff time.Time
 	if s := r.URL.Query().Get("start"); s != "" {
 		if t, err := time.Parse("2006-01-02", s); err == nil {
@@ -504,7 +517,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// === Build total response ===
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	result := map[string]interface{}{
 		// Core fleet stats (existing)
 		"period_days":             int(time.Since(cutoff).Hours()/24) + 1,
 		"total_vehicles":          len(vehicles),
@@ -550,5 +563,8 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 
 		// === NEW: Battery health ===
 		"battery_trend": batteryTrend,
-	})
+	}
+
+	h.cache.Set(r.Context(), cacheKey, result, 120*time.Second)
+	writeJSON(w, http.StatusOK, result)
 }

@@ -22,6 +22,9 @@ import (
 func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor) http.Handler {
 	r := chi.NewRouter()
 
+	// In-memory cache for frequently accessed data
+	cache := database.NewCache()
+
 	// SSE event hub for real-time updates
 	eventHub := NewEventHub()
 
@@ -57,17 +60,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(httprate.LimitByIP(100, 1*time.Minute))
 
 	// Handlers
-	vehicleHandler := NewVehicleHandler(db, teslaClient)
+	vehicleHandler := NewVehicleHandler(db, teslaClient, cache)
 	driveHandler := NewDriveHandler(db)
 	chargingHandler := NewChargingHandler(db)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient)
-	settingsHandler := NewSettingsHandler(db)
+	settingsHandler := NewSettingsHandler(db, cache)
 	alertHandler := NewAlertHandler(db)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(db)
 	batteryHandler := NewBatteryHandler(db)
-	analyticsHandler := NewAnalyticsHandler(db)
+	analyticsHandler := NewAnalyticsHandler(db, cache)
 	notificationHandler := NewNotificationHandler(db)
 	chatbotHandler := NewChatbotHandler(db)
 	tirePressureHandler := NewTirePressureHandler(db)

@@ -35,10 +35,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
-      interval: 30s
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -57,6 +57,12 @@ services:
     depends_on:
       teslasync:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:

@@ -94,6 +94,11 @@ func (c *Client) HasValidToken() bool {
 	return c.accessToken != "" && time.Now().Before(c.expiresAt)
 }
 
+// IsConfigured returns true if Tesla API credentials have been provided.
+func (c *Client) IsConfigured() bool {
+	return c.clientID != ""
+}
+
 // ExpiresWithin returns true if the token will expire within the given duration.
 func (c *Client) ExpiresWithin(d time.Duration) bool {
 	c.mu.RLock()
