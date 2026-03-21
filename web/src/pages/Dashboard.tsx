@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
@@ -84,6 +84,97 @@ function formatTimeAgo(date: Date): string {
 }
 
 /* ---------- Main Dashboard ---------- */
+function SmartSuggestions({ drives, state }: { drives: any[]; state: any }) {
+  const suggestions = useMemo(() => {
+    const tips: Array<{ icon: string; title: string; description: string; priority: 'high'|'medium'|'low' }> = []
+
+    // Analyze driving patterns
+    if (drives?.length > 5) {
+      // Find most common departure time
+      const departureCounts: Record<number, number> = {}
+      drives.forEach(d => {
+        const hour = new Date(d.start_date).getHours()
+        departureCounts[hour] = (departureCounts[hour] || 0) + 1
+      })
+      const peakHour = Object.entries(departureCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0]
+      if (peakHour) {
+        const h = Number(peakHour[0])
+        tips.push({
+          icon: '🕐',
+          title: `Pre-condition at ${h-1 < 10 ? '0' : ''}${h-1}:${h > 12 ? '30' : '45'}`,
+          description: `You usually start driving around ${h}:00. Pre-conditioning 15-30 min before saves range and warms/cools the cabin efficiently while plugged in.`,
+          priority: 'high'
+        })
+      }
+
+      // Check if mostly short trips
+      const avgDistance = drives.reduce((s: number, d: any) => s + d.distance, 0) / drives.length
+      if (avgDistance < 15) {
+        tips.push({
+          icon: '🔋',
+          title: 'Set charge limit to 70%',
+          description: `Your average trip is ${avgDistance.toFixed(0)} km. A 70% charge limit extends battery life while covering daily needs.`,
+          priority: 'medium'
+        })
+      }
+
+      // Check for night driving
+      const nightDrives = drives.filter((d: any) => {
+        const h = new Date(d.start_date).getHours()
+        return h >= 22 || h <= 5
+      })
+      if (nightDrives.length > drives.length * 0.2) {
+        tips.push({
+          icon: '🌙',
+          title: 'Enable scheduled departure',
+          description: `${Math.round(nightDrives.length / drives.length * 100)}% of your drives start at night. Scheduled departure pre-conditions and charges to be ready on time.`,
+          priority: 'low'
+        })
+      }
+    }
+
+    // Battery level suggestions
+    if (state?.battery_level != null) {
+      if (state.battery_level > 90 && !state.is_charging) {
+        tips.push({ icon: '⚡', title: 'High battery notice', description: 'Battery above 90%. For daily use, charging to 80% extends battery longevity.', priority: 'medium' })
+      }
+      if (state.battery_level < 15 && !state.is_charging) {
+        tips.push({ icon: '🪫', title: 'Low battery — charge soon', description: `Battery at ${state.battery_level}%. Find a charger to avoid deep discharge.`, priority: 'high' })
+      }
+    }
+
+    // Sentry mode efficiency
+    if (state?.sentry_mode) {
+      tips.push({ icon: '👁️', title: 'Sentry mode is on', description: 'Sentry mode uses ~1-2% battery per hour. Disable at home to reduce vampire drain.', priority: 'low' })
+    }
+
+    return tips.sort((a, b) => { const p = { high: 0, medium: 1, low: 2 }; return p[a.priority] - p[b.priority] })
+  }, [drives, state])
+
+  if (suggestions.length === 0) return null
+
+  return (
+    <GlassPanel className="p-6">
+      <h3>💡 Smart Suggestions</h3>
+      <div className="space-y-3 mt-3">
+        {suggestions.map((s, i) => (
+          <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{background:'var(--surface-2)'}}>
+            <span className="text-xl mt-0.5">{s.icon}</span>
+            <div>
+              <p className="text-sm font-medium" style={{color:'var(--text-primary)'}}>{s.title}</p>
+              <p className="text-xs mt-0.5" style={{color:'var(--text-secondary)'}}>{s.description}</p>
+            </div>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${
+              s.priority === 'high' ? 'bg-neon-red/10 text-neon-red' : s.priority === 'medium' ? 'bg-neon-amber/10 text-neon-amber' : 'bg-white/5 text-[var(--text-muted)]'}`}>
+              {s.priority}
+            </span>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
+  )
+}
+
 export default function Dashboard() {
   const queryClient = useQueryClient()
 
@@ -522,6 +613,13 @@ export default function Dashboard() {
               </div>
             </FadeIn>
           </div>
+
+          {/* ============ SMART SUGGESTIONS ============ */}
+          {recentDrives && recentDrives.length > 0 && (
+            <FadeIn delay={0.18}>
+              <SmartSuggestions drives={recentDrives} state={primaryState} />
+            </FadeIn>
+          )}
 
           {/* ============ OTHER VEHICLES STRIP ============ */}
           {otherVehicles.length > 0 && (

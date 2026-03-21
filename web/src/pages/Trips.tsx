@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTrips, getDrives } from '../api'
-import type { Drive } from '../api'
+import type { Drive, Trip } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter } from '../components/ui'
-import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download, Navigation } from 'lucide-react'
+import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download, Navigation, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
@@ -148,6 +148,36 @@ function TripPlanner({ vehicles: _vehicles, drives }: { vehicles: any[]; drives:
   )
 }
 
+function TripCostBreakdown({ trip, electricityRate = 0.15 }: { trip: Trip; electricityRate?: number }) {
+  const energyCost = (trip.total_energy_kwh || 0) * electricityRate
+  const costPerKm = trip.total_distance_km > 0 ? energyCost / trip.total_distance_km : 0
+  const gasConsumption = 8 // L/100km
+  const gasPrice = 1.50 // $/L
+  const gasCost = (trip.total_distance_km / 100) * gasConsumption * gasPrice
+  const savings = gasCost - energyCost
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+      <div className="glass-card p-2 rounded-lg text-center">
+        <p className="text-sm font-bold text-neon-cyan">${energyCost.toFixed(2)}</p>
+        <p className="text-[9px] text-[var(--text-muted)]">Energy Cost</p>
+      </div>
+      <div className="glass-card p-2 rounded-lg text-center">
+        <p className="text-sm font-bold text-neon-green">${costPerKm.toFixed(3)}/km</p>
+        <p className="text-[9px] text-[var(--text-muted)]">Cost per km</p>
+      </div>
+      <div className="glass-card p-2 rounded-lg text-center">
+        <p className="text-sm font-bold text-neon-amber">${gasCost.toFixed(2)}</p>
+        <p className="text-[9px] text-[var(--text-muted)]">Gas Equivalent</p>
+      </div>
+      <div className="glass-card p-2 rounded-lg text-center">
+        <p className="text-sm font-bold text-neon-green">${savings.toFixed(2)}</p>
+        <p className="text-[9px] text-[var(--text-muted)]">Saved vs Gas</p>
+      </div>
+    </div>
+  )
+}
+
 export default function Trips() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -180,6 +210,21 @@ export default function Trips() {
   const totalEnergy = filteredTrips.reduce((s, t) => s + t.total_energy_kwh, 0)
   const totalCost = filteredTrips.reduce((s, t) => s + t.total_cost, 0)
   const totalDrives = filteredTrips.reduce((s, t) => s + t.drive_count, 0)
+
+  // Cost summary for current month
+  const costSummary = useMemo(() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthTrips = filteredTrips.filter(t => new Date(t.start_date) >= monthStart)
+    const electricityRate = 0.15
+    const gasConsumption = 8
+    const gasPrice = 1.50
+    const totalEnergyCost = monthTrips.reduce((s, t) => s + (t.total_energy_kwh * electricityRate), 0)
+    const avgCost = monthTrips.length > 0 ? totalEnergyCost / monthTrips.length : 0
+    const totalGasCost = monthTrips.reduce((s, t) => s + ((t.total_distance_km / 100) * gasConsumption * gasPrice), 0)
+    const totalSavings = totalGasCost - totalEnergyCost
+    return { totalEnergyCost, avgCost, totalSavings, tripCount: monthTrips.length }
+  }, [filteredTrips])
 
   // Bar chart: top 10 trips by distance
   const chartData = [...filteredTrips]
@@ -242,6 +287,36 @@ export default function Trips() {
         </div>
       )}
 
+      {/* Cost Summary */}
+      {!isLoading && filteredTrips.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 sm:mb-8">
+          <GlassPanel className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-4 w-4 text-neon-cyan" />
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Energy Costs (This Month)</span>
+            </div>
+            <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>${costSummary.totalEnergyCost.toFixed(2)}</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">{costSummary.tripCount} trips this month</p>
+          </GlassPanel>
+          <GlassPanel className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-neon-amber" />
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Avg Cost per Trip</span>
+            </div>
+            <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>${costSummary.avgCost.toFixed(2)}</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">electricity @ $0.15/kWh</p>
+          </GlassPanel>
+          <GlassPanel className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Fuel className="h-4 w-4 text-neon-green" />
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Total Savings vs Gas</span>
+            </div>
+            <p className="text-xl font-bold text-neon-green">${costSummary.totalSavings.toFixed(2)}</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">vs 8L/100km @ $1.50/L</p>
+          </GlassPanel>
+        </div>
+      )}
+
       {/* Top Trips Chart */}
       {chartData.length > 0 && (
         <GlassPanel className="p-4 sm:p-6 mb-6">
@@ -299,7 +374,8 @@ export default function Trips() {
         ) : (
           <div className="space-y-3">
             {filteredTrips.map(trip => (
-              <div key={trip.id} className="glass-card p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div key={trip.id} className="glass-card p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,240,255,0.1)' }}>
                     <Route className="h-5 w-5 text-neon-cyan" />
@@ -338,6 +414,8 @@ export default function Trips() {
                     </div>
                   )}
                 </div>
+                </div>
+                <TripCostBreakdown trip={trip} />
               </div>
             ))}
           </div>
