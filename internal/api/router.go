@@ -77,6 +77,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	mileageHandler := NewMileageHandler(db)
 	tripHandler := NewTripHandler(db)
 	vehicleStateHandler := NewVehicleStateHandler(db)
+	webhookHandler := NewWebhookHandler(db)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -210,6 +211,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/summary", vehicleStateHandler.Summary)
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
 		})
+
+		// Inbound webhook for external systems (Home Assistant, IFTTT, Node-RED)
+		r.Post("/webhook", webhookHandler.InboundWebhook)
 
 		// Real-time SSE stream
 		r.Get("/events", SSEHandler(eventHub))

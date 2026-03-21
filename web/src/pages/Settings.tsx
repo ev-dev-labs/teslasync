@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getAPIUsage, AppSettings, Vehicle } from '../api'
 import { useState, useEffect, useMemo } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -21,6 +21,23 @@ function SettingField({ label, children }: { label: string; children: React.Reac
       <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">{label}</label>
       {children}
     </div>
+  )
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }}
+      className="glass-button p-1.5 shrink-0"
+      title="Copy to clipboard"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
   )
 }
 
@@ -575,6 +592,65 @@ export default function Settings() {
               Clear filters
             </button>
           )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Webhooks */}
+      <FadeIn delay={0.15}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon-cyan/10">
+              <Webhook className="h-5 w-5 text-neon-cyan" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Webhooks</h2>
+              <p className="text-xs text-[var(--text-muted)]">Receive events from external systems like Home Assistant, IFTTT, or Node-RED</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-2">Inbound Webhook URL</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-sm text-neon-cyan font-mono truncate">
+                  POST {window.location.origin}/api/v1/webhook
+                </code>
+                <CopyButton text={`${window.location.origin}/api/v1/webhook`} />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-2">Example: Create an Alert</p>
+              <div className="relative">
+                <pre className="px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-[var(--text-secondary)] font-mono overflow-x-auto whitespace-pre">{`curl -X POST ${window.location.origin}/api/v1/webhook \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "event": "alert",
+    "title": "Garage Door Open",
+    "message": "Car arrived home but garage door is still open",
+    "severity": "warning"
+  }'`}</pre>
+                <div className="absolute top-2 right-2">
+                  <CopyButton text={`curl -X POST ${window.location.origin}/api/v1/webhook -H "Content-Type: application/json" -d '{"event":"alert","title":"Garage Door Open","message":"Car arrived home but garage door is still open","severity":"warning"}'`} />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-xs font-medium text-[var(--text-primary)] mb-1">alert</p>
+                <p className="text-xs text-[var(--text-muted)]">Creates a persistent alert visible in the Alerts page</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-xs font-medium text-[var(--text-primary)] mb-1">note</p>
+                <p className="text-xs text-[var(--text-muted)]">Logs an informational note to the server log</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-xs font-medium text-[var(--text-primary)] mb-1">custom</p>
+                <p className="text-xs text-[var(--text-muted)]">Any other event type — acknowledged and logged</p>
+              </div>
+            </div>
+          </div>
         </GlassPanel>
       </FadeIn>
 

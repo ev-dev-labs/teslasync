@@ -59,6 +59,10 @@ docker-down:
 docker-logs:
 	docker compose logs -f
 
+## e2e: Run E2E tests against running Docker Compose services
+e2e:
+	bash tests/e2e.sh
+
 ## helm-install: Install Helm chart to current k8s context
 helm-install:
 	helm upgrade --install teslasync helm/teslasync

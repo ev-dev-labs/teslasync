@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getTrips } from '../api'
+import { getVehicles, getTrips, getDrives } from '../api'
+import type { Drive } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter } from '../components/ui'
-import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download } from 'lucide-react'
+import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
@@ -15,6 +16,136 @@ function formatDuration(startDate: string, endDate: string | null): string {
   const mins = Math.round((ms % 3600000) / 60000)
   if (hours === 0) return `${mins}m`
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+}
+
+function TripPlanner({ vehicles: _vehicles, drives }: { vehicles: any[]; drives: Drive[] }) {
+  const [distance, setDistance] = useState(200)
+  const [currentBattery, setCurrentBattery] = useState(80)
+  const [weather, setWeather] = useState<'mild' | 'cold' | 'hot'>('mild')
+  const [sentry, setSentry] = useState(false)
+  const [highway, setHighway] = useState(false)
+
+  const avgEfficiency = useMemo(() => {
+    if (!drives?.length) return 180
+    const total = drives.reduce((s, d) => {
+      if (d.distance > 0 && d.start_battery_level && d.end_battery_level) {
+        const used = (d.start_battery_level - d.end_battery_level) / 100 * 75
+        return { wh: s.wh + (used * 1000), km: s.km + d.distance }
+      }
+      return s
+    }, { wh: 0, km: 0 })
+    return total.km > 0 ? total.wh / total.km : 180
+  }, [drives])
+
+  const adjustedEfficiency = useMemo(() => {
+    let eff = avgEfficiency
+    if (weather === 'cold') eff *= 1.4
+    if (weather === 'hot') eff *= 1.1
+    if (highway) eff *= 1.25
+    if (sentry) eff *= 1.05
+    return eff
+  }, [avgEfficiency, weather, highway, sentry])
+
+  const batteryCapacity = 75000
+  const availableEnergy = (currentBattery / 100) * batteryCapacity
+  const energyNeeded = distance * adjustedEfficiency
+  const canComplete = availableEnergy >= energyNeeded
+  const remainingBattery = Math.max(0, ((availableEnergy - energyNeeded) / batteryCapacity) * 100)
+  const maxRange = availableEnergy / adjustedEfficiency
+  const chargeStopsNeeded = canComplete ? 0 : Math.ceil((energyNeeded - availableEnergy) / (batteryCapacity * 0.6))
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+        <Navigation className="h-4 w-4 text-neon-cyan" /> Trip Planner
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Inputs */}
+        <div className="space-y-4">
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase">Distance (km)</label>
+            <input type="range" min="10" max="1000" value={distance} onChange={e => setDistance(Number(e.target.value))}
+              className="w-full" />
+            <span className="text-lg font-bold text-neon-cyan">{distance} km</span>
+          </div>
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase">Current Battery (%)</label>
+            <input type="range" min="5" max="100" value={currentBattery} onChange={e => setCurrentBattery(Number(e.target.value))}
+              className="w-full" />
+            <span className="text-lg font-bold" style={{color: currentBattery > 50 ? '#10b981' : currentBattery > 20 ? '#f59e0b' : '#ef4444'}}>{currentBattery}%</span>
+          </div>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <select value={weather} onChange={e => setWeather(e.target.value as 'mild' | 'cold' | 'hot')}
+                className="glass-card px-2 py-1 text-xs rounded" style={{background:'var(--surface-2)',color:'var(--text-primary)'}}>
+                <option value="mild">Mild (15-25°C)</option>
+                <option value="cold">Cold (&lt;5°C)</option>
+                <option value="hot">Hot (&gt;35°C)</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={highway} onChange={e => setHighway(e.target.checked)} />
+              Highway
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={sentry} onChange={e => setSentry(e.target.checked)} />
+              Sentry
+            </label>
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="space-y-3">
+          <div className={`rounded-xl p-4 text-center ${canComplete ? 'bg-neon-green/10 border border-neon-green/20' : 'bg-neon-red/10 border border-neon-red/20'}`}>
+            <p className={`text-2xl font-bold ${canComplete ? 'text-neon-green' : 'text-neon-red'}`}>
+              {canComplete ? '✅ Can Complete' : '⚠️ Charging Required'}
+            </p>
+            {canComplete ? (
+              <p className="text-sm text-[var(--text-secondary)]">Arrive with ~{remainingBattery.toFixed(0)}% battery</p>
+            ) : (
+              <p className="text-sm text-[var(--text-secondary)]">{chargeStopsNeeded} charging stop{chargeStopsNeeded > 1 ? 's' : ''} needed</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div className="glass-card p-3 rounded-lg">
+              <p className="text-lg font-bold text-neon-cyan">{maxRange.toFixed(0)} km</p>
+              <p className="text-[10px] text-[var(--text-muted)]">Max Range</p>
+            </div>
+            <div className="glass-card p-3 rounded-lg">
+              <p className="text-lg font-bold text-neon-purple">{adjustedEfficiency.toFixed(0)} Wh/km</p>
+              <p className="text-[10px] text-[var(--text-muted)]">Est. Efficiency</p>
+            </div>
+            <div className="glass-card p-3 rounded-lg">
+              <p className="text-lg font-bold text-neon-amber">{(energyNeeded/1000).toFixed(1)} kWh</p>
+              <p className="text-[10px] text-[var(--text-muted)]">Energy Needed</p>
+            </div>
+            <div className="glass-card p-3 rounded-lg">
+              <p className="text-lg font-bold text-neon-green">{(distance/(adjustedEfficiency > 0 ? distance/maxRange*60 : 60)).toFixed(0)} min</p>
+              <p className="text-[10px] text-[var(--text-muted)]">Est. Drive Time</p>
+            </div>
+          </div>
+
+          {/* Range bar */}
+          <div>
+            <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
+              <span>0 km</span><span>{maxRange.toFixed(0)} km (max range)</span>
+            </div>
+            <div className="h-4 rounded-full overflow-hidden" style={{background: 'var(--surface-2)'}}>
+              <div className="h-full rounded-full bg-gradient-to-r from-neon-green to-neon-cyan relative"
+                style={{width: `${Math.min(100, (distance / Math.max(maxRange, 1)) * 100)}%`}}>
+                {distance > maxRange && (
+                  <div className="absolute right-0 top-0 bottom-0 bg-neon-red/40 rounded-r-full"
+                    style={{width: `${((distance - maxRange) / distance) * 100}%`}} />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </GlassPanel>
+  )
 }
 
 export default function Trips() {
@@ -33,6 +164,12 @@ export default function Trips() {
     queryKey: ['trips', vehicleId, startDate, endDate, page, pageSize],
     queryFn: () => getTrips(vehicleId ?? undefined, pageSize, (page - 1) * pageSize, startDate, endDate),
     enabled: true,
+  })
+
+  const { data: drives } = useQuery({
+    queryKey: ['drives', vehicleId],
+    queryFn: () => getDrives(vehicleId!, 200, 0),
+    enabled: !!vehicleId,
   })
 
   const allTrips = trips ?? []
@@ -145,6 +282,11 @@ export default function Trips() {
           </ResponsiveContainer>
         </GlassPanel>
       )}
+
+      {/* Trip Planner */}
+      <div className="mb-6">
+        <TripPlanner vehicles={vehicles ?? []} drives={drives ?? []} />
+      </div>
 
       {/* Trip List */}
       <GlassPanel className="p-4 sm:p-6">
