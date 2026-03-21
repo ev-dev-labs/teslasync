@@ -1,0 +1,51 @@
+name: Publish Helm Repo
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish Helm Chart to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Package chart
+        run: |
+          mkdir -p .helm-repo
+          VERSION="${GITHUB_REF_NAME#v}"
+          helm package helm/teslasync --version "$VERSION" --app-version "$VERSION" -d .helm-repo
+
+      - name: Download existing index
+        continue-on-error: true
+        run: |
+          curl -sSL https://teslasync-labs.github.io/teslasync/helm/index.yaml -o .helm-repo/existing-index.yaml || true
+
+      - name: Generate index
+        run: |
+          if [ -f .helm-repo/existing-index.yaml ]; then
+            helm repo index .helm-repo --url https://teslasync-labs.github.io/teslasync/helm --merge .helm-repo/existing-index.yaml
+          else
+            helm repo index .helm-repo --url https://teslasync-labs.github.io/teslasync/helm
+          fi
+          rm -f .helm-repo/existing-index.yaml
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .helm-repo
+          destination_dir: helm
+          keep_files: true
