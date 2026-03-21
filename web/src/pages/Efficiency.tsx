@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
-import { Zap, TrendingUp, Thermometer, Gauge, Fuel, BarChart3 } from 'lucide-react'
+import { Zap, TrendingUp, Thermometer, Gauge, Fuel, BarChart3, Lightbulb } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell
@@ -66,6 +66,97 @@ function EfficiencyLeaderboard({ analytics }: { vehicles: any[]; analytics: any 
             <div className="text-right">
               <p className="text-sm font-bold text-neon-cyan">{v.efficiency?.toFixed(0)} Wh/km</p>
               <p className="text-[9px] text-[var(--text-muted)]">{v.energy?.toFixed(0)} kWh total</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
+  )
+}
+
+function PersonalizedTips({ drives, energy: _energy }: { drives: any[]; energy: any }) {
+  const tips = useMemo(() => {
+    const result: Array<{ icon: string; title: string; tip: string; impact: string; priority: 'high'|'medium'|'low' }> = []
+    if (!drives?.length) return result
+
+    // Analyze speed patterns
+    const avgMaxSpeed = drives.reduce((s, d) => s + (d.speed_max || 0), 0) / drives.length
+    if (avgMaxSpeed > 120) {
+      result.push({
+        icon: '🏎️', title: 'Reduce highway speed',
+        tip: `Your average max speed is ${avgMaxSpeed.toFixed(0)} km/h. Driving at 110 instead of ${avgMaxSpeed.toFixed(0)} can improve range by ~15%.`,
+        impact: '10-20% more range', priority: 'high'
+      })
+    }
+
+    // Analyze short trips
+    const shortTrips = drives.filter(d => d.distance < 5)
+    if (shortTrips.length > drives.length * 0.3) {
+      result.push({
+        icon: '🚶', title: 'Consider walking short distances',
+        tip: `${Math.round(shortTrips.length / drives.length * 100)}% of your trips are under 5 km. Short trips are less efficient due to cabin heating/cooling overhead.`,
+        impact: 'Save 5-10 kWh/month', priority: 'medium'
+      })
+    }
+
+    // Analyze cold weather driving
+    const coldDrives = drives.filter(d => d.outside_temp_avg != null && d.outside_temp_avg < 5)
+    if (coldDrives.length > 5) {
+      result.push({
+        icon: '❄️', title: 'Pre-condition while plugged in',
+        tip: `${coldDrives.length} cold weather drives detected. Pre-conditioning while plugged in uses grid power instead of battery for cabin heating.`,
+        impact: '15-30% range saved in cold', priority: 'high'
+      })
+    }
+
+    // Analyze regenerative braking
+    const qualifiedDrives = drives.filter(d => d.distance > 5 && d.start_battery_level && d.end_battery_level)
+    const avgEfficiency = qualifiedDrives.length > 0
+      ? qualifiedDrives.reduce((s, d) => {
+          return s + ((d.start_battery_level - d.end_battery_level) / 100 * 75000) / d.distance
+        }, 0) / qualifiedDrives.length
+      : 0
+
+    if (avgEfficiency > 200) {
+      result.push({
+        icon: '🔄', title: 'Use one-pedal driving',
+        tip: `Your average consumption is ${avgEfficiency.toFixed(0)} Wh/km. One-pedal driving maximizes regenerative braking and can improve efficiency by 10-15%.`,
+        impact: '10-15% efficiency gain', priority: 'medium'
+      })
+    }
+
+    // Tire pressure
+    result.push({
+      icon: '🛞', title: 'Check tire pressure monthly',
+      tip: 'Under-inflated tires increase rolling resistance by 3-5%. Keep tires at recommended PSI (42 PSI cold for most Teslas).',
+      impact: '3-5% range improvement', priority: 'low'
+    })
+
+    // Aero
+    if (avgMaxSpeed > 100) {
+      result.push({
+        icon: '💨', title: 'Use aero wheel covers',
+        tip: 'Aero wheel covers reduce drag coefficient and improve highway efficiency by 3-5%. Most noticeable above 100 km/h.',
+        impact: '3-5% at highway speeds', priority: 'low'
+      })
+    }
+
+    return result.sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.priority] - { high: 0, medium: 1, low: 2 }[b.priority]))
+  }, [drives])
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Lightbulb className="h-4 w-4 text-neon-amber" /> Personalized Efficiency Tips
+      </h3>
+      <div className="space-y-3">
+        {tips.map((t, i) => (
+          <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{background:'var(--surface-2)'}}>
+            <span className="text-xl mt-0.5 shrink-0">{t.icon}</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium" style={{color:'var(--text-primary)'}}>{t.title}</p>
+              <p className="text-xs mt-0.5" style={{color:'var(--text-secondary)'}}>{t.tip}</p>
+              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-medium bg-neon-green/10 text-neon-green">{t.impact}</span>
             </div>
           </div>
         ))}
@@ -498,6 +589,12 @@ export default function Efficiency() {
       {vehicles && analytics && (
         <div className="mt-6">
           <EfficiencyLeaderboard vehicles={vehicles ?? []} analytics={analytics} />
+        </div>
+      )}
+      {/* Personalized Tips */}
+      {drives && drives.length > 0 && (
+        <div className="mt-6">
+          <PersonalizedTips drives={drives} energy={energy} />
         </div>
       )}
     </FadeIn>

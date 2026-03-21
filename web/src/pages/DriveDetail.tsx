@@ -18,6 +18,7 @@ import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
 import { useUnits } from '../hooks/useUnits'
 import { generateDriveReport } from '../lib/report'
+import { exportDriveAsGPX } from '../lib/gpx'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -333,6 +334,13 @@ export default function DriveDetail() {
             title="Download PDF report"
           >
             <FileDown className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => exportDriveAsGPX(drive, drivePositions, vehicle?.display_name || 'Tesla')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neon-green/15 text-neon-green ring-1 ring-neon-green/25 hover:bg-neon-green/25"
+            title="Download GPX file"
+          >
+            <MapPin className="h-3.5 w-3.5" /> GPX
           </button>
           <button
             onClick={handleShare}

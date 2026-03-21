@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus } from '../api'
+import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getAlerts } from '../api'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
@@ -69,6 +69,68 @@ const maintenanceTypeConfig: Record<MaintenanceRecord['type'], { icon: string; l
 }
 
 const MAINTENANCE_TYPES = Object.keys(maintenanceTypeConfig) as MaintenanceRecord['type'][]
+
+function SentryEvents({ vehicleId, alerts }: { vehicleId: number; alerts: any[] }) {
+  const sentryAlerts = useMemo(() => {
+    return (alerts || [])
+      .filter(a => a.type === 'sentry_event' || a.title?.toLowerCase().includes('sentry'))
+      .slice(0, 20)
+  }, [alerts])
+
+  const [sentryLog] = useState<Array<{ time: string; event: string }>>(() => {
+    const stored = localStorage.getItem(`teslasync-sentry-log-${vehicleId}`)
+    return stored ? JSON.parse(stored) : []
+  })
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Eye className="h-4 w-4 text-neon-red" /> Sentry Mode Events
+      </h3>
+
+      {sentryAlerts.length === 0 && sentryLog.length === 0 ? (
+        <div className="text-center py-8">
+          <Shield className="h-8 w-8 mx-auto mb-2 text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-muted)]">No sentry events recorded</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">Events will appear here when sentry mode detects activity</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sentryAlerts.map((a, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{background: 'var(--surface-2)'}}>
+              <div className="h-8 w-8 rounded-full bg-neon-red/10 flex items-center justify-center shrink-0">
+                <Eye className="h-4 w-4 text-neon-red" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium" style={{color:'var(--text-primary)'}}>{a.title}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{a.message}</p>
+              </div>
+              <span className="text-[10px] text-[var(--text-muted)] shrink-0">
+                {new Date(a.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Sentry stats */}
+      <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className="glass-card p-3 rounded-lg text-center">
+          <p className="text-lg font-bold text-neon-red">{sentryAlerts.length}</p>
+          <p className="text-[9px] text-[var(--text-muted)]">Total Events</p>
+        </div>
+        <div className="glass-card p-3 rounded-lg text-center">
+          <p className="text-lg font-bold text-neon-amber">{sentryAlerts.filter(a => a.severity === 'warning' || a.severity === 'critical').length}</p>
+          <p className="text-[9px] text-[var(--text-muted)]">Warnings</p>
+        </div>
+        <div className="glass-card p-3 rounded-lg text-center">
+          <p className="text-lg font-bold text-neon-green">{sentryAlerts.length > 0 ? new Date(sentryAlerts[0].created_at).toLocaleDateString(undefined, {month:'short',day:'numeric'}) : '—'}</p>
+          <p className="text-[9px] text-[var(--text-muted)]">Last Event</p>
+        </div>
+      </div>
+    </GlassPanel>
+  )
+}
 
 function VehicleStatusViz({ state }: { state: any }) {
   const locked = state?.locked ?? true
@@ -384,6 +446,11 @@ export default function VehicleDetail() {
     queryFn: () => getChargingSessions(vehicleId, 5),
   })
 
+  const { data: alerts } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => getAlerts(100),
+  })
+
   const wakeMut = useMutation({
     mutationFn: () => wakeVehicle(vehicleId),
     onSuccess: () => { setTimeout(() => refetchState(), 5000) },
@@ -687,6 +754,11 @@ export default function VehicleDetail() {
 
             <MaintenanceLog vehicleId={vehicleId} />
           </div>
+
+          {/* ============ SENTRY EVENTS ============ */}
+          <FadeIn delay={0.4}>
+            <SentryEvents vehicleId={vehicleId} alerts={(alerts ?? []).filter(a => a.vehicle_id === vehicleId)} />
+          </FadeIn>
         </>
       ) : (
         <FadeIn delay={0.1}>
