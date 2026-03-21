@@ -684,6 +684,30 @@ export interface CompressionStats {
 
 export const getCompressionStats = () => request<CompressionStats>('/system/compression-stats')
 
+// === Extended Health ===
+
+export interface ExtendedHealthComponent {
+  status: string
+  latency_ms?: number
+  error?: string
+  last_check?: string
+  consecutive_failures?: number
+  total_conns?: number
+  idle_conns?: number
+  acquired_conns?: number
+  goroutines?: number
+  go_version?: string
+  uptime_seconds?: number
+}
+
+export interface ExtendedHealthResponse {
+  status: string
+  components: Record<string, ExtendedHealthComponent>
+  checked_at: string
+}
+
+export const getExtendedHealth = () => request<ExtendedHealthResponse>('/system/health')
+
 // === Global Search ===
 
 export interface SearchResult {

@@ -27,6 +27,7 @@ import {
   Target,
   Navigation,
   Activity,
+  GitCompare,
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -96,6 +97,7 @@ const navSections = [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
       { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400' },
+      { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
     ],
   },
   {

@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getChargingSessions, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
-import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight } from 'lucide-react'
+import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight, DollarSign, Car, TreePine } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ComposedChart, Line, PieChart, Pie, Cell, Brush
+  ResponsiveContainer, ComposedChart, Line, PieChart, Pie, Cell, Brush, Legend
 } from 'recharts'
 import { Link } from 'react-router-dom'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
@@ -34,6 +34,171 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold text-neon-green">Saving ${savings.toFixed(2)}</span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">{savingsPct.toFixed(0)}% less</span>
+      </div>
+    </GlassPanel>
+  )
+}
+
+function CostOfOwnershipCalculator() {
+  const [gasPrice, setGasPrice] = useState(1.50)
+  const [gasConsumption, setGasConsumption] = useState(8)
+  const [electricityRate, setElectricityRate] = useState(0.15)
+  const [annualKm, setAnnualKm] = useState(15000)
+  const [years, setYears] = useState(5)
+
+  const evEfficiency = 0.18
+  const annualGasMaintenance = 1200
+  const annualEvMaintenance = 400
+
+  const annualGasCost = (annualKm / 100) * gasConsumption * gasPrice
+  const totalGasCost = (annualGasCost + annualGasMaintenance) * years
+
+  const annualEvCost = annualKm * evEfficiency * electricityRate
+  const totalEvCost = (annualEvCost + annualEvMaintenance) * years
+
+  const savings = totalGasCost - totalEvCost
+  const co2Saved = (annualKm / 100) * gasConsumption * 2.31 * years
+
+  const barData = useMemo(() => {
+    return Array.from({ length: years }, (_, i) => {
+      const yr = i + 1
+      return {
+        year: `Year ${yr}`,
+        'Gas Car': Math.round((annualGasCost + annualGasMaintenance) * yr),
+        Tesla: Math.round((annualEvCost + annualEvMaintenance) * yr),
+      }
+    })
+  }, [years, annualGasCost, annualEvCost, annualGasMaintenance, annualEvMaintenance])
+
+  const sliderClass = 'w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-white/[0.08] accent-neon-cyan'
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-6 flex items-center gap-2">
+        <DollarSign className="h-4 w-4 text-neon-green" /> Total Cost of Ownership
+      </h3>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Sliders */}
+        <div className="space-y-5">
+          <div>
+            <label className="flex items-center justify-between text-sm mb-2">
+              <span style={{ color: 'var(--text-secondary)' }}>Gas Price</span>
+              <span className="text-neon-cyan font-mono">${gasPrice.toFixed(2)}/L</span>
+            </label>
+            <input type="range" min={0.5} max={3} step={0.05} value={gasPrice}
+              onChange={e => setGasPrice(Number(e.target.value))} className={sliderClass} />
+          </div>
+          <div>
+            <label className="flex items-center justify-between text-sm mb-2">
+              <span style={{ color: 'var(--text-secondary)' }}>Gas Consumption</span>
+              <span className="text-neon-cyan font-mono">{gasConsumption} L/100km</span>
+            </label>
+            <input type="range" min={4} max={16} step={0.5} value={gasConsumption}
+              onChange={e => setGasConsumption(Number(e.target.value))} className={sliderClass} />
+          </div>
+          <div>
+            <label className="flex items-center justify-between text-sm mb-2">
+              <span style={{ color: 'var(--text-secondary)' }}>Electricity Rate</span>
+              <span className="text-neon-cyan font-mono">${electricityRate.toFixed(2)}/kWh</span>
+            </label>
+            <input type="range" min={0.05} max={0.50} step={0.01} value={electricityRate}
+              onChange={e => setElectricityRate(Number(e.target.value))} className={sliderClass} />
+          </div>
+          <div>
+            <label className="flex items-center justify-between text-sm mb-2">
+              <span style={{ color: 'var(--text-secondary)' }}>Annual Distance</span>
+              <span className="text-neon-cyan font-mono">{annualKm.toLocaleString()} km</span>
+            </label>
+            <input type="range" min={5000} max={50000} step={1000} value={annualKm}
+              onChange={e => setAnnualKm(Number(e.target.value))} className={sliderClass} />
+          </div>
+          <div>
+            <label className="flex items-center justify-between text-sm mb-2">
+              <span style={{ color: 'var(--text-secondary)' }}>Ownership Period</span>
+              <span className="text-neon-cyan font-mono">{years} years</span>
+            </label>
+            <input type="range" min={1} max={10} step={1} value={years}
+              onChange={e => setYears(Number(e.target.value))} className={sliderClass} />
+          </div>
+        </div>
+
+        {/* Side-by-side comparison */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl border border-white/[0.06] p-4 bg-white/[0.02]">
+              <div className="flex items-center gap-2 mb-3">
+                <Car className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Gas Car</span>
+              </div>
+              <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Annual Fuel</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>${annualGasCost.toFixed(0)}</p>
+              <p className="text-[10px] uppercase tracking-wider mt-2 mb-1" style={{ color: 'var(--text-muted)' }}>Maintenance/yr</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>${annualGasMaintenance}</p>
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{years}-Year Total</p>
+                <p className="text-xl font-bold text-neon-red">${totalGasCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-neon-cyan/20 p-4 bg-neon-cyan/[0.02]">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap className="h-4 w-4 text-neon-cyan" />
+                <span className="text-sm font-medium text-neon-cyan">Tesla</span>
+              </div>
+              <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Annual Energy</p>
+              <p className="text-lg font-bold text-neon-cyan">${annualEvCost.toFixed(0)}</p>
+              <p className="text-[10px] uppercase tracking-wider mt-2 mb-1" style={{ color: 'var(--text-muted)' }}>Maintenance/yr</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>${annualEvMaintenance}</p>
+              <div className="mt-3 pt-3 border-t border-neon-cyan/10">
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{years}-Year Total</p>
+                <p className="text-xl font-bold text-neon-green">${totalEvCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Savings highlight */}
+          <div className="rounded-xl border border-neon-green/20 bg-neon-green/[0.03] p-4 flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                {savings > 0 ? `You save` : 'Additional cost'}
+              </p>
+              <p className={`text-2xl font-bold ${savings > 0 ? 'text-neon-green' : 'text-neon-red'}`}>
+                ${Math.abs(savings).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                over {years} years with Tesla
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-1.5 text-neon-green">
+                <TreePine className="h-4 w-4" />
+                <span className="text-sm font-bold">{co2Saved.toLocaleString(undefined, { maximumFractionDigits: 0 })} kg</span>
+              </div>
+              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>CO₂ avoided</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bar chart */}
+      <div className="mt-8">
+        <h4 className="text-sm font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>
+          Cumulative Cost Over Time
+        </h4>
+        <div className="h-48 sm:h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={barData}>
+              {chartGrid}
+              <XAxis dataKey="year" tick={axisTickSm} tickLine={false} axisLine={false} />
+              <YAxis tick={axisTickSm} tickLine={false} axisLine={false}
+                tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="Gas Car" fill="#ef4444" fillOpacity={0.7} radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Tesla" fill="#00f0ff" fillOpacity={0.7} radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </GlassPanel>
   )
@@ -386,6 +551,11 @@ export default function Energy() {
           )}
         </>
       )}
+
+      {/* Total Cost of Ownership Calculator */}
+      <FadeIn delay={0.35}>
+        <CostOfOwnershipCalculator />
+      </FadeIn>
     </div>
   )
 }

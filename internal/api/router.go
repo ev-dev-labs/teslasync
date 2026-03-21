@@ -85,6 +85,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 	r.Get("/api/v1/system/status", SystemStatusHandler(db, teslaClient, mqttClient, health))
+	r.Get("/api/v1/system/health", ExtendedHealthCheck(db, health))
 	r.Get("/api/v1/system/api-usage", APIUsageHandler())
 	r.Get("/api/v1/system/compression-stats", CompressionStatsHandler(db))
 

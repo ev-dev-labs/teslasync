@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"runtime"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/teslasync/teslasync/internal/database"
@@ -11,6 +13,8 @@ import (
 	"github.com/teslasync/teslasync/internal/tesla"
 	"github.com/teslasync/teslasync/internal/worker"
 )
+
+var startTime = time.Now()
 
 // HealthHandler returns a simple health check.
 func HealthHandler(db *database.DB) http.HandlerFunc {
@@ -116,6 +120,65 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			statusCode = http.StatusServiceUnavailable
 		}
 		writeJSON(w, statusCode, result)
+	}
+}
+
+// ExtendedHealthCheck returns a detailed health check with per-component latency,
+// pool stats, and system information.
+func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		results := make(map[string]interface{})
+		overall := "healthy"
+
+		// Database check with latency
+		dbStart := time.Now()
+		var dbOk bool
+		err := db.Pool.QueryRow(r.Context(), "SELECT 1").Scan(&dbOk)
+		dbLatency := time.Since(dbStart)
+		if err != nil {
+			results["database"] = map[string]interface{}{"status": "unhealthy", "error": err.Error(), "latency_ms": dbLatency.Milliseconds()}
+			overall = "degraded"
+		} else {
+			results["database"] = map[string]interface{}{"status": "healthy", "latency_ms": dbLatency.Milliseconds()}
+		}
+
+		// DB pool stats
+		poolStats := db.Pool.Stat()
+		results["database_pool"] = map[string]interface{}{
+			"total_conns":    poolStats.TotalConns(),
+			"idle_conns":     poolStats.IdleConns(),
+			"acquired_conns": poolStats.AcquiredConns(),
+		}
+
+		// Component statuses from health monitor
+		for name, comp := range health.GetStatus() {
+			results[name] = map[string]interface{}{
+				"status":               comp.Status.String(),
+				"last_check":           comp.LastCheck,
+				"consecutive_failures": comp.ConsecFails,
+			}
+			if comp.Status != resilience.StatusHealthy {
+				overall = "degraded"
+			}
+		}
+
+		// System info
+		results["system"] = map[string]interface{}{
+			"goroutines":     runtime.NumGoroutine(),
+			"go_version":     runtime.Version(),
+			"uptime_seconds": time.Since(startTime).Seconds(),
+		}
+
+		statusCode := http.StatusOK
+		if overall != "healthy" {
+			statusCode = http.StatusServiceUnavailable
+		}
+
+		writeJSON(w, statusCode, map[string]interface{}{
+			"status":     overall,
+			"components": results,
+			"checked_at": time.Now(),
+		})
 	}
 }
 

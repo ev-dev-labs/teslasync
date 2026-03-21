@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { getAuditLogs, getAPIUsage, getCompressionStats, AuditLog, APIUsage, CompressionStats } from '../api'
+import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse } from '../api'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
-  Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp,
+  Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
@@ -141,6 +141,148 @@ function CostColor({ cost }: { cost: number }) {
   if (cost < 5) return <span className="text-neon-green">${cost.toFixed(2)}</span>
   if (cost < 8) return <span className="text-neon-amber">${cost.toFixed(2)}</span>
   return <span className="text-neon-red">${cost.toFixed(2)}</span>
+}
+
+function ComponentHealthPanel() {
+  const { data: health, isLoading } = useQuery<ExtendedHealthResponse>({
+    queryKey: ['extended-health'],
+    queryFn: getExtendedHealth,
+    refetchInterval: 15_000,
+  })
+
+  if (isLoading || !health) {
+    return (
+      <FadeIn delay={0.12}>
+        <Skeleton className="h-48" />
+      </FadeIn>
+    )
+  }
+
+  const pool = health.components.database_pool
+  const system = health.components.system
+
+  const componentEntries = Object.entries(health.components).filter(
+    ([key]) => key !== 'database_pool' && key !== 'system'
+  )
+
+  const statusDot = (status: string) => {
+    const color = status === 'healthy' ? '#10b981' : status === 'degraded' ? '#f59e0b' : status === 'unhealthy' ? '#ef4444' : '#6b7280'
+    return <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+  }
+
+  const formatLastCheck = (ts?: string) => {
+    if (!ts) return '—'
+    const d = new Date(ts)
+    if (isNaN(d.getTime()) || d.getFullYear() <= 1) return 'Never'
+    const diff = Date.now() - d.getTime()
+    const secs = Math.floor(diff / 1000)
+    if (secs < 10) return 'just now'
+    if (secs < 60) return `${secs}s ago`
+    const mins = Math.floor(secs / 60)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    return `${hrs}h ago`
+  }
+
+  return (
+    <FadeIn delay={0.12}>
+      <GlassPanel className="p-5">
+        <h3 className="section-title flex items-center gap-2 mb-5">
+          <HeartPulse className="h-4 w-4 text-neon-green" /> Component Health
+        </h3>
+
+        {/* Component table */}
+        <div className="overflow-x-auto mb-5">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
+                {['Status', 'Component', 'Latency', 'Failures', 'Last Check'].map(h => (
+                  <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {componentEntries.map(([name, comp]) => (
+                <tr key={name} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
+                  <td className="px-4 py-3">{statusDot(comp.status ?? 'unknown')}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-medium text-[var(--text-primary)]">{getComponentLabel(name)}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] ml-2">{name}</span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {comp.latency_ms != null ? `${comp.latency_ms}ms` : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(comp.consecutive_failures ?? 0) > 0 ? (
+                      <span className="text-xs font-semibold text-neon-red">{comp.consecutive_failures}</span>
+                    ) : (
+                      <span className="text-xs text-[var(--text-muted)]">0</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    {formatLastCheck(comp.last_check)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pool & System stats row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Database Pool */}
+          {pool && (
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <div className="flex items-center gap-2 mb-3">
+                <Database className="h-3.5 w-3.5 text-neon-cyan" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Database Pool</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-lg font-bold text-[var(--text-primary)]">{pool.total_conns ?? 0}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Total</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-neon-green">{pool.idle_conns ?? 0}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Idle</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-neon-amber">{pool.acquired_conns ?? 0}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Acquired</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* System Info */}
+          {system && (
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <div className="flex items-center gap-2 mb-3">
+                <Cpu className="h-3.5 w-3.5 text-neon-purple" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Runtime</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-lg font-bold text-[var(--text-primary)]">{system.goroutines ?? 0}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Goroutines</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[var(--text-primary)]">{system.go_version ?? '—'}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Go Version</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[var(--text-primary)]">
+                    {system.uptime_seconds != null ? `${Math.floor(system.uptime_seconds / 60)}m` : '—'}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Uptime</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </GlassPanel>
+    </FadeIn>
+  )
 }
 
 function APIUsageDashboard() {
@@ -605,6 +747,9 @@ export default function SystemStatus() {
           </div>
         </GlassPanel>
       </FadeIn>
+
+      {/* Component Health (Extended) */}
+      <ComponentHealthPanel />
 
       {/* API Usage Dashboard */}
       <APIUsageDashboard />
