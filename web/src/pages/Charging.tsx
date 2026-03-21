@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getChargingSessions, ChargingSession, Vehicle } from '../api'
-import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download } from 'lucide-react'
+import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download, Lightbulb, PiggyBank } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
@@ -175,6 +175,68 @@ export default function Charging() {
     })
     return buckets
   }, [sessions])
+
+  // ── Charging Optimizer computations ──
+  const ratesByType = useMemo(() => {
+    if (!sessions) return { home: 0, supercharger: 0, dc: 0 }
+    const groups: Record<string, { totalCost: number; totalEnergy: number }> = {
+      home: { totalCost: 0, totalEnergy: 0 },
+      supercharger: { totalCost: 0, totalEnergy: 0 },
+      dc: { totalCost: 0, totalEnergy: 0 },
+    }
+    sessions.forEach(s => {
+      const cat = getChargerCategory(s.fast_charger_type)
+      if (s.cost && s.charge_energy_added > 0) {
+        groups[cat].totalCost += s.cost
+        groups[cat].totalEnergy += s.charge_energy_added
+      }
+    })
+    return {
+      home: groups.home.totalEnergy > 0 ? groups.home.totalCost / groups.home.totalEnergy : 0,
+      supercharger: groups.supercharger.totalEnergy > 0 ? groups.supercharger.totalCost / groups.supercharger.totalEnergy : 0,
+      dc: groups.dc.totalEnergy > 0 ? groups.dc.totalCost / groups.dc.totalEnergy : 0,
+    }
+  }, [sessions])
+
+  const recommendation = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null
+    const types = [
+      { name: 'Home / AC', rate: ratesByType.home },
+      { name: 'Supercharger', rate: ratesByType.supercharger },
+      { name: 'DC Fast', rate: ratesByType.dc },
+    ].filter(t => t.rate > 0)
+    if (types.length === 0) return null
+    types.sort((a, b) => a.rate - b.rate)
+    const cheapest = types[0]
+    const scRate = ratesByType.supercharger
+    const homeRate = ratesByType.home
+    const savingsVsSc = scRate > 0 && homeRate > 0 ? Math.round((1 - homeRate / scRate) * 100) : null
+    return { cheapest, savingsVsSc, types }
+  }, [sessions, ratesByType])
+
+  const monthlyChargingCost = useMemo(() => {
+    if (!sessions) return []
+    const map: Record<string, number> = {}
+    sessions.forEach(s => {
+      const month = new Date(s.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })
+      map[month] = (map[month] ?? 0) + (s.cost ?? 0)
+    })
+    return Object.entries(map).map(([month, cost]) => ({ month, cost: parseFloat(cost.toFixed(2)) })).reverse()
+  }, [sessions])
+
+  const [homeRate, setHomeRate] = useState(0.12)
+
+  const savingsCalc = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null
+    const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? 0), 0)
+    const totalEnergy = sessions.reduce((sum, s) => sum + s.charge_energy_added, 0)
+    const hypotheticalCost = totalEnergy * homeRate
+    const monthSpan = sessions.length > 0
+      ? Math.max(1, (new Date(sessions[0].start_date).getTime() - new Date(sessions[sessions.length - 1].start_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
+      : 1
+    const monthlySavings = (totalCost - hypotheticalCost) / monthSpan
+    return { totalCost, hypotheticalCost, monthlySavings, totalEnergy, monthSpan }
+  }, [sessions, homeRate])
 
   // AC/DC energy & cost breakdown (not just count)
   const acDcBreakdown = useMemo(() => {
@@ -454,6 +516,130 @@ export default function Charging() {
                   <Bar dataKey="count" name="Sessions" fill="#f59e0b" fillOpacity={0.6} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* ── Charging Optimizer ── */}
+      {sessions && sessions.length > 2 && (
+        <FadeIn delay={0.25}>
+          <GlassPanel className="p-5 sm:p-6">
+            <h3 className="section-title mb-5 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-neon-amber" /> Charging Optimizer
+            </h3>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Rate Comparison Card */}
+              <GlassPanel className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">Avg Cost per kWh by Location</h4>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Home Charging', rate: ratesByType.home, color: '#10b981' },
+                    { label: 'Supercharger', rate: ratesByType.supercharger, color: '#ef4444' },
+                    { label: 'DC Fast', rate: ratesByType.dc, color: '#f59e0b' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />
+                        <span className="text-sm text-[var(--text-secondary)]">{item.label} avg:</span>
+                      </div>
+                      <span className="text-sm font-bold" style={{ color: item.rate > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {item.rate > 0 ? `$${item.rate.toFixed(3)}/kWh` : 'No data'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </GlassPanel>
+
+              {/* Recommendation Card */}
+              {recommendation && (
+                <GlassPanel className="p-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">Recommendations</h4>
+                  <div className="space-y-3 text-sm">
+                    {recommendation.savingsVsSc !== null && recommendation.savingsVsSc > 0 && (
+                      <p className="text-[var(--text-secondary)]">
+                        <span className="text-neon-green font-semibold">💡</span> Based on your data, home charging saves you{' '}
+                        <strong className="text-neon-green">{recommendation.savingsVsSc}%</strong> vs Supercharging
+                      </p>
+                    )}
+                    <p className="text-[var(--text-secondary)]">
+                      <span className="text-neon-amber font-semibold">⭐</span> Best charging type:{' '}
+                      <strong className="text-[var(--text-primary)]">{recommendation.cheapest.name}</strong> at{' '}
+                      <strong className="text-neon-green">${recommendation.cheapest.rate.toFixed(3)}/kWh</strong>
+                    </p>
+                    <p className="text-[var(--text-secondary)]">
+                      <span className="text-neon-cyan font-semibold">🔌</span> Recommended: charge at home between 10pm–6am for lowest rates
+                    </p>
+                  </div>
+                </GlassPanel>
+              )}
+
+              {/* Monthly Charging Cost Trend */}
+              {monthlyChargingCost.length > 1 && (
+                <GlassPanel className="p-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">Monthly Charging Cost</h4>
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={monthlyChargingCost}>
+                        <defs>
+                          <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Area type="monotone" dataKey="cost" name="Cost ($)" stroke="#a855f7" fill="url(#costGrad)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </GlassPanel>
+              )}
+
+              {/* Savings Calculator */}
+              <GlassPanel className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                  <PiggyBank className="h-3.5 w-3.5 text-neon-green" /> Savings Calculator
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-[var(--text-secondary)] whitespace-nowrap">Home electricity rate:</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-[var(--text-muted)]">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={homeRate}
+                        onChange={e => setHomeRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="glass-card w-20 px-2 py-1 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+                        style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      />
+                      <span className="text-xs text-[var(--text-muted)]">/kWh</span>
+                    </div>
+                  </div>
+                  {savingsCalc && (
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-[var(--text-secondary)]">Actual total cost:</span>
+                        <span className="font-bold text-[var(--text-primary)]">${savingsCalc.totalCost.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-[var(--text-secondary)]">If all charged at home:</span>
+                        <span className="font-bold text-neon-green">${savingsCalc.hypotheticalCost.toFixed(2)}</span>
+                      </div>
+                      {savingsCalc.monthlySavings > 0 && (
+                        <p className="text-sm text-neon-green font-semibold pt-1">
+                          If you charged exclusively at home, you'd save ${savingsCalc.monthlySavings.toFixed(0)}/month
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </GlassPanel>
             </div>
           </GlassPanel>
         </FadeIn>

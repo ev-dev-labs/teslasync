@@ -672,3 +672,14 @@ export interface APIUsage {
 }
 
 export const getAPIUsage = () => request<APIUsage>('/system/api-usage')
+
+// === Compression Stats ===
+
+export interface CompressionStats {
+  total_positions: number
+  compressed_positions: number
+  estimated_saved_rows: number
+  estimated_saved_bytes: number
+}
+
+export const getCompressionStats = () => request<CompressionStats>('/system/compression-stats')

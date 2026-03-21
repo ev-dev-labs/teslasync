@@ -141,3 +141,31 @@ func APIUsageHandler() http.HandlerFunc {
 		})
 	}
 }
+
+// CompressionStatsHandler returns position table statistics including
+// total row count and how many rows have been compressed into hourly summaries.
+func CompressionStatsHandler(db *database.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats, err := db.GetPositionStats(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to get position stats")
+			return
+		}
+
+		// Estimate storage savings: each uncompressed row ~200 bytes.
+		// Compressed rows replaced N samples with 1, so savings ≈ (total_original - total_current).
+		// We approximate original count as: total + compressed * (avg_samples_per_hour - 1).
+		// A conservative estimate: ~6 samples/hour at 10-min polling.
+		avgSamplesPerHour := 6
+		estimatedOriginal := stats.Total + stats.Compressed*int64(avgSamplesPerHour-1)
+		savedRows := estimatedOriginal - stats.Total
+		savedBytes := savedRows * 200
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"total_positions":      stats.Total,
+			"compressed_positions": stats.Compressed,
+			"estimated_saved_rows": savedRows,
+			"estimated_saved_bytes": savedBytes,
+		})
+	}
+}

@@ -6,7 +6,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
-  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2,
+  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2, FileDown,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,6 +15,7 @@ import {
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
 import { useUnits } from '../hooks/useUnits'
+import { generateDriveReport } from '../lib/report'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -230,6 +231,13 @@ export default function DriveDetail() {
               {drive.end_date && ` → ${new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </p>
           </div>
+          <button
+            onClick={() => generateDriveReport(drive, vehicle)}
+            className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all"
+            title="Download PDF report"
+          >
+            <FileDown className="h-5 w-5" />
+          </button>
           <button
             onClick={handleShare}
             className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all"

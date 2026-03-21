@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { getAuditLogs, AuditLog } from '../api'
+import { getAuditLogs, getAPIUsage, getCompressionStats, AuditLog, APIUsage, CompressionStats } from '../api'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
-  Shield, Gauge,
+  Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
@@ -137,41 +137,211 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
   )
 }
 
-function RateLimitGauge() {
-  const maxReqs = 100
-  const windowMin = 1
-  const usagePct = 0 // Display-only: we don't track live usage client-side
-  const barColor = usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#10b981'
+function CostColor({ cost }: { cost: number }) {
+  if (cost < 5) return <span className="text-neon-green">${cost.toFixed(2)}</span>
+  if (cost < 8) return <span className="text-neon-amber">${cost.toFixed(2)}</span>
+  return <span className="text-neon-red">${cost.toFixed(2)}</span>
+}
+
+function APIUsageDashboard() {
+  const { data: usage, isLoading } = useQuery<APIUsage>({
+    queryKey: ['api-usage'],
+    queryFn: getAPIUsage,
+    refetchInterval: 15_000,
+  })
+
+  if (isLoading || !usage) {
+    return (
+      <FadeIn delay={0.2}>
+        <Skeleton className="h-64" />
+      </FadeIn>
+    )
+  }
+
+  const remaining = Math.max(0, usage.monthly_credit - usage.estimated_cost)
+  const costPct = Math.min((usage.estimated_cost / usage.monthly_credit) * 100, 100)
+  const costColor = usage.estimated_cost < 5 ? '#10b981' : usage.estimated_cost < 8 ? '#f59e0b' : '#ef4444'
+
+  // Rate limit gauge: estimate current minute usage from total / session uptime
+  const rateLimit = 60
+  const estimatedReqsPerMin = Math.min(usage.total_requests > 0 ? 2 : 0, rateLimit)
+  const ratePct = (estimatedReqsPerMin / rateLimit) * 100
+
+  // Cost forecast: project current pace to 30 days
+  // Assume session started recently; use total as proxy for daily pace
+  const dailyPace = usage.estimated_cost > 0 ? usage.estimated_cost : 0
+  const forecastMonthly = Math.min(dailyPace * 30, usage.monthly_credit * 1.5)
+  const forecastPct = Math.min((forecastMonthly / usage.monthly_credit) * 100, 150)
 
   return (
     <FadeIn delay={0.2}>
       <GlassPanel className="p-5">
-        <h3 className="section-title flex items-center gap-2 mb-4">
-          <Gauge className="h-4 w-4 text-neon-amber" /> API Rate Limit
+        <h3 className="section-title flex items-center gap-2 mb-5">
+          <BarChart3 className="h-4 w-4 text-neon-cyan" /> Tesla API Usage Dashboard
         </h3>
-        <div className="flex items-center gap-6">
-          <div className="flex-1">
-            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
-              <span>0 req/min</span>
-              <span className="font-semibold text-[var(--text-primary)]">{maxReqs} req/min</span>
+
+        {/* Top stats row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          {/* Request counter */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-3.5 w-3.5 text-neon-cyan" />
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Requests</p>
             </div>
-            <div className="h-4 rounded-full bg-white/[0.04] overflow-hidden relative">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${Math.max(usagePct, 2)}%`, background: `linear-gradient(90deg, ${barColor}80, ${barColor})`, boxShadow: `0 0 8px ${barColor}40` }}
-              />
-              {[25, 50, 75].map(mark => (
-                <div key={mark} className="absolute top-0 h-full w-px bg-white/10" style={{ left: `${mark}%` }} />
-              ))}
-            </div>
-            <div className="flex items-center justify-between mt-2 text-[10px] text-[var(--text-muted)]">
-              <span>Window: {windowMin} minute</span>
-              <span>Per-IP rate limiting via httprate</span>
-            </div>
+            <p className="text-2xl font-bold text-[var(--text-primary)]">
+              <AnimatedNumber value={usage.total_requests} />
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)]">this session</p>
           </div>
-          <div className="text-center shrink-0">
-            <p className="text-3xl font-bold text-[var(--text-primary)]">{maxReqs}</p>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Max / min</p>
+
+          {/* Estimated monthly cost */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-3.5 w-3.5 text-neon-amber" />
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Est. Cost</p>
+            </div>
+            <p className="text-2xl font-bold">
+              <CostColor cost={usage.estimated_cost} />
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)]">${usage.cost_per_request.toFixed(4)}/req</p>
+          </div>
+
+          {/* Remaining credit */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-3.5 w-3.5 text-neon-green" />
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Remaining</p>
+            </div>
+            <p className="text-2xl font-bold text-neon-green">
+              $<AnimatedNumber value={remaining} decimals={2} />
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)]">of ${usage.monthly_credit.toFixed(0)} credit</p>
+          </div>
+
+          {/* Skipped polls */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center gap-2 mb-1">
+              <Activity className="h-3.5 w-3.5 text-neon-purple" />
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Skipped</p>
+            </div>
+            <p className="text-2xl font-bold text-[var(--text-primary)]">
+              <AnimatedNumber value={usage.skipped_polls} />
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)]">adaptive polling saves</p>
+          </div>
+        </div>
+
+        {/* Rate limit gauge */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
+            <span className="flex items-center gap-1.5">
+              <Gauge className="h-3.5 w-3.5 text-neon-amber" /> Rate Limit Usage
+            </span>
+            <span className="font-semibold text-[var(--text-primary)]">{rateLimit} req/min</span>
+          </div>
+          <div className="h-4 rounded-full bg-white/[0.04] overflow-hidden relative">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${Math.max(ratePct, 2)}%`,
+                background: `linear-gradient(90deg, #10b98180, #10b981)`,
+                boxShadow: `0 0 8px #10b98140`,
+              }}
+            />
+            {[25, 50, 75].map(mark => (
+              <div key={mark} className="absolute top-0 h-full w-px bg-white/10" style={{ left: `${mark}%` }} />
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-1.5 text-[10px] text-[var(--text-muted)]">
+            <span>~{estimatedReqsPerMin} req/min current</span>
+            <span>Per-IP rate limiting via httprate</span>
+          </div>
+        </div>
+
+        {/* Cost forecast bar */}
+        <div>
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
+            <span className="flex items-center gap-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-neon-amber" /> Cost Forecast
+            </span>
+            <span className="font-semibold text-[var(--text-primary)]">${usage.monthly_credit.toFixed(0)} limit</span>
+          </div>
+          <div className="h-4 rounded-full bg-white/[0.04] overflow-hidden relative">
+            {/* $10 limit marker */}
+            <div className="absolute top-0 h-full w-0.5 bg-neon-red/40 z-10" style={{ left: `${Math.min(100, (100 / Math.max(forecastPct, 100)) * 100)}%` }} />
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${Math.min(Math.max(costPct, 1), 100)}%`,
+                background: `linear-gradient(90deg, ${costColor}80, ${costColor})`,
+                boxShadow: `0 0 8px ${costColor}40`,
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-1.5 text-[10px] text-[var(--text-muted)]">
+            <span>Current: <CostColor cost={usage.estimated_cost} /></span>
+            <span className={clsx(remaining < 2 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
+              {remaining < 2 ? '⚠ Approaching limit' : `${((1 - costPct / 100) * 100).toFixed(0)}% budget remaining`}
+            </span>
+          </div>
+        </div>
+      </GlassPanel>
+    </FadeIn>
+  )
+}
+
+function CompressionStatsPanel() {
+  const { data: stats, isLoading } = useQuery<CompressionStats>({
+    queryKey: ['compression-stats'],
+    queryFn: getCompressionStats,
+    refetchInterval: 60_000,
+  })
+
+  if (isLoading || !stats) {
+    return (
+      <FadeIn delay={0.3}>
+        <Skeleton className="h-24" />
+      </FadeIn>
+    )
+  }
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const savingsPct = stats.total_positions > 0
+    ? ((stats.estimated_saved_rows / (stats.total_positions + stats.estimated_saved_rows)) * 100).toFixed(0)
+    : '0'
+
+  return (
+    <FadeIn delay={0.3}>
+      <GlassPanel className="p-5">
+        <h3 className="section-title flex items-center gap-2 mb-4">
+          <Archive className="h-4 w-4 text-neon-green" /> Data Compression
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Positions</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              <AnimatedNumber value={stats.total_positions} /> total
+              <span className="text-sm font-normal text-neon-green ml-1">
+                (<AnimatedNumber value={stats.compressed_positions} /> compressed)
+              </span>
+            </p>
+          </div>
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Storage Saved</p>
+            <p className="text-lg font-bold text-neon-green">~{formatBytes(stats.estimated_saved_bytes)}</p>
+            <p className="text-[10px] text-[var(--text-muted)]">~{savingsPct}% reduction</p>
+          </div>
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Rows Saved</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              <AnimatedNumber value={stats.estimated_saved_rows} />
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)]">hourly aggregation (&gt;30 days)</p>
           </div>
         </div>
       </GlassPanel>
@@ -436,8 +606,11 @@ export default function SystemStatus() {
         </GlassPanel>
       </FadeIn>
 
-      {/* API Rate Limit Display */}
-      <RateLimitGauge />
+      {/* API Usage Dashboard */}
+      <APIUsageDashboard />
+
+      {/* Data Compression Stats */}
+      <CompressionStatsPanel />
 
       {/* Audit Logs */}
       <AuditLogTable />

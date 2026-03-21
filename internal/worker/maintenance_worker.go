@@ -60,6 +60,11 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		log.Error().Err(err).Msg("partition cleanup failed")
 	}
 
+	// Compress old positions into hourly summaries before deletion
+	if err := compressOldPositions(maintCtx, db); err != nil {
+		log.Error().Err(err).Msg("position compression failed")
+	}
+
 	// Clean up old positions that may remain in the default partition
 	posDeleted, err := db.CleanupOldPositions(maintCtx, cfg.Retention.PositionRetentionDays)
 	if err != nil {
@@ -84,6 +89,64 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		Int64("states_deleted", statesDeleted).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
+}
+
+// compressOldPositions aggregates positions older than 30 days into hourly
+// summaries (avg speed, power, battery, coordinates, temps) and removes the
+// redundant individual rows. This dramatically reduces storage for historical
+// data while preserving meaningful trends.
+func compressOldPositions(ctx context.Context, db *database.DB) error {
+	log.Info().Msg("compressing old positions into hourly summaries")
+
+	// Insert one representative row per (vehicle, hour) with averaged values
+	query := `
+	WITH hourly AS (
+		SELECT
+			vehicle_id,
+			date_trunc('hour', created_at) as hour,
+			AVG(speed) as avg_speed,
+			AVG(power) as avg_power,
+			AVG(battery_level) as avg_battery,
+			AVG(latitude) as avg_lat,
+			AVG(longitude) as avg_lng,
+			AVG(inside_temp) as avg_inside_temp,
+			AVG(outside_temp) as avg_outside_temp,
+			COUNT(*) as sample_count,
+			MIN(created_at) as first_at
+		FROM positions
+		WHERE created_at < NOW() - INTERVAL '30 days'
+		GROUP BY vehicle_id, date_trunc('hour', created_at)
+		HAVING COUNT(*) > 1
+	)
+	INSERT INTO positions (vehicle_id, speed, power, battery_level, latitude, longitude,
+		inside_temp, outside_temp, created_at)
+	SELECT vehicle_id, avg_speed, avg_power, avg_battery::int, avg_lat, avg_lng,
+		avg_inside_temp, avg_outside_temp, first_at
+	FROM hourly
+	ON CONFLICT DO NOTHING;
+	`
+	_, err := db.Pool.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("compress positions insert: %w", err)
+	}
+
+	// Delete the now-compressed individual records, keeping the single
+	// representative row (MIN(id)) for each (vehicle, hour) bucket.
+	res, err := db.Pool.Exec(ctx, `
+		DELETE FROM positions
+		WHERE created_at < NOW() - INTERVAL '30 days'
+		AND id NOT IN (
+			SELECT MIN(id) FROM positions
+			WHERE created_at < NOW() - INTERVAL '30 days'
+			GROUP BY vehicle_id, date_trunc('hour', created_at)
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("compress positions delete: %w", err)
+	}
+
+	log.Info().Int64("rows_removed", res.RowsAffected()).Msg("position compression complete")
+	return nil
 }
 
 // ensurePartitions creates monthly partitions for the current and next month.
