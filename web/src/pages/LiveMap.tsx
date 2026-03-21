@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getVehiclePositions, getGeofences, getDrives, Vehicle, VehicleState, Position, getVehicleStatus } from '../api'
-import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker, Rectangle, useMapEvents } from 'react-leaflet'
 import { LatLngExpression, divIcon } from 'leaflet'
 import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
@@ -172,6 +172,7 @@ export default function LiveMap() {
   const [chargers, setChargers] = useState<ChargerInfo[]>([])
   const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all')
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
+  const [showSpeedHeatmap, setShowSpeedHeatmap] = useState(false)
   const [historyMode, setHistoryMode] = useState(false)
   const [selectedDriveId, setSelectedDriveId] = useState<number | null>(null)
   const [playbackProgress, setPlaybackProgress] = useState(0)
@@ -224,6 +225,28 @@ export default function LiveMap() {
     queryFn: () => getVehiclePositions(selectedId!, 5000),
     enabled: selectedDriveId !== null && selectedId !== null,
   })
+
+  // Speed heatmap grid from historical positions
+  const positions = trail
+  const speedGrid = useMemo(() => {
+    if (!showSpeedHeatmap || !positions?.length) return []
+
+    const cellSize = 0.002 // ~200m grid cells
+    const cells: Record<string, { lat: number; lng: number; speeds: number[] }> = {}
+
+    positions.forEach(p => {
+      if (!p.latitude || !p.longitude || !p.speed) return
+      const key = `${Math.round(p.latitude / cellSize) * cellSize},${Math.round(p.longitude / cellSize) * cellSize}`
+      if (!cells[key]) cells[key] = { lat: Math.round(p.latitude / cellSize) * cellSize, lng: Math.round(p.longitude / cellSize) * cellSize, speeds: [] }
+      cells[key].speeds.push(p.speed)
+    })
+
+    return Object.values(cells).map(c => ({
+      lat: c.lat, lng: c.lng,
+      avgSpeed: c.speeds.reduce((s, v) => s + v, 0) / c.speeds.length,
+      count: c.speeds.length,
+    }))
+  }, [positions, showSpeedHeatmap])
 
   const states = vehicleStates.data ?? {}
   const markers = vehicles?.filter(v => states[v.id]?.latitude && states[v.id]?.longitude) ?? []
@@ -505,6 +528,17 @@ export default function LiveMap() {
             {/* Charger markers */}
             {showChargers && <ChargerLayer chargers={filteredChargers} />}
 
+            {/* Speed heatmap rectangles */}
+            {showSpeedHeatmap && speedGrid.map((cell, i) => {
+              const color = cell.avgSpeed < 30 ? '#10b981' : cell.avgSpeed < 60 ? '#00f0ff' : cell.avgSpeed < 100 ? '#f59e0b' : '#ef4444'
+              return (
+                <Rectangle key={i}
+                  bounds={[[cell.lat - 0.001, cell.lng - 0.001], [cell.lat + 0.001, cell.lng + 0.001]]}
+                  pathOptions={{ color: 'transparent', fillColor: color, fillOpacity: 0.3 + Math.min(0.4, cell.count / 20) }}
+                />
+              )
+            })}
+
             {/* Watch map center for charger fetching */}
             <MapCenterWatcher onCenterChange={(lat, lng) => setMapCenter({ lat, lng })} />
           </MapContainer>
@@ -553,6 +587,28 @@ export default function LiveMap() {
                     {CHARGER_FILTER_LABELS[f]}
                   </button>
                 ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowSpeedHeatmap(!showSpeedHeatmap)}
+              className={clsx(
+                'glass-panel px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer',
+                showSpeedHeatmap ? 'text-neon-amber border-neon-amber/30' : 'text-[var(--text-secondary)]'
+              )}
+            >
+              🌡️ Speed Heatmap
+            </button>
+            {showSpeedHeatmap && (
+              <div className="glass-panel p-2.5">
+                <p className="text-[10px] text-[var(--text-secondary)] mb-1.5 font-medium">Speed Zones</p>
+                <div className="space-y-1">
+                  {[{ speed: '< 30 km/h', color: '#10b981' }, { speed: '30–60', color: '#00f0ff' }, { speed: '60–100', color: '#f59e0b' }, { speed: '100+', color: '#ef4444' }].map(l => (
+                    <div key={l.speed} className="flex items-center gap-2 text-[10px]">
+                      <div className="h-2 w-6 rounded-sm" style={{ backgroundColor: l.color, opacity: 0.6 }} />
+                      <span className="text-[var(--text-muted)]">{l.speed}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

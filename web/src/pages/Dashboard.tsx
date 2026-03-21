@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import clsx from 'clsx'
 import {
   getVehicles, getAuthStatus, getVehicleState, getDrives, getChargingSessions,
   getFleetAnalytics, getAlerts, Vehicle, VehicleState, getVehicleStatus,
@@ -81,6 +82,106 @@ function formatTimeAgo(date: Date): string {
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+/* ---------- Charging Reminders ---------- */
+function ChargingReminder({ vehicles, states }: { vehicles: any[]; states: Record<number, any> }) {
+  const reminders = useMemo(() => {
+    const result: Array<{ vehicle: string; battery: number; message: string; urgency: 'low'|'medium'|'high' }> = []
+
+    vehicles?.forEach(v => {
+      const state = states[v.id]
+      if (!state) return
+
+      const battery = state.battery_level ?? 100
+      const isCharging = state.is_charging
+      const isHome = true // Simplified — would check geofence in production
+
+      if (battery < 20 && !isCharging) {
+        result.push({
+          vehicle: v.display_name || v.vin,
+          battery,
+          message: `Battery critically low at ${battery}%. Charge immediately.`,
+          urgency: 'high'
+        })
+      } else if (battery < 40 && !isCharging && isHome) {
+        result.push({
+          vehicle: v.display_name || v.vin,
+          battery,
+          message: `Battery at ${battery}%. Consider plugging in tonight.`,
+          urgency: 'medium'
+        })
+      } else if (battery > 90 && isCharging) {
+        result.push({
+          vehicle: v.display_name || v.vin,
+          battery,
+          message: `Charged to ${battery}%. You can unplug — 80% is ideal for daily use.`,
+          urgency: 'low'
+        })
+      }
+    })
+
+    return result.sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.urgency] - { high: 0, medium: 1, low: 2 }[b.urgency]))
+  }, [vehicles, states])
+
+  if (reminders.length === 0) return null
+
+  return (
+    <GlassPanel className="p-4">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-3" style={{color:'var(--text-primary)'}}>
+        <BatteryCharging className="h-4 w-4 text-neon-green" /> Charging Reminders
+      </h3>
+      <div className="space-y-2">
+        {reminders.map((r, i) => (
+          <div key={i} className={clsx('flex items-center gap-3 p-3 rounded-lg text-xs',
+            r.urgency === 'high' ? 'bg-neon-red/10 border border-neon-red/20' :
+            r.urgency === 'medium' ? 'bg-neon-amber/10 border border-neon-amber/20' :
+            'bg-neon-green/10 border border-neon-green/20')}>
+            <span className="text-lg">{r.urgency === 'high' ? '🪫' : r.urgency === 'medium' ? '🔋' : '⚡'}</span>
+            <div>
+              <p className="font-medium" style={{color:'var(--text-primary)'}}>{r.vehicle}</p>
+              <p style={{color:'var(--text-secondary)'}}>{r.message}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
+  )
+}
+
+/* ---------- Dashboard Customizer ---------- */
+function DashboardCustomizer({ config, onChange }: {
+  config: Record<string, boolean>;
+  onChange: (key: string, visible: boolean) => void
+}) {
+  const widgets = [
+    { key: 'fleetSummary', label: 'Fleet Summary Cards', icon: '📊' },
+    { key: 'vehicleCards', label: 'Vehicle Cards', icon: '🚗' },
+    { key: 'recentDrives', label: 'Recent Drives', icon: '🛣️' },
+    { key: 'recentCharges', label: 'Recent Charges', icon: '⚡' },
+    { key: 'batteryTrend', label: 'Battery Trend Chart', icon: '🔋' },
+    { key: 'insights', label: 'Smart Insights', icon: '💡' },
+    { key: 'suggestions', label: 'Smart Suggestions', icon: '🧠' },
+    { key: 'chargingReminders', label: 'Charging Reminders', icon: '🔌' },
+    { key: 'quickNav', label: 'Quick Navigation', icon: '🧭' },
+  ]
+
+  return (
+    <GlassPanel className="p-4">
+      <h3 className="text-sm font-semibold mb-3" style={{color:'var(--text-primary)'}}>Customize Dashboard</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {widgets.map(w => (
+          <label key={w.key} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white/5 text-xs">
+            <input type="checkbox" checked={config[w.key] !== false}
+              onChange={e => onChange(w.key, e.target.checked)}
+              className="rounded border-gray-600 bg-white/5 text-neon-cyan focus:ring-neon-cyan/50" />
+            <span>{w.icon}</span>
+            <span style={{color:'var(--text-secondary)'}}>{w.label}</span>
+          </label>
+        ))}
+      </div>
+    </GlassPanel>
+  )
 }
 
 /* ---------- Main Dashboard ---------- */
@@ -238,6 +339,21 @@ export default function Dashboard() {
   const totalEnergy = analytics?.total_energy_kwh ?? 0
   const unreadAlerts = alerts?.filter(a => !a.read).length ?? 0
 
+  // Widget visibility customization
+  const [showCustomizer, setShowCustomizer] = useState(false)
+  const [widgetConfig, setWidgetConfig] = useState<Record<string, boolean>>(() => {
+    const stored = localStorage.getItem('teslasync-dashboard-widgets')
+    return stored ? JSON.parse(stored) : {}
+  })
+
+  const updateWidget = (key: string, visible: boolean) => {
+    const updated = { ...widgetConfig, [key]: visible }
+    setWidgetConfig(updated)
+    localStorage.setItem('teslasync-dashboard-widgets', JSON.stringify(updated))
+  }
+
+  const isVisible = (key: string) => widgetConfig[key] !== false
+
   // Last-updated timestamp state
   const [, setTick] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -298,6 +414,13 @@ export default function Dashboard() {
               </span>
             )}
             <button
+              onClick={() => setShowCustomizer(v => !v)}
+              className="p-1 rounded-md hover:bg-white/5 transition-colors text-[var(--text-secondary)] hover:text-neon-cyan"
+              title="Customize dashboard"
+            >
+              ⚙️
+            </button>
+            <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="p-1 rounded-md hover:bg-white/5 transition-colors disabled:opacity-50"
@@ -320,6 +443,13 @@ export default function Dashboard() {
           </div>
         }
       />
+
+      {/* Dashboard Customizer Panel */}
+      {showCustomizer && (
+        <FadeIn>
+          <DashboardCustomizer config={widgetConfig} onChange={updateWidget} />
+        </FadeIn>
+      )}
 
       {/* Auth warning */}
       {auth && !auth.authenticated && (
@@ -351,7 +481,7 @@ export default function Dashboard() {
       ) : vehicles && vehicles.length > 0 ? (
         <>
           {/* ============ PRIMARY VEHICLE HERO ============ */}
-          <FadeIn>
+          {isVisible('vehicleCards') && <FadeIn>
             <GlassPanel className="relative overflow-hidden">
               {/* Background gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]" />
@@ -464,10 +594,10 @@ export default function Dashboard() {
                 </div>
               </div>
             </GlassPanel>
-          </FadeIn>
+          </FadeIn>}
 
           {/* ============ FLEET STATS BAR ============ */}
-          <StaggerContainer className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {isVisible('fleetSummary') && <StaggerContainer className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             <StaggerItem>
               <GlassPanel className="p-3 sm:p-4 text-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Fleet Size</p>
@@ -507,12 +637,12 @@ export default function Dashboard() {
                 <p className="text-[10px] text-gray-600 mt-1">unread</p>
               </GlassPanel>
             </StaggerItem>
-          </StaggerContainer>
+          </StaggerContainer>}
 
           {/* ============ CONTENT GRID: Activity + Charts + Battery ============ */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Activity Feed */}
-            <FadeIn delay={0.1}>
+            {isVisible('recentDrives') && <FadeIn delay={0.1}>
               <GlassPanel className="p-5 lg:col-span-1 h-full">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="section-title flex items-center gap-2">
@@ -544,13 +674,13 @@ export default function Dashboard() {
                   </div>
                 )}
               </GlassPanel>
-            </FadeIn>
+            </FadeIn>}
 
             {/* Battery Trend + Fleet Health */}
-            <FadeIn delay={0.15} className="lg:col-span-2">
+            {(isVisible('batteryTrend') || isVisible('insights')) && <FadeIn delay={0.15} className="lg:col-span-2">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 h-full">
                 {/* Battery trend chart */}
-                <GlassPanel className="p-5">
+                {isVisible('batteryTrend') && <GlassPanel className="p-5">
                   <h3 className="section-title flex items-center gap-2 mb-4">
                     <BatteryCharging className="h-4 w-4 text-neon-green" /> Battery Trend
                   </h3>
@@ -577,10 +707,10 @@ export default function Dashboard() {
                       <p className="text-xs text-gray-600">Charge data will appear here</p>
                     </div>
                   )}
-                </GlassPanel>
+                </GlassPanel>}
 
                 {/* Fleet overview */}
-                <GlassPanel className="p-5">
+                {isVisible('insights') && <GlassPanel className="p-5">
                   <h3 className="section-title flex items-center gap-2 mb-4">
                     <TrendingUp className="h-4 w-4 text-neon-purple" /> Fleet Performance
                   </h3>
@@ -609,20 +739,33 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-                </GlassPanel>
+                </GlassPanel>}
               </div>
-            </FadeIn>
+            </FadeIn>}
           </div>
 
           {/* ============ SMART SUGGESTIONS ============ */}
-          {recentDrives && recentDrives.length > 0 && (
+          {isVisible('suggestions') && recentDrives && recentDrives.length > 0 && (
             <FadeIn delay={0.18}>
               <SmartSuggestions drives={recentDrives} state={primaryState} />
             </FadeIn>
           )}
 
+          {/* ============ CHARGING REMINDERS ============ */}
+          {isVisible('chargingReminders') && vehicles && vehicles.length > 0 && (
+            <FadeIn delay={0.19}>
+              <ChargingReminder
+                vehicles={vehicles}
+                states={{
+                  ...(primaryVehicle && primaryState ? { [primaryVehicle.id]: primaryState } : {}),
+                  ...(otherStates ?? {}),
+                }}
+              />
+            </FadeIn>
+          )}
+
           {/* ============ OTHER VEHICLES STRIP ============ */}
-          {otherVehicles.length > 0 && (
+          {isVisible('vehicleCards') && otherVehicles.length > 0 && (
             <FadeIn delay={0.2}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="section-title flex items-center gap-2">
@@ -641,7 +784,7 @@ export default function Dashboard() {
           )}
 
           {/* ============ QUICK NAVIGATION ============ */}
-          <FadeIn delay={0.25}>
+          {isVisible('quickNav') && <FadeIn delay={0.25}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { to: '/drives', icon: Route, label: 'Drives', desc: 'Trip history', color: '#00f0ff' },
@@ -665,7 +808,7 @@ export default function Dashboard() {
                 </Link>
               ))}
             </div>
-          </FadeIn>
+          </FadeIn>}
         </>
       ) : (
         /* ============ EMPTY / ONBOARDING STATE ============ */

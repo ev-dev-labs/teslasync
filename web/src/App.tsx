@@ -38,6 +38,7 @@ const APIKeysPage = lazy(() => import('./pages/APIKeys'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const Compare = lazy(() => import('./pages/Compare'))
 const Admin = lazy(() => import('./pages/Admin'))
+const QuickStats = lazy(() => import('./pages/QuickStats'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -51,6 +52,7 @@ function SafeRoute({ children, name }: { children: React.ReactNode; name: string
 export default function App() {
   return (
     <Routes>
+      <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
