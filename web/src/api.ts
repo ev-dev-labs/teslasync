@@ -659,3 +659,16 @@ export interface AuditLog {
 
 export const getAuditLogs = (limit = 50) =>
   request<AuditLog[]>(`/system/audit?limit=${limit}`)
+
+// === API Usage ===
+
+export interface APIUsage {
+  total_requests: number
+  skipped_polls: number
+  estimated_cost: number
+  cost_per_request: number
+  monthly_credit: number
+  estimated_remaining: number
+}
+
+export const getAPIUsage = () => request<APIUsage>('/system/api-usage')

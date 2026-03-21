@@ -69,9 +69,21 @@ The default pool settings (5–25 connections) are suitable for most single-inst
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `WORKER_POLL_INTERVAL` | duration | `15s` | How often to poll Tesla API for vehicle data |
-| `WORKER_SLEEP_POLL_MULT` | int | `4` | Multiplier for sleeping vehicles (e.g., 4 × 15s = 60s) |
+| `WORKER_POLL_INTERVAL` | duration | `300s` | Polling interval for online/idle vehicles |
+| `WORKER_SLEEP_POLL_INTERVAL` | duration | `1800s` | Polling interval for sleeping/offline vehicles |
+| `WORKER_DRIVING_POLL_INTERVAL` | duration | `30s` | Polling interval when vehicle is actively driving |
+| `WORKER_SLEEP_POLL_MULT` | int | `4` | Legacy multiplier for sleeping vehicles (superseded by adaptive polling) |
 | `WORKER_STREAMING` | bool | `false` | Enable Tesla Streaming API (experimental) |
+
+::: tip Adaptive Polling
+TeslaSync uses adaptive polling to minimize API costs. The worker automatically adjusts the polling interval based on vehicle state:
+- **Driving**: every 30s (real-time data needed)
+- **Charging**: every 120s (battery level changes slowly)
+- **Online/Idle**: every 300s (vehicle is awake but parked)
+- **Asleep/Offline**: every 1800s (don't wake the car)
+
+Before making the expensive `vehicle_data` API call, the worker first checks the vehicle's basic status using the cheaper vehicle endpoint. If the vehicle is asleep, the full data request is skipped entirely.
+:::
 
 ### Redis (Cache)
 
@@ -137,7 +149,7 @@ POSTGRES_PORT=5432
 # Application
 TESLASYNC_PORT=8080
 WEB_PORT=3000
-POLL_INTERVAL=30s
+POLL_INTERVAL=300s
 LOG_LEVEL=info
 
 # Grafana
@@ -179,3 +191,64 @@ Duration values accept Go-style duration strings:
 | `m` | `5m` | 5 minutes |
 | `h` | `1h` | 1 hour |
 | Combined | `1h30m` | 1 hour 30 minutes |
+
+## Tesla Fleet API Billing Optimization
+
+Tesla's Fleet API charges per `vehicle_data` request. Each developer account receives a **$10/month free credit**, which covers approximately **4,500 requests/month** (~150/day).
+
+### Why This Matters
+
+| Polling Strategy | Requests/Day | Requests/Month | Est. Cost/Month |
+|-----------------|-------------|----------------|-----------------|
+| Fixed 30s (old default) | 2,880 | 86,400 | ~$192 |
+| Fixed 5min | 288 | 8,640 | ~$19 |
+| **Adaptive (current)** | **~140** | **~4,200** | **~$9** ✅ |
+
+### How Adaptive Polling Works
+
+TeslaSync automatically adjusts polling frequency based on what the vehicle is doing:
+
+| Vehicle State | Poll Interval | Rationale |
+|--------------|---------------|-----------|
+| **Driving** | 30s | Need real-time speed, location, battery data |
+| **Charging** | 120s | Battery level changes slowly (~1% every few minutes) |
+| **Online/Idle** | 300s (5 min) | Vehicle is awake but parked, minimal changes |
+| **Asleep/Offline** | 1800s (30 min) | Avoid waking the car (wake = extra API call) |
+
+### Cost Estimation
+
+For a typical usage pattern (1h driving, 2h charging, 13h idle, 8h sleep per day):
+
+| State | Requests/Day | Requests/Month |
+|-------|-------------|----------------|
+| Driving (1h × 30s) | 120 | 3,600 |
+| Charging (2h × 120s) | 60 | 1,800 |
+| Idle (13h × 300s) | 156 | 4,680 |
+| Sleep (8h × 1800s) | 16 | 480 |
+| **Total** | **352** | **~10,560** |
+
+At ~$0.00222/request, this costs approximately **$23/month per vehicle**. With the $10 credit, you'd pay **~$13/month** for a single vehicle.
+
+::: tip Staying Within Free Credit
+To stay within the $10/month free credit (~4,500 requests):
+- Reduce `WORKER_DRIVING_POLL_INTERVAL` to `60s` if you don't need 30s granularity
+- Drive less than 1h/day or increase idle interval to `600s`
+- Use the **API Usage Estimate** card in Settings to monitor your usage
+:::
+
+### Monitoring API Usage
+
+The `/api/v1/system/api-usage` endpoint returns real-time usage statistics:
+
+```json
+{
+  "total_requests": 1234,
+  "skipped_polls": 5678,
+  "estimated_cost": 2.74,
+  "cost_per_request": 0.00222,
+  "monthly_credit": 10.0,
+  "estimated_remaining": 7.26
+}
+```
+
+The Settings page includes an interactive billing calculator where you can adjust driving and charging hours to see estimated monthly costs.

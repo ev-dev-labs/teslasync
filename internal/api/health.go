@@ -9,6 +9,7 @@ import (
 	"github.com/teslasync/teslasync/internal/mqtt"
 	"github.com/teslasync/teslasync/internal/resilience"
 	"github.com/teslasync/teslasync/internal/tesla"
+	"github.com/teslasync/teslasync/internal/worker"
 )
 
 // HealthHandler returns a simple health check.
@@ -121,4 +122,22 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 // MetricsHandler returns Prometheus metrics.
 func MetricsHandler() http.Handler {
 	return promhttp.Handler()
+}
+
+// APIUsageHandler returns Tesla API usage statistics for billing estimation.
+func APIUsageHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		requestCount := tesla.GetAPIRequestCount()
+		skippedPolls := worker.GetSkippedPolls()
+		costPerRequest := 0.00222 // ~$10 / 4500 requests
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"total_requests":           requestCount,
+			"skipped_polls":            skippedPolls,
+			"estimated_cost":           float64(requestCount) * costPerRequest,
+			"cost_per_request":         costPerRequest,
+			"monthly_credit":           10.0,
+			"estimated_remaining":      10.0 - float64(requestCount)*costPerRequest,
+		})
+	}
 }

@@ -8,12 +8,21 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
 	"github.com/teslasync/teslasync/internal/config"
 )
+
+// apiRequestCount tracks the total number of Tesla API requests made.
+var apiRequestCount int64
+
+// GetAPIRequestCount returns the total number of API requests made since startup.
+func GetAPIRequestCount() int64 {
+	return atomic.LoadInt64(&apiRequestCount)
+}
 
 // Client is a resilient Tesla Fleet API client with circuit breaker.
 type Client struct {
@@ -97,6 +106,8 @@ var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
 
 // doRequest performs an authenticated API request through the circuit breaker.
 func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
+	atomic.AddInt64(&apiRequestCount, 1)
+
 	result, err := c.cb.Execute(func() (interface{}, error) {
 		url := c.baseURL + path
 		req, err := http.NewRequestWithContext(ctx, method, url, body)
@@ -254,4 +265,29 @@ func (c *Client) SendCommand(ctx context.Context, vehicleID int64, command strin
 		return fmt.Errorf("command %s: status %d", command, status)
 	}
 	return nil
+}
+
+// GetVehicleStatus fetches only the vehicle's basic info (state field) without
+// the full data payload. Uses the cheaper /api/1/vehicles/{id} endpoint instead
+// of /api/1/vehicles/{id}/vehicle_data. Returns the state string (e.g. "online",
+// "asleep", "offline").
+func (c *Client) GetVehicleStatus(ctx context.Context, vehicleID int64) (string, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%d", vehicleID)
+	data, status, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", err
+	}
+	if status != http.StatusOK {
+		return "", fmt.Errorf("get vehicle status: status %d", status)
+	}
+
+	var resp struct {
+		Response struct {
+			State string `json:"state"`
+		} `json:"response"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return "", fmt.Errorf("decode vehicle status: %w", err)
+	}
+	return resp.Response.State, nil
 }

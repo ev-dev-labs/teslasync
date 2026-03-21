@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, AppSettings, Vehicle } from '../api'
-import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles } from 'lucide-react'
+import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getAPIUsage, AppSettings, Vehicle } from '../api'
+import { useState, useEffect, useMemo } from 'react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -29,6 +29,7 @@ export default function Settings() {
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const { data: apiUsage } = useQuery({ queryKey: ['api-usage'], queryFn: getAPIUsage, refetchInterval: 60000 })
   const { themeId, modeId, setTheme, setMode, themes: allThemes, modes: allModes } = useTheme()
   const toast = useToast()
 
@@ -95,6 +96,21 @@ export default function Settings() {
   const [exportStart, setExportStart] = useState('')
   const [exportEnd, setExportEnd] = useState('')
   const [exportVehicle, setExportVehicle] = useState('')
+  const [drivingHours, setDrivingHours] = useState(1)
+  const [chargingHours, setChargingHours] = useState(2)
+
+  const billingEstimate = useMemo(() => {
+    const sleepHours = 8
+    const idleHours = Math.max(0, 24 - drivingHours - chargingHours - sleepHours)
+    const drivingRequests = drivingHours * 3600 / 30 * 30
+    const chargingRequests = chargingHours * 3600 / 120 * 30
+    const idleRequests = idleHours * 3600 / 300 * 30
+    const sleepRequests = sleepHours * 3600 / 1800 * 30
+    const totalRequests = drivingRequests + chargingRequests + idleRequests + sleepRequests
+    const costPerRequest = 0.00222
+    const monthlyCost = totalRequests * costPerRequest
+    return { totalRequests: Math.round(totalRequests), monthlyCost, drivingRequests: Math.round(drivingRequests), chargingRequests: Math.round(chargingRequests), idleRequests: Math.round(idleRequests), sleepRequests: Math.round(sleepRequests) }
+  }, [drivingHours, chargingHours])
 
   function buildExportUrl(type: string, format: string) {
     const params = new URLSearchParams({ format })
@@ -391,6 +407,76 @@ export default function Settings() {
               ))}
             </div>
           </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* API Usage Estimate */}
+      <FadeIn delay={0.16}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-yellow/10 text-neon-yellow ring-1 ring-neon-yellow/20">
+              <DollarSign className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">API Usage Estimate</h2>
+              <p className="text-xs text-[var(--text-muted)]">Tesla Fleet API billing — $10/month free credit (~4,500 requests)</p>
+            </div>
+          </div>
+
+          {apiUsage && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Requests Made</p>
+                <p className="text-lg font-semibold text-[var(--text-primary)]">{apiUsage.total_requests.toLocaleString()}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Polls Skipped</p>
+                <p className="text-lg font-semibold text-neon-green">{apiUsage.skipped_polls.toLocaleString()}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Est. Cost</p>
+                <p className="text-lg font-semibold text-[var(--text-primary)]">${apiUsage.estimated_cost.toFixed(2)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Credit Left</p>
+                <p className={clsx('text-lg font-semibold', apiUsage.estimated_remaining > 3 ? 'text-neon-green' : apiUsage.estimated_remaining > 0 ? 'text-neon-yellow' : 'text-neon-red')}>
+                  ${Math.max(0, apiUsage.estimated_remaining).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Monthly Estimate Calculator</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <SettingField label="Driving Hours / Day">
+                <input type="number" min={0} max={12} step={0.5} value={drivingHours} onChange={e => setDrivingHours(Number(e.target.value))} className="glass-input w-full px-3 py-2.5 text-sm" />
+              </SettingField>
+              <SettingField label="Charging Hours / Day">
+                <input type="number" min={0} max={12} step={0.5} value={chargingHours} onChange={e => setChargingHours(Number(e.target.value))} className="glass-input w-full px-3 py-2.5 text-sm" />
+              </SettingField>
+            </div>
+            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 text-sm space-y-1">
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Driving (30s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.drivingRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Charging (120s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.chargingRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Idle (300s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.idleRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)]">Sleep (1800s interval)</span><span className="text-[var(--text-primary)]">{billingEstimate.sleepRequests.toLocaleString()} req</span></div>
+              <div className="flex justify-between border-t border-white/5 pt-1 mt-1">
+                <span className="text-[var(--text-primary)] font-medium">Total / vehicle / month</span>
+                <span className="text-[var(--text-primary)] font-medium">{billingEstimate.totalRequests.toLocaleString()} req</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-primary)] font-medium">Est. cost / vehicle</span>
+                <span className={clsx('font-medium', billingEstimate.monthlyCost <= 10 ? 'text-neon-green' : 'text-neon-red')}>
+                  ${billingEstimate.monthlyCost.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-[var(--text-muted)]">
+            Adaptive polling reduces costs by ~95% vs fixed 30s polling. Intervals: driving=30s, charging=120s, idle=300s, sleep=1800s.
+          </p>
         </GlassPanel>
       </FadeIn>
 

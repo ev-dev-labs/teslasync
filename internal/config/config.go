@@ -65,9 +65,11 @@ func (m MQTTConfig) BrokerURL() string {
 }
 
 type WorkerConfig struct {
-	PollInterval     time.Duration
-	SleepPollMult    int
-	StreamingEnabled bool
+	PollInterval        time.Duration
+	SleepPollInterval   time.Duration
+	DrivingPollInterval time.Duration
+	SleepPollMult       int
+	StreamingEnabled    bool
 }
 
 type RedisConfig struct {
@@ -137,9 +139,11 @@ func Load() (*Config, error) {
 		},
 
 		Worker: WorkerConfig{
-			PollInterval:     envDuration("WORKER_POLL_INTERVAL", 15*time.Second),
-			SleepPollMult:    envInt("WORKER_SLEEP_POLL_MULT", 4),
-			StreamingEnabled: envBool("WORKER_STREAMING", false),
+			PollInterval:        envDuration("WORKER_POLL_INTERVAL", 300*time.Second),
+			SleepPollInterval:   envDuration("WORKER_SLEEP_POLL_INTERVAL", 1800*time.Second),
+			DrivingPollInterval: envDuration("WORKER_DRIVING_POLL_INTERVAL", 30*time.Second),
+			SleepPollMult:       envInt("WORKER_SLEEP_POLL_MULT", 4),
+			StreamingEnabled:    envBool("WORKER_STREAMING", false),
 		},
 
 		Redis: RedisConfig{
