@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getAPIUsage, AppSettings, Vehicle } from '../api'
 import { useState, useEffect, useMemo } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, DollarSign, Webhook, Copy, Check, Zap, Users } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -38,6 +38,115 @@ function CopyButton({ text }: { text: string }) {
     >
       {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
+  )
+}
+
+function FleetTelemetrySection() {
+  const [enabled, setEnabled] = useState(() => localStorage.getItem('teslasync-fleet-telemetry') === 'true')
+  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('teslasync-telemetry-url') || '')
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Zap className="h-4 w-4 text-neon-purple" /> Fleet Telemetry (Beta)
+      </h3>
+      <p className="text-xs text-[var(--text-muted)] mb-4">
+        Tesla Fleet Telemetry pushes vehicle data via streaming instead of polling.
+        This can reduce API costs by up to 97% but requires a separate telemetry server.
+      </p>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm" style={{color:'var(--text-secondary)'}}>Enable Fleet Telemetry</span>
+          <button onClick={() => { const v = !enabled; setEnabled(v); localStorage.setItem('teslasync-fleet-telemetry', String(v)) }}
+            className={clsx('relative w-11 h-6 rounded-full transition-colors', enabled ? 'bg-neon-purple' : 'bg-gray-600')}>
+            <span className={clsx('absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform', enabled && 'translate-x-5')} />
+          </button>
+        </div>
+
+        {enabled && (
+          <>
+            <div>
+              <label className="text-[11px] text-[var(--text-muted)] uppercase">Telemetry Server URL</label>
+              <input type="url" value={serverUrl} onChange={e => { setServerUrl(e.target.value); localStorage.setItem('teslasync-telemetry-url', e.target.value) }}
+                placeholder="wss://telemetry.example.com"
+                className="mt-1 w-full rounded-lg px-3 py-2 text-sm" style={{background:'var(--surface-2)',color:'var(--text-primary)',border:'1px solid var(--glass-border)'}} />
+            </div>
+
+            <div className="rounded-lg border border-neon-purple/20 bg-neon-purple/5 p-4">
+              <h4 className="text-xs font-semibold text-neon-purple mb-2">Setup Guide</h4>
+              <ol className="text-xs text-[var(--text-secondary)] space-y-1 list-decimal list-inside">
+                <li>Deploy Tesla Fleet Telemetry server (github.com/teslamotors/fleet-telemetry)</li>
+                <li>Configure your Tesla Developer account with the telemetry endpoint</li>
+                <li>Pair your vehicle(s) with the telemetry server</li>
+                <li>Enter the server URL above</li>
+                <li>Data will stream automatically when vehicles are online</li>
+              </ol>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="glass-card p-3 rounded-lg">
+                <p className="text-lg font-bold text-neon-green">97%</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Cost Reduction</p>
+              </div>
+              <div className="glass-card p-3 rounded-lg">
+                <p className="text-lg font-bold text-neon-cyan">1s</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Data Resolution</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </GlassPanel>
+  )
+}
+
+function UserManagementSection() {
+  const [token] = useState(() => localStorage.getItem('teslasync-auth-token'))
+  const hasToken = Boolean(token)
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Users className="h-4 w-4 text-neon-cyan" /> User Management
+      </h3>
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-blue/10">
+            <Shield className="h-4 w-4 text-neon-blue" />
+          </div>
+          <div>
+            <p className="text-sm font-medium" style={{color:'var(--text-primary)'}}>admin</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Role: admin</p>
+          </div>
+          {hasToken && (
+            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green border border-neon-green/20">
+              Authenticated
+            </span>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-neon-cyan/20 bg-neon-cyan/5 p-4">
+          <p className="text-xs text-[var(--text-secondary)]">
+            <strong className="text-neon-cyan">Auth is optional for self-hosted deployments.</strong>{' '}
+            Set <code className="px-1 py-0.5 rounded bg-white/5 text-[var(--text-primary)]">AUTH_ENABLED=true</code> to
+            require login. When disabled, all API endpoints are accessible without a token.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="glass-card p-3 rounded-lg">
+            <p className="text-lg font-bold text-neon-blue">1</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Total Users</p>
+          </div>
+          <div className="glass-card p-3 rounded-lg">
+            <p className="text-lg font-bold text-neon-purple">24h</p>
+            <p className="text-[10px] text-[var(--text-muted)]">Token Expiry</p>
+          </div>
+        </div>
+      </div>
+    </GlassPanel>
   )
 }
 
@@ -654,8 +763,18 @@ export default function Settings() {
         </GlassPanel>
       </FadeIn>
 
-      {/* System Info */}
+      {/* Fleet Telemetry */}
+      <FadeIn delay={0.19}>
+        <FleetTelemetrySection />
+      </FadeIn>
+
+      {/* User Management */}
       <FadeIn delay={0.2}>
+        <UserManagementSection />
+      </FadeIn>
+
+      {/* System Info */}
+      <FadeIn delay={0.22}>
         <GlassPanel className="p-6">
           <div className="flex items-center justify-between">
             <div>

@@ -78,6 +78,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tripHandler := NewTripHandler(db)
 	vehicleStateHandler := NewVehicleStateHandler(db)
 	webhookHandler := NewWebhookHandler(db)
+	userHandler := NewUserHandler(db, cfg.Auth.JWTSecret)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -91,7 +92,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Auth
+		// User authentication (login is public, me uses optional auth)
+		r.Post("/users/login", userHandler.Login)
+		r.Group(func(r chi.Router) {
+			r.Use(userHandler.OptionalAuthMiddleware)
+			r.Get("/users/me", userHandler.Me)
+		})
+
+		// Auth (Tesla OAuth)
 		r.Route("/auth", func(r chi.Router) {
 			r.Get("/login", authHandler.Login)
 			r.Get("/callback", authHandler.Callback)

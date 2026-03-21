@@ -40,6 +40,7 @@ export default withMermaid(defineConfig({
             { text: 'API Reference', link: '/guide/api-endpoints' },
             { text: 'Diagrams', link: '/guide/diagrams' },
             { text: 'Technology Stack', link: '/guide/technology' },
+            { text: 'Fleet Telemetry', link: '/guide/fleet-telemetry' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
             { text: 'FAQ', link: '/guide/faq' },
             { text: 'Roadmap', link: '/guide/roadmap' },
