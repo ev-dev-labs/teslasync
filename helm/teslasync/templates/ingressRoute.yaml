@@ -28,7 +28,7 @@ spec:
       {{- end }}
       services:
       {{- range .services }}
-        - name: {{ .name | default (printf "%s" (include "teslasync.fullname" $)) }}
+        - name: {{ .name | default (printf "%s-%s" (include "teslasync.fullname" $) (eq (.port | int) 80 | ternary "web" "api")) }}
           port: {{ .port }}
       {{- end }}
   {{- end }}
