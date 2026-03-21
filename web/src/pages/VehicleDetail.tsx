@@ -70,6 +70,102 @@ const maintenanceTypeConfig: Record<MaintenanceRecord['type'], { icon: string; l
 
 const MAINTENANCE_TYPES = Object.keys(maintenanceTypeConfig) as MaintenanceRecord['type'][]
 
+function VehicleStatusViz({ state }: { state: any }) {
+  const locked = state?.locked ?? true
+  const sentry = state?.sentry_mode ?? false
+  const charging = state?.is_charging ?? false
+  const battery = state?.battery_level ?? 0
+  const climateOn = state?.is_climate_on ?? false
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Vehicle Status</h3>
+      <div className="flex justify-center">
+        <svg viewBox="0 0 400 700" width="100%" style={{ maxWidth: '350px' }} xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="vs-body" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1a1a3e" />
+              <stop offset="100%" stopColor="#0f0f2a" />
+            </linearGradient>
+            <linearGradient id="vs-glass" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={sentry ? '#ef4444' : '#38bdf8'} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={sentry ? '#ef4444' : '#0ea5e9'} stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
+
+          {/* Car body outline */}
+          <path d="M140,100 C140,50 160,20 200,15 C240,20 260,50 260,100 L270,160 L280,280 L280,460 L270,560 C265,620 240,645 200,650 C160,645 135,620 130,560 L120,460 L120,280 L130,160 Z"
+            fill="url(#vs-body)" stroke={locked ? '#10b981' : '#ef4444'} strokeWidth="2" />
+
+          {/* Windshield */}
+          <path d="M160,110 C165,70 180,45 200,40 C220,45 235,70 240,110 L245,155 L155,155 Z"
+            fill="url(#vs-glass)" stroke={sentry ? '#ef4444' : '#38bdf8'} strokeWidth="1.5" strokeOpacity="0.4" />
+
+          {/* Lock indicator */}
+          <g transform="translate(200, 340)">
+            <circle r="20" fill={locked ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}
+              stroke={locked ? '#10b981' : '#ef4444'} strokeWidth="1.5" />
+            <text textAnchor="middle" y="5" fontSize="14" fill={locked ? '#10b981' : '#ef4444'}>
+              {locked ? '🔒' : '🔓'}
+            </text>
+          </g>
+
+          {/* Battery bar on the side */}
+          <rect x="85" y="200" width="15" height="200" rx="7" fill="#1a1a3e" stroke="#334155" strokeWidth="1" />
+          <rect x="87" y={200 + 200 * (1 - battery / 100)} width="11" height={200 * (battery / 100)} rx="5"
+            fill={battery > 60 ? '#10b981' : battery > 30 ? '#f59e0b' : '#ef4444'}>
+            {charging && <animate attributeName="height" values={`${200 * (battery / 100)};${200 * ((battery + 5) / 100)};${200 * (battery / 100)}`} dur="2s" repeatCount="indefinite" />}
+          </rect>
+          <text x="92" y={195} textAnchor="middle" fontSize="10" fill="#9ca3af">{battery}%</text>
+
+          {/* Charging indicator */}
+          {charging && (
+            <g transform="translate(310, 350)">
+              <circle r="18" fill="rgba(0,240,255,0.1)" stroke="#00f0ff" strokeWidth="1.5">
+                <animate attributeName="r" values="16;22;16" dur="1.5s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" />
+              </circle>
+              <text textAnchor="middle" y="5" fontSize="16">⚡</text>
+            </g>
+          )}
+
+          {/* Climate indicator */}
+          {climateOn && (
+            <g transform="translate(200, 130)">
+              <text textAnchor="middle" fontSize="14" fill="#3b82f6">❄️</text>
+              <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+            </g>
+          )}
+
+          {/* Sentry mode shield */}
+          {sentry && (
+            <g transform="translate(200, 500)">
+              <circle r="15" fill="rgba(239,68,68,0.1)" stroke="#ef4444" strokeWidth="1">
+                <animate attributeName="r" values="15;20;15" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" />
+              </circle>
+              <text textAnchor="middle" y="5" fontSize="12">👁️</text>
+            </g>
+          )}
+
+          {/* Headlights */}
+          <ellipse cx="155" cy="115" rx="10" ry="5" fill="#fbbf24" opacity={charging ? 0.3 : 0.7}>
+            <animate attributeName="opacity" values="0.4;0.8;0.4" dur="3s" repeatCount="indefinite" />
+          </ellipse>
+          <ellipse cx="245" cy="115" rx="10" ry="5" fill="#fbbf24" opacity={charging ? 0.3 : 0.7}>
+            <animate attributeName="opacity" values="0.4;0.8;0.4" dur="3s" repeatCount="indefinite" />
+          </ellipse>
+
+          {/* Status labels */}
+          <text x="200" y="680" textAnchor="middle" fontSize="11" fill="#9ca3af">
+            {locked ? 'Locked' : 'Unlocked'} · {sentry ? 'Sentry On' : 'Sentry Off'} · {charging ? 'Charging' : climateOn ? 'Climate On' : 'Idle'}
+          </text>
+        </svg>
+      </div>
+    </GlassPanel>
+  )
+}
+
 function MaintenanceLog({ vehicleId }: { vehicleId: number }) {
   const storageKey = `teslasync-maintenance-${vehicleId}`
   const [records, setRecords] = useState<MaintenanceRecord[]>(() => {
@@ -333,6 +429,10 @@ export default function VehicleDetail() {
             {wakeMut.isPending ? 'Waking...' : 'Wake Up'}
           </button>
         </div>
+      </FadeIn>
+
+      <FadeIn delay={0.02}>
+        <VehicleStatusViz state={state} />
       </FadeIn>
 
       {state ? (

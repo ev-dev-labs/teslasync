@@ -229,6 +229,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
 		})
 
+		// Fleet Telemetry ingestion
+		telemetryHandler := NewTelemetryHandler(db)
+		r.Post("/telemetry", telemetryHandler.TelemetryIngest)
+		r.Get("/telemetry/status", telemetryHandler.TelemetryStatus)
+
 		// Inbound webhook for external systems (Home Assistant, IFTTT, Node-RED)
 		r.Post("/webhook", webhookHandler.InboundWebhook)
 

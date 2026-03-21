@@ -94,6 +94,86 @@ function SessionCard({ session }: { session: ChargingSession }) {
   )
 }
 
+function ChargingSchedule({ vehicleId }: { vehicleId: number }) {
+  const storageKey = `teslasync-charge-schedule-${vehicleId}`
+  const [schedule, setSchedule] = useState(() => {
+    const stored = localStorage.getItem(storageKey)
+    return stored ? JSON.parse(stored) : {
+      enabled: false,
+      startTime: '22:00',
+      endTime: '06:00',
+      maxCharge: 80,
+      days: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true } as Record<string, boolean>,
+    }
+  })
+
+  const save = (updates: Record<string, unknown>) => {
+    const updated = { ...schedule, ...updates }
+    setSchedule(updated)
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+  }
+
+  const peakRate = 0.25
+  const offPeakRate = 0.10
+  const avgDailyCharge = 15
+  const monthlyPeakCost = avgDailyCharge * peakRate * 30
+  const monthlyOffPeakCost = avgDailyCharge * offPeakRate * 30
+  const monthlySavings = monthlyPeakCost - monthlyOffPeakCost
+
+  return (
+    <GlassPanel className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+          <Clock className="h-4 w-4 text-neon-cyan" /> Charging Schedule
+        </h3>
+        <button onClick={() => save({ enabled: !schedule.enabled })}
+          className={clsx('relative w-11 h-6 rounded-full transition-colors', schedule.enabled ? 'bg-neon-cyan' : 'bg-gray-600')}>
+          <span className={clsx('absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform', schedule.enabled && 'translate-x-5')} />
+        </button>
+      </div>
+
+      {schedule.enabled && (
+        <div className="space-y-4">
+          {/* Time window */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-[var(--text-muted)] block mb-1">Start Time</label>
+              <input type="time" value={schedule.startTime} onChange={e => save({ startTime: e.target.value })} className="glass-input w-full text-sm px-3 py-2" />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-muted)] block mb-1">End Time</label>
+              <input type="time" value={schedule.endTime} onChange={e => save({ endTime: e.target.value })} className="glass-input w-full text-sm px-3 py-2" />
+            </div>
+          </div>
+
+          {/* Max charge slider */}
+          <div>
+            <label className="text-xs text-[var(--text-muted)] block mb-1">Charge Limit: {schedule.maxCharge}%</label>
+            <input type="range" min={50} max={100} value={schedule.maxCharge} onChange={e => save({ maxCharge: Number(e.target.value) })} className="w-full" />
+            <p className="text-xs text-[var(--text-muted)] mt-1">80% recommended for daily use, 100% for trips</p>
+          </div>
+
+          {/* Day selector */}
+          <div className="flex gap-2">
+            {(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const).map(day => (
+              <button key={day} onClick={() => save({ days: { ...schedule.days, [day]: !schedule.days[day] } })}
+                className={clsx('w-9 h-9 rounded-full text-xs font-medium transition-colors', schedule.days[day] ? 'bg-neon-cyan/20 text-neon-cyan' : 'bg-white/5 text-gray-500')}>
+                {day.charAt(0).toUpperCase() + day.slice(1, 3)}
+              </button>
+            ))}
+          </div>
+
+          {/* Savings estimate */}
+          <div className="rounded-lg p-3" style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}>
+            <p className="text-xs text-neon-green font-medium">💰 Off-peak charging saves ~${monthlySavings.toFixed(0)}/month</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">Based on ${peakRate}/kWh peak vs ${offPeakRate}/kWh off-peak rates</p>
+          </div>
+        </div>
+      )}
+    </GlassPanel>
+  )
+}
+
 export default function Charging() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -300,6 +380,12 @@ export default function Charging() {
           onApply={() => setPage(1)}
         />
       </FadeIn>
+
+      {vehicleId && (
+        <FadeIn>
+          <ChargingSchedule vehicleId={vehicleId} />
+        </FadeIn>
+      )}
 
       {/* Hero gauges */}
       {stats && (

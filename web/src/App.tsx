@@ -37,6 +37,7 @@ const Roadmap = lazy(() => import('./pages/Roadmap'))
 const APIKeysPage = lazy(() => import('./pages/APIKeys'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const Compare = lazy(() => import('./pages/Compare'))
+const Admin = lazy(() => import('./pages/Admin'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
         <Route path="compare" element={<SafeRoute name="Compare"><Compare /></SafeRoute>} />
+        <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
       </Route>
     </Routes>
   )
