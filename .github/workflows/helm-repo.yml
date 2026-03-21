@@ -1,18 +1,25 @@
-name: Publish Helm Repo
+name: Publish Helm Chart
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Chart version (e.g. 0.2.0-alpha.1, 0.2.0-beta.1)"
+        required: false
+        type: string
 
 permissions:
-  contents: read
+  contents: write
   pages: write
+  packages: write
   id-token: write
 
 jobs:
   publish:
-    name: Publish Helm Chart to GitHub Pages
+    name: Package & Publish Helm Chart
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,23 +29,58 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v4
 
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            # Manual dispatch with explicit version
+            VERSION="${{ inputs.version }}"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # Tag push: v1.2.3 → 1.2.3
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            # Main branch push: auto-increment from latest tag
+            LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+            if [ -z "$LATEST" ]; then
+              VERSION="0.1.0"
+            else
+              MAJOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f1)
+              MINOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f2)
+              PATCH=$(echo "$LATEST" | sed 's/v//' | cut -d. -f3)
+              VERSION="${MAJOR}.${MINOR}.$((PATCH))"
+            fi
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Chart version: $VERSION"
+
       - name: Package chart
         run: |
           mkdir -p .helm-repo
-          VERSION="${GITHUB_REF_NAME#v}"
-          helm package helm/teslasync --version "$VERSION" --app-version "$VERSION" -d .helm-repo
+          helm package helm/teslasync \
+            --version "${{ steps.version.outputs.version }}" \
+            --app-version "${{ steps.version.outputs.version }}" \
+            -d .helm-repo
+
+      - name: Push to OCI registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          helm push .helm-repo/teslasync-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
 
       - name: Download existing index
         continue-on-error: true
         run: |
-          curl -sSL https://teslasync-labs.github.io/teslasync/helm/index.yaml -o .helm-repo/existing-index.yaml || true
+          curl -sSL https://teslasync-labs.github.io/teslasync/helm/index.yaml \
+            -o .helm-repo/existing-index.yaml 2>/dev/null || true
 
-      - name: Generate index
+      - name: Generate repo index
         run: |
           if [ -f .helm-repo/existing-index.yaml ]; then
-            helm repo index .helm-repo --url https://teslasync-labs.github.io/teslasync/helm --merge .helm-repo/existing-index.yaml
+            helm repo index .helm-repo \
+              --url https://teslasync-labs.github.io/teslasync/helm \
+              --merge .helm-repo/existing-index.yaml
           else
-            helm repo index .helm-repo --url https://teslasync-labs.github.io/teslasync/helm
+            helm repo index .helm-repo \
+              --url https://teslasync-labs.github.io/teslasync/helm
           fi
           rm -f .helm-repo/existing-index.yaml
 
