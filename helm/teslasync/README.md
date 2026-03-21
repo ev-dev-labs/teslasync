@@ -17,19 +17,40 @@ Helm chart for deploying TeslaSync — a Tesla fleet intelligence platform.
 ## Quick Start
 
 ```bash
-helm repo add teslasync oci://ghcr.io/teslasync/charts
+# Method 1: Helm Repository
+helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm repo update
 helm install teslasync teslasync/teslasync \
+  --set tesla.clientId=YOUR_CLIENT_ID \
+  --set tesla.clientSecret=YOUR_CLIENT_SECRET
+
+# Method 2: OCI Registry (no repo add needed)
+helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
   --set tesla.clientId=YOUR_CLIENT_ID \
   --set tesla.clientSecret=YOUR_CLIENT_SECRET
 ```
 
 ## Installation
 
+### From Helm Repository
+
+```bash
+helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm repo update
+helm install teslasync teslasync/teslasync -f values.yaml
+
+# Search available versions
+helm search repo teslasync --versions
+```
+
 ### From OCI Registry
 
 ```bash
-helm install teslasync oci://ghcr.io/teslasync/charts/teslasync \
+helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
   -f values.yaml
+
+# Install specific version
+helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync --version 0.7.1
 ```
 
 ### From Source
@@ -38,14 +59,6 @@ helm install teslasync oci://ghcr.io/teslasync/charts/teslasync \
 git clone https://github.com/teslasync-labs/teslasync.git
 cd teslasync
 helm install teslasync ./helm/teslasync -f my-values.yaml
-```
-
-### With Custom Values File
-
-```bash
-helm install teslasync teslasync/teslasync \
-  -f values.yaml \
-  -f values-production.yaml
 ```
 
 ## Configuration

@@ -232,11 +232,16 @@ docker compose up -d --build
 ### Kubernetes (Helm)
 
 ```bash
-helm install teslasync ./helm/teslasync \
+# Option 1: Helm repo
+helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm install teslasync teslasync/teslasync \
   --set tesla.clientId=$TESLA_CLIENT_ID \
-  --set tesla.clientSecret=$TESLA_CLIENT_SECRET \
-  --set ingress.enabled=true \
-  --set ingress.hosts[0].host=teslasync.example.com
+  --set tesla.clientSecret=$TESLA_CLIENT_SECRET
+
+# Option 2: OCI registry
+helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
+  --set tesla.clientId=$TESLA_CLIENT_ID \
+  --set tesla.clientSecret=$TESLA_CLIENT_SECRET
 ```
 
 The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, Grafana), Traefik IngressRoute, HPA, PDB, and helm test. See [helm/teslasync/README.md](helm/teslasync/README.md) for full documentation.

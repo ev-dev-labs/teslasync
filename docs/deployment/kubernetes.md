@@ -28,15 +28,49 @@ helm/teslasync/
 
 ## Quick Install
 
+### Method 1: Helm Repository (recommended)
+
 ```bash
-# Install with default values + required Tesla credentials
-helm upgrade --install teslasync helm/teslasync \
+# Add the TeslaSync Helm repository
+helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm repo update
+
+# Install
+helm install teslasync teslasync/teslasync \
+  --set tesla.clientId=$TESLA_CLIENT_ID \
+  --set tesla.clientSecret=$TESLA_CLIENT_SECRET
+
+# Upgrade to latest
+helm repo update
+helm upgrade teslasync teslasync/teslasync
+
+# Search available versions
+helm search repo teslasync --versions
+```
+
+### Method 2: OCI Registry
+
+```bash
+# Install directly from GHCR (no repo add needed)
+helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
+  --set tesla.clientId=$TESLA_CLIENT_ID \
+  --set tesla.clientSecret=$TESLA_CLIENT_SECRET
+
+# Install a specific version
+helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync --version 0.7.1
+```
+
+### Method 3: From Source
+
+```bash
+# Clone the repo and install from local chart
+git clone https://github.com/teslasync-labs/teslasync.git
+helm install teslasync ./teslasync/helm/teslasync \
   --set tesla.clientId=$TESLA_CLIENT_ID \
   --set tesla.clientSecret=$TESLA_CLIENT_SECRET
 
 # Or use a values file
-helm upgrade --install teslasync helm/teslasync \
-  -f my-values.yaml
+helm install teslasync ./teslasync/helm/teslasync -f my-values.yaml
 ```
 
 ## Configuration
