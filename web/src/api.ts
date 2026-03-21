@@ -683,3 +683,20 @@ export interface CompressionStats {
 }
 
 export const getCompressionStats = () => request<CompressionStats>('/system/compression-stats')
+
+// === Global Search ===
+
+export interface SearchResult {
+  type: 'vehicle' | 'drive' | 'location'
+  id: number
+  display_name?: string
+  vin?: string
+  model?: string
+  start_date?: string
+  distance?: number
+  address?: string
+  visit_count?: number
+}
+
+/** Searches across vehicles, drives, and locations by query string. */
+export const getSearch = (q: string) => request<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { motion, useInView } from 'framer-motion'
 
 interface AnimatedNumberProps {
@@ -11,7 +11,7 @@ interface AnimatedNumberProps {
 }
 
 /** Animates a number from 0 to the target value with eased interpolation. */
-export function AnimatedNumber({ value, duration = 1.2, decimals = 0, prefix = '', suffix = '', className = '' }: AnimatedNumberProps) {
+function AnimatedNumberBase({ value, duration = 1.2, decimals = 0, prefix = '', suffix = '', className = '' }: AnimatedNumberProps) {
   const ref = useRef<HTMLSpanElement>(null)
   const inView = useInView(ref, { once: true })
   const [display, setDisplay] = useState(0)
@@ -89,7 +89,7 @@ export function TimelineItem({ icon, title, subtitle, time, color, isLast }: {
 }
 
 /** Radial gauge for dashboard hero metrics */
-export function RadialGauge({ value, max, label, unit, color, size = 120 }: {
+function RadialGaugeBase({ value, max, label, unit, color, size = 120 }: {
   value: number; max: number; label: string; unit: string; color: string; size?: number
 }) {
   const pct = Math.min((value / max) * 100, 100)
@@ -228,3 +228,6 @@ export function MiniChart({ data, color, height = 40, width = 120 }: {
     </svg>
   )
 }
+
+export const AnimatedNumber = memo(AnimatedNumberBase)
+export const RadialGauge = memo(RadialGaugeBase)

@@ -28,7 +28,7 @@ import {
   Navigation,
   Activity,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
@@ -126,8 +126,19 @@ export default function Layout() {
     return d > 0 ? `${d}d uptime` : 'Online'
   })()
 
+  const mainRef = useRef<HTMLElement>(null)
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+      {/* Skip to content */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-neon-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-black focus:outline-none"
+        onClick={(e) => { e.preventDefault(); mainRef.current?.focus() }}
+      >
+        Skip to content
+      </a>
+
       {/* Ambient background effects */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-neon-cyan/[0.02] blur-[100px]" />
@@ -150,6 +161,8 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
+        role="navigation"
+        aria-label="Main navigation"
         className={clsx(
           'fixed inset-y-0 left-0 z-30 w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:static lg:w-64 lg:translate-x-0',
           'border-r backdrop-blur-xl',
@@ -183,6 +196,8 @@ export default function Layout() {
                       key={to}
                       to={to}
                       onClick={() => setSidebarOpen(false)}
+                      aria-label={label}
+                      aria-current={isActive ? 'page' : undefined}
                       className="group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200"
                     >
                       {isActive && (
@@ -257,6 +272,8 @@ export default function Layout() {
         <header className="flex items-center gap-4 border-b backdrop-blur-xl px-3 py-2.5 sm:px-5 sm:py-3 lg:hidden safe-top" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-expanded={sidebarOpen}
             className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-white/[0.05] hover:text-[var(--text-primary)] transition-colors"
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -265,7 +282,7 @@ export default function Layout() {
         </header>
 
         <ServiceStatusBanner />
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
           <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             <AnimatePresence mode="wait">
               <motion.div

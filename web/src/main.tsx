@@ -8,6 +8,10 @@ import { ThemeProvider } from './components/ThemeProvider'
 import App from './App'
 import './index.css'
 
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason)
+})
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

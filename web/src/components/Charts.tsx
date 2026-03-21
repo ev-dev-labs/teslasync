@@ -5,6 +5,7 @@
  * components that automatically adapt to the active theme and display mode.
  */
 import { CartesianGrid } from 'recharts'
+import { memo } from 'react'
 
 // ── Neon color palette used across all charts ──
 export const NEON_COLORS = ['#00f0ff', '#10b981', '#a855f7', '#f59e0b', '#4f46e5', '#ef4444', '#ec4899', '#14b8a6']
@@ -23,7 +24,7 @@ export const fmt = (v: unknown, decimals = 1): string => safe(v).toFixed(decimal
 // ── Chart tooltip with glassmorphism styling ──
 interface TooltipPayload { name: string; value: unknown; color?: string; fill?: string; unit?: string }
 
-export function ChartTooltip({ active, payload, label }: {
+export function ChartTooltipBase({ active, payload, label }: {
   active?: boolean
   payload?: TooltipPayload[]
   label?: string
@@ -68,7 +69,7 @@ export function ChartTooltip({ active, payload, label }: {
  *   <Area fill="url(#gradCyan)" />
  * </AreaChart>
  */
-export function ChartGradient({ id, color, opacity = 0.3 }: { id: string; color: string; opacity?: number }) {
+export function ChartGradientBase({ id, color, opacity = 0.3 }: { id: string; color: string; opacity?: number }) {
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stopColor={color} stopOpacity={opacity} />
@@ -86,3 +87,6 @@ export const chartAnimation = {
 /** Common chart margin preset */
 export const chartMargin = { top: 10, right: 10, left: 0, bottom: 0 }
 export const chartMarginLabeled = { top: 10, right: 20, left: 10, bottom: 5 }
+
+export const ChartTooltip = memo(ChartTooltipBase)
+export const ChartGradient = memo(ChartGradientBase)

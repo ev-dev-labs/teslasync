@@ -74,7 +74,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: 380 }}>
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: 380 }} aria-live="assertive" aria-atomic="true">
         <AnimatePresence mode="popLayout">
           {toasts.map(t => {
             const s = styles[t.type]
@@ -82,6 +82,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <motion.div
                 key={t.id}
                 layout
+                role="alert"
+                aria-live="assertive"
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 80, scale: 0.95 }}
@@ -102,6 +104,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   </div>
                   <button
                     onClick={() => dismiss(t.id)}
+                    aria-label={`Dismiss ${t.type} notification: ${t.title}`}
                     className="flex-shrink-0 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
