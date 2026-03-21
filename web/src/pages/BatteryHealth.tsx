@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getBatteryReport, getChargingSessions, Vehicle } from '../api'
+import { getVehicles, getBatteryReport, getChargingSessions, getMileageStats, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Activity, Gauge, Heart, Zap, AlertTriangle, CheckCircle, Info, Target } from 'lucide-react'
@@ -28,6 +28,87 @@ function InsightCard({ icon, title, description, status }: { icon: React.ReactNo
   )
 }
 
+function BatteryWarranty({ battery, mileage }: { battery: any; mileage: any }) {
+  // Tesla warranty: 8 years / 120,000 miles (Model 3/Y) or 150,000 miles (Model S/X)
+  // Battery must retain 70% capacity during warranty period
+
+  const warrantyYears = 8
+  const warrantyMiles = 120000
+  const warrantyCapacity = 70 // % minimum
+
+  const currentYear = new Date().getFullYear()
+  const purchaseYear = 2022
+  const yearsOwned = currentYear - purchaseYear
+  const yearsRemaining = Math.max(0, warrantyYears - yearsOwned)
+
+  const totalKm = mileage?.total_distance ?? 0
+  const totalMiles = totalKm * 0.621371
+  const milesRemaining = Math.max(0, warrantyMiles - totalMiles)
+
+  const degradation = battery?.degradation_pct ?? 0
+  const capacityPct = 100 - degradation
+
+  const isUnderWarranty = yearsRemaining > 0 && milesRemaining > 0
+  const wouldQualifyForClaim = capacityPct < warrantyCapacity
+
+  // Project when battery might hit 70%
+  const annualDegradation = yearsOwned > 0 ? degradation / yearsOwned : 1
+  const yearsTo70 = annualDegradation > 0 ? (30 - degradation) / annualDegradation : 99
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-4 flex items-center gap-2">
+        <CheckCircle className="h-4 w-4 text-neon-green" /> Battery Warranty
+      </h3>
+
+      {/* Status badge */}
+      <div className={clsx('rounded-xl p-4 text-center mb-4', isUnderWarranty ? 'bg-neon-green/10 border border-neon-green/20' : 'bg-neon-amber/10 border border-neon-amber/20')}>
+        <p className={clsx('text-lg font-bold', isUnderWarranty ? 'text-neon-green' : 'text-neon-amber')}>
+          {isUnderWarranty ? '✅ Under Warranty' : '⚠️ Warranty Expired'}
+        </p>
+      </div>
+
+      {/* Progress bars */}
+      <div className="space-y-4">
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-[var(--text-secondary)]">Years: {yearsOwned} of {warrantyYears}</span>
+            <span className="text-[var(--text-secondary)]">{yearsRemaining} remaining</span>
+          </div>
+          <div className="h-3 rounded-full" style={{background:'var(--surface-2)'}}>
+            <div className="h-full rounded-full bg-neon-cyan" style={{width:`${Math.min(100, (yearsOwned/warrantyYears)*100)}%`}} />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-[var(--text-secondary)]">Miles: {Math.round(totalMiles).toLocaleString()} of {warrantyMiles.toLocaleString()}</span>
+            <span className="text-[var(--text-secondary)]">{Math.round(milesRemaining).toLocaleString()} remaining</span>
+          </div>
+          <div className="h-3 rounded-full" style={{background:'var(--surface-2)'}}>
+            <div className="h-full rounded-full bg-neon-purple" style={{width:`${Math.min(100, (totalMiles/warrantyMiles)*100)}%`}} />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-[var(--text-secondary)]">Capacity: {capacityPct.toFixed(1)}% (min {warrantyCapacity}%)</span>
+            <span className="text-[var(--text-secondary)]">{wouldQualifyForClaim ? '⚠️ Below threshold' : '✅ Above threshold'}</span>
+          </div>
+          <div className="h-3 rounded-full" style={{background:'var(--surface-2)'}}>
+            <div className="h-full rounded-full" style={{width:`${capacityPct}%`, background: capacityPct > warrantyCapacity ? '#10b981' : '#ef4444'}} />
+          </div>
+        </div>
+      </div>
+
+      {/* Projection */}
+      <p className="mt-4 text-xs text-[var(--text-muted)]">
+        At current degradation rate ({annualDegradation.toFixed(1)}%/year), battery projected to reach 70% in ~{yearsTo70.toFixed(0)} years.
+      </p>
+    </GlassPanel>
+  )
+}
+
 export default function BatteryHealth() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -42,6 +123,12 @@ export default function BatteryHealth() {
   const { data: sessions } = useQuery({
     queryKey: ['charging-battery', vehicleId],
     queryFn: () => getChargingSessions(vehicleId!, 100),
+    enabled: vehicleId !== null,
+  })
+
+  const { data: mileage } = useQuery({
+    queryKey: ['mileage-stats-battery', vehicleId],
+    queryFn: () => getMileageStats(vehicleId!),
     enabled: vehicleId !== null,
   })
 
@@ -423,6 +510,11 @@ export default function BatteryHealth() {
           )}
         </>
       )}
+
+      {/* Warranty Status */}
+      <FadeIn delay={0.3}>
+        <BatteryWarranty battery={report} mileage={mileage} />
+      </FadeIn>
     </div>
   )
 }

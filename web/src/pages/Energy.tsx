@@ -9,6 +9,7 @@ import {
   ResponsiveContainer, ComposedChart, Line, PieChart, Pie, Cell, Brush, Legend
 } from 'recharts'
 import { Link } from 'react-router-dom'
+import { generateCarbonCertificate } from '../lib/certificate'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 
 function EnergyFlow({ totalCharged }: { totalCharged: number }) {
@@ -768,6 +769,30 @@ export default function Energy() {
           )}
         </>
       )}
+
+      {/* Carbon Offset Certificate */}
+      <FadeIn delay={0.3}>
+        <GlassPanel className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="section-title mb-1 flex items-center gap-2">
+                <TreePine className="h-4 w-4 text-neon-green" /> Environmental Impact
+              </h3>
+              <p className="text-xs text-[var(--text-muted)]">Generate a printable certificate of your carbon savings</p>
+            </div>
+            <button
+              onClick={() => generateCarbonCertificate({
+                vehicleName: vehicles?.find((v: Vehicle) => v.id === vehicleId)?.display_name || 'Tesla',
+                totalKm: totalDistance,
+                totalKwh: totalEnergy,
+              })}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neon-green/10 border border-neon-green/20 text-neon-green text-sm font-medium hover:bg-neon-green/20 transition-colors"
+            >
+              🌍 Generate Certificate
+            </button>
+          </div>
+        </GlassPanel>
+      </FadeIn>
 
       {/* Total Cost of Ownership Calculator */}
       <FadeIn delay={0.35}>

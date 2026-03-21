@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getMileageStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
-import { Target, Battery, Thermometer, TrendingDown, Gauge } from 'lucide-react'
+import { Target, Battery, Thermometer, TrendingDown, Gauge, Compass } from 'lucide-react'
+import clsx from 'clsx'
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ReferenceLine
@@ -20,6 +21,139 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
         </p>
       ))}
     </div>
+  )
+}
+
+function RangeAssistant({ battery, mileage }: { battery: any; mileage: any }) {
+  const [destination, setDestination] = useState(100)
+  const [currentBattery, setCurrentBattery] = useState(battery?.current_level ?? 80)
+  const [elevation, setElevation] = useState<'flat' | 'hilly' | 'mountain'>('flat')
+  const [passengers, setPassengers] = useState(1)
+  const [cargo, setCargo] = useState(false)
+  const [ac, setAc] = useState(true)
+  const [speed, setSpeed] = useState<'city' | 'highway' | 'mixed'>('mixed')
+  
+  const baseEfficiency = 170 // Wh/km
+  
+  const adjustedEfficiency = useMemo(() => {
+    let eff = baseEfficiency
+    if (elevation === 'hilly') eff *= 1.15
+    if (elevation === 'mountain') eff *= 1.35
+    if (passengers > 2) eff *= 1.03
+    if (cargo) eff *= 1.05
+    if (ac) eff *= 1.08
+    if (speed === 'highway') eff *= 1.25
+    if (speed === 'city') eff *= 0.9
+    return eff
+  }, [elevation, passengers, cargo, ac, speed])
+  
+  const batteryCapacity = 75000
+  const availableEnergy = (currentBattery / 100) * batteryCapacity
+  const energyNeeded = destination * adjustedEfficiency
+  const maxRange = availableEnergy / adjustedEfficiency
+  const arrivalBattery = Math.max(0, ((availableEnergy - energyNeeded) / batteryCapacity) * 100)
+  const canMakeIt = arrivalBattery > 5
+  
+  const confidence = arrivalBattery > 20 ? 'high' : arrivalBattery > 10 ? 'medium' : arrivalBattery > 0 ? 'low' : 'impossible'
+  const confidenceColors: Record<string, string> = { high: '#10b981', medium: '#f59e0b', low: '#ef4444', impossible: '#ef4444' }
+  const confidenceLabels: Record<string, string> = { high: 'High Confidence', medium: 'Moderate — plan a charging stop', low: 'Low — charging stop required', impossible: 'Cannot reach without charging' }
+  
+  // suppress unused-variable lint for props used only for future extension
+  void mileage; void passengers; void setPassengers
+  
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Compass className="h-4 w-4 text-neon-green" /> Range Assistant
+      </h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Inputs */}
+        <div className="space-y-4">
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase">Distance to destination</label>
+            <div className="flex items-center gap-3">
+              <input type="range" min={10} max={500} value={destination} onChange={e => setDestination(Number(e.target.value))} className="flex-1" />
+              <span className="text-lg font-bold text-neon-cyan w-20 text-right">{destination} km</span>
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase">Current battery</label>
+            <div className="flex items-center gap-3">
+              <input type="range" min={5} max={100} value={currentBattery} onChange={e => setCurrentBattery(Number(e.target.value))} className="flex-1" />
+              <span className="text-lg font-bold w-16 text-right" style={{color: currentBattery > 50 ? '#10b981' : currentBattery > 20 ? '#f59e0b' : '#ef4444'}}>{currentBattery}%</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2">
+            {(['flat','hilly','mountain'] as const).map(e => (
+              <button key={e} onClick={() => setElevation(e)}
+                className={clsx('py-2 rounded-lg text-xs font-medium transition-all', elevation === e ? 'bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/30' : 'bg-white/5 text-[var(--text-muted)]')}>
+                {e === 'flat' ? '🏜️ Flat' : e === 'hilly' ? '⛰️ Hilly' : '🏔️ Mountain'}
+              </button>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2">
+            {(['city','mixed','highway'] as const).map(s => (
+              <button key={s} onClick={() => setSpeed(s)}
+                className={clsx('py-2 rounded-lg text-xs font-medium transition-all', speed === s ? 'bg-neon-purple/20 text-neon-purple ring-1 ring-neon-purple/30' : 'bg-white/5 text-[var(--text-muted)]')}>
+                {s === 'city' ? '🏙️ City' : s === 'mixed' ? '🛣️ Mixed' : '🛤️ Highway'}
+              </button>
+            ))}
+          </div>
+          
+          <div className="flex gap-3">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={ac} onChange={e => setAc(e.target.checked)} /> A/C On
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={cargo} onChange={e => setCargo(e.target.checked)} /> Heavy Cargo
+            </label>
+          </div>
+        </div>
+        
+        {/* Result */}
+        <div>
+          <div className="rounded-xl p-5 text-center mb-4" style={{background: `${confidenceColors[confidence]}15`, border: `1px solid ${confidenceColors[confidence]}30`}}>
+            <p className="text-3xl font-bold" style={{color: confidenceColors[confidence]}}>
+              {canMakeIt ? `${arrivalBattery.toFixed(0)}%` : '⚠️'}
+            </p>
+            <p className="text-sm mt-1" style={{color: confidenceColors[confidence]}}>
+              {canMakeIt ? `Arrive with ${arrivalBattery.toFixed(0)}% battery` : 'Charging stop needed'}
+            </p>
+            <p className="text-xs mt-2 text-[var(--text-muted)]">{confidenceLabels[confidence]}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="glass-card p-3 rounded-lg text-center">
+              <p className="text-lg font-bold text-neon-cyan">{maxRange.toFixed(0)} km</p>
+              <p className="text-[10px] text-[var(--text-muted)]">Max Range</p>
+            </div>
+            <div className="glass-card p-3 rounded-lg text-center">
+              <p className="text-lg font-bold text-neon-purple">{adjustedEfficiency.toFixed(0)} Wh/km</p>
+              <p className="text-[10px] text-[var(--text-muted)]">Est. Efficiency</p>
+            </div>
+          </div>
+          
+          {/* Range bar */}
+          <div className="mt-4">
+            <div className="h-4 rounded-full overflow-hidden" style={{background:'var(--surface-2)'}}>
+              <div className="h-full rounded-full transition-all duration-500" style={{
+                width: `${Math.min(100, (destination / maxRange) * 100)}%`,
+                background: canMakeIt ? 'linear-gradient(90deg, #10b981, #00f0ff)' : 'linear-gradient(90deg, #f59e0b, #ef4444)',
+              }} />
+            </div>
+            <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
+              <span>0 km</span>
+              <span>{destination} km (destination)</span>
+              <span>{maxRange.toFixed(0)} km (max)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </GlassPanel>
   )
 }
 
@@ -192,6 +326,11 @@ export default function ProjectedRange() {
           </ResponsiveContainer>
         )}
       </GlassPanel>
+
+      {/* Range Assistant */}
+      <div className="mt-6">
+        <RangeAssistant battery={battery} mileage={mileageStats} />
+      </div>
     </FadeIn>
   )
 }
