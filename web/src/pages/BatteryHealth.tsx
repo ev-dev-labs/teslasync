@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions, getMileageStats, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
-import { Activity, Gauge, Heart, Zap, AlertTriangle, CheckCircle, Info, Target } from 'lucide-react'
+import { Activity, Gauge, Heart, Zap, AlertTriangle, CheckCircle, Info, Target, Calendar } from 'lucide-react'
 import {
   AreaChart, Area, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, BarChart, Bar, ReferenceLine, ComposedChart,
@@ -25,6 +25,91 @@ function InsightCard({ icon, title, description, status }: { icon: React.ReactNo
         </div>
       </div>
     </div>
+  )
+}
+
+function BatteryCalendar({ sessions }: { sessions: any[] }) {
+  const dailyBattery = useMemo(() => {
+    const map: Record<string, number[]> = {}
+    sessions?.forEach(s => {
+      if (s.start_battery_level == null) return
+      const date = new Date(s.start_date).toISOString().slice(0, 10)
+      if (!map[date]) map[date] = []
+      map[date].push(s.start_battery_level)
+      if (s.end_battery_level != null) map[date].push(s.end_battery_level)
+    })
+
+    return Object.entries(map).map(([date, levels]) => ({
+      date,
+      avg: Math.round(levels.reduce((a, b) => a + b, 0) / levels.length),
+      min: Math.min(...levels),
+      max: Math.max(...levels),
+    })).sort((a, b) => a.date.localeCompare(b.date))
+  }, [sessions])
+
+  const today = new Date()
+  const weeks = useMemo(() => {
+    const grid: Array<Array<{ date: string; avg: number | null; day: number }>> = []
+    for (let w = 11; w >= 0; w--) {
+      const week: typeof grid[0] = []
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - (w * 7 + (6 - d)))
+        const dateStr = date.toISOString().slice(0, 10)
+        const data = dailyBattery.find(b => b.date === dateStr)
+        week.push({ date: dateStr, avg: data?.avg ?? null, day: date.getDay() })
+      }
+      grid.push(week)
+    }
+    return grid
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailyBattery])
+
+  const getColor = (avg: number | null) => {
+    if (avg === null) return 'var(--surface-2)'
+    if (avg >= 80) return '#10b981'
+    if (avg >= 60) return '#22d3ee'
+    if (avg >= 40) return '#f59e0b'
+    if (avg >= 20) return '#f97316'
+    return '#ef4444'
+  }
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Calendar className="h-4 w-4 text-neon-cyan" /> Battery Level Calendar
+      </h3>
+      <p className="text-xs text-[var(--text-muted)] mb-3">Daily average battery level — last 12 weeks</p>
+
+      {/* Day labels */}
+      <div className="flex gap-1">
+        <div className="w-6 shrink-0 flex flex-col justify-between text-[8px] text-[var(--text-muted)] py-0.5">
+          <span>Mon</span><span>Wed</span><span>Fri</span><span>Sun</span>
+        </div>
+
+        {/* Heatmap grid */}
+        <div className="flex gap-0.5 flex-1">
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-0.5 flex-1">
+              {week.map((day, di) => (
+                <div key={di} className="aspect-square rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 transition-all"
+                  style={{ background: getColor(day.avg), opacity: day.avg !== null ? 0.8 : 0.2 }}
+                  title={`${day.date}: ${day.avg !== null ? day.avg + '%' : 'No data'}`} />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-2 mt-3 justify-center">
+        <span className="text-[9px] text-[var(--text-muted)]">Low</span>
+        {['#ef4444', '#f97316', '#f59e0b', '#22d3ee', '#10b981'].map(c => (
+          <div key={c} className="h-3 w-3 rounded-sm" style={{ background: c }} />
+        ))}
+        <span className="text-[9px] text-[var(--text-muted)]">High</span>
+      </div>
+    </GlassPanel>
   )
 }
 
@@ -511,8 +596,15 @@ export default function BatteryHealth() {
         </>
       )}
 
+      {/* Battery Level Calendar */}
+      {sessions && sessions.length > 0 && (
+        <FadeIn delay={0.3}>
+          <BatteryCalendar sessions={sessions} />
+        </FadeIn>
+      )}
+
       {/* Warranty Status */}
-      <FadeIn delay={0.3}>
+      <FadeIn delay={0.35}>
         <BatteryWarranty battery={report} mileage={mileage} />
       </FadeIn>
     </div>

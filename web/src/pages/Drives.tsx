@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getDrives, Drive, Vehicle } from '../api'
-import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, TrendingDown, Zap, ArrowUpDown, Calendar, MapPin, Download, Award, AlertTriangle } from 'lucide-react'
+import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, TrendingDown, Zap, ArrowUpDown, Calendar, MapPin, Download, Award, AlertTriangle, GitCompareArrows } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, Pagination, DateRangeFilter } from '../components/ui'
 import { RadialGauge, MetricBar, AnimatedNumber } from '../components/Widgets'
 import {
@@ -103,6 +103,145 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
         </div>
       </GlassPanel>
     </Link>
+  )
+}
+
+function RouteAnalysis({ drives }: { drives: any[] }) {
+  const routes = useMemo(() => {
+    const routeMap: Record<string, { from: string; to: string; drives: any[] }> = {}
+
+    drives?.forEach(d => {
+      if (!d.start_address && !d.end_address) return
+      const from = d.start_address || 'Unknown'
+      const to = d.end_address || 'Unknown'
+      const key = `${from}→${to}`
+      if (!routeMap[key]) routeMap[key] = { from, to, drives: [] }
+      routeMap[key].drives.push(d)
+    })
+
+    return Object.values(routeMap)
+      .filter(r => r.drives.length >= 2)
+      .map(r => {
+        const avgDist = r.drives.reduce((s: number, d: any) => s + d.distance, 0) / r.drives.length
+        const avgDur = r.drives.reduce((s: number, d: any) => s + d.duration_min, 0) / r.drives.length
+        const avgEfficiency = r.drives.reduce((s: number, d: any) => {
+          if (d.distance > 0 && d.start_battery_level != null && d.end_battery_level != null) {
+            return s + ((d.start_battery_level - d.end_battery_level) / 100 * 75000) / d.distance
+          }
+          return s
+        }, 0) / r.drives.filter((d: any) => d.distance > 0 && d.start_battery_level != null).length
+
+        return { ...r, avgDist, avgDur, avgEfficiency: avgEfficiency || 0, count: r.drives.length }
+      })
+      .sort((a, b) => a.avgEfficiency - b.avgEfficiency)
+  }, [drives])
+
+  if (routes.length === 0) return null
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <Route className="h-4 w-4 text-neon-cyan" /> Route Efficiency Analysis
+      </h3>
+      <p className="text-xs text-[var(--text-muted)] mb-3">Routes driven at least twice, ranked by efficiency</p>
+
+      <div className="space-y-2">
+        {routes.slice(0, 10).map((r, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{background:'var(--surface-2)'}}>
+            <span className={clsx('text-sm font-bold w-6 text-center',
+              i === 0 ? 'text-neon-green' : i === routes.length - 1 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
+              {i === 0 ? '🏆' : `#${i + 1}`}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{color:'var(--text-primary)'}}>
+                {r.from} → {r.to}
+              </p>
+              <p className="text-[10px] text-[var(--text-muted)]">
+                {r.count} trips · {r.avgDist.toFixed(1)} km avg · {Math.round(r.avgDur)} min avg
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className={clsx('text-sm font-bold', r.avgEfficiency < 180 ? 'text-neon-green' : r.avgEfficiency < 220 ? 'text-neon-amber' : 'text-neon-red')}>
+                {r.avgEfficiency.toFixed(0)} Wh/km
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
+  )
+}
+
+function DriveComparison({ drives }: { drives: Drive[] }) {
+  const [driveA, setDriveA] = useState<number | null>(null)
+  const [driveB, setDriveB] = useState<number | null>(null)
+
+  const a = drives?.find(d => d.id === driveA)
+  const b = drives?.find(d => d.id === driveB)
+
+  if (!drives?.length) return null
+
+  const metrics = a && b ? [
+    { label: 'Distance', a: `${a.distance?.toFixed(1)} km`, b: `${b.distance?.toFixed(1)} km`, better: a.distance > b.distance ? 'a' : 'b' },
+    { label: 'Duration', a: `${Math.round(a.duration_min)} min`, b: `${Math.round(b.duration_min)} min`, better: a.duration_min < b.duration_min ? 'a' : 'b' },
+    { label: 'Max Speed', a: `${a.speed_max?.toFixed(0)} km/h`, b: `${b.speed_max?.toFixed(0)} km/h`, better: 'none' as const },
+    { label: 'Battery Used', a: `${(a.start_battery_level||0)-(a.end_battery_level||0)}%`, b: `${(b.start_battery_level||0)-(b.end_battery_level||0)}%`, better: ((a.start_battery_level||0)-(a.end_battery_level||0)) < ((b.start_battery_level||0)-(b.end_battery_level||0)) ? 'a' : 'b' },
+    { label: 'Start Battery', a: `${a.start_battery_level ?? '?'}%`, b: `${b.start_battery_level ?? '?'}%`, better: 'none' as const },
+    { label: 'End Battery', a: `${a.end_battery_level ?? '?'}%`, b: `${b.end_battery_level ?? '?'}%`, better: 'none' as const },
+  ] : []
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <GitCompareArrows className="h-4 w-4 text-neon-purple" /> Compare Drives
+      </h3>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <select value={driveA ?? ''} onChange={e => setDriveA(Number(e.target.value) || null)}
+          className="rounded-lg px-3 py-2 text-xs" style={{background:'var(--surface-2)',color:'var(--text-primary)',border:'1px solid var(--glass-border)'}}>
+          <option value="">Select Drive A</option>
+          {drives.slice(0, 30).map(d => (
+            <option key={d.id} value={d.id}>
+              {new Date(d.start_date).toLocaleDateString()} — {d.distance?.toFixed(1)} km
+            </option>
+          ))}
+        </select>
+        <select value={driveB ?? ''} onChange={e => setDriveB(Number(e.target.value) || null)}
+          className="rounded-lg px-3 py-2 text-xs" style={{background:'var(--surface-2)',color:'var(--text-primary)',border:'1px solid var(--glass-border)'}}>
+          <option value="">Select Drive B</option>
+          {drives.slice(0, 30).map(d => (
+            <option key={d.id} value={d.id}>
+              {new Date(d.start_date).toLocaleDateString()} — {d.distance?.toFixed(1)} km
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {a && b && (
+        <table className="w-full text-xs">
+          <thead>
+            <tr>
+              <th className="text-left py-2 text-[var(--text-muted)]">Metric</th>
+              <th className="text-right py-2 text-neon-cyan">Drive A</th>
+              <th className="text-right py-2 text-neon-purple">Drive B</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map(m => (
+              <tr key={m.label}>
+                <td className="py-1.5" style={{color:'var(--text-secondary)'}}>{m.label}</td>
+                <td className={clsx('text-right py-1.5 font-mono', m.better === 'a' ? 'text-neon-green font-bold' : '')}>{m.a}</td>
+                <td className={clsx('text-right py-1.5 font-mono', m.better === 'b' ? 'text-neon-green font-bold' : '')}>{m.b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {!a || !b ? (
+        <p className="text-xs text-center py-4 text-[var(--text-muted)]">Select two drives to compare</p>
+      ) : null}
+    </GlassPanel>
   )
 }
 
@@ -455,6 +594,20 @@ export default function Drives() {
       {drives && drives.length > 3 && (
         <FadeIn delay={0.22}>
           <DriveScoreTrends drives={drives} />
+        </FadeIn>
+      )}
+
+      {/* Drive Comparison */}
+      {drives && drives.length > 1 && (
+        <FadeIn delay={0.23}>
+          <DriveComparison drives={drives} />
+        </FadeIn>
+      )}
+
+      {/* Route Efficiency Analysis */}
+      {drives && drives.length > 0 && (
+        <FadeIn delay={0.24}>
+          <RouteAnalysis drives={drives} />
         </FadeIn>
       )}
 

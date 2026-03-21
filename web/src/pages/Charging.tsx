@@ -174,6 +174,80 @@ function ChargingSchedule({ vehicleId }: { vehicleId: number }) {
   )
 }
 
+function ChargingCostMap({ sessions }: { sessions: any[] }) {
+  const locationCosts = useMemo(() => {
+    const map: Record<string, { name: string; lat: number; lng: number; costs: number[]; energy: number[] }> = {}
+
+    sessions?.forEach(s => {
+      if (!s.address_name && !s.address_city) return
+      const name = s.address_name || s.address_city || 'Unknown'
+      const key = name
+      if (!map[key]) map[key] = { name, lat: s.latitude || 0, lng: s.longitude || 0, costs: [], energy: [] }
+      if (s.cost > 0 && s.charge_energy_added > 0) {
+        map[key].costs.push(s.cost)
+        map[key].energy.push(s.charge_energy_added)
+      }
+    })
+
+    return Object.values(map)
+      .filter(l => l.costs.length > 0)
+      .map(l => ({
+        ...l,
+        totalCost: l.costs.reduce((a, b) => a + b, 0),
+        totalEnergy: l.energy.reduce((a, b) => a + b, 0),
+        avgCostPerKwh: l.costs.reduce((a, b) => a + b, 0) / l.energy.reduce((a, b) => a + b, 0),
+        sessions: l.costs.length,
+      }))
+      .sort((a, b) => a.avgCostPerKwh - b.avgCostPerKwh)
+  }, [sessions])
+
+  if (locationCosts.length === 0) return null
+
+  const cheapest = locationCosts[0]
+  const mostExpensive = locationCosts[locationCosts.length - 1]
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
+        <DollarSign className="h-4 w-4 text-neon-green" /> Charging Costs by Location
+      </h3>
+
+      {/* Best/worst comparison */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="rounded-lg p-3 text-center" style={{background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.2)'}}>
+          <p className="text-xs text-neon-green mb-1">💚 Cheapest</p>
+          <p className="text-lg font-bold text-neon-green">${cheapest.avgCostPerKwh.toFixed(3)}/kWh</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{cheapest.name}</p>
+        </div>
+        <div className="rounded-lg p-3 text-center" style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)'}}>
+          <p className="text-xs text-neon-red mb-1">💸 Most Expensive</p>
+          <p className="text-lg font-bold text-neon-red">${mostExpensive.avgCostPerKwh.toFixed(3)}/kWh</p>
+          <p className="text-[10px] text-[var(--text-muted)]">{mostExpensive.name}</p>
+        </div>
+      </div>
+
+      {/* All locations ranked */}
+      <div className="space-y-2">
+        {locationCosts.map((l, i) => {
+          const barWidth = (l.avgCostPerKwh / (mostExpensive.avgCostPerKwh || 1)) * 100
+          const color = l.avgCostPerKwh < 0.15 ? '#10b981' : l.avgCostPerKwh < 0.25 ? '#f59e0b' : '#ef4444'
+          return (
+            <div key={i}>
+              <div className="flex justify-between text-xs mb-1">
+                <span style={{color:'var(--text-secondary)'}}>{l.name}</span>
+                <span className="font-mono" style={{color}}>${l.avgCostPerKwh.toFixed(3)}/kWh · {l.sessions} sessions</span>
+              </div>
+              <div className="h-2 rounded-full" style={{background:'var(--surface-2)'}}>
+                <div className="h-full rounded-full transition-all" style={{width: `${barWidth}%`, background: color}} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </GlassPanel>
+  )
+}
+
 export default function Charging() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -728,6 +802,13 @@ export default function Charging() {
               </GlassPanel>
             </div>
           </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Charging Costs by Location */}
+      {sessions && sessions.length > 0 && (
+        <FadeIn delay={0.21}>
+          <ChargingCostMap sessions={sessions} />
         </FadeIn>
       )}
 
