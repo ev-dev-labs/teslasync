@@ -430,10 +430,32 @@ function RuleCard({ rule, lastTriggered, onUpdate, onDelete }: {
           </span>
         )}
         {rule.updated_at && (
-          <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] ml-auto">
+          <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
             Updated {getTimeAgo(rule.updated_at)}
           </span>
         )}
+        <span className="ml-auto flex items-center gap-1">
+          <button
+            onClick={() => onUpdate({ enabled: !rule.enabled })}
+            className={clsx('px-2 py-1 rounded text-[10px] font-medium transition-all',
+              rule.enabled ? 'bg-neon-amber/10 text-neon-amber hover:bg-neon-amber/20' : 'bg-neon-green/10 text-neon-green hover:bg-neon-green/20'
+            )}
+          >
+            {rule.enabled ? 'Disable' : 'Enable'}
+          </button>
+          <button
+            onClick={() => { setThresholdValue(String(rule.threshold)); setEditingThreshold(true) }}
+            className="px-2 py-1 rounded text-[10px] font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 transition-all flex items-center gap-1"
+          >
+            <Pencil className="h-2.5 w-2.5" /> Edit
+          </button>
+          <button
+            onClick={onDelete}
+            className="px-2 py-1 rounded text-[10px] font-medium bg-neon-red/10 text-neon-red hover:bg-neon-red/20 transition-all"
+          >
+            Delete
+          </button>
+        </span>
       </div>
     </GlassPanel>
   )
@@ -618,9 +640,9 @@ function CreateRuleModal({ open, onClose, vehicles, channels }: {
           </div>
 
           {/* Notification Channels */}
-          {channels.length > 0 && (
-            <div>
-              <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Notification Channels</label>
+          <div>
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Notify Via</label>
+            {channels.length > 0 ? (
               <div className="space-y-2 mt-1.5">
                 {channels.map(ch => (
                   <label key={ch.id} className="flex items-center gap-2 text-xs cursor-pointer group">
@@ -644,8 +666,13 @@ function CreateRuleModal({ open, onClose, vehicles, channels }: {
                   </label>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="mt-1.5 rounded-lg border border-dashed border-white/10 p-3 text-center">
+                <p className="text-xs text-[var(--text-muted)]">No notification channels configured.</p>
+                <a href="/notifications" className="text-xs text-neon-cyan hover:underline mt-1 inline-block">+ Add a channel (Discord, Slack, Email...)</a>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Actions */}
