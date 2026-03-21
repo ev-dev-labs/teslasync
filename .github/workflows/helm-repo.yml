@@ -67,10 +67,15 @@ jobs:
           helm push .helm-repo/teslasync-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
 
       - name: Download existing index
-        continue-on-error: true
         run: |
-          curl -sSL https://teslasync-labs.github.io/teslasync/helm/index.yaml \
-            -o .helm-repo/existing-index.yaml 2>/dev/null || true
+          HTTP_CODE=$(curl -sSL -w '%{http_code}' -o .helm-repo/existing-index.yaml \
+            https://teslasync-labs.github.io/teslasync/helm/index.yaml 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" != "200" ] || ! grep -q "apiVersion:" .helm-repo/existing-index.yaml 2>/dev/null; then
+            echo "No valid existing index found (HTTP $HTTP_CODE) — creating fresh"
+            rm -f .helm-repo/existing-index.yaml
+          else
+            echo "Existing index downloaded successfully"
+          fi
 
       - name: Generate repo index
         run: |
@@ -78,11 +83,11 @@ jobs:
             helm repo index .helm-repo \
               --url https://teslasync-labs.github.io/teslasync/helm \
               --merge .helm-repo/existing-index.yaml
+            rm -f .helm-repo/existing-index.yaml
           else
             helm repo index .helm-repo \
               --url https://teslasync-labs.github.io/teslasync/helm
           fi
-          rm -f .helm-repo/existing-index.yaml
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
