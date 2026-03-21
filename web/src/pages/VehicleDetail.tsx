@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus } from '../api'
@@ -6,7 +7,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
-  Cpu, BatteryCharging, ChevronRight,
+  Cpu, BatteryCharging, ChevronRight, Wrench, Plus, Trash2, X,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,6 +15,7 @@ import {
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge } from '../components/ui'
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
+import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
@@ -43,6 +45,216 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
         </p>
       ))}
     </div>
+  )
+}
+
+interface MaintenanceRecord {
+  id: string
+  date: string
+  type: 'tire_rotation' | 'cabin_filter' | 'brake_fluid' | 'wiper_blades' | 'tire_replacement' | 'service_visit' | 'other'
+  description: string
+  cost: number
+  odometer: number
+  nextDue?: number
+}
+
+const maintenanceTypeConfig: Record<MaintenanceRecord['type'], { icon: string; label: string; interval: number }> = {
+  tire_rotation: { icon: '🔄', label: 'Tire Rotation', interval: 10000 },
+  cabin_filter: { icon: '🌬️', label: 'Cabin Filter', interval: 20000 },
+  brake_fluid: { icon: '💧', label: 'Brake Fluid', interval: 40000 },
+  wiper_blades: { icon: '🪟', label: 'Wiper Blades', interval: 15000 },
+  tire_replacement: { icon: '🛞', label: 'Tire Replacement', interval: 50000 },
+  service_visit: { icon: '🔧', label: 'Service Visit', interval: 20000 },
+  other: { icon: '📋', label: 'Other', interval: 0 },
+}
+
+const MAINTENANCE_TYPES = Object.keys(maintenanceTypeConfig) as MaintenanceRecord['type'][]
+
+function MaintenanceLog({ vehicleId }: { vehicleId: number }) {
+  const storageKey = `teslasync-maintenance-${vehicleId}`
+  const [records, setRecords] = useState<MaintenanceRecord[]>(() => {
+    const stored = localStorage.getItem(storageKey)
+    return stored ? JSON.parse(stored) : []
+  })
+  const [showForm, setShowForm] = useState(false)
+  const [formType, setFormType] = useState<MaintenanceRecord['type']>('service_visit')
+  const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  const [formDesc, setFormDesc] = useState('')
+  const [formCost, setFormCost] = useState('')
+  const [formOdo, setFormOdo] = useState('')
+  const [formNextDue, setFormNextDue] = useState('')
+
+  const addRecord = (record: MaintenanceRecord) => {
+    const updated = [record, ...records]
+    setRecords(updated)
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+    setShowForm(false)
+    resetForm()
+  }
+
+  const deleteRecord = (id: string) => {
+    const updated = records.filter(r => r.id !== id)
+    setRecords(updated)
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+  }
+
+  const resetForm = () => {
+    setFormType('service_visit')
+    setFormDate(new Date().toISOString().slice(0, 10))
+    setFormDesc('')
+    setFormCost('')
+    setFormOdo('')
+    setFormNextDue('')
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    addRecord({
+      id: Date.now().toString(),
+      date: formDate,
+      type: formType,
+      description: formDesc,
+      cost: parseFloat(formCost) || 0,
+      odometer: parseFloat(formOdo) || 0,
+      nextDue: formNextDue ? parseFloat(formNextDue) : undefined,
+    })
+  }
+
+  const totalCost = records.reduce((s, r) => s + r.cost, 0)
+
+  return (
+    <FadeIn delay={0.35}>
+      <GlassPanel className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-neon-amber" /> Maintenance Log
+          </h3>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium bg-neon-amber/10 text-neon-amber hover:bg-neon-amber/20 border border-neon-amber/20 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Record
+          </button>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--glass-border)' }}>
+            <p className="text-lg font-bold text-neon-cyan">{records.length}</p>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Total Records</p>
+          </div>
+          <div className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--glass-border)' }}>
+            <p className="text-lg font-bold text-neon-green">${totalCost.toFixed(0)}</p>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Total Cost</p>
+          </div>
+          <div className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--glass-border)' }}>
+            <p className="text-lg font-bold text-neon-amber">{records[0]?.date ? new Date(records[0].date).toLocaleDateString() : '—'}</p>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Last Service</p>
+          </div>
+        </div>
+
+        {/* Add form modal */}
+        <AnimatePresence>
+          {showForm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              onClick={() => setShowForm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={e => e.stopPropagation()}
+                className="glass-panel p-6 w-full max-w-md space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Add Maintenance Record</h2>
+                  <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                    <X className="h-5 w-5" style={{ color: 'var(--text-secondary)' }} />
+                  </button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Service Type</label>
+                    <select
+                      value={formType}
+                      onChange={e => setFormType(e.target.value as MaintenanceRecord['type'])}
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                    >
+                      {MAINTENANCE_TYPES.map(t => (
+                        <option key={t} value={t}>{maintenanceTypeConfig[t].icon} {maintenanceTypeConfig[t].label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Date</label>
+                    <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Description</label>
+                    <input type="text" value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Brief description..."
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Cost ($)</label>
+                      <input type="number" step="0.01" value={formCost} onChange={e => setFormCost(e.target.value)} placeholder="0.00"
+                        className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                        style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Odometer (km)</label>
+                      <input type="number" value={formOdo} onChange={e => setFormOdo(e.target.value)} placeholder="0"
+                        className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                        style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Next Due (km, optional)</label>
+                    <input type="number" value={formNextDue} onChange={e => setFormNextDue(e.target.value)} placeholder="e.g. 60000"
+                      className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button type="button" onClick={() => setShowForm(false)} className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-white/5 transition-colors" style={{ color: 'var(--text-secondary)' }}>Cancel</button>
+                    <button type="submit" className="rounded-xl px-5 py-2 text-sm font-medium bg-neon-amber/10 text-neon-amber hover:bg-neon-amber/20 border border-neon-amber/20 transition-colors">Add Record</button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Records list */}
+        <div className="space-y-2">
+          {records.map(r => (
+            <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+              <span className="text-xl">{maintenanceTypeConfig[r.type]?.icon || '📋'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{maintenanceTypeConfig[r.type]?.label}: {r.description}</p>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  {new Date(r.date).toLocaleDateString()} · {r.odometer.toLocaleString()} km · ${r.cost}
+                  {r.nextDue ? ` · Next: ${r.nextDue.toLocaleString()} km` : ''}
+                </p>
+              </div>
+              <button onClick={() => deleteRecord(r.id)} className="text-xs text-red-400 hover:text-red-300 shrink-0 flex items-center gap-1 transition-colors">
+                <Trash2 className="h-3 w-3" /> Delete
+              </button>
+            </div>
+          ))}
+          {records.length === 0 && (
+            <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>No maintenance records yet. Add your first record above.</p>
+          )}
+        </div>
+      </GlassPanel>
+    </FadeIn>
   )
 }
 
@@ -372,6 +584,8 @@ export default function VehicleDetail() {
                 )}
               </GlassPanel>
             </FadeIn>
+
+            <MaintenanceLog vehicleId={vehicleId} />
           </div>
         </>
       ) : (

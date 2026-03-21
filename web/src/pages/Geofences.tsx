@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getGeofences, createGeofence, updateGeofence, deleteGeofence, Geofence } from '../api'
-import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap } from 'lucide-react'
+import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap, Bell, Terminal, ChevronDown, ChevronUp } from 'lucide-react'
 import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
@@ -18,6 +18,100 @@ interface FormData {
   cost_per_kwh: string
 }
 
+interface GeofenceAutomationAction {
+  notify: boolean
+  notifyMessage: string
+  command?: string
+}
+
+interface GeofenceAutomation {
+  onEnter: GeofenceAutomationAction
+  onExit: GeofenceAutomationAction
+}
+
+const COMMAND_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: 'lock', label: 'Lock' },
+  { value: 'unlock', label: 'Unlock' },
+  { value: 'sentry_on', label: 'Sentry On' },
+  { value: 'sentry_off', label: 'Sentry Off' },
+  { value: 'climate_on', label: 'Climate On' },
+  { value: 'climate_off', label: 'Climate Off' },
+]
+
+const defaultAutomation: GeofenceAutomation = {
+  onEnter: { notify: false, notifyMessage: '{{vehicle}} arrived at {{geofence}}', command: '' },
+  onExit: { notify: false, notifyMessage: '{{vehicle}} left {{geofence}}', command: '' },
+}
+
+function getAutomation(geofenceId: number | 'new'): GeofenceAutomation {
+  if (geofenceId === 'new') return { ...defaultAutomation, onEnter: { ...defaultAutomation.onEnter }, onExit: { ...defaultAutomation.onExit } }
+  try {
+    const raw = localStorage.getItem(`teslasync-geofence-auto-${geofenceId}`)
+    if (raw) return JSON.parse(raw) as GeofenceAutomation
+  } catch { /* ignore */ }
+  return { ...defaultAutomation, onEnter: { ...defaultAutomation.onEnter }, onExit: { ...defaultAutomation.onExit } }
+}
+
+function saveAutomation(geofenceId: number, automation: GeofenceAutomation) {
+  localStorage.setItem(`teslasync-geofence-auto-${geofenceId}`, JSON.stringify(automation))
+}
+
+function hasActiveAutomation(geofenceId: number): { hasNotify: boolean; hasCommand: boolean } {
+  const auto = getAutomation(geofenceId)
+  return {
+    hasNotify: auto.onEnter.notify || auto.onExit.notify,
+    hasCommand: !!(auto.onEnter.command || auto.onExit.command),
+  }
+}
+
+function AutomationTriggerSection({ label, action, onChange }: {
+  label: string
+  action: GeofenceAutomationAction
+  onChange: (a: GeofenceAutomationAction) => void
+}) {
+  return (
+    <div className="space-y-3">
+      <h5 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{label}</h5>
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={action.notify}
+            onChange={e => onChange({ ...action, notify: e.target.checked })}
+            className="rounded border-[var(--glass-border)] bg-transparent text-neon-purple focus:ring-neon-purple/30"
+          />
+          <span className="text-xs text-[var(--text-secondary)]">Send notification</span>
+        </label>
+      </div>
+      {action.notify && (
+        <div>
+          <label className="block text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Message Template</label>
+          <input
+            type="text"
+            value={action.notifyMessage}
+            onChange={e => onChange({ ...action, notifyMessage: e.target.value })}
+            className="glass-input w-full px-3 py-1.5 text-xs font-mono"
+            placeholder="{{vehicle}} arrived at {{geofence}}"
+          />
+        </div>
+      )}
+      <div>
+        <label className="block text-[10px] text-[var(--text-muted)] mb-1 uppercase tracking-wider">Command</label>
+        <select
+          value={action.command || ''}
+          onChange={e => onChange({ ...action, command: e.target.value || undefined })}
+          className="glass-input w-full px-3 py-1.5 text-xs"
+        >
+          {COMMAND_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
 const emptyForm: FormData = { name: '', latitude: '', longitude: '', radius: '50', cost_per_kwh: '' }
 
 const GEOFENCE_COLORS = ['#a855f7', '#00f0ff', '#10b981', '#f59e0b', '#ef4444', '#4f46e5']
@@ -25,6 +119,7 @@ const GEOFENCE_COLORS = ['#a855f7', '#00f0ff', '#10b981', '#f59e0b', '#ef4444', 
 function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect }: {
   geofence: Geofence; onEdit: () => void; onDelete: () => void; color: string; isSelected: boolean; onSelect: () => void
 }) {
+  const autoStatus = hasActiveAutomation(geofence.id)
   return (
     <GlassPanel hover glow="purple" className={clsx('p-5 transition-all duration-200 group cursor-pointer', isSelected && 'border-neon-purple/30 bg-neon-purple/5')}>
       <div className="flex items-start gap-4" onClick={onSelect}>
@@ -51,6 +146,16 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
             {geofence.cost_per_kwh != null && (
               <span className="flex items-center gap-1 text-neon-green">
                 <Zap className="h-3 w-3" /> ${geofence.cost_per_kwh.toFixed(2)}/kWh
+              </span>
+            )}
+            {autoStatus.hasNotify && (
+              <span className="flex items-center gap-1 text-neon-cyan" title="Notifications enabled">
+                <Bell className="h-3 w-3" /> Notify
+              </span>
+            )}
+            {autoStatus.hasCommand && (
+              <span className="flex items-center gap-1 text-neon-purple" title="Commands configured">
+                <Terminal className="h-3 w-3" /> Command
               </span>
             )}
           </div>
@@ -83,6 +188,16 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
   onCancel: () => void
   isSaving: boolean
 }) {
+  const [automation, setAutomation] = useState<GeofenceAutomation>(() => getAutomation(editing))
+  const [showAutomations, setShowAutomations] = useState(false)
+
+  const handleSubmit = () => {
+    if (typeof editing === 'number') {
+      saveAutomation(editing, automation)
+    }
+    onSubmit()
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -161,9 +276,54 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
           </div>
         </div>
 
+        {/* Automations Section */}
+        <div className="border-t border-[var(--glass-border)] pt-4">
+          <button
+            type="button"
+            onClick={() => setShowAutomations(!showAutomations)}
+            className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <Zap className="h-4 w-4 text-neon-purple" />
+            Automations
+            {showAutomations ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+
+          <AnimatePresence>
+            {showAutomations && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+                  <div className="rounded-lg border border-[var(--glass-border)] p-4 bg-white/[0.02]">
+                    <AutomationTriggerSection
+                      label="On Enter"
+                      action={automation.onEnter}
+                      onChange={onEnter => setAutomation(a => ({ ...a, onEnter }))}
+                    />
+                  </div>
+                  <div className="rounded-lg border border-[var(--glass-border)] p-4 bg-white/[0.02]">
+                    <AutomationTriggerSection
+                      label="On Exit"
+                      action={automation.onExit}
+                      onChange={onExit => setAutomation(a => ({ ...a, onExit }))}
+                    />
+                  </div>
+                </div>
+                {editing === 'new' && (
+                  <p className="text-[10px] text-[var(--text-muted)] mt-2">Automations will be saved after the geofence is created.</p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <div className="flex gap-3">
           <button
-            onClick={onSubmit}
+            onClick={handleSubmit}
             disabled={isSaving || !form.name || !form.latitude || !form.longitude}
             className="neon-button flex items-center gap-2 px-5 py-2 text-sm font-medium disabled:opacity-40"
           >

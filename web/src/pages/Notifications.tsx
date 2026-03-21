@@ -5,7 +5,7 @@ import {
   Bell, Plus, Trash2, TestTube, ToggleLeft, ToggleRight,
   Send, MessageSquare, Mail, Webhook, Hash, Megaphone, Smartphone,
   CheckCircle, XCircle, Clock, BarChart3, X, Pencil, ChevronDown, ChevronUp,
-  Loader2, PlayCircle,
+  Loader2, PlayCircle, FileText, RotateCcw,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -81,6 +81,7 @@ export default function Notifications() {
   const [showForm, setShowForm] = useState(false)
   const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null)
   const [showLogs, setShowLogs] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
   const [testResults, setTestResults] = useState<Record<number, TestResult>>({})
   const [testingAll, setTestingAll] = useState(false)
 
@@ -476,6 +477,33 @@ export default function Notifications() {
         )}
       </AnimatePresence>
 
+      {/* Message Templates toggle */}
+      <FadeIn delay={0.2}>
+        <button
+          onClick={() => setShowTemplates(!showTemplates)}
+          className="flex items-center gap-2 text-sm font-medium transition-colors"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          <FileText className="h-4 w-4" />
+          Message Templates
+          {showTemplates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+      </FadeIn>
+
+      {/* Message Templates section */}
+      <AnimatePresence>
+        {showTemplates && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <NotificationTemplates />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Add/Edit Channel Modal */}
       <AnimatePresence>
         {showForm && (
@@ -691,5 +719,73 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
         </form>
       </motion.div>
     </motion.div>
+  )
+}
+
+const defaultTemplates: Record<string, string> = {
+  low_battery: '🔋 {{vehicle}} battery is at {{battery}}% — consider charging soon',
+  charging_complete: '⚡ {{vehicle}} finished charging — now at {{battery}}%',
+  geofence_enter: '📍 {{vehicle}} arrived at {{location}}',
+  geofence_exit: '📍 {{vehicle}} left {{location}}',
+  speed_limit: '🏎️ {{vehicle}} exceeded {{threshold}} km/h (current: {{speed}} km/h)',
+  tire_pressure_low: '🛞 {{vehicle}} tire pressure low: {{details}}',
+  vehicle_unlocked: '🔓 {{vehicle}} has been unlocked for {{duration}} minutes',
+  software_update: '📲 {{vehicle}} has a software update available: {{version}}',
+  vampire_drain: '🧛 {{vehicle}} losing {{rate}}%/hour while parked',
+  sentry_event: '👁️ Sentry mode event on {{vehicle}}',
+  charging_cost: '💰 {{vehicle}} charging cost ${{cost}} ({{energy}} kWh)',
+  efficiency_drop: '📉 {{vehicle}} efficiency dropped to {{efficiency}} Wh/km',
+}
+
+function NotificationTemplates() {
+  const [templates, setTemplates] = useState<Record<string, string>>(() => {
+    const stored = localStorage.getItem('teslasync-notification-templates')
+    return stored ? { ...defaultTemplates, ...JSON.parse(stored) } : defaultTemplates
+  })
+
+  const save = (type: string, template: string) => {
+    const updated = { ...templates, [type]: template }
+    setTemplates(updated)
+    localStorage.setItem('teslasync-notification-templates', JSON.stringify(updated))
+  }
+
+  const reset = (type: string) => {
+    save(type, defaultTemplates[type])
+  }
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="text-sm font-semibold flex items-center gap-2 mb-1" style={{ color: 'var(--text-primary)' }}>
+        <FileText className="h-4 w-4 text-neon-cyan" /> Message Templates
+      </h3>
+      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+        Customize notification messages. Available variables: {'{{vehicle}}'}, {'{{battery}}'}, {'{{speed}}'}, {'{{location}}'}, {'{{threshold}}'}, {'{{cost}}'}, {'{{energy}}'}, {'{{rate}}'}, {'{{version}}'}, {'{{duration}}'}, {'{{efficiency}}'}, {'{{details}}'}
+      </p>
+      <div className="space-y-3">
+        {Object.entries(templates).map(([type, template]) => (
+          <div key={type} className="flex items-start gap-3">
+            <label className="text-xs font-medium w-32 pt-2 shrink-0 capitalize" style={{ color: 'var(--text-secondary)' }}>
+              {type.replace(/_/g, ' ')}
+            </label>
+            <input
+              type="text"
+              value={template}
+              onChange={e => save(type, e.target.value)}
+              className="flex-1 rounded-lg px-3 py-2 text-xs outline-none transition-colors focus:border-neon-cyan/50"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}
+            />
+            <button
+              onClick={() => reset(type)}
+              className="shrink-0 pt-2 transition-colors flex items-center gap-1"
+              style={{ color: 'var(--text-muted)' }}
+              title="Reset to default"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span className="text-[10px]">Reset</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
   )
 }

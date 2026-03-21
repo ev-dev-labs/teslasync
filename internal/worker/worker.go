@@ -61,6 +61,9 @@ type Worker struct {
 
 	// Per-vehicle adaptive polling state
 	pollingStates  map[int64]*vehiclePollingState
+
+	// Track whether HA discovery has been published for each vehicle
+	haDiscovered map[int64]bool
 }
 
 // New creates a new Worker that polls the Tesla API at the configured interval,
@@ -80,6 +83,7 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		activeCharges: make(map[int64]int64),
 		vehicleHealth: make(map[int64]*vehicleHealth),
 		pollingStates: make(map[int64]*vehiclePollingState),
+		haDiscovered:  make(map[int64]bool),
 	}
 }
 
@@ -425,6 +429,12 @@ func (w *Worker) pollVehicleData(ctx context.Context, vehicle *models.Vehicle) {
 
 	// Track charging sessions
 	w.trackCharging(ctx, vehicle, data)
+
+	// Publish Home Assistant auto-discovery on first successful poll
+	if w.mqttClient != nil && !w.haDiscovered[vehicle.ID] {
+		w.mqttClient.PublishHADiscovery(vehicle)
+		w.haDiscovered[vehicle.ID] = true
+	}
 
 	// Publish to MQTT
 	w.publishVehicleData(vehicle, data)
