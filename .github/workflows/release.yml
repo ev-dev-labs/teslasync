@@ -1,8 +1,13 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch: {}
+
+# DISABLED - quota limit - original triggers:
+# on:
+#   push:
+#     tags: ["v*"]
+
 
 permissions:
   contents: write

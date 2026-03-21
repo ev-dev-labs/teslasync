@@ -1,15 +1,20 @@
 name: Publish Helm Chart
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Chart version (e.g. 0.2.0-alpha.1, 0.2.0-beta.1)"
-        required: false
-        type: string
+  workflow_dispatch: {}
+
+# DISABLED - quota limit - original triggers:
+# on:
+#   push:
+#     branches: [main]
+#     tags: ["v*"]
+#   workflow_dispatch:
+#     inputs:
+#       version:
+#         description: "Chart version (e.g. 0.2.0-alpha.1, 0.2.0-beta.1)"
+#         required: false
+#         type: string
+
 
 permissions:
   contents: write

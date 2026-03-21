@@ -1,9 +1,14 @@
 name: Go Vulnerability Check
 
 on:
-  schedule:
-    - cron: "0 5 * * 1"
-  workflow_dispatch:
+  workflow_dispatch: {}
+
+# DISABLED - quota limit - original triggers:
+# on:
+#   schedule:
+#     - cron: "0 5 * * 1"
+#   workflow_dispatch:
+
 
 permissions:
   contents: read

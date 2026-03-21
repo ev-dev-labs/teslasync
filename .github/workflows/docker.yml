@@ -1,14 +1,19 @@
 name: Docker
 
 on:
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Image tag (e.g. alpha, beta, rc1, my-feature)"
-        required: true
-        type: string
+  workflow_dispatch: {}
+
+# DISABLED - quota limit - original triggers:
+# on:
+#   pull_request:
+#     branches: [main]
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: "Image tag (e.g. alpha, beta, rc1, my-feature)"
+#         required: true
+#         type: string
+
 
 permissions:
   contents: read
