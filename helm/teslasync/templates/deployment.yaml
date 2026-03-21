@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "teslasync.fullname" . }}
+  name: {{ include "teslasync.fullname" . }}-api
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
     app.kubernetes.io/component: backend

@@ -34,7 +34,7 @@ spec:
             backend:
               service:
                 {{- if eq .service "backend" }}
-                name: {{ include "teslasync.fullname" $ }}
+                name: {{ include "teslasync.fullname" $ }}-api
                 port:
                   number: {{ $.Values.service.port }}
                 {{- else }}

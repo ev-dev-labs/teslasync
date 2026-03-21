@@ -16,7 +16,7 @@ spec:
       args:
         - |
           echo "Testing backend health endpoint..."
-          wget --spider --timeout=5 http://{{ include "teslasync.fullname" . }}:{{ .Values.service.port }}/healthz
+          wget --spider --timeout=5 http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/healthz
           echo "Backend: OK"
     {{- if .Values.web.enabled }}
     - name: test-web
