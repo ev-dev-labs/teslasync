@@ -2,15 +2,16 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getDrives, Drive, Vehicle } from '../api'
-import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, Zap, ArrowUpDown, Calendar, MapPin, Download } from 'lucide-react'
+import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, TrendingDown, Zap, ArrowUpDown, Calendar, MapPin, Download, Award, AlertTriangle } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, Pagination, DateRangeFilter } from '../components/ui'
 import { RadialGauge, MetricBar, AnimatedNumber } from '../components/Widgets'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter
+  ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter, ReferenceLine
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { computeDriveScore, getScoreColor } from '../components/DriveScore'
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
@@ -102,6 +103,126 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
         </div>
       </GlassPanel>
     </Link>
+  )
+}
+
+function DriveScoreTrends({ drives }: { drives: Drive[] }) {
+  const scores = useMemo(() => {
+    return drives.filter(d => d.distance > 0).map(d => {
+      const { total } = computeDriveScore(d)
+      return { date: d.start_date, score: total, distance: d.distance }
+    }).reverse() // oldest first for chart
+  }, [drives])
+
+  const avg = scores.length > 0 ? Math.round(scores.reduce((s, d) => s + d.score, 0) / scores.length) : 0
+  const best = scores.length > 0 ? Math.max(...scores.map(s => s.score)) : 0
+  const worst = scores.length > 0 ? Math.min(...scores.map(s => s.score)) : 0
+
+  // Trend: compare last 10 vs previous 10
+  const recent = scores.slice(-10)
+  const previous = scores.slice(-20, -10)
+  const recentAvg = recent.length > 0 ? recent.reduce((s, d) => s + d.score, 0) / recent.length : 0
+  const prevAvg = previous.length > 0 ? previous.reduce((s, d) => s + d.score, 0) / previous.length : 0
+  const trend = previous.length > 0 ? Math.round(recentAvg - prevAvg) : 0
+
+  const chartData = scores.map(s => ({
+    date: new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    score: s.score,
+  }))
+
+  if (scores.length < 3) return null
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-4 flex items-center gap-2">
+        <Award className="h-4 w-4 text-neon-amber" /> Drive Score Trends
+      </h3>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Average</p>
+          <p className="text-2xl font-bold" style={{ color: getScoreColor(avg) }}>{avg}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Best</p>
+          <p className="text-2xl font-bold text-neon-green">{best}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Worst</p>
+          <p className="text-2xl font-bold text-neon-red">{worst}</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Trend</p>
+          <div className="flex items-center justify-center gap-1">
+            {trend >= 0
+              ? <TrendingUp className="h-4 w-4 text-neon-green" />
+              : <TrendingDown className="h-4 w-4 text-neon-red" />
+            }
+            <p className={`text-2xl font-bold ${trend >= 0 ? 'text-neon-green' : 'text-neon-red'}`}>
+              {trend > 0 ? '+' : ''}{trend}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Trend message */}
+      {previous.length > 0 && (
+        <div className={`mb-4 flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg ${
+          trend >= 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'
+        }`}>
+          {trend >= 0
+            ? <><TrendingUp className="h-4 w-4" /> Improving +{Math.abs(trend)}% vs previous drives</>
+            : <><AlertTriangle className="h-4 w-4" /> Declining {trend}% vs previous drives</>
+          }
+        </div>
+      )}
+
+      {/* Area chart */}
+      <div className="h-48 sm:h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} tickLine={false} axisLine={false} />
+            <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} />
+            <Tooltip content={<ChartTooltip />} />
+            <ReferenceLine y={70} stroke="#10b981" strokeDasharray="4 4" strokeOpacity={0.5} />
+            <ReferenceLine y={40} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.5} />
+            <Area
+              type="monotone"
+              dataKey="score"
+              name="Drive Score"
+              stroke="#f59e0b"
+              fill="url(#scoreGrad)"
+              strokeWidth={2}
+              dot={({ cx, cy, payload }: any) => (
+                <circle
+                  key={`${cx}-${cy}`}
+                  cx={cx}
+                  cy={cy}
+                  r={3}
+                  fill={getScoreColor(payload.score)}
+                  stroke="none"
+                />
+              )}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-3 flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-neon-green" /> 70+ Great</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-neon-amber" /> 40-70 Good</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-neon-red" /> &lt;40 Needs improvement</span>
+      </div>
+    </GlassPanel>
   )
 }
 
@@ -327,6 +448,13 @@ export default function Drives() {
               </ResponsiveContainer>
             </div>
           </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Drive Score Trends */}
+      {drives && drives.length > 3 && (
+        <FadeIn delay={0.22}>
+          <DriveScoreTrends drives={drives} />
         </FadeIn>
       )}
 

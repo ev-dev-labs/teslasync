@@ -1,15 +1,213 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getEnergyStats, getChargingSessions, Vehicle } from '../api'
+import { getVehicles, getEnergyStats, getChargingSessions, Vehicle, ChargingSession } from '../api'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
-import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight, DollarSign, Car, TreePine } from 'lucide-react'
+import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight, DollarSign, Car, TreePine, Waves, Home, BatteryCharging, TrendingUp } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ComposedChart, Line, PieChart, Pie, Cell, Brush, Legend
 } from 'recharts'
 import { Link } from 'react-router-dom'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+
+function EnergyFlow({ totalCharged }: { totalCharged: number }) {
+  const totalDriving = totalCharged * 0.75
+  const totalClimate = totalCharged * 0.15
+  const totalLoss = totalCharged * 0.10
+
+  if (totalCharged <= 0) return null
+
+  const maxBar = Math.max(totalDriving, totalClimate, totalLoss, 1)
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-4 flex items-center gap-2">
+        <Waves className="h-4 w-4 text-neon-cyan" /> Energy Flow
+      </h3>
+      <div className="flex items-center gap-4 mt-4">
+        {/* Source */}
+        <div className="rounded-xl border border-neon-amber/20 bg-neon-amber/[0.04] p-4 text-center w-28 shrink-0">
+          <Zap className="h-5 w-5 mx-auto text-neon-amber" />
+          <p className="text-lg font-bold text-neon-amber mt-1">{totalCharged.toFixed(0)}</p>
+          <p className="text-[9px] text-[var(--text-muted)]">kWh Charged</p>
+        </div>
+
+        {/* Arrow */}
+        <div className="flex-1 min-w-8">
+          <div className="h-1 rounded-full bg-gradient-to-r from-neon-amber to-neon-cyan" />
+        </div>
+
+        {/* Distribution */}
+        <div className="space-y-3 flex-1">
+          {[
+            { label: 'Driving', value: totalDriving, color: '#00f0ff', pct: 75 },
+            { label: 'Climate', value: totalClimate, color: '#a855f7', pct: 15 },
+            { label: 'Loss / Vampire', value: totalLoss, color: '#ef4444', pct: 10 },
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-3">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
+                  <span className="text-[10px] font-mono" style={{ color: item.color }}>
+                    {item.value.toFixed(1)} kWh ({item.pct}%)
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${(item.value / maxBar) * 100}%`,
+                      background: item.color,
+                      boxShadow: `0 0 6px ${item.color}40`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </GlassPanel>
+  )
+}
+
+function EnergySourceBreakdown({ sessions }: { sessions: ChargingSession[] }) {
+  const breakdown = useMemo(() => {
+    if (!sessions || sessions.length === 0) return []
+    const sources: Record<string, { energy: number; cost: number }> = {
+      'Home / AC': { energy: 0, cost: 0 },
+      'Supercharger': { energy: 0, cost: 0 },
+      'Other DC': { energy: 0, cost: 0 },
+    }
+    sessions.forEach(s => {
+      const key = s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger'
+        : s.fast_charger_type ? 'Other DC' : 'Home / AC'
+      sources[key].energy += s.charge_energy_added
+      sources[key].cost += s.cost ?? 0
+    })
+    const total = Object.values(sources).reduce((sum, s) => sum + s.energy, 0)
+    const colors: Record<string, string> = { 'Home / AC': '#10b981', 'Supercharger': '#ef4444', 'Other DC': '#f59e0b' }
+    const icons: Record<string, React.ReactNode> = {
+      'Home / AC': <Home className="h-3.5 w-3.5" />,
+      'Supercharger': <Zap className="h-3.5 w-3.5" />,
+      'Other DC': <BatteryCharging className="h-3.5 w-3.5" />,
+    }
+    return Object.entries(sources)
+      .filter(([, d]) => d.energy > 0)
+      .map(([name, data]) => ({
+        name,
+        energy: data.energy,
+        cost: data.cost,
+        pct: total > 0 ? (data.energy / total) * 100 : 0,
+        color: colors[name],
+        icon: icons[name],
+      }))
+  }, [sessions])
+
+  if (breakdown.length === 0) return null
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-4 flex items-center gap-2">
+        <BatteryCharging className="h-4 w-4 text-neon-green" /> Energy Source Breakdown
+      </h3>
+
+      {/* Stacked horizontal bar */}
+      <div className="h-6 rounded-full bg-white/5 overflow-hidden flex mb-4">
+        {breakdown.map(b => (
+          <div
+            key={b.name}
+            className="h-full transition-all duration-700"
+            style={{
+              width: `${b.pct}%`,
+              background: b.color,
+              boxShadow: `0 0 6px ${b.color}30`,
+            }}
+            title={`${b.name}: ${b.energy.toFixed(1)} kWh (${b.pct.toFixed(0)}%)`}
+          />
+        ))}
+      </div>
+
+      {/* Details */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {breakdown.map(b => (
+          <div key={b.name} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.color }} />
+              <span style={{ color: b.color }} className="text-sm font-medium flex items-center gap-1.5">
+                {b.icon} {b.name}
+              </span>
+            </div>
+            <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+              {b.energy.toFixed(1)} <span className="text-xs text-[var(--text-muted)]">kWh</span>
+            </p>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] text-[var(--text-muted)]">{b.pct.toFixed(0)}% of total</span>
+              {b.cost > 0 && <span className="text-[10px] text-neon-green">${b.cost.toFixed(2)}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassPanel>
+  )
+}
+
+function MonthlyEnergyTrend({ sessions }: { sessions: ChargingSession[] }) {
+  const monthlyData = useMemo(() => {
+    if (!sessions || sessions.length === 0) return []
+    const months: Record<string, { energy: number; cost: number; count: number; sortKey: string }> = {}
+    sessions.forEach(s => {
+      const d = new Date(s.start_date)
+      const key = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' })
+      const sortKey = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`
+      if (!months[key]) months[key] = { energy: 0, cost: 0, count: 0, sortKey }
+      months[key].energy += s.charge_energy_added
+      months[key].cost += s.cost ?? 0
+      months[key].count++
+    })
+    return Object.entries(months)
+      .sort(([, a], [, b]) => a.sortKey.localeCompare(b.sortKey))
+      .map(([month, data]) => ({
+        month,
+        energy: parseFloat(data.energy.toFixed(1)),
+        cost: parseFloat(data.cost.toFixed(2)),
+        efficiency: data.energy > 0 ? parseFloat((data.cost / data.energy).toFixed(3)) : 0,
+        sessions: data.count,
+      }))
+  }, [sessions])
+
+  if (monthlyData.length < 2) return null
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="section-title mb-4 flex items-center gap-2">
+        <TrendingUp className="h-4 w-4 text-neon-purple" /> Monthly Energy Trend
+      </h3>
+      <div className="h-56 sm:h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={monthlyData}>
+            <defs>
+              <linearGradient id="monthEnergyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#00f0ff" stopOpacity={0.8} />
+                <stop offset="100%" stopColor="#00f0ff" stopOpacity={0.3} />
+              </linearGradient>
+            </defs>
+            {chartGrid}
+            <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
+            <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} label={{ value: 'kWh', angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 10 } }} />
+            <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} label={{ value: '$/kWh', angle: 90, position: 'insideRight', style: { fill: 'var(--text-muted)', fontSize: 10 } }} />
+            <Tooltip content={<ChartTooltip />} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar yAxisId="left" dataKey="energy" name="Energy (kWh)" fill="url(#monthEnergyGrad)" fillOpacity={0.7} radius={[4, 4, 0, 0]} animationDuration={800} />
+            <Line yAxisId="left" type="monotone" dataKey="cost" name="Cost ($)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: '#f59e0b' }} animationDuration={800} />
+            <Line yAxisId="right" type="monotone" dataKey="efficiency" name="$/kWh" stroke="#a855f7" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 3, fill: '#a855f7' }} animationDuration={800} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </GlassPanel>
+  )
+}
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
   const savings = gasCost - evCost
@@ -494,6 +692,25 @@ export default function Energy() {
               </FadeIn>
             )}
           </div>
+
+          {/* Energy Flow Visualization */}
+          <FadeIn delay={0.27}>
+            <EnergyFlow totalCharged={totalEnergy} />
+          </FadeIn>
+
+          {/* Energy Source Breakdown */}
+          {sessions && sessions.length > 0 && (
+            <FadeIn delay={0.28}>
+              <EnergySourceBreakdown sessions={sessions} />
+            </FadeIn>
+          )}
+
+          {/* Monthly Energy Trend */}
+          {sessions && sessions.length > 0 && (
+            <FadeIn delay={0.29}>
+              <MonthlyEnergyTrend sessions={sessions} />
+            </FadeIn>
+          )}
 
           {/* Recent Charging Sessions (enhanced) */}
           {sessions && sessions.length > 0 && (

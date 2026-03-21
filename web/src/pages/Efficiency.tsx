@@ -23,6 +23,87 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   )
 }
 
+function WeatherImpact({ drives }: { drives: any[] }) {
+  const tempBucketsWeather = useMemo(() => {
+    const buckets = [
+      { label: 'Cold (<5°C)', min: -40, max: 5, drives: [] as any[], color: '#3b82f6' },
+      { label: 'Cool (5-15°C)', min: 5, max: 15, drives: [] as any[], color: '#06b6d4' },
+      { label: 'Mild (15-25°C)', min: 15, max: 25, drives: [] as any[], color: '#10b981' },
+      { label: 'Warm (25-35°C)', min: 25, max: 35, drives: [] as any[], color: '#f59e0b' },
+      { label: 'Hot (>35°C)', min: 35, max: 60, drives: [] as any[], color: '#ef4444' },
+    ]
+
+    drives.forEach(d => {
+      const temp = d.outside_temp_avg ?? d.inside_temp_avg
+      if (temp == null) return
+      const bucket = buckets.find(b => temp >= b.min && temp < b.max)
+      if (bucket) bucket.drives.push(d)
+    })
+
+    return buckets.map(b => ({
+      ...b,
+      count: b.drives.length,
+      avgEfficiency: b.drives.length > 0
+        ? b.drives.reduce((s: number, d: any) => {
+            if (d.distance > 0 && d.start_battery_level != null && d.end_battery_level != null) {
+              return s + ((d.start_battery_level - d.end_battery_level) / 100 * 75000) / d.distance
+            }
+            return s
+          }, 0) / b.drives.filter((d: any) => d.distance > 0 && d.start_battery_level != null && d.end_battery_level != null).length
+        : 0,
+      avgDistance: b.drives.length > 0 ? b.drives.reduce((s: number, d: any) => s + d.distance, 0) / b.drives.length : 0,
+    })).filter(b => b.count > 0)
+  }, [drives])
+
+  const bestTemp = tempBucketsWeather.length > 0
+    ? tempBucketsWeather.reduce((best, b) => b.avgEfficiency > 0 && (best.avgEfficiency === 0 || b.avgEfficiency < best.avgEfficiency) ? b : best, tempBucketsWeather[0])
+    : null
+
+  if (tempBucketsWeather.length === 0) return null
+
+  return (
+    <GlassPanel className="p-6">
+      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+        <Thermometer className="h-4 w-4 text-neon-amber" /> Weather Impact on Efficiency
+      </h3>
+
+      <p className="text-xs text-[var(--text-muted)] mb-4">
+        Analysis based on {drives.length} drives. Best efficiency in <span className="text-neon-green font-medium">{bestTemp?.label}</span> conditions.
+      </p>
+
+      {/* Horizontal bars showing efficiency by temperature */}
+      <div className="space-y-3">
+        {tempBucketsWeather.map(b => (
+          <div key={b.label}>
+            <div className="flex justify-between text-xs mb-1">
+              <span style={{ color: 'var(--text-secondary)' }}>{b.label}</span>
+              <span className="font-mono" style={{ color: b.color }}>{b.avgEfficiency.toFixed(0)} Wh/km · {b.count} drives</span>
+            </div>
+            <div className="h-3 rounded-full" style={{ background: 'var(--surface-2)' }}>
+              <div className="h-full rounded-full transition-all" style={{
+                background: b.color,
+                width: `${Math.min(100, (b.avgEfficiency / 300) * 100)}%`,
+                opacity: 0.7
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tips */}
+      <div className="mt-4 rounded-lg p-3 text-xs" style={{ background: 'rgba(0,240,255,0.05)', border: '1px solid rgba(0,240,255,0.1)' }}>
+        <p className="font-medium text-neon-cyan mb-1">💡 Tips</p>
+        <ul className="space-y-1 text-[var(--text-secondary)]">
+          <li>• Cold weather (&lt;5°C) can increase consumption by 30-50%</li>
+          <li>• Pre-condition while plugged in to save battery in cold weather</li>
+          <li>• Hot weather (&gt;35°C) increases A/C usage, reducing range ~10-15%</li>
+          <li>• Optimal efficiency is typically at 15-25°C</li>
+        </ul>
+      </div>
+    </GlassPanel>
+  )
+}
+
 export default function Efficiency() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -354,6 +435,12 @@ export default function Efficiency() {
               ))}
             </div>
           </GlassPanel>
+        </div>
+      )}
+      {/* Weather Impact */}
+      {drives && drives.length > 0 && (
+        <div className="mt-6">
+          <WeatherImpact drives={drives} />
         </div>
       )}
     </FadeIn>

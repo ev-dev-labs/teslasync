@@ -6,7 +6,7 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
 }
 
-function computeDriveScore(drive: any): { total: number; efficiency: number; speed: number; range: number; trip: number } {
+export function computeDriveScore(drive: any): { total: number; efficiency: number; speed: number; range: number; trip: number } {
   const distance = drive.distance ?? 0
   const durationMin = drive.duration_min ?? 0
   const avgSpeed = durationMin > 0 ? (distance / (durationMin / 60)) : 0
@@ -39,7 +39,7 @@ function computeDriveScore(drive: any): { total: number; efficiency: number; spe
   return { total, efficiency: Math.round(efficiency), speed: Math.round(speed), range: Math.round(rangeScore), trip: Math.round(tripScore) }
 }
 
-function getScoreColor(score: number): string {
+export function getScoreColor(score: number): string {
   if (score < 40) return '#ef4444'
   if (score < 70) return '#f59e0b'
   return '#10b981'
