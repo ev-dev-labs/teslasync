@@ -586,6 +586,20 @@ body::before {
   border-color: #ef4444 !important;
 }
 
+/* ── Mobile Sidebar Scroll Fix ── */
+@media (max-width: 960px) {
+  .VPSidebar {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+  }
+
+  .VPSidebar .nav {
+    overflow-y: visible !important;
+  }
+}
+
 /* ── Mobile Responsive ── */
 @media (max-width: 768px) {
   .VPHero .name {
