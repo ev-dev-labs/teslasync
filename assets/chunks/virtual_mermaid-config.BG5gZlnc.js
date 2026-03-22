@@ -1,0 +1,1 @@
+const r={securityLevel:"loose",startOnLoad:!1,theme:"dark",themeVariables:{primaryColor:"#00f0ff",primaryTextColor:"#e4e4ef",primaryBorderColor:"#00f0ff",lineColor:"#10b981",secondaryColor:"#141430",tertiaryColor:"#0f0f2a"}};export{r as default};

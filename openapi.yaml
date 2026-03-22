@@ -1,0 +1,2452 @@
+openapi: 3.0.3
+info:
+  title: TeslaSync API
+  description: Tesla Fleet Intelligence Platform REST API
+  version: 0.1.0
+  contact:
+    name: TeslaSync
+    url: https://github.com/ev-dev-labs/teslasync
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+tags:
+  - name: Authentication
+    description: Tesla OAuth and user authentication
+  - name: Vehicles
+    description: Vehicle management and live state
+  - name: Drives
+    description: Drive history and details
+  - name: Charging
+    description: Charging session history
+  - name: Geofences
+    description: Geofence CRUD operations
+  - name: Settings
+    description: Application settings
+  - name: Alerts
+    description: Alert history and alert rules
+  - name: Analytics
+    description: Fleet-wide analytics
+  - name: Notifications
+    description: Notification channels and delivery
+  - name: Chatbot
+    description: AI-powered natural language queries
+  - name: TirePressure
+    description: Tire pressure monitoring
+  - name: SoftwareUpdates
+    description: Vehicle software update history
+  - name: VampireDrain
+    description: Vampire drain tracking
+  - name: Locations
+    description: Visited locations
+  - name: Mileage
+    description: Daily and monthly mileage statistics
+  - name: Trips
+    description: Multi-drive trip aggregation
+  - name: VehicleState
+    description: Vehicle state timeline and summaries
+  - name: Search
+    description: Global search across vehicles, drives, and locations
+  - name: Webhook
+    description: Inbound webhooks for external systems
+  - name: Export
+    description: Data export (CSV / JSON)
+  - name: System
+    description: Health checks, metrics, and system status
+  - name: Users
+    description: User login and profile
+
+paths:
+  # ──────────────────────────────────────────────
+  # Authentication
+  # ──────────────────────────────────────────────
+  /auth/login:
+    get:
+      summary: Initiate Tesla OAuth login
+      tags: [Authentication]
+      responses:
+        '200':
+          description: OAuth URL and CSRF state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auth_url:
+                    type: string
+                    example: https://auth.tesla.com/oauth2/v3/authorize?client_id=...
+                  state:
+                    type: string
+                    example: abc123
+
+  /auth/callback:
+    get:
+      summary: Tesla OAuth callback
+      tags: [Authentication]
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from Tesla
+      responses:
+        '302':
+          description: Redirects to /?auth=success
+
+  /auth/refresh:
+    post:
+      summary: Refresh Tesla OAuth token
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: refreshed
+
+  /auth/status:
+    get:
+      summary: Check authentication status
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                  expires_at:
+                    type: string
+                    format: date-time
+                  expired:
+                    type: boolean
+              example:
+                authenticated: true
+                expires_at: "2025-01-15T12:00:00Z"
+                expired: false
+
+  # ──────────────────────────────────────────────
+  # Users
+  # ──────────────────────────────────────────────
+  /users/login:
+    post:
+      summary: Login with username and password
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: string
+                  role:
+                    type: string
+                    enum: [admin]
+                  expires:
+                    type: string
+                    format: date-time
+              example:
+                token: eyJhbGciOiJIUzI1NiIs...
+                user: admin
+                role: admin
+                expires: "2025-01-16T12:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      summary: Get current user info
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                  user_id:
+                    type: integer
+                  username:
+                    type: string
+                  role:
+                    type: string
+
+  # ──────────────────────────────────────────────
+  # Vehicles
+  # ──────────────────────────────────────────────
+  /vehicles:
+    get:
+      summary: List all vehicles
+      tags: [Vehicles]
+      responses:
+        '200':
+          description: Vehicle list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+              example:
+                - id: 1
+                  vehicle_id: 123456789
+                  vin: 5YJ3E1EA1PF000001
+                  display_name: My Tesla
+                  state: online
+                  healthy: true
+
+  /vehicles/sync:
+    post:
+      summary: Sync vehicles from Tesla API
+      tags: [Vehicles]
+      responses:
+        '200':
+          description: Synced vehicles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: integer
+                  vehicles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /vehicles/{vehicleID}:
+    get:
+      summary: Get vehicle by ID
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+      responses:
+        '200':
+          description: Vehicle details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete a vehicle
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+      responses:
+        '204':
+          description: Vehicle deleted
+
+  /vehicles/{vehicleID}/positions:
+    get:
+      summary: Get vehicle position history
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Position list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+
+  /vehicles/{vehicleID}/state:
+    get:
+      summary: Get current vehicle state (live or cached)
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+      responses:
+        '200':
+          description: Current state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  state:
+                    $ref: '#/components/schemas/VehicleState'
+                  vehicle:
+                    $ref: '#/components/schemas/Vehicle'
+                  position:
+                    $ref: '#/components/schemas/Position'
+                  live:
+                    type: boolean
+
+  /vehicles/{vehicleID}/wake:
+    post:
+      summary: Wake up a vehicle
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+      responses:
+        '200':
+          description: Wake command sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: waking
+        '502':
+          description: Tesla API error
+
+  /vehicles/{vehicleID}/command:
+    post:
+      summary: Send a command to a vehicle
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command]
+              properties:
+                command:
+                  type: string
+                  example: honk_horn
+                params:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Command result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  result:
+                    type: string
+
+  /vehicles/{vehicleID}/energy:
+    get:
+      summary: Get vehicle energy statistics
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 3650
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD), overrides days
+      responses:
+        '200':
+          description: Energy statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vehicle_id:
+                    type: integer
+                  period_days:
+                    type: integer
+                  total_kwh:
+                    type: number
+                  total_cost:
+                    type: number
+                  daily_breakdown:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnergyStatsRow'
+
+  /vehicles/{vehicleID}/battery:
+    get:
+      summary: Get battery health report
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/vehicleIDPath'
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 3650
+            maximum: 3650
+      responses:
+        '200':
+          description: Battery health report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatteryReport'
+
+  # ──────────────────────────────────────────────
+  # Drives
+  # ──────────────────────────────────────────────
+  /drives:
+    get:
+      summary: List drives for a vehicle
+      tags: [Drives]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Drive list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Drive'
+
+  /drives/{driveID}:
+    get:
+      summary: Get drive by ID
+      tags: [Drives]
+      parameters:
+        - name: driveID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Drive details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Drive'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ──────────────────────────────────────────────
+  # Charging
+  # ──────────────────────────────────────────────
+  /charging:
+    get:
+      summary: List charging sessions for a vehicle
+      tags: [Charging]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Charging session list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChargingSession'
+
+  /charging/{sessionID}:
+    get:
+      summary: Get charging session by ID
+      tags: [Charging]
+      parameters:
+        - name: sessionID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Charging session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargingSession'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ──────────────────────────────────────────────
+  # Geofences
+  # ──────────────────────────────────────────────
+  /geofences:
+    get:
+      summary: List all geofences
+      tags: [Geofences]
+      responses:
+        '200':
+          description: Geofence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Geofence'
+    post:
+      summary: Create a geofence
+      tags: [Geofences]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeofenceInput'
+            example:
+              name: Home
+              latitude: 37.7749
+              longitude: -122.4194
+              radius: 100
+      responses:
+        '201':
+          description: Geofence created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Geofence'
+
+  /geofences/{geofenceID}:
+    get:
+      summary: Get geofence by ID
+      tags: [Geofences]
+      parameters:
+        - name: geofenceID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Geofence details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Geofence'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a geofence
+      tags: [Geofences]
+      parameters:
+        - name: geofenceID
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeofenceInput'
+      responses:
+        '200':
+          description: Geofence updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Geofence'
+    delete:
+      summary: Delete a geofence
+      tags: [Geofences]
+      parameters:
+        - name: geofenceID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Geofence deleted
+
+  # ──────────────────────────────────────────────
+  # Settings
+  # ──────────────────────────────────────────────
+  /settings:
+    get:
+      summary: Get application settings
+      tags: [Settings]
+      responses:
+        '200':
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+    put:
+      summary: Update application settings
+      tags: [Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Settings'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+
+  # ──────────────────────────────────────────────
+  # Alerts
+  # ──────────────────────────────────────────────
+  /alerts:
+    get:
+      summary: List alerts
+      tags: [Alerts]
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+
+  /alerts/{alertID}/read:
+    post:
+      summary: Mark an alert as read
+      tags: [Alerts]
+      parameters:
+        - name: alertID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Alert marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /alerts/rules:
+    get:
+      summary: List alert rules
+      tags: [Alerts]
+      responses:
+        '200':
+          description: Alert rule list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertRule'
+    post:
+      summary: Create an alert rule
+      tags: [Alerts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                  example: Low Battery Warning
+                type:
+                  type: string
+                  example: battery_low
+                enabled:
+                  type: boolean
+                  default: true
+                threshold:
+                  type: number
+                  example: 20
+                severity:
+                  type: string
+                  enum: [info, warning, critical]
+                vehicle_id:
+                  type: integer
+                  nullable: true
+      responses:
+        '201':
+          description: Alert rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRule'
+
+  /alerts/rules/{ruleID}:
+    put:
+      summary: Update an alert rule
+      tags: [Alerts]
+      parameters:
+        - name: ruleID
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                threshold:
+                  type: number
+      responses:
+        '200':
+          description: Alert rule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRule'
+    delete:
+      summary: Delete an alert rule
+      tags: [Alerts]
+      parameters:
+        - name: ruleID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rule deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+
+  # ──────────────────────────────────────────────
+  # Analytics
+  # ──────────────────────────────────────────────
+  /analytics/fleet:
+    get:
+      summary: Get fleet-wide analytics
+      tags: [Analytics]
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 3650
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD), overrides days
+      responses:
+        '200':
+          description: Fleet analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetAnalytics'
+
+  # ──────────────────────────────────────────────
+  # Notifications
+  # ──────────────────────────────────────────────
+  /notifications:
+    get:
+      summary: List notification channels
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Channel list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationChannel'
+    post:
+      summary: Create a notification channel
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                  example: Discord Alerts
+                type:
+                  type: string
+                  enum: [discord, email, slack, telegram, webhook, ntfy, pushover]
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  example:
+                    webhook_url: https://discord.com/api/webhooks/...
+                enabled:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationChannel'
+
+  /notifications/logs:
+    get:
+      summary: Get notification delivery logs
+      tags: [Notifications]
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Notification logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationLog'
+
+  /notifications/stats:
+    get:
+      summary: Get notification delivery statistics
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Notification stats
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /notifications/{channelID}:
+    get:
+      summary: Get notification channel by ID
+      tags: [Notifications]
+      parameters:
+        - name: channelID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Channel details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationChannel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a notification channel
+      tags: [Notifications]
+      parameters:
+        - name: channelID
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Channel updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationChannel'
+    delete:
+      summary: Delete a notification channel
+      tags: [Notifications]
+      parameters:
+        - name: channelID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Channel deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: deleted
+
+  /notifications/{channelID}/toggle:
+    post:
+      summary: Toggle notification channel enabled state
+      tags: [Notifications]
+      parameters:
+        - name: channelID
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Channel toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  enabled:
+                    type: boolean
+
+  /notifications/{channelID}/test:
+    post:
+      summary: Send a test notification through a channel
+      tags: [Notifications]
+      parameters:
+        - name: channelID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  error:
+                    type: string
+
+  # ──────────────────────────────────────────────
+  # Chatbot
+  # ──────────────────────────────────────────────
+  /chatbot:
+    post:
+      summary: Send a natural language query
+      tags: [Chatbot]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  example: How far did I drive last week?
+                session_id:
+                  type: string
+      responses:
+        '200':
+          description: Chatbot response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  session_id:
+                    type: string
+
+  /chatbot/history:
+    get:
+      summary: Get chat history for a session
+      tags: [Chatbot]
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatMessage'
+
+  /chatbot/sessions:
+    get:
+      summary: List chatbot sessions
+      tags: [Chatbot]
+      responses:
+        '200':
+          description: Session ID list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  # ──────────────────────────────────────────────
+  # Tire Pressure
+  # ──────────────────────────────────────────────
+  /tire-pressure:
+    get:
+      summary: List tire pressure snapshots
+      tags: [TirePressure]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Tire pressure history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TirePressureSnapshot'
+
+  /tire-pressure/latest:
+    get:
+      summary: Get latest tire pressure reading
+      tags: [TirePressure]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Latest tire pressure snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TirePressureSnapshot'
+
+  # ──────────────────────────────────────────────
+  # Software Updates
+  # ──────────────────────────────────────────────
+  /software-updates:
+    get:
+      summary: List software updates
+      tags: [SoftwareUpdates]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Software update list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SoftwareUpdate'
+
+  # ──────────────────────────────────────────────
+  # Vampire Drain
+  # ──────────────────────────────────────────────
+  /vampire-drain:
+    get:
+      summary: List vampire drain events
+      tags: [VampireDrain]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Vampire drain events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VampireDrainEvent'
+
+  /vampire-drain/stats:
+    get:
+      summary: Get vampire drain statistics
+      tags: [VampireDrain]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Aggregated vampire drain stats
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────────────────────────────────────
+  # Locations
+  # ──────────────────────────────────────────────
+  /locations:
+    get:
+      summary: List visited locations
+      tags: [Locations]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Visited location list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisitedLocation'
+
+  # ──────────────────────────────────────────────
+  # Mileage
+  # ──────────────────────────────────────────────
+  /mileage/daily:
+    get:
+      summary: Get daily mileage
+      tags: [Mileage]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: Daily mileage records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailyMileage'
+
+  /mileage/monthly:
+    get:
+      summary: Get monthly mileage aggregation
+      tags: [Mileage]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Monthly mileage data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    month:
+                      type: string
+                      example: "2025-01"
+                    distance_km:
+                      type: number
+                    drive_count:
+                      type: integer
+
+  /mileage/stats:
+    get:
+      summary: Get mileage statistics
+      tags: [Mileage]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Mileage statistics
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────────────────────────────────────
+  # Trips
+  # ──────────────────────────────────────────────
+  /trips:
+    get:
+      summary: List trips
+      tags: [Trips]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Trip list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trip'
+
+  # ──────────────────────────────────────────────
+  # Vehicle State Timeline
+  # ──────────────────────────────────────────────
+  /states/timeline:
+    get:
+      summary: Get vehicle state timeline
+      tags: [VehicleState]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+      responses:
+        '200':
+          description: State timeline
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleStateRecord'
+
+  /states/summary:
+    get:
+      summary: Get vehicle state summary
+      tags: [VehicleState]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 3650
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: State summary
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /states/daily:
+    get:
+      summary: Get daily state breakdown
+      tags: [VehicleState]
+      parameters:
+        - name: vehicle_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 3650
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Daily state breakdown
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ──────────────────────────────────────────────
+  # Webhook
+  # ──────────────────────────────────────────────
+  /webhook:
+    post:
+      summary: Receive inbound webhook from external systems
+      description: Accepts events from Home Assistant, IFTTT, Node-RED, etc.
+      tags: [Webhook]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event:
+                  type: string
+                  enum: [alert, command, note]
+                title:
+                  type: string
+                message:
+                  type: string
+                severity:
+                  type: string
+                  enum: [info, warning, critical]
+                vehicle:
+                  type: string
+                  description: VIN or display name
+                data:
+                  type: object
+                  additionalProperties: true
+            example:
+              event: alert
+              title: Garage Door Open
+              message: Vehicle left with garage door open
+              severity: warning
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: alert_created
+                  id:
+                    type: integer
+
+  # ──────────────────────────────────────────────
+  # Search
+  # ──────────────────────────────────────────────
+  /search:
+    get:
+      summary: Global search across vehicles, drives, and locations
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          description: Search query (min 2 characters)
+      responses:
+        '200':
+          description: Search results grouped by type
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [vehicle, drive, location]
+                    id:
+                      type: integer
+                    display_name:
+                      type: string
+              example:
+                - type: vehicle
+                  id: 1
+                  display_name: My Tesla
+                  vin: 5YJ3E1EA1PF000001
+                - type: location
+                  id: 5
+                  display_name: Supercharger SF
+                  visit_count: 12
+
+  # ──────────────────────────────────────────────
+  # Export
+  # ──────────────────────────────────────────────
+  /export/{type}:
+    get:
+      summary: Export data as CSV or JSON
+      tags: [Export]
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [drives, charging]
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: File download
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  # ──────────────────────────────────────────────
+  # Events (SSE)
+  # ──────────────────────────────────────────────
+  /events:
+    get:
+      summary: Real-time event stream (Server-Sent Events)
+      tags: [System]
+      responses:
+        '200':
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  # ──────────────────────────────────────────────
+  # System
+  # ──────────────────────────────────────────────
+  /system/status:
+    get:
+      summary: Get system component status
+      tags: [System]
+      responses:
+        '200':
+          description: System status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  database:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      consecutive_failures:
+                        type: integer
+                  tesla_api:
+                    type: object
+                  mqtt:
+                    type: object
+
+  /system/health:
+    get:
+      summary: Extended health check
+      tags: [System]
+      responses:
+        '200':
+          description: Extended health
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded]
+                  components:
+                    type: object
+                  database:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      latency_ms:
+                        type: number
+                  database_pool:
+                    type: object
+                    properties:
+                      total_conns:
+                        type: integer
+                      idle_conns:
+                        type: integer
+                      acquired_conns:
+                        type: integer
+                  system:
+                    type: object
+                    properties:
+                      goroutines:
+                        type: integer
+                      go_version:
+                        type: string
+                      uptime_seconds:
+                        type: number
+                  checked_at:
+                    type: string
+                    format: date-time
+
+  /system/api-usage:
+    get:
+      summary: Get Tesla API usage statistics
+      tags: [System]
+      responses:
+        '200':
+          description: API usage stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_requests:
+                    type: integer
+                  skipped_polls:
+                    type: integer
+                  estimated_cost:
+                    type: number
+                  cost_per_request:
+                    type: number
+                  monthly_credit:
+                    type: number
+                  estimated_remaining:
+                    type: number
+
+  /system/compression-stats:
+    get:
+      summary: Get position data compression statistics
+      tags: [System]
+      responses:
+        '200':
+          description: Compression stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_positions:
+                    type: integer
+                  compressed_positions:
+                    type: integer
+                  estimated_saved_rows:
+                    type: integer
+                  estimated_saved_bytes:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    vehicleIDPath:
+      name: vehicleID
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Vehicle ID
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 1000
+    offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: not found
+            code: NOT_FOUND
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: unauthorized
+            code: UNAUTHORIZED
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - BAD_REQUEST
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - INTERNAL_ERROR
+            - RATE_LIMITED
+            - SERVICE_UNAVAILABLE
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        vin:
+          type: string
+        display_name:
+          type: string
+        model:
+          type: string
+        trim_badging:
+          type: string
+        exterior_color:
+          type: string
+        wheel_type:
+          type: string
+        state:
+          type: string
+          enum: [online, asleep, driving, charging, offline]
+        healthy:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Position:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        speed:
+          type: number
+        power:
+          type: number
+        heading:
+          type: integer
+        elevation:
+          type: number
+        odometer:
+          type: number
+        ideal_range:
+          type: number
+        rated_range:
+          type: number
+        battery_level:
+          type: integer
+        inside_temp:
+          type: number
+        outside_temp:
+          type: number
+        is_climate_on:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    VehicleState:
+      type: object
+      properties:
+        vehicle_id:
+          type: integer
+        state:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        speed:
+          type: number
+        power:
+          type: number
+        battery_level:
+          type: integer
+        rated_range:
+          type: number
+        ideal_range:
+          type: number
+        odometer:
+          type: number
+        inside_temp:
+          type: number
+        outside_temp:
+          type: number
+        is_climate_on:
+          type: boolean
+        is_charging:
+          type: boolean
+        charger_power:
+          type: number
+        charge_rate:
+          type: number
+        time_to_full_chg:
+          type: number
+        is_locked:
+          type: boolean
+        sentry_mode:
+          type: boolean
+        software_version:
+          type: string
+
+    Drive:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        distance:
+          type: number
+          description: Distance in km
+        duration_min:
+          type: number
+        start_range_km:
+          type: number
+          nullable: true
+        end_range_km:
+          type: number
+          nullable: true
+        speed_max:
+          type: number
+          nullable: true
+        power_max:
+          type: number
+          nullable: true
+        power_min:
+          type: number
+          nullable: true
+        start_battery_level:
+          type: integer
+          nullable: true
+        end_battery_level:
+          type: integer
+          nullable: true
+        inside_temp_avg:
+          type: number
+          nullable: true
+        outside_temp_avg:
+          type: number
+          nullable: true
+
+    ChargingSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        charge_energy_added:
+          type: number
+          description: Energy added in kWh
+        charge_energy_used:
+          type: number
+          nullable: true
+        start_battery_level:
+          type: integer
+        end_battery_level:
+          type: integer
+        charger_power:
+          type: number
+          nullable: true
+        fast_charger_type:
+          type: string
+          nullable: true
+        fast_charger_brand:
+          type: string
+          nullable: true
+        cost:
+          type: number
+          nullable: true
+        duration_min:
+          type: number
+
+    Geofence:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        radius:
+          type: number
+          description: Radius in meters
+        created_at:
+          type: string
+          format: date-time
+
+    GeofenceInput:
+      type: object
+      required: [name, latitude, longitude, radius]
+      properties:
+        name:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        radius:
+          type: number
+          minimum: 1
+
+    Settings:
+      type: object
+      additionalProperties: true
+      description: Application settings (schema varies by deployment)
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+          nullable: true
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    AlertRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        enabled:
+          type: boolean
+        threshold:
+          type: number
+        severity:
+          type: string
+        vehicle_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    FleetAnalytics:
+      type: object
+      properties:
+        period_days:
+          type: integer
+        total_vehicles:
+          type: integer
+        total_distance_km:
+          type: number
+        total_drives:
+          type: integer
+        total_charging_sessions:
+          type: integer
+        total_energy_kwh:
+          type: number
+        total_cost:
+          type: number
+        avg_efficiency_wh_km:
+          type: number
+        most_efficient_vehicle:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            efficiency:
+              type: number
+        vehicle_comparison:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              drives:
+                type: integer
+              distance:
+                type: number
+              energy:
+                type: number
+              efficiency:
+                type: number
+        drive_analytics:
+          type: object
+          properties:
+            hourly_pattern:
+              type: array
+              items:
+                type: object
+            day_of_week:
+              type: array
+              items:
+                type: object
+            speed_distribution:
+              type: array
+              items:
+                type: object
+            distance_distribution:
+              type: array
+              items:
+                type: object
+            daily_trend:
+              type: array
+              items:
+                type: object
+            temp_vs_efficiency:
+              type: array
+              items:
+                type: object
+        charging_analytics:
+          type: object
+          properties:
+            hourly_pattern:
+              type: array
+              items:
+                type: object
+            charger_types:
+              type: array
+              items:
+                type: object
+            monthly_trend:
+              type: array
+              items:
+                type: object
+        battery_trend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              health_score:
+                type: number
+              capacity_kwh:
+                type: number
+              degradation_pct:
+                type: number
+
+    NotificationChannel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [discord, email, slack, telegram, webhook, ntfy, pushover]
+        config:
+          type: object
+          additionalProperties:
+            type: string
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        channel_id:
+          type: integer
+        title:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+          enum: [sent, failed]
+        error:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        session_id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TirePressureSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        front_left:
+          type: number
+          nullable: true
+        front_right:
+          type: number
+          nullable: true
+        rear_left:
+          type: number
+          nullable: true
+        rear_right:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    SoftwareUpdate:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        version:
+          type: string
+        status:
+          type: string
+          enum: [available, downloading, installing, installed]
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+        installed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    VampireDrainEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        start_battery:
+          type: integer
+        end_battery:
+          type: integer
+          nullable: true
+        battery_lost:
+          type: integer
+        range_lost_km:
+          type: number
+        duration_hours:
+          type: number
+        drain_rate_pct_per_hour:
+          type: number
+        outside_temp_avg:
+          type: number
+          nullable: true
+        sentry_mode:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    VisitedLocation:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        address_id:
+          type: integer
+          nullable: true
+        address_name:
+          type: string
+        visit_count:
+          type: integer
+        total_duration_min:
+          type: number
+        last_visited:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    DailyMileage:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        date:
+          type: string
+          format: date
+        distance_km:
+          type: number
+        odometer_start:
+          type: number
+        odometer_end:
+          type: number
+        drive_count:
+          type: integer
+        energy_used_kwh:
+          type: number
+
+    Trip:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        name:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        total_distance_km:
+          type: number
+        total_energy_kwh:
+          type: number
+        total_cost:
+          type: number
+        drive_count:
+          type: integer
+        charge_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    VehicleStateRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        state:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        duration_min:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+
+    EnergyStatsRow:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        energy_kwh:
+          type: number
+        cost:
+          type: number
+
+    BatteryReport:
+      type: object
+      properties:
+        vehicle_id:
+          type: integer
+        health_score:
+          type: number
+        capacity_kwh:
+          type: number
+        degradation_pct:
+          type: number
+        est_range_km:
+          type: number
+        cycle_count:
+          type: integer
+        avg_cell_temp_c:
+          type: number
+        monthly_trend:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+              health_score:
+                type: number
+              capacity_kwh:
+                type: number
+              est_range_km:
+                type: number
