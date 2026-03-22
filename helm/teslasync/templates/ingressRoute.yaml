@@ -1,18 +1,18 @@
 {{- if .Values.ingressRoute.enabled }}
-apiVersion: traefik.io/v1alpha1
+apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: {{ include "teslasync.fullname" . }}
+  name: {{ include "teslasync.fullname" . }}-ingressroute
   namespace: {{ .Values.ingressRoute.namespace | default .Release.Namespace }}
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
-  {{- with .Values.ingressRoute.annotations }}
+  {{- if .Values.ingressRoute.annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+{{ toYaml .Values.ingressRoute.annotations | indent 4 }}
   {{- end }}
 spec:
   entryPoints:
-    {{- toYaml .Values.ingressRoute.entryPoints | nindent 4 }}
+{{ toYaml .Values.ingressRoute.entryPoints | indent 4 }}
   routes:
   {{- range .Values.ingressRoute.routes }}
     - match: {{ .match }}
@@ -21,14 +21,13 @@ spec:
       middlewares:
       {{- range .middlewares }}
         - name: {{ .name }}
-          {{- if .namespace }}
-          namespace: {{ .namespace }}
-          {{- end }}
+          namespace: {{ .namespace | default $.Values.ingressRoute.namespace }}
       {{- end }}
       {{- end }}
       services:
       {{- range .services }}
         - name: {{ .name | default (printf "%s-%s" (include "teslasync.fullname" $) (eq (.port | int) 80 | ternary "web" "api")) }}
+          namespace: {{ .namespace | default $.Values.ingressRoute.namespace | default $.Release.Namespace }}
           port: {{ .port }}
       {{- end }}
   {{- end }}
@@ -44,12 +43,10 @@ spec:
     domains:
     {{- range .Values.ingressRoute.tls.domains }}
       - main: {{ .main }}
-        {{- if .sans }}
         sans:
           {{- range .sans }}
           - {{ . }}
           {{- end }}
-        {{- end }}
     {{- end }}
     {{- end }}
   {{- end }}
