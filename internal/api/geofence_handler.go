@@ -2,12 +2,29 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
+
+func validateGeofence(g *models.Geofence) error {
+	if g.Latitude < -90 || g.Latitude > 90 {
+		return fmt.Errorf("latitude must be between -90 and 90")
+	}
+	if g.Longitude < -180 || g.Longitude > 180 {
+		return fmt.Errorf("longitude must be between -180 and 180")
+	}
+	if g.Radius > 100000 {
+		return fmt.Errorf("radius must be 100km or less")
+	}
+	if len(g.Name) > 200 {
+		return fmt.Errorf("name must be 200 characters or less")
+	}
+	return nil
+}
 
 // GeofenceHandler handles geofence CRUD.
 type GeofenceHandler struct {
@@ -36,6 +53,10 @@ func (h *GeofenceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if g.Name == "" || g.Radius <= 0 {
 		writeError(w, http.StatusBadRequest, "name and positive radius required")
+		return
+	}
+	if err := validateGeofence(&g); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -83,6 +104,10 @@ func (h *GeofenceHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if g.Name == "" || g.Radius <= 0 {
 		writeError(w, http.StatusBadRequest, "name and positive radius required")
+		return
+	}
+	if err := validateGeofence(&g); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

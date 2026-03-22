@@ -48,14 +48,18 @@ The Go backend is organized into well-defined packages under `internal/`:
 
 ```
 internal/
-├── api/          # HTTP handlers, middleware, routing
-├── config/       # Environment-based configuration
-├── database/     # PostgreSQL repositories (data access layer)
-├── models/       # Domain models and types
-├── mqtt/         # MQTT telemetry publisher
-├── resilience/   # Circuit breaker, health checks
-├── tesla/        # Tesla Fleet API client
-└── worker/       # Background polling and maintenance jobs
+├── api/            # HTTP handlers, middleware, routing
+├── cache/          # Redis + in-memory cache abstraction
+├── config/         # Environment-based configuration
+├── crypto/         # AES-256-GCM encryption for data at rest
+├── database/       # PostgreSQL repositories (data access layer)
+├── events/         # Domain event bus (MQTT-backed)
+├── models/         # Domain models and types
+├── mqtt/           # MQTT telemetry publisher
+├── notification/   # Notification worker & channel senders
+├── resilience/     # Circuit breaker, health checks
+├── tesla/          # Tesla Fleet API client
+└── worker/         # Background polling and maintenance jobs
 ```
 
 ### Request Flow

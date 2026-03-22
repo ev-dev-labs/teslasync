@@ -88,6 +88,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	batteryHandler := NewBatteryHandler(db)
 	analyticsHandler := NewAnalyticsHandler(db)
 	notificationHandler := NewNotificationHandler(db)
+	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	chatbotHandler := NewChatbotHandler(db)
 	tirePressureHandler := NewTirePressureHandler(db)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
@@ -126,8 +127,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
-				r.Post("/wake", vehicleHandler.Wake)
-				r.Post("/command", commandHandler.SendCommand)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
 				r.Get("/energy", energyHandler.Stats)
 				r.Get("/battery", batteryHandler.Report)
 			})
@@ -179,12 +180,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", notificationHandler.CreateChannel)
 			r.Get("/logs", notificationHandler.GetLogs)
 			r.Get("/stats", notificationHandler.GetStats)
+			r.Get("/analytics", notifScheduleHandler.GetAnalytics)
+			r.Route("/schedules", func(r chi.Router) {
+				r.Get("/", notifScheduleHandler.ListSchedules)
+				r.Post("/", notifScheduleHandler.CreateSchedule)
+				r.Delete("/{scheduleID}", notifScheduleHandler.DeleteSchedule)
+			})
 			r.Route("/{channelID}", func(r chi.Router) {
 				r.Get("/", notificationHandler.GetChannel)
 				r.Put("/", notificationHandler.UpdateChannel)
 				r.Delete("/", notificationHandler.DeleteChannel)
 				r.Post("/toggle", notificationHandler.ToggleChannel)
 				r.Post("/test", notificationHandler.TestChannel)
+				r.Get("/preferences", notifScheduleHandler.GetPreferences)
+				r.Put("/preferences", notifScheduleHandler.UpdatePreference)
+				r.Get("/metrics", notifScheduleHandler.GetChannelMetrics)
 			})
 		})
 
@@ -260,7 +270,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Export
-		r.Get("/export/{type}", NewExportHandler(db))
+		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
 	})
 
 	// Serve frontend static files (SPA)

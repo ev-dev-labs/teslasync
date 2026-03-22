@@ -35,6 +35,32 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate allowed values
+	validUnitsLen := map[string]bool{"km": true, "mi": true}
+	validUnitsTemp := map[string]bool{"C": true, "F": true}
+	validRange := map[string]bool{"ideal": true, "rated": true}
+
+	if s.UnitOfLength != "" && !validUnitsLen[s.UnitOfLength] {
+		writeError(w, http.StatusBadRequest, "unit_of_length must be 'km' or 'mi'")
+		return
+	}
+	if s.UnitOfTemp != "" && !validUnitsTemp[s.UnitOfTemp] {
+		writeError(w, http.StatusBadRequest, "unit_of_temp must be 'C' or 'F'")
+		return
+	}
+	if s.PreferredRange != "" && !validRange[s.PreferredRange] {
+		writeError(w, http.StatusBadRequest, "preferred_range must be 'ideal' or 'rated'")
+		return
+	}
+	if s.BaseCostPerKWh < 0 || s.BaseCostPerKWh > 10 {
+		writeError(w, http.StatusBadRequest, "base_cost_per_kwh must be between 0 and 10")
+		return
+	}
+	if len(s.Language) > 10 {
+		writeError(w, http.StatusBadRequest, "language must be 10 characters or less")
+		return
+	}
+
 	if err := h.settingsRepo.Upsert(r.Context(), &s); err != nil {
 		log.Error().Err(err).Msg("failed to update settings")
 		writeError(w, http.StatusInternalServerError, "failed to update settings")

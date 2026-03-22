@@ -260,15 +260,51 @@ type NotificationChannel struct {
 
 // NotificationLog records a notification delivery attempt.
 type NotificationLog struct {
-	ID        int64      `json:"id" db:"id"`
-	ChannelID int64      `json:"channel_id" db:"channel_id"`
-	AlertID   *int64     `json:"alert_id,omitempty" db:"alert_id"`
-	Title     string     `json:"title" db:"title"`
-	Message   string     `json:"message" db:"message"`
-	Status    string     `json:"status" db:"status"` // pending, sent, failed
-	Error     string     `json:"error,omitempty" db:"error"`
-	CreatedAt time.Time  `json:"created_at" db:"created_at"`
-	SentAt    *time.Time `json:"sent_at,omitempty" db:"sent_at"`
+	ID          int64      `json:"id" db:"id"`
+	ChannelID   int64      `json:"channel_id" db:"channel_id"`
+	AlertID     *int64     `json:"alert_id,omitempty" db:"alert_id"`
+	Title       string     `json:"title" db:"title"`
+	Message     string     `json:"message" db:"message"`
+	Status      string     `json:"status" db:"status"` // pending, sent, failed
+	Error       string     `json:"error,omitempty" db:"error"`
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty" db:"scheduled_at"`
+	LatencyMs   *int       `json:"latency_ms,omitempty" db:"latency_ms"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	SentAt      *time.Time `json:"sent_at,omitempty" db:"sent_at"`
+}
+
+// NotificationSchedule represents a scheduled or recurring notification.
+type NotificationSchedule struct {
+	ID          int64      `json:"id" db:"id"`
+	ChannelID   int64      `json:"channel_id" db:"channel_id"`
+	Title       string     `json:"title" db:"title"`
+	Message     string     `json:"message" db:"message"`
+	CronExpr    *string    `json:"cron_expr,omitempty" db:"cron_expr"`
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty" db:"scheduled_at"`
+	LastRunAt   *time.Time `json:"last_run_at,omitempty" db:"last_run_at"`
+	NextRunAt   *time.Time `json:"next_run_at,omitempty" db:"next_run_at"`
+	Enabled     bool       `json:"enabled" db:"enabled"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// NotificationPreference controls which event types trigger a channel.
+type NotificationPreference struct {
+	ID        int64     `json:"id" db:"id"`
+	ChannelID int64     `json:"channel_id" db:"channel_id"`
+	EventType string    `json:"event_type" db:"event_type"`
+	Enabled   bool      `json:"enabled" db:"enabled"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+// NotificationMetric tracks daily delivery metrics per channel.
+type NotificationMetric struct {
+	ID           int64     `json:"id" db:"id"`
+	ChannelID    int64     `json:"channel_id" db:"channel_id"`
+	Date         time.Time `json:"date" db:"date"`
+	TotalSent    int       `json:"total_sent" db:"total_sent"`
+	TotalFailed  int       `json:"total_failed" db:"total_failed"`
+	AvgLatencyMs int       `json:"avg_latency_ms" db:"avg_latency_ms"`
 }
 
 // ChatMessage represents a single chatbot message.

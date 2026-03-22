@@ -787,3 +787,63 @@ export interface UpdateCheckResult {
 
 export const getVersionInfo = () => request<VersionInfo>('/system/version')
 export const checkForUpdates = () => request<UpdateCheckResult>('/system/update-check')
+
+// --- Notification Scheduling ---
+export interface NotificationSchedule {
+  id: number
+  channel_id: number
+  title: string
+  message: string
+  cron_expr: string | null
+  scheduled_at: string | null
+  last_run_at: string | null
+  next_run_at: string | null
+  enabled: boolean
+  created_at: string
+}
+
+export const getNotificationSchedules = () => request<NotificationSchedule[]>('/notifications/schedules')
+export const createNotificationSchedule = (data: Partial<NotificationSchedule>) =>
+  request<NotificationSchedule>('/notifications/schedules', { method: 'POST', body: JSON.stringify(data) })
+export const deleteNotificationSchedule = (id: number) =>
+  request<void>(`/notifications/schedules/${id}`, { method: 'DELETE' })
+
+// --- Notification Preferences ---
+export interface NotificationPreference {
+  id: number
+  channel_id: number
+  event_type: string
+  enabled: boolean
+}
+
+export const getNotificationPreferences = (channelId: number) =>
+  request<NotificationPreference[]>(`/notifications/${channelId}/preferences`)
+export const updateNotificationPreference = (channelId: number, eventType: string, enabled: boolean) =>
+  request<void>(`/notifications/${channelId}/preferences`, {
+    method: 'PUT',
+    body: JSON.stringify({ event_type: eventType, enabled }),
+  })
+
+// --- Notification Analytics ---
+export interface NotificationAnalytics {
+  total_sent: number
+  total_failed: number
+  delivery_rate: number
+  avg_latency_ms: number
+  active_channels: number
+  period_days: number
+}
+
+export interface NotificationMetric {
+  id: number
+  channel_id: number
+  date: string
+  total_sent: number
+  total_failed: number
+  avg_latency_ms: number
+}
+
+export const getNotificationAnalytics = (days?: number) =>
+  request<NotificationAnalytics>(`/notifications/analytics${days ? `?days=${days}` : ''}`)
+export const getChannelMetrics = (channelId: number, days?: number) =>
+  request<NotificationMetric[]>(`/notifications/${channelId}/metrics${days ? `?days=${days}` : ''}`)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
@@ -18,11 +19,16 @@ func VersionHandler(appVersion string) http.HandlerFunc {
 	if chartVersion == "" {
 		chartVersion = "unknown"
 	}
+	bootTime := time.Now()
 	return func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"app_version":   appVersion,
-			"chart_version": chartVersion,
-			"go_version":    "go1.22",
+			"app_version":    appVersion,
+			"chart_version":  chartVersion,
+			"go_version":     runtime.Version(),
+			"os":             runtime.GOOS,
+			"arch":           runtime.GOARCH,
+			"uptime_seconds": time.Since(bootTime).Seconds(),
+			"goroutines":     runtime.NumGoroutine(),
 		})
 	}
 }
