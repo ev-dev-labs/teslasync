@@ -17,6 +17,7 @@ env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/${{ github.repository }}-api
   WEB_IMAGE: ghcr.io/${{ github.repository }}-web
+  NOTIFICATION_IMAGE: ghcr.io/${{ github.repository }}-notification-worker
 
 jobs:
   version-tag:
@@ -112,6 +113,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push notification worker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.notification
+          push: true
+          tags: |
+            ${{ env.NOTIFICATION_IMAGE }}:${{ needs.version-tag.outputs.version }}
+            ${{ env.NOTIFICATION_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.version-tag.outputs.new_tag }}
+
   helm:
     name: Publish Helm Chart
     needs: version-tag
@@ -166,6 +181,9 @@ jobs:
 
           # Web Frontend
           docker pull ghcr.io/${{ github.repository }}-web:${VERSION}
+
+          # Notification Worker
+          docker pull ghcr.io/${{ github.repository }}-notification-worker:${VERSION}
           \`\`\`
 
           ### ⎈ Helm Chart
@@ -186,6 +204,7 @@ jobs:
           |-------|-----|
           | Backend Image | \`ghcr.io/${{ github.repository }}-api:${VERSION}\` |
           | Web Image | \`ghcr.io/${{ github.repository }}-web:${VERSION}\` |
+          | Notification Worker | \`ghcr.io/${{ github.repository }}-notification-worker:${VERSION}\` |
           | Helm Chart | \`oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync:${VERSION}\` |
           NOTES_EOF
 

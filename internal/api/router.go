@@ -45,25 +45,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(chimw.Compress(5))
 	r.Use(chimw.Timeout(30 * time.Second))
 
-	// CORS
-	// NOTE: AllowedOrigins is set to "*" for development convenience.
-	// For production deployments, replace with explicit origins, e.g.:
-	//   AllowedOrigins: []string{"https://your-domain.com"},
-	// Also note: AllowCredentials with a wildcard origin is technically
-	// non-compliant per the Fetch spec — browsers will reject credentialed
-	// requests unless a specific origin is returned. Configure properly
-	// for production via an environment variable or config field.
+	// CORS — use explicit origins in production. The wildcard is kept for
+	// development convenience but paired with AllowCredentials=false to comply
+	// with the Fetch spec. Set CORS_ORIGINS env var for production.
+	corsOrigins := []string{"*"}
+	if cfg.CORSOrigins != "" {
+		corsOrigins = []string{cfg.CORSOrigins}
+	}
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   corsOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
 		ExposedHeaders:   []string{"X-Request-ID"},
-		AllowCredentials: true,
+		AllowCredentials: cfg.CORSOrigins != "",
 		MaxAge:           300,
 	}))
 
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(SecurityHeadersMiddleware)
+
+	// Request body size limit (1MB) — prevents DoS via large payloads
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
+			next.ServeHTTP(w, req)
+		})
+	})
 
 	// Rate limiting
 	r.Use(httprate.LimitByIP(100, 1*time.Minute))

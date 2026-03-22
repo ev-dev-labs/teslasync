@@ -101,7 +101,7 @@ func sendWebhook(url, method, title, message string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("webhook returned %d", resp.StatusCode)
 	}
@@ -120,7 +120,7 @@ func sendNtfy(serverURL, topic, title, message string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 	return nil
 }
 
@@ -144,7 +144,7 @@ func postJSON(url string, payload interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}

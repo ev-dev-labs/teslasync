@@ -9,15 +9,16 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port      int
-	LogLevel  string
-	Database  DatabaseConfig
-	Tesla     TeslaConfig
-	MQTT      MQTTConfig
-	Worker    WorkerConfig
-	Redis     RedisConfig
-	Auth      AuthConfig
-	Retention RetentionConfig
+	Port        int
+	LogLevel    string
+	CORSOrigins string
+	Database    DatabaseConfig
+	Tesla       TeslaConfig
+	MQTT        MQTTConfig
+	Worker      WorkerConfig
+	Redis       RedisConfig
+	Auth        AuthConfig
+	Retention   RetentionConfig
 }
 
 type DatabaseConfig struct {
@@ -100,8 +101,9 @@ type RetentionConfig struct {
 // these fields first or log only non-sensitive values.
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:     envInt("TESLASYNC_PORT", 4000),
-		LogLevel: envStr("TESLASYNC_LOG_LEVEL", "info"),
+		Port:        envInt("TESLASYNC_PORT", 4000),
+		LogLevel:    envStr("TESLASYNC_LOG_LEVEL", "info"),
+		CORSOrigins: envStr("CORS_ORIGINS", ""),
 
 		Database: DatabaseConfig{
 			Host:            envStr("DATABASE_HOST", "localhost"),

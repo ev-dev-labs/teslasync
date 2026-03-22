@@ -67,12 +67,14 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 
 		// Success — log it
 		if req.ChannelID > 0 {
-			w.repo.CreateLog(ctx, &models.NotificationLog{
+			if err := w.repo.CreateLog(ctx, &models.NotificationLog{
 				ChannelID: req.ChannelID,
 				Title:     req.Title,
 				Message:   req.Message,
 				Status:    "sent",
-			})
+			}); err != nil {
+				log.Warn().Err(err).Msg("notification: failed to create success log")
+			}
 		}
 		log.Info().Str("channel", req.ChannelType).Str("title", req.Title).Msg("notification delivered")
 		return
@@ -84,13 +86,15 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 		if lastErr != nil {
 			errStr = lastErr.Error()
 		}
-		w.repo.CreateLog(ctx, &models.NotificationLog{
+		if err := w.repo.CreateLog(ctx, &models.NotificationLog{
 			ChannelID: req.ChannelID,
 			Title:     req.Title,
 			Message:   req.Message,
 			Status:    "failed",
 			Error:     errStr,
-		})
+		}); err != nil {
+			log.Warn().Err(err).Msg("notification: failed to create failure log")
+		}
 	}
 	log.Error().Err(lastErr).Str("channel", req.ChannelType).Msg("notification delivery failed after retries")
 }

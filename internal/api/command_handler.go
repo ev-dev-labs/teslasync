@@ -25,6 +25,31 @@ func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 	}
 }
 
+// allowedCommands is the whitelist of Tesla commands that can be sent via the API.
+var allowedCommands = map[string]bool{
+	"wake_up":                  true,
+	"lock":                     true,
+	"unlock":                   true,
+	"honk_horn":                true,
+	"flash_lights":             true,
+	"climate_on":               true,
+	"climate_off":              true,
+	"set_temps":                true,
+	"charge_start":             true,
+	"charge_stop":              true,
+	"set_charge_limit":         true,
+	"open_charge_port":         true,
+	"close_charge_port":        true,
+	"actuate_trunk":            true,
+	"actuate_frunk":            true,
+	"set_sentry_mode":          true,
+	"vent_windows":             true,
+	"close_windows":            true,
+	"remote_start_drive":       true,
+	"set_scheduled_departure":  true,
+	"set_scheduled_charging":   true,
+}
+
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
@@ -43,6 +68,11 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 
 	if body.Command == "" {
 		writeError(w, http.StatusBadRequest, "command is required")
+		return
+	}
+
+	if !allowedCommands[body.Command] {
+		writeError(w, http.StatusBadRequest, "unknown command: "+body.Command)
 		return
 	}
 
