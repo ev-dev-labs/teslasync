@@ -74,7 +74,7 @@ jobs:
       - name: Download existing index
         run: |
           HTTP_CODE=$(curl -sSL -w '%{http_code}' -o .helm-repo/existing-index.yaml \
-            https://teslasync-labs.github.io/teslasync/helm/index.yaml 2>/dev/null || echo "000")
+            https://ev-dev-labs.github.io/teslasync/helm/index.yaml 2>/dev/null || echo "000")
           if [ "$HTTP_CODE" != "200" ] || ! grep -q "apiVersion:" .helm-repo/existing-index.yaml 2>/dev/null; then
             echo "No valid existing index found (HTTP $HTTP_CODE) — creating fresh"
             rm -f .helm-repo/existing-index.yaml
@@ -86,12 +86,12 @@ jobs:
         run: |
           if [ -f .helm-repo/existing-index.yaml ]; then
             helm repo index .helm-repo \
-              --url https://teslasync-labs.github.io/teslasync/helm \
+              --url https://ev-dev-labs.github.io/teslasync/helm \
               --merge .helm-repo/existing-index.yaml
             rm -f .helm-repo/existing-index.yaml
           else
             helm repo index .helm-repo \
-              --url https://teslasync-labs.github.io/teslasync/helm
+              --url https://ev-dev-labs.github.io/teslasync/helm
           fi
 
       - name: Deploy to GitHub Pages

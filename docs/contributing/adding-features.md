@@ -83,7 +83,7 @@ package database
 
 import (
     "context"
-    "github.com/teslasync/teslasync/internal/models"
+    "github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 func (db *DB) ListMaintenanceLogs(ctx context.Context, vehicleID int64) ([]models.MaintenanceLog, error) {
@@ -149,8 +149,8 @@ import (
     "strconv"
 
     "github.com/go-chi/chi/v5"
-    "github.com/teslasync/teslasync/internal/database"
-    "github.com/teslasync/teslasync/internal/models"
+    "github.com/ev-dev-labs/teslasync/internal/database"
+    "github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type MaintenanceHandler struct {

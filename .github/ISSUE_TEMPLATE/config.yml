@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Documentation
-    url: https://teslasync-labs.github.io/teslasync/
+    url: https://ev-dev-labs.github.io/teslasync/
     about: Check the documentation before filing an issue
   - name: Discussions
-    url: https://github.com/teslasync-labs/teslasync/discussions
+    url: https://github.com/ev-dev-labs/teslasync/discussions
     about: Ask questions and share ideas

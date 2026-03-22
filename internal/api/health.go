@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/mqtt"
-	"github.com/teslasync/teslasync/internal/resilience"
-	"github.com/teslasync/teslasync/internal/tesla"
-	"github.com/teslasync/teslasync/internal/worker"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
 var startTime = time.Now()

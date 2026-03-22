@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // DriveHandler handles drive-related HTTP requests.

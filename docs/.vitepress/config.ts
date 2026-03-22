@@ -83,11 +83,11 @@ export default withMermaid(defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/teslasync-labs/teslasync' },
+      { icon: 'github', link: 'https://github.com/ev-dev-labs/teslasync' },
     ],
 
     editLink: {
-      pattern: 'https://github.com/teslasync-labs/teslasync/edit/main/docs/:path',
+      pattern: 'https://github.com/ev-dev-labs/teslasync/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 

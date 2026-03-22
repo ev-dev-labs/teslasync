@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // SettingsHandler handles user settings.

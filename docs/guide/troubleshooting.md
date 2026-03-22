@@ -156,7 +156,7 @@ Common issues and their solutions when running TeslaSync.
 
 If your issue isn't covered here:
 
-1. Check the [GitHub Issues](https://github.com/teslasync-labs/TeslaSync/issues) for known bugs
+1. Check the [GitHub Issues](https://github.com/ev-dev-labs/TeslaSync/issues) for known bugs
 2. Search the backend logs: `docker compose logs teslasync | grep -i error`
 3. Open a new issue with:
    - TeslaSync version / commit hash

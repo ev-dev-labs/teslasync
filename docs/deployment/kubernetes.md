@@ -32,7 +32,7 @@ helm/teslasync/
 
 ```bash
 # Add the TeslaSync Helm repository
-helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm repo add teslasync https://ev-dev-labs.github.io/teslasync/helm
 helm repo update
 
 # Install
@@ -52,19 +52,19 @@ helm search repo teslasync --versions
 
 ```bash
 # Install directly from GHCR (no repo add needed)
-helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
+helm install teslasync oci://ghcr.io/ev-dev-labs/charts/teslasync \
   --set tesla.clientId=$TESLA_CLIENT_ID \
   --set tesla.clientSecret=$TESLA_CLIENT_SECRET
 
 # Install a specific version
-helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync --version 0.7.1
+helm install teslasync oci://ghcr.io/ev-dev-labs/charts/teslasync --version 0.7.1
 ```
 
 ### Method 3: From Source
 
 ```bash
 # Clone the repo and install from local chart
-git clone https://github.com/teslasync-labs/teslasync.git
+git clone https://github.com/ev-dev-labs/teslasync.git
 helm install teslasync ./teslasync/helm/teslasync \
   --set tesla.clientId=$TESLA_CLIENT_ID \
   --set tesla.clientSecret=$TESLA_CLIENT_SECRET
@@ -82,12 +82,12 @@ The `values.yaml` file contains all configurable parameters. Here are the most i
 ```yaml
 # Image configuration
 image:
-  repository: ghcr.io/teslasync-labs/teslasync
+  repository: ghcr.io/ev-dev-labs/teslasync
   tag: latest
   pullPolicy: IfNotPresent
 
 webImage:
-  repository: ghcr.io/teslasync-labs/teslasync-web
+  repository: ghcr.io/ev-dev-labs/teslasync-web
   tag: latest
   pullPolicy: IfNotPresent
 

@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"github.com/teslasync/teslasync/internal/config"
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/resilience"
 )
 
 // MigrationStatus returns the current database migration version.

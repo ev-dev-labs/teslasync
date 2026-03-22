@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teslasync/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 func TestNewClientSetsFields(t *testing.T) {

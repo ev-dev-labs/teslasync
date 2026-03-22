@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/teslasync/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // CommandLogRepo provides command log data access.

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/config"
-	"github.com/teslasync/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // StartMaintenanceWorker runs periodic database cleanup on a 24-hour schedule.

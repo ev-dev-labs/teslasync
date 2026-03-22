@@ -7,9 +7,9 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/config"
-	"github.com/teslasync/teslasync/internal/models"
-	"github.com/teslasync/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // Client wraps MQTT publishing.

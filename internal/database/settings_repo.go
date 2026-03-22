@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/teslasync/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // SettingsRepo provides settings data access.

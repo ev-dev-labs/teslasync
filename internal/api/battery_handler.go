@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // BatteryHandler handles battery health HTTP requests.

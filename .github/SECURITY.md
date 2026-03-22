@@ -15,8 +15,8 @@ If you discover a security vulnerability in TeslaSync, please report it responsi
 
 Instead, please:
 
-1. Email: security@teslasync-labs.github.io (or use GitHub's private vulnerability reporting)
-2. Use [GitHub Security Advisories](https://github.com/teslasync-labs/teslasync/security/advisories/new) to report privately
+1. Email: security@ev-dev-labs.github.io (or use GitHub's private vulnerability reporting)
+2. Use [GitHub Security Advisories](https://github.com/ev-dev-labs/teslasync/security/advisories/new) to report privately
 
 ### What to include
 

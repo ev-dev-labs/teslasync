@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/teslasync/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type MileageRepo struct {

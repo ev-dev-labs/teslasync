@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // BackupHandler provides endpoints for database backup and restore operations.

@@ -93,8 +93,8 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 
 Have an idea? We'd love to hear it!
 
-- [Open a Feature Request](https://github.com/teslasync-labs/teslasync/issues/new?template=feature_request.yml)
-- [Join Discussions](https://github.com/teslasync-labs/teslasync/discussions)
+- [Open a Feature Request](https://github.com/ev-dev-labs/teslasync/issues/new?template=feature_request.yml)
+- [Join Discussions](https://github.com/ev-dev-labs/teslasync/discussions)
 
 ## 📊 Priority Framework
 

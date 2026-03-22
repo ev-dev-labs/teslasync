@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/teslasync/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // UserHandler handles user authentication with simple HMAC-based tokens.

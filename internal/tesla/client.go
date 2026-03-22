@@ -13,7 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
-	"github.com/teslasync/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // apiRequestCount tracks the total number of Tesla API requests made.

@@ -4,9 +4,9 @@ description: A Helm chart for deploying TeslaSync — a self-hosted Tesla vehicl
 type: application
 version: 0.3.1
 appVersion: "1.0.0"
-home: https://github.com/your-org/teslasync
+home: https://github.com/ev-dev-labs/teslasync
 sources:
-  - https://github.com/your-org/teslasync
+  - https://github.com/ev-dev-labs/teslasync
 keywords:
   - tesla
   - telemetry
@@ -19,7 +19,7 @@ keywords:
   - data-logger
 maintainers:
   - name: TeslaSync
-    url: https://github.com/your-org
+    url: https://github.com/ev-dev-labs
 dependencies: []
 annotations:
   category: Automotive

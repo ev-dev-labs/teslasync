@@ -3,7 +3,7 @@ package mqtt
 import (
 	"testing"
 
-	"github.com/teslasync/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 func TestMQTTConfigBrokerURL(t *testing.T) {

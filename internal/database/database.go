@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
 // DB wraps a pgx connection pool and provides repository methods.

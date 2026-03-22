@@ -11,13 +11,13 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/api"
-	"github.com/teslasync/teslasync/internal/config"
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/mqtt"
-	"github.com/teslasync/teslasync/internal/resilience"
-	"github.com/teslasync/teslasync/internal/tesla"
-	"github.com/teslasync/teslasync/internal/worker"
+	"github.com/ev-dev-labs/teslasync/internal/api"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
 func main() {

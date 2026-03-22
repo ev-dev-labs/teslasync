@@ -18,14 +18,14 @@ Helm chart for deploying TeslaSync — a Tesla fleet intelligence platform.
 
 ```bash
 # Method 1: Helm Repository
-helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm repo add teslasync https://ev-dev-labs.github.io/teslasync/helm
 helm repo update
 helm install teslasync teslasync/teslasync \
   --set tesla.clientId=YOUR_CLIENT_ID \
   --set tesla.clientSecret=YOUR_CLIENT_SECRET
 
 # Method 2: OCI Registry (no repo add needed)
-helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
+helm install teslasync oci://ghcr.io/ev-dev-labs/charts/teslasync \
   --set tesla.clientId=YOUR_CLIENT_ID \
   --set tesla.clientSecret=YOUR_CLIENT_SECRET
 ```
@@ -35,7 +35,7 @@ helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
 ### From Helm Repository
 
 ```bash
-helm repo add teslasync https://teslasync-labs.github.io/teslasync/helm
+helm repo add teslasync https://ev-dev-labs.github.io/teslasync/helm
 helm repo update
 helm install teslasync teslasync/teslasync -f values.yaml
 
@@ -46,17 +46,17 @@ helm search repo teslasync --versions
 ### From OCI Registry
 
 ```bash
-helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync \
+helm install teslasync oci://ghcr.io/ev-dev-labs/charts/teslasync \
   -f values.yaml
 
 # Install specific version
-helm install teslasync oci://ghcr.io/teslasync-labs/charts/teslasync --version 0.7.1
+helm install teslasync oci://ghcr.io/ev-dev-labs/charts/teslasync --version 0.7.1
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/teslasync-labs/teslasync.git
+git clone https://github.com/ev-dev-labs/teslasync.git
 cd teslasync
 helm install teslasync ./helm/teslasync -f my-values.yaml
 ```
@@ -68,11 +68,11 @@ The following table lists all configurable parameters and their default values.
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Backend replicas | `1` |
-| `image.repository` | Backend image repository | `ghcr.io/teslasync-labs/teslasync` |
+| `image.repository` | Backend image repository | `ghcr.io/ev-dev-labs/teslasync` |
 | `image.pullPolicy` | Backend image pull policy | `IfNotPresent` |
 | `image.tag` | Backend image tag (defaults to chart appVersion) | `""` |
 | `web.enabled` | Enable frontend deployment | `true` |
-| `web.image.repository` | Frontend image repository | `ghcr.io/teslasync-labs/teslasync-web` |
+| `web.image.repository` | Frontend image repository | `ghcr.io/ev-dev-labs/teslasync-web` |
 | `web.image.pullPolicy` | Frontend image pull policy | `IfNotPresent` |
 | `web.image.tag` | Frontend image tag | `""` |
 | `web.replicaCount` | Frontend replicas | `1` |

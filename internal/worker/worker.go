@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/teslasync/teslasync/internal/config"
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/models"
-	"github.com/teslasync/teslasync/internal/mqtt"
-	"github.com/teslasync/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // vehicleHealth tracks per-vehicle polling state for backoff.

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/teslasync/teslasync/internal/database"
-	"github.com/teslasync/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type apiKeyPermCtxKey struct{}

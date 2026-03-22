@@ -1,4 +1,4 @@
-module github.com/teslasync/teslasync
+module github.com/ev-dev-labs/teslasync
 
 go 1.24.0
 

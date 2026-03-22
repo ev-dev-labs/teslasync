@@ -1,25 +1,25 @@
 # Backend (Go)
-/internal/ @teslasync-labs/backend
-/cmd/ @teslasync-labs/backend
-go.mod @teslasync-labs/maintainers
-go.sum @teslasync-labs/maintainers
-Dockerfile @teslasync-labs/maintainers
+/internal/ @ev-dev-labs/backend
+/cmd/ @ev-dev-labs/backend
+go.mod @ev-dev-labs/maintainers
+go.sum @ev-dev-labs/maintainers
+Dockerfile @ev-dev-labs/maintainers
 
 # Frontend (React)
-/web/ @teslasync-labs/frontend
-Dockerfile.web @teslasync-labs/maintainers
+/web/ @ev-dev-labs/frontend
+Dockerfile.web @ev-dev-labs/maintainers
 
 # Helm Chart
-/helm/ @teslasync-labs/devops
+/helm/ @ev-dev-labs/devops
 
 # CI/CD
-/.github/ @teslasync-labs/maintainers
+/.github/ @ev-dev-labs/maintainers
 
 # Documentation
-/docs/ @teslasync-labs/docs
+/docs/ @ev-dev-labs/docs
 
 # Grafana
-/grafana/ @teslasync-labs/devops
+/grafana/ @ev-dev-labs/devops
 
 # Database Migrations
-/migrations/ @teslasync-labs/backend
+/migrations/ @ev-dev-labs/backend
