@@ -1,36 +1,20 @@
 name: CI
 
 on:
-  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
-# DISABLED - quota limit - original triggers:
-# on:
-#   pull_request:
-#     branches: [main]
-#   workflow_dispatch:
-
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  lint-backend:
-    name: Lint Go
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-
-  test-backend:
-    name: Test Go
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -49,11 +33,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Detect changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            go:
+              - '**.go'
+              - 'go.mod'
+              - 'go.sum'
+            frontend:
+              - 'web/**'
+            helm:
+              - 'helm/**'
+
+      # --- Go steps ---
       - uses: actions/setup-go@v5
+        if: github.event_name != 'pull_request' || steps.changes.outputs.go == 'true'
         with:
           go-version: "1.24"
 
-      - name: Run tests
+      - name: Go lint
+        if: github.event_name != 'pull_request' || steps.changes.outputs.go == 'true'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: Go vet
+        if: github.event_name != 'pull_request' || steps.changes.outputs.go == 'true'
+        run: go vet ./...
+
+      - name: Go build
+        if: github.event_name != 'pull_request' || steps.changes.outputs.go == 'true'
+        run: CGO_ENABLED=0 go build -ldflags="-s -w" -o teslasync ./cmd/teslasync
+
+      - name: Go test
+        if: github.event_name != 'pull_request' || steps.changes.outputs.go == 'true'
         env:
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
@@ -62,74 +78,44 @@ jobs:
           DATABASE_NAME: teslasync_test
         run: go test -race -coverprofile=coverage.out ./...
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage.out
-          flags: backend
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: github.event_name != 'pull_request'
-
       - name: Upload coverage
+        if: github.event_name != 'pull_request' || steps.changes.outputs.go == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage.out
 
-  build-backend:
-    name: Build Go
-    runs-on: ubuntu-latest
-    needs: [lint-backend, test-backend]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
+      # --- Frontend steps ---
+      - uses: actions/setup-node@v4
+        if: github.event_name != 'pull_request' || steps.changes.outputs.frontend == 'true'
         with:
-          go-version: "1.24"
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
-      - name: Build
+      - name: Install frontend dependencies
+        if: github.event_name != 'pull_request' || steps.changes.outputs.frontend == 'true'
+        working-directory: web
+        run: npm ci --legacy-peer-deps
+
+      - name: ESLint
+        if: github.event_name != 'pull_request' || steps.changes.outputs.frontend == 'true'
+        working-directory: web
+        run: npm run lint
+
+      - name: TypeScript check
+        if: github.event_name != 'pull_request' || steps.changes.outputs.frontend == 'true'
+        working-directory: web
+        run: npx tsc --noEmit
+
+      - name: Build frontend
+        if: github.event_name != 'pull_request' || steps.changes.outputs.frontend == 'true'
+        working-directory: web
+        run: npm run build
+
+      # --- Helm steps ---
+      - name: Helm lint
+        if: github.event_name != 'pull_request' || steps.changes.outputs.helm == 'true'
         run: |
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o teslasync ./cmd/teslasync
-
-  lint-frontend:
-    name: Lint Frontend
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci --legacy-peer-deps
-      - run: npm run lint
-
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    needs: [lint-frontend]
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci --legacy-peer-deps
-      - run: npm run build
-
-      - name: Upload build
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-dist
-          path: web/dist
+          helm lint helm/teslasync
+          helm template test helm/teslasync > /dev/null

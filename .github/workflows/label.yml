@@ -1,13 +1,8 @@
 name: Auto Label
 
 on:
-  workflow_dispatch: {}
-
-# DISABLED - quota limit - original triggers:
-# on:
-#   pull_request:
-#     types: [opened, synchronize, reopened]
-
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read

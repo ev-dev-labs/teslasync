@@ -1,62 +1,198 @@
 name: Release
 
 on:
-  workflow_dispatch: {}
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-# DISABLED - quota limit - original triggers:
-# on:
-#   push:
-#     tags: ["v*"]
-
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
   packages: write
 
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}-api
+  WEB_IMAGE: ghcr.io/${{ github.repository }}-web
+
 jobs:
-  release:
-    name: Create Release
+  version-tag:
+    name: Version & Tag
     runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.bump.outputs.new_tag }}
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
+      - name: Determine version bump
+        id: bump
+        run: |
+          LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"
+          fi
+          echo "Latest tag: $LATEST"
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+          MAJOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | sed 's/v//' | cut -d. -f3)
+
+          if [ "$LATEST" = "v0.0.0" ]; then
+            COMMITS=$(git log --oneline)
+          else
+            COMMITS=$(git log "${LATEST}..HEAD" --oneline)
+          fi
+
+          if echo "$COMMITS" | grep -qiE '^[a-f0-9]+ (feat!|BREAKING)'; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+          elif echo "$COMMITS" | grep -qiE '^[a-f0-9]+ feat'; then
+            MINOR=$((MINOR + 1)); PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New tag: $NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.bump.outputs.new_tag }}" -m "Release ${{ steps.bump.outputs.new_tag }}"
+          git push origin "${{ steps.bump.outputs.new_tag }}"
+
+  docker:
+    name: Build & Push Docker Images
+    needs: version-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ needs.version-tag.outputs.version }}
+            ${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.version-tag.outputs.new_tag }}
+            COMMIT=${{ github.sha }}
+
+      - name: Build and push web
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.web
+          push: true
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ needs.version-tag.outputs.version }}
+            ${{ env.WEB_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   helm:
     name: Publish Helm Chart
+    needs: version-tag
     runs-on: ubuntu-latest
-    needs: [release]
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: v3.14.0
-
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Package chart
+      - name: Package and push chart
         run: |
-          helm package helm/teslasync --version ${{ github.ref_name }} --app-version ${{ github.ref_name }}
-
-      - name: Push chart
-        run: |
+          helm package helm/teslasync \
+            --version ${{ needs.version-tag.outputs.version }} \
+            --app-version ${{ needs.version-tag.outputs.version }}
           helm push teslasync-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
+
+  release-notes:
+    name: Create GitHub Release
+    needs: [version-tag, docker, helm]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        run: |
+          TAG="${{ needs.version-tag.outputs.new_tag }}"
+          VERSION="${{ needs.version-tag.outputs.version }}"
+          PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TAG}$" | head -1)
+
+          if [ -n "$PREV" ]; then
+            CHANGELOG=$(git log "${PREV}..HEAD" --pretty=format:"- %s (@%an)" --no-merges)
+            COMPARE="**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (@%an)" --no-merges -20)
+            COMPARE=""
+          fi
+
+          cat > release-notes.md << NOTES_EOF
+          ## 🚀 TeslaSync ${TAG}
+
+          ### 📦 Docker Images
+
+          \`\`\`bash
+          # Backend API
+          docker pull ghcr.io/${{ github.repository }}-api:${VERSION}
+
+          # Web Frontend
+          docker pull ghcr.io/${{ github.repository }}-web:${VERSION}
+          \`\`\`
+
+          ### ⎈ Helm Chart
+
+          \`\`\`bash
+          helm install teslasync oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync --version ${VERSION}
+          \`\`\`
+
+          ### 📝 Changes
+
+          ${CHANGELOG}
+
+          ${COMPARE}
+
+          ### 📋 Assets
+
+          | Asset | Tag |
+          |-------|-----|
+          | Backend Image | \`ghcr.io/${{ github.repository }}-api:${VERSION}\` |
+          | Web Image | \`ghcr.io/${{ github.repository }}-web:${VERSION}\` |
+          | Helm Chart | \`oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync:${VERSION}\` |
+          NOTES_EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version-tag.outputs.new_tag }}
+          name: TeslaSync ${{ needs.version-tag.outputs.new_tag }}
+          body_path: release-notes.md
+          generate_release_notes: false

@@ -1,37 +1,48 @@
-name: Cleanup Old Packages
+name: Maintenance
 
 on:
-  workflow_dispatch: {}
-
-# DISABLED - quota limit - original triggers:
-# on:
-#   schedule:
-#     - cron: "0 3 * * 0"
-#   workflow_dispatch:
-
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
 
 permissions:
   packages: write
+  issues: write
+  pull-requests: write
 
 jobs:
-  cleanup-backend:
-    name: Cleanup Backend Images
+  maintenance:
+    name: Cleanup & Stale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/delete-package-versions@v5
+      - name: Cleanup backend images
+        uses: actions/delete-package-versions@v5
         with:
           package-name: teslasync
           package-type: container
           min-versions-to-keep: 10
           delete-only-untagged-versions: true
 
-  cleanup-web:
-    name: Cleanup Web Images
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/delete-package-versions@v5
+      - name: Cleanup web images
+        uses: actions/delete-package-versions@v5
         with:
           package-name: teslasync-web
           package-type: container
           min-versions-to-keep: 10
           delete-only-untagged-versions: true
+
+      - name: Mark stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          stale-issue-message: >-
+            This issue has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 14 days if no further activity occurs.
+          stale-pr-message: >-
+            This pull request has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 14 days if no further activity occurs.
+          stale-issue-label: stale
+          stale-pr-label: stale
+          days-before-stale: 60
+          days-before-close: 14
+          exempt-issue-labels: "pinned,security,bug"
+          exempt-pr-labels: "pinned,security"
