@@ -38,6 +38,7 @@ const APIKeysPage = lazy(() => import('./pages/APIKeys'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 const Compare = lazy(() => import('./pages/Compare'))
 const Admin = lazy(() => import('./pages/Admin'))
+const ApiLogs = lazy(() => import('./pages/ApiLogs'))
 const QuickStats = lazy(() => import('./pages/QuickStats'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="changelog" element={<SafeRoute name="Changelog"><Changelog /></SafeRoute>} />
         <Route path="compare" element={<SafeRoute name="Compare"><Compare /></SafeRoute>} />
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
+        <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
       </Route>
     </Routes>
   )

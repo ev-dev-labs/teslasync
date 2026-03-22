@@ -79,6 +79,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleStateHandler := NewVehicleStateHandler(db)
 	backupHandler := NewBackupHandler(db)
 	auditHandler := NewAuditHandler(db)
+	apiCallLogHandler := NewAPICallLogHandler(db)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -223,6 +224,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/backup/stats", backupHandler.BackupStats)
 			r.Get("/config-validation", ConfigValidation(cfg))
 			r.Get("/audit", auditHandler.List)
+		})
+
+		// API Call Logs
+		r.Route("/api-logs", func(r chi.Router) {
+			r.Get("/", apiCallLogHandler.List)
+			r.Get("/stats", apiCallLogHandler.Stats)
 		})
 
 		// Export

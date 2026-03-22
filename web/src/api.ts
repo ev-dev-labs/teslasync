@@ -718,3 +718,54 @@ export async function getBackupStats(): Promise<BackupStats> {
   if (!res.ok) throw new Error('Failed to fetch backup stats')
   return res.json()
 }
+
+// --- API Call Logs ---
+export interface APICallLog {
+  id: number
+  method: string
+  url: string
+  status_code: number | null
+  request_body: string | null
+  response_body: string | null
+  duration_ms: number
+  error: string | null
+  created_at: string
+}
+
+export interface APICallLogResponse {
+  data: APICallLog[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface APICallLogStats {
+  total_calls: number
+  by_method: Record<string, number>
+  error_rate: number
+  error_count: number
+  avg_duration_ms: number
+  last_24h: number
+}
+
+export const getAPICallLogs = (params: {
+  limit?: number
+  offset?: number
+  method?: string
+  status?: string
+  endpoint?: string
+  start?: string
+  end?: string
+} = {}) => {
+  const query = new URLSearchParams()
+  if (params.limit) query.set('limit', String(params.limit))
+  if (params.offset) query.set('offset', String(params.offset))
+  if (params.method) query.set('method', params.method)
+  if (params.status) query.set('status', params.status)
+  if (params.endpoint) query.set('endpoint', params.endpoint)
+  if (params.start) query.set('start', params.start)
+  if (params.end) query.set('end', params.end)
+  return request<APICallLogResponse>(`/api-logs?${query.toString()}`)
+}
+
+export const getAPICallLogStats = () => request<APICallLogStats>('/api-logs/stats')

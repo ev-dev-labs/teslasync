@@ -14,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -78,6 +79,38 @@ func main() {
 
 	// Tesla API client
 	teslaClient := tesla.NewClient(cfg.Tesla)
+
+	// Wire Tesla API call logging
+	apiLogRepo := database.NewAPICallLogRepo(db)
+	teslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
+		logEntry := &models.APICallLog{
+			Method:     method,
+			URL:        url,
+			DurationMs: durationMs,
+		}
+		if statusCode > 0 {
+			logEntry.StatusCode = &statusCode
+		}
+		if len(reqBody) > 0 {
+			s := string(reqBody)
+			logEntry.RequestBody = &s
+		}
+		// Truncate response body to prevent excessive storage
+		if len(respBody) > 0 {
+			s := string(respBody)
+			if len(s) > 10000 {
+				s = s[:10000] + "...(truncated)"
+			}
+			logEntry.ResponseBody = &s
+		}
+		if callErr != nil {
+			s := callErr.Error()
+			logEntry.Error = &s
+		}
+		if err := apiLogRepo.Create(context.Background(), logEntry); err != nil {
+			log.Error().Err(err).Msg("failed to log API call")
+		}
+	})
 
 	// Worker (vehicle poller) — runs in a self-healing goroutine
 	w := worker.New(db, teslaClient, mqttClient, cfg.Worker)

@@ -17,18 +17,21 @@ import (
 
 // Client is a resilient Tesla Fleet API client with circuit breaker.
 type Client struct {
-	httpClient *http.Client
-	baseURL    string
-	authURL    string
-	clientID   string
-	clientSec  string
+	httpClient  *http.Client
+	baseURL     string
+	authURL     string
+	clientID    string
+	clientSec   string
 	redirectURI string
-	cb         *gobreaker.CircuitBreaker
+	cb          *gobreaker.CircuitBreaker
 
 	mu          sync.RWMutex
 	accessToken string
 	refreshTok  string
 	expiresAt   time.Time
+
+	// logCallback is called after each API request for audit logging.
+	logCallback func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, err error)
 }
 
 // NewClient creates a new Tesla API client configured with the given credentials
@@ -92,13 +95,27 @@ func (c *Client) ExpiresWithin(d time.Duration) bool {
 	return c.accessToken != "" && time.Until(c.expiresAt) < d
 }
 
+// SetLogCallback sets the callback function for logging API calls.
+func (c *Client) SetLogCallback(cb func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, err error)) {
+	c.logCallback = cb
+}
+
 // ErrUnauthorized is returned when the Tesla API rejects the current token.
 var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
 
 // doRequest performs an authenticated API request through the circuit breaker.
 func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
+	url := c.baseURL + path
+	start := time.Now()
+
+	// Read request body for logging if present
+	var reqBodyBytes []byte
+	if body != nil {
+		reqBodyBytes, _ = io.ReadAll(body)
+		body = bytes.NewReader(reqBodyBytes)
+	}
+
 	result, err := c.cb.Execute(func() (interface{}, error) {
-		url := c.baseURL + path
 		req, err := http.NewRequestWithContext(ctx, method, url, body)
 		if err != nil {
 			return nil, fmt.Errorf("create request: %w", err)
@@ -123,23 +140,48 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, ErrUnauthorized
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, ErrUnauthorized
 		}
 		if resp.StatusCode == http.StatusTooManyRequests {
-			return nil, fmt.Errorf("rate limited (429)")
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, fmt.Errorf("rate limited (429)")
 		}
 		if resp.StatusCode >= 500 {
-			return nil, fmt.Errorf("server error: %d", resp.StatusCode)
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, fmt.Errorf("server error: %d", resp.StatusCode)
 		}
 
 		return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil
 	})
 
+	durationMs := int(time.Since(start).Milliseconds())
+
 	if err != nil {
+		// Log failed requests too
+		if c.logCallback != nil {
+			statusCode := 0
+			var respBody []byte
+			if result != nil {
+				if resp, ok := result.(*apiResponse); ok {
+					statusCode = resp.StatusCode
+					respBody = resp.Body
+				}
+			}
+			c.logCallback(method, url, statusCode, reqBodyBytes, respBody, durationMs, err)
+		}
+		if result != nil {
+			if resp, ok := result.(*apiResponse); ok {
+				return resp.Body, resp.StatusCode, err
+			}
+		}
 		return nil, 0, err
 	}
 
 	resp := result.(*apiResponse)
+
+	// Log successful requests
+	if c.logCallback != nil {
+		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
+	}
+
 	return resp.Body, resp.StatusCode, nil
 }
 

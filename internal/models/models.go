@@ -357,3 +357,16 @@ type VehicleStateRecord struct {
 	DurationMin float64    `json:"duration_min" db:"duration_min"`
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 }
+
+// APICallLog records a Tesla API call for auditing and debugging.
+type APICallLog struct {
+	ID           int64     `json:"id" db:"id"`
+	Method       string    `json:"method" db:"method"`
+	URL          string    `json:"url" db:"url"`
+	StatusCode   *int      `json:"status_code,omitempty" db:"status_code"`
+	RequestBody  *string   `json:"request_body,omitempty" db:"request_body"`
+	ResponseBody *string   `json:"response_body,omitempty" db:"response_body"`
+	DurationMs   int       `json:"duration_ms" db:"duration_ms"`
+	Error        *string   `json:"error,omitempty" db:"error"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+}

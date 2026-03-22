@@ -29,6 +29,7 @@ import {
   Activity,
   GitCompare,
   Shield,
+  FileText,
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -146,6 +147,7 @@ const navSections = [
     items: [
       { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
       { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
+      { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
     ],
