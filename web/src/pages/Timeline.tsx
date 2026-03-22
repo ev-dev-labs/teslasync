@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleTimeline, getStateSummary, getDailyStateBreakdown } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
-import { Clock, Activity, Car, BatteryCharging, Moon, Wifi, Download, Calendar } from 'lucide-react'
+import { Clock, Activity, Car, BatteryCharging, Moon, Wifi, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -49,78 +49,6 @@ function formatDuration(min: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-function DayView({ timeline, selectedDate }: { timeline: any[]; selectedDate: string }) {
-  const hours = useMemo(() => {
-    const dayStart = new Date(selectedDate)
-    dayStart.setHours(0, 0, 0, 0)
-
-    return Array.from({ length: 24 }, (_, h) => {
-      const hourStart = new Date(dayStart.getTime() + h * 3600000)
-      const hourEnd = new Date(hourStart.getTime() + 3600000)
-
-      const activeState = timeline?.find(t => {
-        const tStart = new Date(t.start_date).getTime()
-        const tEnd = t.end_date ? new Date(t.end_date).getTime() : Date.now()
-        return tStart < hourEnd.getTime() && tEnd > hourStart.getTime()
-      })
-
-      return {
-        hour: h,
-        label: `${h.toString().padStart(2, '0')}:00`,
-        state: activeState?.state || 'unknown',
-        duration: activeState?.duration_min || 0,
-      }
-    })
-  }, [timeline, selectedDate])
-
-  const stateColorsDay: Record<string, string> = {
-    driving: '#00f0ff', charging: '#10b981', online: '#3b82f6',
-    asleep: '#6366f1', offline: '#4b5563', updating: '#f59e0b', unknown: '#1f2937',
-  }
-
-  return (
-    <GlassPanel className="p-6">
-      <h3 className="flex items-center gap-2 text-sm font-semibold mb-4" style={{color:'var(--text-primary)'}}>
-        <Calendar className="h-4 w-4 text-neon-cyan" /> Day View — {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-      </h3>
-
-      {/* 24-hour timeline bar */}
-      <div className="flex h-10 rounded-lg overflow-hidden mb-4">
-        {hours.map(h => (
-          <div key={h.hour} className="flex-1 relative group cursor-pointer"
-            style={{ background: stateColorsDay[h.state] || stateColorsDay.unknown, opacity: 0.7 }}
-            title={`${h.label} — ${h.state}`}>
-            {h.hour % 6 === 0 && (
-              <span className="absolute -bottom-5 left-0 text-[8px] text-[var(--text-muted)]">{h.label}</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Hour-by-hour list */}
-      <div className="space-y-1 mt-8 max-h-64 overflow-y-auto">
-        {hours.filter(h => h.state !== 'unknown').map(h => (
-          <div key={h.hour} className="flex items-center gap-3 px-3 py-1.5 rounded text-xs">
-            <span className="w-12 text-[var(--text-muted)] font-mono">{h.label}</span>
-            <div className="h-3 w-3 rounded-full" style={{ background: stateColorsDay[h.state] }} />
-            <span className="capitalize" style={{color:'var(--text-secondary)'}}>{h.state}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-white/[0.06]">
-        {Object.entries(stateColorsDay).filter(([k]) => k !== 'unknown').map(([state, color]) => (
-          <div key={state} className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-            <span className="text-[10px] capitalize text-[var(--text-muted)]">{state}</span>
-          </div>
-        ))}
-      </div>
-    </GlassPanel>
-  )
-}
-
 export default function Timeline() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -128,7 +56,6 @@ export default function Timeline() {
     const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]
   })
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
-  const [dayViewDate, setDayViewDate] = useState<string | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
   const { data: timeline, isLoading } = useQuery({
@@ -306,35 +233,6 @@ export default function Timeline() {
           )}
         </GlassPanel>
       </div>
-
-      {/* Day View */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <div className="flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-neon-cyan" />
-          <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Day View</label>
-          <input
-            type="date"
-            value={dayViewDate ?? ''}
-            onChange={e => setDayViewDate(e.target.value || null)}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          />
-          {dayViewDate && (
-            <button
-              onClick={() => setDayViewDate(null)}
-              className="text-xs text-[var(--text-muted)] hover:text-neon-cyan transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </GlassPanel>
-
-      {dayViewDate && (
-        <div className="mb-6 sm:mb-8">
-          <DayView timeline={timeline ?? []} selectedDate={dayViewDate} />
-        </div>
-      )}
 
       {/* Recent Timeline */}
       <GlassPanel className="p-4 sm:p-6">

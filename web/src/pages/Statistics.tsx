@@ -6,13 +6,12 @@ import {
 } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
 import {
-  BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge, FileDown
+  BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, RadialBarChart, RadialBar
 } from 'recharts'
-import { generateMonthlyReport } from '../lib/report'
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
@@ -120,14 +119,6 @@ export default function Statistics() {
               {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
             </select>
           )}
-          <button
-            onClick={() => generateMonthlyReport(analytics, vehicles ?? [])}
-            className="glass-card px-3 py-2 text-sm rounded-lg flex items-center gap-1.5 hover:bg-white/5 transition-all"
-            style={{ color: 'var(--text-primary)' }}
-            title="Download monthly report"
-          >
-            <FileDown className="h-4 w-4" /> Report
-          </button>
         </div>
       </div>
 

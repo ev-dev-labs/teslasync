@@ -24,10 +24,7 @@ services:
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
-      - POLL_INTERVAL=${POLL_INTERVAL:-900s}
-      - DRIVING_POLL_INTERVAL=${DRIVING_POLL_INTERVAL:-120s}
-      - CHARGING_POLL_INTERVAL=${CHARGING_POLL_INTERVAL:-600s}
-      - STATUS_CHECK_INTERVAL=${STATUS_CHECK_INTERVAL:-900s}
+      - POLL_INTERVAL=${POLL_INTERVAL:-30s}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
       postgres:
@@ -38,10 +35,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
-      interval: 15s
+      interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -60,12 +57,6 @@ services:
     depends_on:
       teslasync:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
-      interval: 15s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
     deploy:
       resources:
         limits:
@@ -107,13 +98,6 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-teslasync}
       - GF_INSTALL_PLUGINS=grafana-clock-panel
-      - GF_USERS_DEFAULT_THEME=dark
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_NAME=TeslaSync
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/vehicle-overview.json
-      - GF_SERVER_ROOT_URL=http://localhost:3001
-      - GF_PANELS_DISABLE_SANITIZE_HTML=true
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDrive, getVehiclePositions, getVehicle } from '../api'
@@ -7,8 +6,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
-  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2, FileDown,
-  BookOpen,
+  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -17,8 +15,6 @@ import {
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
 import { useUnits } from '../hooks/useUnits'
-import { generateDriveReport } from '../lib/report'
-import { exportDriveAsGPX } from '../lib/gpx'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -40,100 +36,6 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; col
       <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
       <p className="text-lg font-bold text-[var(--text-primary)]">{value}</p>
       <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
-    </GlassPanel>
-  )
-}
-
-function DriveNotes({ driveId }: { driveId: number }) {
-  const storageKey = `teslasync-drive-notes-${driveId}`
-  const [notes, setNotes] = useState(() => localStorage.getItem(storageKey) || '')
-  const [editing, setEditing] = useState(false)
-  const [tags, setTags] = useState<string[]>(() => {
-    const stored = localStorage.getItem(`${storageKey}-tags`)
-    return stored ? JSON.parse(stored) : []
-  })
-  const [newTag, setNewTag] = useState('')
-  
-  const save = () => {
-    localStorage.setItem(storageKey, notes)
-    setEditing(false)
-  }
-  
-  const addTag = () => {
-    if (!newTag.trim() || tags.includes(newTag.trim())) return
-    const updated = [...tags, newTag.trim()]
-    setTags(updated)
-    localStorage.setItem(`${storageKey}-tags`, JSON.stringify(updated))
-    setNewTag('')
-  }
-  
-  const removeTag = (tag: string) => {
-    const updated = tags.filter(t => t !== tag)
-    setTags(updated)
-    localStorage.setItem(`${storageKey}-tags`, JSON.stringify(updated))
-  }
-  
-  const presetTags = ['Road Trip', 'Commute', 'Scenic Route', 'Errands', 'Weekend', 'Night Drive', 'Highway', 'City', 'Mountain']
-  
-  return (
-    <GlassPanel className="p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="flex items-center gap-2 text-sm font-semibold" style={{color:'var(--text-primary)'}}>
-          <BookOpen className="h-4 w-4 text-neon-purple" /> Drive Notes
-        </h3>
-        {!editing && (
-          <button onClick={() => setEditing(true)} className="text-xs text-neon-cyan hover:underline">
-            {notes ? 'Edit' : '+ Add Note'}
-          </button>
-        )}
-      </div>
-      
-      {/* Tags */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {tags.map(tag => (
-          <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neon-purple/15 text-neon-purple">
-            {tag}
-            <button onClick={() => removeTag(tag)} className="hover:text-white">×</button>
-          </span>
-        ))}
-        <div className="flex items-center gap-1">
-          <input type="text" value={newTag} onChange={e => setNewTag(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addTag()}
-            placeholder="Add tag..."
-            className="w-20 px-1.5 py-0.5 rounded text-[10px]"
-            style={{background:'var(--surface-2)',color:'var(--text-primary)',border:'1px solid var(--glass-border)'}} />
-        </div>
-      </div>
-      
-      {/* Preset tag suggestions */}
-      {tags.length === 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {presetTags.map(t => (
-            <button key={t} onClick={() => { const u = [...tags, t]; setTags(u); localStorage.setItem(`${storageKey}-tags`, JSON.stringify(u)) }}
-              className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-[var(--text-muted)] hover:bg-neon-purple/10 hover:text-neon-purple transition-colors">
-              + {t}
-            </button>
-          ))}
-        </div>
-      )}
-      
-      {/* Note content */}
-      {editing ? (
-        <div>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)}
-            rows={4} placeholder="How was this drive? Any memorable moments?"
-            className="w-full rounded-lg px-3 py-2 text-sm resize-none"
-            style={{background:'var(--surface-2)',color:'var(--text-primary)',border:'1px solid var(--glass-border)'}} />
-          <div className="flex gap-2 mt-2">
-            <button onClick={save} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-neon-cyan/15 text-neon-cyan">Save</button>
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg text-xs text-[var(--text-muted)]">Cancel</button>
-          </div>
-        </div>
-      ) : notes ? (
-        <p className="text-sm whitespace-pre-wrap" style={{color:'var(--text-secondary)'}}>{notes}</p>
-      ) : (
-        <p className="text-xs italic text-[var(--text-muted)]">No notes yet. Click "Add Note" to record your thoughts about this drive.</p>
-      )}
     </GlassPanel>
   )
 }
@@ -328,20 +230,6 @@ export default function DriveDetail() {
               {drive.end_date && ` → ${new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </p>
           </div>
-          <button
-            onClick={() => generateDriveReport(drive, vehicle)}
-            className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all"
-            title="Download PDF report"
-          >
-            <FileDown className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => exportDriveAsGPX(drive, drivePositions, vehicle?.display_name || 'Tesla')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neon-green/15 text-neon-green ring-1 ring-neon-green/25 hover:bg-neon-green/25"
-            title="Download GPX file"
-          >
-            <MapPin className="h-3.5 w-3.5" /> GPX
-          </button>
           <button
             onClick={handleShare}
             className="rounded-xl p-2.5 text-[var(--text-muted)] hover:bg-white/5 hover:text-[var(--text-primary)] transition-all"
@@ -539,11 +427,6 @@ export default function DriveDetail() {
             {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
           </div>
         </GlassPanel>
-      </FadeIn>
-
-      {/* Drive Notes */}
-      <FadeIn delay={0.105}>
-        <DriveNotes driveId={driveId} />
       </FadeIn>
 
       {/* Journey Details */}

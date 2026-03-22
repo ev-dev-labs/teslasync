@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getSoftwareUpdates, Vehicle, SoftwareUpdate } from '../api'
+import { getVehicles, getSoftwareUpdates, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../components/ui'
-import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink, TrendingUp } from 'lucide-react'
+import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
 
 const statusConfig: Record<string, { color: string; bg: string; icon: typeof CheckCircle; label: string }> = {
@@ -15,76 +15,6 @@ const statusConfig: Record<string, { color: string; bg: string; icon: typeof Che
 
 function getStatus(status: string) {
   return statusConfig[status] ?? statusConfig.available
-}
-
-function VersionComparison({ current, previous }: { current: SoftwareUpdate | undefined; previous: SoftwareUpdate | undefined }) {
-  const daysSinceUpdate = current?.installed_at
-    ? Math.floor((Date.now() - new Date(current.installed_at).getTime()) / 86400000)
-    : null
-
-  return (
-    <GlassPanel className="p-6">
-      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Current Version</h3>
-      <div className="flex items-center gap-4 mt-3">
-        <div className="text-center">
-          <p className="text-2xl font-bold text-neon-cyan">{current?.version || '—'}</p>
-          <p className="text-[10px] text-[var(--text-muted)]">Current</p>
-        </div>
-        {previous && (
-          <>
-            <div className="text-[var(--text-muted)]">←</div>
-            <div className="text-center">
-              <p className="text-lg font-medium text-[var(--text-secondary)]">{previous.version}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">Previous</p>
-            </div>
-          </>
-        )}
-      </div>
-      {daysSinceUpdate != null && (
-        <p className="text-xs text-[var(--text-muted)] mt-3">Updated {daysSinceUpdate} days ago</p>
-      )}
-    </GlassPanel>
-  )
-}
-
-function UpdateFrequencyStats({ updates }: { updates: SoftwareUpdate[] }) {
-  const { avgDays, totalInstalled } = useMemo(() => {
-    const installed = updates
-      .filter(u => u.status === 'installed' && u.installed_at)
-      .sort((a, b) => new Date(a.installed_at!).getTime() - new Date(b.installed_at!).getTime())
-
-    if (installed.length < 2) return { avgDays: 0, totalInstalled: installed.length }
-
-    let totalDaysBetween = 0
-    for (let i = 1; i < installed.length; i++) {
-      const prev = new Date(installed[i - 1].installed_at!).getTime()
-      const curr = new Date(installed[i].installed_at!).getTime()
-      totalDaysBetween += (curr - prev) / 86400000
-    }
-
-    return {
-      avgDays: Math.round(totalDaysBetween / (installed.length - 1)),
-      totalInstalled: installed.length,
-    }
-  }, [updates])
-
-  return (
-    <GlassPanel className="p-6">
-      <h3 className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-        <TrendingUp className="h-4 w-4 text-neon-purple" /> Update Frequency
-      </h3>
-      <div className="flex items-center gap-6 mt-3">
-        <div>
-          <p className="text-2xl font-bold text-neon-purple">{avgDays}</p>
-          <p className="text-[10px] text-[var(--text-muted)]">Avg Days Between Updates</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-neon-green">{totalInstalled}</p>
-          <p className="text-[10px] text-[var(--text-muted)]">Total Updates Installed</p>
-        </div>
-      </div>
-    </GlassPanel>
-  )
 }
 
 export default function SoftwareUpdates() {
@@ -106,26 +36,6 @@ export default function SoftwareUpdates() {
   const latestVersion = updates?.[0]?.version ?? 'Unknown'
   const totalUpdates = updates?.length ?? 0
   const installedCount = updates?.filter(u => u.status === 'installed').length ?? 0
-
-  const installedUpdates = useMemo(() => {
-    if (!updates) return []
-    return updates
-      .filter(u => u.status === 'installed' && u.installed_at)
-      .sort((a, b) => new Date(b.installed_at!).getTime() - new Date(a.installed_at!).getTime())
-  }, [updates])
-
-  const currentUpdate = installedUpdates[0]
-  const previousUpdate = installedUpdates[1]
-
-  const daysOnVersionMap = useMemo(() => {
-    const map = new Map<number, number>()
-    for (let i = 0; i < installedUpdates.length; i++) {
-      const installDate = new Date(installedUpdates[i].installed_at!).getTime()
-      const endDate = i === 0 ? Date.now() : new Date(installedUpdates[i - 1].installed_at!).getTime()
-      map.set(installedUpdates[i].id, Math.floor((endDate - installDate) / 86400000))
-    }
-    return map
-  }, [installedUpdates])
 
   return (
     <FadeIn>
@@ -173,14 +83,6 @@ export default function SoftwareUpdates() {
           </div>
         </GlassPanel>
       </div>
-
-      {/* Version Comparison & Update Frequency */}
-      {updates && updates.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-          <VersionComparison current={currentUpdate} previous={previousUpdate} />
-          <UpdateFrequencyStats updates={updates} />
-        </div>
-      )}
 
       {/* Timeline */}
       <GlassPanel className="p-6">
@@ -230,11 +132,6 @@ export default function SoftwareUpdates() {
                               <Calendar className="h-3 w-3" />
                               <span>{new Date(u.installed_at).toLocaleDateString()}</span>
                             </div>
-                          )}
-                          {u.status === 'installed' && daysOnVersionMap.has(u.id) && (
-                            <p className="text-[10px] text-neon-purple">
-                              {daysOnVersionMap.get(u.id)} days on this version
-                            </p>
                           )}
                           {u.scheduled_at && !u.installed_at && (
                             <div className="flex items-center gap-1 text-xs text-neon-amber">

@@ -74,38 +74,6 @@ func (db *DB) Health(ctx context.Context) error {
 	return db.Pool.Ping(checkCtx)
 }
 
-// MigrationsComplete checks if database migrations have been applied and are
-// not in a dirty state by querying the schema_migrations table.
-func (db *DB) MigrationsComplete(ctx context.Context) (bool, error) {
-	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	var dirty bool
-	err := db.Pool.QueryRow(checkCtx,
-		"SELECT dirty FROM schema_migrations LIMIT 1",
-	).Scan(&dirty)
-	if err != nil {
-		return false, err
-	}
-	return !dirty, nil
-}
-
-// HasPositions returns true if at least one position record exists,
-// indicating that a vehicle poll has succeeded.
-func (db *DB) HasPositions(ctx context.Context) (bool, error) {
-	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	var exists bool
-	err := db.Pool.QueryRow(checkCtx,
-		"SELECT EXISTS(SELECT 1 FROM positions LIMIT 1)",
-	).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-	return exists, nil
-}
-
 // Stats returns current connection pool statistics for monitoring.
 func (db *DB) Stats() map[string]interface{} {
 	s := db.Pool.Stat()

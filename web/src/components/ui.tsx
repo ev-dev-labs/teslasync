@@ -1,5 +1,5 @@
 import { motion, type HTMLMotionProps } from 'framer-motion'
-import { type ReactNode, useEffect, useRef, useCallback } from 'react'
+import { type ReactNode } from 'react'
 import clsx from 'clsx'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar } from 'lucide-react'
 
@@ -134,7 +134,7 @@ export function StatCard({ label, value, icon, change, color = 'cyan', subtitle 
 export function PageHeader({ title, subtitle, actions, icon }: { title: string; subtitle?: string; actions?: ReactNode; icon?: ReactNode }) {
   return (
     <FadeIn>
-      <section aria-label={title} className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-start gap-3">
           {icon && <div className="mt-1">{icon}</div>}
           <div>
@@ -144,7 +144,7 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: string; 
           </div>
         </div>
         {actions && <div className="flex items-center gap-2 sm:gap-3">{actions}</div>}
-      </section>
+      </div>
     </FadeIn>
   )
 }
@@ -277,55 +277,18 @@ export function EmptyState({ icon, title, description }: { icon: ReactNode; titl
 export function ConfirmModal({ open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', variant = 'danger', onConfirm, onCancel }: {
   open: boolean; title: string; message: string; confirmLabel?: string; cancelLabel?: string; variant?: 'danger' | 'warning'; onConfirm: () => void; onCancel: () => void;
 }) {
-  const modalRef = useRef<HTMLDivElement>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (open) {
-      previousFocusRef.current = document.activeElement as HTMLElement
-      setTimeout(() => modalRef.current?.focus(), 50)
-    } else if (previousFocusRef.current) {
-      previousFocusRef.current.focus()
-      previousFocusRef.current = null
-    }
-  }, [open])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel()
-      return
-    }
-    if (e.key === 'Tab' && modalRef.current) {
-      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-  }, [onCancel])
-
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={title} onKeyDown={handleKeyDown}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
       <motion.div
-        ref={modalRef}
-        tabIndex={-1}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="relative glass-panel p-6 max-w-sm w-full mx-4 outline-none"
+        className="relative glass-panel p-6 max-w-sm w-full mx-4"
       >
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{title}</h3>
-        <p className="text-sm text-[var(--text-secondary)] mb-6" role="alert">{message}</p>
+        <p className="text-sm text-[var(--text-secondary)] mb-6">{message}</p>
         <div className="flex items-center gap-3 justify-end">
           <button onClick={onCancel} className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all">{cancelLabel}</button>
           <button onClick={onConfirm} className={clsx('px-4 py-2 text-sm font-medium rounded-lg transition-all',

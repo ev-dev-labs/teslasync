@@ -22,9 +22,6 @@ import (
 func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor) http.Handler {
 	r := chi.NewRouter()
 
-	// In-memory cache for frequently accessed data
-	cache := database.NewCache()
-
 	// SSE event hub for real-time updates
 	eventHub := NewEventHub()
 
@@ -33,7 +30,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(chimw.RealIP)
 	r.Use(LoggerMiddleware)
 	r.Use(RecoveryMiddleware) // Enhanced recovery that logs panics as structured errors
-	r.Use(PrometheusMiddleware)
 	r.Use(chimw.Compress(5))
 	r.Use(chimw.Timeout(30 * time.Second))
 
@@ -57,33 +53,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(SecurityHeadersMiddleware)
 
-	// Rate limiting — skip SSE and health endpoints
-	r.Use(func(next http.Handler) http.Handler {
-		limiter := httprate.LimitByIP(200, 1*time.Minute)
-		limited := limiter(next)
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Skip rate limiting for SSE, health checks, and metrics
-			switch r.URL.Path {
-			case "/api/v1/events", "/healthz", "/readyz", "/metrics":
-				next.ServeHTTP(w, r)
-			default:
-				limited.ServeHTTP(w, r)
-			}
-		})
-	})
+	// Rate limiting
+	r.Use(httprate.LimitByIP(100, 1*time.Minute))
 
 	// Handlers
-	vehicleHandler := NewVehicleHandler(db, teslaClient, cache)
+	vehicleHandler := NewVehicleHandler(db, teslaClient)
 	driveHandler := NewDriveHandler(db)
 	chargingHandler := NewChargingHandler(db)
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient)
-	settingsHandler := NewSettingsHandler(db, cache)
+	settingsHandler := NewSettingsHandler(db)
 	alertHandler := NewAlertHandler(db)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(db)
 	batteryHandler := NewBatteryHandler(db)
-	analyticsHandler := NewAnalyticsHandler(db, cache)
+	analyticsHandler := NewAnalyticsHandler(db)
 	notificationHandler := NewNotificationHandler(db)
 	chatbotHandler := NewChatbotHandler(db)
 	tirePressureHandler := NewTirePressureHandler(db)
@@ -93,34 +77,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	mileageHandler := NewMileageHandler(db)
 	tripHandler := NewTripHandler(db)
 	vehicleStateHandler := NewVehicleStateHandler(db)
-	webhookHandler := NewWebhookHandler(db)
-	userHandler := NewUserHandler(db, cfg.Auth.JWTSecret)
-	searchHandler := NewSearchHandler(db)
 	backupHandler := NewBackupHandler(db)
+	auditHandler := NewAuditHandler(db)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
-	r.Get("/api/v1/system/status", SystemStatusHandler(db, teslaClient, mqttClient, health))
-	r.Get("/api/v1/system/health", ExtendedHealthCheck(db, health))
-	r.Get("/api/v1/system/api-usage", APIUsageHandler())
-	r.Get("/api/v1/system/compression-stats", CompressionStatsHandler(db))
-	r.Get("/api/v1/system/backup", backupHandler.ExportData)
-	r.Get("/api/v1/system/backup/stats", backupHandler.BackupStats)
 
 	// Metrics
 	r.Handle("/metrics", MetricsHandler())
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// User authentication (login is public, me uses optional auth)
-		r.Post("/users/login", userHandler.Login)
-		r.Group(func(r chi.Router) {
-			r.Use(userHandler.OptionalAuthMiddleware)
-			r.Get("/users/me", userHandler.Me)
-		})
-
-		// Auth (Tesla OAuth)
+		// Auth
 		r.Route("/auth", func(r chi.Router) {
 			r.Get("/login", authHandler.Login)
 			r.Get("/callback", authHandler.Callback)
@@ -241,19 +210,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
 		})
 
-		// Fleet Telemetry ingestion
-		telemetryHandler := NewTelemetryHandler(db)
-		r.Post("/telemetry", telemetryHandler.TelemetryIngest)
-		r.Get("/telemetry/status", telemetryHandler.TelemetryStatus)
-
-		// Inbound webhook for external systems (Home Assistant, IFTTT, Node-RED)
-		r.Post("/webhook", webhookHandler.InboundWebhook)
-
-		// Global search
-		r.Get("/search", searchHandler.Search)
-
 		// Real-time SSE stream
 		r.Get("/events", SSEHandler(eventHub))
+
+		// System endpoints
+		r.Route("/system", func(r chi.Router) {
+			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health))
+			r.Get("/health", ExtendedHealthCheck(db, health))
+			r.Get("/api-usage", APIUsageHandler())
+			r.Get("/compression-stats", CompressionStatsHandler(db))
+			r.Get("/backup", backupHandler.ExportData)
+			r.Get("/backup/stats", backupHandler.BackupStats)
+			r.Get("/config-validation", ConfigValidation(cfg))
+			r.Get("/audit", auditHandler.List)
+		})
 
 		// Export
 		r.Get("/export/{type}", NewExportHandler(db))

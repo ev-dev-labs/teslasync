@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bell, Plus, Trash2, TestTube, ToggleLeft, ToggleRight,
   Send, MessageSquare, Mail, Webhook, Hash, Megaphone, Smartphone,
   CheckCircle, XCircle, Clock, BarChart3, X, Pencil, ChevronDown, ChevronUp,
-  Loader2, PlayCircle, FileText, RotateCcw,
+  Loader2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -16,13 +16,6 @@ import {
 } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState } from '../components/ui'
 import { useToast } from '../components/Toast'
-
-interface TestResult {
-  status: 'success' | 'failed'
-  message: string
-  latency: number
-  time: Date
-}
 
 const CHANNEL_TYPES = [
   { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
@@ -63,27 +56,12 @@ function getChannelMeta(type: string) {
   return CHANNEL_TYPES.find(t => t.value === type) ?? CHANNEL_TYPES[4]
 }
 
-function formatTestTimeAgo(date: Date): string {
-  const diff = Date.now() - date.getTime()
-  const secs = Math.floor(diff / 1000)
-  if (secs < 10) return 'just now'
-  if (secs < 60) return `${secs}s ago`
-  const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
-}
-
 export default function Notifications() {
   const qc = useQueryClient()
   const toast = useToast()
   const [showForm, setShowForm] = useState(false)
   const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null)
   const [showLogs, setShowLogs] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [testResults, setTestResults] = useState<Record<number, TestResult>>({})
-  const [testingAll, setTestingAll] = useState(false)
 
   const { data: channels = [], isLoading } = useQuery({ queryKey: ['notification-channels'], queryFn: getNotificationChannels })
   const { data: stats } = useQuery({ queryKey: ['notification-stats'], queryFn: getNotificationStats })
@@ -108,55 +86,20 @@ export default function Notifications() {
     onError: () => toast.error('Failed to toggle channel'),
   })
   const testMut = useMutation({
-    mutationFn: async (channelId: number) => {
-      const start = performance.now()
-      const data = await testNotificationChannel(channelId)
-      const latency = Math.round(performance.now() - start)
-      return { data, latency, channelId }
-    },
-    onSuccess: ({ data, latency, channelId }) => {
-      const ch = channels.find(c => c.id === channelId)
-      const name = ch?.name ?? 'Channel'
-      const type = ch?.type ?? 'channel'
+    mutationFn: testNotificationChannel,
+    onSuccess: (data, channelId) => {
+      const name = channels.find(c => c.id === channelId)?.name ?? 'Channel'
       if (data?.success) {
-        setTestResults(prev => ({ ...prev, [channelId]: { status: 'success', message: `Test sent successfully via ${type} in ${latency}ms`, latency, time: new Date() } }))
         toast.success(`${name}: test sent successfully!`)
       } else {
-        setTestResults(prev => ({ ...prev, [channelId]: { status: 'failed', message: data?.error || 'Unknown error', latency, time: new Date() } }))
         toast.error(`${name}: test failed`, data?.error || 'Unknown error')
       }
     },
     onError: (_err, channelId) => {
       const name = channels.find(c => c.id === channelId)?.name ?? 'Channel'
-      setTestResults(prev => ({ ...prev, [channelId]: { status: 'failed', message: String(_err), latency: 0, time: new Date() } }))
       toast.error(`${name}: test failed`)
     },
   })
-
-  const handleTestAll = useCallback(async () => {
-    const enabledChannels = channels.filter(c => c.enabled)
-    if (enabledChannels.length === 0) {
-      toast.error('No enabled channels to test')
-      return
-    }
-    setTestingAll(true)
-    for (const ch of enabledChannels) {
-      try {
-        const start = performance.now()
-        const data = await testNotificationChannel(ch.id)
-        const latency = Math.round(performance.now() - start)
-        if (data?.success) {
-          setTestResults(prev => ({ ...prev, [ch.id]: { status: 'success', message: `Test sent via ${ch.type} in ${latency}ms`, latency, time: new Date() } }))
-        } else {
-          setTestResults(prev => ({ ...prev, [ch.id]: { status: 'failed', message: data?.error || 'Unknown error', latency, time: new Date() } }))
-        }
-      } catch (err) {
-        setTestResults(prev => ({ ...prev, [ch.id]: { status: 'failed', message: String(err), latency: 0, time: new Date() } }))
-      }
-    }
-    setTestingAll(false)
-    toast.success(`Tested ${enabledChannels.length} channels`)
-  }, [channels, toast])
 
   return (
     <div className="space-y-8">
@@ -164,22 +107,12 @@ export default function Notifications() {
         title="Notification Center"
         subtitle="Manage notification channels, view delivery logs, and monitor delivery stats"
         actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleTestAll}
-              disabled={testingAll || channels.filter(c => c.enabled).length === 0}
-              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-neon-green/10 text-neon-green hover:bg-neon-green/20 border border-neon-green/20 transition-colors disabled:opacity-50"
-            >
-              {testingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
-              {testingAll ? 'Testing...' : 'Test All'}
-            </button>
-            <button
-              onClick={() => { setEditingChannel(null); setShowForm(true) }}
-              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 border border-neon-cyan/20 transition-colors"
-            >
-              <Plus className="h-4 w-4" /> Add Channel
-            </button>
-          </div>
+          <button
+            onClick={() => { setEditingChannel(null); setShowForm(true) }}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 border border-neon-cyan/20 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Add Channel
+          </button>
         }
       />
 
@@ -222,7 +155,6 @@ export default function Notifications() {
             const meta = getChannelMeta(ch.type)
             const Icon = meta.icon
             const isTestingThis = testMut.isPending && testMut.variables === ch.id
-            const result = testResults[ch.id]
             return (
               <motion.div
                 key={ch.id}
@@ -304,24 +236,6 @@ export default function Notifications() {
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-
-                  {/* Test result inline */}
-                  {result && (
-                    <div className={clsx(
-                      'flex items-center gap-2 rounded-lg px-3 py-2 text-xs',
-                      result.status === 'success' ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'
-                    )}>
-                      {result.status === 'success' ? <CheckCircle className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
-                      <span className="truncate">{result.status === 'success' ? `✅ ${result.message}` : `❌ ${result.message}`}</span>
-                    </div>
-                  )}
-
-                  {/* Last test status */}
-                  {result && (
-                    <span className="text-xs text-[var(--text-muted)]">
-                      Last tested: {formatTestTimeAgo(result.time)} — {result.status === 'success' ? '✅' : '❌'} {result.status === 'success' ? `OK (${result.latency}ms)` : 'Failed'}
-                    </span>
-                  )}
                 </GlassPanel>
               </motion.div>
             )
@@ -338,64 +252,6 @@ export default function Notifications() {
           )}
         </div>
       </FadeIn>
-
-      {/* Test All Results Summary */}
-      {Object.keys(testResults).length > 0 && (
-        <FadeIn delay={0.12}>
-          <GlassPanel className="overflow-x-auto">
-            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--glass-border)' }}>
-              <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <TestTube className="h-4 w-4 text-neon-cyan" /> Test Results Summary
-              </h3>
-              <button
-                onClick={() => setTestResults({})}
-                className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-              >
-                Clear
-              </button>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                  {['Channel', 'Status', 'Latency', 'Message', 'Tested At'].map(h => (
-                    <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(testResults).map(([idStr, res]) => {
-                  const id = Number(idStr)
-                  const ch = channels.find(c => c.id === id)
-                  const meta = ch ? getChannelMeta(ch.type) : null
-                  const CIcon = meta?.icon ?? Bell
-                  return (
-                    <tr key={id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <CIcon className="h-3.5 w-3.5" style={{ color: meta?.color ?? 'var(--text-muted)' }} />
-                          <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{ch?.name ?? `#${id}`}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={clsx(
-                          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                          res.status === 'success' ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'
-                        )}>
-                          {res.status === 'success' ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                          {res.status === 'success' ? 'OK' : 'Failed'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{res.latency}ms</td>
-                      <td className="px-4 py-3 text-xs max-w-[250px] truncate" style={{ color: 'var(--text-tertiary)' }}>{res.message}</td>
-                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>{res.time.toLocaleTimeString()}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </GlassPanel>
-        </FadeIn>
-      )}
 
       {/* Delivery Log toggle */}
       <FadeIn delay={0.15}>
@@ -473,33 +329,6 @@ export default function Notifications() {
                 </tbody>
               </table>
             </GlassPanel>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Message Templates toggle */}
-      <FadeIn delay={0.2}>
-        <button
-          onClick={() => setShowTemplates(!showTemplates)}
-          className="flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          <FileText className="h-4 w-4" />
-          Message Templates
-          {showTemplates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
-      </FadeIn>
-
-      {/* Message Templates section */}
-      <AnimatePresence>
-        {showTemplates && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <NotificationTemplates />
           </motion.div>
         )}
       </AnimatePresence>
@@ -719,73 +548,5 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
         </form>
       </motion.div>
     </motion.div>
-  )
-}
-
-const defaultTemplates: Record<string, string> = {
-  low_battery: '🔋 {{vehicle}} battery is at {{battery}}% — consider charging soon',
-  charging_complete: '⚡ {{vehicle}} finished charging — now at {{battery}}%',
-  geofence_enter: '📍 {{vehicle}} arrived at {{location}}',
-  geofence_exit: '📍 {{vehicle}} left {{location}}',
-  speed_limit: '🏎️ {{vehicle}} exceeded {{threshold}} km/h (current: {{speed}} km/h)',
-  tire_pressure_low: '🛞 {{vehicle}} tire pressure low: {{details}}',
-  vehicle_unlocked: '🔓 {{vehicle}} has been unlocked for {{duration}} minutes',
-  software_update: '📲 {{vehicle}} has a software update available: {{version}}',
-  vampire_drain: '🧛 {{vehicle}} losing {{rate}}%/hour while parked',
-  sentry_event: '👁️ Sentry mode event on {{vehicle}}',
-  charging_cost: '💰 {{vehicle}} charging cost ${{cost}} ({{energy}} kWh)',
-  efficiency_drop: '📉 {{vehicle}} efficiency dropped to {{efficiency}} Wh/km',
-}
-
-function NotificationTemplates() {
-  const [templates, setTemplates] = useState<Record<string, string>>(() => {
-    const stored = localStorage.getItem('teslasync-notification-templates')
-    return stored ? { ...defaultTemplates, ...JSON.parse(stored) } : defaultTemplates
-  })
-
-  const save = (type: string, template: string) => {
-    const updated = { ...templates, [type]: template }
-    setTemplates(updated)
-    localStorage.setItem('teslasync-notification-templates', JSON.stringify(updated))
-  }
-
-  const reset = (type: string) => {
-    save(type, defaultTemplates[type])
-  }
-
-  return (
-    <GlassPanel className="p-6">
-      <h3 className="text-sm font-semibold flex items-center gap-2 mb-1" style={{ color: 'var(--text-primary)' }}>
-        <FileText className="h-4 w-4 text-neon-cyan" /> Message Templates
-      </h3>
-      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-        Customize notification messages. Available variables: {'{{vehicle}}'}, {'{{battery}}'}, {'{{speed}}'}, {'{{location}}'}, {'{{threshold}}'}, {'{{cost}}'}, {'{{energy}}'}, {'{{rate}}'}, {'{{version}}'}, {'{{duration}}'}, {'{{efficiency}}'}, {'{{details}}'}
-      </p>
-      <div className="space-y-3">
-        {Object.entries(templates).map(([type, template]) => (
-          <div key={type} className="flex items-start gap-3">
-            <label className="text-xs font-medium w-32 pt-2 shrink-0 capitalize" style={{ color: 'var(--text-secondary)' }}>
-              {type.replace(/_/g, ' ')}
-            </label>
-            <input
-              type="text"
-              value={template}
-              onChange={e => save(type, e.target.value)}
-              className="flex-1 rounded-lg px-3 py-2 text-xs outline-none transition-colors focus:border-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}
-            />
-            <button
-              onClick={() => reset(type)}
-              className="shrink-0 pt-2 transition-colors flex items-center gap-1"
-              style={{ color: 'var(--text-muted)' }}
-              title="Reset to default"
-            >
-              <RotateCcw className="h-3 w-3" />
-              <span className="text-[10px]">Reset</span>
-            </button>
-          </div>
-        ))}
-      </div>
-    </GlassPanel>
   )
 }

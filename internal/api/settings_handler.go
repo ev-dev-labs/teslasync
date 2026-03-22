@@ -1,10 +1,8 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -14,35 +12,20 @@ import (
 // SettingsHandler handles user settings.
 type SettingsHandler struct {
 	settingsRepo *database.SettingsRepo
-	cache        *database.Cache
 }
 
-func NewSettingsHandler(db *database.DB, cache *database.Cache) *SettingsHandler {
-	return &SettingsHandler{
-		settingsRepo: database.NewSettingsRepo(db),
-		cache:        cache,
-	}
+func NewSettingsHandler(db *database.DB) *SettingsHandler {
+	return &SettingsHandler{settingsRepo: database.NewSettingsRepo(db)}
 }
 
 func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	cacheKey := "settings:global"
-
-	var s models.Settings
-	if h.cache.Get(ctx, cacheKey, &s) {
-		writeJSON(w, http.StatusOK, s)
-		return
-	}
-
-	sp, err := h.settingsRepo.Get(ctx)
+	s, err := h.settingsRepo.Get(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get settings")
 		writeError(w, http.StatusInternalServerError, "failed to get settings")
 		return
 	}
-
-	h.cache.Set(ctx, cacheKey, sp, 300*time.Second)
-	writeJSON(w, http.StatusOK, sp)
+	writeJSON(w, http.StatusOK, s)
 }
 
 func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +40,5 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to update settings")
 		return
 	}
-	h.cache.Delete(context.Background(), "settings:global")
 	writeJSON(w, http.StatusOK, s)
 }

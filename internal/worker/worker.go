@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -22,21 +21,6 @@ type vehicleHealth struct {
 	consecFails int
 	lastError   time.Time
 	backoffUntil time.Time
-}
-
-// vehiclePollingState tracks adaptive polling intervals per vehicle.
-type vehiclePollingState struct {
-	lastState    string
-	lastPollAt   time.Time
-	pollInterval time.Duration
-}
-
-// skippedPolls tracks the number of polls skipped by adaptive polling (for metrics).
-var skippedPolls int64
-
-// GetSkippedPolls returns the total number of polls skipped by adaptive polling.
-func GetSkippedPolls() int64 {
-	return atomic.LoadInt64(&skippedPolls)
 }
 
 // Worker polls Tesla API for vehicle data and stores it.
@@ -58,12 +42,6 @@ type Worker struct {
 	// Per-vehicle health tracking for adaptive backoff
 	mu             sync.Mutex
 	vehicleHealth  map[int64]*vehicleHealth
-
-	// Per-vehicle adaptive polling state
-	pollingStates  map[int64]*vehiclePollingState
-
-	// Track whether HA discovery has been published for each vehicle
-	haDiscovered map[int64]bool
 }
 
 // New creates a new Worker that polls the Tesla API at the configured interval,
@@ -82,8 +60,6 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		activeDrives:  make(map[int64]int64),
 		activeCharges: make(map[int64]int64),
 		vehicleHealth: make(map[int64]*vehicleHealth),
-		pollingStates: make(map[int64]*vehiclePollingState),
-		haDiscovered:  make(map[int64]bool),
 	}
 }
 
@@ -96,13 +72,8 @@ func (w *Worker) Start(ctx context.Context) {
 		log.Warn().Err(err).Msg("no stored tokens, waiting for authentication")
 	}
 
-	// Status check ticker: ListVehicles + poll active ones (15 min)
-	ticker := time.NewTicker(w.cfg.StatusCheckInterval)
+	ticker := time.NewTicker(w.cfg.PollInterval)
 	defer ticker.Stop()
-
-	// Fast ticker: re-fetch data for driving/charging vehicles only (2 min)
-	fastTicker := time.NewTicker(w.cfg.DrivingPollInterval)
-	defer fastTicker.Stop()
 
 	// Token refresh ticker (every 30 minutes)
 	refreshTicker := time.NewTicker(30 * time.Minute)
@@ -124,12 +95,6 @@ func (w *Worker) Start(ctx context.Context) {
 				}
 			}
 			w.safePollAllVehicles(ctx)
-
-		case <-fastTicker.C:
-			if !w.teslaClient.HasValidToken() {
-				continue
-			}
-			w.safePollActiveVehicles(ctx)
 		}
 	}
 }
@@ -152,16 +117,6 @@ func (w *Worker) safePollAllVehicles(ctx context.Context) {
 		}
 	}()
 	w.pollAllVehicles(ctx)
-}
-
-// safePollActiveVehicles wraps active-vehicle polling with panic recovery.
-func (w *Worker) safePollActiveVehicles(ctx context.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error().Str("panic", fmt.Sprintf("%v", r)).Str("stack", string(debug.Stack())).Msg("panic in active poll loop")
-		}
-	}()
-	w.pollActiveVehicles(ctx)
 }
 
 func (w *Worker) loadTokens(ctx context.Context) error {
@@ -207,20 +162,6 @@ func (w *Worker) doRefreshToken(ctx context.Context) bool {
 }
 
 func (w *Worker) pollAllVehicles(ctx context.Context) {
-	// ONE API call to get status of ALL vehicles
-	teslaVehicles, err := w.teslaClient.ListVehicles(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to list vehicles")
-		return
-	}
-
-	// Build state map from the list response
-	stateMap := make(map[int64]string) // vehicleID → state
-	for _, tv := range teslaVehicles {
-		stateMap[tv.VehicleID] = tv.State
-	}
-
-	// Get our DB vehicles
 	vehicles, err := w.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list vehicles for polling")
@@ -228,21 +169,6 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 	}
 
 	for _, vehicle := range vehicles {
-		state := stateMap[vehicle.VehicleID]
-		if state == "" {
-			state = "unknown"
-		}
-
-		// Update state in DB from the list response (no per-vehicle API call)
-		_ = w.vehicleRepo.UpdateState(ctx, vehicle.ID, state, state != "offline")
-		w.publishMQTT(vehicle, "state", state)
-
-		// NEVER call any API for sleeping/offline vehicles
-		if state == "asleep" || state == "offline" {
-			w.updatePollingState(vehicle.ID, state)
-			continue
-		}
-
 		// Check per-vehicle backoff
 		w.mu.Lock()
 		vh, exists := w.vehicleHealth[vehicle.ID]
@@ -253,58 +179,11 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		}
 		w.mu.Unlock()
 
-		// Only call expensive vehicle_data for active vehicles
-		if !w.shouldPollVehicle(vehicle.ID, state) {
-			atomic.AddInt64(&skippedPolls, 1)
-			log.Debug().Int64("vehicle_id", vehicle.ID).Str("state", state).Msg("skipping vehicle (adaptive interval)")
-			continue
-		}
-
 		w.pollVehicleSafe(ctx, vehicle)
 	}
 }
 
-// shouldPollVehicle returns true if enough time has elapsed since the last poll
-// based on the vehicle's current state. This implements adaptive polling to
-// minimize API requests and billing costs.
-func (w *Worker) shouldPollVehicle(vehicleID int64, lastState string) bool {
-	w.mu.Lock()
-	state := w.pollingStates[vehicleID]
-	w.mu.Unlock()
-
-	if state == nil {
-		return true // First poll
-	}
-
-	var interval time.Duration
-	switch lastState {
-	case "driving":
-		interval = w.cfg.DrivingPollInterval // 120s
-	case "charging":
-		interval = w.cfg.ChargingPollInterval // 600s
-	case "asleep", "offline":
-		return false // NEVER poll sleeping/offline vehicles
-	default: // online, idle
-		interval = w.cfg.PollInterval // 900s
-	}
-
-	return time.Since(state.lastPollAt) >= interval
-}
-
-// updatePollingState records the poll time and detected state for a vehicle.
-func (w *Worker) updatePollingState(vehicleID int64, state string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	ps := w.pollingStates[vehicleID]
-	if ps == nil {
-		ps = &vehiclePollingState{}
-		w.pollingStates[vehicleID] = ps
-	}
-	ps.lastState = state
-	ps.lastPollAt = time.Now()
-}
-
-// pollVehicleSafe wraps pollVehicleData with per-vehicle panic recovery.
+// pollVehicleSafe wraps pollVehicle with per-vehicle panic recovery.
 func (w *Worker) pollVehicleSafe(ctx context.Context, vehicle *models.Vehicle) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -312,7 +191,7 @@ func (w *Worker) pollVehicleSafe(ctx context.Context, vehicle *models.Vehicle) {
 			w.recordVehicleFailure(vehicle.ID)
 		}
 	}()
-	w.pollVehicleData(ctx, vehicle)
+	w.pollVehicle(ctx, vehicle)
 }
 
 // recordVehicleFailure applies exponential backoff for a repeatedly failing vehicle.
@@ -345,27 +224,7 @@ func (w *Worker) recordVehicleSuccess(vehicleID int64) {
 	}
 }
 
-// pollActiveVehicles polls only vehicles whose last known state is "driving" or "charging".
-// This is called on the fast ticker and does NOT call ListVehicles.
-func (w *Worker) pollActiveVehicles(ctx context.Context) {
-	vehicles, err := w.vehicleRepo.GetAll(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to list vehicles for active polling")
-		return
-	}
-	for _, v := range vehicles {
-		w.mu.Lock()
-		ps := w.pollingStates[v.ID]
-		w.mu.Unlock()
-		if ps != nil && (ps.lastState == "driving" || ps.lastState == "charging") && w.shouldPollVehicle(v.ID, ps.lastState) {
-			w.pollVehicleSafe(ctx, v)
-		}
-	}
-}
-
-// pollVehicleData fetches the full vehicle_data for a vehicle.
-// Status is already known from ListVehicles, so no GetVehicleStatus call is needed.
-func (w *Worker) pollVehicleData(ctx context.Context, vehicle *models.Vehicle) {
+func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	logger := log.With().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Logger()
 
 	data, err := w.teslaClient.GetVehicleData(ctx, vehicle.VehicleID)
@@ -375,7 +234,6 @@ func (w *Worker) pollVehicleData(ctx context.Context, vehicle *models.Vehicle) {
 		}
 		w.publishMQTT(vehicle, "state", "asleep")
 		w.recordVehicleSuccess(vehicle.ID) // Asleep is not a failure
-		w.updatePollingState(vehicle.ID, "asleep")
 		return
 	}
 	if errors.Is(err, tesla.ErrUnauthorized) {
@@ -404,15 +262,6 @@ func (w *Worker) pollVehicleData(ctx context.Context, vehicle *models.Vehicle) {
 	// Successful poll — reset backoff
 	w.recordVehicleSuccess(vehicle.ID)
 
-	// Determine effective state for adaptive polling
-	effectiveState := data.State
-	if data.DriveState.Speed != nil && *data.DriveState.Speed > 0 {
-		effectiveState = "driving"
-	} else if data.ChargeState.ChargingState == "Charging" {
-		effectiveState = "charging"
-	}
-	w.updatePollingState(vehicle.ID, effectiveState)
-
 	// Update vehicle state
 	if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, data.State, true); err != nil {
 		logger.Error().Err(err).Msg("failed to update vehicle state")
@@ -430,16 +279,10 @@ func (w *Worker) pollVehicleData(ctx context.Context, vehicle *models.Vehicle) {
 	// Track charging sessions
 	w.trackCharging(ctx, vehicle, data)
 
-	// Publish Home Assistant auto-discovery on first successful poll
-	if w.mqttClient != nil && !w.haDiscovered[vehicle.ID] {
-		w.mqttClient.PublishHADiscovery(vehicle)
-		w.haDiscovered[vehicle.ID] = true
-	}
-
 	// Publish to MQTT
 	w.publishVehicleData(vehicle, data)
 
-	logger.Debug().Str("state", data.State).Str("effective_state", effectiveState).Int("battery", data.ChargeState.BatteryLevel).Msg("polled vehicle")
+	logger.Debug().Str("state", data.State).Int("battery", data.ChargeState.BatteryLevel).Msg("polled vehicle")
 }
 
 func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse) *models.Position {

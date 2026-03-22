@@ -1,96 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getVehiclePositions, getGeofences, getDrives, Vehicle, VehicleState, Position, getVehicleStatus } from '../api'
-import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker, Rectangle, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker } from 'react-leaflet'
 import { LatLngExpression, divIcon } from 'leaflet'
 import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
-import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForward, Zap, Shield, Lock, Eye, History } from 'lucide-react'
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForward, Zap, Shield, Lock, Eye } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import clsx from 'clsx'
-
-interface ChargerInfo {
-  ID: number
-  AddressInfo: {
-    Title: string
-    AddressLine1: string
-    Latitude: number
-    Longitude: number
-  }
-  NumberOfPoints: number | null
-  Connections?: Array<{
-    ConnectionTypeID?: number
-    PowerKW?: number
-  }>
-}
-
-type ChargerFilter = 'all' | 'supercharger' | 'ccs' | 'chademo'
-
-const CHARGER_FILTER_LABELS: Record<ChargerFilter, string> = {
-  all: 'All',
-  supercharger: 'Supercharger',
-  ccs: 'CCS',
-  chademo: 'CHAdeMO',
-}
-
-// Connection type IDs from OpenChargeMap
-const CHARGER_CONNECTION_IDS: Record<string, number[]> = {
-  supercharger: [30, 27], // Tesla Supercharger / Tesla connector
-  ccs: [33, 32],          // CCS (Type 1 & 2)
-  chademo: [2],           // CHAdeMO
-}
-
-function filterChargers(chargers: ChargerInfo[], filter: ChargerFilter): ChargerInfo[] {
-  if (filter === 'all') return chargers
-  const ids = CHARGER_CONNECTION_IDS[filter] ?? []
-  return chargers.filter(c =>
-    c.Connections?.some(conn => ids.includes(conn.ConnectionTypeID ?? 0))
-  )
-}
-
-const fetchChargers = async (lat: number, lng: number): Promise<ChargerInfo[]> => {
-  const res = await fetch(
-    `https://api.openchargemap.io/v3/poi/?output=json&latitude=${lat}&longitude=${lng}&distance=25&distanceunit=KM&maxresults=50&compact=true&verbose=false`
-  )
-  return res.json()
-}
-
-function ChargerLayer({ chargers }: { chargers: ChargerInfo[] }) {
-  return (
-    <>
-      {chargers.map(c => (
-        <CircleMarker
-          key={c.ID}
-          center={[c.AddressInfo.Latitude, c.AddressInfo.Longitude]}
-          radius={6}
-          pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.8 }}
-        >
-          <Popup>
-            <div style={{ color: 'var(--text-primary)', fontSize: '12px' }}>
-              <b>{c.AddressInfo.Title}</b><br />
-              {c.AddressInfo.AddressLine1}<br />
-              {c.NumberOfPoints} connectors<br />
-              {c.Connections?.[0]?.PowerKW && `${c.Connections[0].PowerKW} kW`}
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
-    </>
-  )
-}
-
-function MapCenterWatcher({ onCenterChange }: { onCenterChange: (lat: number, lng: number) => void }) {
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useMapEvents({
-    moveend(e) {
-      const center = e.target.getCenter()
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => {
-        onCenterChange(center.lat, center.lng)
-      }, 500)
-    },
-  })
-  return null
-}
 
 function createVehicleIcon(status: string, heading: number = 0) {
   const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
@@ -168,15 +84,6 @@ export default function LiveMap() {
   const [replayMode, setReplayMode] = useState(false)
   const [replayIdx, setReplayIdx] = useState(0)
   const [replayPlaying, setReplayPlaying] = useState(false)
-  const [showChargers, setShowChargers] = useState(false)
-  const [chargers, setChargers] = useState<ChargerInfo[]>([])
-  const [chargerFilter, setChargerFilter] = useState<ChargerFilter>('all')
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null)
-  const [showSpeedHeatmap, setShowSpeedHeatmap] = useState(false)
-  const [historyMode, setHistoryMode] = useState(false)
-  const [selectedDriveId, setSelectedDriveId] = useState<number | null>(null)
-  const [playbackProgress, setPlaybackProgress] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
   const replayTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const vehicleStates = useQuery({
@@ -212,41 +119,6 @@ export default function LiveMap() {
     queryFn: () => getDrives(selectedId!, 5),
     enabled: selectedId !== null,
   })
-
-  // History mode queries
-  const { data: historyDrives } = useQuery({
-    queryKey: ['drives-for-map', selectedId],
-    queryFn: () => getDrives(selectedId!, 20),
-    enabled: historyMode && selectedId !== null,
-  })
-
-  const { data: drivePositions } = useQuery({
-    queryKey: ['drive-positions-map', selectedDriveId, selectedId],
-    queryFn: () => getVehiclePositions(selectedId!, 5000),
-    enabled: selectedDriveId !== null && selectedId !== null,
-  })
-
-  // Speed heatmap grid from historical positions
-  const positions = trail
-  const speedGrid = useMemo(() => {
-    if (!showSpeedHeatmap || !positions?.length) return []
-
-    const cellSize = 0.002 // ~200m grid cells
-    const cells: Record<string, { lat: number; lng: number; speeds: number[] }> = {}
-
-    positions.forEach(p => {
-      if (!p.latitude || !p.longitude || !p.speed) return
-      const key = `${Math.round(p.latitude / cellSize) * cellSize},${Math.round(p.longitude / cellSize) * cellSize}`
-      if (!cells[key]) cells[key] = { lat: Math.round(p.latitude / cellSize) * cellSize, lng: Math.round(p.longitude / cellSize) * cellSize, speeds: [] }
-      cells[key].speeds.push(p.speed)
-    })
-
-    return Object.values(cells).map(c => ({
-      lat: c.lat, lng: c.lng,
-      avgSpeed: c.speeds.reduce((s, v) => s + v, 0) / c.speeds.length,
-      count: c.speeds.length,
-    }))
-  }, [positions, showSpeedHeatmap])
 
   const states = vehicleStates.data ?? {}
   const markers = vehicles?.filter(v => states[v.id]?.latitude && states[v.id]?.longitude) ?? []
@@ -289,54 +161,6 @@ export default function LiveMap() {
     }
     return () => { if (replayTimer.current) clearInterval(replayTimer.current) }
   }, [replayPlaying, replayMode, trailPositions.length])
-
-  // Fetch chargers when toggle is on and map center changes
-  useEffect(() => {
-    if (!showChargers) {
-      setChargers([])
-      return
-    }
-    const lat = mapCenter?.lat ?? (Array.isArray(center) ? (center as number[])[0] : 37.7749)
-    const lng = mapCenter?.lng ?? (Array.isArray(center) ? (center as number[])[1] : -122.4194)
-    let cancelled = false
-    fetchChargers(lat, lng).then(data => {
-      if (!cancelled) setChargers(data)
-    }).catch(() => {
-      if (!cancelled) setChargers([])
-    })
-    return () => { cancelled = true }
-  }, [showChargers, mapCenter, center])
-
-  const filteredChargers = filterChargers(chargers, chargerFilter)
-
-  // History mode: filter positions within selected drive's time window
-  const selectedDrive = historyDrives?.find(d => d.id === selectedDriveId) ?? null
-  const driveTrail = useMemo(() => {
-    if (!selectedDrive || !drivePositions) return []
-    const start = new Date(selectedDrive.start_date).getTime()
-    const end = selectedDrive.end_date ? new Date(selectedDrive.end_date).getTime() : Date.now()
-    return drivePositions
-      .filter(p => {
-        const t = new Date(p.created_at).getTime()
-        return t >= start && t <= end && p.latitude && p.longitude
-      })
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-  }, [selectedDrive, drivePositions])
-
-  // History playback animation
-  useEffect(() => {
-    if (!isPlaying || !driveTrail.length) return
-    const interval = setInterval(() => {
-      setPlaybackProgress(p => {
-        if (p >= 100) { setIsPlaying(false); return 100 }
-        return p + 0.5
-      })
-    }, 50)
-    return () => clearInterval(interval)
-  }, [isPlaying, driveTrail])
-
-  const playbackIdx = driveTrail.length > 0 ? Math.min(Math.floor((playbackProgress / 100) * (driveTrail.length - 1)), driveTrail.length - 1) : 0
-  const playbackPos = driveTrail[playbackIdx] ?? null
 
   const selectedState = selectedId ? states[selectedId] : null
   const replayPos = replayMode && trailPositions[replayIdx] ? trailPositions[replayIdx] : null
@@ -507,111 +331,7 @@ export default function LiveMap() {
                 />
               </>
             )}
-
-            {/* History drive trail + playback marker */}
-            {historyMode && driveTrail.length > 1 && (
-              <>
-                <Polyline
-                  positions={driveTrail.map(p => [p.latitude, p.longitude] as LatLngExpression)}
-                  pathOptions={{ color: '#f59e0b', weight: 3, opacity: 0.6 }}
-                />
-                {playbackPos && (
-                  <CircleMarker
-                    center={[playbackPos.latitude, playbackPos.longitude]}
-                    radius={8}
-                    pathOptions={{ color: '#f59e0b', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.9 }}
-                  />
-                )}
-              </>
-            )}
-
-            {/* Charger markers */}
-            {showChargers && <ChargerLayer chargers={filteredChargers} />}
-
-            {/* Speed heatmap rectangles */}
-            {showSpeedHeatmap && speedGrid.map((cell, i) => {
-              const color = cell.avgSpeed < 30 ? '#10b981' : cell.avgSpeed < 60 ? '#00f0ff' : cell.avgSpeed < 100 ? '#f59e0b' : '#ef4444'
-              return (
-                <Rectangle key={i}
-                  bounds={[[cell.lat - 0.001, cell.lng - 0.001], [cell.lat + 0.001, cell.lng + 0.001]]}
-                  pathOptions={{ color: 'transparent', fillColor: color, fillOpacity: 0.3 + Math.min(0.4, cell.count / 20) }}
-                />
-              )
-            })}
-
-            {/* Watch map center for charger fetching */}
-            <MapCenterWatcher onCenterChange={(lat, lng) => setMapCenter({ lat, lng })} />
           </MapContainer>
-
-          {/* Charger controls overlay */}
-          <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-            <button
-              onClick={() => {
-                setHistoryMode(!historyMode)
-                if (historyMode) {
-                  setSelectedDriveId(null)
-                  setPlaybackProgress(0)
-                  setIsPlaying(false)
-                }
-              }}
-              className={clsx(
-                'glass-panel px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer',
-                historyMode ? 'text-neon-amber border-neon-amber/30' : 'text-[var(--text-secondary)]'
-              )}
-            >
-              {historyMode ? <><History className="h-3.5 w-3.5" /> 📜 History</> : <><History className="h-3.5 w-3.5" /> 🗺️ Live</>}
-            </button>
-            <button
-              onClick={() => setShowChargers(!showChargers)}
-              className={clsx(
-                'glass-panel px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer',
-                showChargers ? 'text-neon-green border-neon-green/30' : 'text-[var(--text-secondary)]'
-              )}
-            >
-              <Zap className="h-3.5 w-3.5" />
-              {showChargers ? `⚡ ${filteredChargers.length} chargers nearby` : 'Show Chargers'}
-            </button>
-            {showChargers && (
-              <div className="glass-panel p-2 flex flex-wrap gap-1">
-                {(Object.keys(CHARGER_FILTER_LABELS) as ChargerFilter[]).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setChargerFilter(f)}
-                    className={clsx(
-                      'px-2 py-1 rounded text-[10px] font-medium transition-all cursor-pointer',
-                      chargerFilter === f
-                        ? 'bg-neon-green/20 text-neon-green'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-                    )}
-                  >
-                    {CHARGER_FILTER_LABELS[f]}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => setShowSpeedHeatmap(!showSpeedHeatmap)}
-              className={clsx(
-                'glass-panel px-3 py-2 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer',
-                showSpeedHeatmap ? 'text-neon-amber border-neon-amber/30' : 'text-[var(--text-secondary)]'
-              )}
-            >
-              🌡️ Speed Heatmap
-            </button>
-            {showSpeedHeatmap && (
-              <div className="glass-panel p-2.5">
-                <p className="text-[10px] text-[var(--text-secondary)] mb-1.5 font-medium">Speed Zones</p>
-                <div className="space-y-1">
-                  {[{ speed: '< 30 km/h', color: '#10b981' }, { speed: '30–60', color: '#00f0ff' }, { speed: '60–100', color: '#f59e0b' }, { speed: '100+', color: '#ef4444' }].map(l => (
-                    <div key={l.speed} className="flex items-center gap-2 text-[10px]">
-                      <div className="h-2 w-6 rounded-sm" style={{ backgroundColor: l.color, opacity: 0.6 }} />
-                      <span className="text-[var(--text-muted)]">{l.speed}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Speed legend overlay */}
           {selectedId && trailPositions.length > 1 && !replayMode && (
@@ -629,7 +349,7 @@ export default function LiveMap() {
           )}
 
           {/* Geofence legend overlay */}
-          {geofences && geofences.length > 0 && !historyMode && (
+          {geofences && geofences.length > 0 && (
             <div className="absolute top-4 right-4 z-[1000] glass-panel p-2.5">
               <p className="text-[10px] text-[var(--text-secondary)] mb-1 font-medium flex items-center gap-1"><Eye className="h-3 w-3" /> Geofences</p>
               <div className="space-y-0.5">
@@ -640,50 +360,6 @@ export default function LiveMap() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Drive History panel */}
-          {historyMode && selectedId && (
-            <div className="absolute top-4 right-4 w-72 glass-card p-4 rounded-xl z-[1000]">
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <History className="h-4 w-4" /> Drive History
-              </h3>
-
-              {/* Drive list */}
-              <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
-                {historyDrives?.map(d => (
-                  <button key={d.id}
-                    onClick={() => { setSelectedDriveId(d.id); setPlaybackProgress(0); setIsPlaying(false) }}
-                    className={clsx('w-full text-left p-2 rounded-lg text-xs transition-colors', selectedDriveId === d.id ? 'bg-neon-cyan/20' : 'hover:bg-white/5')}>
-                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{new Date(d.start_date).toLocaleDateString()}</p>
-                    <p className="text-[var(--text-muted)]">{d.distance?.toFixed(1)} km · {Math.round(d.duration_min)} min</p>
-                  </button>
-                ))}
-                {(!historyDrives || historyDrives.length === 0) && (
-                  <p className="text-xs text-[var(--text-muted)]">No drives found</p>
-                )}
-              </div>
-
-              {/* Playback controls */}
-              {selectedDriveId && driveTrail.length > 0 && (
-                <div className="border-t border-white/10 pt-3">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setIsPlaying(!isPlaying)} className="glass-button !py-1.5 !px-2.5 text-xs text-neon-cyan cursor-pointer">
-                      {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                    </button>
-                    <input type="range" min={0} max={100} value={playbackProgress}
-                      onChange={e => { setPlaybackProgress(Number(e.target.value)); setIsPlaying(false) }}
-                      className="flex-1 accent-[#00f0ff]" />
-                  </div>
-                  {playbackPos && (
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-[var(--text-muted)]">
-                      <span><Gauge className="h-2.5 w-2.5 inline" /> {playbackPos.speed ?? 0} km/h</span>
-                      <span><Battery className="h-2.5 w-2.5 inline" /> {playbackPos.battery_level}%</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </FadeIn>

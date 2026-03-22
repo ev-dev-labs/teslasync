@@ -141,7 +141,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/ev-dev-labs/teslasync.git
+git clone https://github.com/teslasync-labs/teslasync.git
 cd teslasync
 cp .env.example .env
 # Edit .env with your TESLA_CLIENT_ID and TESLA_CLIENT_SECRET
@@ -232,16 +232,11 @@ docker compose up -d --build
 ### Kubernetes (Helm)
 
 ```bash
-# Option 1: Helm repo
-helm repo add teslasync https://ev-dev-labs.github.io/teslasync/helm
-helm install teslasync teslasync/teslasync \
+helm install teslasync ./helm/teslasync \
   --set tesla.clientId=$TESLA_CLIENT_ID \
-  --set tesla.clientSecret=$TESLA_CLIENT_SECRET
-
-# Option 2: OCI registry
-helm install teslasync oci://ghcr.io/ev-dev-labs/charts/teslasync \
-  --set tesla.clientId=$TESLA_CLIENT_ID \
-  --set tesla.clientSecret=$TESLA_CLIENT_SECRET
+  --set tesla.clientSecret=$TESLA_CLIENT_SECRET \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host=teslasync.example.com
 ```
 
 The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, Grafana), Traefik IngressRoute, HPA, PDB, and helm test. See [helm/teslasync/README.md](helm/teslasync/README.md) for full documentation.
@@ -311,14 +306,14 @@ teslasync/vehicles/{vin}/vehicle_data       # full JSON
 
 ## Documentation
 
-Full documentation is available at the [TeslaSync Docs](https://ev-dev-labs.github.io/teslasync/) site, covering:
+Full documentation is available at the [TeslaSync Docs](https://teslasync-labs.github.io/teslasync/) site, covering:
 
-- [Getting Started](https://ev-dev-labs.github.io/teslasync/guide/getting-started)
-- [Architecture & Diagrams](https://ev-dev-labs.github.io/teslasync/guide/architecture)
-- [Configuration](https://ev-dev-labs.github.io/teslasync/guide/configuration)
-- [Technology Stack](https://ev-dev-labs.github.io/teslasync/guide/technology)
-- [Troubleshooting](https://ev-dev-labs.github.io/teslasync/guide/troubleshooting)
-- [FAQ](https://ev-dev-labs.github.io/teslasync/guide/faq)
+- [Getting Started](https://teslasync-labs.github.io/teslasync/guide/getting-started)
+- [Architecture & Diagrams](https://teslasync-labs.github.io/teslasync/guide/architecture)
+- [Configuration](https://teslasync-labs.github.io/teslasync/guide/configuration)
+- [Technology Stack](https://teslasync-labs.github.io/teslasync/guide/technology)
+- [Troubleshooting](https://teslasync-labs.github.io/teslasync/guide/troubleshooting)
+- [FAQ](https://teslasync-labs.github.io/teslasync/guide/faq)
 
 ## Contributing
 

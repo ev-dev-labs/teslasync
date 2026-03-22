@@ -5,7 +5,6 @@ metadata:
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
 data:
-  TESLASYNC_PORT: {{ .Values.service.port | quote }}
   DATABASE_HOST: {{ include "teslasync.postgresql.host" . | quote }}
   DATABASE_PORT: {{ include "teslasync.postgresql.port" . | quote }}
   DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}

@@ -65,13 +65,9 @@ func (m MQTTConfig) BrokerURL() string {
 }
 
 type WorkerConfig struct {
-	PollInterval         time.Duration
-	SleepPollInterval    time.Duration
-	DrivingPollInterval  time.Duration
-	ChargingPollInterval time.Duration
-	StatusCheckInterval  time.Duration
-	SleepPollMult        int
-	StreamingEnabled     bool
+	PollInterval     time.Duration
+	SleepPollMult    int
+	StreamingEnabled bool
 }
 
 type RedisConfig struct {
@@ -111,9 +107,9 @@ func Load() (*Config, error) {
 			Host:            envStr("DATABASE_HOST", "localhost"),
 			Port:            envInt("DATABASE_PORT", 5432),
 			User:            envStr("DATABASE_USER", "teslasync"),
-			Password:        envStr("DATABASE_PASSWORD", "teslasync"),
+			Password:        envStr("DATABASE_PASS", "teslasync"),
 			Name:            envStr("DATABASE_NAME", "teslasync"),
-			SSLMode:         envStr("DATABASE_SSL_MODE", "disable"),
+			SSLMode:         envStr("DATABASE_SSLMODE", "disable"),
 			MaxConns:        envInt("DATABASE_MAX_CONNS", 25),
 			MinConns:        envInt("DATABASE_MIN_CONNS", 5),
 			ConnMaxLifetime: envDuration("DATABASE_CONN_MAX_LIFETIME", 5*time.Minute),
@@ -141,13 +137,9 @@ func Load() (*Config, error) {
 		},
 
 		Worker: WorkerConfig{
-			PollInterval:         envDuration("WORKER_POLL_INTERVAL", 900*time.Second),
-			SleepPollInterval:    envDuration("WORKER_SLEEP_POLL_INTERVAL", 0),
-			DrivingPollInterval:  envDuration("WORKER_DRIVING_POLL_INTERVAL", 120*time.Second),
-			ChargingPollInterval: envDuration("WORKER_CHARGING_POLL_INTERVAL", 600*time.Second),
-			StatusCheckInterval:  envDuration("WORKER_STATUS_CHECK_INTERVAL", 900*time.Second),
-			SleepPollMult:        envInt("WORKER_SLEEP_POLL_MULT", 4),
-			StreamingEnabled:     envBool("WORKER_STREAMING", false),
+			PollInterval:     envDuration("WORKER_POLL_INTERVAL", 15*time.Second),
+			SleepPollMult:    envInt("WORKER_SLEEP_POLL_MULT", 4),
+			StreamingEnabled: envBool("WORKER_STREAMING", false),
 		},
 
 		Redis: RedisConfig{

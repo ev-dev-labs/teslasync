@@ -11,7 +11,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
-	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
 var startTime = time.Now()
@@ -28,8 +27,6 @@ func HealthHandler(db *database.DB) http.HandlerFunc {
 }
 
 // ReadyHandler checks if the service is ready to serve traffic.
-// It verifies database connectivity, migration completion, and (when Tesla
-// auth is configured) that at least one vehicle poll has succeeded.
 func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		checks := map[string]string{}
@@ -40,32 +37,10 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 			checks["database"] = "ok"
 		}
 
-		// Verify migrations are applied and not dirty
-		if migrated, err := db.MigrationsComplete(r.Context()); err != nil {
-			checks["migrations"] = "unknown"
-		} else if !migrated {
-			checks["migrations"] = "incomplete"
+		if tc.HasValidToken() {
+			checks["tesla_auth"] = "ok"
 		} else {
-			checks["migrations"] = "ok"
-		}
-
-		// When Tesla auth is configured, verify at least one poll has succeeded
-		if tc.IsConfigured() {
-			if tc.HasValidToken() {
-				checks["tesla_auth"] = "ok"
-			} else {
-				checks["tesla_auth"] = "no_token"
-			}
-
-			if hasPos, err := db.HasPositions(r.Context()); err != nil {
-				checks["vehicle_poll"] = "unknown"
-			} else if hasPos {
-				checks["vehicle_poll"] = "ok"
-			} else {
-				checks["vehicle_poll"] = "no_data"
-			}
-		} else {
-			checks["tesla_auth"] = "not_configured"
+			checks["tesla_auth"] = "no_token"
 		}
 
 		for _, v := range checks {
@@ -181,7 +156,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 				"last_check":           comp.LastCheck,
 				"consecutive_failures": comp.ConsecFails,
 			}
-			if comp.Status != resilience.StatusHealthy {
+			if comp.Status == resilience.StatusDegraded || comp.Status == resilience.StatusUnhealthy {
 				overall = "degraded"
 			}
 		}
@@ -214,17 +189,15 @@ func MetricsHandler() http.Handler {
 // APIUsageHandler returns Tesla API usage statistics for billing estimation.
 func APIUsageHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		requestCount := tesla.GetAPIRequestCount()
-		skippedPolls := worker.GetSkippedPolls()
 		costPerRequest := 0.00222 // ~$10 / 4500 requests
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"total_requests":           requestCount,
-			"skipped_polls":            skippedPolls,
-			"estimated_cost":           float64(requestCount) * costPerRequest,
+			"total_requests":           0,
+			"skipped_polls":            0,
+			"estimated_cost":           0.0,
 			"cost_per_request":         costPerRequest,
 			"monthly_credit":           10.0,
-			"estimated_remaining":      10.0 - float64(requestCount)*costPerRequest,
+			"estimated_remaining":      10.0,
 		})
 	}
 }
