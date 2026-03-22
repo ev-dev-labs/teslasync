@@ -375,120 +375,37 @@ body {
   color: #0f172a;
 }
 
-/* Glass input in light mode */
-:root.light-mode .glass-input {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #0f172a;
-}
-:root.light-mode .glass-input:focus {
-  border-color: var(--theme-primary);
-  box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.1);
-}
-:root.light-mode .glass-input::placeholder {
-  color: #94a3b8;
+/* === MOBILE SIDEBAR SCROLL FIX === */
+/* The sidebar uses fixed positioning on mobile. The nav needs explicit
+   scroll enabling because body has overflow:hidden which can block
+   touch scroll propagation on iOS Safari / mobile browsers. */
+@media (max-width: 1024px) {
+  aside[role="navigation"] {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+  }
+
+  aside[role="navigation"] > nav {
+    flex: 1 1 0% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+    min-height: 0 !important;
+  }
 }
 
-/* Glass button in light mode */
-:root.light-mode .glass-button {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #0f172a;
+/* Utility: thin scrollbar for nav */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
 }
-:root.light-mode .glass-button:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: var(--theme-primary);
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-/* Neon button in light mode - keep white text */
-:root.light-mode .neon-button {
-  color: white !important;
-}
-
-/* Neon colors adjusted for light mode readability */
-:root.light-mode .text-neon-cyan {
-  color: #0891b2 !important;
-}
-:root.light-mode .text-neon-green,
-:root.light-mode .text-emerald-400 {
-  color: #059669 !important;
-}
-
-/* Stat values readable in light mode */
-:root.light-mode .stat-value {
-  color: #0f172a;
-}
-
-/* Sidebar active item in light mode */
-:root.light-mode .bg-white\/\[0\.06\] {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Badge colors in light mode */
-:root.light-mode .bg-neon-cyan\/10 {
-  background-color: rgba(8, 145, 178, 0.1) !important;
-}
-:root.light-mode .bg-neon-red\/10 {
-  background-color: rgba(220, 38, 38, 0.1) !important;
-}
-:root.light-mode .bg-neon-green\/10 {
-  background-color: rgba(5, 150, 105, 0.1) !important;
-}
-:root.light-mode .bg-neon-blue\/10 {
-  background-color: rgba(79, 70, 229, 0.1) !important;
-}
-:root.light-mode .bg-neon-purple\/10 {
-  background-color: rgba(168, 85, 247, 0.1) !important;
-}
-
-/* Table rows in light mode */
-:root.light-mode tr {
-  border-color: rgba(0, 0, 0, 0.06) !important;
-}
-
-/* Chart tooltip in light mode */
-:root.light-mode .recharts-default-tooltip {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
-  color: #0f172a !important;
-}
-
-/* Ambient background effects - invisible in light mode */
-:root.light-mode .bg-neon-cyan\/\[0\.02\],
-:root.light-mode .bg-neon-purple\/\[0\.02\],
-:root.light-mode .bg-neon-blue\/\[0\.01\] {
-  opacity: 0 !important;
-}
-
-/* Fix backdrop blur in light mode */
-:root.light-mode [style*="backdrop-filter"] {
-  backdrop-filter: blur(20px) saturate(1.2);
-}
-
-/* Color picker styling */
-:root.light-mode input[type="color"] {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 0.5rem;
-}
-
-/* Navigation ring colors in light mode */
-:root.light-mode .ring-neon-cyan\/20 {
-  --tw-ring-color: rgba(8, 145, 178, 0.2) !important;
-}
-:root.light-mode .ring-neon-red\/30 {
-  --tw-ring-color: rgba(220, 38, 38, 0.2) !important;
-}
-
-/* Glow effects dimmed in light mode */
-:root.light-mode .glass-glow-cyan,
-:root.light-mode .glass-glow-green,
-:root.light-mode .glass-glow-purple,
-:root.light-mode .glass-glow-amber,
-:root.light-mode .glass-glow-red {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-}
-
-/* Dividers in light mode */
-:root.light-mode .divide-y > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(0, 0, 0, 0.06) !important;
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.15);
+  border-radius: 2px;
 }

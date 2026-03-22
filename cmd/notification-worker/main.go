@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -65,12 +68,76 @@ func main() {
 	defer mqttClient.Disconnect(1000)
 	log.Info().Msg("MQTT connected")
 
-	// Start notification worker
+	// Start MQTT notification consumer
 	worker := notification.NewWorker(db)
 	go func() {
 		worker.Start(ctx, mqttClient)
 	}()
-	log.Info().Msg("notification worker running")
+
+	// Start schedule processor (checks every 60s for due notifications)
+	schedRepo := database.NewNotificationScheduleRepo(db)
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				due, err := schedRepo.GetDue(ctx)
+				if err != nil {
+					log.Error().Err(err).Msg("schedule: failed to fetch due notifications")
+					continue
+				}
+				for _, s := range due {
+					ch, err := database.NewNotificationRepo(db).GetChannel(ctx, s.ChannelID)
+					if err != nil || ch == nil {
+						log.Warn().Int64("schedule_id", s.ID).Msg("schedule: channel not found, skipping")
+						continue
+					}
+					req := &notification.Request{
+						ChannelType: ch.Type,
+						Config:      ch.Config,
+						Title:       s.Title,
+						Message:     s.Message,
+						ChannelID:   ch.ID,
+					}
+					if pubErr := notification.Publish(mqttClient, req); pubErr != nil {
+						log.Error().Err(pubErr).Int64("schedule_id", s.ID).Msg("schedule: failed to publish")
+					}
+					// Mark as run (one-time schedules get disabled)
+					if markErr := schedRepo.MarkRun(ctx, s.ID, nil); markErr != nil {
+						log.Error().Err(markErr).Int64("schedule_id", s.ID).Msg("schedule: failed to mark run")
+					}
+					log.Info().Int64("schedule_id", s.ID).Str("title", s.Title).Msg("schedule: dispatched")
+				}
+			}
+		}
+	}()
+
+	log.Info().Msg("notification worker running (MQTT consumer + schedule processor)")
+
+	// Health endpoint for k8s probes
+	healthPort := os.Getenv("HEALTH_PORT")
+	if healthPort == "" {
+		healthPort = "8081"
+	}
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if err := db.Health(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, `{"status":"unhealthy","error":"%s"}`, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"status":"ok"}`)
+	})
+	go func() {
+		log.Info().Str("port", healthPort).Msg("health endpoint listening")
+		if err := http.ListenAndServe(":"+healthPort, healthMux); err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("health endpoint failed")
+		}
+	}()
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

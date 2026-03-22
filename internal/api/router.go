@@ -56,7 +56,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		AllowedOrigins:   corsOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
-		ExposedHeaders:   []string{"X-Request-ID"},
+		ExposedHeaders:   []string{"X-Request-ID", "X-Response-Time"},
 		AllowCredentials: cfg.CORSOrigins != "",
 		MaxAge:           300,
 	}))
@@ -100,6 +100,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := NewBackupHandler(db)
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
+	telemetryHandler := NewTelemetryHandler(db, mqttClient)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -110,11 +111,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Auth
+		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
-			r.Get("/login", authHandler.Login)
-			r.Get("/callback", authHandler.Callback)
-			r.Post("/refresh", authHandler.Refresh)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Get("/login", authHandler.Login)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Get("/callback", authHandler.Callback)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
 		})
 
@@ -267,6 +268,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/api-logs", func(r chi.Router) {
 			r.Get("/", apiCallLogHandler.List)
 			r.Get("/stats", apiCallLogHandler.Stats)
+		})
+
+		// Fleet Telemetry ingestion
+		r.Route("/telemetry", func(r chi.Router) {
+			r.Post("/", telemetryHandler.TelemetryIngest)
+			r.Get("/", telemetryHandler.TelemetryStatus)
 		})
 
 		// Export

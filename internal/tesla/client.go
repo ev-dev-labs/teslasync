@@ -120,6 +120,9 @@ func (c *Client) CircuitBreakerCounts() map[string]interface{} {
 // ErrUnauthorized is returned when the Tesla API rejects the current token.
 var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
 
+// ErrRateLimited is returned when Tesla API returns 429 Too Many Requests.
+var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
+
 // doRequest performs an authenticated API request through the circuit breaker.
 func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
 	url := c.baseURL + path
@@ -160,7 +163,9 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, ErrUnauthorized
 		}
 		if resp.StatusCode == http.StatusTooManyRequests {
-			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, fmt.Errorf("rate limited (429)")
+			// 429 is not a server failure — don't trigger circuit breaker.
+			// Return success to the breaker, the caller handles the rate limit.
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil
 		}
 		if resp.StatusCode >= 500 {
 			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, fmt.Errorf("server error: %d", resp.StatusCode)
@@ -239,6 +244,9 @@ func (c *Client) GetVehicleData(ctx context.Context, vehicleID int64) (*VehicleD
 	}
 	if status == http.StatusRequestTimeout || status == http.StatusGatewayTimeout {
 		return nil, ErrVehicleAsleep
+	}
+	if status == http.StatusTooManyRequests {
+		return nil, ErrRateLimited
 	}
 	if status != http.StatusOK {
 		return nil, fmt.Errorf("get vehicle data: status %d", status)

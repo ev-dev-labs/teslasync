@@ -17,7 +17,12 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 		ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
 
 		defer func() {
+			duration := time.Since(start)
 			status := ww.Status()
+
+			// Add response time header for API consumers
+			ww.Header().Set("X-Response-Time", fmt.Sprintf("%dms", duration.Milliseconds()))
+
 			logger := log.Info()
 			if status >= 500 {
 				logger = log.Error()
@@ -29,7 +34,7 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 				Str("path", r.URL.Path).
 				Int("status", status).
 				Int("bytes", ww.BytesWritten()).
-				Dur("duration", time.Since(start)).
+				Dur("duration", duration).
 				Str("ip", r.RemoteAddr).
 				Str("request_id", chimw.GetReqID(r.Context())).
 				Msg("http request")

@@ -1,0 +1,95 @@
+{{- if .Values.fleetTelemetry.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: fleet-telemetry
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: fleet-telemetry
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      containers:
+        - name: fleet-telemetry
+          image: {{ .Values.fleetTelemetry.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: wss
+              containerPort: 4443
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/fleet-telemetry
+            {{- if .Values.fleetTelemetry.tls.secretName }}
+            - name: tls
+              mountPath: /certs
+              readOnly: true
+            {{- end }}
+          resources:
+            {{- toYaml .Values.fleetTelemetry.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+        {{- if .Values.fleetTelemetry.tls.secretName }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.fleetTelemetry.tls.secretName }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+spec:
+  type: {{ .Values.fleetTelemetry.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.fleetTelemetry.service.port | default 4443 }}
+      targetPort: wss
+      protocol: TCP
+      name: wss
+  selector:
+    {{- include "teslasync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+data:
+  config.json: |
+    {
+      "host": "0.0.0.0",
+      "port": 4443,
+      "log_level": "info",
+      "tls": {
+        "server_cert": "/certs/tls.crt",
+        "server_key": "/certs/tls.key"
+      },
+      "records": {
+        "V": {
+          "dispatcher": {
+            "type": "http",
+            "url": "http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/api/v1/telemetry"
+          }
+        }
+      }
+    }
+{{- end }}

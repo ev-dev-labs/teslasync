@@ -107,6 +107,32 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	validTypes := map[string]bool{
+		"battery_low": true, "battery_high": true, "speed_limit": true,
+		"geofence_exit": true, "geofence_enter": true,
+		"charge_complete": true, "charge_started": true,
+		"drive_started": true, "drive_ended": true,
+		"sentry_event": true, "vehicle_offline": true,
+		"vampire_drain": true, "tire_pressure_low": true,
+	}
+	if !validTypes[body.Type] {
+		writeError(w, http.StatusBadRequest, "invalid alert type")
+		return
+	}
+	validSeverity := map[string]bool{"low": true, "medium": true, "high": true, "critical": true}
+	if body.Severity != "" && !validSeverity[body.Severity] {
+		writeError(w, http.StatusBadRequest, "severity must be low, medium, high, or critical")
+		return
+	}
+	if body.Threshold < 0 || body.Threshold > 100000 {
+		writeError(w, http.StatusBadRequest, "threshold must be between 0 and 100000")
+		return
+	}
+	if len(body.Name) > 200 {
+		writeError(w, http.StatusBadRequest, "name must be 200 characters or less")
+		return
+	}
+
 	rule := &models.AlertRule{
 		Name:      body.Name,
 		Type:      body.Type,

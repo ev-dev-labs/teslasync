@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
-export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'ocean-blue' | 'cherry-pink' | 'sunset-orange' | 'midnight-indigo' | 'lime-green' | 'rose-gold' | 'custom'
+export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight'
 
 interface ColorTheme {
@@ -66,62 +66,6 @@ const themes: Record<ThemeId, ColorTheme> = {
     primaryRGB: '245, 158, 11',
     accent: '#d97706',
     accentRGB: '217, 119, 6',
-  },
-  'ocean-blue': {
-    id: 'ocean-blue',
-    name: 'Ocean Blue',
-    primary: '#0ea5e9',
-    primaryRGB: '14, 165, 233',
-    accent: '#0284c7',
-    accentRGB: '2, 132, 199',
-  },
-  'cherry-pink': {
-    id: 'cherry-pink',
-    name: 'Cherry Pink',
-    primary: '#ec4899',
-    primaryRGB: '236, 72, 153',
-    accent: '#db2777',
-    accentRGB: '219, 39, 119',
-  },
-  'sunset-orange': {
-    id: 'sunset-orange',
-    name: 'Sunset Orange',
-    primary: '#f97316',
-    primaryRGB: '249, 115, 22',
-    accent: '#ea580c',
-    accentRGB: '234, 88, 12',
-  },
-  'midnight-indigo': {
-    id: 'midnight-indigo',
-    name: 'Midnight Indigo',
-    primary: '#6366f1',
-    primaryRGB: '99, 102, 241',
-    accent: '#4f46e5',
-    accentRGB: '79, 70, 229',
-  },
-  'lime-green': {
-    id: 'lime-green',
-    name: 'Lime Green',
-    primary: '#84cc16',
-    primaryRGB: '132, 204, 22',
-    accent: '#65a30d',
-    accentRGB: '101, 163, 13',
-  },
-  'rose-gold': {
-    id: 'rose-gold',
-    name: 'Rose Gold',
-    primary: '#f43f5e',
-    primaryRGB: '244, 63, 94',
-    accent: '#e11d48',
-    accentRGB: '225, 29, 72',
-  },
-  'custom': {
-    id: 'custom',
-    name: 'Custom',
-    primary: '#00f0ff',
-    primaryRGB: '0, 240, 255',
-    accent: '#4f46e5',
-    accentRGB: '79, 70, 229',
   },
 }
 
@@ -189,8 +133,6 @@ interface ThemeContextValue {
   setMode: (id: ModeId) => void
   themes: typeof themes
   modes: typeof modes
-  customColor: string
-  setCustomColor: (color: string) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -221,13 +163,6 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.classList.toggle('light-mode', mode.colorScheme === 'light')
 }
 
-function hexToRGB(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `${r}, ${g}, ${b}`
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     const saved = localStorage.getItem('teslasync-theme')
@@ -239,13 +174,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return (saved && saved in modes) ? saved as ModeId : 'dark'
   })
 
-  const [customColor, setCustomColor] = useState<string>(() => {
-    return localStorage.getItem('teslasync-custom-color') || '#00f0ff'
-  })
-
-  const theme = themeId === 'custom' 
-    ? { ...themes['custom'], primary: customColor, primaryRGB: hexToRGB(customColor) }
-    : themes[themeId]
+  const theme = themes[themeId]
   const mode = modes[modeId]
 
   useEffect(() => {
@@ -254,15 +183,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('teslasync-mode', modeId)
   }, [theme, mode, themeId, modeId])
 
-  useEffect(() => {
-    localStorage.setItem('teslasync-custom-color', customColor)
-  }, [customColor])
-
   const setTheme = (id: ThemeId) => setThemeId(id)
   const setMode = (id: ModeId) => setModeId(id)
 
   return (
-    <ThemeContext.Provider value={{ themeId, modeId, theme, mode, setTheme, setMode, themes, modes, customColor, setCustomColor }}>
+    <ThemeContext.Provider value={{ themeId, modeId, theme, mode, setTheme, setMode, themes, modes }}>
       {children}
     </ThemeContext.Provider>
   )

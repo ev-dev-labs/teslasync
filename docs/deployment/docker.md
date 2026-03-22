@@ -4,11 +4,12 @@ This guide covers deploying TeslaSync with Docker Compose for production use.
 
 ## Docker Compose Overview
 
-TeslaSync's `docker-compose.yml` orchestrates 6 services:
+TeslaSync's `docker-compose.yml` orchestrates 7 services:
 
 | Service | Image | Port | Memory | Purpose |
 |---------|-------|------|--------|---------|
-| **teslasync** | Custom (Dockerfile) | 8080 | 128M–512M | Go API server + worker |
+| **teslasync-api** | Custom (Dockerfile) | 8080 | 128M–512M | Go API server + worker |
+| **teslasync-notification-worker** | Custom (Dockerfile.notification) | 8081 | 32M–128M | Async notification delivery |
 | **web** | Custom (Dockerfile.web) | 3000 | 32M–128M | React SPA via Nginx |
 | **postgres** | postgres:17-alpine | 5432 | 256M–1G | PostgreSQL database |
 | **grafana** | grafana/grafana:10.4.0 | 3001 | 64M–256M | Monitoring dashboards |

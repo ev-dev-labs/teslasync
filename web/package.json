@@ -14,13 +14,11 @@
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.38.0",
-    "i18next": "^25.10.3",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.363.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-i18next": "^16.6.0",
     "react-leaflet": "^4.2.1",
     "react-router-dom": "^6.22.3",
     "recharts": "^2.12.3"

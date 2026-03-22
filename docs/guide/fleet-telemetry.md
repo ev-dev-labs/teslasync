@@ -536,6 +536,54 @@ In hybrid mode, increase `WORKER_POLL_INTERVAL` to reduce API costs while keepin
    docker compose logs teslasync | grep maintenance
    ```
 
+## Integrated Fleet Telemetry Server
+
+TeslaSync includes the official Tesla Fleet Telemetry server as an **optional service** in both Docker Compose and Helm.
+
+### Docker Compose
+
+Enable the Fleet Telemetry server using Docker Compose profiles:
+
+```bash
+# Start with fleet telemetry enabled
+docker compose --profile telemetry up -d
+
+# Start without fleet telemetry (default)
+docker compose up -d
+```
+
+Before starting, ensure you have:
+1. A valid TLS certificate and key in `./certs/`
+2. Updated `fleet-telemetry-config.json` with your settings
+
+The config file is pre-configured to relay telemetry data to `teslasync-api:8080/api/v1/telemetry`.
+
+### Helm Chart
+
+Enable in your `values.yaml`:
+
+```yaml
+fleetTelemetry:
+  enabled: true
+  image: ghcr.io/teslamotors/fleet-telemetry:latest
+  service:
+    type: ClusterIP
+    port: 4443
+  tls:
+    secretName: fleet-telemetry-tls  # K8s TLS secret
+```
+
+Create the TLS secret:
+
+```bash
+kubectl create secret tls fleet-telemetry-tls \
+  --cert=fullchain.pem \
+  --key=privkey.pem \
+  -n teslasync
+```
+
+The Helm chart automatically configures the Fleet Telemetry server to forward data to the TeslaSync API service.
+
 ## Next Steps
 
 - [Configuration](/guide/configuration) — Full reference for all environment variables

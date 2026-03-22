@@ -41,7 +41,7 @@ import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
 import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates } from '../api'
-import { useRealtimeEvents, type SSEConnectionStatus } from '../hooks/useRealtimeEvents'
+import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -69,25 +69,12 @@ const navI18nKeys: Record<string, string> = {
   'Settings': 'nav.settings',
 }
 
-function SSEStatusDot({ status, reconnectCount }: { status: SSEConnectionStatus; reconnectCount: number }) {
-  const colorClass =
-    status === 'connected' ? 'bg-neon-green' :
-    status === 'reconnecting' ? 'bg-amber-400' :
-    'bg-red-500'
-  const shadowColor =
-    status === 'connected' ? 'rgba(16,185,129,0.5)' :
-    status === 'reconnecting' ? 'rgba(251,191,36,0.5)' :
-    'rgba(239,68,68,0.5)'
-  const label =
-    status === 'connected' ? `SSE Connected${reconnectCount > 0 ? ` (reconnected ${reconnectCount}×)` : ''}` :
-    status === 'reconnecting' ? 'SSE Reconnecting' :
-    'SSE Disconnected'
-
+function SSEStatusDot({ connected }: { connected: boolean }) {
   return (
     <span
-      title={label}
-      className={clsx('inline-block h-2 w-2 rounded-full shrink-0', colorClass, status === 'reconnecting' && 'animate-pulse')}
-      style={{ boxShadow: `0 0 6px ${shadowColor}` }}
+      title={connected ? 'SSE Connected' : 'SSE Disconnected'}
+      className={clsx('inline-block h-2 w-2 rounded-full shrink-0', connected ? 'bg-neon-green' : 'bg-red-500')}
+      style={{ boxShadow: `0 0 6px ${connected ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }}
     />
   )
 }
@@ -161,7 +148,7 @@ export default function Layout() {
   const { t } = useTranslation()
 
   // SSE connection status
-  const { status: sseStatus, reconnectCount } = useRealtimeEvents()
+  const { connected: sseConnected } = useRealtimeEvents()
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: Infinity })
@@ -230,13 +217,13 @@ export default function Layout() {
         aria-label="Main navigation"
         className={clsx(
           'fixed inset-y-0 left-0 z-30 w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:static lg:w-64 lg:translate-x-0',
-          'border-r backdrop-blur-xl',
+          'border-r backdrop-blur-xl flex flex-col overflow-hidden',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b" style={{ borderColor: 'var(--glass-border)' }}>
+        <div className="flex items-center gap-3 px-5 py-5 border-b shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
           <Logo size={32} showWordmark />
           <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
             {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown' ? `v${versionInfo.chart_version}` : 'v2'}
@@ -244,7 +231,7 @@ export default function Layout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto overscroll-contain py-4 px-3 space-y-6 scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Search trigger */}
           <div className="px-1 mb-2">
             <CommandPaletteTrigger />
@@ -305,7 +292,7 @@ export default function Layout() {
         </nav>
 
         {/* Bottom status */}
-        <div className="border-t px-4 py-3 space-y-2" style={{ borderColor: 'var(--glass-border)' }}>
+        <div className="border-t px-4 py-3 space-y-2 shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
           {/* Update available banner */}
           {updateCheck?.update_available && (
             <div className="glass-card !p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
@@ -339,7 +326,7 @@ export default function Layout() {
               <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
             </div>
             <SystemHealthDot />
-            <SSEStatusDot status={sseStatus} reconnectCount={reconnectCount} />
+            <SSEStatusDot connected={sseConnected} />
           </div>
         </div>
       </aside>

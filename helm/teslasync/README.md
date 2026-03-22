@@ -132,6 +132,11 @@ The following table lists all configurable parameters and their default values.
 | `grafana.adminUser` | Grafana admin username | `admin` |
 | `grafana.adminPassword` | Grafana admin password | `teslasync` |
 | `grafana.service.port` | Grafana service port | `3000` |
+| `notificationWorker.enabled` | Deploy notification worker | `true` |
+| `notificationWorker.replicaCount` | Notification worker replicas | `1` |
+| `notificationWorker.image.repository` | Notification worker image | `ghcr.io/your-org/teslasync-notification-worker` |
+| `notificationWorker.resources.limits.memory` | Worker memory limit | `128Mi` |
+| `encryption.key` | Custom encryption key for sensitive data | `""` |
 
 ## Using External Services
 
@@ -273,21 +278,27 @@ helm uninstall teslasync
                     ▼                         ▼
           ┌─────────────────┐      ┌──────────────────┐
           │  TeslaSync API  │      │  TeslaSync Web   │
-          │    (backend)    │      │   (frontend)     │
-          └───────┬─────┬───┘      └──────────────────┘
+          │   (teslasync-   │      │  (teslasync-web) │
+          │      api)       │      └──────────────────┘
+          └───────┬─────┬───┘
                   │     │
        ┌──────────┘     └──────────┐
        ▼                           ▼
 ┌──────────────┐          ┌────────────────┐
 │  PostgreSQL  │          │     Redis      │
 │   (PG 17)    │          │   (caching)    │
-└──────────────┘          └────────────────┘
+└──────┬───────┘          └────────────────┘
        │
-       ▼
-┌──────────────┐          ┌────────────────┐
-│   Grafana    │◄─────────│  MQTT Broker   │
-│ (dashboards) │          │  (telemetry)   │
-└──────────────┘          └────────────────┘
+       ▼                  ┌────────────────┐
+┌──────────────┐          │  MQTT Broker   │
+│   Grafana    │◄─────────│  (telemetry +  │
+│ (dashboards) │          │   events)      │
+└──────────────┘          └───────┬────────┘
+                                  │
+                          ┌───────▼────────┐
+                          │  Notification  │
+                          │    Worker      │
+                          └────────────────┘
 ```
 
 ## Troubleshooting

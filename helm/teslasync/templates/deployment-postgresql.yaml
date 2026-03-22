@@ -38,7 +38,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "teslasync.fullname" . }}
-                  key: DATABASE_PASSWORD
+                  key: DATABASE_PASS
           livenessProbe:
             exec:
               command:

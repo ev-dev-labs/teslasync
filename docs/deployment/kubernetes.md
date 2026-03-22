@@ -14,16 +14,26 @@ TeslaSync includes a Helm chart for deploying to Kubernetes clusters. The chart 
 
 ```
 helm/teslasync/
-├── Chart.yaml              # Chart metadata (name, version, appVersion)
-├── values.yaml             # Default configuration values
+├── Chart.yaml                          # Chart metadata
+├── values.yaml                         # Default configuration
 └── templates/
-    ├── deployment.yaml     # Backend Deployment
-    ├── deployment-web.yaml # Frontend Deployment
-    ├── service.yaml        # ClusterIP Service
-    ├── ingress.yaml        # Ingress (optional)
-    ├── configmap.yaml      # Non-sensitive configuration
-    ├── secret.yaml         # Sensitive data (credentials)
-    └── serviceaccount.yaml # RBAC ServiceAccount
+    ├── deployment.yaml                 # Backend API Deployment
+    ├── deployment-web.yaml             # Frontend Deployment
+    ├── deployment-notification.yaml    # Notification Worker Deployment
+    ├── deployment-redis.yaml           # Redis Deployment
+    ├── deployment-postgresql.yaml      # PostgreSQL Deployment
+    ├── deployment-mosquitto.yaml       # MQTT Deployment
+    ├── deployment-grafana.yaml         # Grafana Deployment
+    ├── service.yaml                    # Backend + Web Services
+    ├── ingress.yaml                    # Ingress (optional)
+    ├── ingressRoute.yaml               # Traefik IngressRoute (optional)
+    ├── configmap.yaml                  # Non-sensitive configuration
+    ├── configmap-nginx.yaml            # Nginx proxy config
+    ├── secret.yaml                     # Sensitive data (credentials, encryption key)
+    ├── serviceaccount.yaml             # RBAC ServiceAccount
+    ├── hpa.yaml                        # Horizontal Pod Autoscaler
+    ├── pdb.yaml                        # Pod Disruption Budget
+    └── _helpers.tpl                    # Template helpers
 ```
 
 ## Quick Install

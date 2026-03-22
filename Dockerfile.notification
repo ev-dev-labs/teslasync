@@ -29,4 +29,9 @@ COPY --from=builder /bin/notification-worker /usr/local/bin/notification-worker
 
 USER teslasync
 
+EXPOSE 8081
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:8081/healthz || exit 1
+
 ENTRYPOINT ["notification-worker"]

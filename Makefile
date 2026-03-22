@@ -1,15 +1,19 @@
-.PHONY: all build run test lint clean docker docker-up docker-down migrate web
+.PHONY: all build build-worker run test lint clean docker docker-up docker-down migrate web check coverage
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildTime=$(BUILD_TIME)
 
-all: build
+all: build build-worker
 
 ## build: Build the Go backend binary
 build:
 	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/teslasync ./cmd/teslasync
+
+## build-worker: Build the notification worker binary
+build-worker:
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/notification-worker ./cmd/notification-worker
 
 ## run: Run the backend locally
 run:
@@ -22,6 +26,17 @@ test:
 ## lint: Run golangci-lint
 lint:
 	golangci-lint run ./...
+
+## check: Run all quality checks (lint + test + vet)
+check: lint test
+	go vet ./...
+	@echo "All checks passed ✓"
+
+## coverage: Generate HTML coverage report
+coverage:
+	go test -race -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
 
 ## clean: Remove build artifacts
 clean:

@@ -2,6 +2,56 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [0.3.0] - 2026-03-22
+
+### 🏗 Architecture
+- **Microservice split** — Dedicated notification worker container (`teslasync-notification-worker`)
+- **Event-driven design** — Domain event bus via MQTT (`drive.started`, `charge.completed`, etc.)
+- **Pod renaming** — Backend deployment renamed from `teslasync` to `teslasync-api` for clarity
+- **Redis caching layer** — Two-tier cache (in-memory L1 + Redis L2) with automatic fallback
+
+### 🔐 Security
+- **AES-256-GCM encryption** — Encrypt Tesla tokens and sensitive data at rest (`ENCRYPTION_KEY`)
+- **Command whitelist** — Only 21 known Tesla commands accepted, rejects unknown
+- **Request body size limit** — Global 1MB `MaxBytesReader` middleware prevents DoS
+- **CORS hardened** — Configurable origins via `CORS_ORIGINS` env var
+- **Input validation** — Geofence coordinates, alert rule types/severity, settings values, import rows
+- **Per-route rate limiting** — Commands: 20/min, exports: 10/min, reads: 100/min
+- **Default credentials removed** — `.env.example` uses `changeme` placeholders
+- **Nginx hardened** — Added HSTS, Permissions-Policy, proxy timeouts, body size limits
+
+### 📬 Notifications
+- **Notification scheduling** — One-time or cron-based recurring notifications
+- **Notification preferences** — Per-event-type enable/disable per channel
+- **Notification analytics** — Delivery rates, latency tracking, per-channel metrics
+- **Async delivery** — MQTT-backed queue with 3x retry and exponential backoff
+- **Metrics tracking** — Automatic delivery success/failure recording per channel/day
+
+### 📊 Observability
+- **Version endpoint** — `/api/v1/system/version` returns app version, chart version, Go version, OS/arch, uptime, goroutines
+- **Update checker** — `/api/v1/system/update-check` checks GitHub releases (cached 1hr)
+- **Circuit breaker state** — Exposed in `/api/v1/system/status` with counts
+- **API log retention** — Automatic cleanup of logs >30 days
+- **Notification log retention** — Automatic cleanup of logs >90 days
+
+### 🎨 Frontend
+- **Version badge** — Sidebar shows actual Helm chart version
+- **Update notification** — Banner when newer release is available
+- **Circuit breaker UX** — Friendly "Tesla API unavailable, auto-retry in Xs" with countdown
+- **Settings page** — Shows live version info, Go version, encryption status
+- **ErrorBoundary** — Enhanced to detect circuit breaker and network errors separately
+
+### ⚙️ CI/CD
+- **3 Docker images** — api, web, notification-worker (all built and pushed in release workflow)
+- **GoReleaser** — Notification worker binary added for cross-platform builds
+- **CI pipeline** — Both binaries built and tested
+
+### 📖 Documentation
+- **Architecture docs** — Updated package tree, event-driven diagrams, notification worker sequence
+- **Configuration docs** — Redis, encryption, CORS, system env vars documented
+- **Fleet Telemetry guide** — Expanded from 129 to 423 lines with MQTT integration, Home Assistant examples
+- **README** — Updated highlights, service count, new API endpoints
+
 ## [0.1.0] - 2026-03-21
 
 ### 🚀 Features

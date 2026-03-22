@@ -20,18 +20,23 @@ func NewBackupHandler(db *database.DB) *BackupHandler {
 	return &BackupHandler{db: db}
 }
 
+// allowedBackupTables is a whitelist of tables safe to export/query.
+var allowedBackupTables = map[string]bool{
+	"vehicles": true, "drives": true, "charging_sessions": true,
+	"positions": true, "addresses": true, "geofences": true,
+	"alerts": true, "alert_rules": true, "settings": true,
+	"daily_mileage": true, "vehicle_states": true, "software_updates": true,
+	"tire_pressure_snapshots": true, "vampire_drain_events": true,
+	"visited_locations": true, "trips": true,
+}
+
 // ExportData exports all data as JSON for backup.
 func (h *BackupHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	backup := make(map[string]interface{})
 
-	tables := []string{"vehicles", "drives", "charging_sessions", "positions", "addresses",
-		"geofences", "alerts", "alert_rules", "settings", "daily_mileage",
-		"vehicle_states", "software_updates", "tire_pressure_snapshots",
-		"vampire_drain_events", "visited_locations", "trips"}
-
-	for _, table := range tables {
-		rows, err := h.db.Pool.Query(ctx, fmt.Sprintf("SELECT row_to_json(t) FROM %s t", table))
+	for table := range allowedBackupTables {
+		rows, err := h.db.Pool.Query(ctx, fmt.Sprintf(`SELECT row_to_json(t) FROM "%s" t`, table))
 		if err != nil {
 			log.Warn().Err(err).Str("table", table).Msg("backup: failed to export table")
 			continue
@@ -54,8 +59,8 @@ func (h *BackupHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 
 	backup["_meta"] = map[string]interface{}{
 		"exported_at": time.Now(),
-		"version":     "0.1.0",
-		"tables":      len(tables),
+		"version":     "0.3.0",
+		"tables":      len(allowedBackupTables),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -76,10 +81,9 @@ func (h *BackupHandler) BackupStats(w http.ResponseWriter, r *http.Request) {
 	_ = h.db.Pool.QueryRow(ctx, "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'").Scan(&tableCount)
 
 	tableCounts := make(map[string]int)
-	tables := []string{"vehicles", "drives", "charging_sessions", "positions", "alerts", "daily_mileage"}
-	for _, t := range tables {
+	for t := range allowedBackupTables {
 		var count int
-		_ = h.db.Pool.QueryRow(ctx, fmt.Sprintf("SELECT count(*) FROM %s", t)).Scan(&count)
+		_ = h.db.Pool.QueryRow(ctx, fmt.Sprintf(`SELECT count(*) FROM "%s"`, t)).Scan(&count)
 		tableCounts[t] = count
 	}
 

@@ -13,14 +13,18 @@ import (
 )
 
 // Worker subscribes to the internal MQTT notification topic and delivers
-// notifications asynchronously with retry logic.
+// notifications asynchronously with retry logic and metrics tracking.
 type Worker struct {
-	repo *database.NotificationRepo
+	repo       *database.NotificationRepo
+	metricRepo *database.NotificationMetricRepo
 }
 
 // NewWorker creates a notification worker.
 func NewWorker(db *database.DB) *Worker {
-	return &Worker{repo: database.NewNotificationRepo(db)}
+	return &Worker{
+		repo:       database.NewNotificationRepo(db),
+		metricRepo: database.NewNotificationMetricRepo(db),
+	}
 }
 
 // Start subscribes to the internal notification topic and processes messages.
@@ -52,8 +56,10 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 }
 
 func (w *Worker) processNotification(ctx context.Context, req *Request) {
-	// Retry up to 3 times with backoff
+	startTime := time.Now()
 	var lastErr error
+
+	// Retry up to 3 times with backoff
 	for attempt := 0; attempt < 3; attempt++ {
 		if err := Send(req); err != nil {
 			lastErr = err
@@ -65,6 +71,8 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			continue
 		}
 
+		latencyMs := int(time.Since(startTime).Milliseconds())
+
 		// Success — log it
 		if req.ChannelID > 0 {
 			if err := w.repo.CreateLog(ctx, &models.NotificationLog{
@@ -75,10 +83,16 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			}); err != nil {
 				log.Warn().Err(err).Msg("notification: failed to create success log")
 			}
+			// Record delivery metric
+			if err := w.metricRepo.Record(ctx, req.ChannelID, true, latencyMs); err != nil {
+				log.Warn().Err(err).Msg("notification: failed to record metric")
+			}
 		}
-		log.Info().Str("channel", req.ChannelType).Str("title", req.Title).Msg("notification delivered")
+		log.Info().Str("channel", req.ChannelType).Str("title", req.Title).Int("latency_ms", latencyMs).Msg("notification delivered")
 		return
 	}
+
+	latencyMs := int(time.Since(startTime).Milliseconds())
 
 	// All retries exhausted
 	if req.ChannelID > 0 {
@@ -94,6 +108,10 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			Error:     errStr,
 		}); err != nil {
 			log.Warn().Err(err).Msg("notification: failed to create failure log")
+		}
+		// Record failure metric
+		if err := w.metricRepo.Record(ctx, req.ChannelID, false, latencyMs); err != nil {
+			log.Warn().Err(err).Msg("notification: failed to record failure metric")
 		}
 	}
 	log.Error().Err(lastErr).Str("channel", req.ChannelType).Msg("notification delivery failed after retries")

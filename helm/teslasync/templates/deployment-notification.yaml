@@ -32,6 +32,22 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: {{ include "teslasync.notificationWorker.image" . | quote }}
           imagePullPolicy: {{ .Values.notificationWorker.image.pullPolicy }}
+          ports:
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
           envFrom:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}

@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -27,16 +28,18 @@ type vehicleHealth struct {
 
 // Worker polls Tesla API for vehicle data and stores it.
 type Worker struct {
-	db          *database.DB
-	vehicleRepo *database.VehicleRepo
-	posRepo     *database.PositionRepo
-	driveRepo   *database.DriveRepo
-	chargeRepo  *database.ChargingRepo
-	tokenRepo   *database.TokenRepo
-	teslaClient *tesla.Client
-	mqttClient  *mqtt.Client
-	eventBus    *events.Bus
-	cfg         config.WorkerConfig
+	db            *database.DB
+	vehicleRepo   *database.VehicleRepo
+	posRepo       *database.PositionRepo
+	driveRepo     *database.DriveRepo
+	chargeRepo    *database.ChargingRepo
+	tokenRepo     *database.TokenRepo
+	alertRuleRepo *database.AlertRuleRepo
+	alertRepo     *database.AlertRepo
+	teslaClient   *tesla.Client
+	mqttClient    *mqtt.Client
+	eventBus      *events.Bus
+	cfg           config.WorkerConfig
 
 	// Track active sessions per vehicle
 	activeDrives  map[int64]int64 // vehicleID -> driveID
@@ -57,6 +60,8 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		driveRepo:     database.NewDriveRepo(db),
 		chargeRepo:    database.NewChargingRepo(db),
 		tokenRepo:     database.NewTokenRepo(db, enc),
+		alertRuleRepo: database.NewAlertRuleRepo(db),
+		alertRepo:     database.NewAlertRepo(db),
 		teslaClient:   tc,
 		mqttClient:    mc,
 		eventBus:      eb,
@@ -231,7 +236,11 @@ func (w *Worker) recordVehicleSuccess(vehicleID int64) {
 func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	logger := log.With().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Logger()
 
-	data, err := w.teslaClient.GetVehicleData(ctx, vehicle.VehicleID)
+	// Apply timeout to prevent hanging on unresponsive Tesla API
+	pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VehicleID)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, "asleep", true); err != nil {
 			logger.Error().Err(err).Msg("failed to update vehicle state")
@@ -240,11 +249,23 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 		w.recordVehicleSuccess(vehicle.ID) // Asleep is not a failure
 		return
 	}
+	if errors.Is(err, tesla.ErrRateLimited) {
+		logger.Warn().Msg("Tesla API rate limited (429) — backing off without counting as failure")
+		// Apply temporary backoff but don't count as a failure
+		w.mu.Lock()
+		if vh, ok := w.vehicleHealth[vehicle.ID]; ok {
+			vh.backoffUntil = time.Now().Add(60 * time.Second)
+		}
+		w.mu.Unlock()
+		return
+	}
 	if errors.Is(err, tesla.ErrUnauthorized) {
 		logger.Warn().Msg("received 401 — attempting token refresh")
 		if w.doRefreshToken(ctx) {
 			// Retry once after successful refresh
-			data, err = w.teslaClient.GetVehicleData(ctx, vehicle.VehicleID)
+			retryCtx, retryCancel := context.WithTimeout(ctx, 30*time.Second)
+			defer retryCancel()
+			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VehicleID)
 			if err != nil {
 				logger.Warn().Err(err).Msg("retry after token refresh still failed")
 				w.recordVehicleFailure(vehicle.ID)
@@ -282,6 +303,9 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 	// Track charging sessions
 	w.trackCharging(ctx, vehicle, data)
+
+	// Evaluate alert rules
+	w.evaluateAlerts(ctx, vehicle, data)
 
 	// Publish to MQTT
 	w.publishVehicleData(vehicle, data)
@@ -402,6 +426,110 @@ func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, dat
 		log.Info().Int64("vehicleID", vehicle.ID).Int64("sessionID", activeChargeID).Msg("charging ended")
 		if w.eventBus != nil {
 			w.eventBus.Publish(events.Event{Type: events.ChargeCompleted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"session_id": activeChargeID, "battery_level": data.ChargeState.BatteryLevel, "energy_added": data.ChargeState.ChargeEnergyAdded}})
+		}
+	}
+}
+
+func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+	rules, err := w.alertRuleRepo.GetAll(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, rule := range rules {
+		if !rule.Enabled {
+			continue
+		}
+		// If rule is vehicle-specific, skip other vehicles
+		if rule.VehicleID != nil && *rule.VehicleID != vehicle.ID {
+			continue
+		}
+
+		var triggered bool
+		var message string
+
+		switch rule.Type {
+		case "battery_low":
+			if float64(data.ChargeState.BatteryLevel) <= rule.Threshold {
+				triggered = true
+				message = fmt.Sprintf("Battery at %d%% (threshold: %.0f%%)", data.ChargeState.BatteryLevel, rule.Threshold)
+			}
+		case "battery_high":
+			if float64(data.ChargeState.BatteryLevel) >= rule.Threshold {
+				triggered = true
+				message = fmt.Sprintf("Battery at %d%% (threshold: %.0f%%)", data.ChargeState.BatteryLevel, rule.Threshold)
+			}
+		case "speed_limit":
+			if data.DriveState.Speed != nil && float64(*data.DriveState.Speed) > rule.Threshold {
+				triggered = true
+				message = fmt.Sprintf("Speed %d km/h exceeds limit of %.0f km/h", *data.DriveState.Speed, rule.Threshold)
+			}
+		case "charge_complete":
+			if data.ChargeState.ChargingState == "Complete" {
+				triggered = true
+				message = fmt.Sprintf("Charging complete at %d%%", data.ChargeState.BatteryLevel)
+			}
+		case "vehicle_offline":
+			if data.State == "offline" {
+				triggered = true
+				message = "Vehicle is offline"
+			}
+		}
+
+		if triggered {
+			vid := vehicle.ID
+			alert := &models.Alert{
+				VehicleID: &vid,
+				Type:      rule.Type,
+				Title:     rule.Name,
+				Message:   message,
+			}
+			if err := w.alertRepo.Create(ctx, alert); err != nil {
+				log.Warn().Err(err).Str("type", rule.Type).Msg("failed to create alert")
+			}
+
+			if w.eventBus != nil {
+				w.eventBus.Publish(events.Event{
+					Type:      events.AlertTriggered,
+					VehicleID: vehicle.ID,
+					VIN:       vehicle.VIN,
+					Data: map[string]interface{}{
+						"rule_type": rule.Type,
+						"message":   message,
+						"threshold": rule.Threshold,
+					},
+				})
+			}
+
+			// Send notification to all enabled channels
+			w.sendAlertNotifications(ctx, vehicle, rule.Name, message)
+		}
+	}
+}
+
+func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *models.Vehicle, title, message string) {
+	notifRepo := database.NewNotificationRepo(w.db)
+	channels, err := notifRepo.GetAllChannels(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("alert: failed to fetch notification channels")
+		return
+	}
+	for _, ch := range channels {
+		if !ch.Enabled {
+			continue
+		}
+		fullTitle := fmt.Sprintf("🚗 %s: %s", vehicle.DisplayName, title)
+		if w.mqttClient != nil {
+			req := &notification.Request{
+				ChannelType: ch.Type,
+				Config:      ch.Config,
+				Title:       fullTitle,
+				Message:     message,
+				ChannelID:   ch.ID,
+			}
+			if err := notification.Publish(w.mqttClient.Underlying(), req); err != nil {
+				log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("alert: failed to publish notification")
+			}
 		}
 	}
 }

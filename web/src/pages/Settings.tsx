@@ -29,7 +29,7 @@ export default function Settings() {
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
-  const { themeId, modeId, setTheme, setMode, themes: allThemes, modes: allModes, customColor, setCustomColor } = useTheme()
+  const { themeId, modeId, setTheme, setMode, themes: allThemes, modes: allModes } = useTheme()
   const toast = useToast()
 
   const [form, setForm] = useState<AppSettings>({
@@ -389,27 +389,6 @@ export default function Settings() {
                   )}
                 </button>
               ))}
-            </div>
-
-            {/* Custom Color Picker */}
-            <div className="mt-4 p-4 rounded-xl border" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-2)' }}>
-              <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Custom Color</p>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={customColor}
-                  onChange={e => { setCustomColor(e.target.value); setTheme('custom' as ThemeId) }}
-                  className="h-10 w-14 rounded-lg border-0 cursor-pointer bg-transparent"
-                />
-                <div className="flex-1">
-                  <p className="text-sm text-[var(--text-primary)]">Pick any color</p>
-                  <p className="text-xs text-[var(--text-muted)]">Choose a custom accent color for a personalized look</p>
-                </div>
-                <div
-                  className="h-8 w-8 rounded-full ring-2 ring-white/10"
-                  style={{ background: `linear-gradient(135deg, ${customColor}, var(--theme-accent))` }}
-                />
-              </div>
             </div>
           </div>
         </GlassPanel>

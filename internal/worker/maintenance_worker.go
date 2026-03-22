@@ -77,6 +77,18 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		log.Error().Err(err).Msg("vehicle state cleanup failed")
 	}
 
+	// Clean up old API call logs (keep 30 days)
+	apiLogsDeleted, err := cleanupOldLogs(maintCtx, db, "api_call_logs", 30)
+	if err != nil {
+		log.Error().Err(err).Msg("API call log cleanup failed")
+	}
+
+	// Clean up old notification logs (keep 90 days)
+	notifLogsDeleted, err := cleanupOldLogs(maintCtx, db, "notification_logs", 90)
+	if err != nil {
+		log.Error().Err(err).Msg("notification log cleanup failed")
+	}
+
 	// Run VACUUM ANALYZE to reclaim space and update statistics
 	if posDeleted > 0 || statesDeleted > 0 {
 		if err := db.VacuumAnalyze(maintCtx); err != nil {
@@ -87,6 +99,8 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	log.Info().
 		Int64("positions_deleted", posDeleted).
 		Int64("states_deleted", statesDeleted).
+		Int64("api_logs_deleted", apiLogsDeleted).
+		Int64("notif_logs_deleted", notifLogsDeleted).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
 }
@@ -182,4 +196,17 @@ func cleanOldPartitions(ctx context.Context, db *database.DB, table string, rete
 	`, table, table, table, cutoff)
 	_, err := db.Pool.Exec(ctx, query)
 	return err
+}
+
+func cleanupOldLogs(ctx context.Context, db *database.DB, table string, retentionDays int) (int64, error) {
+	query := fmt.Sprintf("DELETE FROM %s WHERE created_at < NOW() - ($1 || ' days')::INTERVAL", table)
+	tag, err := db.Pool.Exec(ctx, query, retentionDays)
+	if err != nil {
+		return 0, err
+	}
+	deleted := tag.RowsAffected()
+	if deleted > 0 {
+		log.Info().Int64("deleted", deleted).Str("table", table).Msg("cleaned up old logs")
+	}
+	return deleted, nil
 }

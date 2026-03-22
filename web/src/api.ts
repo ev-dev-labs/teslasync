@@ -775,6 +775,10 @@ export interface VersionInfo {
   app_version: string
   chart_version: string
   go_version: string
+  os: string
+  arch: string
+  uptime_seconds: number
+  goroutines: number
 }
 
 export interface UpdateCheckResult {

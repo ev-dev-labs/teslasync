@@ -123,7 +123,12 @@ func (hm *HealthMonitor) OverallStatus() ComponentStatus {
 	defer hm.mu.RUnlock()
 	worst := StatusHealthy
 	for _, c := range hm.components {
-		if c.Status > worst {
+		// Skip components that haven't been checked yet — they shouldn't
+		// degrade the overall status before their first health check runs.
+		if c.Status == StatusUnknown && c.TotalChecks == 0 {
+			continue
+		}
+		if c.Status > worst && c.Status != StatusUnknown {
 			worst = c.Status
 		}
 	}

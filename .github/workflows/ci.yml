@@ -54,7 +54,7 @@ jobs:
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
           DATABASE_USER: test
-          DATABASE_PASSWORD: test
+          DATABASE_PASS: test
           DATABASE_NAME: teslasync_test
         run: go test -race -coverprofile=coverage.out ./...
 

@@ -162,12 +162,7 @@ async function _doFetch<T>(
     // Circuit breaker check
     if (!checkBreaker()) {
       setStatus('degraded')
-      const remainingMs = BREAKER_RESET_MS - (Date.now() - breaker.lastFailure)
-      const remainingSec = Math.max(1, Math.ceil(remainingMs / 1000))
-      throw new ApiError(
-        `Tesla API temporarily unavailable. Auto-retry in ${remainingSec}s.`,
-        503,
-      )
+      throw new ApiError('Service temporarily unavailable (circuit open)', 503)
     }
 
     // Offline check
@@ -250,17 +245,6 @@ export interface SystemStatus {
   tesla_api: { status: string }
   mqtt?: { status: string; consecutive_failures?: number; last_error?: string }
   worker?: { status: string; consecutive_failures?: number }
-  circuit_breaker?: { state: string; counts?: Record<string, number> }
-}
-
-/** Returns the current client-side circuit breaker state and retry timing. */
-export function getCircuitBreakerInfo(): { state: string; failures: number; retryInSec: number | null } {
-  const retryInMs = breaker.state === 'open' ? BREAKER_RESET_MS - (Date.now() - breaker.lastFailure) : null
-  return {
-    state: breaker.state,
-    failures: breaker.failures,
-    retryInSec: retryInMs !== null ? Math.max(0, Math.ceil(retryInMs / 1000)) : null,
-  }
 }
 
 /** Fetches the backend system health status (database, Tesla API, MQTT, worker). */

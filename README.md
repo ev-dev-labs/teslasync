@@ -27,16 +27,14 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **35 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
+- **29 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
-- **21 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more (whitelisted)
+- **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
 - **16 Grafana dashboards** — Pre-built dashboards for deep analytics
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
-- **Microservice architecture** — Dedicated notification worker, event-driven design via MQTT
-- **AES-256-GCM encryption** — Encrypt tokens and sensitive data at rest with a custom key
-- **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release (3 Docker images)
+- **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
 
 ## Features
 
@@ -155,7 +153,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-This starts 7 services: Go API server, notification worker, React web UI, PostgreSQL 17, Redis, MQTT, and Grafana.
+This starts 6 services: Go API server, React web UI, PostgreSQL 17, Redis, MQTT, and Grafana.
 
 ### 3. Access
 
@@ -287,21 +285,6 @@ The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, 
 | GET | `/api/v1/notifications` | List channels |
 | POST | `/api/v1/notifications` | Create channel |
 | POST | `/api/v1/notifications/:id/test` | Test channel |
-| GET | `/api/v1/notifications/:id/preferences` | Get event preferences |
-| PUT | `/api/v1/notifications/:id/preferences` | Update event preference |
-| GET | `/api/v1/notifications/:id/metrics` | Channel delivery metrics |
-| GET | `/api/v1/notifications/analytics` | Delivery analytics summary |
-| GET | `/api/v1/notifications/schedules` | List scheduled notifications |
-| POST | `/api/v1/notifications/schedules` | Create scheduled notification |
-
-### System
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/system/version` | App + chart version info |
-| GET | `/api/v1/system/update-check` | Check for new releases |
-| GET | `/api/v1/system/status` | Component health + circuit breaker |
-| GET | `/api/v1/system/health` | Extended health with latency |
 
 ## MQTT Topics
 

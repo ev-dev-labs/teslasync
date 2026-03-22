@@ -131,9 +131,35 @@ notificationWorker:
 # Encryption
 # ─────────────────────────────────────────────────────────────────────────────
 encryption:
-  # Custom key for encrypting sensitive data (tokens, credentials) at rest.
-  # If empty, data is stored unencrypted (not recommended for production).
   key: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fleet Telemetry (Tesla streaming data)
+#
+# Set enabled: true to deploy the official Tesla Fleet Telemetry server.
+# Requires TLS certificates and a Tesla Developer account with Fleet Telemetry access.
+# Vehicles connect via wss:// and stream real-time data at ~1s resolution.
+# See: https://developer.tesla.com/docs/fleet-api/fleet-telemetry
+# ─────────────────────────────────────────────────────────────────────────────
+fleetTelemetry:
+  enabled: false
+
+  image: ghcr.io/teslamotors/fleet-telemetry:latest
+
+  service:
+    type: ClusterIP
+    port: 4443
+
+  tls:
+    secretName: ""  # K8s TLS secret with tls.crt and tls.key
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Service Account

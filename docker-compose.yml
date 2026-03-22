@@ -1,11 +1,11 @@
 services:
-  teslasync-api:
+  teslasync:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VERSION: ${VERSION:-dev}
-    container_name: teslasync-api
+    container_name: teslasync
     restart: unless-stopped
     ports:
       - "${TESLASYNC_PORT:-8080}:8080"
@@ -14,20 +14,18 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
-      - DATABASE_PASS=${POSTGRES_PASSWORD:-teslasync}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - DATABASE_NAME=${POSTGRES_DB:-teslasync}
-      - DATABASE_SSLMODE=disable
+      - DATABASE_SSL_MODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - REDIS_ENABLED=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
-      - WORKER_POLL_INTERVAL=${POLL_INTERVAL:-30s}
-      - TESLASYNC_LOG_LEVEL=${LOG_LEVEL:-info}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - POLL_INTERVAL=${POLL_INTERVAL:-30s}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,37 +46,6 @@ services:
         reservations:
           memory: 128M
 
-  teslasync-notification-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.notification
-      args:
-        VERSION: ${VERSION:-dev}
-    container_name: teslasync-notification-worker
-    restart: unless-stopped
-    environment:
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=${POSTGRES_USER:-teslasync}
-      - DATABASE_PASS=${POSTGRES_PASSWORD:-teslasync}
-      - DATABASE_NAME=${POSTGRES_DB:-teslasync}
-      - DATABASE_SSLMODE=disable
-      - MQTT_HOST=mosquitto
-      - MQTT_PORT=1883
-      - TESLASYNC_LOG_LEVEL=${LOG_LEVEL:-info}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      mosquitto:
-        condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 32M
-
   web:
     build:
       context: .
@@ -88,7 +55,7 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     depends_on:
-      teslasync-api:
+      teslasync:
         condition: service_healthy
     deploy:
       resources:
@@ -192,6 +159,31 @@ services:
           memory: 192M
         reservations:
           memory: 32M
+
+  # Fleet Telemetry Server (optional — set FLEET_TELEMETRY_ENABLED=true to enable)
+  # Receives streaming data from Tesla vehicles via WebSocket and relays to TeslaSync API.
+  # Requires TLS certificates and Tesla Developer account with Fleet Telemetry access.
+  fleet-telemetry:
+    image: ghcr.io/teslamotors/fleet-telemetry:latest
+    container_name: teslasync-fleet-telemetry
+    restart: unless-stopped
+    profiles:
+      - telemetry
+    ports:
+      - "${FLEET_TELEMETRY_PORT:-4443}:4443"
+    volumes:
+      - ./fleet-telemetry-config.json:/etc/fleet-telemetry/config.json:ro
+      - ${FLEET_TELEMETRY_TLS_CERT:-./certs/server.crt}:/certs/server.crt:ro
+      - ${FLEET_TELEMETRY_TLS_KEY:-./certs/server.key}:/certs/server.key:ro
+    depends_on:
+      teslasync-api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
 
 volumes:
   postgres_data:

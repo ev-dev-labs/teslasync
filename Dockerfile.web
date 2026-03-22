@@ -11,19 +11,8 @@ RUN npm run build
 # Serve with nginx
 FROM nginx:1.25-alpine
 
-# Prepare writable directories for non-root operation
-RUN mkdir -p /var/cache/nginx/client_temp \
-             /var/cache/nginx/proxy_temp \
-             /var/cache/nginx/fastcgi_temp \
-             /var/cache/nginx/uwsgi_temp \
-             /var/cache/nginx/scgi_temp \
-    && chown -R 1000:1000 /var/cache/nginx /var/run /tmp \
-    && sed -i 's/^user  nginx;/# user  nginx;/' /etc/nginx/nginx.conf
-
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf
-
-USER 1000
 
 EXPOSE 80
 
