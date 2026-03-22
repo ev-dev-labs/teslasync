@@ -654,6 +654,65 @@ On receiving SIGINT or SIGTERM, TeslaSync performs an ordered shutdown:
 4. Disconnect MQTT client
 5. Stop worker goroutines
 
+### Event-Driven Architecture
+
+TeslaSync publishes domain events to MQTT whenever significant state changes occur. This decouples components and enables asynchronous processing.
+
+```mermaid
+graph LR
+    Worker["Vehicle Poller"] -->|publish| EventBus["MQTT Event Bus"]
+    EventBus --> NotifWorker["Notification Worker"]
+    EventBus --> External["External Subscribers"]
+
+    subgraph "Domain Events"
+        E1["drive.started"]
+        E2["drive.ended"]
+        E3["charge.started"]
+        E4["charge.completed"]
+        E5["vehicle.updated"]
+        E6["alert.triggered"]
+    end
+```
+
+**Event Topics:** `teslasync/events/{event_type}`
+
+| Event | Trigger | Data |
+|---|---|---|
+| `drive.started` | Speed > 0 detected | drive_id, battery_level |
+| `drive.ended` | Speed returns to 0 | drive_id, battery_level |
+| `charge.started` | ChargingState == "Charging" | session_id, battery_level |
+| `charge.completed` | Charging stops | session_id, battery_level, energy_added |
+
+### Notification Worker
+
+Notifications are delivered asynchronously via an MQTT-backed worker:
+
+```mermaid
+sequenceDiagram
+    participant API as API Handler
+    participant MQ as MQTT Broker
+    participant NW as Notification Worker
+    participant CH as Channel (Discord/Slack/etc.)
+
+    API->>MQ: Publish to teslasync/internal/notifications
+    MQ->>NW: Deliver message
+    NW->>CH: Send notification (with 3x retry)
+    NW->>NW: Log result to database
+```
+
+Supported channels: Discord, Slack, Telegram, Webhook, Ntfy, Pushover, Email.
+
+### Redis Caching
+
+TeslaSync uses a two-tier caching strategy:
+
+| Tier | Backend | TTL | Purpose |
+|---|---|---|---|
+| L1 | In-memory (per-process) | Short (seconds) | Hot path dedup |
+| L2 | Redis (shared) | Medium (minutes) | Cross-request caching |
+
+When Redis is unavailable, the system falls back to in-memory caching automatically.
+
 ## Frontend Architecture
 
 ### Component Hierarchy

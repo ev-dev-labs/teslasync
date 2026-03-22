@@ -12,10 +12,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
@@ -77,6 +81,24 @@ func main() {
 		}
 	}
 
+	// Cache (Redis or in-memory fallback)
+	cacheStore := cache.New(cfg.Redis)
+	defer cacheStore.Close()
+
+	// Domain event bus (MQTT-backed)
+	var eventBus *events.Bus
+	if mqttClient != nil {
+		eventBus = events.NewBus(mqttClient.Underlying())
+	} else {
+		eventBus = events.NewBus(nil)
+	}
+
+	// Encryption for sensitive data at rest
+	encryptor := crypto.NewFromEnv()
+	if encryptor != nil {
+		log.Info().Msg("encryption enabled for sensitive data")
+	}
+
 	// Tesla API client
 	teslaClient := tesla.NewClient(cfg.Tesla)
 
@@ -113,11 +135,19 @@ func main() {
 	})
 
 	// Worker (vehicle poller) — runs in a self-healing goroutine
-	w := worker.New(db, teslaClient, mqttClient, cfg.Worker)
+	w := worker.New(db, teslaClient, mqttClient, cfg.Worker, eventBus, encryptor)
 	resilience.SafeGoLoop(ctx, "vehicle-poller", func(loopCtx context.Context) {
 		w.Start(loopCtx)
 	})
 	log.Info().Msg("vehicle poller started (resilient mode)")
+
+	// Notification worker — processes notifications via MQTT queue
+	if mqttClient != nil {
+		notifWorker := notification.NewWorker(db)
+		resilience.SafeGoLoop(ctx, "notification-worker", func(loopCtx context.Context) {
+			notifWorker.Start(loopCtx, mqttClient.Underlying())
+		})
+	}
 
 	// Maintenance worker — periodic data retention cleanup
 	resilience.SafeGoLoop(ctx, "maintenance-worker", func(loopCtx context.Context) {
@@ -159,7 +189,10 @@ func main() {
 	})
 
 	// HTTP API
-	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health)
+	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
+		AppVersion: Version,
+		Encryptor:  encryptor,
+	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
 		Handler:      router,

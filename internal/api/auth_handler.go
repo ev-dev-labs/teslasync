@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -18,9 +19,13 @@ type AuthHandler struct {
 	teslaClient *tesla.Client
 }
 
-func NewAuthHandler(db *database.DB, tc *tesla.Client) *AuthHandler {
+func NewAuthHandler(db *database.DB, tc *tesla.Client, enc ...*crypto.Encryptor) *AuthHandler {
+	var e *crypto.Encryptor
+	if len(enc) > 0 {
+		e = enc[0]
+	}
 	return &AuthHandler{
-		tokenRepo:   database.NewTokenRepo(db),
+		tokenRepo:   database.NewTokenRepo(db, e),
 		teslaClient: tc,
 	}
 }

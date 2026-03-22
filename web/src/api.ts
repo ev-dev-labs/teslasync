@@ -769,3 +769,21 @@ export const getAPICallLogs = (params: {
 }
 
 export const getAPICallLogStats = () => request<APICallLogStats>('/api-logs/stats')
+
+// --- Version & Update Check ---
+export interface VersionInfo {
+  app_version: string
+  chart_version: string
+  go_version: string
+}
+
+export interface UpdateCheckResult {
+  current: string
+  latest: string
+  update_available: boolean
+  checked_at?: string
+  message?: string
+}
+
+export const getVersionInfo = () => request<VersionInfo>('/system/version')
+export const checkForUpdates = () => request<UpdateCheckResult>('/system/update-check')

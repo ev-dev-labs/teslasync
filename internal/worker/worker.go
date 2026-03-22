@@ -10,7 +10,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -33,6 +35,7 @@ type Worker struct {
 	tokenRepo   *database.TokenRepo
 	teslaClient *tesla.Client
 	mqttClient  *mqtt.Client
+	eventBus    *events.Bus
 	cfg         config.WorkerConfig
 
 	// Track active sessions per vehicle
@@ -46,16 +49,17 @@ type Worker struct {
 
 // New creates a new Worker that polls the Tesla API at the configured interval,
 // persists data to the database, and publishes updates via MQTT.
-func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerConfig) *Worker {
+func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerConfig, eb *events.Bus, enc *crypto.Encryptor) *Worker {
 	return &Worker{
 		db:            db,
 		vehicleRepo:   database.NewVehicleRepo(db),
 		posRepo:       database.NewPositionRepo(db),
 		driveRepo:     database.NewDriveRepo(db),
 		chargeRepo:    database.NewChargingRepo(db),
-		tokenRepo:     database.NewTokenRepo(db),
+		tokenRepo:     database.NewTokenRepo(db, enc),
 		teslaClient:   tc,
 		mqttClient:    mc,
+		eventBus:      eb,
 		cfg:           cfg,
 		activeDrives:  make(map[int64]int64),
 		activeCharges: make(map[int64]int64),
@@ -340,6 +344,9 @@ func (w *Worker) trackDriving(ctx context.Context, vehicle *models.Vehicle, data
 		}
 		w.activeDrives[vehicle.ID] = drive.ID
 		log.Info().Int64("vehicleID", vehicle.ID).Int64("driveID", drive.ID).Msg("drive started")
+		if w.eventBus != nil {
+			w.eventBus.Publish(events.Event{Type: events.DriveStarted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"drive_id": drive.ID, "battery_level": data.ChargeState.BatteryLevel}})
+		}
 	} else if !isDriving && hasActiveDrive {
 		// End drive
 		endRange := data.ChargeState.BatteryRange
@@ -350,6 +357,9 @@ func (w *Worker) trackDriving(ctx context.Context, vehicle *models.Vehicle, data
 		}
 		delete(w.activeDrives, vehicle.ID)
 		log.Info().Int64("vehicleID", vehicle.ID).Int64("driveID", activeDriveID).Msg("drive ended")
+		if w.eventBus != nil {
+			w.eventBus.Publish(events.Event{Type: events.DriveEnded, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"drive_id": activeDriveID, "battery_level": data.ChargeState.BatteryLevel}})
+		}
 	}
 }
 
@@ -372,6 +382,9 @@ func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, dat
 		}
 		w.activeCharges[vehicle.ID] = session.ID
 		log.Info().Int64("vehicleID", vehicle.ID).Int64("sessionID", session.ID).Msg("charging started")
+		if w.eventBus != nil {
+			w.eventBus.Publish(events.Event{Type: events.ChargeStarted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"session_id": session.ID, "battery_level": data.ChargeState.BatteryLevel}})
+		}
 	} else if !isCharging && hasActiveCharge {
 		endBattery := data.ChargeState.BatteryLevel
 		endRange := data.ChargeState.BatteryRange
@@ -387,6 +400,9 @@ func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, dat
 		}
 		delete(w.activeCharges, vehicle.ID)
 		log.Info().Int64("vehicleID", vehicle.ID).Int64("sessionID", activeChargeID).Msg("charging ended")
+		if w.eventBus != nil {
+			w.eventBus.Publish(events.Event{Type: events.ChargeCompleted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"session_id": activeChargeID, "battery_level": data.ChargeState.BatteryLevel, "energy_added": data.ChargeState.ChargeEnergyAdded}})
+		}
 	}
 }
 

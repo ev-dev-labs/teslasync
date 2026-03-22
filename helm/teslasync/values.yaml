@@ -108,6 +108,34 @@ web:
   affinity: {}
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Notification Worker
+# ─────────────────────────────────────────────────────────────────────────────
+notificationWorker:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/your-org/teslasync-notification-worker
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Encryption
+# ─────────────────────────────────────────────────────────────────────────────
+encryption:
+  # Custom key for encrypting sensitive data (tokens, credentials) at rest.
+  # If empty, data is stored unencrypted (not recommended for production).
+  key: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Service Account
 # ─────────────────────────────────────────────────────────────────────────────
 serviceAccount:

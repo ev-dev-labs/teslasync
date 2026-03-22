@@ -95,6 +95,17 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{- define "teslasync.notificationWorker.image" -}}
+{{- $registry := .Values.global.imageRegistry | default "" }}
+{{- $repo := .Values.notificationWorker.image.repository }}
+{{- $tag := .Values.notificationWorker.image.tag | default .Chart.AppVersion }}
+{{- if $registry }}
+{{- printf "%s/%s:%s" $registry $repo $tag }}
+{{- else }}
+{{- printf "%s:%s" $repo $tag }}
+{{- end }}
+{{- end }}
+
 {{/* ── PostgreSQL connection helpers ──────────────────────────────────── */}}
 
 {{- define "teslasync.postgresql.host" -}}

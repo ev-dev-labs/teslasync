@@ -5,13 +5,13 @@ metadata:
   name: {{ include "teslasync.fullname" . }}
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
-    app.kubernetes.io/component: backend
+    app.kubernetes.io/component: api
 spec:
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   selector:
     matchLabels:
       {{- include "teslasync.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: backend
+      app.kubernetes.io/component: api
 {{- end }}
 ---
 {{- if and .Values.web.enabled .Values.web.podDisruptionBudget.enabled }}

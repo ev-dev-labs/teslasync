@@ -8,9 +8,12 @@ Release   : {{ .Release.Name }}
 Namespace : {{ .Release.Namespace }}
 
 Components deployed:
-  ✓ Backend (Go)      — {{ include "teslasync.backend.image" . }}
+  ✓ API (Go)          — {{ include "teslasync.backend.image" . }}
 {{- if .Values.web.enabled }}
   ✓ Web (Nginx)       — {{ include "teslasync.web.image" . }}
+{{- end }}
+{{- if .Values.notificationWorker.enabled }}
+  ✓ Notification      — {{ include "teslasync.notificationWorker.image" . }}
 {{- end }}
 {{- if .Values.postgresql.enabled }}
   ✓ PostgreSQL 17     — bundled ({{ .Values.postgresql.image }})

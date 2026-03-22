@@ -73,6 +73,10 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			teslaStatus = "authenticated"
 		}
 
+		// Circuit breaker state
+		cbState := tc.CircuitBreakerState()
+		cbCounts := tc.CircuitBreakerCounts()
+
 		// MQTT connectivity check
 		mqttStatus := "disabled"
 		if mqttClient != nil {
@@ -101,6 +105,10 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			},
 			"mqtt": componentInfo{
 				Status: mqttStatus,
+			},
+			"circuit_breaker": map[string]interface{}{
+				"state":  cbState,
+				"counts": cbCounts,
 			},
 		}
 

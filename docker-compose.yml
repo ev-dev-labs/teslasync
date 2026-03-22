@@ -1,11 +1,11 @@
 services:
-  teslasync:
+  teslasync-api:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VERSION: ${VERSION:-dev}
-    container_name: teslasync
+    container_name: teslasync-api
     restart: unless-stopped
     ports:
       - "${TESLASYNC_PORT:-8080}:8080"
@@ -14,18 +14,20 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
-      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
+      - DATABASE_PASS=${POSTGRES_PASSWORD:-teslasync}
       - DATABASE_NAME=${POSTGRES_DB:-teslasync}
-      - DATABASE_SSL_MODE=disable
+      - DATABASE_SSLMODE=disable
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
+      - REDIS_ENABLED=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
-      - POLL_INTERVAL=${POLL_INTERVAL:-30s}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - WORKER_POLL_INTERVAL=${POLL_INTERVAL:-30s}
+      - TESLASYNC_LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +48,37 @@ services:
         reservations:
           memory: 128M
 
+  teslasync-notification-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+      args:
+        VERSION: ${VERSION:-dev}
+    container_name: teslasync-notification-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER:-teslasync}
+      - DATABASE_PASS=${POSTGRES_PASSWORD:-teslasync}
+      - DATABASE_NAME=${POSTGRES_DB:-teslasync}
+      - DATABASE_SSLMODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - TESLASYNC_LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+
   web:
     build:
       context: .
@@ -55,7 +88,7 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     depends_on:
-      teslasync:
+      teslasync-api:
         condition: service_healthy
     deploy:
       resources:

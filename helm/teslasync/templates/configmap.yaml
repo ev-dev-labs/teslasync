@@ -20,3 +20,7 @@ data:
   WORKER_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}
+  HELM_CHART_VERSION: {{ .Chart.Version | quote }}
+  REDIS_ENABLED: "true"
+  REDIS_HOST: {{ include "teslasync.redis.host" . | quote }}
+  REDIS_PORT: {{ include "teslasync.redis.port" . | quote }}

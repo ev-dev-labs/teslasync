@@ -100,6 +100,23 @@ func (c *Client) SetLogCallback(cb func(method, url string, statusCode int, reqB
 	c.logCallback = cb
 }
 
+// CircuitBreakerState returns the current state of the Tesla API circuit breaker.
+func (c *Client) CircuitBreakerState() string {
+	return c.cb.State().String()
+}
+
+// CircuitBreakerCounts returns the current circuit breaker request counts.
+func (c *Client) CircuitBreakerCounts() map[string]interface{} {
+	counts := c.cb.Counts()
+	return map[string]interface{}{
+		"requests":              counts.Requests,
+		"total_successes":       counts.TotalSuccesses,
+		"total_failures":        counts.TotalFailures,
+		"consecutive_successes": counts.ConsecutiveSuccesses,
+		"consecutive_failures":  counts.ConsecutiveFailures,
+	}
+}
+
 // ErrUnauthorized is returned when the Tesla API rejects the current token.
 var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
 

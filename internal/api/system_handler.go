@@ -1,12 +1,107 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 )
+
+// VersionHandler returns the application and Helm chart version.
+func VersionHandler(appVersion string) http.HandlerFunc {
+	chartVersion := os.Getenv("HELM_CHART_VERSION")
+	if chartVersion == "" {
+		chartVersion = "unknown"
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"app_version":   appVersion,
+			"chart_version": chartVersion,
+			"go_version":    "go1.22",
+		})
+	}
+}
+
+// UpdateCheckHandler checks whether a newer Helm chart version is available
+// by querying the GitHub API for the latest release tag.
+func UpdateCheckHandler() http.HandlerFunc {
+	type updateCache struct {
+		latest    string
+		checkedAt time.Time
+	}
+	var cache *updateCache
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentChart := os.Getenv("HELM_CHART_VERSION")
+		if currentChart == "" {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"current":       "unknown",
+				"latest":        "unknown",
+				"update_available": false,
+				"message":       "HELM_CHART_VERSION not set",
+			})
+			return
+		}
+
+		// Cache for 1 hour to avoid hammering GitHub API
+		if cache != nil && time.Since(cache.checkedAt) < time.Hour {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"current":          currentChart,
+				"latest":           cache.latest,
+				"update_available": cache.latest != currentChart && cache.latest != "",
+				"checked_at":       cache.checkedAt,
+			})
+			return
+		}
+
+		// Check GitHub releases
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get("https://api.github.com/repos/ev-dev-labs/teslasync/releases/latest")
+		if err != nil {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"current":          currentChart,
+				"latest":           "unknown",
+				"update_available": false,
+				"error":            fmt.Sprintf("failed to check: %v", err),
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		var release struct {
+			TagName string `json:"tag_name"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"current":          currentChart,
+				"latest":           "unknown",
+				"update_available": false,
+			})
+			return
+		}
+
+		latest := release.TagName
+		// Strip "v" prefix for comparison
+		latestClean := latest
+		if len(latestClean) > 0 && latestClean[0] == 'v' {
+			latestClean = latestClean[1:]
+		}
+
+		cache = &updateCache{latest: latestClean, checkedAt: time.Now()}
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"current":          currentChart,
+			"latest":           latestClean,
+			"update_available": latestClean != currentChart && latestClean != "",
+			"checked_at":       cache.checkedAt,
+		})
+	}
+}
 
 // MigrationStatus returns the current database migration version.
 func MigrationStatus(db *database.DB) http.HandlerFunc {

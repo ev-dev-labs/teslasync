@@ -1,0 +1,50 @@
+{{- if .Values.notificationWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-notification-worker
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notification-worker
+spec:
+  replicas: {{ .Values.notificationWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: notification-worker
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: notification-worker
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "teslasync.postgresql.host" . }} {{ include "teslasync.postgresql.port" . }}; do echo "waiting for database..."; sleep 2; done']
+      containers:
+        - name: notification-worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "teslasync.notificationWorker.image" . | quote }}
+          imagePullPolicy: {{ .Values.notificationWorker.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "teslasync.fullname" . }}
+            - secretRef:
+                name: {{ include "teslasync.fullname" . }}
+          resources:
+            {{- toYaml .Values.notificationWorker.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

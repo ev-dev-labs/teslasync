@@ -1,0 +1,32 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /src
+
+COPY go.mod ./
+COPY go.sum* ./
+RUN go mod download 2>/dev/null || true
+
+COPY . .
+RUN go mod tidy
+
+ARG VERSION=dev
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w -X main.Version=${VERSION}" \
+    -o /bin/notification-worker ./cmd/notification-worker
+
+# Runtime stage
+FROM alpine:3.23
+
+RUN apk add --no-cache ca-certificates tzdata
+
+RUN addgroup -S teslasync && adduser -S teslasync -G teslasync
+
+COPY --from=builder /bin/notification-worker /usr/local/bin/notification-worker
+
+USER teslasync
+
+ENTRYPOINT ["notification-worker"]

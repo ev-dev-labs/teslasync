@@ -9,18 +9,30 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
+// RouterOptions holds optional parameters for NewRouter.
+type RouterOptions struct {
+	AppVersion string
+	Encryptor  *crypto.Encryptor
+}
+
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
 // a static file server for the SPA frontend. It wires up handler dependencies
 // and returns the ready-to-serve http.Handler.
-func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor) http.Handler {
+func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, opts ...RouterOptions) http.Handler {
 	r := chi.NewRouter()
+
+	var opt RouterOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
 
 	// SSE event hub for real-time updates
 	eventHub := NewEventHub()
@@ -61,7 +73,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	driveHandler := NewDriveHandler(db)
 	chargingHandler := NewChargingHandler(db)
 	geofenceHandler := NewGeofenceHandler(db)
-	authHandler := NewAuthHandler(db, teslaClient)
+	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
 	alertHandler := NewAlertHandler(db)
 	commandHandler := NewCommandHandler(db, teslaClient)
@@ -224,6 +236,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/backup/stats", backupHandler.BackupStats)
 			r.Get("/config-validation", ConfigValidation(cfg))
 			r.Get("/audit", auditHandler.List)
+
+			// Version & update endpoints
+			ver := opt.AppVersion
+			if ver == "" {
+				ver = "dev"
+			}
+			r.Get("/version", VersionHandler(ver))
+			r.Get("/update-check", UpdateCheckHandler())
 		})
 
 		// API Call Logs

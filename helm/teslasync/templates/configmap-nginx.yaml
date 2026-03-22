@@ -19,7 +19,7 @@ data:
         }
 
         location /api/ {
-            proxy_pass http://{{ include "teslasync.fullname" . }}:{{ .Values.service.port }};
+            proxy_pass http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }};
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -27,11 +27,11 @@ data:
         }
 
         location /healthz {
-            proxy_pass http://{{ include "teslasync.fullname" . }}:{{ .Values.service.port }};
+            proxy_pass http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }};
         }
 
         location /readyz {
-            proxy_pass http://{{ include "teslasync.fullname" . }}:{{ .Values.service.port }};
+            proxy_pass http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }};
         }
 
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {

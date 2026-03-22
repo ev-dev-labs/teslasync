@@ -95,9 +95,21 @@ This approach eliminates the expensive per-vehicle `GetVehicleStatus` call and a
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `REDIS_ENABLED` | bool | `false` | Enable Redis caching layer |
+| `REDIS_ENABLED` | bool | `true` | Enable Redis caching layer |
 | `REDIS_HOST` | string | `localhost` | Redis hostname |
 | `REDIS_PORT` | int | `6379` | Redis port |
+| `REDIS_PASSWORD` | string | — | Redis password (optional) |
+| `REDIS_DB` | int | `0` | Redis database number |
+
+::: tip
+Redis is deployed automatically with the Helm chart and enabled by default. When Redis is unavailable, TeslaSync falls back to an in-memory cache automatically.
+:::
+
+### System
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `HELM_CHART_VERSION` | string | — | Helm chart version (set automatically by chart) |
 
 ### Authentication
 

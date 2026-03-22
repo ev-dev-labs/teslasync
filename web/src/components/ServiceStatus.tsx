@@ -1,15 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { WifiOff, AlertTriangle } from 'lucide-react'
-import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../lib/resilience'
+import { WifiOff, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { getConnectionStatus, onStatusChange, fetchSystemStatus, getCircuitBreakerInfo, type SystemStatus } from '../lib/resilience'
 
 export function ServiceStatusBanner() {
   const [connStatus, setConnStatus] = useState<string>(getConnectionStatus())
+  const [cbInfo, setCbInfo] = useState(getCircuitBreakerInfo())
 
   useEffect(() => {
     return onStatusChange((s) => setConnStatus(s))
   }, [])
+
+  // Update circuit breaker countdown every second when open
+  useEffect(() => {
+    if (cbInfo.state !== 'open') return
+    const timer = setInterval(() => setCbInfo(getCircuitBreakerInfo()), 1000)
+    return () => clearInterval(timer)
+  }, [cbInfo.state])
+
+  // Refresh breaker info on status changes
+  useEffect(() => {
+    setCbInfo(getCircuitBreakerInfo())
+  }, [connStatus])
 
   // Poll system status every 60s (only when online)
   const { data: sysStatus } = useQuery<SystemStatus>({
@@ -20,11 +33,12 @@ export function ServiceStatusBanner() {
     retry: 1,
   })
 
+  const isCircuitOpen = cbInfo.state === 'open' || sysStatus?.circuit_breaker?.state === 'open'
   const isDegraded = connStatus === 'degraded' || sysStatus?.overall === 'degraded'
   const isOffline = connStatus === 'offline'
   const isUnhealthy = sysStatus?.overall === 'unhealthy'
 
-  const show = isOffline || isDegraded || isUnhealthy
+  const show = isOffline || isDegraded || isUnhealthy || isCircuitOpen
 
   return (
     <AnimatePresence>
@@ -55,6 +69,16 @@ export function ServiceStatusBanner() {
               <>
                 <WifiOff className="h-3.5 w-3.5" />
                 <span>You are offline. Data may be stale. Reconnecting automatically...</span>
+              </>
+            ) : isCircuitOpen ? (
+              <>
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span>
+                  Tesla API temporarily unavailable.
+                  {cbInfo.retryInSec !== null && cbInfo.retryInSec > 0
+                    ? ` Auto-retry in ${cbInfo.retryInSec}s.`
+                    : ' Retrying now...'}
+                </span>
               </>
             ) : isUnhealthy ? (
               <>

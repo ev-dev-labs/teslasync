@@ -5,16 +5,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// TokenRepo provides token data access.
+// TokenRepo provides token data access with optional encryption.
 type TokenRepo struct {
-	db *DB
+	db  *DB
+	enc *crypto.Encryptor
 }
 
-func NewTokenRepo(db *DB) *TokenRepo {
-	return &TokenRepo{db: db}
+func NewTokenRepo(db *DB, enc ...*crypto.Encryptor) *TokenRepo {
+	var e *crypto.Encryptor
+	if len(enc) > 0 {
+		e = enc[0]
+	}
+	return &TokenRepo{db: db, enc: e}
 }
 
 func (r *TokenRepo) Upsert(ctx context.Context, t *models.Token) error {
@@ -27,7 +33,9 @@ func (r *TokenRepo) Upsert(ctx context.Context, t *models.Token) error {
 			expires_at = EXCLUDED.expires_at,
 			updated_at = EXCLUDED.updated_at`
 	now := time.Now().UTC()
-	_, err := r.db.Pool.Exec(ctx, query, t.AccessToken, t.RefreshToken, t.ExpiresAt, now)
+	accessEnc := crypto.EncryptIfEnabled(r.enc, t.AccessToken)
+	refreshEnc := crypto.EncryptIfEnabled(r.enc, t.RefreshToken)
+	_, err := r.db.Pool.Exec(ctx, query, accessEnc, refreshEnc, t.ExpiresAt, now)
 	return err
 }
 
@@ -38,5 +46,10 @@ func (r *TokenRepo) Get(ctx context.Context) (*models.Token, error) {
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
-	return t, err
+	if err != nil {
+		return nil, err
+	}
+	t.AccessToken = crypto.DecryptIfEnabled(r.enc, t.AccessToken)
+	t.RefreshToken = crypto.DecryptIfEnabled(r.enc, t.RefreshToken)
+	return t, nil
 }

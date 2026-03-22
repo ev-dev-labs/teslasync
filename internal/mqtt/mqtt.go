@@ -119,6 +119,12 @@ func (c *Client) IsConnected() bool {
 	return c.client.IsConnected()
 }
 
+// Underlying returns the raw Paho MQTT client for advanced usage
+// such as subscribing to internal topics.
+func (c *Client) Underlying() pahomqtt.Client {
+	return c.client
+}
+
 // Disconnect disconnects the MQTT client.
 func (c *Client) Disconnect() {
 	c.client.Disconnect(1000)
