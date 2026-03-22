@@ -659,3 +659,62 @@ export interface AuditLog {
 
 export const getAuditLogs = (limit = 50) =>
   request<AuditLog[]>(`/system/audit?limit=${limit}`)
+
+// --- System / Admin ---
+
+export interface APIUsage {
+  total_requests: number
+  skipped_polls: number
+  estimated_cost: number
+  cost_per_request: number
+  monthly_credit: number
+  estimated_remaining: number
+}
+
+export interface CompressionStats {
+  total: number
+  compressed: number
+  savings_percent: number
+  total_positions: number
+  compressed_positions: number
+  estimated_saved_rows: number
+  estimated_saved_bytes: number
+}
+
+export interface ExtendedHealthResponse {
+  status: string
+  components: Record<string, { status: string; latency_ms?: number; last_check?: string; consecutive_failures?: number }>
+  database: { status: string; latency_ms: number }
+  database_pool: { total_conns: number; idle_conns: number; acquired_conns: number }
+  system: { goroutines: number; go_version: string; uptime_seconds: number }
+}
+
+export interface BackupStats {
+  database_size: string
+  table_count: number
+  row_counts: Record<string, number>
+}
+
+export async function getAPIUsage(): Promise<APIUsage> {
+  const res = await fetch('/api/v1/system/api-usage')
+  if (!res.ok) throw new Error('Failed to fetch API usage')
+  return res.json()
+}
+
+export async function getCompressionStats(): Promise<CompressionStats> {
+  const res = await fetch('/api/v1/system/compression-stats')
+  if (!res.ok) throw new Error('Failed to fetch compression stats')
+  return res.json()
+}
+
+export async function getExtendedHealth(): Promise<ExtendedHealthResponse> {
+  const res = await fetch('/api/v1/system/health')
+  if (!res.ok) throw new Error('Failed to fetch health')
+  return res.json()
+}
+
+export async function getBackupStats(): Promise<BackupStats> {
+  const res = await fetch('/api/v1/system/backup/stats')
+  if (!res.ok) throw new Error('Failed to fetch backup stats')
+  return res.json()
+}

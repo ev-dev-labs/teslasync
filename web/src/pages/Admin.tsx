@@ -22,6 +22,9 @@ import {
   getAPIKeys,
   getExtendedHealth,
   refreshAuth,
+  type BackupStats,
+  type APIUsage,
+  type ExtendedHealthResponse,
 } from '../api'
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
@@ -41,18 +44,18 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 }
 
 export default function Admin() {
-  const { data: health, isLoading: healthLoading } = useQuery({
+  const { data: health, isLoading: healthLoading } = useQuery<ExtendedHealthResponse>({
     queryKey: ['admin-health'],
     queryFn: getExtendedHealth,
     refetchInterval: 30_000,
   })
 
-  const { data: apiUsage, isLoading: usageLoading } = useQuery({
+  const { data: apiUsage, isLoading: usageLoading } = useQuery<APIUsage>({
     queryKey: ['admin-api-usage'],
     queryFn: getAPIUsage,
   })
 
-  const { data: backupStats, isLoading: backupLoading } = useQuery({
+  const { data: backupStats, isLoading: backupLoading } = useQuery<BackupStats>({
     queryKey: ['admin-backup-stats'],
     queryFn: getBackupStats,
   })

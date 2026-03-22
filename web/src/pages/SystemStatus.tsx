@@ -158,10 +158,10 @@ function ComponentHealthPanel() {
     )
   }
 
-  const pool = health.components.database_pool
-  const system = health.components.system
+  const pool = health.components.database_pool as unknown as { total_conns: number; idle_conns: number; acquired_conns: number }
+  const system = health.components.system as unknown as { goroutines: number; go_version: string; uptime_seconds: number }
 
-  const componentEntries = Object.entries(health.components).filter(
+  const componentEntries = (Object.entries(health.components) as [string, { status: string; latency_ms?: number; consecutive_failures?: number; last_check?: string }][]).filter(
     ([key]) => key !== 'database_pool' && key !== 'system'
   )
 

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 
+export type SSEConnectionStatus = 'connected' | 'reconnecting' | 'disconnected'
+
 interface SSEOptions {
   onVehicleUpdate?: (data: unknown) => void
   onAlert?: (data: unknown) => void
@@ -15,7 +17,8 @@ interface SSEOptions {
  */
 export function useRealtimeEvents(options: SSEOptions = {}) {
   const { enabled = true, onVehicleUpdate, onAlert, onConnected, onDisconnected } = options
-  const [connected, setConnected] = useState(false)
+  const [status, setStatus] = useState<SSEConnectionStatus>('disconnected')
+  const [reconnectCount, setReconnectCount] = useState(0)
   const sourceRef = useRef<EventSource | null>(null)
   const reconnectTimer = useRef<number>(undefined)
   const backoffRef = useRef(1000) // start at 1s, max 30s
@@ -29,7 +32,8 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     sourceRef.current = source
 
     source.addEventListener('connected', (e) => {
-      setConnected(true)
+      setStatus('connected')
+      setReconnectCount(0)
       backoffRef.current = 1000 // reset backoff on successful connection
       const data = JSON.parse(e.data)
       onConnected?.(data.client_id)
@@ -50,7 +54,8 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     })
 
     source.onerror = () => {
-      setConnected(false)
+      setStatus('reconnecting')
+      setReconnectCount((c) => c + 1)
       onDisconnected?.()
       source.close()
       sourceRef.current = null
@@ -72,5 +77,6 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     }
   }, [enabled, connect])
 
-  return { connected }
+  const connected = status === 'connected'
+  return { connected, status, reconnectCount }
 }
