@@ -57,8 +57,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(SecurityHeadersMiddleware)
 
-	// Rate limiting
-	r.Use(httprate.LimitByIP(100, 1*time.Minute))
+	// Rate limiting — skip SSE and health endpoints
+	r.Use(func(next http.Handler) http.Handler {
+		limiter := httprate.LimitByIP(200, 1*time.Minute)
+		limited := limiter(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Skip rate limiting for SSE, health checks, and metrics
+			switch r.URL.Path {
+			case "/api/v1/events", "/healthz", "/readyz", "/metrics":
+				next.ServeHTTP(w, r)
+			default:
+				limited.ServeHTTP(w, r)
+			}
+		})
+	})
 
 	// Handlers
 	vehicleHandler := NewVehicleHandler(db, teslaClient, cache)
