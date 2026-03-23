@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   getVehicles, getAuthStatus, getVehicleState, getDrives, getChargingSessions,
-  getFleetAnalytics, getAlerts, Vehicle, VehicleState, getVehicleStatus,
+  getFleetAnalytics, getAlerts, syncVehicles as syncVehiclesApi, Vehicle, VehicleState, getVehicleStatus,
 } from '../api'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
@@ -587,14 +587,24 @@ export default function Dashboard() {
                   model="model3"
                 />
               </div>
-              <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Welcome to TeslaSync</h2>
+              <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+                {auth?.authenticated ? 'Sync Your Vehicles' : 'Welcome to TeslaSync'}
+              </h2>
               <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-8">
-                The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.
+                {auth?.authenticated
+                  ? 'Your Tesla account is connected. Sync your vehicles to start tracking.'
+                  : 'The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.'}
               </p>
               <div className="flex items-center justify-center gap-4">
-                <Link to="/settings" className="neon-button">
-                  Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
-                </Link>
+                {auth?.authenticated ? (
+                  <button onClick={() => { syncVehiclesApi().then(() => window.location.reload()) }} className="neon-button">
+                    Sync Vehicles <RefreshCw className="h-4 w-4 ml-1 inline-block" />
+                  </button>
+                ) : (
+                  <Link to="/settings" className="neon-button">
+                    Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
+                  </Link>
+                )}
               </div>
               <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
                 {[
