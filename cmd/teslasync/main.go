@@ -159,6 +159,7 @@ func main() {
 
 	// Periodic component health checker — creates system alerts on state changes
 	alertRepo := database.NewAlertRepo(db)
+	notifRepo := database.NewNotificationRepo(db)
 	prevHealthState := make(map[string]resilience.ComponentStatus)
 	resilience.SafeGo("health-watchdog", func() {
 		ticker := time.NewTicker(60 * time.Second)
@@ -196,23 +197,30 @@ func main() {
 						if comp.Status == resilience.StatusUnhealthy {
 							severity = "critical"
 						}
+						title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
+						message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
 						_ = alertRepo.Create(ctx, &models.Alert{
 							Type:     "system_" + name,
 							Severity: severity,
-							Title:    fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String()),
-							Message:  fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError),
+							Title:    title,
+							Message:  message,
 						})
+						// Send notifications to all enabled channels
+						sendSystemNotification(ctx, notifRepo, mqttClient, "⚠️ "+title, message)
 						log.Warn().Str("component", name).Str("status", comp.Status.String()).Msg("system alert: component degraded")
 					}
 
 					// Component recovered
 					if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
+						title := fmt.Sprintf("%s recovered", componentDisplayName(name))
+						message := fmt.Sprintf("Component %s is healthy again", name)
 						_ = alertRepo.Create(ctx, &models.Alert{
 							Type:     "system_" + name,
 							Severity: "info",
-							Title:    fmt.Sprintf("%s recovered", componentDisplayName(name)),
-							Message:  fmt.Sprintf("Component %s is healthy again", name),
+							Title:    title,
+							Message:  message,
 						})
+						sendSystemNotification(ctx, notifRepo, mqttClient, "✅ "+title, message)
 						log.Info().Str("component", name).Msg("system alert: component recovered")
 					}
 
@@ -301,5 +309,30 @@ func componentDisplayName(name string) string {
 		return "Redis Cache"
 	default:
 		return name
+	}
+}
+
+func sendSystemNotification(ctx context.Context, notifRepo *database.NotificationRepo, mqttClient *mqtt.Client, title, message string) {
+	if mqttClient == nil {
+		return
+	}
+	channels, err := notifRepo.GetAllChannels(ctx)
+	if err != nil {
+		return
+	}
+	for _, ch := range channels {
+		if !ch.Enabled {
+			continue
+		}
+		req := &notification.Request{
+			ChannelType: ch.Type,
+			Config:      ch.Config,
+			Title:       title,
+			Message:     message,
+			ChannelID:   ch.ID,
+		}
+		if err := notification.Publish(mqttClient.Underlying(), req); err != nil {
+			log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("failed to send system notification")
+		}
 	}
 }

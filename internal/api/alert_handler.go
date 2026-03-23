@@ -114,6 +114,9 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		"drive_started": true, "drive_ended": true,
 		"sentry_event": true, "vehicle_offline": true,
 		"vampire_drain": true, "tire_pressure_low": true,
+		// System component alerts
+		"system_database": true, "system_mqtt": true, "system_redis": true,
+		"system_tesla_api": true, "system_worker": true,
 	}
 	if !validTypes[body.Type] {
 		writeError(w, http.StatusBadRequest, "invalid alert type")

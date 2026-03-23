@@ -57,6 +57,7 @@ const allRuleTypes = [
   'battery_low', 'battery_high', 'geofence_enter', 'geofence_exit',
   'charging_complete', 'charging_cost', 'speed_limit', 'vampire_drain',
   'tire_pressure_low', 'idle_unlocked', 'software_update', 'efficiency_drop',
+  'system_database', 'system_mqtt', 'system_redis', 'system_tesla_api', 'system_worker',
 ] as const
 type RuleType = typeof allRuleTypes[number]
 
@@ -165,6 +166,41 @@ const ruleDescriptions: Record<string, { label: string; description: string; thr
     thresholdLabel: 'Wh/km',
     thresholdUnit: 'Wh/km',
     thresholdHint: 'e.g. 180',
+  },
+  system_database: {
+    label: 'Database Down',
+    description: 'PostgreSQL becomes unhealthy or recovers',
+    thresholdLabel: '',
+    thresholdUnit: '',
+    thresholdHint: '',
+  },
+  system_mqtt: {
+    label: 'MQTT Disconnected',
+    description: 'MQTT broker connection lost or restored',
+    thresholdLabel: '',
+    thresholdUnit: '',
+    thresholdHint: '',
+  },
+  system_redis: {
+    label: 'Redis Down',
+    description: 'Redis cache becomes unreachable or recovers',
+    thresholdLabel: '',
+    thresholdUnit: '',
+    thresholdHint: '',
+  },
+  system_tesla_api: {
+    label: 'Tesla API Unavailable',
+    description: 'Tesla Fleet API connectivity issues or recovery',
+    thresholdLabel: '',
+    thresholdUnit: '',
+    thresholdHint: '',
+  },
+  system_worker: {
+    label: 'Poller Down',
+    description: 'Vehicle polling worker stopped or recovered',
+    thresholdLabel: '',
+    thresholdUnit: '',
+    thresholdHint: '',
   },
 }
 
