@@ -106,10 +106,6 @@ func (w *Worker) Start(ctx context.Context) {
 			w.safePollAllVehicles(ctx)
 
 		case <-refreshTicker.C:
-			// Skip token refresh when API is suspended
-			if suspended, _ := w.settingsRepo.IsAPISuspended(ctx); suspended {
-				continue
-			}
 			w.safeRefreshToken(ctx)
 		}
 	}
