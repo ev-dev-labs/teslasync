@@ -1,6 +1,8 @@
 package mqtt
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -19,9 +21,11 @@ type Client struct {
 
 // NewClient creates a new MQTT client.
 func NewClient(cfg config.MQTTConfig) (*Client, error) {
+	// Append random suffix to client ID to avoid collisions during rolling updates
+	clientID := cfg.ClientID + "-" + randomSuffix(4)
 	opts := pahomqtt.NewClientOptions().
 		AddBroker(cfg.BrokerURL()).
-		SetClientID(cfg.ClientID).
+		SetClientID(clientID).
 		SetAutoReconnect(true).
 		SetMaxReconnectInterval(60 * time.Second).
 		SetKeepAlive(30 * time.Second).
@@ -128,4 +132,10 @@ func (c *Client) Underlying() pahomqtt.Client {
 // Disconnect disconnects the MQTT client.
 func (c *Client) Disconnect() {
 	c.client.Disconnect(1000)
+}
+
+func randomSuffix(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }

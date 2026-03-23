@@ -30,22 +30,44 @@ func NewWorker(db *database.DB) *Worker {
 // Start subscribes to the internal notification topic and processes messages.
 // It blocks until ctx is cancelled.
 func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
-	if mqttClient == nil || !mqttClient.IsConnected() {
+	if mqttClient == nil {
 		log.Warn().Msg("notification worker: MQTT not available, running in direct mode")
 		return
 	}
 
-	token := mqttClient.Subscribe(InternalTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
-		var req Request
-		if err := json.Unmarshal(msg.Payload(), &req); err != nil {
-			log.Error().Err(err).Msg("notification worker: invalid message")
+	// Retry subscription with backoff — connection may not be stable immediately
+	var subscribed bool
+	for attempt := 1; attempt <= 10; attempt++ {
+		if ctx.Err() != nil {
 			return
 		}
-		w.processNotification(ctx, &req)
-	})
+		if !mqttClient.IsConnected() {
+			log.Warn().Int("attempt", attempt).Msg("notification worker: waiting for MQTT connection")
+			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+			continue
+		}
 
-	if token.WaitTimeout(10 * time.Second) && token.Error() != nil {
-		log.Error().Err(token.Error()).Msg("notification worker: failed to subscribe")
+		token := mqttClient.Subscribe(InternalTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			var req Request
+			if err := json.Unmarshal(msg.Payload(), &req); err != nil {
+				log.Error().Err(err).Msg("notification worker: invalid message")
+				return
+			}
+			w.processNotification(ctx, &req)
+		})
+
+		if token.WaitTimeout(10*time.Second) && token.Error() != nil {
+			log.Warn().Err(token.Error()).Int("attempt", attempt).Msg("notification worker: subscribe failed, retrying")
+			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+			continue
+		}
+
+		subscribed = true
+		break
+	}
+
+	if !subscribed {
+		log.Error().Msg("notification worker: failed to subscribe after 10 attempts")
 		return
 	}
 
