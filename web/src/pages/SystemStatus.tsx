@@ -25,8 +25,8 @@ interface SystemStatus {
 
 function getStatusColor(status: string): string {
   switch (status.toLowerCase()) {
-    case 'ok': case 'healthy': case 'authenticated': return '#10b981'
-    case 'degraded': return '#f59e0b'
+    case 'ok': case 'healthy': case 'authenticated': case 'connected': return '#10b981'
+    case 'degraded': case 'disconnected': return '#f59e0b'
     case 'unhealthy': case 'error': return '#ef4444'
     case 'no_token': return '#6b7280'
     default: return '#6b7280'
@@ -35,9 +35,9 @@ function getStatusColor(status: string): string {
 
 function getStatusIcon(status: string) {
   switch (status.toLowerCase()) {
-    case 'ok': case 'healthy': case 'authenticated':
+    case 'ok': case 'healthy': case 'authenticated': case 'connected':
       return <CheckCircle className="h-5 w-5 text-neon-green" />
-    case 'degraded':
+    case 'degraded': case 'disconnected':
       return <AlertTriangle className="h-5 w-5 text-neon-amber" />
     case 'unhealthy': case 'error':
       return <XCircle className="h-5 w-5 text-neon-red" />
@@ -49,8 +49,8 @@ function getStatusIcon(status: string) {
 function getStatusLabel(status: string): string {
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': return 'Healthy'
-    case 'authenticated': return 'Connected'
-    case 'degraded': return 'Degraded'
+    case 'authenticated': case 'connected': return 'Connected'
+    case 'degraded': case 'disconnected': return 'Degraded'
     case 'unhealthy': case 'error': return 'Unhealthy'
     case 'no_token': return 'Not Connected'
     default: return status
@@ -662,7 +662,7 @@ export default function SystemStatus() {
 
   const overallStatus = status?.overall ?? 'unknown'
   const overallColor = getStatusColor(overallStatus)
-  const healthyCount = components.filter(([, c]) => ['ok', 'healthy', 'authenticated'].includes(c.status.toLowerCase())).length
+  const healthyCount = components.filter(([, c]) => ['ok', 'healthy', 'authenticated', 'connected'].includes(c.status.toLowerCase())).length
   const totalCount = components.length
 
   return (

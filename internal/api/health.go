@@ -165,7 +165,9 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 				"consecutive_failures": comp.ConsecFails,
 			}
 			if comp.Status == resilience.StatusDegraded || comp.Status == resilience.StatusUnhealthy {
-				overall = "degraded"
+				if comp.TotalChecks > 0 {
+					overall = "degraded"
+				}
 			}
 		}
 
