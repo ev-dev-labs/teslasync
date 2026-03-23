@@ -487,7 +487,7 @@ export default function Analytics() {
                       {da.temperature?.outside?.count > 0 && (
                         <div>
                           <p className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Outside Temperature</p>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             <StatCard label="Min" value={fmt(da.temperature.outside.min)} unit="C" color="#00f0ff" />
                             <StatCard label="Avg" value={fmt(da.temperature.outside.avg)} unit="C" color="#10b981" />
                             <StatCard label="Max" value={fmt(da.temperature.outside.max)} unit="C" color="#ef4444" />
@@ -497,7 +497,7 @@ export default function Analytics() {
                       {da.temperature?.inside?.count > 0 && (
                         <div>
                           <p className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Inside Temperature</p>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             <StatCard label="Min" value={fmt(da.temperature.inside.min)} unit="C" color="#00f0ff" />
                             <StatCard label="Avg" value={fmt(da.temperature.inside.avg)} unit="C" color="#10b981" />
                             <StatCard label="Max" value={fmt(da.temperature.inside.max)} unit="C" color="#ef4444" />

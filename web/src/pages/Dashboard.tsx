@@ -48,7 +48,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
           </div>
         </div>
         {state ? (
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-xs text-[var(--text-muted)]">Battery</p>
               <p className="text-sm font-bold" style={{ color: state.battery_level > 50 ? '#10b981' : '#f59e0b' }}>{state.battery_level}%</p>
@@ -298,7 +298,7 @@ export default function Dashboard() {
                             <BatteryCharging className="h-4 w-4 text-neon-green animate-pulse" />
                             <span className="text-sm font-medium text-neon-green">Charging</span>
                           </div>
-                          <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center text-xs">
                             <div>
                               <p className="text-[var(--text-muted)]">Power</p>
                               <p className="text-sm font-bold text-neon-green">{primaryState.charger_power} kW</p>
