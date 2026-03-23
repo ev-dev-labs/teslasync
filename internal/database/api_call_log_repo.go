@@ -18,15 +18,18 @@ func NewAPICallLogRepo(db *DB) *APICallLogRepo {
 }
 
 func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error {
-	query := `INSERT INTO api_call_logs (method, url, status_code, request_body, response_body, duration_ms, error, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	if l.Source == "" {
+		l.Source = "tesla_api"
+	}
+	query := `INSERT INTO api_call_logs (method, url, status_code, request_body, response_body, duration_ms, error, source, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
 	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query, l.Method, l.URL, l.StatusCode, l.RequestBody, l.ResponseBody, l.DurationMs, l.Error, now).Scan(&l.ID)
+	return r.db.Pool.QueryRow(ctx, query, l.Method, l.URL, l.StatusCode, l.RequestBody, l.ResponseBody, l.DurationMs, l.Error, l.Source, now).Scan(&l.ID)
 }
 
 func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, startDate, endDate string) ([]*models.APICallLog, int, error) {
 	// Build dynamic query with filters
-	query := `SELECT id, method, url, status_code, request_body, response_body, duration_ms, error, created_at FROM api_call_logs WHERE 1=1`
+	query := `SELECT id, method, url, status_code, request_body, response_body, duration_ms, error, source, created_at FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
 	args := []interface{}{}
 	argIdx := 1
@@ -92,7 +95,7 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 	var logs []*models.APICallLog
 	for rows.Next() {
 		l := &models.APICallLog{}
-		if err := rows.Scan(&l.ID, &l.Method, &l.URL, &l.StatusCode, &l.RequestBody, &l.ResponseBody, &l.DurationMs, &l.Error, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.Method, &l.URL, &l.StatusCode, &l.RequestBody, &l.ResponseBody, &l.DurationMs, &l.Error, &l.Source, &l.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		logs = append(logs, l)

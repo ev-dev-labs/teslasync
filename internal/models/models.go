@@ -404,5 +404,6 @@ type APICallLog struct {
 	ResponseBody *string   `json:"response_body,omitempty" db:"response_body"`
 	DurationMs   int       `json:"duration_ms" db:"duration_ms"`
 	Error        *string   `json:"error,omitempty" db:"error"`
+	Source       string    `json:"source" db:"source"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 }

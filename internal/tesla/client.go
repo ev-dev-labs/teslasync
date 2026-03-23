@@ -120,6 +120,58 @@ func (c *Client) CircuitBreakerCounts() map[string]interface{} {
 // ErrUnauthorized is returned when the Tesla API rejects the current token.
 var ErrUnauthorized = fmt.Errorf("unauthorized (401): token expired or invalid")
 
+// BaseURL returns the configured Fleet API base URL.
+func (c *Client) BaseURL() string { return c.baseURL }
+
+// ClientID returns the configured OAuth client ID.
+func (c *Client) ClientID() string { return c.clientID }
+
+// ClientSecret returns the configured OAuth client secret.
+func (c *Client) ClientSecret() string { return c.clientSec }
+
+// GetUserRegion calls GET /api/1/users/region to detect the account's Fleet API region.
+func (c *Client) GetUserRegion(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/users/region", nil)
+}
+
+// RegisterPartner calls POST /api/1/partner_accounts to register this app in the current region.
+func (c *Client) RegisterPartner(ctx context.Context, domain string) ([]byte, int, error) {
+	body := fmt.Sprintf(`{"domain":"%s"}`, domain)
+	return c.doRequest(ctx, http.MethodPost, "/api/1/partner_accounts", bytes.NewReader([]byte(body)))
+}
+
+// GetPartnerToken obtains a client_credentials token for partner-level API calls.
+func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
+	data := fmt.Sprintf(
+		"grant_type=client_credentials&client_id=%s&client_secret=%s&scope=openid+vehicle_device_data+vehicle_cmds+vehicle_charging_cmds&audience=%s",
+		c.clientID, c.clientSec, c.baseURL,
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL+"/oauth2/v3/token", bytes.NewReader([]byte(data)))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("partner token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("partner token failed (%d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return "", fmt.Errorf("decode partner token: %w", err)
+	}
+	return result.AccessToken, nil
+}
+
 // ErrRateLimited is returned when Tesla API returns 429 Too Many Requests.
 var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
 

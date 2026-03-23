@@ -5,6 +5,7 @@ import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
+  Satellite,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
@@ -14,6 +15,14 @@ interface ComponentInfo {
   status: string
   consecutive_failures?: number
   last_error?: string
+  details?: {
+    enabled?: boolean
+    host?: string
+    port?: number
+    endpoint?: string
+    protocol?: string
+    supported_signals?: string[]
+  }
 }
 
 interface SystemStatus {
@@ -25,22 +34,24 @@ interface SystemStatus {
 
 function getStatusColor(status: string): string {
   switch (status.toLowerCase()) {
-    case 'ok': case 'healthy': case 'authenticated': case 'connected': return '#10b981'
+    case 'ok': case 'healthy': case 'authenticated': case 'connected': case 'enabled': return '#10b981'
     case 'degraded': case 'disconnected': return '#f59e0b'
     case 'unhealthy': case 'error': return '#ef4444'
-    case 'no_token': return '#6b7280'
+    case 'no_token': case 'disabled': return '#6b7280'
     default: return '#6b7280'
   }
 }
 
 function getStatusIcon(status: string) {
   switch (status.toLowerCase()) {
-    case 'ok': case 'healthy': case 'authenticated': case 'connected':
+    case 'ok': case 'healthy': case 'authenticated': case 'connected': case 'enabled':
       return <CheckCircle className="h-5 w-5 text-neon-green" />
     case 'degraded': case 'disconnected':
       return <AlertTriangle className="h-5 w-5 text-neon-amber" />
     case 'unhealthy': case 'error':
       return <XCircle className="h-5 w-5 text-neon-red" />
+    case 'disabled':
+      return <XCircle className="h-5 w-5 text-[var(--text-muted)]" />
     default:
       return <AlertTriangle className="h-5 w-5 text-[var(--text-muted)]" />
   }
@@ -50,6 +61,8 @@ function getStatusLabel(status: string): string {
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': return 'Healthy'
     case 'authenticated': case 'connected': return 'Connected'
+    case 'enabled': return 'Enabled'
+    case 'disabled': return 'Disabled'
     case 'degraded': case 'disconnected': return 'Degraded'
     case 'unhealthy': case 'error': return 'Unhealthy'
     case 'no_token': return 'Not Connected'
@@ -64,6 +77,7 @@ function getComponentIcon(name: string) {
     case 'mqtt': return <Wifi className="h-5 w-5" />
     case 'redis': return <HardDrive className="h-5 w-5" />
     case 'poller': return <Activity className="h-5 w-5" />
+    case 'fleet_telemetry': return <Satellite className="h-5 w-5" />
     default: return <Server className="h-5 w-5" />
   }
 }
@@ -75,6 +89,7 @@ function getComponentLabel(name: string): string {
     case 'mqtt': return 'MQTT (Mosquitto)'
     case 'redis': return 'Redis Cache'
     case 'poller': return 'Vehicle Poller'
+    case 'fleet_telemetry': return 'Fleet Telemetry'
     default: return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   }
 }
@@ -130,6 +145,51 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
           <div className="mt-3 p-2.5 rounded-lg bg-neon-red/5 border border-neon-red/10">
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Last Error</p>
             <p className="text-xs text-neon-red/80 font-mono break-all">{info.last_error}</p>
+          </div>
+        )}
+
+        {/* Fleet Telemetry details */}
+        {name === 'fleet_telemetry' && info.details && (
+          <div className="mt-3 space-y-2">
+            {info.details.enabled && (
+              <>
+                {info.details.endpoint && (
+                  <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Endpoint</p>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{info.details.endpoint}</p>
+                  </div>
+                )}
+                {info.details.protocol && (
+                  <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Protocol</p>
+                    <p className="text-xs text-[var(--text-primary)]">{info.details.protocol}</p>
+                  </div>
+                )}
+                {info.details.host && (
+                  <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Host</p>
+                    <p className="text-xs font-mono text-[var(--text-primary)]">{info.details.host}:{info.details.port}</p>
+                  </div>
+                )}
+                {info.details.supported_signals && (
+                  <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Signals ({info.details.supported_signals.length})</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {info.details.supported_signals.map(s => (
+                        <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-neon-cyan/10 text-neon-cyan">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {!info.details.enabled && (
+              <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <p className="text-xs text-[var(--text-muted)]">
+                  Set <code className="text-neon-cyan text-[10px]">FLEET_TELEMETRY_ENABLED=true</code> to enable streaming telemetry from vehicles.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -109,6 +109,7 @@ func main() {
 			Method:     method,
 			URL:        url,
 			DurationMs: durationMs,
+			Source:     "tesla_api",
 		}
 		if statusCode > 0 {
 			logEntry.StatusCode = &statusCode

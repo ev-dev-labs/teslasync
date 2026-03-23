@@ -246,7 +246,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// System endpoints
 		r.Route("/system", func(r chi.Router) {
-			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health))
+			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health, cfg))
 			r.Get("/health", ExtendedHealthCheck(db, health))
 			r.Get("/api-usage", APIUsageHandler())
 			r.Get("/compression-stats", CompressionStatsHandler(db))
@@ -274,6 +274,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/telemetry", func(r chi.Router) {
 			r.Post("/", telemetryHandler.TelemetryIngest)
 			r.Get("/", telemetryHandler.TelemetryStatus)
+		})
+
+		// Developer Tools
+		devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
+		r.Route("/dev-tools", func(r chi.Router) {
+			r.Get("/fleet-api-info", devToolsHandler.FleetAPIInfo)
+			r.Get("/detect-region", devToolsHandler.DetectRegion)
+			r.Post("/register-partner", devToolsHandler.RegisterPartner)
+			r.Get("/test-api", devToolsHandler.TestAPIConnectivity)
+			r.Get("/token-info", devToolsHandler.TokenInfo)
+			r.Get("/db-stats", devToolsHandler.DatabaseStats)
+			r.Get("/migration-status", devToolsHandler.MigrationStatus)
+			r.Post("/mqtt-test", devToolsHandler.MQTTTest)
+			r.Get("/env-check", devToolsHandler.EnvCheck)
+			r.Get("/runtime-info", devToolsHandler.RuntimeInfo)
 		})
 
 		// Export

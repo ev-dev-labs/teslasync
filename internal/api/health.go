@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -54,7 +55,7 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 }
 
 // SystemStatusHandler returns detailed system health for the frontend resilience dashboard.
-func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Client, health *resilience.HealthMonitor) http.HandlerFunc {
+func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Client, health *resilience.HealthMonitor, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		components := health.GetStatus()
 		overall := health.OverallStatus()
@@ -89,6 +90,27 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			}
 		}
 
+		// Fleet Telemetry status
+		ftStatus := "disabled"
+		ftDetails := map[string]interface{}{
+			"enabled": false,
+		}
+		if cfg != nil && cfg.FleetTelemetry.Enabled {
+			ftStatus = "enabled"
+			ftDetails = map[string]interface{}{
+				"enabled":  true,
+				"host":     cfg.FleetTelemetry.Host,
+				"port":     cfg.FleetTelemetry.Port,
+				"endpoint": "/api/v1/telemetry",
+				"protocol": "HTTP POST (JSON)",
+				"supported_signals": []string{
+					"Latitude", "Longitude", "VehicleSpeed", "PackPower",
+					"BatteryLevel", "StateOfCharge", "InsideTemp", "OutsideTemp",
+					"Odometer", "Heading",
+				},
+			}
+		}
+
 		type componentInfo struct {
 			Status      string `json:"status"`
 			ConsecFails int    `json:"consecutive_failures"`
@@ -105,6 +127,10 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			},
 			"mqtt": componentInfo{
 				Status: mqttStatus,
+			},
+			"fleet_telemetry": map[string]interface{}{
+				"status":  ftStatus,
+				"details": ftDetails,
 			},
 			"circuit_breaker": map[string]interface{}{
 				"state":  cbState,

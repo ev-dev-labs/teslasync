@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -16,6 +17,7 @@ type TelemetryHandler struct {
 	db         *database.DB
 	posRepo    *database.PositionRepo
 	mqttClient *mqtt.Client
+	logRepo    *database.APICallLogRepo
 }
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
@@ -28,6 +30,7 @@ func NewTelemetryHandler(db *database.DB, mc ...*mqtt.Client) *TelemetryHandler 
 		db:         db,
 		posRepo:    database.NewPositionRepo(db),
 		mqttClient: mqttC,
+		logRepo:    database.NewAPICallLogRepo(db),
 	}
 }
 
@@ -47,6 +50,7 @@ type telemetryPayload struct {
 // TelemetryIngest receives Fleet Telemetry data via HTTP POST.
 // Tesla Fleet Telemetry can be configured to POST to this endpoint.
 func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var payload telemetryPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -131,6 +135,20 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 				}
 			}
 		}
+	}
+
+	// Log the fleet telemetry ingest to API call logs
+	durationMs := int(time.Since(start).Milliseconds())
+	statusCode := http.StatusOK
+	logEntry := &models.APICallLog{
+		Method:     "POST",
+		URL:        fmt.Sprintf("/api/v1/telemetry (VIN: %s)", payload.VIN),
+		StatusCode: &statusCode,
+		DurationMs: durationMs,
+		Source:     "fleet_telemetry",
+	}
+	if err := h.logRepo.Create(r.Context(), logEntry); err != nil {
+		log.Warn().Err(err).Msg("failed to log fleet telemetry ingest")
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

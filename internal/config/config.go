@@ -9,16 +9,23 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port        int
-	LogLevel    string
-	CORSOrigins string
-	Database    DatabaseConfig
-	Tesla       TeslaConfig
-	MQTT        MQTTConfig
-	Worker      WorkerConfig
-	Redis       RedisConfig
-	Auth        AuthConfig
-	Retention   RetentionConfig
+	Port           int
+	LogLevel       string
+	CORSOrigins    string
+	Database       DatabaseConfig
+	Tesla          TeslaConfig
+	MQTT           MQTTConfig
+	Worker         WorkerConfig
+	Redis          RedisConfig
+	Auth           AuthConfig
+	Retention      RetentionConfig
+	FleetTelemetry FleetTelemetryConfig
+}
+
+type FleetTelemetryConfig struct {
+	Enabled bool
+	Host    string
+	Port    int
 }
 
 type DatabaseConfig struct {
@@ -160,6 +167,12 @@ func Load() (*Config, error) {
 		Retention: RetentionConfig{
 			DataRetentionDays:     envInt("DATA_RETENTION_DAYS", 365),
 			PositionRetentionDays: envInt("POSITION_RETENTION_DAYS", 90),
+		},
+
+		FleetTelemetry: FleetTelemetryConfig{
+			Enabled: envBool("FLEET_TELEMETRY_ENABLED", false),
+			Host:    envStr("FLEET_TELEMETRY_HOST", ""),
+			Port:    envInt("FLEET_TELEMETRY_PORT", 4443),
 		},
 	}
 
