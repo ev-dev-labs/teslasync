@@ -195,7 +195,7 @@ export default function DriveDetail() {
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {[1,2,3,4,5,6,7,8].map(i => <Skeleton key={i} className="h-24" />)}
         </div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64 sm:h-80 lg:h-96" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-72" /><Skeleton className="h-72" />
           <Skeleton className="h-72" /><Skeleton className="h-72" />
@@ -392,7 +392,7 @@ export default function DriveDetail() {
               <MapPin className="h-4 w-4 text-neon-cyan" /> Route
             </h3>
           </div>
-          <div className="h-96">
+          <div className="h-64 sm:h-80 lg:h-96">
             <MapContainer center={centerPos as [number, number]} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
               <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

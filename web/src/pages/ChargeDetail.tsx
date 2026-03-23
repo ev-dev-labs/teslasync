@@ -281,7 +281,7 @@ export default function ChargeDetail() {
             <h3 className="section-title flex items-center gap-2 mb-4">
               <BatteryCharging className="h-4 w-4 text-neon-green" /> Charge Curve — Power vs SoC
             </h3>
-            <div className="h-64">
+            <div className="h-48 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chargeData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -301,7 +301,7 @@ export default function ChargeDetail() {
             <h3 className="section-title flex items-center gap-2 mb-4">
               <Zap className="h-4 w-4 text-neon-cyan" /> SoC · Energy · Range over Time
             </h3>
-            <div className="h-64">
+            <div className="h-48 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chargeData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />

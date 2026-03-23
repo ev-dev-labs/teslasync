@@ -186,10 +186,10 @@ export default function LiveMap() {
           {/* Vehicle list */}
           <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible flex-1 lg:flex-none pb-2 lg:pb-0">
             {isLoading ? (
-              Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-32 min-w-[260px] lg:min-w-0" />)
+              Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-32 min-w-[200px] sm:min-w-[260px] lg:min-w-0" />)
             ) : (
               vehicles?.map(v => (
-                <div key={v.id} className="min-w-[260px] lg:min-w-0">
+                <div key={v.id} className="min-w-[200px] sm:min-w-[260px] lg:min-w-0">
                   <VehiclePanel
                     vehicle={v}
                     state={states[v.id]}

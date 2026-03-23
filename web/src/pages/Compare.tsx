@@ -250,9 +250,9 @@ export default function Compare() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider">
                   <tr>
-                    <th className="pb-3 pr-6 min-w-[180px]">Metric</th>
+                    <th className="pb-3 pr-6 min-w-[100px] sm:min-w-[180px]">Metric</th>
                     {selectedVehicles.map(v => (
-                      <th key={v.id} className="pb-3 pr-6 min-w-[150px]">
+                      <th key={v.id} className="pb-3 pr-6 min-w-[80px] sm:min-w-[150px]">
                         {v.display_name || v.vin}
                       </th>
                     ))}
