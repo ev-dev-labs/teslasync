@@ -21,8 +21,9 @@ import (
 
 // vehicleHealth tracks per-vehicle polling state for backoff.
 type vehicleHealth struct {
-	consecFails int
-	lastError   time.Time
+	consecFails  int
+	consecAsleep int
+	lastError    time.Time
 	backoffUntil time.Time
 }
 
@@ -229,8 +230,38 @@ func (w *Worker) recordVehicleSuccess(vehicleID int64) {
 	defer w.mu.Unlock()
 	if vh, ok := w.vehicleHealth[vehicleID]; ok {
 		vh.consecFails = 0
+		vh.consecAsleep = 0
 		vh.backoffUntil = time.Time{}
 	}
+}
+
+// recordVehicleAsleep applies escalating backoff for a sleeping vehicle.
+// Uses SleepPollMult as the base multiplier, then doubles on each
+// consecutive asleep response, capping at 10 minutes.
+func (w *Worker) recordVehicleAsleep(vehicleID int64) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	vh, ok := w.vehicleHealth[vehicleID]
+	if !ok {
+		vh = &vehicleHealth{}
+		w.vehicleHealth[vehicleID] = vh
+	}
+	vh.consecFails = 0 // asleep is not an error
+	vh.consecAsleep++
+
+	// Base backoff = PollInterval * SleepPollMult (default 15s * 4 = 60s)
+	// Then double for each consecutive asleep: 60s, 120s, 240s, 480s, max 10m
+	mult := w.cfg.SleepPollMult
+	if mult < 1 {
+		mult = 4
+	}
+	base := w.cfg.PollInterval * time.Duration(mult)
+	backoff := base * time.Duration(1<<uint(vh.consecAsleep-1))
+	if backoff > 10*time.Minute {
+		backoff = 10 * time.Minute
+	}
+	vh.backoffUntil = time.Now().Add(backoff)
+	log.Info().Int64("vehicle_id", vehicleID).Int("consec_asleep", vh.consecAsleep).Dur("backoff", backoff).Msg("vehicle asleep — backing off")
 }
 
 func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
@@ -246,7 +277,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 			logger.Error().Err(err).Msg("failed to update vehicle state")
 		}
 		w.publishMQTT(vehicle, "state", "asleep")
-		w.recordVehicleSuccess(vehicle.ID) // Asleep is not a failure
+		w.recordVehicleAsleep(vehicle.ID)
 		return
 	}
 	if errors.Is(err, tesla.ErrRateLimited) {
