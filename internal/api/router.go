@@ -317,7 +317,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Serve frontend static files (SPA)
 	// Static assets found on disk are served directly; all other GET
 	// requests fall back to index.html for client-side routing.
-	staticDir := "./web/dist"
+	// Try /web/dist (Docker) then ./web/dist (local dev).
+	staticDir := "/web/dist"
+	if _, err := os.Stat(staticDir); err != nil {
+		staticDir = "./web/dist"
+	}
 	fs := http.FileServer(http.Dir(staticDir))
 	r.NotFound(spaFallback(staticDir, fs))
 

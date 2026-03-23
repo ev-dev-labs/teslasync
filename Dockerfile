@@ -1,5 +1,5 @@
-# Build stage
-FROM golang:1.24-alpine AS builder
+# Build stage — Go binary
+FROM golang:1.24-alpine AS go-builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -20,6 +20,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" \
     -o /bin/teslasync ./cmd/teslasync
 
+# Build stage — frontend assets
+FROM node:20-alpine AS web-builder
+
+WORKDIR /app
+
+COPY web/package.json web/package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+
+COPY web/ .
+RUN npm run build
+
 # Runtime stage
 FROM alpine:3.23
 
@@ -27,8 +38,9 @@ RUN apk add --no-cache ca-certificates tzdata
 
 RUN addgroup -S teslasync && adduser -S teslasync -G teslasync
 
-COPY --from=builder /bin/teslasync /usr/local/bin/teslasync
+COPY --from=go-builder /bin/teslasync /usr/local/bin/teslasync
 COPY migrations /migrations
+COPY --from=web-builder /app/dist /web/dist
 
 USER teslasync
 
