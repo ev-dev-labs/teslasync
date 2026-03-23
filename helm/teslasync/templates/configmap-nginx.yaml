@@ -39,6 +39,16 @@ data:
             proxy_pass {{ $apiBackend }};
         }
 
+        location /.well-known/ {
+            proxy_pass {{ $apiBackend }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /metrics {
+            proxy_pass {{ $apiBackend }};
+        }
+
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";

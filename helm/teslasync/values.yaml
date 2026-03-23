@@ -197,9 +197,6 @@ ingress:
   hosts:
     - host: teslasync.local
       paths:
-        - path: /api/
-          pathType: Prefix
-          service: backend
         - path: /
           pathType: Prefix
           service: web
@@ -207,9 +204,9 @@ ingress:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Traefik IngressRoute (alternative to standard Ingress)
-# Set enabled: true and configure routes when using Traefik as your ingress
-# controller. Both the web frontend and the backend API can share one
-# IngressRoute with separate Host()/PathPrefix() match rules.
+# All traffic routes to Nginx, which proxies /api/ and /.well-known/ to the
+# backend internally over the Kubernetes network. This keeps API traffic
+# off the ingress and on the internal cluster network.
 # ─────────────────────────────────────────────────────────────────────────────
 ingressRoute:
   enabled: false
@@ -218,20 +215,13 @@ ingressRoute:
   entryPoints:
     - websecure
   routes:
-    # Web frontend (Nginx)
+    # Single route — Nginx handles static files + proxies API internally
     - match: Host(`teslasync.example.com`)
       kind: Rule
       middlewares: []
       services:
         - name: ""   # leave empty → set to <release>-web at deploy time
           port: 80
-    # Backend API (Go)
-    - match: "Host(`teslasync.example.com`) && PathPrefix(`/api/`)"
-      kind: Rule
-      middlewares: []
-      services:
-        - name: ""   # leave empty → set to <release>-backend at deploy time
-          port: 8080
   tls:
     enabled: false
     secretName: teslasync-tls
