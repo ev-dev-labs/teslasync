@@ -850,7 +850,16 @@ export default function SystemStatus() {
                 <p className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium mb-2.5">
                   <Link className="h-3 w-3" /> Configured Endpoints
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {version.endpoints.api && (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                      <Server className="h-3.5 w-3.5 text-neon-amber shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[var(--text-muted)]">API (Internal)</p>
+                        <p className="text-xs font-mono text-[var(--text-secondary)] truncate">{version.endpoints.api}</p>
+                      </div>
+                    </div>
+                  )}
                   {version.endpoints.web && (
                     <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
                       <Globe className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
@@ -908,7 +917,7 @@ export default function SystemStatus() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'API Endpoint', value: window.location.origin, icon: Server },
+              { label: 'API Endpoint', value: version?.endpoints?.api ?? window.location.origin, icon: Server },
               { label: 'Auto Refresh', value: '15 seconds', icon: RefreshCw },
               { label: 'Last Check', value: lastChecked.toLocaleTimeString(), icon: Clock },
               { label: 'Connection', value: navigator.onLine ? 'Online' : 'Offline', icon: navigator.onLine ? Wifi : WifiOff },

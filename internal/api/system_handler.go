@@ -33,6 +33,9 @@ func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
 
 		// Endpoint configuration (read-only, from Helm/env)
 		endpoints := map[string]string{}
+		if v := os.Getenv("API_ENDPOINT"); v != "" {
+			endpoints["api"] = v
+		}
 		if v := cfg.CORSOrigins; v != "" {
 			endpoints["web"] = v
 		}

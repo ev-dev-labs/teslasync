@@ -788,6 +788,7 @@ export interface VersionInfo {
   uptime_seconds: number
   goroutines: number
   endpoints?: {
+    api?: string
     web?: string
     oauth_callback?: string
     tesla_api?: string

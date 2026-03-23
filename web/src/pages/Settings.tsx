@@ -652,6 +652,12 @@ export default function Settings() {
                 <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">Configured Endpoints</p>
               </div>
               <div className="grid gap-2">
+                {version.endpoints.api && (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                    <span className="text-xs text-[var(--text-muted)] font-medium">API (Internal)</span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{version.endpoints.api}</span>
+                  </div>
+                )}
                 {version.endpoints.web && (
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
                     <span className="text-xs text-[var(--text-muted)] font-medium">Web Frontend</span>
