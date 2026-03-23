@@ -6,7 +6,7 @@
  * {@link resilientFetch} for automatic retry, circuit-breaker protection,
  * request deduplication, and offline detection.
  */
-import { resilientFetch, ApiError } from './lib/resilience'
+import { resilientFetch, ApiError, getApiBase } from './lib/resilience'
 
 export { ApiError }
 
@@ -704,25 +704,25 @@ export interface BackupStats {
 }
 
 export async function getAPIUsage(): Promise<APIUsage> {
-  const res = await fetch('/api/v1/system/api-usage')
+  const res = await fetch(`${getApiBase()}/api/v1/system/api-usage`)
   if (!res.ok) throw new Error('Failed to fetch API usage')
   return res.json()
 }
 
 export async function getCompressionStats(): Promise<CompressionStats> {
-  const res = await fetch('/api/v1/system/compression-stats')
+  const res = await fetch(`${getApiBase()}/api/v1/system/compression-stats`)
   if (!res.ok) throw new Error('Failed to fetch compression stats')
   return res.json()
 }
 
 export async function getExtendedHealth(): Promise<ExtendedHealthResponse> {
-  const res = await fetch('/api/v1/system/health')
+  const res = await fetch(`${getApiBase()}/api/v1/system/health`)
   if (!res.ok) throw new Error('Failed to fetch health')
   return res.json()
 }
 
 export async function getBackupStats(): Promise<BackupStats> {
-  const res = await fetch('/api/v1/system/backup/stats')
+  const res = await fetch(`${getApiBase()}/api/v1/system/backup/stats`)
   if (!res.ok) throw new Error('Failed to fetch backup stats')
   return res.json()
 }

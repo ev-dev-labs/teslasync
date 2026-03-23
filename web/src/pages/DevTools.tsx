@@ -9,6 +9,7 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
+import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 
 // ─── Shared helpers ──────────────────────────────────────────────
@@ -121,7 +122,7 @@ const textareaClasses = 'w-full bg-white/[0.04] border border-white/[0.08] round
 async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: unknown) {
   const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } }
   if (body) opts.body = JSON.stringify(body)
-  const res = await fetch(`/api/v1/dev-tools/${endpoint}`, opts)
+  const res = await fetch(`${getApiBase()}/api/v1/dev-tools/${endpoint}`, opts)
   const text = await res.text()
   try {
     return JSON.parse(text)
@@ -505,7 +506,7 @@ function PublicKeySetupTool() {
 
 function VehicleKeyPairingTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch('/api/v1/vehicles')
+    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
     if (!res.ok) return []
     return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
   }})
@@ -557,7 +558,7 @@ const TELEMETRY_FIELDS = [
 
 function FleetTelemetrySubscribeTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch('/api/v1/vehicles')
+    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
     if (!res.ok) return []
     return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
   }})
@@ -700,7 +701,7 @@ function FleetTelemetrySubscribeTool() {
 
 function FleetTelemetryConfigTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch('/api/v1/vehicles')
+    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
     if (!res.ok) return []
     return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
   }})
@@ -762,7 +763,7 @@ function FleetTelemetryConfigTool() {
 
 function FleetStatusTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch('/api/v1/vehicles')
+    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
     if (!res.ok) return []
     return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
   }})
@@ -889,7 +890,7 @@ function OnboardingWorkflow() {
   const { data: keyStatus } = useQuery({ queryKey: ['onboard-key-status'], queryFn: () => apiFetch('public-key-status'), refetchInterval: 30000 })
   const { data: fleetInfo } = useQuery({ queryKey: ['onboard-fleet-info'], queryFn: () => apiFetch('fleet-api-info'), refetchInterval: 30000 })
   const { data: authStatus } = useQuery({ queryKey: ['onboard-auth-status'], queryFn: async () => {
-    const res = await fetch('/api/v1/auth/status')
+    const res = await fetch(`${getApiBase()}/api/v1/auth/status`)
     return res.json()
   }, refetchInterval: 30000 })
 

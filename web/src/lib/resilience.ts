@@ -11,6 +11,19 @@
 
 type RequestStatus = 'online' | 'degraded' | 'offline'
 
+// --- API Base URL ---
+// Injected at runtime by Nginx via sub_filter into index.html.
+// Falls back to empty string (relative paths) if not set.
+declare global {
+  interface Window {
+    __TESLASYNC_API_BASE__?: string
+  }
+}
+
+export function getApiBase(): string {
+  return (window.__TESLASYNC_API_BASE__ || '').replace(/\/+$/, '')
+}
+
 // --- Circuit Breaker ---
 
 interface BreakerState {
@@ -92,7 +105,7 @@ let _refreshing: Promise<void> | null = null
 
 async function refreshTokenOnce(): Promise<void> {
   if (_refreshing) return _refreshing
-  _refreshing = fetch('/api/v1/auth/refresh', { method: 'POST' })
+  _refreshing = fetch(`${getApiBase()}/api/v1/auth/refresh`, { method: 'POST' })
     .then(res => { if (!res.ok) throw new Error('refresh failed') })
     .finally(() => { _refreshing = null })
   return _refreshing
@@ -175,7 +188,7 @@ async function _doFetch<T>(
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), timeout)
 
-      const res = await fetch(`/api/v1${path}`, {
+      const res = await fetch(`${getApiBase()}/api/v1${path}`, {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         ...fetchOpts,
@@ -249,7 +262,7 @@ export interface SystemStatus {
 
 /** Fetches the backend system health status (database, Tesla API, MQTT, worker). */
 export async function fetchSystemStatus(): Promise<SystemStatus> {
-  const res = await fetch('/api/v1/system/status')
+  const res = await fetch(`${getApiBase()}/api/v1/system/status`)
   if (!res.ok) throw new Error('Failed to fetch system status')
   return res.json()
 }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { getApiBase } from '../lib/resilience'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight'
@@ -208,7 +209,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Load theme from backend settings on first mount
   useEffect(() => {
-    fetch('/api/v1/settings')
+    fetch(`${getApiBase()}/api/v1/settings`)
       .then(r => r.ok ? r.json() : null)
       .then(settings => {
         if (!settings) return
@@ -243,9 +244,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Persist theme changes to backend (fire-and-forget)
   const saveThemeToBackend = useCallback((t: ThemeId, m: ModeId, cp: string, ca: string) => {
     if (!initialized) return
-    fetch('/api/v1/settings').then(r => r.ok ? r.json() : null).then(current => {
+    fetch(`${getApiBase()}/api/v1/settings`).then(r => r.ok ? r.json() : null).then(current => {
       if (!current) return
-      fetch('/api/v1/settings', {
+      fetch(`${getApiBase()}/api/v1/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...current, theme: t, mode: m, custom_primary: cp, custom_accent: ca }),

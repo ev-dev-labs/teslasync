@@ -8,17 +8,21 @@ metadata:
     app.kubernetes.io/component: web
 data:
   default.conf: |
+    {{- $apiBackend := .Values.config.apiEndpoint | default (printf "http://%s-api:%v" (include "teslasync.fullname" .) (int .Values.service.port)) }}
     server {
         listen 80;
         server_name _;
         root /usr/share/nginx/html;
         index index.html;
 
+        # Inject API base URL into frontend at runtime
+        sub_filter '</head>' '<script>window.__TESLASYNC_API_BASE__="{{ $apiBackend }}";</script></head>';
+        sub_filter_once on;
+
         location / {
             try_files $uri $uri/ /index.html;
         }
 
-        {{- $apiBackend := .Values.config.apiEndpoint | default (printf "http://%s-api:%v" (include "teslasync.fullname" .) (int .Values.service.port)) }}
         location /api/ {
             proxy_pass {{ $apiBackend }};
             proxy_set_header Host $host;

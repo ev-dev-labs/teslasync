@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse } from '../api'
+import { getApiBase } from '../lib/resilience'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
@@ -663,7 +664,7 @@ export default function SystemStatus() {
   const { data: status, isLoading, refetch, dataUpdatedAt } = useQuery<SystemStatus>({
     queryKey: ['system-status'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/system/status')
+      const res = await fetch(`${getApiBase()}/api/v1/system/status`)
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         return body as SystemStatus
@@ -677,7 +678,7 @@ export default function SystemStatus() {
   const { data: healthz } = useQuery({
     queryKey: ['healthz'],
     queryFn: async () => {
-      const res = await fetch('/healthz')
+      const res = await fetch(`${getApiBase()}/healthz`)
       return { ok: res.ok, status: res.status }
     },
     refetchInterval: 15_000,
@@ -686,7 +687,7 @@ export default function SystemStatus() {
   const { data: readyz } = useQuery({
     queryKey: ['readyz'],
     queryFn: async () => {
-      const res = await fetch('/readyz')
+      const res = await fetch(`${getApiBase()}/readyz`)
       const body = await res.json().catch(() => ({}))
       return { ok: res.ok, status: res.status, body }
     },
