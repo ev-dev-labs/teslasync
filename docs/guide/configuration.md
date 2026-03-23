@@ -317,3 +317,35 @@ Available regions:
 - **NA:** `https://fleet-api.prd.na.vn.cloud.tesla.com`
 - **EU:** `https://fleet-api.prd.eu.vn.cloud.tesla.com`
 - **CN:** `https://fleet-api.prd.cn.vn.cloud.tesla.com`
+
+## Kubernetes / Helm Configuration
+
+When deploying with the Helm chart, the following values control how the frontend communicates with the API backend. These are set in `values.yaml` and are separate from the environment variables above.
+
+### `config.apiEndpoint`
+
+| Helm Value | Default | Description |
+|------------|---------|-------------|
+| `config.apiEndpoint` | `""` (auto-derived) | Internal API endpoint used for both Nginx `proxy_pass` and frontend API base URL |
+
+This value serves a **dual purpose**:
+
+1. **Nginx reverse proxy target** — Configures `proxy_pass` in the Nginx config so that requests to `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, and `/metrics` are forwarded to the API pod over the internal Kubernetes network.
+
+2. **Frontend API base URL** — Injected into the React SPA at runtime via Nginx `sub_filter`, setting `window.__TESLASYNC_API_BASE__` so the browser knows where to send API requests.
+
+If left empty (the default), the chart automatically derives the endpoint as `http://<release>-api:<port>` based on the Helm release name and the API service port. For most deployments, you do not need to set this value.
+
+```yaml
+# Example: explicit override (rarely needed)
+config:
+  apiEndpoint: "http://my-custom-api-service:8080"
+```
+
+### `config.webEndpoint`
+
+| Helm Value | Default | Description |
+|------------|---------|-------------|
+| `config.webEndpoint` | `""` | Public frontend URL, used to configure CORS `Access-Control-Allow-Origin` on the API |
+
+This is the public-facing URL of your TeslaSync instance (e.g., `https://teslasync.example.com`). It is used by the API server to set the CORS allowed origin header.

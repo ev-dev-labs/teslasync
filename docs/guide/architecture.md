@@ -6,8 +6,18 @@ TeslaSync follows a clean, modular architecture with clear separation between th
 
 ```mermaid
 graph TB
-    subgraph Frontend["React Frontend (Port 3000)"]
+    subgraph Frontend["React Frontend"]
         UI["Vite + TypeScript + Tailwind + Leaflet"]
+    end
+
+    subgraph Ingress["Ingress Layer"]
+        IG["Traefik / Nginx Ingress Controller"]
+    end
+
+    subgraph WebLayer["Web Layer (Nginx :80)"]
+        direction TB
+        Static["Static Files<br/>(served directly)"]
+        Proxy["Reverse Proxy<br/>/api/*, /.well-known/*<br/>/healthz, /readyz, /metrics"]
     end
 
     subgraph Backend["Go Backend (Port 8080)"]
@@ -32,13 +42,39 @@ graph TB
         TeslaAPI["Tesla Fleet API"]
     end
 
-    Frontend -- "HTTP / SSE" --> Backend
+    Frontend -- "HTTPS" --> Ingress
+    Ingress -- "single route" --> WebLayer
+    Static -. "serves SPA" .-> Frontend
+    Proxy -- "proxy_pass (internal k8s)" --> Backend
     DB_Layer --> PG
     MQTT --> Mosquitto
     Tesla --> TeslaAPI
     Backend --> Redis
     Grafana --> PG
 ```
+
+### Traffic Flow
+
+All external traffic enters through a **single ingress route** pointing to `teslasync-web` (Nginx). Nginx serves dual roles:
+
+1. **Static file server** — Serves the React SPA (`/index.html`, `/assets/*`) directly from the container filesystem.
+2. **Reverse proxy** — Forwards API paths (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api:8080` over the internal Kubernetes cluster network.
+
+```
+Browser → Traefik/Ingress → teslasync-web (Nginx)
+                              ├── static files: served directly
+                              ├── /api/*: proxy_pass → teslasync-api:8080 (internal k8s)
+                              ├── /.well-known/*: proxy_pass → teslasync-api:8080
+                              ├── /healthz, /readyz, /metrics: proxy_pass → teslasync-api:8080
+                              └── teslasync-api → Tesla Fleet API (outbound only)
+```
+
+**Why this architecture?**
+- **Internal API traffic** — After the initial page load through the ingress, all subsequent API calls from the browser go to Nginx, which proxies them to the API pod over the cluster network. API traffic never traverses the ingress controller.
+- **Fewer ingress rules** — A single route simplifies configuration and reduces potential misrouting (e.g., the old `PathPrefix('/api')` matching frontend routes like `/api-logs`).
+- **Homelab-friendly** — Most homelab clusters run a single Traefik instance. Keeping API traffic internal avoids overloading the ingress controller.
+
+The `config.apiEndpoint` Helm value controls the Nginx `proxy_pass` target and is also injected into the frontend at runtime via Nginx `sub_filter` as `window.__TESLASYNC_API_BASE__`. If left empty, it auto-derives as `http://<release>-api:<port>`.
 
 ## Component Architecture
 

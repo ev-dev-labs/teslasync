@@ -123,7 +123,7 @@ The following table lists all configurable parameters and their default values.
 | `affinity` | Pod affinity rules | `{}` |
 | `config.logLevel` | Application log level | `info` |
 | `config.pollInterval` | Vehicle polling interval | `30s` |
-| `config.apiEndpoint` | Internal API endpoint for frontend→backend routing | `""` |
+| `config.apiEndpoint` | Internal API endpoint for Nginx proxy_pass and frontend API base URL. Nginx proxies `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics` to this address. Also injected into the frontend at runtime via Nginx `sub_filter` as `window.__TESLASYNC_API_BASE__`. Defaults to auto-derived `http://<release>-api:<port>` if empty. | `""` |
 | `config.webEndpoint` | Public frontend URL for CORS | `""` |
 | `tesla.clientId` | Tesla API client ID | `""` |
 | `tesla.clientSecret` | Tesla API client secret | `""` |
@@ -191,6 +191,13 @@ mqtt:
 
 ## Ingress Configuration
 
+TeslaSync uses a **single-route ingress** architecture. All external traffic is routed to `teslasync-web` (Nginx), which serves static files directly and proxies API paths (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network. There is no need to configure a separate `/api` path in your ingress — Nginx handles the API routing internally.
+
+This design offers several advantages for homelab and production deployments:
+- **Fewer ingress rules** — a single route simplifies configuration and debugging
+- **Internal API traffic** — API requests stay on the cluster network, reducing ingress controller load
+- **Fewer external hops** — after the initial page load, all API calls go directly from Nginx to the API pod without traversing the ingress controller again
+
 ### Standard Kubernetes Ingress
 
 ```yaml
@@ -202,9 +209,6 @@ ingress:
   hosts:
     - host: teslasync.example.com
       paths:
-        - path: /api/
-          pathType: Prefix
-          service: backend
         - path: /
           pathType: Prefix
           service: web
@@ -213,6 +217,8 @@ ingress:
       hosts:
         - teslasync.example.com
 ```
+
+> **Note:** Only a single `/` path pointing to `web` is needed. Do **not** add a separate `/api/` path — Nginx proxies API traffic internally to `teslasync-api`.
 
 ### Traefik IngressRoute
 
@@ -226,9 +232,6 @@ ingress:
   hosts:
     - host: teslasync.example.com
       paths:
-        - path: /api/
-          pathType: Prefix
-          service: backend
         - path: /
           pathType: Prefix
           service: web
@@ -237,6 +240,62 @@ ingress:
       hosts:
         - teslasync.example.com
 ```
+
+If you are using a Traefik `IngressRoute` CRD directly, only one route is needed:
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: teslasync
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`teslasync.example.com`)
+      kind: Rule
+      services:
+        - name: teslasync-web
+          port: 80
+  tls:
+    secretName: teslasync-tls
+```
+
+> **Important:** There is no `/api` route in the IngressRoute. All API traffic is proxied internally by Nginx.
+
+## API Routing
+
+TeslaSync uses Nginx as both a static file server and a reverse proxy for API traffic. This keeps API requests on the internal Kubernetes network and eliminates the need for multiple ingress routes.
+
+### Traffic Flow
+
+```
+Browser → Traefik/Ingress → teslasync-web (Nginx :80)
+                              ├── /index.html, /assets/*   → served directly (static files)
+                              ├── /api/*                   → proxy_pass → teslasync-api:8080
+                              ├── /.well-known/*            → proxy_pass → teslasync-api:8080
+                              ├── /healthz, /readyz         → proxy_pass → teslasync-api:8080
+                              ├── /metrics                  → proxy_pass → teslasync-api:8080
+                              └── teslasync-api:8080        → Tesla Fleet API (outbound only)
+```
+
+### How It Works
+
+1. **Single ingress route** — The ingress controller (Traefik, Nginx Ingress, etc.) routes all traffic for your domain to the `teslasync-web` service (Nginx on port 80).
+
+2. **Nginx serves static files** — Requests for the React SPA (`/`, `/index.html`, `/assets/*`) are served directly from the Nginx container's filesystem.
+
+3. **Nginx proxies API requests** — Requests matching `/api/`, `/.well-known/`, `/healthz`, `/readyz`, or `/metrics` are forwarded via `proxy_pass` to `teslasync-api:8080` over the internal Kubernetes cluster network.
+
+4. **Frontend API base URL** — The `config.apiEndpoint` value is injected into the frontend at runtime via Nginx `sub_filter`, setting `window.__TESLASYNC_API_BASE__` so the React app knows where to send API requests.
+
+5. **Auto-derived endpoint** — If `config.apiEndpoint` is left empty (the default), the chart automatically derives it as `http://<release>-api:<port>` based on the release name and service port.
+
+### Why Internal Routing?
+
+- **Homelab optimization** — Most homelabs run a single ingress controller (often Traefik). Routing API traffic internally avoids doubling the load on that controller.
+- **Reduced latency** — API calls between Nginx and the Go backend use cluster-internal DNS (`teslasync-api.namespace.svc.cluster.local`), avoiding TLS termination and external routing overhead.
+- **Simplified ingress** — One route instead of two means fewer things to debug when something goes wrong.
 
 ## Upgrading
 
@@ -286,34 +345,50 @@ helm uninstall teslasync
                         │   IngressRoute      │
                         └────────┬───────────┘
                                  │
-                    ┌────────────┴────────────┐
-                    │                         │
-              /api/ │                    /    │
-                    ▼                         ▼
-          ┌─────────────────┐      ┌──────────────────┐
-          │  TeslaSync API  │      │  TeslaSync Web   │
-          │  (teslasync-api)│      │  (teslasync-web) │
-          │  + API suspend  │      └──────────────────┘
-          └───────┬─────┬───┘
-                  │     │
-       ┌──────────┘     └──────────┐
-       ▼                           ▼
-┌──────────────┐          ┌────────────────┐
-│  PostgreSQL  │          │     Redis      │
-│   (PG 17)    │          │   (caching)    │
-└──────┬───────┘          └────────────────┘
-       │
-       ▼                  ┌────────────────┐
-┌──────────────┐          │  MQTT Broker   │
-│   Grafana    │◄─────────│  (telemetry +  │
-│ (dashboards) │          │   events)      │
-└──────────────┘          └───────┬────────┘
-                                  │
-                          ┌───────▼────────┐
-                          │  Notification  │
-                          │    Worker      │
-                          └────────────────┘
+                          all traffic (single route)
+                                 │
+                                 ▼
+                      ┌──────────────────────┐
+                      │   TeslaSync Web      │
+                      │   (Nginx :80)        │
+                      │                      │
+                      │  static files:       │
+                      │   served directly    │
+                      │                      │
+                      │  /api/*, /.well-     │
+                      │  known/*, /healthz,  │
+                      │  /readyz, /metrics:  │
+                      │   proxy_pass ──────────────┐
+                      └──────────────────────┘     │
+                                                    │ internal k8s
+                                                    │ network
+                                                    ▼
+                      ┌──────────────────────┐
+                      │   TeslaSync API      │
+                      │   (Go :8080)         │
+                      │   + API suspend      │
+                      └───────┬─────┬────────┘
+                              │     │
+                   ┌──────────┘     └──────────┐
+                   ▼                           ▼
+            ┌──────────────┐          ┌────────────────┐
+            │  PostgreSQL  │          │     Redis      │
+            │   (PG 17)    │          │   (caching)    │
+            └──────┬───────┘          └────────────────┘
+                   │
+                   ▼                  ┌────────────────┐
+            ┌──────────────┐          │  MQTT Broker   │
+            │   Grafana    │◄─────────│  (telemetry +  │
+            │ (dashboards) │          │   events)      │
+            └──────────────┘          └───────┬────────┘
+                                              │
+                                      ┌───────▼────────┐
+                                      │  Notification  │
+                                      │    Worker      │
+                                      └────────────────┘
 ```
+
+> **Note:** All external traffic enters through a single ingress route to Nginx. Nginx proxies API paths internally to `teslasync-api` over the Kubernetes cluster network. The API service is never directly exposed via ingress.
 
 ## Troubleshooting
 
@@ -350,6 +425,8 @@ kubectl run pg-test --rm -it --image=postgres:16 -- \
 - Verify the ingress controller is installed and the `className` matches.
 - Check ingress resource status: `kubectl describe ingress teslasync`.
 - Ensure DNS points to the ingress controller's external IP.
+- Ensure only a single `/` path is configured — do not add a separate `/api` path. Nginx handles API proxying internally to `teslasync-api`.
+- If using Traefik IngressRoute, verify the route points to `teslasync-web` (port 80), not `teslasync-api`.
 
 ### Grafana dashboards missing
 

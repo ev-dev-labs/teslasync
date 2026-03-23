@@ -4,6 +4,10 @@ All notable changes to TeslaSync are documented here.
 
 ## [0.5.0] - 2026-03-23
 
+### 🏗 Architecture
+- **Single-route ingress** — All traffic now routes through a single Traefik IngressRoute (or standard Ingress) pointing to `teslasync-web` (Nginx). Nginx serves static files AND proxies `/api/`, `/.well-known/`, `/healthz`, `/readyz`, `/metrics` to `teslasync-api` over the internal Kubernetes cluster network. API traffic no longer traverses the ingress controller — only the initial page load does.
+- **Nginx reverse proxy** — `teslasync-web` now acts as both static file server and reverse proxy. The `config.apiEndpoint` Helm value configures the Nginx `proxy_pass` target (defaults to auto-derived `http://<release>-api:<port>`) and is injected into the frontend at runtime via Nginx `sub_filter` as `window.__TESLASYNC_API_BASE__`.
+
 ### 🚀 Features
 - **Sleep backoff for asleep vehicles** — When a vehicle returns 408 (asleep), polling now backs off exponentially using `WORKER_SLEEP_POLL_MULT` (default 4×): 60s → 120s → 240s → 10 min cap. Previously, asleep vehicles were polled every 15s with no backoff.
 - **API Suspend Toggle** — New toggle on the Settings page to suspend ALL Tesla Fleet API calls. Useful when a vehicle is in service. Persisted in DB (`api_suspended` column on `settings` table, migration 000011). Token refresh continues during suspension so re-auth isn't needed. All API entry points are blocked: worker polling, CurrentState, SyncFromTesla, Wake, SendCommand.
@@ -14,15 +18,18 @@ All notable changes to TeslaSync are documented here.
 - **Traefik IngressRoute fix** — `PathPrefix('/api')` matched frontend routes `/api-logs` and `/api-keys`. Fixed to `PathPrefix('/api/')` (trailing slash).
 
 ### ⎈ Helm
+- **Single-route ingress** — All traffic now routes through one ingress path (`/`) to `teslasync-web`. Nginx proxies API paths internally to `teslasync-api` over the cluster network. Removed the separate `/api` ingress path.
 - **Helm chart v0.5.0** — Service exposure: `service.type`, `service.nodePort`, `service.loadBalancerIP`, `service.externalTrafficPolicy`, `service.annotations` (same for `web.service.*`)
-- **New config fields** — `config.apiEndpoint` (internal API URL for frontend→backend routing), `config.webEndpoint` (public URL for CORS)
+- **New config fields** — `config.apiEndpoint` (configures Nginx proxy_pass target and frontend API base URL via `sub_filter`), `config.webEndpoint` (public URL for CORS)
 - **`tesla.redirectUri`** remains explicit (public-facing, Tesla calls it)
 
 ### 📖 Documentation
-- **CHANGELOG** — Added 0.5.0 release notes
-- **README** — Updated API table with suspend endpoint, added sleep backoff and API suspend to features
-- **Helm README** — Updated configuration table, fixed ingress path examples
-- **Configuration guide** — Fixed `WORKER_POLL_INTERVAL` default, updated sleep backoff docs, added API suspend note
+- **CHANGELOG** — Added 0.5.0 release notes with architecture changes
+- **README** — Updated architecture diagram to show single-route ingress and Nginx proxy layer, updated deployment section
+- **Helm README** — Updated architecture diagram, rewrote ingress configuration for single-route pattern, added API Routing section, updated `config.apiEndpoint` description
+- **Kubernetes deployment guide** — Updated with single-route ingress examples for both Traefik IngressRoute and standard Ingress
+- **Architecture docs** — Updated high-level overview diagram and added traffic flow explanation
+- **Configuration guide** — Added Kubernetes/Helm configuration section explaining `config.apiEndpoint` dual purpose
 - **.env.example** — Added sleep backoff and API suspend comments
 
 ## [0.4.0] - 2026-03-23

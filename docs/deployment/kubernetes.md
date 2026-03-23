@@ -217,6 +217,8 @@ resources:
     memory: 256Mi
 ```
 
+> **Note:** Only a single `/` path is needed in the ingress — Nginx handles routing API requests to the backend internally.
+
 Install with the custom values:
 
 ```bash
@@ -237,16 +239,17 @@ The backend deployment (`templates/deployment.yaml`) runs the Go API server:
 
 ### Frontend Deployment
 
-The web deployment (`templates/deployment-web.yaml`) serves the React SPA:
+The web deployment (`templates/deployment-web.yaml`) serves the React SPA and proxies API traffic:
 
 - **Replicas:** Configurable (default 1)
 - **Port:** 80 (Nginx)
 - **Health checks:** HTTP GET on `/`
 - **Resources:** Lightweight (32M–128M memory)
+- **Reverse proxy:** Forwards `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics` to `teslasync-api` over the internal cluster network
 
 ### Ingress
 
-The ingress template (`templates/ingress.yaml`) exposes TeslaSync externally:
+The ingress template (`templates/ingress.yaml`) exposes TeslaSync externally using a **single-route** pattern. All traffic routes to `teslasync-web` (Nginx), which serves static files and proxies API requests internally to `teslasync-api`:
 
 ```bash
 # Enable ingress with custom domain
@@ -256,6 +259,60 @@ helm upgrade --install teslasync helm/teslasync \
   --set ingress.hosts[0].paths[0].path=/ \
   --set ingress.hosts[0].paths[0].pathType=Prefix
 ```
+
+> **Note:** Only a single `/` path pointing to the web service is needed. Nginx handles routing `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, and `/metrics` to the API pod internally over the Kubernetes cluster network.
+
+#### Traefik IngressRoute
+
+If using Traefik's native `IngressRoute` CRD, only one route is required:
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: teslasync
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`teslasync.example.com`)
+      kind: Rule
+      services:
+        - name: teslasync-web
+          port: 80
+  tls:
+    secretName: teslasync-tls
+```
+
+#### Standard Kubernetes Ingress
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teslasync
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - teslasync.example.com
+      secretName: teslasync-tls
+  rules:
+    - host: teslasync.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: teslasync-web
+                port:
+                  number: 80
+```
+
+> **Important:** Do not add a separate `/api` path to the ingress. API traffic is proxied internally by Nginx to `teslasync-api:8080`, keeping API requests on the cluster network and reducing ingress controller load.
 
 ### Secrets
 

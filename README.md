@@ -106,8 +106,28 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
  │  │  (Vite 5)    │  │  (manifest)  │  │  (16 dashboards)     │  │
  │  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
  └─────────┼─────────────────┼─────────────────────┼──────────────┘
-           │ REST + SSE      │                     │ SQL
- ┌─────────┴─────────────────┴─────────────────────┴──────────────┐
+           │                 │                     │ SQL
+ ┌─────────┴─────────────────┴─────────────────────┤              │
+ │                   INGRESS LAYER                  │              │
+ │         (Traefik / Nginx Ingress Controller)     │              │
+ └──────────────────────┬──────────────────────────┘              │
+                        │ single route (all traffic)              │
+ ┌──────────────────────┴──────────────────────────────────────────┐
+ │                     WEB LAYER (Nginx)                           │
+ │                                                                  │
+ │  ┌────────────────────────────────────────────────────────────┐ │
+ │  │              teslasync-web (Nginx :80)                     │ │
+ │  │  ┌─────────────────┐  ┌────────────────────────────────┐  │ │
+ │  │  │  Static Files   │  │  Reverse Proxy (internal k8s)  │  │ │
+ │  │  │  /index.html    │  │  /api/*  → teslasync-api:8080  │  │ │
+ │  │  │  /assets/*      │  │  /.well-known/* → api:8080     │  │ │
+ │  │  │  (served direct)│  │  /healthz,/readyz → api:8080   │  │ │
+ │  │  └─────────────────┘  │  /metrics → api:8080           │  │ │
+ │  │                       └────────────────────────────────┘  │ │
+ │  └────────────────────────────────────────────────────────────┘ │
+ └──────────────────────────────┬───────────────────────────────────┘
+                                │ proxy_pass (cluster-internal)
+ ┌──────────────────────────────┴──────────────────────────────────┐
  │                        API LAYER                                │
  │                                                                  │
  │  ┌──────────────────────────────────────────────────────────┐  │
@@ -128,6 +148,8 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
  │ (PG 17)     │ │   Cache     │ │ MQTT 2     │ │ Fleet API │
  └─────────────┘ └─────────────┘ └───────────┘ └───────────┘
 ```
+
+> **Traffic Flow:** In Kubernetes, all external traffic enters through a single ingress route pointing to `teslasync-web` (Nginx). Nginx serves static files directly and proxies API paths (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network. API traffic never traverses the ingress controller — only the initial page load does.
 
 ### Tech Stack
 
@@ -249,7 +271,7 @@ helm install teslasync ./helm/teslasync \
   --set ingress.hosts[0].host=teslasync.example.com
 ```
 
-The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, Grafana), Traefik IngressRoute, HPA, PDB, and helm test. See [helm/teslasync/README.md](helm/teslasync/README.md) for full documentation.
+The Helm chart uses a **single ingress route** pointing all traffic to `teslasync-web` (Nginx). Nginx serves the React SPA and proxies API requests (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network — no separate `/api` ingress path is needed. The chart supports embedded or external services (PostgreSQL, Redis, MQTT, Grafana), Traefik IngressRoute, HPA, PDB, and helm test. See [helm/teslasync/README.md](helm/teslasync/README.md) for full documentation.
 
 ## API
 
