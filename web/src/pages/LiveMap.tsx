@@ -204,7 +204,7 @@ export default function LiveMap() {
           {/* Selected vehicle quick gauges */}
           {selectedState && (
             <GlassPanel className="p-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <RadialGauge value={selectedState.battery_level} max={100} label="Battery" unit="%" size={70} color="#10b981" />
                 <RadialGauge value={selectedState.speed} max={200} label="Speed" unit="km/h" size={70} color="#00f0ff" />
                 <RadialGauge value={Math.round(selectedState.rated_range)} max={600} label="Range" unit="km" size={70} color="#a855f7" />
@@ -240,7 +240,7 @@ export default function LiveMap() {
                 )}
               </div>
               {replayPos && (
-                <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-[var(--text-muted)]">
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] text-[var(--text-muted)]">
                   <span><Gauge className="h-2.5 w-2.5 inline" /> {replayPos.speed ?? 0} km/h</span>
                   <span><Battery className="h-2.5 w-2.5 inline" /> {replayPos.battery_level}%</span>
                   <span><Navigation className="h-2.5 w-2.5 inline" /> {replayPos.elevation?.toFixed(0) ?? '—'}m</span>

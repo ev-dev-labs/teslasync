@@ -237,7 +237,7 @@ function ComponentHealthPanel() {
                 <Database className="h-3.5 w-3.5 text-neon-cyan" />
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Database Pool</p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
                   <p className="text-lg font-bold text-[var(--text-primary)]">{pool.total_conns ?? 0}</p>
                   <p className="text-[10px] text-[var(--text-muted)]">Total</p>
@@ -261,7 +261,7 @@ function ComponentHealthPanel() {
                 <Cpu className="h-3.5 w-3.5 text-neon-purple" />
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Runtime</p>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
                   <p className="text-lg font-bold text-[var(--text-primary)]">{system.goroutines ?? 0}</p>
                   <p className="text-[10px] text-[var(--text-muted)]">Goroutines</p>

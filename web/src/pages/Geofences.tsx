@@ -331,7 +331,7 @@ export default function Geofences() {
         <Skeleton className="h-96" />
       ) : view === 'map' ? (
         <FadeIn>
-          <GlassPanel className="p-0 overflow-hidden" style={{ height: '500px' }}>
+          <GlassPanel className="p-0 overflow-hidden" style={{ height: 'min(500px, 60vh)' }}>
             <MapContainer center={center} zoom={12} className="h-full w-full" style={{ background: '#0a0a0f' }}>
               <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
