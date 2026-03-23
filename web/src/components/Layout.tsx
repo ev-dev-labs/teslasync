@@ -294,7 +294,7 @@ export default function Layout() {
         </nav>
 
         {/* Bottom status */}
-        <div className="border-t px-4 py-3 space-y-2 shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
+        <div className="border-t px-4 py-3 space-y-2 shrink-0 safe-bottom" style={{ borderColor: 'var(--glass-border)' }}>
           {/* Update available banner */}
           {updateCheck?.update_available && (
             <div className="glass-card !p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">

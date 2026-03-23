@@ -74,7 +74,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none" style={{ maxWidth: 380 }}>
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col gap-3 pointer-events-none safe-bottom" style={{ maxWidth: 'min(380px, calc(100vw - 2rem))' }}>
         <AnimatePresence mode="popLayout">
           {toasts.map(t => {
             const s = styles[t.type]

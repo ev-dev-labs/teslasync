@@ -376,9 +376,6 @@ body {
 }
 
 /* === MOBILE SIDEBAR SCROLL FIX === */
-/* The sidebar uses fixed positioning on mobile. The nav needs explicit
-   scroll enabling because body has overflow:hidden which can block
-   touch scroll propagation on iOS Safari / mobile browsers. */
 @media (max-width: 1024px) {
   aside[role="navigation"] {
     display: flex !important;
@@ -395,6 +392,30 @@ body {
     overscroll-behavior-y: contain !important;
     touch-action: pan-y !important;
     min-height: 0 !important;
+  }
+}
+
+/* === SAFE AREA INSETS (iPhone notch, Android cutouts) === */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* === MOBILE TYPOGRAPHY & SPACING === */
+@media (max-width: 640px) {
+  .glass-panel {
+    border-radius: 1rem;
+  }
+  .glass-card {
+    padding: 0.75rem;
   }
 }
 

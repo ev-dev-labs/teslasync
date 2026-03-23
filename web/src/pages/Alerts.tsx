@@ -520,7 +520,7 @@ function CreateRuleModal({ open, onClose, vehicles, channels }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative glass-panel p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto">
+      <div className="relative glass-panel p-4 sm:p-6 max-w-md sm:max-w-lg w-full mx-3 sm:mx-4 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
             <Plus className="h-5 w-5 text-neon-cyan" /> Create Alert Rule
