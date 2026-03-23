@@ -172,7 +172,7 @@ func TestGetVehicleDataMockResponse(t *testing.T) {
 	defer server.Close()
 
 	c := newTestClient(server)
-	data, err := c.GetVehicleData(context.Background(), 100)
+	data, err := c.GetVehicleData(context.Background(), "TESTVIN100")
 	if err != nil {
 		t.Fatalf("GetVehicleData() error = %v", err)
 	}
@@ -230,7 +230,7 @@ func TestSendCommandUnknownReturnsError(t *testing.T) {
 	defer server.Close()
 
 	c := newTestClient(server)
-	err := c.SendCommand(context.Background(), 1, "nonexistent", nil)
+	err := c.SendCommand(context.Background(), "TESTVIN1", "nonexistent", nil)
 	if err == nil {
 		t.Fatal("expected error for unknown command")
 	}
@@ -246,7 +246,7 @@ func TestSendCommandKnownSuccess(t *testing.T) {
 	c := newTestClient(server)
 	commands := []string{"lock", "unlock", "climate_on", "climate_off", "honk", "flash"}
 	for _, cmd := range commands {
-		err := c.SendCommand(context.Background(), 1, cmd, nil)
+		err := c.SendCommand(context.Background(), "TESTVIN1", cmd, nil)
 		if err != nil {
 			t.Errorf("SendCommand(%q) error = %v", cmd, err)
 		}
@@ -264,7 +264,7 @@ func TestWakeUpSuccess(t *testing.T) {
 	defer server.Close()
 
 	c := newTestClient(server)
-	if err := c.WakeUp(context.Background(), 1); err != nil {
+	if err := c.WakeUp(context.Background(), "TESTVIN1"); err != nil {
 		t.Errorf("WakeUp() error = %v", err)
 	}
 }

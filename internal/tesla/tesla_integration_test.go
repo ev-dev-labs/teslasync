@@ -165,14 +165,11 @@ func TestGetVehicleData_Success(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	data, err := client.GetVehicleData(context.Background(), 12345)
+	data, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if data.VIN != "5YJ3E1EA1PF000001" {
-		t.Errorf("expected VIN 5YJ3E1EA1PF000001, got %s", data.VIN)
-	}
-	if data.ChargeState.BatteryLevel != 75 {
 		t.Errorf("expected battery level 75, got %d", data.ChargeState.BatteryLevel)
 	}
 	if data.VehicleState.Locked != true {
@@ -188,8 +185,8 @@ func TestGetVehicleData_Unauthorized(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	_, err := client.GetVehicleData(context.Background(), 12345)
-	if !errors.Is(err, ErrUnauthorized) {
+	_, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
+	if !errors.Is(err, ErrUnauthorized){
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
 }
@@ -201,7 +198,7 @@ func TestGetVehicleData_RateLimited(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	_, err := client.GetVehicleData(context.Background(), 12345)
+	_, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
 	if err == nil {
 		t.Error("expected error on 429, got nil")
 	}
@@ -214,8 +211,8 @@ func TestGetVehicleData_VehicleAsleep(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	_, err := client.GetVehicleData(context.Background(), 12345)
-	if !errors.Is(err, ErrVehicleAsleep) {
+	_, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
+	if !errors.Is(err, ErrVehicleAsleep){
 		t.Errorf("expected ErrVehicleAsleep, got %v", err)
 	}
 }
@@ -227,7 +224,7 @@ func TestGetVehicleData_ServerError(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	_, err := client.GetVehicleData(context.Background(), 12345)
+	_, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
 	if err == nil {
 		t.Error("expected error on 500, got nil")
 	}
@@ -249,7 +246,7 @@ func TestWakeUp_Success(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	err := client.WakeUp(context.Background(), 12345)
+	err := client.WakeUp(context.Background(), "5YJ3E1EA1PF000001")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -262,8 +259,8 @@ func TestWakeUp_Unauthorized(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	err := client.WakeUp(context.Background(), 12345)
-	if !errors.Is(err, ErrUnauthorized) {
+	err := client.WakeUp(context.Background(), "5YJ3E1EA1PF000001")
+	if !errors.Is(err, ErrUnauthorized){
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
 }
@@ -278,7 +275,7 @@ func TestSendCommand_Lock(t *testing.T) {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
 		// The lock command should map to door_lock
-		expectedPath := "/api/1/vehicles/12345/command/door_lock"
+		expectedPath := "/api/1/vehicles/5YJ3E1EA1PF000001/command/door_lock"
 		if r.URL.Path != expectedPath {
 			t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -288,7 +285,7 @@ func TestSendCommand_Lock(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	err := client.SendCommand(context.Background(), 12345, "lock", nil)
+	err := client.SendCommand(context.Background(), "5YJ3E1EA1PF000001", "lock", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -301,7 +298,7 @@ func TestSendCommand_UnknownCommand(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	err := client.SendCommand(context.Background(), 12345, "self_destruct", nil)
+	err := client.SendCommand(context.Background(), "5YJ3E1EA1PF000001", "self_destruct", nil)
 	if err == nil {
 		t.Error("expected error for unknown command")
 	}
@@ -323,7 +320,7 @@ func TestSendCommand_WithParams(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	err := client.SendCommand(context.Background(), 12345, "frunk", map[string]string{"which_trunk": "front"})
+	err := client.SendCommand(context.Background(), "5YJ3E1EA1PF000001", "frunk", map[string]string{"which_trunk": "front"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

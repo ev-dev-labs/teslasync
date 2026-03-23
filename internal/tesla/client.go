@@ -267,9 +267,9 @@ func (c *Client) partnerAuthURL() string {
 }
 
 // PairKey pairs the public key with a vehicle for command signing.
-func (c *Client) PairKey(ctx context.Context, vehicleID int64, publicKeyPEM string) ([]byte, int, error) {
+func (c *Client) PairKey(ctx context.Context, vin string, publicKeyPEM string) ([]byte, int, error) {
 	body := fmt.Sprintf(`{"public_key":"%s"}`, publicKeyPEM)
-	path := fmt.Sprintf("/api/1/vehicles/%d/paired_keys", vehicleID)
+	path := fmt.Sprintf("/api/1/vehicles/%s/paired_keys", vin)
 	return c.doRequest(ctx, http.MethodPost, path, bytes.NewReader([]byte(body)))
 }
 
@@ -464,8 +464,8 @@ func (c *Client) ListVehicles(ctx context.Context) ([]VehicleData, error) {
 // GetVehicleData returns the full snapshot of a vehicle's charge, climate,
 // drive, and config state. Returns ErrVehicleAsleep if the vehicle cannot
 // be reached (408/504).
-func (c *Client) GetVehicleData(ctx context.Context, vehicleID int64) (*VehicleDataResponse, error) {
-	path := fmt.Sprintf("/api/1/vehicles/%d/vehicle_data?endpoints=%s", vehicleID,
+func (c *Client) GetVehicleData(ctx context.Context, vin string) (*VehicleDataResponse, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/vehicle_data?endpoints=%s", vin,
 		"charge_state;climate_state;drive_state;location_data;vehicle_state;vehicle_config")
 	data, status, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -491,8 +491,8 @@ func (c *Client) GetVehicleData(ctx context.Context, vehicleID int64) (*VehicleD
 }
 
 // WakeUp wakes a vehicle.
-func (c *Client) WakeUp(ctx context.Context, vehicleID int64) error {
-	path := fmt.Sprintf("/api/1/vehicles/%d/wake_up", vehicleID)
+func (c *Client) WakeUp(ctx context.Context, vin string) error {
+	path := fmt.Sprintf("/api/1/vehicles/%s/wake_up", vin)
 	_, status, err := c.doRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
 		return err
@@ -525,7 +525,7 @@ var commandMap = map[string]string{
 // SendCommand sends a named command (e.g. "lock", "climate_on") to a vehicle,
 // translating it to the corresponding Tesla API endpoint. Returns an error if
 // the command is unknown or the API call fails.
-func (c *Client) SendCommand(ctx context.Context, vehicleID int64, command string, params map[string]string) error {
+func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]string) error {
 	endpoint, ok := commandMap[command]
 	if !ok {
 		return fmt.Errorf("unknown command: %s", command)
@@ -541,7 +541,7 @@ func (c *Client) SendCommand(ctx context.Context, vehicleID int64, command strin
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
-	path := fmt.Sprintf("/api/1/vehicles/%d/command/%s", vehicleID, endpoint)
+	path := fmt.Sprintf("/api/1/vehicles/%s/command/%s", vin, endpoint)
 	_, status, err := c.doRequest(ctx, http.MethodPost, path, bodyReader)
 	if err != nil {
 		return err

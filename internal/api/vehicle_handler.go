@@ -151,7 +151,7 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := h.teslaClient.GetVehicleData(r.Context(), vehicle.VehicleID)
+	data, err := h.teslaClient.GetVehicleData(r.Context(), vehicle.VIN)
 	if err != nil {
 		pos, _ := h.positionRepo.GetLatest(r.Context(), id)
 		writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -207,7 +207,7 @@ func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.teslaClient.WakeUp(r.Context(), vehicle.VehicleID); err != nil {
+	if err := h.teslaClient.WakeUp(r.Context(), vehicle.VIN); err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to wake vehicle")
 		writeError(w, http.StatusBadGateway, "failed to wake vehicle")
 		return

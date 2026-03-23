@@ -509,10 +509,10 @@ function VehicleKeyPairingTool() {
     if (!res.ok) return []
     return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
   }})
-  const [selectedVehicle, setSelectedVehicle] = useState<number>(0)
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const mut = useMutation({
-    mutationFn: () => apiFetch('pair-vehicle-key', 'POST', { vehicle_id: selectedVehicle }),
+    mutationFn: () => apiFetch('pair-vehicle-key', 'POST', { vin: selectedVehicle }),
     onSuccess: (data: Record<string, unknown>) => setResult(data),
     onError: (err) => setResult({ error: (err as Error).message }),
   })
@@ -521,10 +521,10 @@ function VehicleKeyPairingTool() {
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVehicle} onChange={e => setSelectedVehicle(Number(e.target.value))} className={inputClasses}>
-            <option value={0}>Select a vehicle...</option>
+          <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className={inputClasses}>
+            <option value="">Select a vehicle...</option>
             {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
-              <option key={v.id} value={v.vehicle_id}>{v.display_name} ({v.vin})</option>
+              <option key={v.id} value={v.vin}>{v.display_name} ({v.vin})</option>
             ))}
           </select>
         ) : (

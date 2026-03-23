@@ -586,10 +586,10 @@ func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req struct {
-		VehicleID int64 `json:"vehicle_id"`
+		VIN string `json:"vin"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.VehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.VIN == "" {
+		writeError(w, http.StatusBadRequest, "vin is required")
 		return
 	}
 
@@ -603,9 +603,9 @@ func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	data, status, err := h.teslaClient.PairKey(r.Context(), req.VehicleID, pubPEM)
+	data, status, err := h.teslaClient.PairKey(r.Context(), req.VIN, pubPEM)
 	if err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", req.VehicleID).Msg("vehicle key pairing failed")
+		log.Warn().Err(err).Str("vin", req.VIN).Msg("vehicle key pairing failed")
 	}
 
 	w.Header().Set("Content-Type", "application/json")

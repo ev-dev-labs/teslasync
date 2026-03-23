@@ -240,7 +240,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VehicleID)
+	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, "asleep", true); err != nil {
 			logger.Error().Err(err).Msg("failed to update vehicle state")
@@ -265,7 +265,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 			// Retry once after successful refresh
 			retryCtx, retryCancel := context.WithTimeout(ctx, 30*time.Second)
 			defer retryCancel()
-			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VehicleID)
+			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VIN)
 			if err != nil {
 				logger.Warn().Err(err).Msg("retry after token refresh still failed")
 				w.recordVehicleFailure(vehicle.ID)

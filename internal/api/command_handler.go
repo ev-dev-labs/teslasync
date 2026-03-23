@@ -91,7 +91,7 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	paramsJSON, _ := json.Marshal(body.Params)
 
 	// Execute command via Tesla API
-	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VehicleID, body.Command, body.Params)
+	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
 
 	status := "success"
 	errMsg := ""
