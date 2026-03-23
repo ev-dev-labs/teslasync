@@ -208,7 +208,7 @@ export default function Chatbot() {
                 )}
                 <div
                   className={clsx(
-                    'rounded-2xl px-4 py-3 max-w-[80%] text-sm leading-relaxed',
+                    'rounded-2xl px-4 py-3 max-w-[90%] sm:max-w-[80%] text-sm leading-relaxed',
                     msg.role === 'user'
                       ? 'bg-neon-cyan/10 border border-neon-cyan/20'
                       : 'bg-white/5 border border-white/5'

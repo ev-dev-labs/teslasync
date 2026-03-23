@@ -138,7 +138,7 @@ export default function Trips() {
               </defs>
               {chartGrid}
               <XAxis type="number" tick={axisTickSm} />
-              <YAxis dataKey="name" type="category" tick={axisTickSm} width={120} />
+              <YAxis dataKey="name" type="category" tick={axisTickSm} width={80} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="distance" fill="url(#tripGrad)" name={`Distance (${distanceUnit})`} radius={[0, 4, 4, 0]} />
             </BarChart>

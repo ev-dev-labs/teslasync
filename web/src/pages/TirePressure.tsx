@@ -76,7 +76,7 @@ function TireCarVisualization({ fl, fr, rl, rr }: { fl: number | null; fr: numbe
   ]
 
   return (
-    <svg viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: 500 }} role="img" aria-label="Tire pressure vehicle visualization">
+    <svg viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: "100%" }} role="img" aria-label="Tire pressure vehicle visualization">
       <style>{`
         .tcv-spin{animation:tcvSpin .8s linear infinite}
         .tcv-flow{animation:tcvFlow 1.2s linear infinite}
@@ -159,7 +159,7 @@ function TireCarVisualization({ fl, fr, rl, rr }: { fl: number | null; fr: numbe
             <line x1={isL ? 60 : 340} y1={t.cy} x2={isL ? t.cx - 15 : t.cx + 15} y2={t.cy} stroke={c} strokeWidth="0.8" strokeDasharray="3 3" opacity="0.35" className="tcv-flow" />
 
             {/* PSI label box */}
-            <rect x={isL ? 4 : 340} y={t.cy - 22} width={56} height={44} rx={8} fill="#0f172a" stroke={c} strokeWidth="1.2" opacity="0.9" />
+            <rect x={isL ? 10 : 300} y={t.cy - 22} width={56} height={44} rx={8} fill="#0f172a" stroke={c} strokeWidth="1.2" opacity="0.9" />
             <text x={isL ? 32 : 368} y={t.cy - 4} textAnchor="middle" fontSize="15" fontWeight="bold" fill={c} fontFamily="system-ui,sans-serif">{fmt(t.psi)}</text>
             <text x={isL ? 32 : 368} y={t.cy + 12} textAnchor="middle" fontSize="7" fill="#9ca3af" fontFamily="system-ui,sans-serif">{t.label}</text>
           </g>

@@ -126,7 +126,7 @@ export default function Admin() {
           <Activity className="w-5 h-5 text-neon-cyan" />
           Quick Actions
         </h3>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
             { icon: <RefreshCw className="w-4 h-4" />, label: 'Refresh Tokens', action: () => refreshAuth() },
             { icon: <Download className="w-4 h-4" />, label: 'Download Backup', action: () => window.open('/api/v1/system/backup', '_blank') },
