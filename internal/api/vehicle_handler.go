@@ -13,6 +13,7 @@ import (
 type VehicleHandler struct {
 	vehicleRepo  *database.VehicleRepo
 	positionRepo *database.PositionRepo
+	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
 }
 
@@ -20,6 +21,7 @@ func NewVehicleHandler(db *database.DB, tc *tesla.Client) *VehicleHandler {
 	return &VehicleHandler{
 		vehicleRepo:  database.NewVehicleRepo(db),
 		positionRepo: database.NewPositionRepo(db),
+		settingsRepo: database.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
 }
@@ -70,6 +72,10 @@ func (h *VehicleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
+	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
+		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+		return
+	}
 	if !h.teslaClient.HasValidToken() {
 		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
@@ -140,13 +146,15 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.teslaClient.HasValidToken() {
-		// Return last known position as fallback
+	// Return cached data when API is suspended or no valid token
+	suspended, _ := h.settingsRepo.IsAPISuspended(r.Context())
+	if suspended || !h.teslaClient.HasValidToken() {
 		pos, _ := h.positionRepo.GetLatest(r.Context(), id)
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"vehicle": vehicle,
-			"position": pos,
-			"live":    false,
+			"vehicle":   vehicle,
+			"position":  pos,
+			"live":      false,
+			"suspended": suspended,
 		})
 		return
 	}
@@ -195,6 +203,11 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
+	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
+		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+		return
+	}
+
 	id, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid vehicle ID")

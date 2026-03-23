@@ -14,14 +14,16 @@ import (
 type CommandHandler struct {
 	vehicleRepo  *database.VehicleRepo
 	commandRepo  *database.CommandLogRepo
+	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
 }
 
 func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 	return &CommandHandler{
-		vehicleRepo: database.NewVehicleRepo(db),
-		commandRepo: database.NewCommandLogRepo(db),
-		teslaClient: tc,
+		vehicleRepo:  database.NewVehicleRepo(db),
+		commandRepo:  database.NewCommandLogRepo(db),
+		settingsRepo: database.NewSettingsRepo(db),
+		teslaClient:  tc,
 	}
 }
 
@@ -51,6 +53,11 @@ var allowedCommands = map[string]bool{
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
+	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
+		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+		return
+	}
+
 	vehicleID, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
