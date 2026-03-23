@@ -75,8 +75,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	})
 
-	// Rate limiting
-	r.Use(httprate.LimitByIP(100, 1*time.Minute))
+	// Rate limiting — generous for SPA with multiple polling components
+	r.Use(httprate.LimitByIP(300, 1*time.Minute))
 
 	// Handlers
 	vehicleHandler := NewVehicleHandler(db, teslaClient)

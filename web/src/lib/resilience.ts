@@ -33,8 +33,8 @@ interface BreakerState {
 }
 
 const breaker: BreakerState = { failures: 0, lastFailure: 0, state: 'closed' }
-const BREAKER_THRESHOLD = 5
-const BREAKER_RESET_MS = 30_000
+const BREAKER_THRESHOLD = 10
+const BREAKER_RESET_MS = 15_000
 
 function checkBreaker(): boolean {
   if (breaker.state === 'closed') return true
@@ -133,7 +133,7 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
     this.status = status
-    this.retryable = status >= 500 || status === 408 || status === 429
+    this.retryable = status >= 500 || status === 408
   }
 }
 
@@ -208,6 +208,12 @@ async function _doFetch<T>(
             recordFailure()
             throw new ApiError('Session expired. Please reconnect your Tesla account in Settings.', 401)
           }
+        }
+
+        // 429 Rate Limited — wait and retry without counting as breaker failure
+        if (res.status === 429 && attempt < retries) {
+          await sleep(2000 * (attempt + 1))
+          continue
         }
 
         // Non-retryable errors: don't retry

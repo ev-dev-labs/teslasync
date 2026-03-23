@@ -41,11 +41,11 @@ type Client struct {
 func NewClient(cfg config.TeslaConfig) *Client {
 	cbSettings := gobreaker.Settings{
 		Name:        "tesla-api",
-		MaxRequests: 3,
-		Interval:    60 * time.Second,
-		Timeout:     30 * time.Second,
+		MaxRequests: 5,
+		Interval:    120 * time.Second,
+		Timeout:     60 * time.Second,
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			return counts.ConsecutiveFailures > 5
+			return counts.ConsecutiveFailures > 10
 		},
 		OnStateChange: func(name string, from, to gobreaker.State) {
 			log.Warn().Str("breaker", name).Str("from", from.String()).Str("to", to.String()).Msg("circuit breaker state change")
