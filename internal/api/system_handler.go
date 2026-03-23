@@ -14,14 +14,14 @@ import (
 )
 
 // VersionHandler returns the application and Helm chart version.
-func VersionHandler(appVersion string) http.HandlerFunc {
+func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
 	chartVersion := os.Getenv("HELM_CHART_VERSION")
 	if chartVersion == "" {
 		chartVersion = "unknown"
 	}
 	bootTime := time.Now()
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		resp := map[string]interface{}{
 			"app_version":    appVersion,
 			"chart_version":  chartVersion,
 			"go_version":     runtime.Version(),
@@ -29,7 +29,20 @@ func VersionHandler(appVersion string) http.HandlerFunc {
 			"arch":           runtime.GOARCH,
 			"uptime_seconds": time.Since(bootTime).Seconds(),
 			"goroutines":     runtime.NumGoroutine(),
-		})
+		}
+
+		// Endpoint configuration (read-only, from Helm/env)
+		endpoints := map[string]string{}
+		if v := cfg.CORSOrigins; v != "" {
+			endpoints["web"] = v
+		}
+		if v := cfg.Tesla.RedirectURI; v != "" {
+			endpoints["oauth_callback"] = v
+		}
+		endpoints["tesla_api"] = cfg.Tesla.BaseURL
+		resp["endpoints"] = endpoints
+
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 

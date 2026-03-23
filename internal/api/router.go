@@ -265,7 +265,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			if ver == "" {
 				ver = "dev"
 			}
-			r.Get("/version", VersionHandler(ver))
+			r.Get("/version", VersionHandler(ver, cfg))
 			r.Get("/update-check", UpdateCheckHandler())
 		})
 

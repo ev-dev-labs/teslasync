@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, AppSettings, Vehicle } from '../api'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getVersionInfo, AppSettings, Vehicle } from '../api'
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -29,6 +29,7 @@ export default function Settings() {
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const { data: version } = useQuery({ queryKey: ['version'], queryFn: getVersionInfo, staleTime: 60_000 })
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
   const toast = useToast()
 
@@ -625,18 +626,49 @@ export default function Settings() {
         </GlassPanel>
       </FadeIn>
 
-      {/* System Info */}
+      {/* System Info & Endpoints */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-6">
+        <GlassPanel className="p-6 space-y-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-1">TeslaSync</p>
-              <p className="text-sm text-[var(--text-secondary)]">v2.0.0 &middot; Next-Gen Tesla Intelligence Platform</p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {version ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}` : 'v2.0.0 · Next-Gen Tesla Intelligence Platform'}
+              </p>
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neon-cyan/5 text-neon-cyan/40">
               <Globe className="h-4 w-4" />
             </div>
           </div>
+
+          {version?.endpoints && Object.keys(version.endpoints).length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Link className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">Configured Endpoints</p>
+              </div>
+              <div className="grid gap-2">
+                {version.endpoints.web && (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                    <span className="text-xs text-[var(--text-muted)] font-medium">Web Frontend</span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{version.endpoints.web}</span>
+                  </div>
+                )}
+                {version.endpoints.oauth_callback && (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                    <span className="text-xs text-[var(--text-muted)] font-medium">OAuth Callback</span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{version.endpoints.oauth_callback}</span>
+                  </div>
+                )}
+                {version.endpoints.tesla_api && (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                    <span className="text-xs text-[var(--text-muted)] font-medium">Tesla Fleet API</span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{version.endpoints.tesla_api}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </GlassPanel>
       </FadeIn>
     </div>

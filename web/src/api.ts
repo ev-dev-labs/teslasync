@@ -783,6 +783,11 @@ export interface VersionInfo {
   arch: string
   uptime_seconds: number
   goroutines: number
+  endpoints?: {
+    web?: string
+    oauth_callback?: string
+    tesla_api?: string
+  }
 }
 
 export interface UpdateCheckResult {
