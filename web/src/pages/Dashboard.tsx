@@ -39,7 +39,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
   const status = getVehicleStatus(vehicle, state)
   return (
     <Link to={`/vehicles/${vehicle.id}`} className="block group">
-      <GlassPanel hover glow="cyan" className="p-3 sm:p-4 min-w-[160px] sm:min-w-[220px] transition-all group-hover:scale-[1.02]">
+      <GlassPanel hover glow="cyan" className="p-3 sm:p-4 min-w-[130px] sm:min-w-[180px] md:min-w-[220px] transition-all group-hover:scale-[1.02]">
         <div className="flex items-center gap-3 mb-3">
           <TeslaCarMini batteryLevel={state?.battery_level ?? 0} isCharging={state?.is_charging ?? false} model={parseModelKey(vehicle.model)} />
           <div className="flex-1 min-w-0">

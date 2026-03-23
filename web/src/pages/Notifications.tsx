@@ -438,7 +438,7 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
           {!isEdit && (
             <div>
               <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Channel Type</label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {CHANNEL_TYPES.map(t => {
                   const TIcon = t.icon
                   return (

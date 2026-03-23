@@ -111,7 +111,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
-            className="fixed left-1/2 top-[15%] z-[201] w-full max-w-lg -translate-x-1/2"
+            className="fixed left-1/2 top-[10%] sm:top-[15%] z-[201] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2"
           >
             <div className="overflow-hidden rounded-2xl shadow-2xl" style={{ border: '1px solid var(--glass-border)', background: 'var(--surface-1)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
               {/* Search input */}
