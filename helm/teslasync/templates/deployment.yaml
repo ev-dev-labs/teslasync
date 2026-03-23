@@ -48,9 +48,9 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "teslasync.fullname" . }}-api
+                name: {{ include "teslasync.fullname" . }}
             - secretRef:
-                name: {{ include "teslasync.fullname" . }}-api
+                name: {{ include "teslasync.fullname" . }}
           startupProbe:
             httpGet:
               path: /healthz

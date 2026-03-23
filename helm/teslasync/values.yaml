@@ -19,7 +19,7 @@ fullnameOverride: ""
 replicaCount: 1
 
 image:
-  repository: ghcr.io/your-org/teslasync
+  repository: ghcr.io/ev-dev-labs/teslasync-api
   pullPolicy: IfNotPresent
   tag: ""
 
@@ -70,7 +70,7 @@ web:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/your-org/teslasync-web
+    repository: ghcr.io/ev-dev-labs/teslasync-web
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -115,7 +115,7 @@ notificationWorker:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/your-org/teslasync-notification-worker
+    repository: ghcr.io/ev-dev-labs/teslasync-notification-worker
     pullPolicy: IfNotPresent
     tag: ""
 
