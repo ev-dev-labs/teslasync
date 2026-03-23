@@ -78,6 +78,10 @@ The following table lists all configurable parameters and their default values.
 | `web.replicaCount` | Frontend replicas | `1` |
 | `web.service.type` | Frontend service type | `ClusterIP` |
 | `web.service.port` | Frontend service port | `80` |
+| `web.service.annotations` | Frontend service annotations | `{}` |
+| `web.service.nodePort` | Frontend NodePort (when type: NodePort) | `""` |
+| `web.service.loadBalancerIP` | Frontend LB IP (when type: LoadBalancer) | `""` |
+| `web.service.externalTrafficPolicy` | Frontend external traffic policy | `""` |
 | `web.resources.limits.cpu` | Frontend CPU limit | `200m` |
 | `web.resources.limits.memory` | Frontend memory limit | `128Mi` |
 | `web.resources.requests.cpu` | Frontend CPU request | `50m` |
@@ -97,6 +101,10 @@ The following table lists all configurable parameters and their default values.
 | `securityContext.capabilities.drop` | Dropped capabilities | `[ALL]` |
 | `service.type` | Backend service type | `ClusterIP` |
 | `service.port` | Backend service port | `8080` |
+| `service.annotations` | Backend service annotations | `{}` |
+| `service.nodePort` | Backend NodePort (when type: NodePort) | `""` |
+| `service.loadBalancerIP` | Backend LB IP (when type: LoadBalancer) | `""` |
+| `service.externalTrafficPolicy` | Backend external traffic policy | `""` |
 | `ingress.enabled` | Enable ingress | `false` |
 | `ingress.className` | Ingress class name | `""` |
 | `ingress.annotations` | Ingress annotations | `{}` |
@@ -115,6 +123,8 @@ The following table lists all configurable parameters and their default values.
 | `affinity` | Pod affinity rules | `{}` |
 | `config.logLevel` | Application log level | `info` |
 | `config.pollInterval` | Vehicle polling interval | `30s` |
+| `config.apiEndpoint` | Internal API endpoint for frontend→backend routing | `""` |
+| `config.webEndpoint` | Public frontend URL for CORS | `""` |
 | `tesla.clientId` | Tesla API client ID | `""` |
 | `tesla.clientSecret` | Tesla API client secret | `""` |
 | `tesla.redirectUri` | Tesla OAuth redirect URI | `http://localhost:8080/api/v1/auth/callback` |
@@ -192,7 +202,7 @@ ingress:
   hosts:
     - host: teslasync.example.com
       paths:
-        - path: /api
+        - path: /api/
           pathType: Prefix
           service: backend
         - path: /
@@ -216,7 +226,7 @@ ingress:
   hosts:
     - host: teslasync.example.com
       paths:
-        - path: /api
+        - path: /api/
           pathType: Prefix
           service: backend
         - path: /
@@ -278,12 +288,12 @@ helm uninstall teslasync
                                  │
                     ┌────────────┴────────────┐
                     │                         │
-               /api │                    /    │
+              /api/ │                    /    │
                     ▼                         ▼
           ┌─────────────────┐      ┌──────────────────┐
           │  TeslaSync API  │      │  TeslaSync Web   │
-          │   (teslasync-   │      │  (teslasync-web) │
-          │      api)       │      └──────────────────┘
+          │  (teslasync-api)│      │  (teslasync-web) │
+          │  + API suspend  │      └──────────────────┘
           └───────┬─────┬───┘
                   │     │
        ┌──────────┘     └──────────┐

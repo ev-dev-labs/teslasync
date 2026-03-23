@@ -2,6 +2,29 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [0.5.0] - 2026-03-23
+
+### 🚀 Features
+- **Sleep backoff for asleep vehicles** — When a vehicle returns 408 (asleep), polling now backs off exponentially using `WORKER_SLEEP_POLL_MULT` (default 4×): 60s → 120s → 240s → 10 min cap. Previously, asleep vehicles were polled every 15s with no backoff.
+- **API Suspend Toggle** — New toggle on the Settings page to suspend ALL Tesla Fleet API calls. Useful when a vehicle is in service. Persisted in DB (`api_suspended` column on `settings` table, migration 000011). Token refresh continues during suspension so re-auth isn't needed. All API entry points are blocked: worker polling, CurrentState, SyncFromTesla, Wake, SendCommand.
+- **API Usage Dashboard fix** — `APIUsageHandler` now queries `api_call_logs` table for real monthly request counts, skipped polls (408/504), and estimated cost vs Tesla's $10/month credit. Previously returned hardcoded zeros.
+
+### 🔧 Fixes
+- **SPA routing fix** — Replaced Go `fileServer` catch-all with `r.NotFound()` SPA fallback. Go Dockerfile now includes a `web-builder` stage so the Go container bundles frontend assets. Router auto-detects static dir (`/web/dist` in Docker, `./web/dist` local).
+- **Traefik IngressRoute fix** — `PathPrefix('/api')` matched frontend routes `/api-logs` and `/api-keys`. Fixed to `PathPrefix('/api/')` (trailing slash).
+
+### ⎈ Helm
+- **Helm chart v0.5.0** — Service exposure: `service.type`, `service.nodePort`, `service.loadBalancerIP`, `service.externalTrafficPolicy`, `service.annotations` (same for `web.service.*`)
+- **New config fields** — `config.apiEndpoint` (internal API URL for frontend→backend routing), `config.webEndpoint` (public URL for CORS)
+- **`tesla.redirectUri`** remains explicit (public-facing, Tesla calls it)
+
+### 📖 Documentation
+- **CHANGELOG** — Added 0.5.0 release notes
+- **README** — Updated API table with suspend endpoint, added sleep backoff and API suspend to features
+- **Helm README** — Updated configuration table, fixed ingress path examples
+- **Configuration guide** — Fixed `WORKER_POLL_INTERVAL` default, updated sleep backoff docs, added API suspend note
+- **.env.example** — Added sleep backoff and API suspend comments
+
 ## [0.4.0] - 2026-03-23
 
 ### 🛠 Developer Tools

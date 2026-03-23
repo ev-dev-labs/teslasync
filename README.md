@@ -85,6 +85,8 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **Redis Caching** — Fast lookups for vehicle state and sessions
 - **7-Channel Notifications** — Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
+- **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
+- **API Suspend Toggle** — Suspend all Tesla Fleet API calls from Settings UI or API when vehicle is in service
 
 ### 🛠 Developer Tools
 - **Tesla Fleet API** — Region detection, partner registration, API connectivity test, token inspector
@@ -293,6 +295,12 @@ The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, 
 | GET | `/api/v1/notifications` | List channels |
 | POST | `/api/v1/notifications` | Create channel |
 | POST | `/api/v1/notifications/:id/test` | Test channel |
+
+### Settings
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/settings/suspend-api` | Suspend or resume all Tesla API calls (`{"suspended": true/false}`) |
 
 ### Developer Tools
 

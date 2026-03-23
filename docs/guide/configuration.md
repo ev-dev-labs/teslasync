@@ -69,12 +69,12 @@ The default pool settings (5–25 connections) are suitable for most single-inst
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `WORKER_POLL_INTERVAL` | duration | `900s` | Polling interval for online/idle vehicles (vehicle_data calls) |
+| `WORKER_POLL_INTERVAL` | duration | `15s` | Polling interval for online/idle vehicles (vehicle_data calls) |
 | `WORKER_SLEEP_POLL_INTERVAL` | duration | `0` | Polling interval for sleeping/offline vehicles (0 = never poll) |
 | `WORKER_DRIVING_POLL_INTERVAL` | duration | `120s` | Polling interval when vehicle is actively driving |
 | `WORKER_CHARGING_POLL_INTERVAL` | duration | `600s` | Polling interval when vehicle is charging |
 | `WORKER_STATUS_CHECK_INTERVAL` | duration | `900s` | How often to call ListVehicles to check all vehicle states |
-| `WORKER_SLEEP_POLL_MULT` | int | `4` | Legacy multiplier for sleeping vehicles (superseded by adaptive polling) |
+| `WORKER_SLEEP_POLL_MULT` | int | `4` | Backoff multiplier for sleeping vehicles. When vehicle returns 408, polling backs off: PollInterval × SleepPollMult, then doubles each consecutive asleep response, capping at 10 minutes. |
 | `WORKER_STREAMING` | bool | `false` | Enable Tesla Streaming API (experimental) |
 
 ::: tip Cost-Optimized Polling
@@ -89,6 +89,8 @@ TeslaSync uses a two-tier polling strategy to minimize API costs and stay within
 - **Asleep/Offline**: never polled (0 API calls)
 
 This approach eliminates the expensive per-vehicle `GetVehicleStatus` call and avoids waking sleeping cars entirely.
+
+**API Suspend:** You can also suspend all Tesla Fleet API calls entirely from the Settings UI or via `POST /api/v1/settings/suspend-api` with body `{"suspended": true}`. Useful when a vehicle is in service. Token refresh continues during suspension so re-auth isn't needed.
 :::
 
 ### Redis (Cache)
