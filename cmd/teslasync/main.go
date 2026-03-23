@@ -140,6 +140,7 @@ func main() {
 		w.Start(loopCtx)
 	})
 	log.Info().Msg("vehicle poller started (resilient mode)")
+	health.RecordSuccess("worker")
 
 	// Notification worker — processes notifications via MQTT queue
 	if mqttClient != nil {
@@ -173,6 +174,9 @@ func main() {
 					health.RecordSuccess("database")
 				}
 				checkCancel()
+
+				// Worker is alive if we reach this point (SafeGoLoop restarts on crash)
+				health.RecordSuccess("worker")
 
 				// Log overall status
 				overall := health.OverallStatus()
