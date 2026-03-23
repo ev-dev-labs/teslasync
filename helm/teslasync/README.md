@@ -118,6 +118,10 @@ The following table lists all configurable parameters and their default values.
 | `tesla.clientId` | Tesla API client ID | `""` |
 | `tesla.clientSecret` | Tesla API client secret | `""` |
 | `tesla.redirectUri` | Tesla OAuth redirect URI | `http://localhost:8080/api/v1/auth/callback` |
+| `tesla.apiBaseUrl` | Fleet API base URL (NA/EU/CN) | `https://fleet-api.prd.na.vn.cloud.tesla.com` |
+| `fleetTelemetry.enabled` | Enable Fleet Telemetry status monitoring | `false` |
+| `fleetTelemetry.host` | Fleet Telemetry server hostname | `` |
+| `fleetTelemetry.port` | Fleet Telemetry server port | `4443` |
 | `postgresql.enabled` | Deploy bundled PostgreSQL | `true` |
 | `postgresql.auth.username` | PostgreSQL username | `teslasync` |
 | `postgresql.auth.password` | PostgreSQL password | `teslasync` |

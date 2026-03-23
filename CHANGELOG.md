@@ -2,6 +2,35 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [0.4.0] - 2026-03-23
+
+### 🛠 Developer Tools
+- **Developer Tools page** — 25 built-in utilities accessible from sidebar nav
+- **Tesla Fleet API tools** — Region detection, partner registration, API connectivity test, token inspector
+- **Infrastructure diagnostics** — Database stats, migration status, MQTT test, env check, runtime info
+- **Client-side utilities** — VIN decoder, JWT decoder, timestamp converter, Base64, URL encoder, JSON formatter, UUID generator, SHA-256 hash, byte converter, color converter, cron parser, HTTP status reference, Tesla API endpoint reference, regex tester, Unix permission calculator
+
+### 📡 Fleet Telemetry
+- **Status UI** — Fleet Telemetry card in System Status page (enabled/disabled with details)
+- **Signal display** — Shows supported signals, endpoint, protocol, host:port when enabled
+- **Setup hints** — Displays configuration instructions when disabled
+- **Fleet Telemetry config** — New `FleetTelemetryConfig` with `FLEET_TELEMETRY_ENABLED`, `FLEET_TELEMETRY_HOST`, `FLEET_TELEMETRY_PORT` env vars
+
+### 📊 API Call Log Enhancement
+- **Source tagging** — API call logs now distinguish `tesla_api` vs `fleet_telemetry` sources
+- **Database migration** — Migration 000009 adds `source` column with index to `api_call_logs`
+- **Telemetry logging** — Incoming fleet telemetry ingests logged with `source: fleet_telemetry`
+
+### 🔧 Configuration
+- **`TESLA_API_BASE_URL`** — Configurable Fleet API region (NA/EU/CN) via env var, docker-compose, and Helm
+- **Fleet Telemetry env vars** — `FLEET_TELEMETRY_ENABLED`, `FLEET_TELEMETRY_HOST`, `FLEET_TELEMETRY_PORT`
+
+### 📖 Documentation
+- **README** — Updated features, API endpoints, highlights for Developer Tools
+- **CHANGELOG** — Added 0.4.0 release notes
+- **.env.example** — Added `TESLA_API_BASE_URL` and fleet telemetry env vars
+- **Fleet Telemetry guide** — Updated with status UI documentation
+
 ## [0.3.0] - 2026-03-22
 
 ### 🏗 Architecture

@@ -296,3 +296,22 @@ The `/api/v1/system/api-usage` endpoint returns real-time usage statistics:
 ```
 
 The Settings page includes an interactive billing calculator where you can adjust driving and charging hours to see estimated monthly costs.
+
+## Fleet Telemetry Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FLEET_TELEMETRY_ENABLED` | `false` | Enable Fleet Telemetry status monitoring |
+| `FLEET_TELEMETRY_HOST` | `` | Hostname of your Fleet Telemetry server |
+| `FLEET_TELEMETRY_PORT` | `4443` | Port for Fleet Telemetry server |
+
+## Tesla Fleet API Region
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TESLA_API_BASE_URL` | `https://fleet-api.prd.na.vn.cloud.tesla.com` | Fleet API base URL. Change for EU or CN regions |
+
+Available regions:
+- **NA:** `https://fleet-api.prd.na.vn.cloud.tesla.com`
+- **EU:** `https://fleet-api.prd.eu.vn.cloud.tesla.com`
+- **CN:** `https://fleet-api.prd.cn.vn.cloud.tesla.com`

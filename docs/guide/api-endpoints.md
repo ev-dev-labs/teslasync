@@ -1148,3 +1148,51 @@ All endpoints return errors in a consistent format:
 | `404` | Resource not found |
 | `429` | Rate limit exceeded (100 req/min/IP) |
 | `500` | Internal server error |
+
+---
+
+## Developer Tools
+
+Built-in utilities for Tesla Fleet API setup and system diagnostics.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/dev-tools/fleet-api-info` | Current Fleet API configuration (base URL, client ID, auth status, regions) |
+| GET | `/api/v1/dev-tools/detect-region` | Detect Tesla account region via `/api/1/users/region` |
+| POST | `/api/v1/dev-tools/register-partner` | Register partner account in configured region. Body: `{"domain": "your-domain.com"}` |
+| GET | `/api/v1/dev-tools/test-api` | Test Tesla Fleet API connectivity and latency |
+| GET | `/api/v1/dev-tools/token-info` | Token validity, expiry time, time remaining (no secrets exposed) |
+| GET | `/api/v1/dev-tools/db-stats` | Database table row counts and total size |
+| GET | `/api/v1/dev-tools/migration-status` | Current database migration version and dirty flag |
+| POST | `/api/v1/dev-tools/mqtt-test` | Test MQTT broker connectivity and publish test message |
+| GET | `/api/v1/dev-tools/env-check` | Check which required environment variables are set/unset |
+| GET | `/api/v1/dev-tools/runtime-info` | Go runtime statistics (goroutines, memory, CPU, uptime) |
+
+### Partner Registration Flow
+
+The partner registration endpoint automates the Tesla Fleet API setup:
+
+1. Obtains a partner token via `client_credentials` grant
+2. Calls `POST /api/1/partner_accounts` on the configured Fleet API region
+3. Returns the raw Tesla API response
+
+**Prerequisites:**
+- Valid `TESLA_CLIENT_ID` and `TESLA_CLIENT_SECRET`
+- Public key hosted at `https://YOUR_DOMAIN/.well-known/appspecific/com.tesla.3p.public-key.pem`
+- Domain matches `allowed_origin` in Tesla Developer app
+
+### Environment Check Response
+
+The env check endpoint returns the status of 15 environment variables without exposing values:
+
+```json
+{
+  "variables": {
+    "TESLA_CLIENT_ID": "set",
+    "TESLA_CLIENT_SECRET": "set",
+    "DATABASE_HOST": "set",
+    "FLEET_TELEMETRY_ENABLED": "unset",
+    ...
+  }
+}
+```

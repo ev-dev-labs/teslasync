@@ -471,6 +471,31 @@ WORKER_SLEEP_POLL_MULT=4       # 240s when asleep
 In hybrid mode, increase `WORKER_POLL_INTERVAL` to reduce API costs while keeping telemetry for real-time data. Polling at 60 s instead of 15 s cuts API costs by **75%**.
 :::
 
+## Fleet Telemetry Status in UI
+
+TeslaSync v0.4.0 adds Fleet Telemetry visibility to the **System Status** page.
+
+### Status Card
+
+The Fleet Telemetry card appears alongside other service cards (Database, Tesla API, MQTT, Redis). It shows:
+
+- **Enabled** (green) — Displays endpoint, protocol, host:port, and supported signals
+- **Disabled** (grey) — Shows setup hint with `FLEET_TELEMETRY_ENABLED=true` instruction
+
+### Configuration
+
+Set these environment variables to enable Fleet Telemetry monitoring:
+
+```env
+FLEET_TELEMETRY_ENABLED=true
+FLEET_TELEMETRY_HOST=fleet-telemetry    # hostname of your fleet telemetry server
+FLEET_TELEMETRY_PORT=4443               # port (default: 4443)
+```
+
+### API Call Logging
+
+Fleet Telemetry ingests are automatically logged in the API call logs with `source: fleet_telemetry`, making it easy to distinguish from regular Tesla API calls (`source: tesla_api`) in the **API Logs** page.
+
 ## Troubleshooting
 
 ### Vehicle not connecting

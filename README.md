@@ -27,7 +27,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **29 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
+- **30 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
@@ -35,6 +35,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **16 Grafana dashboards** — Pre-built dashboards for deep analytics
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
 - **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
+- **25 Developer Tools** — Built-in Tesla API diagnostics, VIN decoder, JWT decoder, partner registration, and 20+ utilities
 
 ## Features
 
@@ -84,6 +85,12 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **Redis Caching** — Fast lookups for vehicle state and sessions
 - **7-Channel Notifications** — Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
+
+### 🛠 Developer Tools
+- **Tesla Fleet API** — Region detection, partner registration, API connectivity test, token inspector
+- **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
+- **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
+- **Fleet Telemetry** — Status monitoring, signal support, enable/disable visibility in system status
 
 ## Architecture
 
@@ -141,7 +148,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/teslasync-labs/teslasync.git
+git clone https://github.com/ev-dev-labs/teslasync.git
 cd teslasync
 cp .env.example .env
 # Edit .env with your TESLA_CLIENT_ID and TESLA_CLIENT_SECRET
@@ -285,6 +292,21 @@ The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, 
 | GET | `/api/v1/notifications` | List channels |
 | POST | `/api/v1/notifications` | Create channel |
 | POST | `/api/v1/notifications/:id/test` | Test channel |
+
+### Developer Tools
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/dev-tools/fleet-api-info` | Fleet API configuration |
+| GET | `/api/v1/dev-tools/detect-region` | Detect account region |
+| POST | `/api/v1/dev-tools/register-partner` | Register partner account |
+| GET | `/api/v1/dev-tools/test-api` | Test API connectivity |
+| GET | `/api/v1/dev-tools/token-info` | Token validity info |
+| GET | `/api/v1/dev-tools/db-stats` | Database statistics |
+| GET | `/api/v1/dev-tools/migration-status` | Migration version |
+| POST | `/api/v1/dev-tools/mqtt-test` | Test MQTT connectivity |
+| GET | `/api/v1/dev-tools/env-check` | Environment variable check |
+| GET | `/api/v1/dev-tools/runtime-info` | Go runtime information |
 
 ## MQTT Topics
 
