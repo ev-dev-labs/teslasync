@@ -180,7 +180,7 @@ ingress:
   hosts:
     - host: teslasync.local
       paths:
-        - path: /api
+        - path: /api/
           pathType: Prefix
           service: backend
         - path: /
@@ -209,7 +209,7 @@ ingressRoute:
         - name: ""   # leave empty → set to <release>-web at deploy time
           port: 80
     # Backend API (Go)
-    - match: "Host(`teslasync.example.com`) && PathPrefix(`/api`)"
+    - match: "Host(`teslasync.example.com`) && PathPrefix(`/api/`)"
       kind: Rule
       middlewares: []
       services:
