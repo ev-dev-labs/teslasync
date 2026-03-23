@@ -172,6 +172,13 @@ func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
 	return result.AccessToken, nil
 }
 
+// PairKey pairs the public key with a vehicle for command signing.
+func (c *Client) PairKey(ctx context.Context, vehicleID int64, publicKeyPEM string) ([]byte, int, error) {
+	body := fmt.Sprintf(`{"public_key":"%s"}`, publicKeyPEM)
+	path := fmt.Sprintf("/api/1/vehicles/%d/paired_keys", vehicleID)
+	return c.doRequest(ctx, http.MethodPost, path, bytes.NewReader([]byte(body)))
+}
+
 // ErrRateLimited is returned when Tesla API returns 429 Too Many Requests.
 var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
 

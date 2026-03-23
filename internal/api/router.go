@@ -293,6 +293,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/upload-public-key", devToolsHandler.UploadPublicKey)
 			r.Get("/public-key-status", devToolsHandler.PublicKeyStatus)
 			r.Delete("/public-key", devToolsHandler.DeletePublicKey)
+			r.Post("/pair-vehicle-key", devToolsHandler.PairVehicleKey)
 		})
 
 		// Export

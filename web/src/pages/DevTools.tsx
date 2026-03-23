@@ -498,6 +498,46 @@ function PublicKeySetupTool() {
   )
 }
 
+function VehicleKeyPairingTool() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
+    const res = await fetch('/api/v1/vehicles')
+    if (!res.ok) return []
+    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+  }})
+  const [selectedVehicle, setSelectedVehicle] = useState<number>(0)
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const mut = useMutation({
+    mutationFn: () => apiFetch('pair-vehicle-key', 'POST', { vehicle_id: selectedVehicle }),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+  return (
+    <ToolCard icon={Car} color="green" title="Pair Key to Vehicle" description="Pair your public key with a vehicle for commands and fleet telemetry">
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
+        {vehicles && vehicles.length > 0 ? (
+          <select value={selectedVehicle} onChange={e => setSelectedVehicle(Number(e.target.value))} className={inputClasses}>
+            <option value={0}>Select a vehicle...</option>
+            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
+              <option key={v.id} value={v.vehicle_id}>{v.display_name} ({v.vin})</option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)]">No vehicles found. Sync vehicles in Settings first.</p>
+        )}
+      </div>
+      <div className="p-3 rounded-lg bg-neon-amber/5 border border-neon-amber/20 mb-3">
+        <p className="text-[10px] text-neon-amber flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> The vehicle owner must approve the key on the car's touchscreen after pairing.</p>
+      </div>
+      <button onClick={() => mut.mutate()} disabled={mut.isPending || !selectedVehicle} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
+        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+        Pair Key
+      </button>
+      {result !== null && <ResultPanel title="Key Pairing Result" data={result} />}
+    </ToolCard>
+  )
+}
+
 function FleetApiSection() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 pt-0">
@@ -507,6 +547,7 @@ function FleetApiSection() {
       <PartnerRegistrationTool />
       <BackendTool icon={Network} color="cyan" title="API Connectivity Test" description="Test if Fleet API is reachable from the server" endpoint="test-api" />
       <BackendTool icon={Key} color="amber" title="Token Info" description="Show token expiry, validity, and scopes" endpoint="token-info" />
+      <VehicleKeyPairingTool />
     </div>
   )
 }

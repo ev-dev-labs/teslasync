@@ -563,3 +563,44 @@ func (h *DevToolsHandler) ServePublicKey(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(pubPEM))
 }
+
+// PairVehicleKey pairs the stored public key with a vehicle for command signing.
+func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		writeError(w, http.StatusInternalServerError, "database not available")
+		return
+	}
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		return
+	}
+
+	var req struct {
+		VehicleID int64 `json:"vehicle_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.VehicleID == 0 {
+		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		return
+	}
+
+	// Get stored public key
+	var pubPEM string
+	err := h.db.Pool.QueryRow(r.Context(),
+		`SELECT public_key_pem FROM tesla_public_key WHERE id = 1`,
+	).Scan(&pubPEM)
+	if err != nil {
+		writeError(w, http.StatusPreconditionFailed, "no public key configured — generate one in Dev Tools first")
+		return
+	}
+
+	data, status, err := h.teslaClient.PairKey(r.Context(), req.VehicleID, pubPEM)
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", req.VehicleID).Msg("vehicle key pairing failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		w.Write(data)
+	}
+}
