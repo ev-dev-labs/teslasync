@@ -246,12 +246,31 @@ config:
   logLevel: info
   pollInterval: "30s"
 
+  # -- Internal API endpoint used by the web frontend (Nginx) to reach the
+  # backend. Since both services run in the same namespace/cluster, this
+  # should be the cluster-internal address.
+  #
+  # Examples:
+  #   In-cluster: http://teslasync-api.teslasync.svc.cluster.local:8080
+  #   Same namespace (default): auto-derived from release name
+  #   Local dev: http://localhost:8080
+  apiEndpoint: ""
+
+  # -- Public-facing base URL for the web frontend.
+  # Used for CORS allowed origins. Leave empty to allow all origins.
+  #
+  # Examples:
+  #   Public:   https://teslasync.cyphers.app
+  #   Internal: http://teslasync-web.teslasync.svc.cluster.local
+  webEndpoint: ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
 # ─────────────────────────────────────────────────────────────────────────────
 tesla:
   clientId: ""
   clientSecret: ""
+  # -- Tesla OAuth callback URL (must be public-facing — Tesla calls this)
   redirectUri: "http://localhost:8080/api/v1/auth/callback"
   # Tesla Fleet API base URL — set to your region:
   #   NA: https://fleet-api.prd.na.vn.cloud.tesla.com
