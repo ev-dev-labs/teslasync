@@ -101,6 +101,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	telemetryHandler := NewTelemetryHandler(db, mqttClient)
+	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -277,7 +278,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Developer Tools
-		devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 		r.Route("/dev-tools", func(r chi.Router) {
 			r.Get("/fleet-api-info", devToolsHandler.FleetAPIInfo)
 			r.Get("/detect-region", devToolsHandler.DetectRegion)
@@ -289,11 +289,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/mqtt-test", devToolsHandler.MQTTTest)
 			r.Get("/env-check", devToolsHandler.EnvCheck)
 			r.Get("/runtime-info", devToolsHandler.RuntimeInfo)
+			r.Post("/generate-keypair", devToolsHandler.GenerateKeypair)
+			r.Post("/upload-public-key", devToolsHandler.UploadPublicKey)
+			r.Get("/public-key-status", devToolsHandler.PublicKeyStatus)
+			r.Delete("/public-key", devToolsHandler.DeletePublicKey)
 		})
 
 		// Export
 		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
 	})
+
+	// Tesla public key (.well-known path required by Tesla Fleet API)
+	r.Get("/.well-known/appspecific/com.tesla.3p.public-key.pem", devToolsHandler.ServePublicKey)
 
 	// Serve frontend static files (SPA)
 	fileServer(r, "/", http.Dir("./web/dist"))

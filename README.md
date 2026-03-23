@@ -88,6 +88,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 
 ### 🛠 Developer Tools
 - **Tesla Fleet API** — Region detection, partner registration, API connectivity test, token inspector
+- **Public Key Management** — Generate ECDSA P-256 keypairs, auto-serve at `.well-known` path, upload existing keys
 - **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
 - **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
 - **Fleet Telemetry** — Status monitoring, signal support, enable/disable visibility in system status
@@ -307,6 +308,11 @@ The Helm chart supports embedded or external services (PostgreSQL, Redis, MQTT, 
 | POST | `/api/v1/dev-tools/mqtt-test` | Test MQTT connectivity |
 | GET | `/api/v1/dev-tools/env-check` | Environment variable check |
 | GET | `/api/v1/dev-tools/runtime-info` | Go runtime information |
+| POST | `/api/v1/dev-tools/generate-keypair` | Generate ECDSA P-256 keypair |
+| POST | `/api/v1/dev-tools/upload-public-key` | Upload existing public key |
+| GET | `/api/v1/dev-tools/public-key-status` | Public key configuration status |
+| DELETE | `/api/v1/dev-tools/public-key` | Remove stored public key |
+| GET | `/.well-known/appspecific/com.tesla.3p.public-key.pem` | Serve Tesla public key |
 
 ## MQTT Topics
 

@@ -73,10 +73,47 @@ sequenceDiagram
 | **Public server** | Reachable from the internet (or via Tesla's proxy) |
 | **TeslaSync** | Running instance with PostgreSQL ([Getting Started](/guide/getting-started)) |
 | **Docker** | Recommended for deploying the telemetry server |
+| **Public key** | ECDSA P-256 key hosted at `/.well-known/appspecific/com.tesla.3p.public-key.pem` |
 
 ::: warning
 Tesla vehicles **only** connect to endpoints with valid TLS certificates signed by a public CA. Let's Encrypt is a free option that works well.
 :::
+
+## Public Key Setup
+
+Tesla requires an ECDSA P-256 public key hosted at a well-known URL on your domain. TeslaSync handles this automatically.
+
+### Using Developer Tools (Recommended)
+
+1. Navigate to **Dev Tools** in the sidebar
+2. Click **Generate Keypair** in the Public Key Setup section
+3. **Save the private key immediately** — it's shown once and never stored
+4. The public key is automatically stored and served at:
+   ```
+   https://your-domain/.well-known/appspecific/com.tesla.3p.public-key.pem
+   ```
+5. Click **Test** to verify the key is accessible
+
+### Manual Setup
+
+Generate a keypair with OpenSSL:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out private-key.pem
+openssl ec -in private-key.pem -pubout -out public-key.pem
+```
+
+Then upload `public-key.pem` via the Dev Tools UI, or paste the PEM content in the upload form.
+
+### Verification
+
+After setup, verify the key is served correctly:
+
+```bash
+curl https://your-domain/.well-known/appspecific/com.tesla.3p.public-key.pem
+```
+
+You should see a PEM-encoded public key starting with `-----BEGIN PUBLIC KEY-----`.
 
 ## Setup Guide
 

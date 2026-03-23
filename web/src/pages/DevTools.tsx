@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Wrench, Globe, KeyRound, CheckCircle, XCircle, AlertTriangle,
   Loader2, Copy, ExternalLink, Server, Shield, Database, GitBranch,
   Radio, Settings, Cpu, Car, Key, Clock, FileCode, Link, Braces,
   Fingerprint, Hash, HardDrive, Palette, Timer, Network, BookOpen,
   Regex, Lock, ChevronDown, ChevronRight, Play, RefreshCw,
+  Download, Upload, Trash2,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import clsx from 'clsx'
@@ -117,7 +118,7 @@ const textareaClasses = 'w-full bg-white/[0.04] border border-white/[0.08] round
 
 // ─── Backend API helpers ─────────────────────────────────────────
 
-async function apiFetch(endpoint: string, method: 'GET' | 'POST' = 'GET', body?: unknown) {
+async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: unknown) {
   const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } }
   if (body) opts.body = JSON.stringify(body)
   const res = await fetch(`/api/v1/dev-tools/${endpoint}`, opts)
@@ -141,7 +142,7 @@ function BackendTool({
   title: string
   description: string
   endpoint: string
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'DELETE'
   bodyBuilder?: () => unknown
   children?: React.ReactNode
 }) {
@@ -276,9 +277,231 @@ function PartnerRegistrationTool() {
   )
 }
 
+function PublicKeySetupTool() {
+  const queryClient = useQueryClient()
+  const [uploadPem, setUploadPem] = useState('')
+  const [showPrivateKey, setShowPrivateKey] = useState<string | null>(null)
+  const [showPublicKeyPem, setShowPublicKeyPem] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [uploadResult, setUploadResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  const wellKnownUrl = `${window.location.origin}/.well-known/appspecific/com.tesla.3p.public-key.pem`
+
+  const { data: status, isLoading } = useQuery<{
+    configured: boolean
+    fingerprint?: string
+    created_at?: string
+    well_known_path: string
+    public_key_pem?: string
+  }>({
+    queryKey: ['public-key-status'],
+    queryFn: () => apiFetch('public-key-status'),
+  })
+
+  const generateMut = useMutation({
+    mutationFn: () => apiFetch('generate-keypair', 'POST'),
+    onSuccess: (data: { private_key_pem: string }) => {
+      setShowPrivateKey(data.private_key_pem)
+      queryClient.invalidateQueries({ queryKey: ['public-key-status'] })
+    },
+  })
+
+  const uploadMut = useMutation({
+    mutationFn: () => apiFetch('upload-public-key', 'POST', { public_key_pem: uploadPem }),
+    onSuccess: (data: Record<string, unknown>) => {
+      if (data.error) {
+        setUploadResult({ ok: false, message: data.error as string })
+      } else {
+        setUploadResult({ ok: true, message: 'Public key uploaded successfully' })
+        setUploadPem('')
+        queryClient.invalidateQueries({ queryKey: ['public-key-status'] })
+      }
+    },
+    onError: (err) => setUploadResult({ ok: false, message: (err as Error).message }),
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: () => apiFetch('public-key', 'DELETE'),
+    onSuccess: () => {
+      setConfirmDelete(false)
+      setShowPrivateKey(null)
+      queryClient.invalidateQueries({ queryKey: ['public-key-status'] })
+    },
+  })
+
+  const downloadPrivateKey = (pem: string) => {
+    const blob = new Blob([pem], { type: 'application/x-pem-file' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'tesla-private-key.pem'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <ToolCard icon={Shield} color="green" title="Public Key Setup" description="Configure the EC public key required for Tesla partner registration">
+      {/* Status */}
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading key status…
+        </div>
+      ) : status?.configured ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-neon-green/10 text-neon-green ring-1 ring-neon-green/20">
+              <CheckCircle className="h-3 w-3" /> Configured
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {status.fingerprint && (
+              <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Fingerprint</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xs font-mono text-[var(--text-primary)] truncate">{status.fingerprint.substring(0, 24)}…</p>
+                  <CopyButton text={status.fingerprint} />
+                </div>
+              </div>
+            )}
+            {status.created_at && (
+              <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Created</p>
+                <p className="text-xs font-mono text-[var(--text-primary)] mt-0.5">{new Date(status.created_at).toLocaleDateString()}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Well-Known URL */}
+          <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+            <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Well-Known URL</p>
+            <div className="flex items-center gap-2">
+              <code className="text-[10px] text-neon-cyan font-mono truncate flex-1">{wellKnownUrl}</code>
+              <CopyButton text={wellKnownUrl} />
+              <a href={wellKnownUrl} target="_blank" rel="noopener noreferrer" className="p-1 rounded hover:bg-white/10 transition-colors" title="Test URL">
+                <ExternalLink className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+              </a>
+            </div>
+          </div>
+
+          {/* Collapsible Public Key PEM */}
+          {status.public_key_pem && (
+            <div>
+              <button onClick={() => setShowPublicKeyPem(!showPublicKeyPem)} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
+                {showPublicKeyPem ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                {showPublicKeyPem ? 'Hide' : 'Show'} Public Key PEM
+              </button>
+              {showPublicKeyPem && (
+                <div className="mt-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] relative">
+                  <div className="absolute top-2 right-2"><CopyButton text={status.public_key_pem} /></div>
+                  <pre className="text-[10px] font-mono text-[var(--text-secondary)] whitespace-pre-wrap break-all">{status.public_key_pem}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="p-3 rounded-xl bg-neon-amber/5 border border-neon-amber/20">
+          <p className="text-xs text-neon-amber font-semibold mb-1.5 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" /> No Public Key Configured
+          </p>
+          <p className="text-[10px] text-[var(--text-secondary)]">
+            Tesla requires a public key for partner registration. Generate a new keypair below, or upload an existing public key.
+          </p>
+        </div>
+      )}
+
+      {/* Private Key Warning (after generation) */}
+      {showPrivateKey && (
+        <div className="mt-4 p-4 rounded-xl bg-neon-red/10 border-2 border-neon-red/40">
+          <p className="text-sm font-bold text-neon-red flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-5 w-5" /> Save This Now — It Won't Be Shown Again
+          </p>
+          <pre className="text-[10px] font-mono text-[var(--text-primary)] bg-black/30 p-3 rounded-lg whitespace-pre-wrap break-all mb-3">{showPrivateKey}</pre>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => downloadPrivateKey(showPrivateKey)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-neon-green/20 text-neon-green ring-1 ring-neon-green/30 hover:bg-neon-green/30 transition-colors"
+            >
+              <Download className="h-4 w-4" /> Download Private Key
+            </button>
+            <CopyButton text={showPrivateKey} />
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex flex-wrap gap-2 mt-4">
+        <button
+          onClick={() => generateMut.mutate()}
+          disabled={generateMut.isPending}
+          className="glass-button text-xs flex items-center gap-2"
+        >
+          {generateMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+          Generate Keypair
+        </button>
+
+        {status?.configured && !confirmDelete && (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-neon-red bg-neon-red/5 ring-1 ring-neon-red/20 hover:bg-neon-red/10 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete Key
+          </button>
+        )}
+        {confirmDelete && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => deleteMut.mutate()}
+              disabled={deleteMut.isPending}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-neon-red/80 hover:bg-neon-red transition-colors"
+            >
+              {deleteMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Confirm Delete
+            </button>
+            <button onClick={() => setConfirmDelete(false)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]">Cancel</button>
+          </div>
+        )}
+      </div>
+
+      {generateMut.isError && (
+        <ResultPanel title="Generation Error" data={{ error: (generateMut.error as Error).message }} error={(generateMut.error as Error).message} />
+      )}
+
+      {/* Upload existing key */}
+      <div className="mt-4 pt-4 border-t border-white/[0.06]">
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Upload Existing Public Key</p>
+        <textarea
+          value={uploadPem}
+          onChange={e => setUploadPem(e.target.value)}
+          placeholder="-----BEGIN PUBLIC KEY-----&#10;MFkwEwYHKoZIzj0C...&#10;-----END PUBLIC KEY-----"
+          className={textareaClasses}
+          rows={4}
+        />
+        <button
+          onClick={() => uploadMut.mutate()}
+          disabled={uploadMut.isPending || !uploadPem.trim()}
+          className="glass-button text-xs flex items-center gap-2 mt-2 disabled:opacity-40"
+        >
+          {uploadMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          Upload Public Key
+        </button>
+        {uploadResult && (
+          <div className={clsx('mt-2 p-3 rounded-xl border text-xs', uploadResult.ok ? 'bg-neon-green/5 border-neon-green/20 text-neon-green' : 'bg-neon-red/5 border-neon-red/20 text-neon-red')}>
+            <div className="flex items-center gap-1.5">
+              {uploadResult.ok ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+              {uploadResult.message}
+            </div>
+          </div>
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
 function FleetApiSection() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 pt-0">
+      <PublicKeySetupTool />
       <FleetApiConfigTool />
       <BackendTool icon={Globe} color="green" title="Region Detection" description="Detect which Fleet API region your account belongs to" endpoint="detect-region" />
       <PartnerRegistrationTool />

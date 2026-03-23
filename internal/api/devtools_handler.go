@@ -2,7 +2,13 @@ package api
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"os"
@@ -372,4 +378,188 @@ func (h *DevToolsHandler) RuntimeInfo(w http.ResponseWriter, r *http.Request) {
 			"heap_objects":      mem.HeapObjects,
 		},
 	})
+}
+
+// ---------------------------------------------------------------------------
+// Tesla Public Key Management
+// ---------------------------------------------------------------------------
+
+// GenerateKeypair generates an ECDSA P-256 keypair, stores the public key in DB,
+// and returns the private key ONE TIME (never stored).
+func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		writeError(w, http.StatusInternalServerError, "database not available")
+		return
+	}
+
+	// Generate ECDSA P-256 key
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to generate keypair")
+		return
+	}
+
+	// Encode private key to PEM
+	privBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to marshal private key")
+		return
+	}
+	privPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
+
+	// Encode public key to PEM
+	pubBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to marshal public key")
+		return
+	}
+	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubBytes})
+
+	// Calculate fingerprint (SHA-256 of DER-encoded public key)
+	hash := sha256.Sum256(pubBytes)
+	fingerprint := fmt.Sprintf("%x", hash)
+
+	// Store public key in DB (upsert)
+	_, err = h.db.Pool.Exec(r.Context(),
+		`INSERT INTO tesla_public_key (id, public_key_pem, fingerprint, created_at)
+		 VALUES (1, $1, $2, NOW())
+		 ON CONFLICT (id) DO UPDATE SET public_key_pem = $1, fingerprint = $2, created_at = NOW()`,
+		string(pubPEM), fingerprint)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store public key: "+err.Error())
+		return
+	}
+
+	log.Info().Str("fingerprint", fingerprint).Msg("generated new Tesla keypair")
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"private_key_pem": string(privPEM),
+		"public_key_pem":  string(pubPEM),
+		"fingerprint":     fingerprint,
+		"warning":         "Save the private key now. It will NOT be shown again.",
+	})
+}
+
+// UploadPublicKey accepts a PEM-encoded public key and stores it.
+func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		writeError(w, http.StatusInternalServerError, "database not available")
+		return
+	}
+
+	var req struct {
+		PublicKeyPEM string `json:"public_key_pem"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PublicKeyPEM == "" {
+		writeError(w, http.StatusBadRequest, "public_key_pem is required")
+		return
+	}
+
+	// Validate it's a valid PEM public key
+	block, _ := pem.Decode([]byte(req.PublicKeyPEM))
+	if block == nil {
+		writeError(w, http.StatusBadRequest, "invalid PEM format")
+		return
+	}
+	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid public key: "+err.Error())
+		return
+	}
+
+	// Verify it's an EC key
+	if _, ok := pubKey.(*ecdsa.PublicKey); !ok {
+		writeError(w, http.StatusBadRequest, "key must be an ECDSA public key (P-256)")
+		return
+	}
+
+	// Calculate fingerprint
+	hash := sha256.Sum256(block.Bytes)
+	fingerprint := fmt.Sprintf("%x", hash)
+
+	_, err = h.db.Pool.Exec(r.Context(),
+		`INSERT INTO tesla_public_key (id, public_key_pem, fingerprint, created_at)
+		 VALUES (1, $1, $2, NOW())
+		 ON CONFLICT (id) DO UPDATE SET public_key_pem = $1, fingerprint = $2, created_at = NOW()`,
+		req.PublicKeyPEM, fingerprint)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store public key")
+		return
+	}
+
+	log.Info().Str("fingerprint", fingerprint).Msg("uploaded Tesla public key")
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":      "stored",
+		"fingerprint": fingerprint,
+	})
+}
+
+// PublicKeyStatus returns the current public key status.
+func (h *DevToolsHandler) PublicKeyStatus(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{"configured": false})
+		return
+	}
+
+	var pubPEM, fingerprint string
+	var createdAt time.Time
+	err := h.db.Pool.QueryRow(r.Context(),
+		`SELECT public_key_pem, fingerprint, created_at FROM tesla_public_key WHERE id = 1`,
+	).Scan(&pubPEM, &fingerprint, &createdAt)
+
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"configured":      false,
+			"well_known_path": "/.well-known/appspecific/com.tesla.3p.public-key.pem",
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"configured":      true,
+		"fingerprint":     fingerprint,
+		"created_at":      createdAt,
+		"well_known_path": "/.well-known/appspecific/com.tesla.3p.public-key.pem",
+		"public_key_pem":  pubPEM,
+	})
+}
+
+// DeletePublicKey removes the stored public key.
+func (h *DevToolsHandler) DeletePublicKey(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		writeError(w, http.StatusInternalServerError, "database not available")
+		return
+	}
+
+	_, err := h.db.Pool.Exec(r.Context(), `DELETE FROM tesla_public_key WHERE id = 1`)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete public key")
+		return
+	}
+
+	log.Info().Msg("deleted Tesla public key")
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted"})
+}
+
+// ServePublicKey serves the PEM at the Tesla-required .well-known path.
+func (h *DevToolsHandler) ServePublicKey(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		http.Error(w, "not configured", http.StatusNotFound)
+		return
+	}
+
+	var pubPEM string
+	err := h.db.Pool.QueryRow(r.Context(),
+		`SELECT public_key_pem FROM tesla_public_key WHERE id = 1`,
+	).Scan(&pubPEM)
+	if err != nil {
+		http.Error(w, "no public key configured", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-pem-file")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(pubPEM))
 }

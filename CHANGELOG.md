@@ -5,8 +5,9 @@ All notable changes to TeslaSync are documented here.
 ## [0.4.0] - 2026-03-23
 
 ### 🛠 Developer Tools
-- **Developer Tools page** — 25 built-in utilities accessible from sidebar nav
+- **Developer Tools page** — 25+ built-in utilities accessible from sidebar nav
 - **Tesla Fleet API tools** — Region detection, partner registration, API connectivity test, token inspector
+- **Public key management** — Generate ECDSA P-256 keypairs in-app, auto-serve at `.well-known` path, upload existing keys, fingerprint display
 - **Infrastructure diagnostics** — Database stats, migration status, MQTT test, env check, runtime info
 - **Client-side utilities** — VIN decoder, JWT decoder, timestamp converter, Base64, URL encoder, JSON formatter, UUID generator, SHA-256 hash, byte converter, color converter, cron parser, HTTP status reference, Tesla API endpoint reference, regex tester, Unix permission calculator
 
