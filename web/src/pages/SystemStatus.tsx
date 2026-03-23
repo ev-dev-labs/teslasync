@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse } from '../api'
+import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse } from '../api'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
-  Satellite,
+  Satellite, Link, Globe,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
@@ -693,6 +693,12 @@ export default function SystemStatus() {
     refetchInterval: 15_000,
   })
 
+  const { data: version } = useQuery({
+    queryKey: ['version'],
+    queryFn: getVersionInfo,
+    staleTime: 60_000,
+  })
+
   useEffect(() => {
     if (dataUpdatedAt) setLastChecked(new Date(dataUpdatedAt))
   }, [dataUpdatedAt])
@@ -813,6 +819,71 @@ export default function SystemStatus() {
           </GlassPanel>
         </div>
       </FadeIn>
+
+      {/* Backend Info & Endpoints */}
+      {version && (
+        <FadeIn delay={0.08}>
+          <GlassPanel className="p-5">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Server className="h-4 w-4 text-neon-cyan" /> Backend Status
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              {[
+                { label: 'Version', value: `v${version.chart_version}`, icon: Shield },
+                { label: 'Runtime', value: `${version.go_version} · ${version.os}/${version.arch}`, icon: Cpu },
+                { label: 'Uptime', value: version.uptime_seconds < 3600 ? `${Math.floor(version.uptime_seconds / 60)}m` : `${Math.floor(version.uptime_seconds / 3600)}h ${Math.floor((version.uptime_seconds % 3600) / 60)}m`, icon: Clock },
+                { label: 'Goroutines', value: String(version.goroutines), icon: Activity },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {version.endpoints && Object.keys(version.endpoints).length > 0 && (
+              <div>
+                <p className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium mb-2.5">
+                  <Link className="h-3 w-3" /> Configured Endpoints
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {version.endpoints.web && (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                      <Globe className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[var(--text-muted)]">Web Frontend</p>
+                        <p className="text-xs font-mono text-[var(--text-secondary)] truncate">{version.endpoints.web}</p>
+                      </div>
+                    </div>
+                  )}
+                  {version.endpoints.oauth_callback && (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                      <Shield className="h-3.5 w-3.5 text-neon-green shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[var(--text-muted)]">OAuth Callback</p>
+                        <p className="text-xs font-mono text-[var(--text-secondary)] truncate">{version.endpoints.oauth_callback}</p>
+                      </div>
+                    </div>
+                  )}
+                  {version.endpoints.tesla_api && (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                      <Radio className="h-3.5 w-3.5 text-neon-purple shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[var(--text-muted)]">Tesla Fleet API</p>
+                        <p className="text-xs font-mono text-[var(--text-secondary)] truncate">{version.endpoints.tesla_api}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* Service Components Grid */}
       {isLoading ? (
