@@ -23,9 +23,18 @@ image:
   pullPolicy: IfNotPresent
   tag: ""
 
+# -- Backend Kubernetes service configuration
+# type: ClusterIP (internal only), NodePort, or LoadBalancer (public)
 service:
   type: ClusterIP
   port: 8080
+  # nodePort: 30080           # Only used when type: NodePort
+  # loadBalancerIP: ""        # Only used when type: LoadBalancer
+  # externalTrafficPolicy: "" # Local or Cluster (LoadBalancer only)
+  annotations: {}
+  # annotations:
+  #   service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  #   service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 resources:
   limits:
@@ -74,9 +83,17 @@ web:
     pullPolicy: IfNotPresent
     tag: ""
 
+  # -- Frontend Kubernetes service configuration
+  # type: ClusterIP (internal only), NodePort, or LoadBalancer (public)
   service:
     type: ClusterIP
     port: 80
+    # nodePort: 30080           # Only used when type: NodePort
+    # loadBalancerIP: ""        # Only used when type: LoadBalancer
+    # externalTrafficPolicy: "" # Local or Cluster (LoadBalancer only)
+    annotations: {}
+    # annotations:
+    #   service.beta.kubernetes.io/aws-load-balancer-type: nlb
 
   resources:
     limits:
