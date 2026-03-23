@@ -253,7 +253,7 @@ export default function Settings() {
             <div className="flex items-center gap-2 p-3 rounded-lg bg-neon-red/5 border border-neon-red/20">
               <Pause className="h-4 w-4 text-neon-red shrink-0" />
               <p className="text-xs text-neon-red/80">
-                Polling, commands, and token refresh are paused. Useful when your vehicle is in service. Toggle back on to resume.
+                Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service.
               </p>
             </div>
           )}

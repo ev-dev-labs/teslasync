@@ -223,17 +223,49 @@ func MetricsHandler() http.Handler {
 }
 
 // APIUsageHandler returns Tesla API usage statistics for billing estimation.
-func APIUsageHandler() http.HandlerFunc {
+// Queries the api_call_logs table for real request counts and calculates
+// estimated costs based on the Tesla Fleet API pricing.
+func APIUsageHandler(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		costPerRequest := 0.00222 // ~$10 / 4500 requests
+		monthlyCredit := 10.0
+
+		ctx := r.Context()
+
+		// Total requests this month
+		var totalRequests int
+		err := db.Pool.QueryRow(ctx,
+			`SELECT COUNT(*) FROM api_call_logs WHERE created_at >= date_trunc('month', NOW())`).Scan(&totalRequests)
+		if err != nil {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"total_requests":      0,
+				"skipped_polls":       0,
+				"estimated_cost":      0.0,
+				"cost_per_request":    costPerRequest,
+				"monthly_credit":      monthlyCredit,
+				"estimated_remaining": monthlyCredit,
+			})
+			return
+		}
+
+		// Skipped polls (408/504 asleep responses don't count as useful polls)
+		var skippedPolls int
+		_ = db.Pool.QueryRow(ctx,
+			`SELECT COUNT(*) FROM api_call_logs WHERE created_at >= date_trunc('month', NOW()) AND (status_code = 408 OR status_code = 504)`).Scan(&skippedPolls)
+
+		estimatedCost := float64(totalRequests) * costPerRequest
+		remaining := monthlyCredit - estimatedCost
+		if remaining < 0 {
+			remaining = 0
+		}
 
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"total_requests":           0,
-			"skipped_polls":            0,
-			"estimated_cost":           0.0,
-			"cost_per_request":         costPerRequest,
-			"monthly_credit":           10.0,
-			"estimated_remaining":      10.0,
+			"total_requests":      totalRequests,
+			"skipped_polls":       skippedPolls,
+			"estimated_cost":      estimatedCost,
+			"cost_per_request":    costPerRequest,
+			"monthly_credit":      monthlyCredit,
+			"estimated_remaining": remaining,
 		})
 	}
 }

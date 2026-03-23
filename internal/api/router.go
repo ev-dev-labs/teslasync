@@ -253,7 +253,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/system", func(r chi.Router) {
 			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health, cfg))
 			r.Get("/health", ExtendedHealthCheck(db, health))
-			r.Get("/api-usage", APIUsageHandler())
+			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)
