@@ -217,10 +217,10 @@ export default function Layout() {
         aria-label="Main navigation"
         className={clsx(
           'fixed inset-y-0 left-0 z-30 w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:static lg:w-64 lg:translate-x-0',
-          'border-r backdrop-blur-xl flex flex-col overflow-hidden',
+          'border-r backdrop-blur-xl flex flex-col',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
-        style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}
+        style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)', maxHeight: '100dvh' }}
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
@@ -231,8 +231,10 @@ export default function Layout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overscroll-contain py-4 px-3 space-y-6 scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {/* Search trigger */}
+        <nav 
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-4 px-3 space-y-6 scrollbar-thin"
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
+        >          {/* Search trigger */}
           <div className="px-1 mb-2">
             <CommandPaletteTrigger />
           </div>
