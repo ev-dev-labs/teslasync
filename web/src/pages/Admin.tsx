@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Shield,
   Clock,
@@ -15,6 +15,7 @@ import {
   HardDrive,
 } from 'lucide-react'
 import { FadeIn, GlassPanel, PageHeader, Skeleton } from '../components/ui'
+import { useToast } from '../components/Toast'
 import {
   getAPIUsage,
   getBackupStats,
@@ -44,6 +45,9 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 }
 
 export default function Admin() {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+
   const { data: health, isLoading: healthLoading } = useQuery<ExtendedHealthResponse>({
     queryKey: ['admin-health'],
     queryFn: getExtendedHealth,
@@ -128,12 +132,12 @@ export default function Admin() {
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
-            { icon: <RefreshCw className="w-4 h-4" />, label: 'Refresh Tokens', action: () => refreshAuth() },
+            { icon: <RefreshCw className="w-4 h-4" />, label: 'Refresh Tokens', action: () => { refreshAuth().then(() => toast.success('Tokens refreshed')).catch(() => toast.error('Token refresh failed')) } },
             { icon: <Download className="w-4 h-4" />, label: 'Download Backup', action: () => window.open('/api/v1/system/backup', '_blank') },
-            { icon: <Trash2 className="w-4 h-4" />, label: 'Clear Cache', action: () => {} },
-            { icon: <Search className="w-4 h-4" />, label: 'Run Health Check', action: () => {} },
-            { icon: <BarChart3 className="w-4 h-4" />, label: 'View API Usage', action: () => {} },
-            { icon: <Key className="w-4 h-4" />, label: 'Rotate API Keys', action: () => {} },
+            { icon: <Trash2 className="w-4 h-4" />, label: 'Clear Cache', action: () => { queryClient.clear(); toast.success('Query cache cleared') } },
+            { icon: <Search className="w-4 h-4" />, label: 'Run Health Check', action: () => { queryClient.invalidateQueries({ queryKey: ['admin-health'] }); toast.success('Health check triggered') } },
+            { icon: <BarChart3 className="w-4 h-4" />, label: 'View API Usage', action: () => { queryClient.invalidateQueries({ queryKey: ['admin-api-usage'] }); toast.success('API usage refreshed') } },
+            { icon: <Key className="w-4 h-4" />, label: 'Manage API Keys', action: () => { window.location.href = '/admin#api-keys' } },
           ].map(({ icon, label, action }) => (
             <button
               key={label}
