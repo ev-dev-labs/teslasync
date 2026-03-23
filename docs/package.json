@@ -1,7 +1,7 @@
 {
   "name": "docs",
   "version": "1.0.0",
-  "description": "",
+  "description": "TeslaSync documentation site — VitePress-powered guides, API reference, and deployment docs",
   "main": "index.js",
   "scripts": {
     "docs:dev": "vitepress dev",

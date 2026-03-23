@@ -1,0 +1,39 @@
+# GitHub Repository Settings
+# Applied by the Settings probot app (https://github.com/apps/settings)
+# or use as reference to configure manually via GitHub UI.
+
+repository:
+  name: teslasync
+  description: "🚗 Self-hosted Tesla Fleet Intelligence Platform — real-time monitoring, analytics, remote commands, and 30+ interactive dashboards. Built with Go, React, PostgreSQL, and Helm."
+  homepage: https://teslasync-labs.github.io/teslasync/
+  topics:
+    - tesla
+    - tesla-api
+    - fleet-api
+    - self-hosted
+    - go
+    - golang
+    - react
+    - typescript
+    - kubernetes
+    - helm
+    - homelab
+    - vehicle-tracking
+    - ev
+    - data-logger
+    - grafana
+    - mqtt
+    - postgresql
+    - sse
+    - glassmorphism
+    - pwa
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_downloads: true
+  default_branch: main
+  allow_squash_merge: true
+  allow_merge_commit: true
+  allow_rebase_merge: true
+  delete_branch_on_merge: true
