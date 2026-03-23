@@ -107,21 +107,31 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 	}
 
 	// Use the partner token to register
-	data, status, err := h.teslaClient.RegisterPartner(r.Context(), req.Domain)
+	data, status, err := h.teslaClient.RegisterPartner(r.Context(), partnerToken, req.Domain)
 	if err != nil {
 		log.Warn().Err(err).Int("status", status).Msg("partner registration failed")
 	}
 
 	// Return raw Tesla response
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if data != nil {
+	if data != nil && isJSON(data) {
+		w.WriteHeader(status)
 		w.Write(data)
 	} else {
+		// Tesla may return HTML on auth errors — wrap it cleanly
+		errMsg := "Registration request failed"
+		details := "Tesla returned a non-JSON response (likely an auth redirect or error page)"
+		if err != nil {
+			details = err.Error()
+		}
+		if status == 0 {
+			status = http.StatusBadGateway
+		}
 		writeJSON(w, status, map[string]interface{}{
-			"error":         "Registration request failed",
-			"details":       err.Error(),
+			"error":         errMsg,
+			"details":       details,
 			"partner_token": partnerToken != "",
+			"status_code":   status,
 		})
 	}
 }
@@ -603,4 +613,259 @@ func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request)
 	if data != nil {
 		w.Write(data)
 	}
+}
+
+// isJSON returns true if the data looks like a JSON response.
+func isJSON(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	// Trim whitespace and check first character
+	for _, b := range data {
+		if b == ' ' || b == '\t' || b == '\n' || b == '\r' {
+			continue
+		}
+		return b == '{' || b == '[' || b == '"'
+	}
+	return false
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Fleet Telemetry Configuration
+// ──────────────────────────────────────────────────────────────────
+
+// FleetTelemetrySubscribe configures vehicles to stream telemetry data.
+// POST /api/v1/dev-tools/fleet-telemetry-subscribe
+func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http.Request) {
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		return
+	}
+
+	var req struct {
+		VINs     []string `json:"vins"`
+		Hostname string   `json:"hostname"`
+		Port     int      `json:"port"`
+		CA       string   `json:"ca"`
+		Fields   []string `json:"fields"`
+		Interval int      `json:"interval_seconds"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(req.VINs) == 0 {
+		writeError(w, http.StatusBadRequest, "at least one VIN is required")
+		return
+	}
+	if req.Hostname == "" {
+		// Fall back to config
+		if h.cfg != nil && h.cfg.FleetTelemetry.Host != "" {
+			req.Hostname = h.cfg.FleetTelemetry.Host
+		} else {
+			writeError(w, http.StatusBadRequest, "hostname is required (or set FLEET_TELEMETRY_HOST)")
+			return
+		}
+	}
+	if req.Port == 0 {
+		if h.cfg != nil && h.cfg.FleetTelemetry.Port > 0 {
+			req.Port = h.cfg.FleetTelemetry.Port
+		} else {
+			req.Port = 4443
+		}
+	}
+	if req.Interval == 0 {
+		req.Interval = 10
+	}
+
+	// Build fields map
+	fields := make(map[string]tesla.FleetTelemetryField)
+	if len(req.Fields) == 0 {
+		// Default essential fields
+		req.Fields = []string{
+			"VehicleSpeed", "Odometer", "Soc", "BatteryLevel",
+			"Location", "Latitude", "Longitude",
+			"ChargeState", "ChargeLimitSoc",
+			"InsideTemp", "OutsideTemp",
+			"Locked", "SentryMode",
+		}
+	}
+	for _, f := range req.Fields {
+		fields[f] = tesla.FleetTelemetryField{IntervalSeconds: req.Interval}
+	}
+
+	sub := tesla.FleetTelemetrySubscription{
+		VINs: req.VINs,
+		Config: tesla.FleetTelemetryConfigPayload{
+			Hostname:   req.Hostname,
+			Port:       req.Port,
+			CA:         req.CA,
+			Fields:     fields,
+			AlertTypes: []string{"service", "security"},
+		},
+	}
+
+	log.Info().
+		Strs("vins", req.VINs).
+		Str("hostname", req.Hostname).
+		Int("port", req.Port).
+		Int("fields", len(fields)).
+		Msg("subscribing vehicles to fleet telemetry")
+
+	data, status, err := h.teslaClient.SubscribeFleetTelemetry(r.Context(), sub)
+	if err != nil {
+		log.Warn().Err(err).Int("status", status).Msg("fleet telemetry subscription failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if data != nil && isJSON(data) {
+		w.WriteHeader(status)
+		w.Write(data)
+	} else {
+		errMsg := "Fleet telemetry subscription failed"
+		details := "Tesla returned a non-JSON response"
+		if err != nil {
+			details = err.Error()
+		}
+		if status == 0 {
+			status = http.StatusBadGateway
+		}
+		writeJSON(w, status, map[string]interface{}{
+			"error":   errMsg,
+			"details": details,
+		})
+	}
+}
+
+// FleetTelemetryGetConfig returns the fleet telemetry configuration for a vehicle.
+// GET /api/v1/dev-tools/fleet-telemetry-config?vin=...
+func (h *DevToolsHandler) FleetTelemetryGetConfig(w http.ResponseWriter, r *http.Request) {
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		return
+	}
+
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin query parameter is required")
+		return
+	}
+
+	data, status, err := h.teslaClient.GetFleetTelemetryConfig(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("get fleet telemetry config failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if data != nil && isJSON(data) {
+		w.WriteHeader(status)
+		w.Write(data)
+	} else {
+		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+			"error":   "Failed to fetch fleet telemetry config",
+			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
+		})
+	}
+}
+
+// FleetTelemetryDeleteConfig removes fleet telemetry configuration for a vehicle.
+// DELETE /api/v1/dev-tools/fleet-telemetry-config?vin=...
+func (h *DevToolsHandler) FleetTelemetryDeleteConfig(w http.ResponseWriter, r *http.Request) {
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		return
+	}
+
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin query parameter is required")
+		return
+	}
+
+	data, status, err := h.teslaClient.DeleteFleetTelemetryConfig(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("delete fleet telemetry config failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if data != nil && isJSON(data) {
+		w.WriteHeader(status)
+		w.Write(data)
+	} else {
+		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+			"error":   "Failed to delete fleet telemetry config",
+			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
+		})
+	}
+}
+
+// FleetTelemetryErrors returns recent fleet telemetry errors for a vehicle.
+// GET /api/v1/dev-tools/fleet-telemetry-errors?vin=...
+func (h *DevToolsHandler) FleetTelemetryErrors(w http.ResponseWriter, r *http.Request) {
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		return
+	}
+
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin query parameter is required")
+		return
+	}
+
+	data, status, err := h.teslaClient.GetFleetTelemetryErrors(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("get fleet telemetry errors failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if data != nil && isJSON(data) {
+		w.WriteHeader(status)
+		w.Write(data)
+	} else {
+		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+			"error":   "Failed to fetch fleet telemetry errors",
+			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
+		})
+	}
+}
+
+// FleetStatus provides fleet information for vehicles.
+// POST /api/v1/dev-tools/fleet-status
+func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		return
+	}
+
+	var req struct {
+		VINs []string `json:"vins"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.VINs) == 0 {
+		writeError(w, http.StatusBadRequest, "vins array is required")
+		return
+	}
+
+	data, status, err := h.teslaClient.GetFleetStatus(r.Context(), req.VINs)
+	if err != nil {
+		log.Warn().Err(err).Msg("get fleet status failed")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if data != nil && isJSON(data) {
+		w.WriteHeader(status)
+		w.Write(data)
+	} else {
+		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+			"error":   "Failed to fetch fleet status",
+			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
+		})
+	}
+}
+
+func errStringOrDefault(err error, def string) string {
+	if err != nil {
+		return err.Error()
+	}
+	return def
 }

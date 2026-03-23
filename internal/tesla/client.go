@@ -135,9 +135,69 @@ func (c *Client) GetUserRegion(ctx context.Context) ([]byte, int, error) {
 }
 
 // RegisterPartner calls POST /api/1/partner_accounts to register this app in the current region.
-func (c *Client) RegisterPartner(ctx context.Context, domain string) ([]byte, int, error) {
+// It requires the partner token (client_credentials), not the user's OAuth token.
+func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain string) ([]byte, int, error) {
 	body := fmt.Sprintf(`{"domain":"%s"}`, domain)
-	return c.doRequest(ctx, http.MethodPost, "/api/1/partner_accounts", bytes.NewReader([]byte(body)))
+	return c.doRequestWithToken(ctx, http.MethodPost, "/api/1/partner_accounts", bytes.NewReader([]byte(body)), partnerToken)
+}
+
+// SubscribeFleetTelemetry configures vehicles to connect to a self-hosted fleet-telemetry server.
+// POST /api/1/vehicles/fleet_telemetry_config
+func (c *Client) SubscribeFleetTelemetry(ctx context.Context, config FleetTelemetrySubscription) ([]byte, int, error) {
+	body, err := json.Marshal(config)
+	if err != nil {
+		return nil, 0, fmt.Errorf("marshal fleet telemetry config: %w", err)
+	}
+	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_telemetry_config", bytes.NewReader(body))
+}
+
+// GetFleetTelemetryConfig fetches a vehicle's fleet telemetry configuration.
+// GET /api/1/vehicles/{vin}/fleet_telemetry_config
+func (c *Client) GetFleetTelemetryConfig(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/fleet_telemetry_config", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// DeleteFleetTelemetryConfig removes fleet telemetry configuration from a vehicle.
+// DELETE /api/1/vehicles/{vin}/fleet_telemetry_config
+func (c *Client) DeleteFleetTelemetryConfig(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/fleet_telemetry_config", vin)
+	return c.doRequest(ctx, http.MethodDelete, path, nil)
+}
+
+// GetFleetTelemetryErrors returns recent fleet telemetry errors for a vehicle.
+// GET /api/1/vehicles/{vin}/fleet_telemetry_errors
+func (c *Client) GetFleetTelemetryErrors(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/fleet_telemetry_errors", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetFleetStatus provides vehicle state information (firmware, telemetry version, etc.).
+// POST /api/1/vehicles/fleet_status
+func (c *Client) GetFleetStatus(ctx context.Context, vins []string) ([]byte, int, error) {
+	body, _ := json.Marshal(map[string]interface{}{"vins": vins})
+	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_status", bytes.NewReader(body))
+}
+
+// FleetTelemetrySubscription is the configuration payload for fleet telemetry.
+type FleetTelemetrySubscription struct {
+	VINs   []string                       `json:"vins"`
+	Config FleetTelemetryConfigPayload    `json:"config"`
+}
+
+// FleetTelemetryConfigPayload describes the streaming server and fields to subscribe.
+type FleetTelemetryConfigPayload struct {
+	Hostname   string                          `json:"hostname"`
+	CA         string                          `json:"ca,omitempty"`
+	Fields     map[string]FleetTelemetryField  `json:"fields"`
+	AlertTypes []string                        `json:"alert_types,omitempty"`
+	Port       int                             `json:"port"`
+	Exp        int64                           `json:"exp,omitempty"`
+}
+
+// FleetTelemetryField describes a single telemetry field subscription.
+type FleetTelemetryField struct {
+	IntervalSeconds int `json:"interval_seconds"`
 }
 
 // GetPartnerToken obtains a client_credentials token for partner-level API calls.
@@ -269,6 +329,82 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 type apiResponse struct {
 	StatusCode int
 	Body       []byte
+}
+
+// doRequestWithToken performs an API request using a custom bearer token (e.g. partner token)
+// instead of the stored user access token. Runs through the circuit breaker and logging.
+func (c *Client) doRequestWithToken(ctx context.Context, method, path string, body io.Reader, token string) ([]byte, int, error) {
+	url := c.baseURL + path
+	start := time.Now()
+
+	var reqBodyBytes []byte
+	if body != nil {
+		reqBodyBytes, _ = io.ReadAll(body)
+		body = bytes.NewReader(reqBodyBytes)
+	}
+
+	result, err := c.cb.Execute(func() (interface{}, error) {
+		req, err := http.NewRequestWithContext(ctx, method, url, body)
+		if err != nil {
+			return nil, fmt.Errorf("create request: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("do request: %w", err)
+		}
+		defer resp.Body.Close()
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("read body: %w", err)
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, ErrUnauthorized
+		}
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil
+		}
+		if resp.StatusCode >= 500 {
+			return &apiResponse{StatusCode: resp.StatusCode, Body: data}, fmt.Errorf("server error: %d", resp.StatusCode)
+		}
+
+		return &apiResponse{StatusCode: resp.StatusCode, Body: data}, nil
+	})
+
+	durationMs := int(time.Since(start).Milliseconds())
+
+	if err != nil {
+		if c.logCallback != nil {
+			statusCode := 0
+			var respBody []byte
+			if result != nil {
+				if resp, ok := result.(*apiResponse); ok {
+					statusCode = resp.StatusCode
+					respBody = resp.Body
+				}
+			}
+			c.logCallback(method, url, statusCode, reqBodyBytes, respBody, durationMs, err)
+		}
+		if result != nil {
+			if resp, ok := result.(*apiResponse); ok {
+				return resp.Body, resp.StatusCode, err
+			}
+		}
+		return nil, 0, err
+	}
+
+	resp := result.(*apiResponse)
+
+	if c.logCallback != nil {
+		c.logCallback(method, url, resp.StatusCode, reqBodyBytes, resp.Body, durationMs, nil)
+	}
+
+	return resp.Body, resp.StatusCode, nil
 }
 
 // ListVehicles returns all vehicles associated with the authenticated Tesla account.

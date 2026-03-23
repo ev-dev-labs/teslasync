@@ -294,6 +294,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/public-key-status", devToolsHandler.PublicKeyStatus)
 			r.Delete("/public-key", devToolsHandler.DeletePublicKey)
 			r.Post("/pair-vehicle-key", devToolsHandler.PairVehicleKey)
+
+			// Fleet Telemetry
+			r.Post("/fleet-telemetry-subscribe", devToolsHandler.FleetTelemetrySubscribe)
+			r.Get("/fleet-telemetry-config", devToolsHandler.FleetTelemetryGetConfig)
+			r.Delete("/fleet-telemetry-config", devToolsHandler.FleetTelemetryDeleteConfig)
+			r.Get("/fleet-telemetry-errors", devToolsHandler.FleetTelemetryErrors)
+			r.Post("/fleet-status", devToolsHandler.FleetStatus)
 		})
 
 		// Export

@@ -6,7 +6,7 @@ import {
   Radio, Settings, Cpu, Car, Key, Clock, FileCode, Link, Braces,
   Fingerprint, Hash, HardDrive, Palette, Timer, Network, BookOpen,
   Regex, Lock, ChevronDown, ChevronRight, Play, RefreshCw,
-  Download, Upload, Trash2,
+  Download, Upload, Trash2, Satellite, Eye, Zap,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import clsx from 'clsx'
@@ -122,7 +122,12 @@ async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'G
   const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } }
   if (body) opts.body = JSON.stringify(body)
   const res = await fetch(`/api/v1/dev-tools/${endpoint}`, opts)
-  return res.json()
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: `Unexpected response (HTTP ${res.status})`, details: text.substring(0, 500) }
+  }
 }
 
 // ─── Backend tool: generic "Run" button pattern ──────────────────
@@ -538,6 +543,248 @@ function VehicleKeyPairingTool() {
   )
 }
 
+// ─── Fleet Telemetry Tools ──────────────────────────────────────
+
+const TELEMETRY_FIELDS = [
+  { category: 'Location', fields: ['Latitude', 'Longitude', 'Location', 'DestinationLocation', 'DestinationName'] },
+  { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'CruiseSetSpeed', 'BrakePedal', 'DriveRail'] },
+  { category: 'Charging', fields: ['BatteryLevel', 'ChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargerVoltage', 'DCChargingPower', 'ACChargingPower', 'EnergyRemaining', 'EstBatteryRange', 'ChargePortDoorOpen', 'ChargingCableType'] },
+  { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'ClimateKeeperMode', 'DefrostMode', 'CabinOverheatProtectionMode'] },
+  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'TrunkOpen', 'FrunkOpen', 'WindowState', 'DriverSeatOccupied', 'CenterDisplay'] },
+  { category: 'Safety', fields: ['DriverSeatBelt', 'AutomaticEmergencyBrakingOff', 'BlindSpotCollisionWarningChime'] },
+  { category: 'Powertrain', fields: ['DiTorqueActualR', 'DiTorqueActualF', 'DiAxleSpeedF', 'DiAxleSpeedR'] },
+]
+
+function FleetTelemetrySubscribeTool() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
+    const res = await fetch('/api/v1/vehicles')
+    if (!res.ok) return []
+    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+  }})
+  const [selectedVins, setSelectedVins] = useState<string[]>([])
+  const [hostname, setHostname] = useState('')
+  const [port, setPort] = useState('4443')
+  const [interval, setInterval] = useState('10')
+  const [ca, setCa] = useState('')
+  const [selectedFields, setSelectedFields] = useState<string[]>([
+    'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Latitude', 'Longitude',
+    'ChargeState', 'ChargeLimitSoc', 'InsideTemp', 'OutsideTemp', 'Locked', 'SentryMode',
+  ])
+  const [showFields, setShowFields] = useState(false)
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+
+  const toggleVin = (vin: string) => {
+    setSelectedVins(prev => prev.includes(vin) ? prev.filter(v => v !== vin) : [...prev, vin])
+  }
+  const toggleField = (field: string) => {
+    setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])
+  }
+  const selectCategory = (fields: string[]) => {
+    setSelectedFields(prev => {
+      const allSelected = fields.every(f => prev.includes(f))
+      if (allSelected) return prev.filter(f => !fields.includes(f))
+      return [...new Set([...prev, ...fields])]
+    })
+  }
+
+  const mut = useMutation({
+    mutationFn: () => apiFetch('fleet-telemetry-subscribe', 'POST', {
+      vins: selectedVins,
+      hostname,
+      port: parseInt(port) || 4443,
+      ca: ca || undefined,
+      fields: selectedFields,
+      interval_seconds: parseInt(interval) || 10,
+    }),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+
+  return (
+    <ToolCard icon={Satellite} color="cyan" title="Fleet Telemetry Subscription" description="Configure vehicles to stream real-time telemetry data to your server">
+      {/* Vehicle Selection */}
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">Vehicles</label>
+        {vehicles && vehicles.length > 0 ? (
+          <div className="grid grid-cols-1 gap-1.5">
+            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
+              <label key={v.vin} className={clsx(
+                'flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border transition-colors text-xs',
+                selectedVins.includes(v.vin)
+                  ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                  : 'bg-white/[0.02] border-white/[0.06] text-[var(--text-secondary)] hover:border-white/[0.12]'
+              )}>
+                <input type="checkbox" checked={selectedVins.includes(v.vin)} onChange={() => toggleVin(v.vin)} className="sr-only" />
+                <div className={clsx('h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0', selectedVins.includes(v.vin) ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20')}>
+                  {selectedVins.includes(v.vin) && <CheckCircle className="h-2.5 w-2.5 text-black" />}
+                </div>
+                <span className="font-medium">{v.display_name}</span>
+                <span className="font-mono text-[10px] text-[var(--text-muted)] ml-auto">{v.vin}</span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)]">No vehicles found. Sync vehicles in Settings first.</p>
+        )}
+      </div>
+
+      {/* Server Configuration */}
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Hostname</label>
+          <input type="text" value={hostname} onChange={e => setHostname(e.target.value)} placeholder="telemetry.yourdomain.com" className={inputClasses} />
+        </div>
+        <div>
+          <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Port</label>
+          <input type="text" value={port} onChange={e => setPort(e.target.value)} placeholder="4443" className={inputClasses} />
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Interval (seconds)</label>
+        <input type="text" value={interval} onChange={e => setInterval(e.target.value)} placeholder="10" className={clsx(inputClasses, 'w-24')} />
+      </div>
+
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">CA Certificate (optional)</label>
+        <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(inputClasses, 'h-16 resize-y font-mono text-[10px]')} />
+      </div>
+
+      {/* Field Selection */}
+      <div className="mb-3">
+        <button onClick={() => setShowFields(!showFields)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors w-full">
+          {showFields ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          <span className="font-medium">Telemetry Fields</span>
+          <span className="text-[10px] text-[var(--text-muted)] ml-auto">{selectedFields.length} selected</span>
+        </button>
+        {showFields && (
+          <div className="mt-2 space-y-2 max-h-72 overflow-y-auto pr-1">
+            {TELEMETRY_FIELDS.map(cat => {
+              const allSelected = cat.fields.every(f => selectedFields.includes(f))
+              return (
+                <div key={cat.category}>
+                  <button onClick={() => selectCategory(cat.fields)} className={clsx(
+                    'text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5 cursor-pointer',
+                    allSelected ? 'text-neon-cyan' : 'text-[var(--text-muted)]'
+                  )}>
+                    <div className={clsx('h-2.5 w-2.5 rounded-sm border', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20')} />
+                    {cat.category}
+                  </button>
+                  <div className="flex flex-wrap gap-1">
+                    {cat.fields.map(f => (
+                      <button key={f} onClick={() => toggleField(f)} className={clsx(
+                        'px-2 py-0.5 rounded text-[10px] border transition-colors',
+                        selectedFields.includes(f)
+                          ? 'bg-neon-cyan/15 border-neon-cyan/30 text-neon-cyan'
+                          : 'bg-white/[0.02] border-white/[0.06] text-[var(--text-muted)] hover:border-white/[0.12]'
+                      )}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <button onClick={() => mut.mutate()} disabled={mut.isPending || selectedVins.length === 0 || !hostname} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
+        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Satellite className="h-3.5 w-3.5" />}
+        Subscribe to Telemetry
+      </button>
+      {result !== null && <ResultPanel title="Fleet Telemetry Subscription Result" data={result} />}
+    </ToolCard>
+  )
+}
+
+function FleetTelemetryConfigTool() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
+    const res = await fetch('/api/v1/vehicles')
+    if (!res.ok) return []
+    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+  }})
+  const [selectedVin, setSelectedVin] = useState('')
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [errorsResult, setErrorsResult] = useState<Record<string, unknown> | null>(null)
+
+  const getConfig = useMutation({
+    mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+  const deleteConfig = useMutation({
+    mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`, 'DELETE'),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+  const getErrors = useMutation({
+    mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${selectedVin}`),
+    onSuccess: (data: Record<string, unknown>) => setErrorsResult(data),
+    onError: (err) => setErrorsResult({ error: (err as Error).message }),
+  })
+
+  return (
+    <ToolCard icon={Eye} color="green" title="Fleet Telemetry Status" description="View, manage, and debug fleet telemetry configuration per vehicle">
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
+        {vehicles && vehicles.length > 0 ? (
+          <select value={selectedVin} onChange={e => setSelectedVin(e.target.value)} className={inputClasses}>
+            <option value="">Select a vehicle...</option>
+            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
+              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => getConfig.mutate()} disabled={getConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {getConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+          View Config
+        </button>
+        <button onClick={() => getErrors.mutate()} disabled={getErrors.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
+          View Errors
+        </button>
+        <button onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle?')) deleteConfig.mutate() }} disabled={deleteConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-red">
+          {deleteConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+          Remove Config
+        </button>
+      </div>
+      {result !== null && <ResultPanel title="Fleet Telemetry Config" data={result} />}
+      {errorsResult !== null && <ResultPanel title="Fleet Telemetry Errors" data={errorsResult} />}
+    </ToolCard>
+  )
+}
+
+function FleetStatusTool() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
+    const res = await fetch('/api/v1/vehicles')
+    if (!res.ok) return []
+    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+  }})
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+
+  const mut = useMutation({
+    mutationFn: () => apiFetch('fleet-status', 'POST', { vins: vehicles?.map((v: { vin: string }) => v.vin) ?? [] }),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+
+  return (
+    <ToolCard icon={Zap} color="amber" title="Fleet Status" description="Check firmware version, telemetry version, command protocol, and key count for all vehicles">
+      <button onClick={() => mut.mutate()} disabled={mut.isPending || !vehicles?.length} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
+        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+        Check Fleet Status
+      </button>
+      {result !== null && <ResultPanel title="Fleet Status" data={result} />}
+    </ToolCard>
+  )
+}
+
 function FleetApiSection() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 pt-0">
@@ -548,6 +795,9 @@ function FleetApiSection() {
       <BackendTool icon={Network} color="cyan" title="API Connectivity Test" description="Test if Fleet API is reachable from the server" endpoint="test-api" />
       <BackendTool icon={Key} color="amber" title="Token Info" description="Show token expiry, validity, and scopes" endpoint="token-info" />
       <VehicleKeyPairingTool />
+      <FleetTelemetrySubscribeTool />
+      <FleetTelemetryConfigTool />
+      <FleetStatusTool />
     </div>
   )
 }
@@ -1216,6 +1466,11 @@ const TESLA_ENDPOINTS: [string, string, string][] = [
   ['POST', '/api/1/partner_accounts', 'Register as a Tesla partner'],
   ['GET', '/api/1/partner_accounts/public_key', 'Get partner public key info'],
   ['POST', '/api/1/vehicles/{id}/signed_command', 'Send signed vehicle command'],
+  ['POST', '/api/1/vehicles/fleet_telemetry_config', 'Configure fleet telemetry streaming'],
+  ['GET', '/api/1/vehicles/{vin}/fleet_telemetry_config', 'Get fleet telemetry config'],
+  ['DELETE', '/api/1/vehicles/{vin}/fleet_telemetry_config', 'Remove fleet telemetry config'],
+  ['GET', '/api/1/vehicles/{vin}/fleet_telemetry_errors', 'Get fleet telemetry errors'],
+  ['POST', '/api/1/vehicles/fleet_status', 'Get fleet status (firmware, telemetry version)'],
 ]
 
 function TeslaApiRefTool() {
@@ -1437,7 +1692,7 @@ export default function DevTools() {
             icon={Wrench}
             color="cyan"
             title="Tesla Fleet API"
-            subtitle="Partner registration, region detection, API connectivity, and token management"
+            subtitle="Partner registration, fleet telemetry, region detection, API connectivity, and token management"
             isOpen={!!openSections.fleet}
             onToggle={() => toggle('fleet')}
           />
