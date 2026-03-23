@@ -18,6 +18,7 @@ data:
   GRAFANA_HOST: {{ include "teslasync.grafana.host" . | quote }}
   GRAFANA_PORT: {{ include "teslasync.grafana.port" . | quote }}
   TESLA_REDIRECT_URI: {{ .Values.tesla.redirectUri | quote }}
+  TESLA_API_BASE_URL: {{ .Values.tesla.apiBaseUrl | quote }}
   WORKER_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}

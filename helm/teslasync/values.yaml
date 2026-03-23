@@ -236,6 +236,11 @@ tesla:
   clientId: ""
   clientSecret: ""
   redirectUri: "http://localhost:8080/api/v1/auth/callback"
+  # Tesla Fleet API base URL — set to your region:
+  #   NA: https://fleet-api.prd.na.vn.cloud.tesla.com
+  #   EU: https://fleet-api.prd.eu.vn.cloud.tesla.com
+  #   CN: https://fleet-api.prd.cn.vn.cloud.tesla.com
+  apiBaseUrl: "https://fleet-api.prd.na.vn.cloud.tesla.com"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PostgreSQL
