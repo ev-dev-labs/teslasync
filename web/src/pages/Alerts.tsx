@@ -10,7 +10,7 @@ import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
   Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings, CheckCircle, Clock, Pencil,
   Plus, Settings2, BarChart3, PieChart as PieChartIcon, X, Trash2, Moon, Send, TrendingDown,
-  Car, Lock, Droplets,
+  Car, Lock, Droplets, Database, Radio, Wifi, HardDrive, Activity,
 } from 'lucide-react'
 import { useState, useMemo, useCallback } from 'react'
 import { useToast } from '../components/Toast'
@@ -43,6 +43,12 @@ const typeIcons: Record<string, React.ElementType> = {
   tire_pressure_low: Droplets,
   idle_unlocked: Lock,
   efficiency_drop: BarChart3,
+  // System health alerts
+  system_database: Database,
+  system_mqtt: Wifi,
+  system_redis: HardDrive,
+  system_tesla_api: Radio,
+  system_worker: Activity,
 }
 
 // ─── Rule type definitions (expanded) ────────────────────────────────────────

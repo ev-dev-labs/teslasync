@@ -157,7 +157,9 @@ func main() {
 	})
 	log.Info().Msg("maintenance worker started")
 
-	// Periodic component health checker
+	// Periodic component health checker — creates system alerts on state changes
+	alertRepo := database.NewAlertRepo(db)
+	prevHealthState := make(map[string]resilience.ComponentStatus)
 	resilience.SafeGo("health-watchdog", func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -179,10 +181,47 @@ func main() {
 				// Worker is alive if we reach this point (SafeGoLoop restarts on crash)
 				health.RecordSuccess("worker")
 
+				// Check for state transitions and create system alerts
+				components := health.GetStatus()
+				for name, comp := range components {
+					prev, seen := prevHealthState[name]
+					if !seen {
+						prevHealthState[name] = comp.Status
+						continue
+					}
+
+					// Component became unhealthy or degraded
+					if prev == resilience.StatusHealthy && comp.Status >= resilience.StatusDegraded {
+						severity := "warning"
+						if comp.Status == resilience.StatusUnhealthy {
+							severity = "critical"
+						}
+						_ = alertRepo.Create(ctx, &models.Alert{
+							Type:     "system_" + name,
+							Severity: severity,
+							Title:    fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String()),
+							Message:  fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError),
+						})
+						log.Warn().Str("component", name).Str("status", comp.Status.String()).Msg("system alert: component degraded")
+					}
+
+					// Component recovered
+					if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
+						_ = alertRepo.Create(ctx, &models.Alert{
+							Type:     "system_" + name,
+							Severity: "info",
+							Title:    fmt.Sprintf("%s recovered", componentDisplayName(name)),
+							Message:  fmt.Sprintf("Component %s is healthy again", name),
+						})
+						log.Info().Str("component", name).Msg("system alert: component recovered")
+					}
+
+					prevHealthState[name] = comp.Status
+				}
+
 				// Log overall status
 				overall := health.OverallStatus()
 				if overall != resilience.StatusHealthy {
-					components := health.GetStatus()
 					for name, comp := range components {
 						if comp.Status != resilience.StatusHealthy {
 							log.Warn().Str("component", name).Str("status", comp.Status.String()).Int("consec_fails", comp.ConsecFails).Msg("degraded component")
@@ -245,5 +284,22 @@ func setupLogger(level string) {
 
 	if os.Getenv("TESLASYNC_DEV") == "true" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+}
+
+func componentDisplayName(name string) string {
+	switch name {
+	case "database":
+		return "PostgreSQL"
+	case "mqtt":
+		return "MQTT Broker"
+	case "tesla_api":
+		return "Tesla Fleet API"
+	case "worker":
+		return "Vehicle Poller"
+	case "redis":
+		return "Redis Cache"
+	default:
+		return name
 	}
 }
