@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight'
@@ -204,6 +204,31 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   })
 
   const [customColors, setCustomColorsState] = useState(loadCustomColors)
+  const [initialized, setInitialized] = useState(false)
+
+  // Load theme from backend settings on first mount
+  useEffect(() => {
+    fetch('/api/v1/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(settings => {
+        if (!settings) return
+        if (settings.theme && settings.theme in themes) {
+          setThemeId(settings.theme as ThemeId)
+          localStorage.setItem('teslasync-theme', settings.theme)
+        }
+        if (settings.mode && settings.mode in modes) {
+          setModeId(settings.mode as ModeId)
+          localStorage.setItem('teslasync-mode', settings.mode)
+        }
+        if (settings.custom_primary && settings.custom_accent) {
+          setCustomColorsState({ primary: settings.custom_primary, accent: settings.custom_accent })
+          localStorage.setItem('teslasync-custom-primary', settings.custom_primary)
+          localStorage.setItem('teslasync-custom-accent', settings.custom_accent)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setInitialized(true))
+  }, [])
 
   const currentThemes = { ...themes, custom: buildCustomTheme(customColors.primary, customColors.accent) }
   const theme = currentThemes[themeId]
@@ -215,14 +240,34 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('teslasync-mode', modeId)
   }, [theme, mode, themeId, modeId])
 
-  const setTheme = (id: ThemeId) => setThemeId(id)
-  const setMode = (id: ModeId) => setModeId(id)
+  // Persist theme changes to backend (fire-and-forget)
+  const saveThemeToBackend = useCallback((t: ThemeId, m: ModeId, cp: string, ca: string) => {
+    if (!initialized) return
+    fetch('/api/v1/settings').then(r => r.ok ? r.json() : null).then(current => {
+      if (!current) return
+      fetch('/api/v1/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...current, theme: t, mode: m, custom_primary: cp, custom_accent: ca }),
+      }).catch(() => {})
+    }).catch(() => {})
+  }, [initialized])
+
+  const setTheme = (id: ThemeId) => {
+    setThemeId(id)
+    saveThemeToBackend(id, modeId, customColors.primary, customColors.accent)
+  }
+  const setMode = (id: ModeId) => {
+    setModeId(id)
+    saveThemeToBackend(themeId, id, customColors.primary, customColors.accent)
+  }
 
   const setCustomColors = (primary: string, accent: string) => {
     localStorage.setItem('teslasync-custom-primary', primary)
     localStorage.setItem('teslasync-custom-accent', accent)
     setCustomColorsState({ primary, accent })
     setThemeId('custom')
+    saveThemeToBackend('custom', modeId, primary, accent)
   }
 
   return (

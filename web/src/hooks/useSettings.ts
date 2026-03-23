@@ -8,6 +8,10 @@ const defaults: AppSettings = {
   language: 'en',
   base_cost_per_kwh: 0.12,
   api_suspended: false,
+  theme: 'neon-cyan',
+  mode: 'dark',
+  custom_primary: '#00b4d8',
+  custom_accent: '#e63946',
 }
 
 /**

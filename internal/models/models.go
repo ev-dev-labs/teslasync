@@ -167,6 +167,10 @@ type Settings struct {
 	Language        string  `json:"language" db:"language"`
 	BaseCostPerKWh  float64 `json:"base_cost_per_kwh" db:"base_cost_per_kwh"`
 	APISuspended    bool    `json:"api_suspended" db:"api_suspended"`
+	Theme           string  `json:"theme" db:"theme"`                         // neon-cyan, tesla-red, etc.
+	Mode            string  `json:"mode" db:"mode"`                           // dark, light, oled, midnight
+	CustomPrimary   string  `json:"custom_primary" db:"custom_primary"`       // hex color for custom theme
+	CustomAccent    string  `json:"custom_accent" db:"custom_accent"`         // hex color for custom theme
 }
 
 // VehicleState represents a snapshot of vehicle state at a point in time.

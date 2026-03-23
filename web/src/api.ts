@@ -119,6 +119,10 @@ export interface AppSettings {
   language: string
   base_cost_per_kwh: number
   api_suspended: boolean
+  theme: string
+  mode: string
+  custom_primary: string
+  custom_accent: string
 }
 
 export interface VehicleState {

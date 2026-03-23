@@ -1,0 +1,4 @@
+ALTER TABLE settings DROP COLUMN IF EXISTS theme;
+ALTER TABLE settings DROP COLUMN IF EXISTS mode;
+ALTER TABLE settings DROP COLUMN IF EXISTS custom_primary;
+ALTER TABLE settings DROP COLUMN IF EXISTS custom_accent;
