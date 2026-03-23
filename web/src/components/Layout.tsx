@@ -228,7 +228,7 @@ export default function Layout() {
         <NavLink to="/" className="flex items-center gap-3 px-5 py-5 border-b shrink-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }} onClick={() => setSidebarOpen(false)}>
           <Logo size={32} showWordmark />
           <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-            {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown' ? `v${versionInfo.chart_version}` : 'v2'}
+            {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown' ? `v${versionInfo.chart_version}` : ''}
           </span>
         </NavLink>
 

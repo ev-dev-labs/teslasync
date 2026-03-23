@@ -637,7 +637,7 @@ export default function Settings() {
             <div>
               <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-1">TeslaSync</p>
               <p className="text-sm text-[var(--text-secondary)]">
-                {version ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}` : 'v2.0.0 · Next-Gen Tesla Intelligence Platform'}
+                {version ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}` : ''}
               </p>
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neon-cyan/5 text-neon-cyan/40">
