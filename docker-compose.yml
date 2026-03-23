@@ -56,7 +56,7 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     depends_on:
-      teslasync:
+      teslasync-api:
         condition: service_healthy
     deploy:
       resources:
