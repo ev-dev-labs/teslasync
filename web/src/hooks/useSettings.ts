@@ -7,6 +7,7 @@ const defaults: AppSettings = {
   preferred_range: 'rated',
   language: 'en',
   base_cost_per_kwh: 0.12,
+  api_suspended: false,
 }
 
 /**

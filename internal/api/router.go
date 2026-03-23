@@ -162,6 +162,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Settings
 		r.Get("/settings", settingsHandler.Get)
 		r.Put("/settings", settingsHandler.Update)
+		r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
 
 		// Alerts
 		r.Route("/alerts", func(r chi.Router) {

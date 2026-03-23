@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, AppSettings, Vehicle } from '../api'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, AppSettings, Vehicle } from '../api'
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -38,6 +38,7 @@ export default function Settings() {
     preferred_range: 'rated',
     language: 'en',
     base_cost_per_kwh: 0.12,
+    api_suspended: false,
   })
   const [saved, setSaved] = useState(false)
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
@@ -83,6 +84,21 @@ export default function Settings() {
     },
     onError: (err: Error) => {
       toast.error('Vehicle sync failed', err.message || 'Could not sync vehicles from Tesla')
+    },
+  })
+
+  const suspendMut = useMutation({
+    mutationFn: (suspended: boolean) => toggleAPISuspend(suspended),
+    onSuccess: (_data, suspended) => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      if (suspended) {
+        toast.info('API suspended', 'All Tesla API calls have been paused')
+      } else {
+        toast.success('API resumed', 'Tesla API polling has been re-enabled')
+      }
+    },
+    onError: () => {
+      toast.error('Failed', 'Could not toggle API suspension')
     },
   })
 
@@ -192,6 +208,55 @@ export default function Settings() {
               </motion.p>
             )}
           </AnimatePresence>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Tesla API Suspension */}
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={clsx(
+                'flex h-10 w-10 items-center justify-center rounded-xl ring-1',
+                settings?.api_suspended
+                  ? 'bg-neon-red/10 text-neon-red ring-neon-red/20'
+                  : 'bg-neon-green/10 text-neon-green ring-neon-green/20'
+              )}>
+                {settings?.api_suspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">Tesla API Polling</h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {settings?.api_suspended
+                    ? 'All Tesla Fleet API calls are suspended'
+                    : 'Vehicle data is being polled from Tesla'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => suspendMut.mutate(!settings?.api_suspended)}
+              disabled={suspendMut.isPending}
+              className={clsx(
+                'relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-40',
+                settings?.api_suspended ? 'bg-neon-red/60' : 'bg-neon-green/60'
+              )}
+            >
+              <span className={clsx(
+                'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200',
+                settings?.api_suspended ? 'translate-x-0' : 'translate-x-5'
+              )} />
+            </button>
+          </div>
+
+          {settings?.api_suspended && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-neon-red/5 border border-neon-red/20">
+              <Pause className="h-4 w-4 text-neon-red shrink-0" />
+              <p className="text-xs text-neon-red/80">
+                Polling, commands, and token refresh are paused. Useful when your vehicle is in service. Toggle back on to resume.
+              </p>
+            </div>
+          )}
         </GlassPanel>
       </FadeIn>
 

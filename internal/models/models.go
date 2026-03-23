@@ -166,6 +166,7 @@ type Settings struct {
 	PreferredRange  string  `json:"preferred_range" db:"preferred_range"`     // ideal, rated
 	Language        string  `json:"language" db:"language"`
 	BaseCostPerKWh  float64 `json:"base_cost_per_kwh" db:"base_cost_per_kwh"`
+	APISuspended    bool    `json:"api_suspended" db:"api_suspended"`
 }
 
 // VehicleState represents a snapshot of vehicle state at a point in time.

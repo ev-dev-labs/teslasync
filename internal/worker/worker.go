@@ -37,6 +37,7 @@ type Worker struct {
 	tokenRepo     *database.TokenRepo
 	alertRuleRepo *database.AlertRuleRepo
 	alertRepo     *database.AlertRepo
+	settingsRepo  *database.SettingsRepo
 	teslaClient   *tesla.Client
 	mqttClient    *mqtt.Client
 	eventBus      *events.Bus
@@ -63,6 +64,7 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		tokenRepo:     database.NewTokenRepo(db, enc),
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		alertRepo:     database.NewAlertRepo(db),
+		settingsRepo:  database.NewSettingsRepo(db),
 		teslaClient:   tc,
 		mqttClient:    mc,
 		eventBus:      eb,
@@ -95,9 +97,6 @@ func (w *Worker) Start(ctx context.Context) {
 			log.Info().Msg("worker stopping")
 			return
 
-		case <-refreshTicker.C:
-			w.safeRefreshToken(ctx)
-
 		case <-ticker.C:
 			if !w.teslaClient.HasValidToken() {
 				if err := w.loadTokens(ctx); err != nil {
@@ -105,6 +104,13 @@ func (w *Worker) Start(ctx context.Context) {
 				}
 			}
 			w.safePollAllVehicles(ctx)
+
+		case <-refreshTicker.C:
+			// Skip token refresh when API is suspended
+			if suspended, _ := w.settingsRepo.IsAPISuspended(ctx); suspended {
+				continue
+			}
+			w.safeRefreshToken(ctx)
 		}
 	}
 }
@@ -172,6 +178,14 @@ func (w *Worker) doRefreshToken(ctx context.Context) bool {
 }
 
 func (w *Worker) pollAllVehicles(ctx context.Context) {
+	// Check if Tesla API calls are suspended (e.g., vehicle in service)
+	if suspended, err := w.settingsRepo.IsAPISuspended(ctx); err != nil {
+		log.Warn().Err(err).Msg("failed to check api_suspended setting, continuing")
+	} else if suspended {
+		log.Debug().Msg("Tesla API calls suspended — skipping poll cycle")
+		return
+	}
+
 	vehicles, err := w.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list vehicles for polling")

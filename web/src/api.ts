@@ -118,6 +118,7 @@ export interface AppSettings {
   preferred_range: string
   language: string
   base_cost_per_kwh: number
+  api_suspended: boolean
 }
 
 export interface VehicleState {
@@ -492,6 +493,9 @@ export const deleteGeofence = (id: number) => request<void>(`/geofences/${id}`, 
 export const getSettings = () => request<AppSettings>('/settings')
 /** Persists updated application settings. */
 export const updateSettings = (s: AppSettings) => request<AppSettings>('/settings', { method: 'PUT', body: JSON.stringify(s) })
+/** Toggles the Tesla API suspension flag (blocks all Tesla Fleet API calls). */
+export const toggleAPISuspend = (suspended: boolean) =>
+  request<{ api_suspended: boolean }>('/settings/suspend-api', { method: 'POST', body: JSON.stringify({ suspended }) })
 
 // === Vehicle Commands ===
 /** Sends a command (lock, unlock, climate_on, etc.) to a vehicle. */

@@ -68,3 +68,31 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, s)
 }
+
+// ToggleAPISuspend toggles the api_suspended flag. POST /api/v1/settings/suspend-api
+func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Suspended bool `json:"suspended"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	s, err := h.settingsRepo.Get(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get settings for suspend toggle")
+		writeError(w, http.StatusInternalServerError, "failed to get settings")
+		return
+	}
+	s.APISuspended = body.Suspended
+
+	if err := h.settingsRepo.Upsert(r.Context(), s); err != nil {
+		log.Error().Err(err).Msg("failed to toggle api_suspended")
+		writeError(w, http.StatusInternalServerError, "failed to update api_suspended")
+		return
+	}
+
+	log.Info().Bool("api_suspended", body.Suspended).Msg("Tesla API suspension toggled")
+	writeJSON(w, http.StatusOK, map[string]bool{"api_suspended": body.Suspended})
+}
