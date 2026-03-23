@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -201,16 +202,32 @@ type FleetTelemetryField struct {
 }
 
 // GetPartnerToken obtains a client_credentials token for partner-level API calls.
+// Partner tokens use a separate auth endpoint (fleet-auth) from the user OAuth flow.
 func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
-	data := fmt.Sprintf(
-		"grant_type=client_credentials&client_id=%s&client_secret=%s&scope=openid+vehicle_device_data+vehicle_cmds+vehicle_charging_cmds&audience=%s",
-		c.clientID, c.clientSec, c.baseURL,
-	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL+"/oauth2/v3/token", bytes.NewReader([]byte(data)))
+	// Partner token endpoint is fleet-auth, not auth.tesla.com.
+	// Derive from base URL: https://fleet-api.prd.na.vn.cloud.tesla.com
+	//                     → https://fleet-auth.prd.vn.cloud.tesla.com
+	partnerAuthURL := c.partnerAuthURL()
+
+	formData := url.Values{
+		"grant_type":    {"client_credentials"},
+		"client_id":     {c.clientID},
+		"client_secret": {c.clientSec},
+		"scope":         {"openid vehicle_device_data vehicle_cmds vehicle_charging_cmds"},
+		"audience":      {c.baseURL},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, partnerAuthURL+"/oauth2/v3/token", bytes.NewReader([]byte(formData.Encode())))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	log.Debug().
+		Str("url", partnerAuthURL+"/oauth2/v3/token").
+		Str("client_id", c.clientID).
+		Str("audience", c.baseURL).
+		Msg("requesting partner token")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -230,6 +247,23 @@ func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("decode partner token: %w", err)
 	}
 	return result.AccessToken, nil
+}
+
+// partnerAuthURL derives the fleet-auth URL from the configured base URL.
+// e.g. https://fleet-api.prd.na.vn.cloud.tesla.com → https://fleet-auth.prd.vn.cloud.tesla.com
+// Falls back to https://fleet-auth.prd.vn.cloud.tesla.com if parsing fails.
+func (c *Client) partnerAuthURL() string {
+	// Known mappings
+	regionMap := map[string]string{
+		"https://fleet-api.prd.na.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
+		"https://fleet-api.prd.eu.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
+		"https://fleet-api.prd.cn.vn.cloud.tesla.com": "https://fleet-auth.prd.vn.cloud.tesla.com",
+	}
+	if authURL, ok := regionMap[c.baseURL]; ok {
+		return authURL
+	}
+	// Default fallback
+	return "https://fleet-auth.prd.vn.cloud.tesla.com"
 }
 
 // PairKey pairs the public key with a vehicle for command signing.
