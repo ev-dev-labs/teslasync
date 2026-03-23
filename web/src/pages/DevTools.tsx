@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Wrench, Globe, KeyRound, CheckCircle, XCircle, AlertTriangle,
@@ -6,7 +6,7 @@ import {
   Radio, Settings, Cpu, Car, Key, Clock, FileCode, Link, Braces,
   Fingerprint, Hash, HardDrive, Palette, Timer, Network, BookOpen,
   Regex, Lock, ChevronDown, ChevronRight, Play, RefreshCw,
-  Download, Upload, Trash2, Satellite, Eye, Zap,
+  Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import clsx from 'clsx'
@@ -782,6 +782,350 @@ function FleetStatusTool() {
       </button>
       {result !== null && <ResultPanel title="Fleet Status" data={result} />}
     </ToolCard>
+  )
+}
+
+// ─── Guided Onboarding Workflow ──────────────────────────────────
+
+interface OnboardingStep {
+  id: string
+  title: string
+  description: string
+  external?: boolean
+  link?: string
+  linkLabel?: string
+  note?: string
+  toolId?: 'keypair' | 'register' | 'auth' | 'pair' | 'telemetry'
+}
+
+const ONBOARDING_STEPS: OnboardingStep[] = [
+  {
+    id: 'account',
+    title: 'Create Tesla Account',
+    description: 'Create a Tesla account and ensure it has a verified email and multi-factor authentication enabled.',
+    external: true,
+    link: 'https://developer.tesla.com/teslaaccount',
+    linkLabel: 'Create Account',
+  },
+  {
+    id: 'application',
+    title: 'Create Application',
+    description: 'Request app access on the Tesla Developer Dashboard. Provide business details, application name, description, and purpose. Select the scopes your application needs.',
+    external: true,
+    link: 'https://developer.tesla.com/dashboard',
+    linkLabel: 'Open Developer Dashboard',
+    note: 'Account creation requests can be automatically rejected if the application name already exists.',
+  },
+  {
+    id: 'keypair',
+    title: 'Generate & Host Public Key',
+    description: 'Generate an EC keypair and host the public key at your domain. The key validates domain ownership and is required for Vehicle Commands and Fleet Telemetry.',
+    toolId: 'keypair',
+  },
+  {
+    id: 'register',
+    title: 'Register as Partner',
+    description: 'Generate a partner authentication token (client_credentials) and call the register endpoint to complete registration with Fleet API.',
+    toolId: 'register',
+    note: 'The register call needs to be completed in each region of operation.',
+  },
+  {
+    id: 'auth',
+    title: 'Connect Tesla Account',
+    description: 'Authenticate a user via OAuth to obtain access tokens. This allows TeslaSync to access vehicle data and send commands on behalf of the user.',
+    toolId: 'auth',
+  },
+  {
+    id: 'pair',
+    title: 'Pair Key to Vehicle',
+    description: 'Pair your public key with a vehicle. This is required to send Vehicle Commands and set up Fleet Telemetry. The vehicle owner must approve on the touchscreen.',
+    toolId: 'pair',
+  },
+  {
+    id: 'telemetry',
+    title: 'Configure Fleet Telemetry',
+    description: 'Subscribe vehicles to stream real-time telemetry data directly to your server. Select the data fields you want and the streaming interval.',
+    toolId: 'telemetry',
+  },
+]
+
+type StepStatus = 'pending' | 'completed' | 'active'
+
+function OnboardingWorkflow() {
+  const STORAGE_KEY = 'teslasync-onboarding-progress'
+  const [currentStep, setCurrentStep] = useState(0)
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? new Set(JSON.parse(saved)) : new Set<number>()
+    } catch { return new Set<number>() }
+  })
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...completedSteps]))
+  }, [completedSteps])
+
+  const markComplete = (idx: number) => {
+    setCompletedSteps(prev => new Set([...prev, idx]))
+    if (idx < ONBOARDING_STEPS.length - 1) {
+      setCurrentStep(idx + 1)
+    }
+  }
+  const markIncomplete = (idx: number) => {
+    setCompletedSteps(prev => { const n = new Set(prev); n.delete(idx); return n })
+  }
+  const resetAll = () => { setCompletedSteps(new Set()); setCurrentStep(0) }
+
+  const getStepStatus = (idx: number): StepStatus => {
+    if (completedSteps.has(idx)) return 'completed'
+    if (idx === currentStep) return 'active'
+    return 'pending'
+  }
+
+  const allComplete = ONBOARDING_STEPS.every((_, i) => completedSteps.has(i))
+  const step = ONBOARDING_STEPS[currentStep]
+
+  // Fetch live status checks for auto-detection
+  const { data: keyStatus } = useQuery({ queryKey: ['onboard-key-status'], queryFn: () => apiFetch('public-key-status'), refetchInterval: 30000 })
+  const { data: fleetInfo } = useQuery({ queryKey: ['onboard-fleet-info'], queryFn: () => apiFetch('fleet-api-info'), refetchInterval: 30000 })
+  const { data: authStatus } = useQuery({ queryKey: ['onboard-auth-status'], queryFn: async () => {
+    const res = await fetch('/api/v1/auth/status')
+    return res.json()
+  }, refetchInterval: 30000 })
+
+  return (
+    <div className="space-y-4">
+      {/* Progress bar */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider shrink-0">Progress</span>
+        <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-neon-cyan to-neon-green rounded-full transition-all duration-500"
+            style={{ width: `${(completedSteps.size / ONBOARDING_STEPS.length) * 100}%` }}
+          />
+        </div>
+        <span className="text-[10px] text-[var(--text-muted)] shrink-0">{completedSteps.size}/{ONBOARDING_STEPS.length}</span>
+        {completedSteps.size > 0 && (
+          <button onClick={resetAll} className="text-[10px] text-[var(--text-muted)] hover:text-neon-red ml-1 transition-colors" title="Reset progress">
+            <RefreshCw className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {/* Step indicators */}
+      <div className="flex gap-1">
+        {ONBOARDING_STEPS.map((s, i) => {
+          const status = getStepStatus(i)
+          return (
+            <button
+              key={s.id}
+              onClick={() => setCurrentStep(i)}
+              className={clsx(
+                'flex-1 relative py-2 rounded-lg border transition-all text-center cursor-pointer group',
+                status === 'completed' && 'bg-neon-green/10 border-neon-green/30',
+                status === 'active' && 'bg-neon-cyan/10 border-neon-cyan/40 ring-1 ring-neon-cyan/20',
+                status === 'pending' && 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]',
+              )}
+              title={s.title}
+            >
+              <span className={clsx(
+                'text-[10px] font-bold',
+                status === 'completed' && 'text-neon-green',
+                status === 'active' && 'text-neon-cyan',
+                status === 'pending' && 'text-[var(--text-muted)]',
+              )}>
+                {status === 'completed' ? '✓' : i + 1}
+              </span>
+              <p className={clsx(
+                'text-[8px] mt-0.5 leading-tight hidden sm:block',
+                status === 'completed' && 'text-neon-green/70',
+                status === 'active' && 'text-neon-cyan/70',
+                status === 'pending' && 'text-[var(--text-muted)]',
+              )}>
+                {s.title.replace('Tesla ', '').replace('Create ', '').replace('Configure ', '')}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* All complete banner */}
+      {allComplete && (
+        <div className="p-4 rounded-xl bg-neon-green/10 border border-neon-green/30 flex items-center gap-3">
+          <CheckCircle className="h-5 w-5 text-neon-green shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-neon-green">Setup Complete!</p>
+            <p className="text-xs text-neon-green/70 mt-0.5">
+              Fleet API is fully configured. Your vehicles can now stream telemetry data and receive commands.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Active step detail */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+        {/* Step header */}
+        <div className={clsx(
+          'p-4 border-b',
+          completedSteps.has(currentStep) ? 'border-neon-green/20 bg-neon-green/5' : 'border-white/[0.06]',
+        )}>
+          <div className="flex items-center gap-3">
+            <div className={clsx(
+              'flex h-8 w-8 items-center justify-center rounded-lg shrink-0 font-bold text-sm',
+              completedSteps.has(currentStep)
+                ? 'bg-neon-green/20 text-neon-green ring-1 ring-neon-green/30'
+                : 'bg-neon-cyan/15 text-neon-cyan ring-1 ring-neon-cyan/30',
+            )}>
+              {completedSteps.has(currentStep) ? <CheckCircle className="h-4 w-4" /> : currentStep + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                Step {currentStep + 1}: {step.title}
+              </h3>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{step.description}</p>
+            </div>
+          </div>
+          {step.note && (
+            <div className="mt-3 p-2.5 rounded-lg bg-neon-amber/5 border border-neon-amber/20 flex items-start gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-neon-amber shrink-0 mt-0.5" />
+              <p className="text-[10px] text-neon-amber">{step.note}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Step content */}
+        <div className="p-4">
+          {step.external ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--text-secondary)]">
+                This step is completed on the Tesla Developer Portal.
+              </p>
+              <a
+                href={step.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 glass-button text-xs"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {step.linkLabel}
+              </a>
+            </div>
+          ) : step.toolId === 'keypair' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--text-secondary)]">
+                Use the tool below to generate a keypair. TeslaSync automatically hosts the public key at the required <code className="text-neon-cyan">.well-known</code> path.
+              </p>
+              {keyStatus && !keyStatus.error && keyStatus.fingerprint ? (
+                <div className="p-3 rounded-lg bg-neon-green/5 border border-neon-green/20 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-neon-green shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-neon-green">Public key configured</p>
+                    <p className="text-[10px] text-neon-green/70 font-mono mt-0.5">Fingerprint: {keyStatus.fingerprint}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-neon-amber/5 border border-neon-amber/20 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-neon-amber shrink-0" />
+                  <p className="text-xs text-neon-amber">No public key found. Generate one using the Public Key Setup tool in the Fleet API section below.</p>
+                </div>
+              )}
+              <PublicKeySetupTool />
+            </div>
+          ) : step.toolId === 'register' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--text-secondary)]">
+                Enter your domain to register as a Tesla partner. This obtains a partner token automatically and calls the register endpoint.
+              </p>
+              {fleetInfo && !fleetInfo.error && (
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Current Configuration</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-[var(--text-muted)]">Region:</span> <span className="text-[var(--text-primary)] font-mono">{fleetInfo.base_url || 'Not set'}</span></div>
+                    <div><span className="text-[var(--text-muted)]">Client ID:</span> <span className="text-[var(--text-primary)] font-mono">{fleetInfo.client_id ? '••••' + fleetInfo.client_id.slice(-4) : 'Not set'}</span></div>
+                  </div>
+                </div>
+              )}
+              <PartnerRegistrationTool />
+            </div>
+          ) : step.toolId === 'auth' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--text-secondary)]">
+                Connect a Tesla account via OAuth. This grants TeslaSync permission to access vehicle data and send commands.
+              </p>
+              {authStatus && authStatus.authenticated ? (
+                <div className="p-3 rounded-lg bg-neon-green/5 border border-neon-green/20 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-neon-green shrink-0" />
+                  <p className="text-xs text-neon-green font-semibold">Tesla account connected</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-3 rounded-lg bg-neon-amber/5 border border-neon-amber/20 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-neon-amber shrink-0" />
+                    <p className="text-xs text-neon-amber">No Tesla account connected.</p>
+                  </div>
+                  <a href="/api/v1/auth/login" className="inline-flex items-center gap-2 glass-button text-xs">
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Connect Tesla Account
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : step.toolId === 'pair' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--text-secondary)]">
+                Select a vehicle and pair your public key. The vehicle owner must approve on the car&apos;s touchscreen after pairing.
+              </p>
+              <VehicleKeyPairingTool />
+            </div>
+          ) : step.toolId === 'telemetry' ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--text-secondary)]">
+                Configure your vehicles to stream real-time telemetry data. Select vehicles, data fields, and your telemetry server hostname.
+              </p>
+              <FleetTelemetrySubscribeTool />
+            </div>
+          ) : null}
+        </div>
+
+        {/* Step actions footer */}
+        <div className="p-4 border-t border-white/[0.06] flex items-center justify-between">
+          <button
+            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            disabled={currentStep === 0}
+            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Previous
+          </button>
+
+          <div className="flex items-center gap-2">
+            {completedSteps.has(currentStep) ? (
+              <button
+                onClick={() => markIncomplete(currentStep)}
+                className="text-xs text-[var(--text-muted)] hover:text-neon-amber transition-colors flex items-center gap-1.5"
+              >
+                <RefreshCw className="h-3 w-3" /> Mark Incomplete
+              </button>
+            ) : (
+              <button
+                onClick={() => markComplete(currentStep)}
+                className="glass-button text-xs flex items-center gap-1.5"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                Mark Complete {currentStep < ONBOARDING_STEPS.length - 1 ? '& Continue' : ''}
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setCurrentStep(Math.min(ONBOARDING_STEPS.length - 1, currentStep + 1))}
+            disabled={currentStep === ONBOARDING_STEPS.length - 1}
+            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
+          >
+            Next <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1672,6 +2016,7 @@ function ClientUtilitiesSection() {
 
 export default function DevTools() {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    workflow: true,
     fleet: true,
     infra: false,
     client: true,
@@ -1685,8 +2030,27 @@ export default function DevTools() {
         subtitle="Tesla Fleet API utilities, infrastructure diagnostics, and client-side developer tools"
       />
 
-      {/* Section 1: Tesla Fleet API */}
+      {/* Section 0: Guided Onboarding Workflow */}
       <FadeIn>
+        <GlassPanel className="overflow-hidden">
+          <SectionHeader
+            icon={ListChecks}
+            color="cyan"
+            title="Fleet API Setup Wizard"
+            subtitle="Step-by-step guided workflow to onboard with Tesla Fleet API"
+            isOpen={!!openSections.workflow}
+            onToggle={() => toggle('workflow')}
+          />
+          {openSections.workflow && (
+            <div className="p-4 pt-0">
+              <OnboardingWorkflow />
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Section 1: Tesla Fleet API */}
+      <FadeIn delay={0.05}>
         <GlassPanel className="overflow-hidden">
           <SectionHeader
             icon={Wrench}
