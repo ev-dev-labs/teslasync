@@ -173,7 +173,7 @@ export default function Compare() {
     return (
       <div className="space-y-6">
         <PageHeader title="Compare Vehicles" subtitle="Select 2-3 vehicles to compare side by side" />
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64 sm:h-96" />
       </div>
     )
   }
@@ -237,7 +237,7 @@ export default function Compare() {
 
       {/* Comparison table */}
       {selected.length >= 2 && !isDataReady && (
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64 sm:h-96" />
       )}
 
       {isDataReady && rows.length > 0 && (

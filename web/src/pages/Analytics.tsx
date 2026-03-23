@@ -171,7 +171,7 @@ export default function Analytics() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-80" />)}
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-56 sm:h-80" />)}
         </div>
       ) : comparison.length === 0 ? (
         <EmptyState icon={<BarChart3 className="h-8 w-8" />} title="No analytics data yet" description="Drive and charge your vehicles to see fleet analytics." />

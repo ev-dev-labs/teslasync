@@ -328,7 +328,7 @@ export default function Geofences() {
       </AnimatePresence>
 
       {isLoading ? (
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64 sm:h-96" />
       ) : view === 'map' ? (
         <FadeIn>
           <GlassPanel className="p-0 overflow-hidden" style={{ height: 'min(500px, 60vh)' }}>

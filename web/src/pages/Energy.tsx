@@ -167,7 +167,7 @@ export default function Energy() {
       </StaggerContainer>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><Skeleton className="h-56 sm:h-80" /><Skeleton className="h-56 sm:h-80" /></div>
       ) : (
         <>
           {/* Cost vs Gas Savings */}

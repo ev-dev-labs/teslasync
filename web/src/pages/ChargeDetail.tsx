@@ -66,7 +66,7 @@ export default function ChargeDetail() {
         </div>
         <Skeleton className="h-48" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80" /><Skeleton className="h-80" />
+          <Skeleton className="h-56 sm:h-80" /><Skeleton className="h-56 sm:h-80" />
         </div>
       </div>
     )
