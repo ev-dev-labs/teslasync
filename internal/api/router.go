@@ -2,6 +2,9 @@ package api
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -250,7 +253,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/system", func(r chi.Router) {
 			r.Get("/status", SystemStatusHandler(db, teslaClient, mqttClient, health, cfg))
 			r.Get("/health", ExtendedHealthCheck(db, health))
-			r.Get("/api-usage", APIUsageHandler())
+			r.Get("/api-usage", APIUsageHandler(db))
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)
@@ -312,20 +315,41 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Get("/.well-known/appspecific/com.tesla.3p.public-key.pem", devToolsHandler.ServePublicKey)
 
 	// Serve frontend static files (SPA)
-	fileServer(r, "/", http.Dir("./web/dist"))
+	// Static assets found on disk are served directly; all other GET
+	// requests fall back to index.html for client-side routing.
+	staticDir := "./web/dist"
+	fs := http.FileServer(http.Dir(staticDir))
+	r.NotFound(spaFallback(staticDir, fs))
 
 	return r
 }
 
-// fileServer serves static files from the given directory.
-func fileServer(r chi.Router, path string, root http.FileSystem) {
-	fs := http.StripPrefix(path, http.FileServer(root))
-	r.Get(path+"*", func(w http.ResponseWriter, r *http.Request) {
-		if _, err := root.Open(r.URL.Path); err != nil {
-			// Serve index.html for SPA routing
-			http.ServeFile(w, r, "./web/dist/index.html")
+// spaFallback returns an http.Handler that serves static files from dir
+// and falls back to index.html for paths that don't match a file on disk.
+// This enables client-side routing so that direct navigation or page
+// reload on paths like /api-logs works correctly.
+func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only serve SPA fallback for GET requests
+		if r.Method != http.MethodGet {
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		fs.ServeHTTP(w, r)
-	})
+
+		// Don't intercept API paths — let them 404 naturally
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+
+		// If the file exists on disk, serve it directly
+		path := filepath.Join(dir, filepath.Clean(r.URL.Path))
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		// SPA fallback — serve index.html for client-side routing
+		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
+	}
 }
