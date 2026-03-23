@@ -29,7 +29,7 @@ export default function Settings() {
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
-  const { themeId, modeId, setTheme, setMode, themes: allThemes, modes: allModes } = useTheme()
+  const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
   const toast = useToast()
 
   const [form, setForm] = useState<AppSettings>({
@@ -40,6 +40,8 @@ export default function Settings() {
     base_cost_per_kwh: 0.12,
   })
   const [saved, setSaved] = useState(false)
+  const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
+  const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || '#e63946')
 
   useEffect(() => {
     if (settings) setForm(settings)
@@ -357,8 +359,8 @@ export default function Settings() {
           {/* Accent Color */}
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Accent Color</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {Object.values(allThemes).map(t => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {Object.values(allThemes).filter(t => t.id !== 'custom').map(t => (
                 <button
                   key={t.id}
                   onClick={() => { setTheme(t.id as ThemeId); toast.info(`Theme: ${t.name}`) }}
@@ -389,7 +391,73 @@ export default function Settings() {
                   )}
                 </button>
               ))}
+
+              {/* Custom color picker card */}
+              <button
+                onClick={() => { setCustomColors(customPrimary, customAccent); toast.info('Theme: Custom') }}
+                className={clsx(
+                  'group relative rounded-xl border p-4 text-left transition-all duration-200',
+                  themeId === 'custom'
+                    ? 'bg-[var(--surface-3)]'
+                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)]'
+                )}
+                style={{ borderColor: themeId === 'custom' ? customPrimary : 'var(--glass-border)' }}
+              >
+                <div
+                  className="h-6 w-6 rounded-full mb-3"
+                  style={{
+                    background: `linear-gradient(135deg, ${customPrimary}, ${customAccent})`,
+                    boxShadow: themeId === 'custom' ? `0 0 12px ${customPrimary}` : 'none',
+                  }}
+                />
+                <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>Custom</p>
+                {themeId === 'custom' && (
+                  <motion.div
+                    layoutId="theme-check"
+                    className="absolute top-2.5 right-2.5"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.3 }}
+                  >
+                    <CheckCircle className="h-4 w-4" style={{ color: customPrimary }} />
+                  </motion.div>
+                )}
+              </button>
             </div>
+
+            {/* Custom color pickers — shown when custom theme is active */}
+            <AnimatePresence>
+              {themeId === 'custom' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-wrap gap-6 mt-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--glass-border)]">
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Primary</label>
+                      <input
+                        type="color"
+                        value={customPrimary}
+                        onChange={e => { setCustomPrimary(e.target.value); setCustomColors(e.target.value, customAccent) }}
+                        className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer"
+                      />
+                      <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{customPrimary}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Accent</label>
+                      <input
+                        type="color"
+                        value={customAccent}
+                        onChange={e => { setCustomAccent(e.target.value); setCustomColors(customPrimary, e.target.value) }}
+                        className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer"
+                      />
+                      <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{customAccent}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </GlassPanel>
       </FadeIn>

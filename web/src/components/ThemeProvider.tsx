@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
-export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber'
+export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight'
 
 interface ColorTheme {
@@ -24,6 +24,33 @@ interface ModeTheme {
   textSecondary: string
   textMuted: string
   colorScheme: 'dark' | 'light'
+}
+
+function hexToRGB(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `${r}, ${g}, ${b}`
+}
+
+const defaultCustomPrimary = '#00b4d8'
+const defaultCustomAccent = '#e63946'
+
+function loadCustomColors(): { primary: string; accent: string } {
+  const p = localStorage.getItem('teslasync-custom-primary') || defaultCustomPrimary
+  const a = localStorage.getItem('teslasync-custom-accent') || defaultCustomAccent
+  return { primary: p, accent: a }
+}
+
+function buildCustomTheme(primary: string, accent: string): ColorTheme {
+  return {
+    id: 'custom',
+    name: 'Custom',
+    primary,
+    primaryRGB: hexToRGB(primary),
+    accent,
+    accentRGB: hexToRGB(accent),
+  }
 }
 
 const themes: Record<ThemeId, ColorTheme> = {
@@ -67,6 +94,7 @@ const themes: Record<ThemeId, ColorTheme> = {
     accent: '#d97706',
     accentRGB: '217, 119, 6',
   },
+  'custom': buildCustomTheme(loadCustomColors().primary, loadCustomColors().accent),
 }
 
 const modes: Record<ModeId, ModeTheme> = {
@@ -131,6 +159,7 @@ interface ThemeContextValue {
   mode: ModeTheme
   setTheme: (id: ThemeId) => void
   setMode: (id: ModeId) => void
+  setCustomColors: (primary: string, accent: string) => void
   themes: typeof themes
   modes: typeof modes
 }
@@ -174,7 +203,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return (saved && saved in modes) ? saved as ModeId : 'dark'
   })
 
-  const theme = themes[themeId]
+  const [customColors, setCustomColorsState] = useState(loadCustomColors)
+
+  const currentThemes = { ...themes, custom: buildCustomTheme(customColors.primary, customColors.accent) }
+  const theme = currentThemes[themeId]
   const mode = modes[modeId]
 
   useEffect(() => {
@@ -186,8 +218,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (id: ThemeId) => setThemeId(id)
   const setMode = (id: ModeId) => setModeId(id)
 
+  const setCustomColors = (primary: string, accent: string) => {
+    localStorage.setItem('teslasync-custom-primary', primary)
+    localStorage.setItem('teslasync-custom-accent', accent)
+    setCustomColorsState({ primary, accent })
+    setThemeId('custom')
+  }
+
   return (
-    <ThemeContext.Provider value={{ themeId, modeId, theme, mode, setTheme, setMode, themes, modes }}>
+    <ThemeContext.Provider value={{ themeId, modeId, theme, mode, setTheme, setMode, setCustomColors, themes: currentThemes, modes }}>
       {children}
     </ThemeContext.Provider>
   )
