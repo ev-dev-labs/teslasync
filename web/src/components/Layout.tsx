@@ -32,7 +32,7 @@ import {
   FileText,
   Wrench,
 } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -146,14 +146,13 @@ const navSections = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const [now, setNow] = useState(Date.now())
   const { t } = useTranslation()
 
   // SSE connection status
   const { connected: sseConnected } = useRealtimeEvents()
 
   // Version info
-  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: Infinity })
+  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: 60_000, refetchInterval: 60_000 })
   const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: checkForUpdates, staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
@@ -170,14 +169,15 @@ export default function Layout() {
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
   const isConnected = !!primaryState?.live
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 60_000)
-    return () => clearInterval(t)
-  }, [])
-
-  const uptimeStr = (() => {
-    const d = Math.floor((now - (Date.parse('2024-01-01') || now)) / 86400000)
-    return d > 0 ? `${d}d uptime` : 'Online'
+  const uptimeStr= (() => {
+    const secs = versionInfo?.uptime_seconds
+    if (!secs || secs <= 0) return 'Online'
+    const d = Math.floor(secs / 86400)
+    const h = Math.floor((secs % 86400) / 3600)
+    const m = Math.floor((secs % 3600) / 60)
+    if (d > 0) return `${d}d ${h}h uptime`
+    if (h > 0) return `${h}h ${m}m uptime`
+    return `${m}m uptime`
   })()
 
   const mainRef = useRef<HTMLElement>(null)
