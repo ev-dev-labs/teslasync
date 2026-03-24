@@ -10,17 +10,20 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
 
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
 type TelemetryHandler struct {
-	db         *database.DB
-	posRepo    *database.PositionRepo
-	mqttClient *mqtt.Client
-	logRepo    *database.APICallLogRepo
-	eventHub   *EventHub
+	db             *database.DB
+	posRepo        *database.PositionRepo
+	mqttClient     *mqtt.Client
+	logRepo        *database.APICallLogRepo
+	eventHub       *EventHub
+	sessionTracker *TelemetrySessionTracker
+	alertEvaluator *TelemetryAlertEvaluator
 
 	// Per-vehicle streaming health tracking
 	mu             sync.RWMutex
@@ -37,12 +40,20 @@ type VehicleStreamState struct {
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
 func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub) *TelemetryHandler {
+	var eventBus *events.Bus
+	if mc != nil {
+		eventBus = events.NewBus(mc.Underlying())
+	} else {
+		eventBus = events.NewBus(nil)
+	}
 	return &TelemetryHandler{
 		db:             db,
 		posRepo:        database.NewPositionRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus),
+		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
 		streamingState: make(map[string]*VehicleStreamState),
 	}
 }
@@ -173,6 +184,12 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 	state.SignalCount += int64(len(signals))
 	state.IsStreaming = true
 	h.mu.Unlock()
+
+	// Drive/charge session detection from streaming signals
+	if vehicleID > 0 {
+		h.sessionTracker.ProcessSignals(r.Context(), vehicleID, payload.VIN, signals)
+		h.alertEvaluator.Evaluate(r.Context(), vehicleID, payload.VIN, signals)
+	}
 
 	// Log the ingest (sampled — only log every 100th to avoid flooding)
 	if state.SignalCount%100 == 0 {
