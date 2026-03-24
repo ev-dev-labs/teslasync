@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { WifiOff, AlertTriangle } from 'lucide-react'
+import { WifiOff, AlertTriangle, X } from 'lucide-react'
 import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../lib/resilience'
 
 export function ServiceStatusBanner() {
   const [connStatus, setConnStatus] = useState<string>(getConnectionStatus())
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    return onStatusChange((s) => setConnStatus(s))
+    return onStatusChange((s) => {
+      setConnStatus(s)
+      // Auto-show banner again when status changes
+      if (s !== 'online') setDismissed(false)
+    })
   }, [])
 
   // Poll system status every 60s (only when online)
@@ -24,7 +29,7 @@ export function ServiceStatusBanner() {
   const isOffline = connStatus === 'offline'
   const isUnhealthy = sysStatus?.overall === 'unhealthy'
 
-  const show = isOffline || isDegraded || isUnhealthy
+  const show = (isOffline || isDegraded || isUnhealthy) && !dismissed
 
   return (
     <AnimatePresence>
@@ -37,7 +42,7 @@ export function ServiceStatusBanner() {
           className="overflow-hidden"
         >
           <div
-            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium"
+            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium relative"
             style={{
               background: isOffline
                 ? 'rgba(239,68,68,0.15)'
@@ -66,6 +71,15 @@ export function ServiceStatusBanner() {
                 <AlertTriangle className="h-3.5 w-3.5" />
                 <span>Running in degraded mode. Some services may respond slowly.</span>
               </>
+            )}
+            {!isOffline && (
+              <button
+                onClick={() => setDismissed(true)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="h-3 w-3" />
+              </button>
             )}
           </div>
         </motion.div>

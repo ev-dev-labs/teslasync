@@ -48,6 +48,9 @@ spec:
               port: health
             initialDelaySeconds: 5
             periodSeconds: 10
+          env:
+            - name: HEALTH_PORT
+              value: "8081"
           envFrom:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}
