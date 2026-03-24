@@ -83,6 +83,20 @@ func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]models.E
 	return jobs, nil
 }
 
+// UpdateStatusAtomic atomically claims a job by updating its status only if it
+// currently has the expected status. Returns true if the update was applied.
+// This prevents duplicate processing when multiple workers subscribe to MQTT.
+func (r *ExportJobRepo) UpdateStatusAtomic(ctx context.Context, id string, fromStatus, toStatus string) (bool, error) {
+	tag, err := r.db.Pool.Exec(ctx, `
+		UPDATE export_jobs SET status = $2, updated_at = $3
+		WHERE id = $1 AND status = $4`,
+		id, toStatus, time.Now().UTC(), fromStatus)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 // UpdateStatus updates the status of a job.
 func (r *ExportJobRepo) UpdateStatus(ctx context.Context, id string, status string) error {
 	_, err := r.db.Pool.Exec(ctx, `

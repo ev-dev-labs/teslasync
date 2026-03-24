@@ -74,14 +74,20 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	// Parse optional date range
 	var startDate, endDate *time.Time
 	if req.Start != "" {
-		if t, err := time.Parse("2006-01-02", req.Start); err == nil {
-			startDate = &t
+		t, err := time.Parse("2006-01-02", req.Start)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid start date format (expected YYYY-MM-DD)")
+			return
 		}
+		startDate = &t
 	}
 	if req.End != "" {
-		if t, err := time.Parse("2006-01-02", req.End); err == nil {
-			endDate = &t
+		t, err := time.Parse("2006-01-02", req.End)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid end date format (expected YYYY-MM-DD)")
+			return
 		}
+		endDate = &t
 	}
 
 	// Generate job ID

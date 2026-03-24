@@ -908,5 +908,10 @@ export const submitImportJob = (type: 'import_drives' | 'import_charging', file:
   const formData = new FormData()
   formData.append('type', type)
   formData.append('file', file)
-  return request<ExportJobSubmitResponse>('/export/jobs/import', { method: 'POST', body: formData })
+  // Override Content-Type to let browser set multipart/form-data with boundary
+  return request<ExportJobSubmitResponse>('/export/jobs/import', {
+    method: 'POST',
+    body: formData,
+    headers: {},
+  })
 }

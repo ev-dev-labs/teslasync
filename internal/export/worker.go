@@ -83,9 +83,14 @@ func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
 	startTime := time.Now()
 	log.Info().Str("job_id", req.JobID).Str("type", req.Type).Str("format", req.Format).Msg("export worker: processing job")
 
-	// Mark as processing
-	if err := w.repo.UpdateStatus(ctx, req.JobID, string(StatusProcessing)); err != nil {
-		log.Error().Err(err).Str("job_id", req.JobID).Msg("export worker: failed to update status")
+	// Atomically claim the job — prevents duplicate processing with multiple workers
+	claimed, err := w.repo.UpdateStatusAtomic(ctx, req.JobID, string(StatusQueued), string(StatusProcessing))
+	if err != nil {
+		log.Error().Err(err).Str("job_id", req.JobID).Msg("export worker: failed to claim job")
+		return
+	}
+	if !claimed {
+		log.Debug().Str("job_id", req.JobID).Msg("export worker: job already claimed by another worker")
 		return
 	}
 	w.publishStatusEvent(req.JobID, string(StatusProcessing), req.Type, "", 0)

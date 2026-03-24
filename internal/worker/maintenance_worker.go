@@ -191,6 +191,9 @@ func ensurePartitions(ctx context.Context, db *database.DB) error {
 
 			if _, err := db.Pool.Exec(ctx, query); err != nil {
 				log.Warn().Err(err).Str("table", t).Str("partition", partName).Msg("failed to create partition")
+				if monthOffset == 0 {
+					return fmt.Errorf("failed to create current month partition %s: %w", partName, err)
+				}
 			}
 		}
 	}
