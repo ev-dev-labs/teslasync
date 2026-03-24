@@ -14,9 +14,10 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/sony/gobreaker"
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"golang.org/x/time/rate"
 )
 
-// Client is a resilient Tesla Fleet API client with circuit breaker.
+// Client is a resilient Tesla Fleet API client with circuit breaker and rate limiter.
 type Client struct {
 	httpClient  *http.Client
 	baseURL     string
@@ -25,6 +26,7 @@ type Client struct {
 	clientSec   string
 	redirectURI string
 	cb          *gobreaker.CircuitBreaker
+	limiter     *rate.Limiter
 
 	mu          sync.RWMutex
 	accessToken string
@@ -52,14 +54,20 @@ func NewClient(cfg config.TeslaConfig) *Client {
 		},
 	}
 
+	// Rate limiter: ~10 requests/second with burst of 5.
+	// Tesla allows 200 req/10min for vehicle_data endpoints but some
+	// endpoints have lower limits. This keeps us well within budget.
+	limiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 5)
+
 	return &Client{
-		httpClient: &http.Client{Timeout: cfg.Timeout},
-		baseURL:    cfg.BaseURL,
-		authURL:    cfg.AuthURL,
-		clientID:   cfg.ClientID,
-		clientSec:  cfg.ClientSecret,
+		httpClient:  &http.Client{Timeout: cfg.Timeout},
+		baseURL:     cfg.BaseURL,
+		authURL:     cfg.AuthURL,
+		clientID:    cfg.ClientID,
+		clientSec:   cfg.ClientSecret,
 		redirectURI: cfg.RedirectURI,
-		cb:         gobreaker.NewCircuitBreaker(cbSettings),
+		cb:          gobreaker.NewCircuitBreaker(cbSettings),
+		limiter:     limiter,
 	}
 }
 
@@ -278,6 +286,11 @@ var ErrRateLimited = fmt.Errorf("rate limited (429): too many requests")
 
 // doRequest performs an authenticated API request through the circuit breaker.
 func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
+	// Rate limit all Tesla API calls
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, 0, fmt.Errorf("rate limiter: %w", err)
+	}
+
 	url := c.baseURL + path
 	start := time.Now()
 
@@ -368,6 +381,10 @@ type apiResponse struct {
 // doRequestWithToken performs an API request using a custom bearer token (e.g. partner token)
 // instead of the stored user access token. Runs through the circuit breaker and logging.
 func (c *Client) doRequestWithToken(ctx context.Context, method, path string, body io.Reader, token string) ([]byte, int, error) {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, 0, fmt.Errorf("rate limiter: %w", err)
+	}
+
 	url := c.baseURL + path
 	start := time.Now()
 
