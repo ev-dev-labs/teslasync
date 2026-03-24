@@ -1,6 +1,6 @@
 module github.com/ev-dev-labs/teslasync
 
-go 1.25.0
+go 1.24.0
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.3
@@ -13,7 +13,7 @@ require (
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rs/zerolog v1.32.0
 	github.com/sony/gobreaker v0.5.0
-	golang.org/x/time v0.15.0
+	golang.org/x/time v0.12.0
 )
 
 require (
