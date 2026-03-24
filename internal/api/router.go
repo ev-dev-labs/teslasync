@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -334,6 +335,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	fs := http.FileServer(http.Dir(staticDir))
 	r.NotFound(spaFallback(staticDir, fs))
+
+	// Subscribe to export status events from the export worker and relay via SSE
+	if mqttClient != nil {
+		mqttClient.Underlying().Subscribe("teslasync/events/export.status", 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			var evt map[string]interface{}
+			if err := json.Unmarshal(msg.Payload(), &evt); err != nil {
+				return
+			}
+			eventHub.Broadcast("export_status", evt)
+		})
+	}
 
 	return r
 }

@@ -16,8 +16,9 @@ import (
 // Worker subscribes to the internal MQTT export topic and processes
 // export jobs asynchronously with retry logic.
 type Worker struct {
-	repo      *database.ExportJobRepo
-	processor *Processor
+	repo       *database.ExportJobRepo
+	processor  *Processor
+	mqttClient pahomqtt.Client
 }
 
 // NewWorker creates an export worker.
@@ -35,6 +36,7 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 		log.Warn().Msg("export worker: MQTT not available")
 		return
 	}
+	w.mqttClient = mqttClient
 
 	var subscribed bool
 	for attempt := 1; attempt <= 10; attempt++ {
@@ -86,6 +88,7 @@ func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
 		log.Error().Err(err).Str("job_id", req.JobID).Msg("export worker: failed to update status")
 		return
 	}
+	w.publishStatusEvent(req.JobID, string(StatusProcessing), req.Type, "", 0)
 
 	// Process the export
 	result, err := w.processor.Process(ctx, req)
@@ -94,6 +97,7 @@ func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
 		if failErr := w.repo.Fail(ctx, req.JobID, err.Error()); failErr != nil {
 			log.Error().Err(failErr).Str("job_id", req.JobID).Msg("export worker: failed to mark as failed")
 		}
+		w.publishStatusEvent(req.JobID, string(StatusFailed), req.Type, err.Error(), 0)
 		return
 	}
 
@@ -103,6 +107,7 @@ func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
 		if failErr := w.repo.Fail(ctx, req.JobID, "failed to store result: "+err.Error()); failErr != nil {
 			log.Error().Err(failErr).Str("job_id", req.JobID).Msg("export worker: failed to mark as failed")
 		}
+		w.publishStatusEvent(req.JobID, string(StatusFailed), req.Type, "failed to store result", 0)
 		return
 	}
 
@@ -115,6 +120,35 @@ func (w *Worker) processJob(ctx context.Context, req *models.ExportJobRequest) {
 		Int64("size_bytes", int64(len(result.Data))).
 		Dur("elapsed", elapsed).
 		Msg("export worker: job completed")
+
+	w.publishStatusEvent(req.JobID, string(StatusReady), req.Type, "", result.RecordCount)
+}
+
+// StatusEvent is published to MQTT when an export job changes status.
+// The API server subscribes to this topic and broadcasts via SSE.
+const StatusTopic = "teslasync/events/export.status"
+
+// publishStatusEvent sends a status change event via MQTT for SSE relay.
+func (w *Worker) publishStatusEvent(jobID, status, jobType, errMsg string, recordCount int) {
+	if w.mqttClient == nil || !w.mqttClient.IsConnected() {
+		return
+	}
+	evt := map[string]interface{}{
+		"job_id":       jobID,
+		"status":       status,
+		"type":         jobType,
+		"record_count": recordCount,
+		"timestamp":    time.Now().UTC(),
+	}
+	if errMsg != "" {
+		evt["error"] = errMsg
+	}
+	data, err := json.Marshal(evt)
+	if err != nil {
+		return
+	}
+	token := w.mqttClient.Publish(StatusTopic, 1, false, data)
+	token.WaitTimeout(2 * time.Second)
 }
 
 // Publish sends an export job request to the MQTT topic for async processing.

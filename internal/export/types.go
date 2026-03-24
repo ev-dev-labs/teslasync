@@ -25,4 +25,7 @@ const (
 	TypeDrives   JobType = "drives"
 	TypeCharging JobType = "charging"
 	TypeBackup   JobType = "backup"
+	TypeAnalytics JobType = "analytics"
+	TypeImportDrives   JobType = "import_drives"
+	TypeImportCharging JobType = "import_charging"
 )
