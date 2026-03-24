@@ -56,8 +56,45 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     depends_on:
-      teslasync-api:
+      teslasync:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+      args:
+        VERSION: ${VERSION:-dev}
+    container_name: teslasync-notification-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER:-teslasync}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
+      - DATABASE_NAME=${POSTGRES_DB:-teslasync}
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - HEALTH_PORT=8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -214,7 +251,7 @@ services:
       - ${FLEET_TELEMETRY_TLS_CERT:-./certs/server.crt}:/certs/server.crt:ro
       - ${FLEET_TELEMETRY_TLS_KEY:-./certs/server.key}:/certs/server.key:ro
     depends_on:
-      teslasync-api:
+      teslasync:
         condition: service_healthy
     deploy:
       resources:

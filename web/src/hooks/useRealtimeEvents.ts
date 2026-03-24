@@ -3,6 +3,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 interface SSEOptions {
   onVehicleUpdate?: (data: unknown) => void
   onAlert?: (data: unknown) => void
+  onExportStatus?: (data: unknown) => void
   onConnected?: (clientId: string) => void
   onDisconnected?: () => void
   enabled?: boolean
@@ -14,11 +15,14 @@ interface SSEOptions {
  * exponential backoff (up to 30s) on connection failure.
  */
 export function useRealtimeEvents(options: SSEOptions = {}) {
-  const { enabled = true, onVehicleUpdate, onAlert, onConnected, onDisconnected } = options
+  const { enabled = true } = options
   const [connected, setConnected] = useState(false)
   const sourceRef = useRef<EventSource | null>(null)
   const reconnectTimer = useRef<number>(undefined)
   const backoffRef = useRef(1000) // start at 1s, max 30s
+  // Store callbacks in refs to avoid re-creating the connect function on every render
+  const callbacksRef = useRef(options)
+  callbacksRef.current = options
 
   const connect = useCallback(() => {
     if (sourceRef.current) {
@@ -32,17 +36,22 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
       setConnected(true)
       backoffRef.current = 1000 // reset backoff on successful connection
       const data = JSON.parse(e.data)
-      onConnected?.(data.client_id)
+      callbacksRef.current.onConnected?.(data.client_id)
     })
 
     source.addEventListener('vehicle_update', (e) => {
       const data = JSON.parse(e.data)
-      onVehicleUpdate?.(data)
+      callbacksRef.current.onVehicleUpdate?.(data)
     })
 
     source.addEventListener('alert', (e) => {
       const data = JSON.parse(e.data)
-      onAlert?.(data)
+      callbacksRef.current.onAlert?.(data)
+    })
+
+    source.addEventListener('export_status', (e) => {
+      const data = JSON.parse(e.data)
+      callbacksRef.current.onExportStatus?.(data)
     })
 
     source.addEventListener('heartbeat', () => {
@@ -51,7 +60,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
 
     source.onerror = () => {
       setConnected(false)
-      onDisconnected?.()
+      callbacksRef.current.onDisconnected?.()
       source.close()
       sourceRef.current = null
       // Exponential backoff with jitter, capped at 30s
@@ -60,7 +69,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
       backoffRef.current = Math.min(backoffRef.current * 2, 30_000)
       reconnectTimer.current = window.setTimeout(connect, delay)
     }
-  }, [onVehicleUpdate, onAlert, onConnected, onDisconnected])
+  }, []) // No dependencies — uses callbacksRef for stable reference
 
   useEffect(() => {
     if (!enabled) return

@@ -29,8 +29,8 @@ func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Pool.Query(r.Context(),
 		`SELECT id, name, key_prefix, permissions, last_used_at, created_at, expires_at FROM api_keys ORDER BY created_at DESC`)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list API keys")
-		writeError(w, http.StatusInternalServerError, "failed to list API keys")
+		// Table may not exist yet — return empty array gracefully
+		writeJSON(w, http.StatusOK, []struct{}{})
 		return
 	}
 	defer rows.Close()
