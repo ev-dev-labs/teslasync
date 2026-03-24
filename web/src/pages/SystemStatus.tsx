@@ -208,7 +208,7 @@ function ComponentHealthPanel() {
   const { data: health, isLoading } = useQuery<ExtendedHealthResponse>({
     queryKey: ['extended-health'],
     queryFn: getExtendedHealth,
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
   })
 
   if (isLoading || !health) {
@@ -350,7 +350,7 @@ function APIUsageDashboard() {
   const { data: usage, isLoading } = useQuery<APIUsage>({
     queryKey: ['api-usage'],
     queryFn: getAPIUsage,
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
   })
 
   if (isLoading || !usage) {
@@ -671,7 +671,7 @@ export default function SystemStatus() {
       }
       return res.json()
     },
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
   })
 
   // Also fetch healthz and readyz for additional details
@@ -681,7 +681,7 @@ export default function SystemStatus() {
       const res = await fetch(`${getApiBase()}/healthz`)
       return { ok: res.ok, status: res.status }
     },
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
   })
 
   const { data: readyz } = useQuery({
@@ -691,7 +691,7 @@ export default function SystemStatus() {
       const body = await res.json().catch(() => ({}))
       return { ok: res.ok, status: res.status, body }
     },
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
   })
 
   const { data: version } = useQuery({

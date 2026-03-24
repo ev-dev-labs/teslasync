@@ -130,9 +130,11 @@ func main() {
 			s := callErr.Error()
 			logEntry.Error = &s
 		}
-		if err := apiLogRepo.Create(context.Background(), logEntry); err != nil {
+		logCtx, logCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := apiLogRepo.Create(logCtx, logEntry); err != nil {
 			log.Error().Err(err).Msg("failed to log API call")
 		}
+		logCancel()
 	})
 
 	// Worker (vehicle poller) — runs in a self-healing goroutine

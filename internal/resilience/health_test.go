@@ -21,7 +21,8 @@ func TestOverallStatusSkipsUnknown(t *testing.T) {
 		t.Errorf("OverallStatus() with one healthy, rest unknown = %v, want healthy", status)
 	}
 
-	// Mark one as degraded (needs >= 2 consecutive failures)
+	// Mark one as degraded (needs >= 3 consecutive failures)
+	hm.RecordFailure("tesla_api", nil)
 	hm.RecordFailure("tesla_api", nil)
 	hm.RecordFailure("tesla_api", nil)
 	if status := hm.OverallStatus(); status != StatusDegraded {

@@ -163,7 +163,7 @@ export default function Layout() {
     queryKey: ['primary-state-sidebar', primaryVehicle?.id],
     queryFn: () => getVehicleState(primaryVehicle!.id),
     enabled: !!primaryVehicle,
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
   })
   const unreadAlerts = alerts?.filter(a => !a.read).length ?? 0
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0

@@ -98,9 +98,9 @@ func (hm *HealthMonitor) RecordFailure(name string, err error) {
 	if err != nil {
 		c.LastError = err.Error()
 	}
-	if c.ConsecFails >= 5 {
+	if c.ConsecFails >= 10 {
 		c.Status = StatusUnhealthy
-	} else if c.ConsecFails >= 2 {
+	} else if c.ConsecFails >= 3 {
 		c.Status = StatusDegraded
 	}
 }

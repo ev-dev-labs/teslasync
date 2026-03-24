@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -56,7 +57,23 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 
 // SystemStatusHandler returns detailed system health for the frontend resilience dashboard.
 func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Client, health *resilience.HealthMonitor, cfg *config.Config) http.HandlerFunc {
+	var (
+		cacheMu   sync.Mutex
+		cached    map[string]interface{}
+		cachedAt  time.Time
+		cacheTTL  = 10 * time.Second
+	)
+
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Serve cached result if fresh
+		cacheMu.Lock()
+		if cached != nil && time.Since(cachedAt) < cacheTTL {
+			cacheMu.Unlock()
+			writeJSON(w, http.StatusOK, cached)
+			return
+		}
+		cacheMu.Unlock()
+
 		components := health.GetStatus()
 		overall := health.OverallStatus()
 
@@ -152,6 +169,13 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 		if overall == resilience.StatusUnhealthy {
 			statusCode = http.StatusServiceUnavailable
 		}
+
+		// Cache the result for subsequent requests
+		cacheMu.Lock()
+		cached = result
+		cachedAt = time.Now()
+		cacheMu.Unlock()
+
 		writeJSON(w, statusCode, result)
 	}
 }

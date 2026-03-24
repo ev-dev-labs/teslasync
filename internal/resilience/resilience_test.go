@@ -57,14 +57,15 @@ func TestHealthMonitor_RecordFailure_Degraded(t *testing.T) {
 
 	hm.RecordFailure("api", errors.New("timeout"))
 	hm.RecordFailure("api", errors.New("timeout"))
+	hm.RecordFailure("api", errors.New("timeout"))
 
 	status := hm.GetStatus()
 	comp := status["api"]
 	if comp.Status != StatusDegraded {
-		t.Errorf("expected status Degraded after 2 failures, got '%s'", comp.Status)
+		t.Errorf("expected status Degraded after 3 failures, got '%s'", comp.Status)
 	}
-	if comp.ConsecFails != 2 {
-		t.Errorf("expected 2 consecutive failures, got %d", comp.ConsecFails)
+	if comp.ConsecFails != 3 {
+		t.Errorf("expected 3 consecutive failures, got %d", comp.ConsecFails)
 	}
 }
 
@@ -72,17 +73,17 @@ func TestHealthMonitor_RecordFailure_Unhealthy(t *testing.T) {
 	hm := NewHealthMonitor()
 	hm.Register("mqtt")
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		hm.RecordFailure("mqtt", errors.New("connection refused"))
 	}
 
 	status := hm.GetStatus()
 	comp := status["mqtt"]
 	if comp.Status != StatusUnhealthy {
-		t.Errorf("expected status Unhealthy after 5 failures, got '%s'", comp.Status)
+		t.Errorf("expected status Unhealthy after 10 failures, got '%s'", comp.Status)
 	}
-	if comp.TotalFailures != 5 {
-		t.Errorf("expected 5 total failures, got %d", comp.TotalFailures)
+	if comp.TotalFailures != 10 {
+		t.Errorf("expected 10 total failures, got %d", comp.TotalFailures)
 	}
 }
 
@@ -117,6 +118,7 @@ func TestHealthMonitor_OverallStatus(t *testing.T) {
 	}
 
 	// Degrade one component
+	hm.RecordFailure("api", errors.New("err"))
 	hm.RecordFailure("api", errors.New("err"))
 	hm.RecordFailure("api", errors.New("err"))
 
