@@ -87,6 +87,7 @@ jobs:
         run: |
           CGO_ENABLED=0 go build -ldflags="-s -w" -o teslasync ./cmd/teslasync
           CGO_ENABLED=0 go build -ldflags="-s -w" -o notification-worker ./cmd/notification-worker
+          CGO_ENABLED=0 go build -ldflags="-s -w" -o export-worker ./cmd/export-worker
 
   lint-frontend:
     name: Lint Frontend

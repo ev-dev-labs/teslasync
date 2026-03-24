@@ -15,6 +15,9 @@ Components deployed:
 {{- if .Values.notificationWorker.enabled }}
   ✓ Notification      — {{ include "teslasync.notificationWorker.image" . }}
 {{- end }}
+{{- if .Values.exportWorker.enabled }}
+  ✓ Export Worker      — {{ include "teslasync.exportWorker.image" . }}
+{{- end }}
 {{- if .Values.postgresql.enabled }}
   ✓ PostgreSQL 17     — bundled ({{ .Values.postgresql.image }})
 {{- else }}

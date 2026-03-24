@@ -6,12 +6,186 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
+
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/export"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// NewExportHandler returns a handler for data export endpoints.
+// ExportHandler provides endpoints for data export and async export job management.
+type ExportHandler struct {
+	db         *database.DB
+	mqttClient pahomqtt.Client
+	jobRepo    *database.ExportJobRepo
+}
+
+// NewExportJobHandler creates a handler with MQTT support for async exports.
+func NewExportJobHandler(db *database.DB, mqttClient pahomqtt.Client) *ExportHandler {
+	return &ExportHandler{
+		db:         db,
+		mqttClient: mqttClient,
+		jobRepo:    database.NewExportJobRepo(db),
+	}
+}
+
+// SubmitJob creates a new export job and publishes it to the MQTT queue.
+func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Type      string `json:"type"`
+		Format    string `json:"format"`
+		VehicleID *int64 `json:"vehicle_id,omitempty"`
+		Start     string `json:"start,omitempty"`
+		End       string `json:"end,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Type == "" {
+		writeError(w, http.StatusBadRequest, "type is required (drives, charging, backup)")
+		return
+	}
+	if req.Format == "" {
+		req.Format = "csv"
+	}
+	if req.Type == "backup" {
+		req.Format = "json"
+	}
+
+	// Parse optional date range
+	var startDate, endDate *time.Time
+	if req.Start != "" {
+		if t, err := time.Parse("2006-01-02", req.Start); err == nil {
+			startDate = &t
+		}
+	}
+	if req.End != "" {
+		if t, err := time.Parse("2006-01-02", req.End); err == nil {
+			endDate = &t
+		}
+	}
+
+	// Generate job ID
+	jobID := fmt.Sprintf("exp-%d", time.Now().UnixNano())
+
+	now := time.Now().UTC()
+	job := &models.ExportJob{
+		ID:        jobID,
+		Type:      req.Type,
+		Format:    req.Format,
+		Status:    string(export.StatusQueued),
+		VehicleID: req.VehicleID,
+		StartDate: startDate,
+		EndDate:   endDate,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	if err := h.jobRepo.Create(r.Context(), job); err != nil {
+		log.Error().Err(err).Msg("export: failed to create job")
+		writeError(w, http.StatusInternalServerError, "failed to create export job")
+		return
+	}
+
+	// Publish to MQTT for worker processing
+	mqttReq := &models.ExportJobRequest{
+		JobID:     jobID,
+		Type:      req.Type,
+		Format:    req.Format,
+		VehicleID: req.VehicleID,
+		StartDate: startDate,
+		EndDate:   endDate,
+	}
+
+	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
+		log.Error().Err(err).Str("job_id", jobID).Msg("export: failed to publish to MQTT")
+		// Mark as failed since worker won't pick it up
+		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
+		writeError(w, http.StatusServiceUnavailable, "export service unavailable, MQTT not connected")
+		return
+	}
+
+	log.Info().Str("job_id", jobID).Str("type", req.Type).Str("format", req.Format).Msg("export job submitted")
+
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
+		"id":      jobID,
+		"type":    req.Type,
+		"format":  req.Format,
+		"status":  "queued",
+		"message": "Export job submitted successfully. Check status at /api/v1/export/jobs/" + jobID,
+	})
+}
+
+// ListJobs returns recent export jobs.
+func (h *ExportHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
+	limit, offset := pagination(r)
+	jobs, err := h.jobRepo.List(r.Context(), limit, offset)
+	if err != nil {
+		log.Error().Err(err).Msg("export: failed to list jobs")
+		writeError(w, http.StatusInternalServerError, "failed to list export jobs")
+		return
+	}
+	writeJSON(w, http.StatusOK, jobs)
+}
+
+// GetJob returns the status of a specific export job.
+func (h *ExportHandler) GetJob(w http.ResponseWriter, r *http.Request) {
+	jobID := chi.URLParam(r, "jobID")
+	job, err := h.jobRepo.GetByID(r.Context(), jobID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "export job not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, models.ExportJobSummary{
+		ID:           job.ID,
+		Type:         job.Type,
+		Format:       job.Format,
+		Status:       job.Status,
+		FileName:     job.FileName,
+		FileSize:     job.FileSize,
+		RecordCount:  job.RecordCount,
+		ErrorMessage: job.ErrorMessage,
+		CreatedAt:    job.CreatedAt,
+		CompletedAt:  job.CompletedAt,
+	})
+}
+
+// DownloadJob serves the completed export file.
+func (h *ExportHandler) DownloadJob(w http.ResponseWriter, r *http.Request) {
+	jobID := chi.URLParam(r, "jobID")
+	data, fileName, err := h.jobRepo.GetFileData(r.Context(), jobID)
+	if err != nil || data == nil {
+		writeError(w, http.StatusNotFound, "export file not available (job may not be ready)")
+		return
+	}
+
+	// Determine content type from file extension
+	contentType := "application/octet-stream"
+	if len(fileName) > 4 {
+		switch fileName[len(fileName)-4:] {
+		case ".csv":
+			contentType = "text/csv"
+		case "json":
+			contentType = "application/json"
+		}
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, _ = w.Write(data)
+}
+
+// NewExportHandler returns a handler for the legacy synchronous data export endpoint.
+// Kept for backward compatibility with direct download use cases.
 func NewExportHandler(db *database.DB) http.HandlerFunc {
 	vehicleRepo := database.NewVehicleRepo(db)
 	driveRepo := database.NewDriveRepo(db)

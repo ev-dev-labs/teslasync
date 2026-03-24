@@ -1,10 +1,113 @@
 # Data Export
 
-TeslaSync allows you to export your vehicle data in multiple formats for analysis, backup, or integration with other tools.
+TeslaSync allows you to export your vehicle data in multiple formats for analysis, backup, or integration with other tools. Exports can be performed synchronously (direct download) or asynchronously via a background worker.
 
-## Export API
+## Async Export (Recommended)
 
-The export endpoint supports exporting different data types in CSV or JSON format:
+Export processing is offloaded to a dedicated **export worker** service that communicates via MQTT. This prevents long-running exports from blocking the API server and provides real-time status tracking.
+
+### How It Works
+
+```
+1. User submits export request  →  POST /api/v1/export/jobs
+2. API creates job (status: queued)  →  publishes to MQTT topic
+3. Export worker picks up job  →  status: processing
+4. Worker generates file & stores in DB  →  status: ready (or failed)
+5. User downloads the file  →  GET /api/v1/export/jobs/{id}/download
+```
+
+### Submit an Export Job
+
+```bash
+# Submit a drives export
+curl -X POST http://localhost:8080/api/v1/export/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"type": "drives", "format": "csv"}'
+
+# Response:
+# {
+#   "id": "exp-1234567890",
+#   "type": "drives",
+#   "format": "csv",
+#   "status": "queued",
+#   "message": "Export job submitted successfully. Check status at /api/v1/export/jobs/exp-1234567890"
+# }
+```
+
+### Check Job Status
+
+```bash
+# Get status of a specific job
+curl http://localhost:8080/api/v1/export/jobs/exp-1234567890
+
+# Response:
+# {
+#   "id": "exp-1234567890",
+#   "type": "drives",
+#   "format": "csv",
+#   "status": "ready",
+#   "file_name": "teslasync-drives.csv",
+#   "file_size": 45231,
+#   "record_count": 342,
+#   "created_at": "2024-01-15T10:00:00Z",
+#   "completed_at": "2024-01-15T10:00:05Z"
+# }
+```
+
+### List All Jobs
+
+```bash
+curl http://localhost:8080/api/v1/export/jobs
+```
+
+### Download Completed Export
+
+```bash
+curl -o drives.csv http://localhost:8080/api/v1/export/jobs/exp-1234567890/download
+```
+
+### Job Status Flow
+
+| Status | Description |
+|--------|-------------|
+| `queued` | Job submitted, waiting for worker to pick it up |
+| `processing` | Worker is generating the export file |
+| `ready` | Export complete, file available for download |
+| `failed` | Export failed (check `error_message` for details) |
+
+### Supported Job Types
+
+| Type | Description | Format |
+|------|-------------|--------|
+| `drives` | Drive records with distance, duration, speed | CSV or JSON |
+| `charging` | Charging sessions with energy, cost, duration | CSV or JSON |
+| `backup` | Full database backup (all tables) | JSON only |
+
+### Request Body
+
+```json
+{
+  "type": "drives",          // Required: drives, charging, backup
+  "format": "csv",           // Optional: csv (default) or json
+  "vehicle_id": 123,         // Optional: filter to specific vehicle
+  "start": "2024-01-01",     // Optional: date range start (ISO 8601)
+  "end": "2024-01-31"        // Optional: date range end (ISO 8601)
+}
+```
+
+### Database Backup via Export Worker
+
+Database backups can also be submitted as async jobs, offloading the heavy I/O from the API server:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/export/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"type": "backup"}'
+```
+
+## Synchronous Export (Legacy)
+
+The original synchronous export endpoint is still available for direct downloads:
 
 ```
 GET /api/v1/export/{type}?format={csv|json}&start={date}&end={date}&vehicle_id={id}

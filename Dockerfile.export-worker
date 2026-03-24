@@ -1,0 +1,37 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /src
+
+COPY go.mod ./
+COPY go.sum* ./
+RUN go mod download 2>/dev/null || true
+
+COPY . .
+RUN go mod tidy
+
+ARG VERSION=dev
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w -X main.Version=${VERSION}" \
+    -o /bin/export-worker ./cmd/export-worker
+
+# Runtime stage
+FROM alpine:3.23
+
+RUN apk add --no-cache ca-certificates tzdata
+
+RUN addgroup -S teslasync && adduser -S teslasync -G teslasync
+
+COPY --from=builder /bin/export-worker /usr/local/bin/export-worker
+
+USER teslasync
+
+EXPOSE 8082
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:8082/healthz || exit 1
+
+ENTRYPOINT ["export-worker"]

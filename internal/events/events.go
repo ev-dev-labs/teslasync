@@ -27,6 +27,10 @@ const (
 	GeofenceEntered  = "geofence.entered"
 	GeofenceExited   = "geofence.exited"
 	BatteryLow       = "battery.low"
+	ExportQueued     = "export.queued"
+	ExportProcessing = "export.processing"
+	ExportCompleted  = "export.completed"
+	ExportFailed     = "export.failed"
 )
 
 // TopicPrefix is the MQTT topic prefix for domain events.

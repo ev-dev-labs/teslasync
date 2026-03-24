@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -305,6 +306,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Export
 		r.Get("/export/{type}", NewExportHandler(db))
+
+		// Export Jobs (async, MQTT-backed)
+		var pahoClient pahomqtt.Client
+		if mqttClient != nil {
+			pahoClient = mqttClient.Underlying()
+		}
+		exportJobHandler := NewExportJobHandler(db, pahoClient)
+		r.Route("/export/jobs", func(r chi.Router) {
+			r.Post("/", exportJobHandler.SubmitJob)
+			r.Get("/", exportJobHandler.ListJobs)
+			r.Get("/{jobID}", exportJobHandler.GetJob)
+			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
+		})
 	})
 
 	// Tesla public key (.well-known path required by Tesla Fleet API)
