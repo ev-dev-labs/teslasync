@@ -64,9 +64,18 @@
           if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 500); }
         }, 300);
       });
-      // Register service worker for PWA
+      // Unregister any existing service worker and clear all caches.
+      // The PWA service worker was caching stale JavaScript and causing
+      // the app to show outdated code despite server-side deployments.
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(function() {});
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+        });
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(n) { caches.delete(n); });
+          });
+        }
       }
     </script>
   </body>

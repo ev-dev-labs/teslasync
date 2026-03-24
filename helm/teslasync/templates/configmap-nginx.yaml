@@ -58,6 +58,14 @@ data:
             proxy_pass {{ $apiBackend }};
         }
 
+        # Service worker must never be cached — browser needs to detect updates
+        location = /sw.js {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            expires 0;
+        }
+
+        # Hashed static assets (Vite bundles) can be cached long-term
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
