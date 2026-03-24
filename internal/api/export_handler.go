@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -50,13 +51,23 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Type == "" {
-		writeError(w, http.StatusBadRequest, "type is required (drives, charging, backup)")
+		writeError(w, http.StatusBadRequest, "type is required (drives, charging, backup, analytics)")
 		return
 	}
+
+	validTypes := map[string]bool{
+		"drives": true, "charging": true, "backup": true, "analytics": true,
+		"import_drives": true, "import_charging": true,
+	}
+	if !validTypes[req.Type] {
+		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, backup, analytics")
+		return
+	}
+
 	if req.Format == "" {
 		req.Format = "csv"
 	}
-	if req.Type == "backup" {
+	if req.Type == "backup" || req.Type == "analytics" {
 		req.Format = "json"
 	}
 
@@ -182,6 +193,75 @@ func (h *ExportHandler) DownloadJob(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, _ = w.Write(data)
+}
+
+// SubmitImportJob handles async CSV file import. The file is stored in the job
+// record and processed by the export worker.
+func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB limit
+		writeError(w, http.StatusBadRequest, "invalid multipart form")
+		return
+	}
+
+	importType := r.FormValue("type")
+	if importType != "import_drives" && importType != "import_charging" {
+		writeError(w, http.StatusBadRequest, "type must be import_drives or import_charging")
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read file")
+		return
+	}
+
+	jobID := fmt.Sprintf("imp-%d", time.Now().UnixNano())
+	now := time.Now().UTC()
+
+	// Create job with the file data stored directly
+	job := &models.ExportJob{
+		ID:        jobID,
+		Type:      importType,
+		Format:    "csv",
+		Status:    string(export.StatusQueued),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := h.jobRepo.Create(r.Context(), job); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create import job")
+		return
+	}
+
+	// Store the CSV data in file_data for the worker to pick up
+	if _, err := h.db.Pool.Exec(r.Context(), `UPDATE export_jobs SET file_data = $2 WHERE id = $1`, jobID, fileData); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store import data")
+		return
+	}
+
+	mqttReq := &models.ExportJobRequest{
+		JobID:  jobID,
+		Type:   importType,
+		Format: "csv",
+	}
+	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
+		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
+		writeError(w, http.StatusServiceUnavailable, "import service unavailable")
+		return
+	}
+
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{
+		"id":      jobID,
+		"type":    importType,
+		"status":  "queued",
+		"message": "Import job submitted. Check status at /api/v1/export/jobs/" + jobID,
+	})
 }
 
 // NewExportHandler returns a handler for the legacy synchronous data export endpoint.

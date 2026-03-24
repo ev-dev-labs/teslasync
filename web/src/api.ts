@@ -904,3 +904,9 @@ export const getExportJob = (jobId: string) =>
   request<ExportJobSummary>(`/export/jobs/${jobId}`)
 export const getExportJobDownloadUrl = (jobId: string) =>
   `${getApiBase()}/export/jobs/${jobId}/download`
+export const submitImportJob = (type: 'import_drives' | 'import_charging', file: File) => {
+  const formData = new FormData()
+  formData.append('type', type)
+  formData.append('file', file)
+  return request<ExportJobSubmitResponse>('/export/jobs/import', { method: 'POST', body: formData })
+}

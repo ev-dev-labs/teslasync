@@ -289,6 +289,7 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | GET | `/api/v1/export/jobs` | List export jobs |
 | GET | `/api/v1/export/jobs/:id` | Get export job status |
 | GET | `/api/v1/export/jobs/:id/download` | Download completed export |
+| POST | `/api/v1/export/jobs/import` | Submit async CSV import job |
 
 ### Vehicles
 

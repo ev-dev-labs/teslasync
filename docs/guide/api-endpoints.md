@@ -1146,6 +1146,24 @@ Get the status of a specific export job. Status progresses: `queued` → `proces
 
 Download the completed export file. Returns 404 if the job is not in `ready` status.
 
+### POST `/api/v1/export/jobs/import`
+
+Submit an async CSV import job. Accepts multipart form with a CSV file.
+
+**Form Fields:**
+- `type` — `import_drives` or `import_charging`
+- `file` — CSV file (max 10 MB)
+
+**Response (202 Accepted):**
+```json
+{
+  "id": "imp-1234567890",
+  "type": "import_drives",
+  "status": "queued",
+  "message": "Import job submitted."
+}
+```
+
 ---
 
 ## SSE (Server-Sent Events)
