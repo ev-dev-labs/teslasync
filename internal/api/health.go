@@ -185,16 +185,14 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		results := make(map[string]interface{})
-		overall := "healthy"
 
-		// Database check with latency
+		// Database check with latency (direct live check)
 		dbStart := time.Now()
-		var dbOk bool
-		err := db.Pool.QueryRow(r.Context(), "SELECT 1").Scan(&dbOk)
+		var dbCheck int
+		err := db.Pool.QueryRow(r.Context(), "SELECT 1").Scan(&dbCheck)
 		dbLatency := time.Since(dbStart)
 		if err != nil {
 			results["database"] = map[string]interface{}{"status": "unhealthy", "error": err.Error(), "latency_ms": dbLatency.Milliseconds()}
-			overall = "degraded"
 		} else {
 			results["database"] = map[string]interface{}{"status": "healthy", "latency_ms": dbLatency.Milliseconds()}
 		}
@@ -207,16 +205,13 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 			"acquired_conns": poolStats.AcquiredConns(),
 		}
 
-		// Component statuses from health monitor
+		// Component statuses from health monitor — don't overwrite direct checks
 		for name, comp := range health.GetStatus() {
-			results[name] = map[string]interface{}{
-				"status":               comp.Status.String(),
-				"last_check":           comp.LastCheck,
-				"consecutive_failures": comp.ConsecFails,
-			}
-			if comp.Status == resilience.StatusDegraded || comp.Status == resilience.StatusUnhealthy {
-				if comp.TotalChecks > 0 {
-					overall = "degraded"
+			if _, exists := results[name]; !exists {
+				results[name] = map[string]interface{}{
+					"status":               comp.Status.String(),
+					"last_check":           comp.LastCheck,
+					"consecutive_failures": comp.ConsecFails,
 				}
 			}
 		}
@@ -226,6 +221,19 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 			"goroutines":     runtime.NumGoroutine(),
 			"go_version":     runtime.Version(),
 			"uptime_seconds": time.Since(startTime).Seconds(),
+		}
+
+		// Use the health monitor's overall status which properly skips unchecked components
+		overall := "healthy"
+		monitorStatus := health.OverallStatus()
+		if monitorStatus == resilience.StatusDegraded {
+			overall = "degraded"
+		} else if monitorStatus == resilience.StatusUnhealthy {
+			overall = "unhealthy"
+		}
+		// Also degrade if the live database check failed
+		if err != nil {
+			overall = "degraded"
 		}
 
 		statusCode := http.StatusOK

@@ -164,13 +164,33 @@ func compressOldPositions(ctx context.Context, db *database.DB) error {
 }
 
 // ensurePartitions creates monthly partitions for the current and next month.
+// Uses inline DDL to avoid dependency on a stored function that may not exist
+// in external PostgreSQL instances.
 func ensurePartitions(ctx context.Context, db *database.DB) error {
 	tables := []string{"positions"}
 	for _, t := range tables {
-		for _, offset := range []string{"CURRENT_DATE", "CURRENT_DATE + INTERVAL '1 month'"} {
-			query := fmt.Sprintf("SELECT create_monthly_partition('%s', %s)", t, offset)
+		for _, monthOffset := range []int{0, 1} {
+			start := time.Now().AddDate(0, monthOffset, 0)
+			partStart := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
+			partEnd := partStart.AddDate(0, 1, 0)
+			partName := fmt.Sprintf("%s_%s", t, partStart.Format("2006_01"))
+
+			query := fmt.Sprintf(`
+				DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT 1 FROM pg_tables WHERE tablename = '%s'
+					) THEN
+						EXECUTE format(
+							'CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES FROM (%%L) TO (%%L)',
+							'%s'::timestamp, '%s'::timestamp
+						);
+					END IF;
+				END $$;
+			`, partName, partName, t, partStart.Format("2006-01-02"), partEnd.Format("2006-01-02"))
+
 			if _, err := db.Pool.Exec(ctx, query); err != nil {
-				log.Warn().Err(err).Str("table", t).Msg("failed to create partition")
+				log.Warn().Err(err).Str("table", t).Str("partition", partName).Msg("failed to create partition")
 			}
 		}
 	}
@@ -200,7 +220,7 @@ func cleanOldPartitions(ctx context.Context, db *database.DB, table string, rete
 
 func cleanupOldLogs(ctx context.Context, db *database.DB, table string, retentionDays int) (int64, error) {
 	query := fmt.Sprintf("DELETE FROM %s WHERE created_at < NOW() - ($1 || ' days')::INTERVAL", table)
-	tag, err := db.Pool.Exec(ctx, query, retentionDays)
+	tag, err := db.Pool.Exec(ctx, query, fmt.Sprintf("%d", retentionDays))
 	if err != nil {
 		return 0, err
 	}

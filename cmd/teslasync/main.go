@@ -181,6 +181,20 @@ func main() {
 				}
 				checkCancel()
 
+				// Check MQTT connectivity
+				if mqttClient != nil {
+					if mqttClient.IsConnected() {
+						health.RecordSuccess("mqtt")
+					} else {
+						health.RecordFailure("mqtt", fmt.Errorf("MQTT broker not connected"))
+					}
+				}
+
+				// Check Tesla API auth status
+				if teslaClient.HasValidToken() {
+					health.RecordSuccess("tesla_api")
+				}
+
 				// Worker is alive if we reach this point (SafeGoLoop restarts on crash)
 				health.RecordSuccess("worker")
 
