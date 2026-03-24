@@ -220,3 +220,21 @@ imagePullSecrets:
 {{- toString .Values.grafana.external.port }}
 {{- end }}
 {{- end }}
+
+{{/* ── Fleet Telemetry connection helpers ──────────────────────────────── */}}
+
+{{- define "teslasync.fleetTelemetry.host" -}}
+{{- if .Values.fleetTelemetry.enabled }}
+{{- .Values.fleetTelemetry.host | default "" }}
+{{- else }}
+{{- .Values.fleetTelemetry.external.host | default "" }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.fleetTelemetry.port" -}}
+{{- if .Values.fleetTelemetry.enabled }}
+{{- toString (.Values.fleetTelemetry.service.port | default 4443) }}
+{{- else }}
+{{- toString (.Values.fleetTelemetry.external.port | default 4443) }}
+{{- end }}
+{{- end }}

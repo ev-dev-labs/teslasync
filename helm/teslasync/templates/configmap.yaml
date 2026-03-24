@@ -28,8 +28,9 @@ data:
   {{- if .Values.config.webEndpoint }}
   CORS_ORIGINS: {{ .Values.config.webEndpoint | quote }}
   {{- end }}
-  {{- if .Values.fleetTelemetry.enabled }}
+  {{- $ftHost := include "teslasync.fleetTelemetry.host" . }}
+  {{- if or .Values.fleetTelemetry.enabled $ftHost }}
   FLEET_TELEMETRY_ENABLED: "true"
-  FLEET_TELEMETRY_HOST: {{ .Values.fleetTelemetry.host | default "" | quote }}
-  FLEET_TELEMETRY_PORT: {{ .Values.fleetTelemetry.service.port | default 4443 | quote }}
+  FLEET_TELEMETRY_HOST: {{ $ftHost | quote }}
+  FLEET_TELEMETRY_PORT: {{ include "teslasync.fleetTelemetry.port" . | quote }}
   {{- end }}

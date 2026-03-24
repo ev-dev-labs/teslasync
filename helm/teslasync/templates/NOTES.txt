@@ -38,6 +38,11 @@ Components deployed:
 {{- else }}
   • Grafana            — external ({{ .Values.grafana.external.host }}:{{ .Values.grafana.external.port }})
 {{- end }}
+{{- if .Values.fleetTelemetry.enabled }}
+  ✓ Fleet Telemetry   — bundled ({{ .Values.fleetTelemetry.image }})
+{{- else if .Values.fleetTelemetry.external.host }}
+  • Fleet Telemetry    — external ({{ .Values.fleetTelemetry.external.host }}:{{ .Values.fleetTelemetry.external.port }})
+{{- end }}
 
 ──────────────────────────────────────────────────────
   Accessing the services

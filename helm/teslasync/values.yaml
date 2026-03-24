@@ -206,6 +206,13 @@ fleetTelemetry:
       cpu: 100m
       memory: 64Mi
 
+  # External Fleet Telemetry — used when fleetTelemetry.enabled is false.
+  # Set these to connect TeslaSync to a Fleet Telemetry server running
+  # outside the Helm release (e.g., a separate deployment or bare-metal).
+  external:
+    host: ""
+    port: 4443
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Service Account
 # ─────────────────────────────────────────────────────────────────────────────
