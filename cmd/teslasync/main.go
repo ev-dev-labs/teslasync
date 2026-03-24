@@ -251,7 +251,7 @@ func main() {
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 60 * time.Second, // Increased for SSE and large analytics queries
+		WriteTimeout: 0, // Disabled for SSE long-lived connections (heartbeat keeps alive)
 		IdleTimeout:  120 * time.Second,
 	}
 

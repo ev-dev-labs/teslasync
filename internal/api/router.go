@@ -46,7 +46,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(LoggerMiddleware)
 	r.Use(RecoveryMiddleware) // Enhanced recovery that logs panics as structured errors
 	r.Use(chimw.Compress(5))
-	r.Use(chimw.Timeout(30 * time.Second))
 
 	// CORS — use explicit origins in production. The wildcard is kept for
 	// development convenience but paired with AllowCredentials=false to comply
