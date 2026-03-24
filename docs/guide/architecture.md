@@ -74,7 +74,7 @@ Browser → Traefik/Ingress → teslasync-web (Nginx)
 - **Fewer ingress rules** — A single route simplifies configuration and reduces potential misrouting (e.g., the old `PathPrefix('/api')` matching frontend routes like `/api-logs`).
 - **Homelab-friendly** — Most homelab clusters run a single Traefik instance. Keeping API traffic internal avoids overloading the ingress controller.
 
-The `config.apiEndpoint` Helm value controls the Nginx `proxy_pass` target and is also injected into the frontend at runtime via Nginx `sub_filter` as `window.__TESLASYNC_API_BASE__`. If left empty, it auto-derives as `http://<release>-api:<port>`.
+The `config.apiEndpoint` Helm value controls the Nginx `proxy_pass` target (internal K8s routing). The `config.browserApiBase` controls what URL the browser uses for API calls — leave it empty (default) so the browser uses relative paths through Nginx. If left empty, `apiEndpoint` auto-derives as `http://<release>-api:<port>`.
 
 ## Component Architecture
 

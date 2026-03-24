@@ -326,20 +326,32 @@ When deploying with the Helm chart, the following values control how the fronten
 
 | Helm Value | Default | Description |
 |------------|---------|-------------|
-| `config.apiEndpoint` | `""` (auto-derived) | Internal API endpoint used for both Nginx `proxy_pass` and frontend API base URL |
+| `config.apiEndpoint` | `""` (auto-derived) | Internal API endpoint for Nginx `proxy_pass` |
 
-This value serves a **dual purpose**:
+Configures Nginx's `proxy_pass` so that requests to `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, and `/metrics` are forwarded to the API pod over the internal Kubernetes network.
 
-1. **Nginx reverse proxy target** — Configures `proxy_pass` in the Nginx config so that requests to `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, and `/metrics` are forwarded to the API pod over the internal Kubernetes network.
+If left empty (the default), the chart automatically derives the endpoint as `http://<release>-api:<port>`.
 
-2. **Frontend API base URL** — Injected into the React SPA at runtime via Nginx `sub_filter`, setting `window.__TESLASYNC_API_BASE__` so the browser knows where to send API requests.
+::: danger
+This is an **internal K8s address** — never expose it to the browser. Browsers cannot resolve `svc.cluster.local` DNS names. Use `config.browserApiBase` instead for the frontend.
+:::
 
-If left empty (the default), the chart automatically derives the endpoint as `http://<release>-api:<port>` based on the Helm release name and the API service port. For most deployments, you do not need to set this value.
+### `config.browserApiBase`
+
+| Helm Value | Default | Description |
+|------------|---------|-------------|
+| `config.browserApiBase` | `""` (empty — relative paths) | API base URL injected into the browser JavaScript |
+
+Controls `window.__TESLASYNC_API_BASE__` in the React SPA. When empty (recommended), the browser uses relative paths (`/api/v1/...`) which Nginx proxies to the backend. Only set this if the browser needs to reach the API at a different origin.
 
 ```yaml
-# Example: explicit override (rarely needed)
+# Recommended: leave empty (browser uses relative paths through Nginx)
 config:
-  apiEndpoint: "http://my-custom-api-service:8080"
+  browserApiBase: ""
+
+# Only if browser needs to reach API at a different origin:
+config:
+  browserApiBase: "https://api.teslasync.example.com"
 ```
 
 ### `config.webEndpoint`

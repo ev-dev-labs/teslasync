@@ -259,15 +259,28 @@ config:
   logLevel: info
   pollInterval: "30s"
 
-  # -- Internal API endpoint used by the web frontend (Nginx) to reach the
-  # backend. Since both services run in the same namespace/cluster, this
-  # should be the cluster-internal address.
+  # -- Internal API endpoint used by Nginx reverse proxy to reach the backend.
+  # This is a cluster-internal address — NOT reachable by browsers.
+  # Only Nginx's proxy_pass uses this value.
   #
   # Examples:
   #   In-cluster: http://teslasync-api.teslasync.svc.cluster.local:8080
   #   Same namespace (default): auto-derived from release name
   #   Local dev: http://localhost:8080
   apiEndpoint: ""
+
+  # -- Browser API base URL injected into the frontend at runtime.
+  # Leave empty (recommended) so the browser uses relative paths (/api/v1/...)
+  # which Nginx proxies to the backend. Only set this if the browser needs
+  # to reach the API at a different origin (e.g., for CORS or split deploys).
+  #
+  # ⚠️  NEVER set this to an internal K8s address (svc.cluster.local) — the
+  #     browser cannot resolve Kubernetes DNS names.
+  #
+  # Examples:
+  #   Empty (default): "" — uses relative paths (recommended for K8s + Nginx)
+  #   Public URL: "https://teslasync.example.com" — direct browser-to-API
+  browserApiBase: ""
 
   # -- Public-facing base URL for the web frontend.
   # Used for CORS allowed origins. Leave empty to allow all origins.
