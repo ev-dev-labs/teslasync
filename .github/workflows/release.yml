@@ -73,9 +73,29 @@ jobs:
           git push origin "${{ steps.bump.outputs.new_tag }}"
 
   docker:
-    name: Build & Push Docker Images
+    name: Docker · ${{ matrix.image }}
     needs: version-tag
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            file: Dockerfile
+            build-args: |
+              VERSION=${{ needs.version-tag.outputs.new_tag }}
+              COMMIT=${{ github.sha }}
+          - image: web
+            file: Dockerfile.web
+            build-args: ""
+          - image: notification-worker
+            file: Dockerfile.notification
+            build-args: |
+              VERSION=${{ needs.version-tag.outputs.new_tag }}
+          - image: export-worker
+            file: Dockerfile.export-worker
+            build-args: |
+              VERSION=${{ needs.version-tag.outputs.new_tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -87,60 +107,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend
+      - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
+          file: ${{ matrix.file }}
           push: true
           tags: |
-            ${{ env.BACKEND_IMAGE }}:${{ needs.version-tag.outputs.version }}
-            ${{ env.BACKEND_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ needs.version-tag.outputs.new_tag }}
-            COMMIT=${{ github.sha }}
-
-      - name: Build and push web
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.web
-          push: true
-          tags: |
-            ${{ env.WEB_IMAGE }}:${{ needs.version-tag.outputs.version }}
-            ${{ env.WEB_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push notification worker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.notification
-          push: true
-          tags: |
-            ${{ env.NOTIFICATION_IMAGE }}:${{ needs.version-tag.outputs.version }}
-            ${{ env.NOTIFICATION_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ needs.version-tag.outputs.new_tag }}
-
-      - name: Build and push export worker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.export-worker
-          push: true
-          tags: |
-            ${{ env.EXPORT_IMAGE }}:${{ needs.version-tag.outputs.version }}
-            ${{ env.EXPORT_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ needs.version-tag.outputs.new_tag }}
+            ghcr.io/${{ github.repository }}-${{ matrix.image }}:${{ needs.version-tag.outputs.version }}
+            ghcr.io/${{ github.repository }}-${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          build-args: ${{ matrix.build-args }}
 
   helm:
     name: Publish Helm Chart
