@@ -24,6 +24,9 @@ data:
 
         location / {
             try_files $uri $uri/ /index.html;
+            # index.html must not be cached so new JS bundle references are picked up
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
         }
 
         location /api/ {
