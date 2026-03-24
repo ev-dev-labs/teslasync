@@ -75,9 +75,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	})
 
-	// Rate limiting — generous for SPA with multiple polling components
-	r.Use(httprate.LimitByIP(300, 1*time.Minute))
-
 	// Handlers
 	vehicleHandler := NewVehicleHandler(db, teslaClient)
 	driveHandler := NewDriveHandler(db)
@@ -117,9 +114,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Get("/login", authHandler.Login)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Get("/callback", authHandler.Callback)
-			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/refresh", authHandler.Refresh)
+			r.Get("/login", authHandler.Login)
+			r.Get("/callback", authHandler.Callback)
+			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
 		})
 
@@ -308,7 +305,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Export
-		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
+		r.Get("/export/{type}", NewExportHandler(db))
 	})
 
 	// Tesla public key (.well-known path required by Tesla Fleet API)
