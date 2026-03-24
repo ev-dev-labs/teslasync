@@ -28,3 +28,8 @@ data:
   {{- if .Values.config.webEndpoint }}
   CORS_ORIGINS: {{ .Values.config.webEndpoint | quote }}
   {{- end }}
+  {{- if .Values.fleetTelemetry.enabled }}
+  FLEET_TELEMETRY_ENABLED: "true"
+  FLEET_TELEMETRY_HOST: {{ .Values.fleetTelemetry.host | default "" | quote }}
+  FLEET_TELEMETRY_PORT: {{ .Values.fleetTelemetry.service.port | default 4443 | quote }}
+  {{- end }}

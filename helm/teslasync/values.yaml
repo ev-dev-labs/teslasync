@@ -184,6 +184,11 @@ encryption:
 fleetTelemetry:
   enabled: false
 
+  # -- Public hostname where vehicles connect via wss://.
+  # This is also passed to the TeslaSync API as FLEET_TELEMETRY_HOST
+  # for use in the DevTools subscription UI.
+  host: ""
+
   image: ghcr.io/teslamotors/fleet-telemetry:latest
 
   service:
