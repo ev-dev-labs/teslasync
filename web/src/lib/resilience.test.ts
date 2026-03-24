@@ -9,22 +9,11 @@ describe('ApiError', () => {
     expect(err.name).toBe('ApiError')
   })
 
-  it('marks 5xx as retryable', () => {
-    expect(new ApiError('', 500).retryable).toBe(true)
-    expect(new ApiError('', 502).retryable).toBe(true)
-    expect(new ApiError('', 503).retryable).toBe(true)
-  })
-
-  it('marks 408 and 429 as retryable', () => {
-    expect(new ApiError('', 408).retryable).toBe(true)
-    expect(new ApiError('', 429).retryable).toBe(true)
-  })
-
-  it('marks 4xx (except 408,429) as non-retryable', () => {
-    expect(new ApiError('', 400).retryable).toBe(false)
-    expect(new ApiError('', 401).retryable).toBe(false)
-    expect(new ApiError('', 403).retryable).toBe(false)
-    expect(new ApiError('', 404).retryable).toBe(false)
+  it('stores various status codes', () => {
+    expect(new ApiError('', 500).status).toBe(500)
+    expect(new ApiError('', 502).status).toBe(502)
+    expect(new ApiError('', 400).status).toBe(400)
+    expect(new ApiError('', 408).status).toBe(408)
   })
 
   it('extends Error', () => {

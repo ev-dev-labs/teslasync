@@ -1,39 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { WifiOff, AlertTriangle, X } from 'lucide-react'
+import { WifiOff } from 'lucide-react'
 import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../lib/resilience'
 
 export function ServiceStatusBanner() {
   const [connStatus, setConnStatus] = useState<string>(getConnectionStatus())
-  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    return onStatusChange((s) => {
-      setConnStatus(s)
-      // Auto-show banner again when status changes
-      if (s !== 'online') setDismissed(false)
-    })
+    return onStatusChange((s) => setConnStatus(s))
   }, [])
 
-  // Poll system status every 60s (only when online)
-  const { data: sysStatus } = useQuery<SystemStatus>({
-    queryKey: ['system-status'],
-    queryFn: fetchSystemStatus,
-    refetchInterval: 60_000,
-    enabled: connStatus !== 'offline',
-    retry: 1,
-  })
-
-  const isDegraded = connStatus === 'degraded' || sysStatus?.overall === 'degraded'
   const isOffline = connStatus === 'offline'
-  const isUnhealthy = sysStatus?.overall === 'unhealthy'
-
-  const show = (isOffline || isDegraded || isUnhealthy) && !dismissed
 
   return (
     <AnimatePresence>
-      {show && (
+      {isOffline && (
         <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
@@ -42,45 +24,15 @@ export function ServiceStatusBanner() {
           className="overflow-hidden"
         >
           <div
-            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium relative"
+            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium"
             style={{
-              background: isOffline
-                ? 'rgba(239,68,68,0.15)'
-                : isUnhealthy
-                ? 'rgba(239,68,68,0.1)'
-                : 'rgba(245,158,11,0.1)',
-              color: isOffline || isUnhealthy ? '#f87171' : '#fbbf24',
-              borderBottom: '1px solid',
-              borderColor: isOffline || isUnhealthy
-                ? 'rgba(239,68,68,0.2)'
-                : 'rgba(245,158,11,0.2)',
+              background: 'rgba(239,68,68,0.15)',
+              color: '#f87171',
+              borderBottom: '1px solid rgba(239,68,68,0.2)',
             }}
           >
-            {isOffline ? (
-              <>
-                <WifiOff className="h-3.5 w-3.5" />
-                <span>You are offline. Data may be stale. Reconnecting automatically...</span>
-              </>
-            ) : isUnhealthy ? (
-              <>
-                <AlertTriangle className="h-3.5 w-3.5" />
-                <span>System health issue detected. Some features may be unavailable.</span>
-              </>
-            ) : (
-              <>
-                <AlertTriangle className="h-3.5 w-3.5" />
-                <span>Running in degraded mode. Some services may respond slowly.</span>
-              </>
-            )}
-            {!isOffline && (
-              <button
-                onClick={() => setDismissed(true)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors"
-                aria-label="Dismiss"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
+            <WifiOff className="h-3.5 w-3.5" />
+            <span>You are offline. Data may be stale. Reconnecting automatically...</span>
           </div>
         </motion.div>
       )}
