@@ -1,11 +1,11 @@
-.PHONY: all build build-worker run test lint clean docker docker-up docker-down migrate web check coverage
+.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildTime=$(BUILD_TIME)
 
-all: build build-worker
+all: build build-worker build-export-worker
 
 ## build: Build the Go backend binary
 build:
@@ -14,6 +14,10 @@ build:
 ## build-worker: Build the notification worker binary
 build-worker:
 	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/notification-worker ./cmd/notification-worker
+
+## build-export-worker: Build the export worker binary
+build-export-worker:
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/export-worker ./cmd/export-worker
 
 ## run: Run the backend locally
 run:

@@ -10,10 +10,17 @@ TeslaSync/
 │   ├── main.go                # Bootstrap: config, DB, MQTT, worker, router, server
 │   └── version.go             # Version info (injected at build via ldflags)
 │
+├── cmd/notification-worker/   # Notification worker entry point
+│   └── main.go                # MQTT subscriber for async notification delivery
+│
+├── cmd/export-worker/         # Export worker entry point
+│   └── main.go                # MQTT subscriber for async export & backup processing
+│
 ├── internal/                  # Private application packages
 │   ├── api/                   # HTTP layer (handlers + middleware)
 │   ├── config/                # Environment-based configuration
 │   ├── database/              # Data access layer (repositories)
+│   ├── export/                # Export worker (MQTT subscriber + processor)
 │   ├── models/                # Domain models and types
 │   ├── mqtt/                  # MQTT telemetry publisher
 │   ├── resilience/            # Circuit breaker, health checks
@@ -55,8 +62,10 @@ TeslaSync/
 │   ├── release.yml            # GoReleaser
 │   └── docs.yml               # Documentation deployment
 │
-├── docker-compose.yml         # 6-service orchestration
+├── docker-compose.yml         # 8-service orchestration
 ├── Dockerfile                 # Backend multi-stage build
+├── Dockerfile.notification    # Notification worker build
+├── Dockerfile.export-worker   # Export worker build
 ├── Dockerfile.web             # Frontend multi-stage build
 ├── Makefile                   # 20+ development targets
 ├── .env.example               # Environment variable template
@@ -109,7 +118,7 @@ Each domain has its own handler file:
 | `vehicle_state_handler.go` | `VehicleStateHandler` | State timeline |
 | `auth_handler.go` | `AuthHandler` | OAuth2 flow |
 | `sse_handler.go` | — | Server-Sent Events streaming |
-| `export_handler.go` | — | CSV/JSON data export |
+| `export_handler.go` | `ExportHandler` | CSV/JSON data export + async export jobs |
 | `health.go` | — | Health, readiness, system status |
 | `middleware.go` | — | Logging, recovery, security |
 | `security.go` | — | Auth, CORS configuration |
@@ -233,6 +242,8 @@ Migrations run automatically on backend startup. The `positions` table uses nati
 | Target | Description |
 |--------|-------------|
 | `make build` | Compile Go binary to `./bin/teslasync` |
+| `make build-worker` | Compile notification worker to `./bin/notification-worker` |
+| `make build-export-worker` | Compile export worker to `./bin/export-worker` |
 | `make run` | Run backend directly with `go run` |
 | `make test` | Run Go tests with race detector |
 | `make lint` | Run golangci-lint |

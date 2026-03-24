@@ -145,6 +145,29 @@ notificationWorker:
       memory: 32Mi
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Export Worker
+#
+# Processes data exports and database backups asynchronously via MQTT.
+# Subscribes to teslasync/internal/exports for background job processing.
+# ─────────────────────────────────────────────────────────────────────────────
+exportWorker:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/ev-dev-labs/teslasync-export-worker
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Encryption
 # ─────────────────────────────────────────────────────────────────────────────
 encryption:

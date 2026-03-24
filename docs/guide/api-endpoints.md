@@ -1077,7 +1077,7 @@ Update global settings.
 
 ### GET `/api/v1/export/{type}`
 
-Export data as CSV or JSON.
+Export data as CSV or JSON (synchronous — direct download).
 
 | URL Param | Description |
 |-----------|-------------|
@@ -1092,6 +1092,77 @@ Export data as CSV or JSON.
 **Example:** `GET /api/v1/export/drives?format=csv&start_date=2025-01-01`
 
 Returns a downloadable file with `Content-Disposition: attachment` header.
+
+### POST `/api/v1/export/jobs`
+
+Submit an async export job. Processing is handled by the export worker via MQTT.
+
+**Request Body:**
+```json
+{
+  "type": "drives",       // Required: drives, charging, backup, analytics, import_drives, import_charging
+  "format": "csv",        // Optional: csv (default) or json
+  "vehicle_id": 123,      // Optional: filter to specific vehicle
+  "start": "2025-01-01",  // Optional: ISO 8601 date
+  "end": "2025-01-31"     // Optional: ISO 8601 date
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "id": "exp-1234567890",
+  "type": "drives",
+  "format": "csv",
+  "status": "queued",
+  "message": "Export job submitted successfully."
+}
+```
+
+### GET `/api/v1/export/jobs`
+
+List all export jobs (most recent first). Supports `limit` and `offset` query params.
+
+### GET `/api/v1/export/jobs/{jobID}`
+
+Get the status of a specific export job. Status progresses: `queued` → `processing` → `ready` / `failed`.
+
+**Response:**
+```json
+{
+  "id": "exp-1234567890",
+  "type": "drives",
+  "format": "csv",
+  "status": "ready",
+  "file_name": "teslasync-drives.csv",
+  "file_size": 45231,
+  "record_count": 342,
+  "created_at": "2025-01-15T10:00:00Z",
+  "completed_at": "2025-01-15T10:00:05Z"
+}
+```
+
+### GET `/api/v1/export/jobs/{jobID}/download`
+
+Download the completed export file. Returns 404 if the job is not in `ready` status.
+
+### POST `/api/v1/export/jobs/import`
+
+Submit an async CSV import job. Accepts multipart form with a CSV file.
+
+**Form Fields:**
+- `type` — `import_drives` or `import_charging`
+- `file` — CSV file (max 10 MB)
+
+**Response (202 Accepted):**
+```json
+{
+  "id": "imp-1234567890",
+  "type": "import_drives",
+  "status": "queued",
+  "message": "Import job submitted."
+}
+```
 
 ---
 
@@ -1129,6 +1200,7 @@ es.addEventListener('charging_update', (e) => {
 | `vehicle_update` | Vehicle data polled |
 | `alert` | Alert rule triggered |
 | `charging_update` | Charging session started/stopped/updated |
+| `export_status` | Export job status changed (queued/processing/ready/failed) |
 
 ---
 

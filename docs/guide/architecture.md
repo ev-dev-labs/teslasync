@@ -90,6 +90,7 @@ internal/
 ├── crypto/         # AES-256-GCM encryption for data at rest
 ├── database/       # PostgreSQL repositories (data access layer)
 ├── events/         # Domain event bus (MQTT-backed)
+├── export/         # Export worker — async data export & backup processing
 ├── models/         # Domain models and types
 ├── mqtt/           # MQTT telemetry publisher
 ├── notification/   # Notification worker & channel senders
@@ -702,6 +703,7 @@ TeslaSync publishes domain events to MQTT whenever significant state changes occ
 graph LR
     Worker["Vehicle Poller"] -->|publish| EventBus["MQTT Event Bus"]
     EventBus --> NotifWorker["Notification Worker"]
+    EventBus --> ExportWorker["Export Worker"]
     EventBus --> External["External Subscribers"]
 
     subgraph "Domain Events"
@@ -711,6 +713,8 @@ graph LR
         E4["charge.completed"]
         E5["vehicle.updated"]
         E6["alert.triggered"]
+        E7["export.queued"]
+        E8["export.completed"]
     end
 ```
 
@@ -722,6 +726,9 @@ graph LR
 | `drive.ended` | Speed returns to 0 | drive_id, battery_level |
 | `charge.started` | ChargingState == "Charging" | session_id, battery_level |
 | `charge.completed` | Charging stops | session_id, battery_level, energy_added |
+| `export.queued` | Export job submitted | job_id, type, format |
+| `export.completed` | Export job finished | job_id, file_name, record_count |
+| `export.failed` | Export job failed | job_id, error |
 
 ### Notification Worker
 
@@ -741,6 +748,34 @@ sequenceDiagram
 ```
 
 Supported channels: Discord, Slack, Telegram, Webhook, Ntfy, Pushover, Email.
+
+### Export Worker
+
+Data exports and database backups are processed asynchronously via a dedicated MQTT-backed worker:
+
+```mermaid
+sequenceDiagram
+    participant UI as User/UI
+    participant API as API Handler
+    participant MQ as MQTT Broker
+    participant EW as Export Worker
+    participant DB as PostgreSQL
+
+    UI->>API: POST /api/v1/export/jobs
+    API->>DB: Create job (status: queued)
+    API->>MQ: Publish to teslasync/internal/exports
+    API-->>UI: 202 Accepted {id, status: "queued"}
+    MQ->>EW: Deliver message
+    EW->>DB: Update status: processing
+    EW->>DB: Query data (drives/charging/backup)
+    EW->>DB: Store result (status: ready)
+    UI->>API: GET /api/v1/export/jobs/{id}
+    API-->>UI: {status: "ready", file_name, file_size}
+    UI->>API: GET /api/v1/export/jobs/{id}/download
+    API-->>UI: File download
+```
+
+Supported export types: drives, charging, database backup. The worker also performs periodic cleanup of old export jobs (>7 days).
 
 ### Redis Caching
 

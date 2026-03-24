@@ -865,3 +865,53 @@ export const getNotificationAnalytics = (days?: number) =>
   request<NotificationAnalytics>(`/notifications/analytics${days ? `?days=${days}` : ''}`)
 export const getChannelMetrics = (channelId: number, days?: number) =>
   request<NotificationMetric[]>(`/notifications/${channelId}/metrics${days ? `?days=${days}` : ''}`)
+
+// --- Export Jobs (Async) ---
+export interface ExportJobSummary {
+  id: string
+  type: string
+  format: string
+  status: 'queued' | 'processing' | 'ready' | 'failed'
+  file_name: string
+  file_size: number
+  record_count: number
+  error_message: string
+  created_at: string
+  completed_at: string | null
+}
+
+export interface ExportJobSubmitRequest {
+  type: 'drives' | 'charging' | 'backup' | 'analytics' | 'import_drives' | 'import_charging'
+  format?: 'csv' | 'json'
+  vehicle_id?: number
+  start?: string
+  end?: string
+}
+
+export interface ExportJobSubmitResponse {
+  id: string
+  type: string
+  format: string
+  status: string
+  message: string
+}
+
+export const submitExportJob = (data: ExportJobSubmitRequest) =>
+  request<ExportJobSubmitResponse>('/export/jobs', { method: 'POST', body: JSON.stringify(data) })
+export const getExportJobs = (limit?: number, offset?: number) =>
+  request<ExportJobSummary[]>(`/export/jobs?limit=${limit || 50}&offset=${offset || 0}`)
+export const getExportJob = (jobId: string) =>
+  request<ExportJobSummary>(`/export/jobs/${jobId}`)
+export const getExportJobDownloadUrl = (jobId: string) =>
+  `${getApiBase()}/export/jobs/${jobId}/download`
+export const submitImportJob = (type: 'import_drives' | 'import_charging', file: File) => {
+  const formData = new FormData()
+  formData.append('type', type)
+  formData.append('file', file)
+  // Override Content-Type to let browser set multipart/form-data with boundary
+  return request<ExportJobSubmitResponse>('/export/jobs/import', {
+    method: 'POST',
+    body: formData,
+    headers: {},
+  })
+}

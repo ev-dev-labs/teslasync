@@ -161,6 +161,43 @@ services:
         reservations:
           memory: 32M
 
+  export-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.export-worker
+      args:
+        VERSION: ${VERSION:-dev}
+    container_name: teslasync-export-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER:-teslasync}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
+      - DATABASE_NAME=${POSTGRES_DB:-teslasync}
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - HEALTH_PORT=8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 64M
+
   # Fleet Telemetry Server (optional — set FLEET_TELEMETRY_ENABLED=true to enable)
   # Receives streaming data from Tesla vehicles via WebSocket and relays to TeslaSync API.
   # Requires TLS certificates and Tesla Developer account with Fleet Telemetry access.

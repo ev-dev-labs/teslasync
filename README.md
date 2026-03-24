@@ -83,6 +83,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Structured Logging** — JSON logs via zerolog
 - **PostgreSQL 17** — Natively partitioned tables for position data
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
+- **MQTT Workers** — Notification worker + export worker for async processing
 - **Redis Caching** — Fast lookups for vehicle state and sessions
 - **7-Channel Notifications** — Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
 - **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
@@ -185,7 +186,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-This starts 6 services: Go API server, React web UI, PostgreSQL 17, Redis, MQTT, and Grafana.
+This starts 8 services: Go API server, React web UI, notification worker, export worker, PostgreSQL 17, Redis, MQTT, and Grafana.
 
 ### 3. Access
 
@@ -247,7 +248,7 @@ npm run lint           # ESLint
 ### Docker
 
 ```bash
-docker compose up -d          # Start all 6 services
+docker compose up -d          # Start all 8 services
 docker compose logs -f        # Tail logs
 docker compose down           # Stop everything
 docker compose build          # Rebuild images
@@ -283,7 +284,12 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | GET | `/readyz` | Readiness probe |
 | GET | `/metrics` | Prometheus metrics |
 | GET | `/api/v1/events` | SSE real-time event stream |
-| GET | `/api/v1/export/{type}` | Export data (CSV/JSON) |
+| GET | `/api/v1/export/{type}` | Export data (CSV/JSON) — synchronous |
+| POST | `/api/v1/export/jobs` | Submit async export job |
+| GET | `/api/v1/export/jobs` | List export jobs |
+| GET | `/api/v1/export/jobs/:id` | Get export job status |
+| GET | `/api/v1/export/jobs/:id/download` | Download completed export |
+| POST | `/api/v1/export/jobs/import` | Submit async CSV import job |
 
 ### Vehicles
 

@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -305,6 +307,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Export
 		r.Get("/export/{type}", NewExportHandler(db))
+
+		// Export Jobs (async, MQTT-backed)
+		var pahoClient pahomqtt.Client
+		if mqttClient != nil {
+			pahoClient = mqttClient.Underlying()
+		}
+		exportJobHandler := NewExportJobHandler(db, pahoClient)
+		r.Route("/export/jobs", func(r chi.Router) {
+			r.Post("/", exportJobHandler.SubmitJob)
+			r.Post("/import", exportJobHandler.SubmitImportJob)
+			r.Get("/", exportJobHandler.ListJobs)
+			r.Get("/{jobID}", exportJobHandler.GetJob)
+			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
+		})
 	})
 
 	// Tesla public key (.well-known path required by Tesla Fleet API)
@@ -320,6 +336,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	fs := http.FileServer(http.Dir(staticDir))
 	r.NotFound(spaFallback(staticDir, fs))
+
+	// Subscribe to export status events from the export worker and relay via SSE
+	if mqttClient != nil {
+		mqttClient.Underlying().Subscribe("teslasync/events/export.status", 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			var evt map[string]interface{}
+			if err := json.Unmarshal(msg.Payload(), &evt); err != nil {
+				return
+			}
+			eventHub.Broadcast("export_status", evt)
+		})
+	}
 
 	return r
 }

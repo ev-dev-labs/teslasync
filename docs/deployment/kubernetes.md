@@ -20,6 +20,7 @@ helm/teslasync/
     ├── deployment.yaml                 # Backend API Deployment
     ├── deployment-web.yaml             # Frontend Deployment
     ├── deployment-notification.yaml    # Notification Worker Deployment
+    ├── deployment-export-worker.yaml   # Export Worker Deployment
     ├── deployment-redis.yaml           # Redis Deployment
     ├── deployment-postgresql.yaml      # PostgreSQL Deployment
     ├── deployment-mosquitto.yaml       # MQTT Deployment
