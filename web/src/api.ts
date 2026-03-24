@@ -915,3 +915,21 @@ export const submitImportJob = (type: 'import_drives' | 'import_charging', file:
     headers: {},
   })
 }
+
+// --- Fleet Telemetry ---
+export interface TelemetryStatus {
+  enabled: boolean
+  endpoint: string
+  protocol: string
+  supported_signals: string[]
+  mqtt_publishing: boolean
+  streaming_vehicles: Record<string, {
+    vin: string
+    last_received: string
+    signal_count: number
+    is_streaming: boolean
+  }>
+}
+
+export const getTelemetryStatus = () =>
+  request<TelemetryStatus>('/telemetry')
