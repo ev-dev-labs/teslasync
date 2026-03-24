@@ -82,18 +82,31 @@ curl -o drives.csv http://localhost:8080/api/v1/export/jobs/exp-1234567890/downl
 | `drives` | Drive records with distance, duration, speed | CSV or JSON |
 | `charging` | Charging sessions with energy, cost, duration | CSV or JSON |
 | `backup` | Full database backup (all tables) | JSON only |
+| `analytics` | Fleet analytics report (drive/charging/battery trends) | JSON only |
 
 ### Request Body
 
 ```json
 {
-  "type": "drives",          // Required: drives, charging, backup
+  "type": "drives",          // Required: drives, charging, backup, analytics
   "format": "csv",           // Optional: csv (default) or json
   "vehicle_id": 123,         // Optional: filter to specific vehicle
   "start": "2024-01-01",     // Optional: date range start (ISO 8601)
   "end": "2024-01-31"        // Optional: date range end (ISO 8601)
 }
 ```
+
+### Async CSV Import
+
+CSV files can be imported asynchronously via the export worker:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/export/jobs/import \
+  -F "type=import_drives" \
+  -F "file=@drives.csv"
+```
+
+Supported import types: `import_drives`, `import_charging`.
 
 ### Database Backup via Export Worker
 
