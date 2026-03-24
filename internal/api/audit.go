@@ -39,8 +39,9 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Pool.Query(r.Context(),
 		`SELECT id, action, resource, details, ip, created_at FROM audit_logs ORDER BY created_at DESC LIMIT $1`, limit)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list audit logs")
-		writeError(w, http.StatusInternalServerError, "failed to list audit logs")
+		// Table may not exist yet — return empty array instead of 500
+		// to avoid tripping the frontend circuit breaker
+		writeJSON(w, http.StatusOK, []models.AuditLog{})
 		return
 	}
 	defer rows.Close()

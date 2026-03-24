@@ -33,8 +33,8 @@ interface BreakerState {
 }
 
 const breaker: BreakerState = { failures: 0, lastFailure: 0, state: 'closed' }
-const BREAKER_THRESHOLD = 10
-const BREAKER_RESET_MS = 15_000
+const BREAKER_THRESHOLD = 20
+const BREAKER_RESET_MS = 10_000
 
 function checkBreaker(): boolean {
   if (breaker.state === 'closed') return true
@@ -216,13 +216,10 @@ async function _doFetch<T>(
           continue
         }
 
-        // Non-retryable errors: don't retry
-        if (!apiErr.retryable) {
-          recordSuccess() // server responded, just a client error
-          setStatus('online')
-          throw apiErr
-        }
-
+        // Server responded (even with error) — the connection is working.
+        // Only network failures and timeouts should trip the circuit breaker.
+        recordSuccess()
+        setStatus('online')
         throw apiErr
       }
 
@@ -231,6 +228,11 @@ async function _doFetch<T>(
       setStatus('online')
       return await res.json() as T
     } catch (err) {
+      // ApiError means the server responded — don't count as connectivity failure
+      if (err instanceof ApiError) {
+        throw err
+      }
+
       lastError = err instanceof Error ? err : new Error(String(err))
 
       // Abort/timeout
@@ -238,14 +240,14 @@ async function _doFetch<T>(
         lastError = new ApiError('Request timed out', 408)
       }
 
-      const isRetryable = lastError instanceof ApiError ? lastError.retryable : true
-
-      if (isRetryable && attempt < retries) {
+      // Network errors and timeouts are retryable
+      if (attempt < retries) {
         const delay = retryDelay * Math.pow(2, attempt) * (0.75 + Math.random() * 0.5)
         await sleep(delay)
         continue
       }
 
+      // All retries exhausted — record as connectivity failure
       recordFailure()
       if (breaker.state === 'open') {
         setStatus('degraded')
@@ -268,7 +270,5 @@ export interface SystemStatus {
 
 /** Fetches the backend system health status (database, Tesla API, MQTT, worker). */
 export async function fetchSystemStatus(): Promise<SystemStatus> {
-  const res = await fetch(`${getApiBase()}/api/v1/system/status`)
-  if (!res.ok) throw new Error('Failed to fetch system status')
-  return res.json()
+  return resilientFetch<SystemStatus>('/system/status', { retries: 0, timeout: 10000 })
 }
