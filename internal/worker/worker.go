@@ -43,6 +43,10 @@ type Worker struct {
 	eventBus      *events.Bus
 	cfg           config.WorkerConfig
 
+	// Optional streaming checker — when set, vehicles that are actively
+	// streaming via Fleet Telemetry get reduced polling (5-minute heartbeat).
+	IsVehicleStreaming func(vin string) bool
+
 	// Track active sessions per vehicle (guarded by sessionMu)
 	sessionMu     sync.Mutex
 	activeDrives  map[int64]int64 // vehicleID -> driveID
@@ -190,6 +194,26 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 	}
 
 	for _, vehicle := range vehicles {
+		// Hybrid mode: if vehicle is streaming via Fleet Telemetry, reduce
+		// polling to a 5-minute heartbeat (just for state/wake detection).
+		if w.IsVehicleStreaming != nil && w.IsVehicleStreaming(vehicle.VIN) {
+			w.mu.Lock()
+			vh, exists := w.vehicleHealth[vehicle.ID]
+			if exists && time.Since(vh.lastError) < 5*time.Minute {
+				// Last poll was less than 5 minutes ago — skip this vehicle
+				w.mu.Unlock()
+				log.Debug().Int64("vehicle_id", vehicle.ID).Msg("skipping vehicle (streaming via Fleet Telemetry)")
+				continue
+			}
+			// Mark last poll time so we don't poll again for 5 minutes
+			if !exists {
+				vh = &vehicleHealth{}
+				w.vehicleHealth[vehicle.ID] = vh
+			}
+			vh.lastError = time.Now() // reuse lastError as "last polled" marker
+			w.mu.Unlock()
+		}
+
 		// Check per-vehicle backoff
 		w.mu.Lock()
 		vh, exists := w.vehicleHealth[vehicle.ID]

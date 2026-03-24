@@ -23,8 +23,9 @@ import (
 
 // RouterOptions holds optional parameters for NewRouter.
 type RouterOptions struct {
-	AppVersion string
-	Encryptor  *crypto.Encryptor
+	AppVersion       string
+	Encryptor        *crypto.Encryptor
+	TelemetryHandler *TelemetryHandler // If set, reuses existing handler (for hybrid mode wiring)
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -101,7 +102,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := NewBackupHandler(db)
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
-	telemetryHandler := NewTelemetryHandler(db, mqttClient)
+	telemetryHandler := opt.TelemetryHandler
+	if telemetryHandler == nil {
+		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub)
+	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 
 	// Health check

@@ -137,8 +137,18 @@ func main() {
 		logCancel()
 	})
 
+	// Fleet Telemetry handler — created early so the worker can check streaming state
+	var telemetryHandler *api.TelemetryHandler
+	if cfg.FleetTelemetry.Enabled {
+		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil) // eventHub wired later via router
+	}
+
 	// Worker (vehicle poller) — runs in a self-healing goroutine
 	w := worker.New(db, teslaClient, mqttClient, cfg.Worker, eventBus, encryptor)
+	if telemetryHandler != nil {
+		w.IsVehicleStreaming = telemetryHandler.IsVehicleStreaming
+		log.Info().Msg("hybrid mode enabled — polling reduced for streaming vehicles")
+	}
 	resilience.SafeGoLoop(ctx, "vehicle-poller", func(loopCtx context.Context) {
 		w.Start(loopCtx)
 	})
@@ -258,8 +268,9 @@ func main() {
 
 	// HTTP API
 	router := api.NewRouter(db, teslaClient, mqttClient, cfg, health, api.RouterOptions{
-		AppVersion: Version,
-		Encryptor:  encryptor,
+		AppVersion:       Version,
+		Encryptor:        encryptor,
+		TelemetryHandler: telemetryHandler,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
