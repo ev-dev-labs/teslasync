@@ -44,6 +44,12 @@ func Send(req *Request) error {
 		return sendNtfy(req.Config["server_url"], req.Config["topic"], req.Title, req.Message)
 	case "pushover":
 		return sendPushover(req.Config["app_token"], req.Config["user_key"], req.Title, req.Message)
+	case "webpush":
+		// Web Push is handled separately via WebPushSender (requires DB access).
+		// When dispatched through the MQTT worker, this is a no-op; callers
+		// should invoke WebPushSender.Send directly.
+		log.Info().Str("title", req.Title).Msg("webpush notification (use WebPushSender for delivery)")
+		return nil
 	case "email":
 		log.Info().Str("to", req.Config["to"]).Str("title", req.Title).Msg("email notification (SMTP not configured)")
 		return nil

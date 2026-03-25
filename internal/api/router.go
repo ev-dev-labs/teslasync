@@ -101,6 +101,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleStateHandler := NewVehicleStateHandler(db)
 	backupHandler := NewBackupHandler(db)
 	auditHandler := NewAuditHandler(db)
+	pushHandler := NewPushHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
@@ -204,6 +205,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Put("/preferences", notifScheduleHandler.UpdatePreference)
 				r.Get("/metrics", notifScheduleHandler.GetChannelMetrics)
 			})
+		})
+
+		// Web Push
+		r.Route("/push", func(r chi.Router) {
+			r.Get("/vapid-key", pushHandler.GetVAPIDKey)
+			r.Post("/subscribe", pushHandler.SubscribePush)
+			r.Delete("/subscribe", pushHandler.UnsubscribePush)
 		})
 
 		// Chatbot

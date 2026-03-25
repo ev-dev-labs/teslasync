@@ -39,6 +39,10 @@ import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
 import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
+import { OfflineBanner } from './OfflineBanner'
+import { InstallPrompt } from './InstallPrompt'
+import { UpdatePrompt } from './UpdatePrompt'
+import { SyncStatus } from './SyncStatus'
 import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates } from '../api'
@@ -332,6 +336,7 @@ export default function Layout() {
             <SystemHealthDot />
             <SSEStatusDot connected={sseConnected} />
           </div>
+          <SyncStatus />
         </div>
       </aside>
 
@@ -351,6 +356,7 @@ export default function Layout() {
         </header>
 
         <ServiceStatusBanner />
+        <OfflineBanner />
         <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
           <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             <AnimatePresence mode="wait">
@@ -373,6 +379,10 @@ export default function Layout() {
 
       {/* Onboarding Wizard */}
       <OnboardingWizard />
+
+      {/* PWA Prompts */}
+      <InstallPrompt />
+      <UpdatePrompt />
     </div>
   )
 }

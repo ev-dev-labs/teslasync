@@ -1,6 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { registerServiceWorker } from './pwa'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { createIDBPersister } from './lib/query-persister'
 import { BrowserRouter } from 'react-router-dom'
 import { ToastProvider } from './components/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -13,6 +16,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60_000,
+      gcTime: 24 * 60 * 60 * 1000, // 24 hours — keep data for offline access
       retry: 1,
       retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 30_000),
       refetchOnWindowFocus: false,
@@ -25,10 +29,21 @@ const queryClient = new QueryClient({
   },
 })
 
+const persister = createIDBPersister()
+
+registerServiceWorker()
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister,
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          buster: '', // cache buster — change to invalidate all cached queries
+        }}
+      >
         <BrowserRouter>
           <ThemeProvider>
             <ToastProvider>
@@ -36,7 +51,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             </ToastProvider>
           </ThemeProvider>
         </BrowserRouter>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )

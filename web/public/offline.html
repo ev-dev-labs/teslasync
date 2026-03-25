@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>TeslaSync — Offline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .container { max-width: 400px; padding: 2rem; }
+    .icon {
+      width: 80px; height: 80px; margin: 0 auto 1.5rem;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.03);
+    }
+    .icon svg { width: 36px; height: 36px; color: #00f0ff; opacity: 0.6; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+    p { font-size: 0.875rem; color: rgba(255,255,255,0.5); line-height: 1.6; margin-bottom: 1.5rem; }
+    .retry-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(0, 240, 255, 0.1); color: #00f0ff;
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      padding: 0.75rem 1.5rem; border-radius: 0.75rem;
+      font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .retry-btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+    }
+    .status { margin-top: 2rem; font-size: 0.75rem; color: rgba(255,255,255,0.25); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.5 6.5a7.5 7.5 0 019 2.5M6 10a10 10 0 012.5-3.5M14 14.5a3 3 0 00-4 0M12 18h.01" />
+      </svg>
+    </div>
+    <h1>You're Offline</h1>
+    <p>
+      TeslaSync can't reach the server right now. Check your internet connection and try again.
+      Cached pages may still be available.
+    </p>
+    <button class="retry-btn" onclick="window.location.reload()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Retry Connection
+    </button>
+    <div class="status">TeslaSync PWA — Offline Mode</div>
+  </div>
+</body>
+</html>

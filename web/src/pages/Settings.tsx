@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getVersionInfo, AppSettings, Vehicle } from '../api'
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link, Bell, BellOff, Smartphone, HardDrive } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
 import { useToast } from '../components/Toast'
+import { usePushNotifications } from '../hooks/usePushNotifications'
+import { useOfflineStatus } from '../hooks/useOfflineStatus'
+import { clearAllCachedData } from '../lib/idb'
 import clsx from 'clsx'
 
 const modeIcons: Record<string, React.ReactNode> = {
@@ -32,6 +35,8 @@ export default function Settings() {
   const { data: version } = useQuery({ queryKey: ['version'], queryFn: getVersionInfo, staleTime: 60_000 })
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
   const toast = useToast()
+  const push = usePushNotifications()
+  const { storagePercent } = useOfflineStatus()
 
   const [form, setForm] = useState<AppSettings>({
     unit_of_length: 'km',
@@ -528,6 +533,119 @@ export default function Settings() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Push Notifications */}
+      <FadeIn delay={0.16}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-purple/10 text-neon-purple ring-1 ring-neon-purple/20">
+              <Smartphone className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Push Notifications</h2>
+              <p className="text-xs text-[var(--text-muted)]">Receive native push notifications for vehicle alerts even when the app is closed</p>
+            </div>
+          </div>
+
+          {!push.supported ? (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+              <BellOff className="h-4 w-4 text-[var(--text-muted)]" />
+              <p className="text-sm text-[var(--text-muted)]">Push notifications are not supported in this browser</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                {push.subscribed ? (
+                  <>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neon-green/10">
+                      <Bell className="h-4 w-4 text-neon-green" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-neon-green">Push notifications enabled</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">You'll receive alerts for battery, charging, geofence, and sentry events</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5">
+                      <BellOff className="h-4 w-4 text-[var(--text-muted)]" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[var(--text-secondary)]">Push notifications disabled</p>
+                      {push.permission === 'denied' ? (
+                        <p className="text-[11px] text-neon-red">Permission denied — enable in browser settings</p>
+                      ) : (
+                        <p className="text-[11px] text-[var(--text-muted)]">Enable to get alerts even when the app tab is closed</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                {push.subscribed ? (
+                  <button
+                    onClick={() => push.unsubscribe()}
+                    disabled={push.loading}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border transition-colors text-[var(--text-secondary)] hover:text-neon-red hover:border-neon-red/30"
+                    style={{ borderColor: 'var(--glass-border)' }}
+                  >
+                    <BellOff className="h-4 w-4" />
+                    {push.loading ? 'Disabling...' : 'Disable Push'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => push.subscribe()}
+                    disabled={push.loading || push.permission === 'denied'}
+                    className="neon-button flex items-center gap-2 px-5 py-2.5 text-sm font-medium disabled:opacity-40"
+                  >
+                    <Bell className="h-4 w-4" />
+                    {push.loading ? 'Enabling...' : 'Enable Push Notifications'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Offline Storage */}
+      <FadeIn delay={0.17}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-amber/10 text-amber-400 ring-1 ring-amber-500/20">
+              <HardDrive className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Offline Storage</h2>
+              <p className="text-xs text-[var(--text-muted)]">Cached data for offline access — vehicle states, drives, and charging sessions</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[var(--text-secondary)]">Storage used</span>
+              <span className="text-sm font-medium text-[var(--text-primary)]">{storagePercent.toFixed(1)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+              <div
+                className={clsx('h-full rounded-full transition-all duration-500', storagePercent > 80 ? 'bg-neon-red' : storagePercent > 50 ? 'bg-amber-400' : 'bg-neon-cyan')}
+                style={{ width: `${Math.min(storagePercent, 100)}%` }}
+              />
+            </div>
+            <button
+              onClick={async () => {
+                await clearAllCachedData()
+                toast.success('Cache cleared', 'All offline data has been removed')
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border transition-colors text-[var(--text-secondary)] hover:text-neon-red hover:border-neon-red/30"
+              style={{ borderColor: 'var(--glass-border)' }}
+            >
+              Clear Cached Data
+            </button>
           </div>
         </GlassPanel>
       </FadeIn>
