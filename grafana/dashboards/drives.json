@@ -176,42 +176,54 @@
       {
         "current": {
           "text": "mi",
-          "value": "mi"
+          "value": "mi",
+          "selected": true
         },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "DS_TESLASYNC_POSTGRESQL"
-        },
-        "definition": "SELECT unit_of_length FROM settings WHERE id = 1",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "unit_length",
         "label": "Distance",
-        "options": [],
-        "query": "SELECT unit_of_length FROM settings WHERE id = 1",
-        "refresh": 1,
-        "type": "query"
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
       },
       {
         "current": {
           "text": "C",
-          "value": "C"
+          "value": "C",
+          "selected": true
         },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "DS_TESLASYNC_POSTGRESQL"
-        },
-        "definition": "SELECT unit_of_temp FROM settings WHERE id = 1",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "unit_temp",
         "label": "Temperature",
-        "options": [],
-        "query": "SELECT unit_of_temp FROM settings WHERE id = 1",
-        "refresh": 1,
-        "type": "query"
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
