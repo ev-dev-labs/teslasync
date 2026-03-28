@@ -107,7 +107,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level = 100\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  CASE WHEN '${unit_length}' = 'mi' THEN ROUND((rated_range * 0.621371)::numeric, 1) ELSE ROUND(rated_range::numeric, 1) END AS \"Rated Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level >= 95\nORDER BY created_at",
           "refId": "A"
         }
       ],
