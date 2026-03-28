@@ -605,7 +605,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(fast_charger_type, 'AC') AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY COALESCE(fast_charger_type, 'AC')\nORDER BY \"Sessions\" DESC",
+          "rawSql": "SELECT\n  COALESCE(fast_charger_type, 'AC') AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY COALESCE(fast_charger_type, 'AC')\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -725,7 +725,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.charge_energy_added)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_date)\nGROUP BY a.id, a.display_name, a.city\nORDER BY \"Sessions\" DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.charge_energy_added)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_date)\nGROUP BY a.id, a.display_name, a.city\nORDER BY 2 DESC\nLIMIT 20",
           "refId": "A"
         }
       ],

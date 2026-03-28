@@ -321,7 +321,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN fast_charger_type IS NOT NULL AND fast_charger_type != '' THEN fast_charger_type\n    WHEN charger_power > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY 1 ORDER BY \"Sessions\" DESC",
+          "rawSql": "SELECT\n  CASE\n    WHEN fast_charger_type IS NOT NULL AND fast_charger_type != '' THEN fast_charger_type\n    WHEN charger_power > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY 1 ORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -376,7 +376,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN fast_charger_type IS NOT NULL AND fast_charger_type != '' THEN fast_charger_type\n    WHEN charger_power > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  ROUND(SUM(CASE WHEN cost > 0 THEN cost ELSE charge_energy_added * (SELECT COALESCE(base_cost_per_kwh, 0.12) FROM settings WHERE id = 1) END)::numeric, 2) AS \"Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY 1 ORDER BY \"Cost ($)\" DESC",
+          "rawSql": "SELECT\n  CASE\n    WHEN fast_charger_type IS NOT NULL AND fast_charger_type != '' THEN fast_charger_type\n    WHEN charger_power > 20 THEN 'DC Fast'\n    ELSE 'Home/AC'\n  END AS \"🏷️ Type\",\n  ROUND(SUM(CASE WHEN cost > 0 THEN cost ELSE charge_energy_added * (SELECT COALESCE(base_cost_per_kwh, 0.12) FROM settings WHERE id = 1) END)::numeric, 2) AS \"Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY 1 ORDER BY 2 DESC",
           "refId": "A"
         }
       ],

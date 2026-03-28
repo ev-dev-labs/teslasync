@@ -145,7 +145,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT v.display_name AS \"🚗 Vehicle\", ROUND(SUM(d.distance)::numeric, 1) AS \"📏 Distance\"\nFROM drives d JOIN vehicles v ON d.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY \"Distance km\" DESC",
+          "rawSql": "SELECT v.display_name AS \"🚗 Vehicle\", ROUND(SUM(d.distance)::numeric, 1) AS \"📏 Distance\"\nFROM drives d JOIN vehicles v ON d.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -214,7 +214,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT v.display_name AS \"🚗 Vehicle\", ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"⚡ Energy\"\nFROM charging_sessions cs JOIN vehicles v ON cs.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY \"Energy kWh\" DESC",
+          "rawSql": "SELECT v.display_name AS \"🚗 Vehicle\", ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"⚡ Energy\"\nFROM charging_sessions cs JOIN vehicles v ON cs.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY 2 DESC",
           "refId": "A"
         }
       ],

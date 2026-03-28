@@ -399,7 +399,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN fast_charger_type != '' AND fast_charger_type IS NOT NULL THEN fast_charger_type ELSE 'Home/AC' END AS \"Charger\", SUM(charge_energy_added) AS \"Energy (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) GROUP BY 1 ORDER BY \"Energy (kWh)\" DESC",
+          "rawSql": "SELECT CASE WHEN fast_charger_type != '' AND fast_charger_type IS NOT NULL THEN fast_charger_type ELSE 'Home/AC' END AS \"Charger\", SUM(charge_energy_added) AS \"Energy (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) GROUP BY 1 ORDER BY 2 DESC",
           "refId": "A"
         }
       ],

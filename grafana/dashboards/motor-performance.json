@@ -574,7 +574,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT gear AS \"Gear\", COUNT(*) AS \"📊 Count\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND gear IS NOT NULL GROUP BY gear ORDER BY \"Count\" DESC",
+          "rawSql": "SELECT gear AS \"Gear\", COUNT(*) AS \"📊 Count\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND gear IS NOT NULL GROUP BY gear ORDER BY 2 DESC",
           "refId": "A"
         }
       ],

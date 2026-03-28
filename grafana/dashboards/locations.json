@@ -198,7 +198,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY \"Visits\" DESC\nLIMIT 15",
+          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY 2 DESC\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -254,7 +254,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY \"Hours\" DESC\nLIMIT 10",
+          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY 2 DESC\nLIMIT 10",
           "refId": "A"
         }
       ],
@@ -306,7 +306,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COALESCE(a.state, 'Unknown') AS \"📊 State\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"Cities\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.state\nORDER BY \"Visits\" DESC",
+          "rawSql": "SELECT \n  COALESCE(a.state, 'Unknown') AS \"📊 State\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.state\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -412,7 +412,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' OR a.display_name LIKE '%Residence%' THEN '🏠 Home'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢 Work'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡ Supercharger'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨 Hotel'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒 Shopping'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧 Service'\n    ELSE '📍 Other'\n  END AS \"🏷️ Type\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY \"Visits\" DESC",
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' OR a.display_name LIKE '%Residence%' THEN '🏠 Home'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢 Work'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡ Supercharger'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨 Hotel'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒 Shopping'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧 Service'\n    ELSE '📍 Other'\n  END AS \"🏷️ Type\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
