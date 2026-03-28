@@ -287,6 +287,22 @@ export interface NotificationStats {
   enabled_channels: number
 }
 
+// === Worker Health Types ===
+
+export interface WorkerStatus {
+  name: string
+  host: string
+  status: 'healthy' | 'unhealthy' | 'down'
+  latency_ms: number
+  error?: string
+}
+
+export interface WorkersHealth {
+  workers: WorkerStatus[]
+  total: number
+  healthy_count: number
+}
+
 // === Chatbot Types ===
 
 export interface ChatMessage {
@@ -558,6 +574,10 @@ export const getNotificationLogs = (limit = 50, offset = 0) =>
   request<NotificationLog[]>(`/notifications/logs?limit=${limit}&offset=${offset}`)
 /** Fetches aggregate notification statistics (sent, failed, pending counts). */
 export const getNotificationStats = () => request<NotificationStats>('/notifications/stats')
+
+// === Workers Health ===
+/** Fetches health status of background worker services. */
+export const getWorkersHealth = () => request<WorkersHealth>('/system/workers')
 
 // === Chatbot ===
 /** Sends a user message and receives an AI assistant response. */
@@ -928,6 +948,7 @@ export interface TelemetryStatus {
     last_received: string
     signal_count: number
     is_streaming: boolean
+    last_signals?: Record<string, unknown>
   }>
 }
 

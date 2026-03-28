@@ -188,3 +188,60 @@ func DegradedStatusHandler(health *resilience.HealthMonitor) http.HandlerFunc {
 		})
 	}
 }
+
+// WorkersHealthHandler checks the health of background worker services.
+func WorkersHealthHandler() http.HandlerFunc {
+	type workerStatus struct {
+		Name    string `json:"name"`
+		Host    string `json:"host"`
+		Status  string `json:"status"`
+		Latency int64  `json:"latency_ms"`
+		Error   string `json:"error,omitempty"`
+	}
+
+	workers := []struct {
+		name string
+		url  string
+	}{
+		{"notification-worker", "http://notification-worker:8081/healthz"},
+		{"export-worker", "http://export-worker:8082/healthz"},
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{Timeout: 3 * time.Second}
+		results := make([]workerStatus, len(workers))
+
+		for i, wk := range workers {
+			ws := workerStatus{Name: wk.name, Host: wk.url}
+			start := time.Now()
+			resp, err := client.Get(wk.url)
+			ws.Latency = time.Since(start).Milliseconds()
+			if err != nil {
+				ws.Status = "down"
+				ws.Error = err.Error()
+			} else {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					ws.Status = "healthy"
+				} else {
+					ws.Status = "unhealthy"
+					ws.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+				}
+			}
+			results[i] = ws
+		}
+
+		healthy := 0
+		for _, ws := range results {
+			if ws.Status == "healthy" {
+				healthy++
+			}
+		}
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"workers":       results,
+			"total":         len(results),
+			"healthy_count": healthy,
+		})
+	}
+}

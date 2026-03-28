@@ -1,11 +1,11 @@
 services:
-  teslasync:
+  teslasync-api:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VERSION: ${VERSION:-dev}
-    container_name: teslasync
+    container_name: teslasync-api
     restart: unless-stopped
     ports:
       - "${TESLASYNC_PORT:-8080}:8080"
@@ -61,7 +61,7 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     depends_on:
-      teslasync:
+      teslasync-api:
         condition: service_healthy
     deploy:
       resources:
@@ -256,7 +256,7 @@ services:
       - ${FLEET_TELEMETRY_TLS_CERT:-./certs/server.crt}:/certs/server.crt:ro
       - ${FLEET_TELEMETRY_TLS_KEY:-./certs/server.key}:/certs/server.key:ro
     depends_on:
-      teslasync:
+      teslasync-api:
         condition: service_healthy
     deploy:
       resources:

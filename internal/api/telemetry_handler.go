@@ -33,10 +33,11 @@ type TelemetryHandler struct {
 
 // VehicleStreamState tracks streaming health per vehicle.
 type VehicleStreamState struct {
-	VIN          string    `json:"vin"`
-	LastReceived time.Time `json:"last_received"`
-	SignalCount  int64     `json:"signal_count"`
-	IsStreaming  bool      `json:"is_streaming"`
+	VIN          string                 `json:"vin"`
+	LastReceived time.Time              `json:"last_received"`
+	SignalCount  int64                  `json:"signal_count"`
+	IsStreaming  bool                   `json:"is_streaming"`
+	LastSignals  map[string]interface{} `json:"last_signals,omitempty"`
 }
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
@@ -163,6 +164,12 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	state.LastReceived = time.Now()
 	state.SignalCount += int64(len(signals))
 	state.IsStreaming = true
+	// Store a shallow copy of the latest signal batch for the status endpoint
+	last := make(map[string]interface{}, len(signals))
+	for k, v := range signals {
+		last[k] = v
+	}
+	state.LastSignals = last
 	h.mu.Unlock()
 
 	// Drive/charge session detection from streaming signals
