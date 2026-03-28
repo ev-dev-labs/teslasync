@@ -49,7 +49,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "ID"
+              "options": "🔗 ID"
             },
             "properties": [
               {
@@ -71,7 +71,25 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Type"
+              "options": "\ud83d\udcc5 Date"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View Drive Detail",
+                    "url": "/d/teslasync-drive-detail?var-drive_id=${__data.fields[\"🔗 ID\"]}&var-vehicle_id=${vehicle_id}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "🏷️ Type"
             },
             "properties": [
               {
@@ -83,7 +101,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Speed"
+              "options": "🚦 Speed"
             },
             "properties": [
               {
@@ -95,7 +113,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Usage"
+              "options": "📊 Usage"
             },
             "properties": [
               {
