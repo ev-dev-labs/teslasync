@@ -14,6 +14,7 @@ import {
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge } from '../components/ui'
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
+import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
@@ -49,6 +50,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 export default function VehicleDetail() {
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
+  const { convertDistance, convertSpeed, convertTemp, distanceUnit, speedUnit, tempUnit } = useSettings()
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -90,7 +92,7 @@ export default function VehicleDetail() {
   const batteryData = positions?.map(p => ({
     time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     battery: p.battery_level,
-    speed: p.speed ?? 0,
+    speed: convertSpeed(p.speed ?? 0),
   })).reverse() ?? []
 
   return (
@@ -155,13 +157,13 @@ export default function VehicleDetail() {
                       size={110}
                     />
                     <RadialGauge
-                      value={Math.round(state.rated_range)} max={600}
-                      label="Range" unit="km"
+                      value={Math.round(convertDistance(state.rated_range))} max={Math.round(convertDistance(600))}
+                      label="Range" unit={distanceUnit}
                       color="#00f0ff" size={110}
                     />
                     <RadialGauge
-                      value={state.speed} max={250}
-                      label="Speed" unit="km/h"
+                      value={Math.round(convertSpeed(state.speed))} max={Math.round(convertSpeed(250))}
+                      label="Speed" unit={speedUnit}
                       color={state.speed > 0 ? '#a855f7' : '#374151'}
                       size={110}
                     />
@@ -176,9 +178,9 @@ export default function VehicleDetail() {
                   {/* Metric bars */}
                   <div className="space-y-3">
                     <MetricBar value={state.battery_level} max={100} color={state.battery_level > 50 ? '#10b981' : '#f59e0b'} label="Battery Level" sublabel={`${state.battery_level}%`} />
-                    <MetricBar value={state.rated_range} max={600} color="#00f0ff" label="Estimated Range" sublabel={`${Math.round(state.rated_range)} km`} />
+                    <MetricBar value={convertDistance(state.rated_range)} max={convertDistance(600)} color="#00f0ff" label="Estimated Range" sublabel={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`} />
                     {state.is_charging && (
-                      <MetricBar value={state.charge_rate} max={state.charger_power || 100} color="#10b981" label="Charge Rate" sublabel={`${state.charge_rate} km/h added`} />
+                      <MetricBar value={convertSpeed(state.charge_rate)} max={state.charger_power || 100} color="#10b981" label="Charge Rate" sublabel={`${Math.round(convertSpeed(state.charge_rate))} ${speedUnit} added`} />
                     )}
                   </div>
 
@@ -206,18 +208,18 @@ export default function VehicleDetail() {
             <StaggerItem>
               <InfoTile icon={Battery} label="Battery" value={`${state.battery_level}%`}
                 color={state.battery_level > 50 ? 'text-neon-green' : state.battery_level > 20 ? 'text-neon-amber' : 'text-neon-red'}
-                sub={`${Math.round(state.rated_range)} km range`} />
+                sub={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit} range`} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Gauge} label="Speed" value={`${state.speed} km/h`}
+              <InfoTile icon={Gauge} label="Speed" value={`${Math.round(convertSpeed(state.speed))} ${speedUnit}`}
                 sub={state.speed > 0 ? 'Driving' : 'Parked'} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Thermometer} label="Inside" value={`${state.inside_temp}°C`}
-                sub={`Outside: ${state.outside_temp}°C`} />
+              <InfoTile icon={Thermometer} label="Inside" value={`${convertTemp(state.inside_temp).toFixed(1)}${tempUnit}`}
+                sub={`Outside: ${convertTemp(state.outside_temp).toFixed(1)}${tempUnit}`} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(state.odometer).toLocaleString()} km`} />
+              <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(convertDistance(state.odometer)).toLocaleString()} ${distanceUnit}`} />
             </StaggerItem>
             <StaggerItem>
               <InfoTile icon={BatteryCharging} label="Charger" value={state.is_charging ? `${state.charger_power} kW` : 'Not charging'}
@@ -279,7 +281,7 @@ export default function VehicleDetail() {
                         <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                         <Tooltip content={<ChartTooltip />} />
                         <Area yAxisId="left" type="monotone" dataKey="battery" stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Battery %" />
-                        <Area yAxisId="right" type="monotone" dataKey="speed" stroke="#00f0ff" fill="#00f0ff" fillOpacity={0.1} name="Speed km/h" />
+                        <Area yAxisId="right" type="monotone" dataKey="speed" stroke="#00f0ff" fill="#00f0ff" fillOpacity={0.1} name={`Speed ${speedUnit}`} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -313,7 +315,7 @@ export default function VehicleDetail() {
                         </div>
                         <div className="flex-1 text-sm">
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
-                            <AnimatedNumber value={d.distance} decimals={1} suffix=" km" />
+                            <AnimatedNumber value={convertDistance(d.distance)} decimals={1} suffix={` ${distanceUnit}`} />
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">{new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                         </div>

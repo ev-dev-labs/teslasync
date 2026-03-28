@@ -4,6 +4,7 @@ import {
   getNotificationChannels, getNotificationLogs, getNotificationStats, getVehicles,
   Alert, AlertRule, NotificationChannel, Vehicle,
 } from '../api'
+import { useSettings } from '../hooks/useSettings'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
@@ -204,13 +205,28 @@ const ruleDescriptions: Record<string, { label: string; description: string; thr
   },
 }
 
-function getRuleDescription(type: string) {
-  return ruleDescriptions[type] ?? {
+function getRuleDescription(type: string, units?: { speedUnit: string; tempUnit: string; efficiencyUnit: string; pressureUnit: string }) {
+  const base = ruleDescriptions[type] ?? {
     label: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     description: 'Custom alert rule',
     thresholdLabel: 'Threshold',
     thresholdUnit: '',
     thresholdHint: '',
+  }
+  if (!units) return base
+  switch (type) {
+    case 'speed_limit':
+      return { ...base, thresholdLabel: `Speed ${units.speedUnit}`, thresholdUnit: units.speedUnit }
+    case 'vampire_drain':
+      return { ...base, thresholdLabel: units.efficiencyUnit, thresholdUnit: units.efficiencyUnit }
+    case 'temperature':
+      return { ...base, thresholdUnit: units.tempUnit }
+    case 'efficiency_drop':
+      return { ...base, thresholdLabel: units.efficiencyUnit, thresholdUnit: units.efficiencyUnit }
+    case 'tire_pressure_low':
+      return { ...base, thresholdLabel: units.pressureUnit, thresholdUnit: units.pressureUnit }
+    default:
+      return base
   }
 }
 
@@ -337,8 +353,9 @@ function RuleCard({ rule, lastTriggered, onUpdate, onDelete }: {
   onUpdate: (changes: { enabled?: boolean; threshold?: number }) => void
   onDelete: () => void
 }) {
+  const { speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
   const Icon = typeIcons[rule.type] || Bell
-  const desc = getRuleDescription(rule.type)
+  const desc = getRuleDescription(rule.type, { speedUnit, tempUnit, efficiencyUnit, pressureUnit })
   const hasThreshold = !!desc.thresholdLabel
   const [editingThreshold, setEditingThreshold] = useState(false)
   const [thresholdValue, setThresholdValue] = useState(String(rule.threshold))
@@ -528,6 +545,7 @@ function CreateRuleModal({ open, onClose, vehicles, channels }: {
   vehicles: Vehicle[]
   channels: NotificationChannel[]
 }) {
+  const { speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [form, setForm] = useState<CreateRuleForm>({ ...emptyForm })
@@ -554,7 +572,7 @@ function CreateRuleModal({ open, onClose, vehicles, channels }: {
     onError: () => toast.error('Failed to create alert rule'),
   })
 
-  const desc = getRuleDescription(form.type)
+  const desc = getRuleDescription(form.type, { speedUnit, tempUnit, efficiencyUnit, pressureUnit })
   const hasThreshold = !!desc.thresholdLabel
 
   if (!open) return null

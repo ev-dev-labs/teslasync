@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, Tooltip, Legend,
 } from 'recharts'
 import { ChartTooltip, NEON_COLORS } from '../components/Charts'
+import { useSettings } from '../hooks/useSettings'
 
 type ComparisonRow = {
   label: string
@@ -26,6 +27,7 @@ function highlightClass(raw: number[], idx: number, higherIsBetter: boolean): st
 }
 
 export default function Compare() {
+  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const { data: vehicles, isLoading: loadingVehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selected, setSelected] = useState<number[]>([])
 
@@ -123,17 +125,17 @@ export default function Compare() {
           raw: arr.map(() => 0),
           higherIsBetter: true,
         },
-        makeRow('Total Distance (km)', a => a.mileage?.total_distance ?? 0, v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }), true),
+        makeRow(`Total Distance (${distanceUnit})`, a => convertDistance(a.mileage?.total_distance ?? 0), v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }), true),
         makeRow('Total Drives', a => a.mileage?.total_drives ?? 0, v => v.toLocaleString(), true),
         makeRow('Total Energy (kWh)', a => a.fleetEntry?.energy ?? a.mileage?.total_energy ?? 0, v => v.toFixed(1), true),
         makeRow('Total Charging Cost ($)', _a => {
           const monthlyTrend = fleet?.charging_analytics?.monthly_trend ?? []
           return monthlyTrend.reduce((sum, m) => sum + m.cost, 0) / (fleet?.total_vehicles || 1)
         }, v => `$${v.toFixed(2)}`, false),
-        makeRow('Avg Efficiency (Wh/km)', a => a.fleetEntry?.efficiency ?? 0, v => v.toFixed(1), false),
+        makeRow(`Avg Efficiency (${efficiencyUnit})`, a => convertEfficiency(a.fleetEntry?.efficiency ?? 0), v => v.toFixed(1), false),
         makeRow('Battery Health Score', a => a.battery?.health_score ?? 0, v => v.toFixed(0), true),
         makeRow('Battery Degradation (%)', a => a.battery?.degradation_pct ?? 0, v => `${v.toFixed(1)}%`, false),
-        makeRow('Avg Daily Distance (km)', a => a.mileage?.avg_daily ?? 0, v => v.toFixed(1), true),
+        makeRow(`Avg Daily Distance (${distanceUnit})`, a => convertDistance(a.mileage?.avg_daily ?? 0), v => v.toFixed(1), true),
         {
           label: 'Most Visited Location',
           values: arr.map(a => a.topLocation?.address_name || '—'),
@@ -149,11 +151,11 @@ export default function Compare() {
     if (!isDataReady || rows.length === 0) return []
 
     const metrics = [
-      { label: 'Distance', rowLabel: 'Total Distance (km)' },
-      { label: 'Efficiency', rowLabel: 'Avg Efficiency (Wh/km)' },
+      { label: 'Distance', rowLabel: `Total Distance (${distanceUnit})` },
+      { label: 'Efficiency', rowLabel: `Avg Efficiency (${efficiencyUnit})` },
       { label: 'Health', rowLabel: 'Battery Health Score' },
       { label: 'Cost', rowLabel: 'Total Charging Cost ($)' },
-      { label: 'Daily Avg', rowLabel: 'Avg Daily Distance (km)' },
+      { label: 'Daily Avg', rowLabel: `Avg Daily Distance (${distanceUnit})` },
       { label: 'Drives', rowLabel: 'Total Drives' },
     ]
 

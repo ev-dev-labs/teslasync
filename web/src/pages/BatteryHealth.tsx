@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { useSettings } from '../hooks/useSettings'
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Activity, Gauge, Heart, Zap, AlertTriangle, CheckCircle, Info, Target } from 'lucide-react'
 import {
@@ -29,6 +30,7 @@ function InsightCard({ icon, title, description, status }: { icon: React.ReactNo
 }
 
 export default function BatteryHealth() {
+  const { convertDistance, distanceUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
 
@@ -50,11 +52,11 @@ export default function BatteryHealth() {
   const currentCapacity = report?.current_capacity_pct ?? 95
   const cycles = report?.total_cycles ?? 0
 
-  const trendData = report?.monthly_trend ?? Array.from({ length: 12 }, (_, i) => ({
+  const trendData = (report?.monthly_trend ?? Array.from({ length: 12 }, (_, i) => ({
     month: new Date(Date.now() - (11 - i) * 30 * 86400000).toLocaleDateString(undefined, { month: 'short' }),
     capacity_pct: 100 - (i * 0.4 + Math.random() * 0.3),
     range_km: 500 - (i * 2 + Math.random() * 3),
-  }))
+  }))).map(m => ({ ...m, range_km: convertDistance(m.range_km) }))
 
   // Degradation prediction: linear extrapolation
   const predictionData = useMemo(() => {
@@ -204,7 +206,7 @@ export default function BatteryHealth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
                   <MetricBar label="Current Capacity" value={currentCapacity} max={100} color="#00f0ff" />
-                  <p className="text-[10px] text-gray-600 mt-1">{report?.estimated_range_current_km ? `${Math.round(report.estimated_range_current_km)} km current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(report.estimated_range_new_km)} km when new` : ''}</p>
+                  <p className="text-[10px] text-gray-600 mt-1">{report?.estimated_range_current_km ? `${Math.round(convertDistance(report.estimated_range_current_km))} ${distanceUnit} current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(convertDistance(report.estimated_range_new_km))} ${distanceUnit} when new` : ''}</p>
                 </div>
                 <div>
                   <MetricBar label="Degradation" value={degradation} max={30} color={degradation < 10 ? '#10b981' : '#f59e0b'} />
@@ -251,7 +253,7 @@ export default function BatteryHealth() {
                     {chartGrid}
                     <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis yAxisId="left" domain={[70, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
-                    <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} unit=" km" />
+                    <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} unit={` ${distanceUnit}`} />
                     <Tooltip content={<ChartTooltip />} />
                     <ReferenceLine yAxisId="left" y={70} stroke="#ef4444" strokeDasharray="8 4" label={{ value: '70% warranty', fill: '#ef4444', fontSize: 10, position: 'insideTopLeft' }} />
                     <ReferenceLine yAxisId="left" y={80} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: '80% threshold', fill: '#f59e0b', fontSize: 10, position: 'insideTopLeft' }} />
@@ -284,7 +286,7 @@ export default function BatteryHealth() {
                     <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Area type="monotone" dataKey="range_km" name="Range (km)" stroke="#10b981" fill="url(#rangeGrad)" strokeWidth={2} animationDuration={800} />
+                    <Area type="monotone" dataKey="range_km" name={`Range (${distanceUnit})`} stroke="#10b981" fill="url(#rangeGrad)" strokeWidth={2} animationDuration={800} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -353,13 +355,13 @@ export default function BatteryHealth() {
                 </div>
                 <div className="text-center p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Range When New</p>
-                  <p className="text-2xl font-bold text-[var(--text-primary)]">{report?.estimated_range_new_km ? Math.round(report.estimated_range_new_km) : '—'}<span className="text-sm text-[var(--text-muted)]"> km</span></p>
+                  <p className="text-2xl font-bold text-[var(--text-primary)]">{report?.estimated_range_new_km ? Math.round(convertDistance(report.estimated_range_new_km)) : '—'}<span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span></p>
                 </div>
                 <div className="text-center p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Range Now</p>
-                  <p className="text-2xl font-bold text-neon-green">{report?.estimated_range_current_km ? Math.round(report.estimated_range_current_km) : '—'}<span className="text-sm text-[var(--text-muted)]"> km</span></p>
+                  <p className="text-2xl font-bold text-neon-green">{report?.estimated_range_current_km ? Math.round(convertDistance(report.estimated_range_current_km)) : '—'}<span className="text-sm text-[var(--text-muted)]"> {distanceUnit}</span></p>
                   {report?.estimated_range_new_km && report?.estimated_range_current_km && (
-                    <p className="text-[10px] text-neon-red mt-1">-{Math.round(report.estimated_range_new_km - report.estimated_range_current_km)} km lost</p>
+                    <p className="text-[10px] text-neon-red mt-1">-{Math.round(convertDistance(report.estimated_range_new_km - report.estimated_range_current_km))} {distanceUnit} lost</p>
                   )}
                 </div>
               </div>

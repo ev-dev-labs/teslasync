@@ -12,8 +12,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, RadialBarChart, RadialBar
 } from 'recharts'
+import { useSettings } from '../hooks/useSettings'
 
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
+interface TooltipPayload{ name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
@@ -39,6 +40,7 @@ function formatDuration(min: number): string {
 
 export default function Statistics() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [startDate, setStartDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() - 365); return d.toISOString().split('T')[0]
@@ -131,12 +133,12 @@ export default function Statistics() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6 sm:mb-8">
           {[
             { label: 'Vehicles', value: `${analytics?.total_vehicles ?? 0}`, icon: Car, color: '#00f0ff' },
-            { label: 'Distance', value: `${((analytics?.total_distance_km ?? 0) / 1000).toFixed(1)}k km`, icon: MapPin, color: '#10b981' },
+            { label: 'Distance', value: `${(convertDistance(analytics?.total_distance_km ?? 0) / 1000).toFixed(1)}k ${distanceUnit}`, icon: MapPin, color: '#10b981' },
             { label: 'Drives', value: `${analytics?.total_drives ?? 0}`, icon: TrendingUp, color: '#3b82f6' },
             { label: 'Charges', value: `${analytics?.total_charging_sessions ?? 0}`, icon: Battery, color: '#f59e0b' },
             { label: 'Energy', value: `${(analytics?.total_energy_kwh ?? 0).toFixed(0)} kWh`, icon: Zap, color: '#8b5cf6' },
             { label: 'Cost', value: `$${(analytics?.total_cost ?? 0).toFixed(0)}`, icon: Fuel, color: '#ec4899' },
-            { label: 'Efficiency', value: `${(analytics?.avg_efficiency_wh_km ?? 0).toFixed(0)} Wh/km`, icon: Gauge, color: '#f97316' },
+            { label: 'Efficiency', value: `${convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0).toFixed(0)} ${efficiencyUnit}`, icon: Gauge, color: '#f97316' },
             { label: 'CO₂ Saved', value: `${(energy?.co2_saved_kg ?? 0).toFixed(0)} kg`, icon: Clock, color: '#06b6d4' },
           ].map(card => (
             <GlassPanel key={card.label} className="p-3">
@@ -200,9 +202,9 @@ export default function Statistics() {
           <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Mileage Summary</h3>
           <div className="space-y-4">
             {[
-              { label: 'Total Distance', value: `${(mileage?.total_distance ?? 0).toFixed(0)} km`, color: '#00f0ff' },
-              { label: 'Daily Average', value: `${(mileage?.avg_daily ?? 0).toFixed(1)} km`, color: '#10b981' },
-              { label: 'Best Day', value: `${(mileage?.max_daily ?? 0).toFixed(0)} km`, color: '#f59e0b' },
+              { label: 'Total Distance', value: `${convertDistance(mileage?.total_distance ?? 0).toFixed(0)} ${distanceUnit}`, color: '#00f0ff' },
+              { label: 'Daily Average', value: `${convertDistance(mileage?.avg_daily ?? 0).toFixed(1)} ${distanceUnit}`, color: '#10b981' },
+              { label: 'Best Day', value: `${convertDistance(mileage?.max_daily ?? 0).toFixed(0)} ${distanceUnit}`, color: '#f59e0b' },
               { label: 'Total Energy', value: `${(mileage?.total_energy ?? 0).toFixed(0)} kWh`, color: '#8b5cf6' },
               { label: 'Total Drives', value: `${mileage?.total_drives ?? 0}`, color: '#ec4899' },
               { label: 'Days Tracked', value: `${mileage?.days_tracked ?? 0}`, color: '#3b82f6' },
@@ -230,7 +232,7 @@ export default function Statistics() {
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="distance" fill="#00f0ff" name="Distance (km)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="distance" fill="#00f0ff" name={`Distance (${distanceUnit})`} radius={[4, 4, 0, 0]} />
               <Bar dataKey="energy" fill="#f59e0b" name="Energy (kWh)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

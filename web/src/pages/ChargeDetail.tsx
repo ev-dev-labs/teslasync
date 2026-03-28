@@ -11,6 +11,7 @@ import {
   ComposedChart, Line,
 } from 'recharts'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { useSettings } from '../hooks/useSettings'
 import { AnimatedNumber, RadialGauge, MetricBar } from '../components/Widgets'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string; unit?: string }>; label?: string }) {
@@ -38,6 +39,7 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color
 }
 
 export default function ChargeDetail() {
+  const { convertDistance, distanceUnit } = useSettings()
   const { id } = useParams<{ id: string }>()
   const sessionId = Number(id)
 
@@ -113,7 +115,7 @@ export default function ChargeDetail() {
       battery: Math.round(batteryAtPoint),
       power: Math.round(powerAtPoint * 10) / 10,
       energy: Math.round(session.charge_energy_added * progress * 10) / 10,
-      range: rangeAtPoint != null ? Math.round(rangeAtPoint) : null,
+      range: rangeAtPoint != null ? Math.round(convertDistance(rangeAtPoint)) : null,
     }
   })
 
@@ -183,7 +185,7 @@ export default function ChargeDetail() {
           <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
             <span>+{batteryGain}% gained</span>
             <span>{session.charge_energy_added.toFixed(1)} kWh added</span>
-            {rangeGained != null && <span className="text-neon-green">+{Math.round(rangeGained)} km range</span>}
+            {rangeGained != null && <span className="text-neon-green">+{Math.round(convertDistance(rangeGained))} {distanceUnit} range</span>}
             {session.cost != null && <span className="text-neon-amber">${session.cost.toFixed(2)} cost</span>}
           </div>
         </GlassPanel>
@@ -197,7 +199,7 @@ export default function ChargeDetail() {
         <StaggerItem><StatCard icon={TrendingUp} color="#00f0ff" value={`${session.start_battery_level}% → ${session.end_battery_level ?? '?'}%`} label="SoC Range" /></StaggerItem>
         <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={session.cost != null ? `$${session.cost.toFixed(2)}` : '—'} label="Total Cost" /></StaggerItem>
         <StaggerItem><StatCard icon={Timer} color="#6b7280" value={costPerKwh ? `$${costPerKwh}` : '—'} label="Per kWh" /></StaggerItem>
-        <StaggerItem><StatCard icon={ArrowUpRight} color="#10b981" value={rangeGained != null ? `+${Math.round(rangeGained)} km` : '—'} label="Range Gained" /></StaggerItem>
+        <StaggerItem><StatCard icon={ArrowUpRight} color="#10b981" value={rangeGained != null ? `+${Math.round(convertDistance(rangeGained))} ${distanceUnit}` : '—'} label="Range Gained" /></StaggerItem>
         <StaggerItem><StatCard icon={Activity} color="#06b6d4" value={chargeSpeedKwhH ? `${chargeSpeedKwhH}` : '—'} label="kWh/h Avg" /></StaggerItem>
       </StaggerContainer>
 
@@ -230,7 +232,7 @@ export default function ChargeDetail() {
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Range (Start → End)</p>
               <p className="text-lg font-bold text-neon-green">
-                {session.start_range_km != null ? `${Math.round(session.start_range_km)} → ${session.end_range_km != null ? Math.round(session.end_range_km) : '?'}` : '—'} <span className="text-xs text-[var(--text-muted)]">km</span>
+                {session.start_range_km != null ? `${Math.round(convertDistance(session.start_range_km))} → ${session.end_range_km != null ? Math.round(convertDistance(session.end_range_km)) : '?'}` : '—'} <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
               </p>
             </div>
             <div className="text-center">
@@ -313,7 +315,7 @@ export default function ChargeDetail() {
                   <Area yAxisId="left" type="monotone" dataKey="battery" stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} name="Battery %" />
                   <Line yAxisId="right" type="monotone" dataKey="energy" stroke="#00f0ff" strokeWidth={2} dot={false} name="Energy kWh" />
                   {chargeData.some(d => d.range !== null) && (
-                    <Line yAxisId="right" type="monotone" dataKey="range" stroke="#f59e0b" strokeWidth={1.5} dot={false} name="Range km" strokeDasharray="4 2" />
+                    <Line yAxisId="right" type="monotone" dataKey="range" stroke="#f59e0b" strokeWidth={1.5} dot={false} name={`Range ${distanceUnit}`} strokeDasharray="4 2" />
                   )}
                 </ComposedChart>
               </ResponsiveContainer>
