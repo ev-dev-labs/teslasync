@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getDrive, getVehiclePositions, getVehicle } from '../api'
+import { getDrive, getDrivePositions, getVehicle } from '../api'
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
@@ -57,19 +57,12 @@ export default function DriveDetail() {
   })
 
   const { data: positions } = useQuery({
-    queryKey: ['drive-positions', drive?.vehicle_id, driveId],
-    queryFn: () => getVehiclePositions(drive!.vehicle_id, 5000),
-    enabled: !!drive,
+    queryKey: ['drive-positions', driveId],
+    queryFn: () => getDrivePositions(driveId!),
+    enabled: !!driveId && !!drive,
   })
 
-  // Filter positions within the drive time window
-  const drivePositions = positions?.filter(p => {
-    if (!drive) return false
-    const t = new Date(p.created_at).getTime()
-    const start = new Date(drive.start_date).getTime()
-    const end = drive.end_date ? new Date(drive.end_date).getTime() : Date.now()
-    return t >= start && t <= end
-  }) ?? []
+  const drivePositions = positions ?? []
 
   const trail: LatLngExpression[] = drivePositions
     .filter(p => p.latitude && p.longitude)
@@ -440,7 +433,7 @@ export default function DriveDetail() {
               <div className="flex items-center gap-2 text-neon-green mb-1">
                 <MapPin className="h-4 w-4" /> Start
               </div>
-              <p className="font-bold text-[var(--text-primary)]">{startPos ? `${startPos[0].toFixed(4)}, ${startPos[1].toFixed(4)}` : 'Unknown'}</p>
+              <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{startPos[0].toFixed(4)}°N, {Math.abs(startPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
               <p className="text-xs text-[var(--text-muted)]">{new Date(drive.start_date).toLocaleString()}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>
@@ -448,7 +441,7 @@ export default function DriveDetail() {
               <div className="flex items-center gap-2 text-neon-red mb-1">
                 <Flag className="h-4 w-4" /> Destination
               </div>
-              <p className="font-bold text-[var(--text-primary)]">{endPos ? `${endPos[0].toFixed(4)}, ${endPos[1].toFixed(4)}` : 'Unknown'}</p>
+              <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{endPos[0].toFixed(4)}°N, {Math.abs(endPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
               <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>

@@ -532,6 +532,8 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 }
 /** Fetches a single drive session by ID. */
 export const getDrive = (id: number) => request<Drive>(`/drives/${id}`)
+/** Fetches positions within a drive's time window. */
+export const getDrivePositions = (driveId: number) => request<Position[]>(`/drives/${driveId}/positions`)
 
 // === Charging ===
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */

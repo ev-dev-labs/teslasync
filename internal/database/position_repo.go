@@ -57,6 +57,39 @@ func (r *PositionRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	return positions, rows.Err()
 }
 
+func (r *PositionRepo) GetByTimeRange(ctx context.Context, vehicleID int64, start time.Time, end *time.Time) ([]*models.Position, error) {
+	var endTime time.Time
+	if end != nil {
+		endTime = *end
+	} else {
+		endTime = time.Now()
+	}
+	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
+		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
+		fan_status, is_climate_on, created_at
+		FROM positions WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
+		ORDER BY created_at ASC LIMIT 10000`
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, start, endTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var positions []*models.Position
+	for rows.Next() {
+		p := &models.Position{}
+		if err := rows.Scan(
+			&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,
+			&p.Elevation, &p.Odometer, &p.IdealRange, &p.RatedRange, &p.BatteryLvl,
+			&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &p.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		positions = append(positions, p)
+	}
+	return positions, rows.Err()
+}
+
 func (r *PositionRepo) GetLatest(ctx context.Context, vehicleID int64) (*models.Position, error) {
 	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
