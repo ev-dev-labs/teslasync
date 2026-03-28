@@ -85,7 +85,7 @@ FLEET_TELEMETRY_HOST=
 
 Enable with: `docker compose --profile telemetry up -d`
 
-- Uses official `ghcr.io/teslamotors/fleet-telemetry:latest` image
+- Uses official `tesla/fleet-telemetry:latest` image
 - Config mounted from `fleet-telemetry-config.json`
 - TLS cert/key mounted from paths in `.env`
 - Dispatches vehicle data to `http://teslasync:8080/api/v1/telemetry`

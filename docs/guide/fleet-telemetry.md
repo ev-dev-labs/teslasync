@@ -135,7 +135,7 @@ docker run -d \
   -p 443:443 \
   -v $(pwd)/config.json:/etc/fleet-telemetry/config.json \
   -v $(pwd)/certs:/certs \
-  ghcr.io/teslamotors/fleet-telemetry:latest
+  tesla/fleet-telemetry:latest
 ```
 
 Create a `config.json` pointing to TeslaSync as the data consumer:
@@ -627,7 +627,7 @@ Enable in your `values.yaml`:
 ```yaml
 fleetTelemetry:
   enabled: true
-  image: ghcr.io/teslamotors/fleet-telemetry:latest
+  image: tesla/fleet-telemetry:latest
   service:
     type: ClusterIP
     port: 4443

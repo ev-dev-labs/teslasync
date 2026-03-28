@@ -258,7 +258,7 @@ fleetTelemetry:
 
   # -- Tesla's official Fleet Telemetry Docker image.
   # See: https://hub.docker.com/r/tesla/fleet-telemetry
-  image: ghcr.io/teslamotors/fleet-telemetry:latest
+  image: tesla/fleet-telemetry:latest
 
   service:
     type: ClusterIP
