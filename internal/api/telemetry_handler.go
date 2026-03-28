@@ -322,6 +322,14 @@ func (h *TelemetryHandler) trackTirePressure(ctx context.Context, vehicleID int6
 	}
 
 	if !flOk && !frOk && !rlOk && !rrOk {
+		// Try TpmsPressure* naming used by fleet-telemetry proto
+		fl, flOk = signals["TpmsPressureFl"]
+		fr, frOk = signals["TpmsPressureFr"]
+		rl, rlOk = signals["TpmsPressureRl"]
+		rr, rrOk = signals["TpmsPressureRr"]
+	}
+
+	if !flOk && !frOk && !rlOk && !rrOk {
 		return // no tire pressure in this batch
 	}
 
