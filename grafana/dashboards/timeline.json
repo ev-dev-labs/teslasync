@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -291,7 +304,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — State Timeline",
+  "title": "TeslaSync ⏱️ State Timeline",
   "uid": "teslasync-timeline",
   "version": 1,
   "weekStart": ""

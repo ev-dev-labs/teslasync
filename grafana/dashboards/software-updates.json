@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -109,7 +122,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Software Updates",
+  "title": "TeslaSync 📦 Software Updates",
   "uid": "teslasync-software-updates",
   "version": 1,
   "weekStart": ""
