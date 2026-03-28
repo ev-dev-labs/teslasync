@@ -74,7 +74,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  COUNT(DISTINCT a.state) AS \"🗺️ States\",\n  COUNT(*) AS \"📍 Locations\",\n  SUM(vl.visit_count) AS \"🔄 Total Visits\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Total Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT \n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  COUNT(DISTINCT a.state) AS \"🗺️ States\",\n  COUNT(DISTINCT a.country) AS \"🌍 Countries\",\n  COUNT(*) AS \"📍 Locations\",\n  SUM(vl.visit_count) AS \"🔄 Total Visits\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Total Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -356,7 +356,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' THEN '🏠'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  COALESCE(a.city, '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"📊 State\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' THEN '🏠'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨'\n    WHEN a.display_name LIKE '%Resort%' THEN '🏖️'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  COALESCE(a.city, '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"🗺️ State\",\n  COALESCE(a.country, '') AS \"🌍 Country\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
@@ -419,6 +419,98 @@
       "title": "Location Type Distribution",
       "type": "piechart",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 8,
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "barWidth": 0.8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(a.country, 'Unknown') AS \"🌍 Country\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.country\nORDER BY \"🔄 Visits\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "🌍 Visits by Country",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 9,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(a.country, 'Unknown') AS \"🌍 Country\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.country\nORDER BY \"⏱️ Hours\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "🌍 Time by Country",
+      "type": "piechart"
     }
   ],
   "schemaVersion": 39,
