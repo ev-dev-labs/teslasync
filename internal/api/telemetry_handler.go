@@ -20,11 +20,13 @@ import (
 type TelemetryHandler struct {
 	db             *database.DB
 	posRepo        *database.PositionRepo
+	vehicleRepo    *database.VehicleRepo
 	mqttClient     *mqtt.Client
 	logRepo        *database.APICallLogRepo
 	eventHub       *EventHub
 	sessionTracker *TelemetrySessionTracker
 	alertEvaluator *TelemetryAlertEvaluator
+	staleTimeout   time.Duration
 
 	// Per-vehicle streaming health tracking
 	mu             sync.RWMutex
@@ -41,21 +43,26 @@ type VehicleStreamState struct {
 }
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
-func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub) *TelemetryHandler {
+func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleTimeout time.Duration) *TelemetryHandler {
 	var eventBus *events.Bus
 	if mc != nil {
 		eventBus = events.NewBus(mc.Underlying())
 	} else {
 		eventBus = events.NewBus(nil)
 	}
+	if staleTimeout <= 0 {
+		staleTimeout = 5 * time.Minute
+	}
 	return &TelemetryHandler{
 		db:             db,
 		posRepo:        database.NewPositionRepo(db),
+		vehicleRepo:    database.NewVehicleRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
+		staleTimeout:   staleTimeout,
 		streamingState: make(map[string]*VehicleStreamState),
 	}
 }
@@ -80,13 +87,13 @@ func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
 	result := make(map[string]*VehicleStreamState, len(h.streamingState))
 	for k, v := range h.streamingState {
 		cp := *v
-		cp.IsStreaming = time.Since(v.LastReceived) < 5*time.Minute
+		cp.IsStreaming = time.Since(v.LastReceived) < h.staleTimeout
 		result[k] = &cp
 	}
 	return result
 }
 
-// IsVehicleStreaming returns true if a vehicle has received telemetry within 5 minutes.
+// IsVehicleStreaming returns true if a vehicle has received telemetry within the stale timeout.
 func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -94,7 +101,7 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 	if !ok {
 		return false
 	}
-	return time.Since(state.LastReceived) < 5*time.Minute
+	return time.Since(state.LastReceived) < h.staleTimeout
 }
 
 // ProcessSignals is the core telemetry processing pipeline. It stores position
@@ -177,6 +184,46 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		h.sessionTracker.ProcessSignals(ctx, vehicleID, vin, signals)
 		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
 	}
+
+	// Update vehicle state to online/healthy — telemetry proves the vehicle is alive.
+	// This runs asynchronously to avoid slowing down signal processing.
+	if vehicleID > 0 {
+		go func() {
+			updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := h.vehicleRepo.UpdateState(updateCtx, vehicleID, "online", true); err != nil {
+				log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
+			}
+		}()
+	}
+}
+
+// StreamingVINs returns the set of VINs currently receiving live telemetry data.
+func (h *TelemetryHandler) StreamingVINs() map[string]bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	result := make(map[string]bool, len(h.streamingState))
+	for vin, state := range h.streamingState {
+		if time.Since(state.LastReceived) < h.staleTimeout {
+			result[vin] = true
+		}
+	}
+	return result
+}
+
+// GetStaleVINs returns VINs that were previously streaming but have not received
+// any telemetry signals within the stale timeout. These vehicles should be polled
+// via the Tesla Fleet API as a fallback.
+func (h *TelemetryHandler) GetStaleVINs() []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	var stale []string
+	for vin, state := range h.streamingState {
+		if time.Since(state.LastReceived) >= h.staleTimeout {
+			stale = append(stale, vin)
+		}
+	}
+	return stale
 }
 
 // TelemetryIngest receives Fleet Telemetry data via HTTP POST.

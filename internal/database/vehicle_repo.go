@@ -43,6 +43,20 @@ func (r *VehicleRepo) GetByID(ctx context.Context, id int64) (*models.Vehicle, e
 	return v, err
 }
 
+func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*models.Vehicle, error) {
+	query := `SELECT id, vehicle_id, vin, display_name, model, trim_badging, exterior_color, wheel_type, state, healthy, created_at, updated_at
+		FROM vehicles WHERE vin = $1`
+	v := &models.Vehicle{}
+	err := r.db.Pool.QueryRow(ctx, query, vin).Scan(
+		&v.ID, &v.VehicleID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimBadging,
+		&v.ExteriorColor, &v.WheelType, &v.State, &v.Healthy, &v.CreatedAt, &v.UpdatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	return v, err
+}
+
 func (r *VehicleRepo) GetAll(ctx context.Context) ([]*models.Vehicle, error) {
 	query := `SELECT id, vehicle_id, vin, display_name, model, trim_badging, exterior_color, wheel_type, state, healthy, created_at, updated_at
 		FROM vehicles ORDER BY id`

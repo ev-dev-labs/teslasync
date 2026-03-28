@@ -23,11 +23,13 @@ type Config struct {
 }
 
 type FleetTelemetryConfig struct {
-	Enabled   bool
-	Host      string
-	Port      int
-	TopicBase string // MQTT topic base for fleet-telemetry (e.g., "telemetry")
-	BatchMs   int    // Signal batching window in milliseconds
+	Enabled              bool
+	Host                 string
+	Port                 int
+	TopicBase            string        // MQTT topic base for fleet-telemetry (e.g., "telemetry")
+	BatchMs              int           // Signal batching window in milliseconds
+	StaleTimeout         time.Duration // How long without signals before a vehicle is considered stale (fallback to API polling)
+	FallbackPollInterval time.Duration // How often to poll non-streaming vehicles when telemetry is enabled
 }
 
 type DatabaseConfig struct {
@@ -174,11 +176,13 @@ func Load() (*Config, error) {
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{
-			Enabled:   envBool("FLEET_TELEMETRY_ENABLED", false),
-			Host:      envStr("FLEET_TELEMETRY_HOST", ""),
-			Port:      envInt("FLEET_TELEMETRY_PORT", 4443),
-			TopicBase: envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
-			BatchMs:   envInt("FLEET_TELEMETRY_BATCH_MS", 100),
+			Enabled:              envBool("FLEET_TELEMETRY_ENABLED", false),
+			Host:                 envStr("FLEET_TELEMETRY_HOST", ""),
+			Port:                 envInt("FLEET_TELEMETRY_PORT", 4443),
+			TopicBase:            envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
+			BatchMs:              envInt("FLEET_TELEMETRY_BATCH_MS", 100),
+			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 5*time.Minute),
+			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 60*time.Second),
 		},
 	}
 

@@ -140,7 +140,7 @@ func main() {
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
 	if cfg.FleetTelemetry.Enabled {
-		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil) // eventHub wired later via router
+		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout) // eventHub wired later via router
 
 		// Start MQTT subscriber for fleet-telemetry data
 		if mqttClient != nil && cfg.FleetTelemetry.TopicBase != "" {
@@ -159,17 +159,25 @@ func main() {
 				log.Info().
 					Str("topic_base", cfg.FleetTelemetry.TopicBase).
 					Int("batch_ms", cfg.FleetTelemetry.BatchMs).
+					Dur("stale_timeout", cfg.FleetTelemetry.StaleTimeout).
 					Msg("fleet-telemetry MQTT subscriber active")
 				defer ftSubscriber.Stop()
 			}
 		}
 	}
 
-	// Worker (vehicle poller) — runs in a self-healing goroutine
+	// Worker (vehicle poller) — runs in a self-healing goroutine.
+	// When fleet telemetry is enabled, the worker operates in fallback mode:
+	// it only polls vehicles that are NOT actively streaming via telemetry.
 	w := worker.New(db, teslaClient, mqttClient, cfg.Worker, eventBus, encryptor)
 	if telemetryHandler != nil {
 		w.IsVehicleStreaming = telemetryHandler.IsVehicleStreaming
-		log.Info().Msg("hybrid mode enabled — polling reduced for streaming vehicles")
+		w.FleetTelemetryEnabled = true
+		w.SetFallbackPollInterval(cfg.FleetTelemetry.FallbackPollInterval)
+		log.Info().
+			Dur("fallback_poll_interval", cfg.FleetTelemetry.FallbackPollInterval).
+			Dur("stale_timeout", cfg.FleetTelemetry.StaleTimeout).
+			Msg("fleet telemetry primary mode — worker will only poll non-streaming vehicles as fallback")
 	}
 	resilience.SafeGoLoop(ctx, "vehicle-poller", func(loopCtx context.Context) {
 		w.Start(loopCtx)
