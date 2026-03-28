@@ -234,9 +234,11 @@ type CommandLog struct {
 
 // EnergyStatsRow represents a single day of energy data.
 type EnergyStatsRow struct {
-	Date     string  `json:"date"`
-	Consumed float64 `json:"consumed_kwh"`
-	Cost     float64 `json:"cost"`
+	Date       string  `json:"date"`
+	EnergyKWh  float64 `json:"energy_kwh"`
+	DistanceKm float64 `json:"distance_km"`
+	Efficiency float64 `json:"efficiency"`
+	Cost       float64 `json:"cost"`
 }
 
 // BatterySnapshot represents a point-in-time battery health reading.
