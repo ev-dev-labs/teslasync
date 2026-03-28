@@ -2,6 +2,51 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [0.6.0] - 2026-03-28
+
+### 🚀 New Features
+
+#### 10 New Pages
+- **Driving Dynamics** — Real-time motor torque gauges, G-force visualization, acceleration patterns, pedal usage tracking, stator temperature monitoring
+- **Climate Control** — HVAC power & fan speed monitoring, thermal comfort scoring, cabin/outside temperature trends, defrost and battery heater status
+- **Security & Access** — SVG vehicle visualization with lock/sentry/door/window status indicators, security event timeline, sentry activity charts
+- **Charging Curve** — Charge rate (kW) vs SOC% curve visualization, multi-session overlay comparison, charging speed degradation trend analysis
+- **Cost Analysis** — Monthly/yearly cost trends, cost-per-mile tracking, interactive gas vs electric savings calculator, lifetime savings counter
+- **Battery Cells** — Cell voltage spread gauge, module temperature balance, 4×23 pack grid visualization, cell balance scoring, degradation correlation
+- **Drive Score** — Gamified 0-100 driving efficiency scoring with animated gauge, efficiency/smoothness/speed breakdown, improvement tips, score trends
+- **Weekly Digest** — Auto-generated weekly car summary with drive highlights, charging summary, fun facts, week-over-week comparison, notable events
+- **Maintenance Tracker** — Service schedule with 8 maintenance items, odometer-based progress bars, localStorage service log, annual cost estimates
+- **Data Export** — Export drives, charging, analytics in CSV/JSON format with date range filtering, export job management and download
+
+#### Enhanced Existing Pages
+- **Dashboard** — New "Live Telemetry" section with real-time drivetrain, climate, security, and tire pressure cards
+- **Vehicle Detail** — 4 comprehensive telemetry panels: powertrain, climate, security, tire pressure with 3-second auto-refresh
+- **Charging** — Enhanced session cards with cable type badges, charger specs, charging efficiency, new charger specs breakdown panel
+
+#### Backend — New Telemetry Storage
+- New database migration (000016): `motor_snapshots`, `climate_snapshots`, `security_events` tables
+- Telemetry handler now stores motor/powertrain signals (torque, RPM, G-forces, pedal, brake, gear)
+- Telemetry handler now stores climate/HVAC signals (temps, power, fan speed, defrost, heater)
+- Telemetry handler now stores security signals (locks, sentry, doors, windows, HomeLink)
+- New API endpoints: `GET /motor`, `GET /climate`, `GET /security` (list + latest)
+- New `GET /drives/{id}/positions` endpoint for time-windowed route data
+- Energy Stats API enriched with distance, efficiency (Wh/km), and CO₂ saved data
+
+#### Testing & Data Generation
+- Continuous MQTT load test with 8 simulated vehicles on real US routes
+- Historical data generator: 145K+ records spanning 10 years (2016-2026) across all tables
+
+### 🐛 Bug Fixes
+- **Unit conversion** — Fixed 14 pages hardcoding metric units; now respects user's km/mi and °C/°F preferences
+- **Mobile layout** — Fixed last panel getting cut off on all screens (h-screen → h-dvh + safe-area padding)
+- **Map tiles** — Fixed invisible CARTO dark map tiles (brightness filter too aggressive)
+- **Tire pressure** — Fixed bar→PSI conversion, composite latest from history for partial snapshots
+- **Tire pressure signals** — Added TpmsPressureFl/Fr/Rl/Rr signal name variant recognition
+- **Energy API** — Fixed response missing total_distance_km, avg_efficiency_wh_km, co2_saved_kg fields
+- **Drive routes** — Fixed empty route map on DriveDetail by adding time-windowed position query
+- **Drive addresses** — Show lat/lon coordinates instead of "Unknown" for start/destination
+- **Sidebar nav** — Fixed raw i18n keys showing for new pages (fallback to label when translation missing)
+
 ## [0.5.0] - 2026-03-23
 
 ### 🏗 Architecture
