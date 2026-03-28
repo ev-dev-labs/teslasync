@@ -86,7 +86,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(distance_km)::numeric, 1) AS \"km\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT ROUND(CASE WHEN '${unit_length}' = 'mi' THEN SUM(distance_km) * 0.621371 ELSE SUM(distance_km) END::numeric, 1) AS \"Distance\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
           "refId": "A"
         }
       ],
@@ -146,7 +146,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(distance_km)::numeric, 1) AS \"km\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date) AND distance_km > 0",
+          "rawSql": "SELECT ROUND(CASE WHEN '${unit_length}' = 'mi' THEN AVG(distance_km) * 0.621371 ELSE AVG(distance_km) END::numeric, 1) AS \"Distance\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date) AND distance_km > 0",
           "refId": "A"
         }
       ],
@@ -206,7 +206,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(MAX(distance_km)::numeric, 1) AS \"km\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT ROUND(CASE WHEN '${unit_length}' = 'mi' THEN MAX(distance_km) * 0.621371 ELSE MAX(distance_km) END::numeric, 1) AS \"Distance\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
           "refId": "A"
         }
       ],
@@ -346,11 +346,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date::timestamptz AS time,\n  distance_km AS \"📏 Distance\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
+          "rawSql": "SELECT\n  date::timestamptz AS time,\n  CASE WHEN '${unit_length}' = 'mi' THEN ROUND((distance_km * 0.621371)::numeric, 1) ELSE ROUND(distance_km::numeric, 1) END AS \"📏 Distance\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
           "refId": "A"
         }
       ],
-      "title": "Daily Distance (km)",
+      "title": "Daily Distance",
       "type": "timeseries",
       "transparent": false
     },
@@ -427,11 +427,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date::timestamptz AS time,\n  SUM(distance_km) OVER (ORDER BY date) AS \"Cumulative km\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
+          "rawSql": "SELECT\n  date::timestamptz AS time,\n  CASE WHEN '${unit_length}' = 'mi' THEN ROUND((SUM(distance_km) OVER (ORDER BY date) * 0.621371)::numeric, 1) ELSE ROUND((SUM(distance_km) OVER (ORDER BY date))::numeric, 1) END AS \"Cumulative\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
           "refId": "A"
         }
       ],
-      "title": "Cumulative Distance (km)",
+      "title": "Cumulative Distance",
       "type": "timeseries",
       "transparent": false
     },
@@ -496,11 +496,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS \"📅 Month\",\n  ROUND(SUM(distance_km)::numeric, 1) AS \"📏 Distance\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nGROUP BY DATE_TRUNC('month', date)\nORDER BY DATE_TRUNC('month', date)",
+          "rawSql": "SELECT\n  TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS \"📅 Month\",\n  ROUND(CASE WHEN '${unit_length}' = 'mi' THEN SUM(distance_km) * 0.621371 ELSE SUM(distance_km) END::numeric, 1) AS \"📏 Distance\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nGROUP BY DATE_TRUNC('month', date)\nORDER BY DATE_TRUNC('month', date)",
           "refId": "A"
         }
       ],
-      "title": "Monthly Distance (km)",
+      "title": "Monthly Distance",
       "type": "barchart",
       "transparent": false
     }
