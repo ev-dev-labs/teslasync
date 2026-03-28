@@ -27,6 +27,11 @@ services:
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
       - POLL_INTERVAL=${POLL_INTERVAL:-30s}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
+      - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
+      - FLEET_TELEMETRY_PORT=${FLEET_TELEMETRY_PORT:-4443}
+      - FLEET_TELEMETRY_TOPIC_BASE=${FLEET_TELEMETRY_TOPIC_BASE:-telemetry}
+      - FLEET_TELEMETRY_BATCH_MS=${FLEET_TELEMETRY_BATCH_MS:-100}
     depends_on:
       postgres:
         condition: service_healthy
