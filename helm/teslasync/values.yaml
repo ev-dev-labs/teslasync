@@ -136,6 +136,10 @@ notificationWorker:
     pullPolicy: IfNotPresent
     tag: ""
 
+  service:
+    type: ClusterIP
+    port: 8081
+
   resources:
     limits:
       cpu: 200m
@@ -143,6 +147,11 @@ notificationWorker:
     requests:
       cpu: 50m
       memory: 32Mi
+
+  # -- External notification worker — used when notificationWorker.enabled is false.
+  external:
+    host: ""
+    port: 8081
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Export Worker
@@ -159,6 +168,10 @@ exportWorker:
     pullPolicy: IfNotPresent
     tag: ""
 
+  service:
+    type: ClusterIP
+    port: 8082
+
   resources:
     limits:
       cpu: 500m
@@ -166,6 +179,11 @@ exportWorker:
     requests:
       cpu: 100m
       memory: 64Mi
+
+  # -- External export worker — used when exportWorker.enabled is false.
+  external:
+    host: ""
+    port: 8082
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Encryption

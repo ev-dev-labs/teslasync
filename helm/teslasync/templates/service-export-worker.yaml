@@ -1,0 +1,19 @@
+{{- if .Values.exportWorker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslasync.fullname" . }}-export-worker
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: export-worker
+spec:
+  type: {{ .Values.exportWorker.service.type }}
+  selector:
+    {{- include "teslasync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: export-worker
+  ports:
+    - name: health
+      port: {{ .Values.exportWorker.service.port }}
+      targetPort: health
+      protocol: TCP
+{{- end }}

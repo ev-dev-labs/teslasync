@@ -199,12 +199,29 @@ func WorkersHealthHandler() http.HandlerFunc {
 		Error   string `json:"error,omitempty"`
 	}
 
+	envOrDefault := func(key, fallback string) string {
+		if v := os.Getenv(key); v != "" {
+			return v
+		}
+		return fallback
+	}
+
 	workers := []struct {
 		name string
 		url  string
 	}{
-		{"notification-worker", "http://notification-worker:8081/healthz"},
-		{"export-worker", "http://export-worker:8082/healthz"},
+		{
+			"notification-worker",
+			fmt.Sprintf("http://%s:%s/healthz",
+				envOrDefault("NOTIFICATION_WORKER_HOST", "notification-worker"),
+				envOrDefault("NOTIFICATION_WORKER_PORT", "8081")),
+		},
+		{
+			"export-worker",
+			fmt.Sprintf("http://%s:%s/healthz",
+				envOrDefault("EXPORT_WORKER_HOST", "export-worker"),
+				envOrDefault("EXPORT_WORKER_PORT", "8082")),
+		},
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

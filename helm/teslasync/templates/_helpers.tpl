@@ -238,3 +238,39 @@ imagePullSecrets:
 {{- toString (.Values.fleetTelemetry.external.port | default 4443) }}
 {{- end }}
 {{- end }}
+
+{{/* ── Notification Worker connection helpers ──────────────────────────── */}}
+
+{{- define "teslasync.notificationWorker.host" -}}
+{{- if .Values.notificationWorker.enabled }}
+{{- printf "%s-notification-worker" (include "teslasync.fullname" .) }}
+{{- else }}
+{{- .Values.notificationWorker.external.host }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.notificationWorker.port" -}}
+{{- if .Values.notificationWorker.enabled }}
+{{- toString (.Values.notificationWorker.service.port | default 8081) }}
+{{- else }}
+{{- toString (.Values.notificationWorker.external.port | default 8081) }}
+{{- end }}
+{{- end }}
+
+{{/* ── Export Worker connection helpers ─────────────────────────────────── */}}
+
+{{- define "teslasync.exportWorker.host" -}}
+{{- if .Values.exportWorker.enabled }}
+{{- printf "%s-export-worker" (include "teslasync.fullname" .) }}
+{{- else }}
+{{- .Values.exportWorker.external.host }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.exportWorker.port" -}}
+{{- if .Values.exportWorker.enabled }}
+{{- toString (.Values.exportWorker.service.port | default 8082) }}
+{{- else }}
+{{- toString (.Values.exportWorker.external.port | default 8082) }}
+{{- end }}
+{{- end }}
