@@ -279,7 +279,7 @@ export default function Layout() {
                         <Icon className={clsx('h-[18px] w-[18px] transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_6px_currentColor]' : 'opacity-40 group-hover:opacity-80')} />
                       </span>
                       <span className={clsx('relative z-10 transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-                        {navI18nKeys[label] ? t(navI18nKeys[label]) : label}
+                        {navI18nKeys[label] ? (t(navI18nKeys[label]) === navI18nKeys[label] ? label : t(navI18nKeys[label])) : label}
                       </span>
                       {/* Badge for Alerts */}
                       {to === '/alerts' && unreadAlerts > 0 && (
