@@ -402,6 +402,9 @@ body {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1.5rem);
+}
 .safe-left {
   padding-left: env(safe-area-inset-left, 0px);
 }

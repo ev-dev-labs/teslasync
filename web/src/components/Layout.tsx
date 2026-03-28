@@ -183,7 +183,7 @@ export default function Layout() {
   const mainRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+    <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -352,7 +352,7 @@ export default function Layout() {
 
         <ServiceStatusBanner />
         <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
-          <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
