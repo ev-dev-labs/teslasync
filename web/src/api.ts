@@ -939,15 +939,35 @@ export const submitImportJob = (type: 'import_drives' | 'import_charging', file:
 // --- Fleet Telemetry ---
 export interface TelemetryStatus {
   enabled: boolean
+  mode: string
   endpoint: string
   protocol: string
   supported_signals: string[]
   mqtt_publishing: boolean
+  speed_comparison?: {
+    fleet_telemetry_latency: string
+    fleet_api_polling: string
+    speedup: string
+  }
+  aggregate_stats?: {
+    streaming_vehicles: number
+    total_vehicles_seen: number
+    total_signals_received: number
+    total_batches_processed: number
+    avg_signals_per_second: string
+    stale_timeout: string
+  }
   streaming_vehicles: Record<string, {
     vin: string
     last_received: string
+    first_received: string
     signal_count: number
+    batch_count: number
     is_streaming: boolean
+    data_source: string
+    signals_per_second: number
+    latency_ms: number
+    uptime_seconds: number
     last_signals?: Record<string, unknown>
   }>
 }

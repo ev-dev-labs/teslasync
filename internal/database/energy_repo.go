@@ -69,11 +69,11 @@ func NewEnergyStatsRepo(db *DB) *EnergyStatsRepo {
 }
 
 func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
-	query := `SELECT DATE(start_date) AS date,
+	query := `SELECT TO_CHAR(DATE(start_date), 'YYYY-MM-DD') AS date,
 		COALESCE(SUM(charge_energy_added), 0) AS consumed_kwh,
 		COALESCE(SUM(cost), 0) AS cost
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND start_date >= NOW() - ($2 || ' days')::interval
+		WHERE vehicle_id = $1 AND start_date >= NOW() - make_interval(days := $2)
 		GROUP BY DATE(start_date)
 		ORDER BY DATE(start_date)`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, days)
@@ -96,7 +96,7 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 func (r *EnergyStatsRepo) GetTotalEnergy(ctx context.Context, vehicleID int64, days int) (float64, float64, error) {
 	query := `SELECT COALESCE(SUM(charge_energy_added), 0), COALESCE(SUM(cost), 0)
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND start_date >= NOW() - ($2 || ' days')::interval`
+		WHERE vehicle_id = $1 AND start_date >= NOW() - make_interval(days := $2)`
 	var energy, cost float64
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID, days).Scan(&energy, &cost)
 	return energy, cost, err

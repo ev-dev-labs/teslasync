@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -12,6 +13,21 @@ type MileageRepo struct {
 
 func NewMileageRepo(db *DB) *MileageRepo {
 	return &MileageRepo{db: db}
+}
+
+// UpsertDaily inserts or updates the daily mileage for a vehicle. It tracks odometer
+// start/end and computes distance. Called from the telemetry pipeline whenever an
+// odometer reading is received.
+func (r *MileageRepo) UpsertDaily(ctx context.Context, vehicleID int64, odometer float64) error {
+	today := time.Now().UTC().Format("2006-01-02")
+	query := `INSERT INTO daily_mileage (vehicle_id, date, odometer_start, odometer_end, distance_km)
+		VALUES ($1, $2, $3, $3, 0)
+		ON CONFLICT (vehicle_id, date) DO UPDATE SET
+			odometer_end = GREATEST(daily_mileage.odometer_end, $3),
+			odometer_start = LEAST(daily_mileage.odometer_start, $3),
+			distance_km = GREATEST(daily_mileage.odometer_end, $3) - LEAST(daily_mileage.odometer_start, $3)`
+	_, err := r.db.Pool.Exec(ctx, query, vehicleID, today, odometer)
+	return err
 }
 
 func (r *MileageRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.DailyMileage, error) {

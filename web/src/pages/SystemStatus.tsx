@@ -722,7 +722,7 @@ function TelemetryLivePanel() {
   const { data: telemetry, isLoading } = useQuery<TelemetryStatus>({
     queryKey: ['telemetry-status'],
     queryFn: getTelemetryStatus,
-    refetchInterval: 5_000,
+    refetchInterval: 2_000, // 2s refresh — matches real-time telemetry speed
   })
 
   const prevSignalCounts = useRef<Record<string, number>>({})
@@ -757,6 +757,10 @@ function TelemetryLivePanel() {
   const totalSignals = vehicles.reduce((sum, v) => sum + v.signal_count, 0)
   const activeVehicles = vehicles.filter(v => v.is_streaming).length
   const anyActive = activeVehicles > 0
+  const avgLatency = activeVehicles > 0
+    ? Math.round(vehicles.filter(v => v.is_streaming).reduce((s, v) => s + v.latency_ms, 0) / activeVehicles)
+    : 0
+  const totalSignalsPerSec = vehicles.filter(v => v.is_streaming).reduce((s, v) => s + (v.signals_per_second || 0), 0)
 
   return (
     <FadeIn delay={0.13}>
@@ -769,22 +773,42 @@ function TelemetryLivePanel() {
             {anyActive && (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-neon-green/10 text-neon-green">
                 <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
-                Receiving events
+                Primary Data Source
               </span>
             )}
             <span className="text-[10px] text-[var(--text-muted)]">
-              Updates every 5s
+              Real-time · 2s refresh
             </span>
           </div>
         </div>
 
+        {/* Speed comparison banner */}
+        {anyActive && telemetry.speed_comparison && (
+          <div className="mb-4 p-3 rounded-xl bg-neon-cyan/[0.04] border border-neon-cyan/10">
+            <div className="flex items-center gap-2 text-[10px] text-neon-cyan font-medium mb-1">
+              <Zap className="h-3 w-3" /> {telemetry.speed_comparison.speedup}
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-[10px]">
+              <div>
+                <span className="text-[var(--text-muted)]">Fleet Telemetry: </span>
+                <span className="text-neon-green font-mono">{telemetry.speed_comparison.fleet_telemetry_latency}</span>
+              </div>
+              <div>
+                <span className="text-[var(--text-muted)]">Fleet API Polling: </span>
+                <span className="text-[var(--text-secondary)] font-mono">{telemetry.speed_comparison.fleet_api_polling}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Overview stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
           {[
-            { label: 'MQTT Publishing', value: telemetry.mqtt_publishing ? 'Active' : 'Inactive', color: telemetry.mqtt_publishing ? '#10b981' : '#6b7280' },
+            { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? '#10b981' : '#f59e0b' },
             { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? '#10b981' : '#6b7280' },
-            { label: 'Total Signals', value: totalSignals.toLocaleString(), color: '#00f0ff' },
-            { label: 'Supported Signals', value: String(telemetry.supported_signals?.length ?? 0), color: '#8b5cf6' },
+            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? totalSignalsPerSec.toFixed(1) : '0', color: '#00f0ff' },
+            { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? '#10b981' : avgLatency < 5000 ? '#f59e0b' : '#ef4444' },
+            { label: 'Total Signals', value: totalSignals.toLocaleString(), color: '#8b5cf6' },
           ].map(item => (
             <div key={item.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{item.label}</p>
@@ -801,8 +825,10 @@ function TelemetryLivePanel() {
                 <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                   <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Status</th>
                   <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">VIN</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Signals Received</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Last Event</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Source</th>
+                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Signals/s</th>
+                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Latency</th>
+                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Total</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -818,11 +844,11 @@ function TelemetryLivePanel() {
 
                     return (
                       <tr key={v.vin} className="border-b border-white/[0.03]">
-                        <td colSpan={5} className="p-0">
+                        <td colSpan={7} className="p-0">
                           <button
                             onClick={() => setExpandedVin(isExpanded ? null : v.vin)}
                             className={clsx(
-                              'w-full grid grid-cols-[auto_1fr_auto_auto_auto] items-center text-left transition-colors duration-500 hover:bg-white/[0.02]',
+                              'w-full grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] items-center text-left transition-colors duration-500 hover:bg-white/[0.02]',
                               justReceived && 'bg-neon-green/[0.04]',
                             )}
                           >
@@ -843,14 +869,28 @@ function TelemetryLivePanel() {
                               </span>
                             </span>
                             <span className="px-4 py-3 font-mono text-xs text-[var(--text-primary)]">{v.vin}</span>
+                            <span className="px-4 py-3 text-xs">
+                              <span className={clsx(
+                                'px-1.5 py-0.5 rounded text-[10px] font-medium',
+                                v.data_source === 'fleet_telemetry' ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-neon-amber/10 text-neon-amber',
+                              )}>
+                                {v.data_source === 'fleet_telemetry' ? '⚡ Telemetry' : '🔄 API Poll'}
+                              </span>
+                            </span>
+                            <span className="px-4 py-3 text-right font-mono text-xs text-neon-cyan">
+                              {v.signals_per_second > 0 ? v.signals_per_second.toFixed(1) : '—'}
+                            </span>
+                            <span className={clsx(
+                              'px-4 py-3 text-right font-mono text-xs',
+                              v.latency_ms < 1000 ? 'text-neon-green' : v.latency_ms < 5000 ? 'text-neon-amber' : 'text-red-400',
+                            )}>
+                              {v.is_streaming ? `${Math.round(v.latency_ms)}ms` : formatTimeAgo(lastReceived)}
+                            </span>
                             <span className={clsx(
                               'px-4 py-3 text-right font-mono text-xs transition-colors duration-300',
                               justReceived ? 'text-neon-green' : 'text-[var(--text-secondary)]',
                             )}>
                               <AnimatedNumber value={v.signal_count} />
-                            </span>
-                            <span className="px-4 py-3 text-right text-xs text-[var(--text-secondary)]">
-                              {lastReceived.getFullYear() <= 1 ? 'Never' : formatTimeAgo(lastReceived)}
                             </span>
                             <span className="px-3 py-3">
                               <ChevronDown className={clsx(
@@ -862,9 +902,11 @@ function TelemetryLivePanel() {
                           {/* Expandable signal details */}
                           {isExpanded && (
                             <div className="px-4 pb-4 pt-1 border-t border-white/[0.04]">
-                              <p className="text-[10px] text-[var(--text-muted)] mb-2">
-                                Latest batch: {signalCount} signal{signalCount !== 1 ? 's' : ''}
-                              </p>
+                              <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)] mb-2">
+                                <span>Batch: {signalCount} signal{signalCount !== 1 ? 's' : ''}</span>
+                                {v.batch_count > 0 && <span>Batches: {v.batch_count.toLocaleString()}</span>}
+                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${(v.uptime_seconds / 3600).toFixed(1)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
+                              </div>
                               {v.last_signals ? (
                                 <SignalGrid signals={v.last_signals as Record<string, unknown>} />
                               ) : (

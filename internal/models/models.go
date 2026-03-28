@@ -351,14 +351,14 @@ type VampireDrainEvent struct {
 
 // DailyMileage represents mileage data for a single day.
 type DailyMileage struct {
-	ID            int64   `json:"id" db:"id"`
-	VehicleID     int64   `json:"vehicle_id" db:"vehicle_id"`
-	Date          string  `json:"date" db:"date"`
-	DistanceKm    float64 `json:"distance_km" db:"distance_km"`
-	OdometerStart float64 `json:"odometer_start" db:"odometer_start"`
-	OdometerEnd   float64 `json:"odometer_end" db:"odometer_end"`
-	DriveCount    int     `json:"drive_count" db:"drive_count"`
-	EnergyUsedKWh float64 `json:"energy_used_kwh" db:"energy_used_kwh"`
+	ID            int64     `json:"id" db:"id"`
+	VehicleID     int64     `json:"vehicle_id" db:"vehicle_id"`
+	Date          time.Time `json:"date" db:"date"`
+	DistanceKm    float64   `json:"distance_km" db:"distance_km"`
+	OdometerStart float64   `json:"odometer_start" db:"odometer_start"`
+	OdometerEnd   float64   `json:"odometer_end" db:"odometer_end"`
+	DriveCount    int       `json:"drive_count" db:"drive_count"`
+	EnergyUsedKWh float64  `json:"energy_used_kwh" db:"energy_used_kwh"`
 }
 
 // VisitedLocation represents an aggregated visited place.

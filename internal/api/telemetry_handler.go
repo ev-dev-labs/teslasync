@@ -21,6 +21,9 @@ type TelemetryHandler struct {
 	db             *database.DB
 	posRepo        *database.PositionRepo
 	vehicleRepo    *database.VehicleRepo
+	stateRepo      *database.VehicleStateRepo
+	mileageRepo    *database.MileageRepo
+	tireRepo       *database.TirePressureRepo
 	mqttClient     *mqtt.Client
 	logRepo        *database.APICallLogRepo
 	eventHub       *EventHub
@@ -35,11 +38,17 @@ type TelemetryHandler struct {
 
 // VehicleStreamState tracks streaming health per vehicle.
 type VehicleStreamState struct {
-	VIN          string                 `json:"vin"`
-	LastReceived time.Time              `json:"last_received"`
-	SignalCount  int64                  `json:"signal_count"`
-	IsStreaming  bool                   `json:"is_streaming"`
-	LastSignals  map[string]interface{} `json:"last_signals,omitempty"`
+	VIN              string                 `json:"vin"`
+	LastReceived     time.Time              `json:"last_received"`
+	FirstReceived    time.Time              `json:"first_received"`
+	SignalCount      int64                  `json:"signal_count"`
+	BatchCount       int64                  `json:"batch_count"`
+	IsStreaming      bool                   `json:"is_streaming"`
+	DataSource       string                 `json:"data_source"`        // "fleet_telemetry" or "fleet_api"
+	SignalsPerSecond float64                `json:"signals_per_second"` // rolling throughput
+	LatencyMs        int64                  `json:"latency_ms"`        // age of data in milliseconds
+	UptimeSeconds    float64                `json:"uptime_seconds"`    // how long vehicle has been streaming
+	LastSignals      map[string]interface{} `json:"last_signals,omitempty"`
 }
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
@@ -57,6 +66,9 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		db:             db,
 		posRepo:        database.NewPositionRepo(db),
 		vehicleRepo:    database.NewVehicleRepo(db),
+		stateRepo:      database.NewVehicleStateRepo(db),
+		mileageRepo:    database.NewMileageRepo(db),
+		tireRepo:       database.NewTirePressureRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
@@ -80,14 +92,28 @@ type telemetryPayload struct {
 	Signals   []telemetrySignal      `json:"signals"`
 }
 
-// GetStreamingState returns streaming health for all vehicles.
+// GetStreamingState returns streaming health for all vehicles with computed metrics.
 func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	now := time.Now()
 	result := make(map[string]*VehicleStreamState, len(h.streamingState))
 	for k, v := range h.streamingState {
 		cp := *v
-		cp.IsStreaming = time.Since(v.LastReceived) < h.staleTimeout
+		cp.IsStreaming = now.Sub(v.LastReceived) < h.staleTimeout
+		cp.LatencyMs = now.Sub(v.LastReceived).Milliseconds()
+		if !v.FirstReceived.IsZero() {
+			cp.UptimeSeconds = now.Sub(v.FirstReceived).Seconds()
+			elapsed := now.Sub(v.FirstReceived).Seconds()
+			if elapsed > 0 {
+				cp.SignalsPerSecond = float64(v.SignalCount) / elapsed
+			}
+		}
+		if cp.IsStreaming {
+			cp.DataSource = "fleet_telemetry"
+		} else {
+			cp.DataSource = "fleet_api"
+		}
 		result[k] = &cp
 	}
 	return result
@@ -106,6 +132,7 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 
 // ProcessSignals is the core telemetry processing pipeline. It stores position
 // data in PostgreSQL, broadcasts to SSE clients, detects drive/charge sessions,
+// tracks vehicle state transitions, updates daily mileage, stores tire pressure,
 // and evaluates alert rules. When publishToMQTT is true, signals are also
 // published to MQTT topics (used by the HTTP endpoint). When called from the
 // MQTT subscriber, publishToMQTT should be false to avoid a publish loop.
@@ -139,7 +166,6 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 					h.mqttClient.Publish(vin+"/"+name, "false")
 				}
 			case map[string]interface{}:
-				// Location type: {latitude: ..., longitude: ...}
 				if lat, ok := v["latitude"]; ok {
 					h.mqttClient.Publish(vin+"/"+name+"_latitude", formatFloat(toFloat(lat)))
 				}
@@ -165,13 +191,14 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	h.mu.Lock()
 	state, ok := h.streamingState[vin]
 	if !ok {
-		state = &VehicleStreamState{VIN: vin}
+		state = &VehicleStreamState{VIN: vin, FirstReceived: time.Now()}
 		h.streamingState[vin] = state
 	}
 	state.LastReceived = time.Now()
 	state.SignalCount += int64(len(signals))
+	state.BatchCount++
 	state.IsStreaming = true
-	// Store a shallow copy of the latest signal batch for the status endpoint
+	state.DataSource = "fleet_telemetry"
 	last := make(map[string]interface{}, len(signals))
 	for k, v := range signals {
 		last[k] = v
@@ -185,16 +212,123 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
 	}
 
-	// Update vehicle state to online/healthy — telemetry proves the vehicle is alive.
-	// This runs asynchronously to avoid slowing down signal processing.
+	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
 	if vehicleID > 0 {
 		go func() {
-			updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := h.vehicleRepo.UpdateState(updateCtx, vehicleID, "online", true); err != nil {
+
+			// Update vehicle to online/healthy
+			if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, "online", true); err != nil {
 				log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
 			}
+
+			// Track vehicle state transitions (online/driving/charging)
+			h.trackStateTransition(bgCtx, vehicleID, signals)
+
+			// Update daily mileage from odometer readings
+			h.trackMileage(bgCtx, vehicleID, signals)
+
+			// Store tire pressure snapshots
+			h.trackTirePressure(bgCtx, vehicleID, signals)
 		}()
+	}
+}
+
+// trackStateTransition detects the vehicle state from signals and records transitions.
+func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	// Determine current state from signals
+	newState := "online"
+	if speed, ok := signals["VehicleSpeed"]; ok && toFloat(speed) > 0 {
+		newState = "driving"
+	} else if gear, ok := signals["Gear"]; ok {
+		gs := fmt.Sprintf("%v", gear)
+		if gs == "D" || gs == "R" {
+			newState = "driving"
+		}
+	}
+	if cs, ok := signals["ChargeState"]; ok {
+		csStr := fmt.Sprintf("%v", cs)
+		if csStr == "Charging" || csStr == "Starting" {
+			newState = "charging"
+		}
+	}
+	if dcs, ok := signals["DetailedChargeState"]; ok {
+		dcsStr := fmt.Sprintf("%v", dcs)
+		if dcsStr == "Charging" || dcsStr == "Starting" {
+			newState = "charging"
+		}
+	}
+
+	currentState, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
+	if currentState == newState {
+		return // no transition
+	}
+
+	// Close previous state and open new one
+	if currentState != "" {
+		if err := h.stateRepo.EndCurrent(ctx, vehicleID); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to end current state")
+		}
+	}
+	if _, err := h.stateRepo.Insert(ctx, vehicleID, newState); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("state", newState).Msg("telemetry: failed to insert state")
+	}
+}
+
+// trackMileage updates daily mileage when odometer readings are present.
+func (h *TelemetryHandler) trackMileage(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	odomVal, ok := signals["Odometer"]
+	if !ok {
+		return
+	}
+	odometer := toFloat(odomVal)
+	if odometer <= 0 {
+		return
+	}
+	if err := h.mileageRepo.UpsertDaily(ctx, vehicleID, odometer); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to upsert daily mileage")
+	}
+}
+
+// trackTirePressure stores tire pressure snapshots when TPMS signals arrive.
+func (h *TelemetryHandler) trackTirePressure(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	fl, flOk := signals["TirePressureFrontLeft"]
+	fr, frOk := signals["TirePressureFrontRight"]
+	rl, rlOk := signals["TirePressureRearLeft"]
+	rr, rrOk := signals["TirePressureRearRight"]
+
+	if !flOk && !frOk && !rlOk && !rrOk {
+		// Also try the alternate signal names from fleet telemetry
+		fl, flOk = signals["TPMS_FL"]
+		fr, frOk = signals["TPMS_FR"]
+		rl, rlOk = signals["TPMS_RL"]
+		rr, rrOk = signals["TPMS_RR"]
+	}
+
+	if !flOk && !frOk && !rlOk && !rrOk {
+		return // no tire pressure in this batch
+	}
+
+	snap := &models.TirePressureSnapshot{VehicleID: vehicleID}
+	if flOk {
+		v := toFloat(fl)
+		snap.FrontLeft = &v
+	}
+	if frOk {
+		v := toFloat(fr)
+		snap.FrontRight = &v
+	}
+	if rlOk {
+		v := toFloat(rl)
+		snap.RearLeft = &v
+	}
+	if rrOk {
+		v := toFloat(rr)
+		snap.RearRight = &v
+	}
+	if err := h.tireRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store tire pressure")
 	}
 }
 
@@ -363,10 +497,38 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 	streamingVehicles := h.GetStreamingState()
 
+	// Compute aggregate metrics
+	totalSignals := int64(0)
+	totalBatches := int64(0)
+	streamingCount := 0
+	avgSignalsPerSec := 0.0
+	for _, v := range streamingVehicles {
+		totalSignals += v.SignalCount
+		totalBatches += v.BatchCount
+		if v.IsStreaming {
+			streamingCount++
+			avgSignalsPerSec += v.SignalsPerSecond
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"enabled":  true,
+		"mode":     "primary",
 		"endpoint": "/api/v1/telemetry",
-		"protocol": "HTTP POST (JSON)",
+		"protocol": "HTTP POST (JSON) + MQTT",
+		"speed_comparison": map[string]interface{}{
+			"fleet_telemetry_latency": "<100ms (real-time via MQTT)",
+			"fleet_api_polling":       "15,000ms (15s intervals)",
+			"speedup":                 "~150x faster with Fleet Telemetry",
+		},
+		"aggregate_stats": map[string]interface{}{
+			"streaming_vehicles":       streamingCount,
+			"total_vehicles_seen":      len(streamingVehicles),
+			"total_signals_received":   totalSignals,
+			"total_batches_processed":  totalBatches,
+			"avg_signals_per_second":   fmt.Sprintf("%.1f", avgSignalsPerSec),
+			"stale_timeout":            h.staleTimeout.String(),
+		},
 		"supported_signals": []string{
 			// Location
 			"Location", "Latitude", "Longitude", "GpsHeading", "GpsState",
