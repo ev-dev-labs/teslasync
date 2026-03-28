@@ -268,7 +268,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(AVG(rated_range / NULLIF(battery_level, 0) * 100)::numeric, 1) AS \"Projected Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(AVG(rated_range / NULLIF(battery_level, 0) * 100)::numeric, 1) AS \"Projected Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
