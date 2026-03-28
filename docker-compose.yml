@@ -240,9 +240,11 @@ services:
         reservations:
           memory: 64M
 
-  # Fleet Telemetry Server (optional — set FLEET_TELEMETRY_ENABLED=true to enable)
-  # Receives streaming data from Tesla vehicles via WebSocket and relays to TeslaSync API.
+  # Fleet Telemetry Server (optional — docker compose --profile telemetry up)
+  # Receives streaming data from Tesla vehicles via WebSocket and publishes
+  # to MQTT (Mosquitto). TeslaSync's MQTT subscriber picks up the signals.
   # Requires TLS certificates and Tesla Developer account with Fleet Telemetry access.
+  # See: https://github.com/teslamotors/fleet-telemetry
   fleet-telemetry:
     image: ghcr.io/teslamotors/fleet-telemetry:latest
     container_name: teslasync-fleet-telemetry
@@ -256,8 +258,8 @@ services:
       - ${FLEET_TELEMETRY_TLS_CERT:-./certs/server.crt}:/certs/server.crt:ro
       - ${FLEET_TELEMETRY_TLS_KEY:-./certs/server.key}:/certs/server.key:ro
     depends_on:
-      teslasync-api:
-        condition: service_healthy
+      mosquitto:
+        condition: service_started
     deploy:
       resources:
         limits:

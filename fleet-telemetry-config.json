@@ -2,17 +2,23 @@
   "host": "0.0.0.0",
   "port": 4443,
   "log_level": "info",
+  "transmit_decoded_records": true,
   "tls": {
     "server_cert": "/certs/server.crt",
     "server_key": "/certs/server.key"
   },
+  "mqtt": {
+    "broker": "mosquitto:1883",
+    "client_id": "fleet-telemetry",
+    "topic_base": "telemetry",
+    "qos": 1,
+    "retained": false
+  },
   "records": {
-    "V": {
-      "dispatcher": {
-        "type": "http",
-        "url": "http://teslasync-api:8080/api/v1/telemetry"
-      }
-    }
+    "V": ["mqtt"],
+    "alerts": ["mqtt"],
+    "errors": ["logger"],
+    "connectivity": ["mqtt"]
   },
   "monitoring": {
     "prometheus_metrics_port": 9090

@@ -228,19 +228,36 @@ encryption:
 # ─────────────────────────────────────────────────────────────────────────────
 # Fleet Telemetry (Tesla streaming data)
 #
-# Set enabled: true to deploy the official Tesla Fleet Telemetry server.
-# Requires TLS certificates and a Tesla Developer account with Fleet Telemetry access.
-# Vehicles connect via wss:// and stream real-time data at ~1s resolution.
-# See: https://developer.tesla.com/docs/fleet-api/fleet-telemetry
+# Deploys Tesla's official Fleet Telemetry server (bundled) alongside TeslaSync.
+# Uses Tesla's Docker image but auto-configures it to dispatch to TeslaSync's
+# MQTT broker (Mosquitto). No separate Helm chart needed.
+#
+# Architecture:
+#   Vehicle ──wss://──► Fleet Telemetry ──MQTT──► Mosquitto ──► TeslaSync Subscriber
+#
+# The same Tesla Developer app keypair is used for both Fleet API calls
+# (OAuth, commands) and Fleet Telemetry vehicle registration.
+#
+# Requires:
+#   - TLS certificates (vehicles only connect to valid HTTPS endpoints)
+#   - Tesla Developer account with Fleet Telemetry access
+#   - Public hostname reachable by vehicles
+#
+# See: https://github.com/teslamotors/fleet-telemetry
 # ─────────────────────────────────────────────────────────────────────────────
 fleetTelemetry:
+  # -- Deploy the Fleet Telemetry server and enable TeslaSync's MQTT subscriber.
   enabled: false
 
   # -- Public hostname where vehicles connect via wss://.
-  # This is also passed to the TeslaSync API as FLEET_TELEMETRY_HOST
-  # for use in the DevTools subscription UI.
+  # Must be a valid FQDN with a publicly trusted TLS certificate.
+  # Also passed to TeslaSync API as FLEET_TELEMETRY_HOST for the
+  # DevTools vehicle subscription UI.
+  # Example: telemetry.example.com
   host: ""
 
+  # -- Tesla's official Fleet Telemetry Docker image.
+  # See: https://hub.docker.com/r/tesla/fleet-telemetry
   image: ghcr.io/teslamotors/fleet-telemetry:latest
 
   service:
@@ -248,17 +265,28 @@ fleetTelemetry:
     port: 4443
 
   tls:
-    secretName: ""  # K8s TLS secret with tls.crt and tls.key
+    # -- K8s TLS secret containing tls.crt and tls.key for the Fleet Telemetry server.
+    # Vehicles verify this certificate — must be from a public CA (e.g., Let's Encrypt).
+    # Self-signed certificates are rejected by vehicles.
+    secretName: ""
 
-  # -- MQTT topic base used by fleet-telemetry's MQTT dispatcher.
-  # Fleet-telemetry publishes to: {topicBase}/{VIN}/v/{field}
-  # TeslaSync subscribes to these topics to ingest telemetry.
+  # -- MQTT topic base for fleet-telemetry's MQTT dispatcher.
+  # Fleet Telemetry publishes each signal to: {topicBase}/{VIN}/v/{field_name}
+  # TeslaSync's MQTT subscriber listens on: {topicBase}/+/v/#
+  # Must match FLEET_TELEMETRY_TOPIC_BASE env var on the TeslaSync API.
   topicBase: "telemetry"
 
   # -- Signal batching window in milliseconds.
-  # Fleet-telemetry publishes each field as a separate MQTT message.
-  # The subscriber batches fields per VIN within this window before processing.
+  # Fleet Telemetry publishes each field as a separate MQTT message.
+  # TeslaSync batches fields per VIN within this window before processing.
   batchMs: 100
+
+  # -- Time without signals before a vehicle is considered stale.
+  staleTimeout: "5m"
+
+  # -- Polling interval for vehicles that stop streaming.
+  # Set to "0" to disable fallback polling entirely.
+  fallbackPollInterval: "60s"
 
   # -- Traefik IngressRouteTCP for TLS passthrough.
   # Required because vehicles connect with mTLS (client certificates).
@@ -278,9 +306,11 @@ fleetTelemetry:
       cpu: 100m
       memory: 64Mi
 
-  # External Fleet Telemetry — used when fleetTelemetry.enabled is false.
-  # Set these to connect TeslaSync to a Fleet Telemetry server running
-  # outside the Helm release (e.g., a separate deployment or bare-metal).
+  # External Fleet Telemetry — used when fleetTelemetry.enabled is false
+  # but you want TeslaSync's MQTT subscriber to connect to a Fleet Telemetry
+  # server deployed separately (e.g., Tesla's own Helm chart or bare-metal).
+  # TeslaSync still subscribes to MQTT topics regardless — just set the
+  # mqtt.external values and fleetTelemetry.topicBase accordingly.
   external:
     host: ""
     port: 4443
