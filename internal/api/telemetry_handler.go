@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -95,7 +96,85 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 	return time.Since(state.LastReceived) < 5*time.Minute
 }
 
+// ProcessSignals is the core telemetry processing pipeline. It stores position
+// data in PostgreSQL, broadcasts to SSE clients, detects drive/charge sessions,
+// and evaluates alert rules. When publishToMQTT is true, signals are also
+// published to MQTT topics (used by the HTTP endpoint). When called from the
+// MQTT subscriber, publishToMQTT should be false to avoid a publish loop.
+func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signals map[string]interface{}, publishToMQTT bool) {
+	// Extract position data from all supported signals
+	pos := h.extractPosition(signals)
+
+	// Find vehicle by VIN and store position
+	var vehicleID int64
+	err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID)
+	if err == nil && pos != nil {
+		pos.VehicleID = vehicleID
+		if err := h.posRepo.Insert(ctx, pos); err != nil {
+			log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to store position")
+		}
+	}
+
+	// Publish signals to MQTT only when called from the HTTP endpoint.
+	// When called from the MQTT subscriber, fleet-telemetry already published.
+	if publishToMQTT && h.mqttClient != nil {
+		for name, val := range signals {
+			switch v := val.(type) {
+			case float64:
+				h.mqttClient.Publish(vin+"/"+name, formatFloat(v))
+			case string:
+				h.mqttClient.Publish(vin+"/"+name, v)
+			case bool:
+				if v {
+					h.mqttClient.Publish(vin+"/"+name, "true")
+				} else {
+					h.mqttClient.Publish(vin+"/"+name, "false")
+				}
+			case map[string]interface{}:
+				// Location type: {latitude: ..., longitude: ...}
+				if lat, ok := v["latitude"]; ok {
+					h.mqttClient.Publish(vin+"/"+name+"_latitude", formatFloat(toFloat(lat)))
+				}
+				if lng, ok := v["longitude"]; ok {
+					h.mqttClient.Publish(vin+"/"+name+"_longitude", formatFloat(toFloat(lng)))
+				}
+			}
+		}
+	}
+
+	// Broadcast to SSE clients for real-time frontend updates
+	if h.eventHub != nil {
+		h.eventHub.Broadcast("vehicle_update", map[string]interface{}{
+			"vin":        vin,
+			"vehicle_id": vehicleID,
+			"source":     "fleet_telemetry",
+			"signals":    signals,
+			"timestamp":  time.Now().UTC(),
+		})
+	}
+
+	// Update streaming health state
+	h.mu.Lock()
+	state, ok := h.streamingState[vin]
+	if !ok {
+		state = &VehicleStreamState{VIN: vin}
+		h.streamingState[vin] = state
+	}
+	state.LastReceived = time.Now()
+	state.SignalCount += int64(len(signals))
+	state.IsStreaming = true
+	h.mu.Unlock()
+
+	// Drive/charge session detection from streaming signals
+	if vehicleID > 0 {
+		h.sessionTracker.ProcessSignals(ctx, vehicleID, vin, signals)
+		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
+	}
+}
+
 // TelemetryIngest receives Fleet Telemetry data via HTTP POST.
+// This endpoint is used when fleet-telemetry dispatches via the HTTP dispatcher.
+// It delegates to ProcessSignals with publishToMQTT=true.
 func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var payload telemetryPayload
@@ -108,7 +187,7 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 	log.Debug().
 		Str("vin", payload.VIN).
 		Int("signals", len(payload.Signals)).
-		Msg("telemetry data received")
+		Msg("telemetry data received via HTTP")
 
 	// Build a signal map for easy lookup
 	signals := make(map[string]interface{}, len(payload.Signals))
@@ -123,76 +202,14 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Extract position data from all supported signals
-	pos := h.extractPosition(signals)
-
-	// Find vehicle by VIN and store position
-	var vehicleID int64
-	err := h.db.Pool.QueryRow(r.Context(), "SELECT id FROM vehicles WHERE vin = $1", payload.VIN).Scan(&vehicleID)
-	if err == nil && pos != nil {
-		pos.VehicleID = vehicleID
-		if err := h.posRepo.Insert(r.Context(), pos); err != nil {
-			log.Warn().Err(err).Str("vin", payload.VIN).Msg("telemetry: failed to store position")
-		}
-	}
-
-	// Publish ALL signals to MQTT
-	if h.mqttClient != nil {
-		for name, val := range signals {
-			switch v := val.(type) {
-			case float64:
-				h.mqttClient.Publish(payload.VIN+"/"+name, formatFloat(v))
-			case string:
-				h.mqttClient.Publish(payload.VIN+"/"+name, v)
-			case bool:
-				if v {
-					h.mqttClient.Publish(payload.VIN+"/"+name, "true")
-				} else {
-					h.mqttClient.Publish(payload.VIN+"/"+name, "false")
-				}
-			case map[string]interface{}:
-				// Location type: {latitude: ..., longitude: ...}
-				if lat, ok := v["latitude"]; ok {
-					h.mqttClient.Publish(payload.VIN+"/"+name+"_latitude", formatFloat(toFloat(lat)))
-				}
-				if lng, ok := v["longitude"]; ok {
-					h.mqttClient.Publish(payload.VIN+"/"+name+"_longitude", formatFloat(toFloat(lng)))
-				}
-			}
-		}
-	}
-
-	// Broadcast to SSE clients for real-time frontend updates
-	if h.eventHub != nil {
-		h.eventHub.Broadcast("vehicle_update", map[string]interface{}{
-			"vin":        payload.VIN,
-			"vehicle_id": vehicleID,
-			"source":     "fleet_telemetry",
-			"signals":    signals,
-			"timestamp":  time.Now().UTC(),
-		})
-	}
-
-	// Update streaming health state
-	h.mu.Lock()
-	state, ok := h.streamingState[payload.VIN]
-	if !ok {
-		state = &VehicleStreamState{VIN: payload.VIN}
-		h.streamingState[payload.VIN] = state
-	}
-	state.LastReceived = time.Now()
-	state.SignalCount += int64(len(signals))
-	state.IsStreaming = true
-	h.mu.Unlock()
-
-	// Drive/charge session detection from streaming signals
-	if vehicleID > 0 {
-		h.sessionTracker.ProcessSignals(r.Context(), vehicleID, payload.VIN, signals)
-		h.alertEvaluator.Evaluate(r.Context(), vehicleID, payload.VIN, signals)
-	}
+	// Process with MQTT publishing enabled (HTTP dispatcher path)
+	h.ProcessSignals(r.Context(), payload.VIN, signals, true)
 
 	// Log the ingest (sampled — only log every 100th to avoid flooding)
-	if state.SignalCount%100 == 0 {
+	h.mu.RLock()
+	state := h.streamingState[payload.VIN]
+	h.mu.RUnlock()
+	if state != nil && state.SignalCount%100 == 0 {
 		durationMs := int(time.Since(start).Milliseconds())
 		statusCode := http.StatusOK
 		logEntry := &models.APICallLog{

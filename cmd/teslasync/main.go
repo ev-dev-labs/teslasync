@@ -141,6 +141,28 @@ func main() {
 	var telemetryHandler *api.TelemetryHandler
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil) // eventHub wired later via router
+
+		// Start MQTT subscriber for fleet-telemetry data
+		if mqttClient != nil && cfg.FleetTelemetry.TopicBase != "" {
+			ftSubscriber := mqtt.NewSubscriber(
+				mqttClient.Underlying(),
+				cfg.FleetTelemetry.TopicBase,
+				cfg.FleetTelemetry.BatchMs,
+				func(ctx context.Context, vin string, signals map[string]interface{}) {
+					// Process signals without re-publishing to MQTT (fleet-telemetry already published)
+					telemetryHandler.ProcessSignals(ctx, vin, signals, false)
+				},
+			)
+			if err := ftSubscriber.Start(); err != nil {
+				log.Warn().Err(err).Msg("fleet-telemetry MQTT subscriber failed to start")
+			} else {
+				log.Info().
+					Str("topic_base", cfg.FleetTelemetry.TopicBase).
+					Int("batch_ms", cfg.FleetTelemetry.BatchMs).
+					Msg("fleet-telemetry MQTT subscriber active")
+				defer ftSubscriber.Stop()
+			}
+		}
 	}
 
 	// Worker (vehicle poller) — runs in a self-healing goroutine

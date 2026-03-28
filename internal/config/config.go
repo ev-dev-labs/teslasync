@@ -23,9 +23,11 @@ type Config struct {
 }
 
 type FleetTelemetryConfig struct {
-	Enabled bool
-	Host    string
-	Port    int
+	Enabled   bool
+	Host      string
+	Port      int
+	TopicBase string // MQTT topic base for fleet-telemetry (e.g., "telemetry")
+	BatchMs   int    // Signal batching window in milliseconds
 }
 
 type DatabaseConfig struct {
@@ -170,9 +172,11 @@ func Load() (*Config, error) {
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{
-			Enabled: envBool("FLEET_TELEMETRY_ENABLED", false),
-			Host:    envStr("FLEET_TELEMETRY_HOST", ""),
-			Port:    envInt("FLEET_TELEMETRY_PORT", 4443),
+			Enabled:   envBool("FLEET_TELEMETRY_ENABLED", false),
+			Host:      envStr("FLEET_TELEMETRY_HOST", ""),
+			Port:      envInt("FLEET_TELEMETRY_PORT", 4443),
+			TopicBase: envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
+			BatchMs:   envInt("FLEET_TELEMETRY_BATCH_MS", 100),
 		},
 	}
 

@@ -83,13 +83,29 @@ data:
         "server_cert": "/certs/tls.crt",
         "server_key": "/certs/tls.key"
       },
+      "mqtt": {
+        "broker": "{{ include "teslasync.mqtt.host" . }}:{{ include "teslasync.mqtt.port" . }}",
+        "client_id": "fleet-telemetry",
+        "topic_base": {{ .Values.fleetTelemetry.topicBase | default "telemetry" | quote }},
+        "qos": 1,
+        "retained": false
+      },
       "records": {
-        "V": {
-          "dispatcher": {
-            "type": "http",
-            "url": "http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/api/v1/telemetry"
-          }
-        }
+        "V": [
+          "mqtt"
+        ],
+        "alerts": [
+          "mqtt"
+        ],
+        "errors": [
+          "logger"
+        ],
+        "connectivity": [
+          "mqtt"
+        ]
+      },
+      "monitoring": {
+        "prometheus_metrics_port": 9090
       }
     }
 {{- end }}

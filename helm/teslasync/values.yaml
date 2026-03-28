@@ -198,6 +198,26 @@ fleetTelemetry:
   tls:
     secretName: ""  # K8s TLS secret with tls.crt and tls.key
 
+  # -- MQTT topic base used by fleet-telemetry's MQTT dispatcher.
+  # Fleet-telemetry publishes to: {topicBase}/{VIN}/v/{field}
+  # TeslaSync subscribes to these topics to ingest telemetry.
+  topicBase: "telemetry"
+
+  # -- Signal batching window in milliseconds.
+  # Fleet-telemetry publishes each field as a separate MQTT message.
+  # The subscriber batches fields per VIN within this window before processing.
+  batchMs: 100
+
+  # -- Traefik IngressRouteTCP for TLS passthrough.
+  # Required because vehicles connect with mTLS (client certificates).
+  # Traefik must forward raw TCP — it must NOT terminate TLS.
+  ingressRouteTCP:
+    enabled: false
+    annotations: {}
+    entryPoints:
+      - websecure
+    host: ""  # e.g., telemetry.example.com
+
   resources:
     limits:
       cpu: 500m

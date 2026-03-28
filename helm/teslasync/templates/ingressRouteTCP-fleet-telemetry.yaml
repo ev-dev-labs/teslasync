@@ -1,0 +1,26 @@
+{{- if and .Values.fleetTelemetry.enabled .Values.fleetTelemetry.ingressRouteTCP.enabled }}
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+  {{- with .Values.fleetTelemetry.ingressRouteTCP.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+  {{- range .Values.fleetTelemetry.ingressRouteTCP.entryPoints }}
+    - {{ . }}
+  {{- end }}
+  routes:
+    - match: HostSNI(`{{ .Values.fleetTelemetry.ingressRouteTCP.host }}`)
+      services:
+        - name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+          port: {{ .Values.fleetTelemetry.service.port | default 4443 }}
+  tls:
+    passthrough: true
+{{- end }}
