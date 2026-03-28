@@ -38,6 +38,9 @@ import {
   DollarSign,
   Battery,
   Trophy,
+  CalendarCheck,
+  Wrench as WrenchIcon,
+  HardDriveDownload,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -98,6 +101,7 @@ const navSections = [
       { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400' },
       { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
+      { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
     ],
   },
   {
@@ -139,6 +143,7 @@ const navSections = [
       { to: '/trips', icon: Navigation, label: 'Trips', color: 'text-violet-400' },
       { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
       { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
+      { to: '/maintenance', icon: WrenchIcon, label: 'Maintenance', color: 'text-amber-400' },
     ],
   },
   {
@@ -154,6 +159,7 @@ const navSections = [
       { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
       { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
     ],

@@ -48,6 +48,9 @@ const ChargingCurve = lazy(() => import('./pages/ChargingCurve'))
 const CostAnalysis = lazy(() => import('./pages/CostAnalysis'))
 const BatteryCells = lazy(() => import('./pages/BatteryCells'))
 const DriveScore = lazy(() => import('./pages/DriveScore'))
+const WeeklyDigest = lazy(() => import('./pages/WeeklyDigest'))
+const Maintenance = lazy(() => import('./pages/Maintenance'))
+const DataExport = lazy(() => import('./pages/DataExport'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -105,6 +108,9 @@ export default function App() {
         <Route path="cost-analysis" element={<SafeRoute name="CostAnalysis"><CostAnalysis /></SafeRoute>} />
         <Route path="battery-cells" element={<SafeRoute name="BatteryCells"><BatteryCells /></SafeRoute>} />
         <Route path="drive-score" element={<SafeRoute name="DriveScore"><DriveScore /></SafeRoute>} />
+        <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />
+        <Route path="maintenance" element={<SafeRoute name="Maintenance"><Maintenance /></SafeRoute>} />
+        <Route path="data-export" element={<SafeRoute name="DataExport"><DataExport /></SafeRoute>} />
       </Route>
     </Routes>
   )

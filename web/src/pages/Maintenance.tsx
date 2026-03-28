@@ -1,0 +1,787 @@
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getVehicles, getVehicleState, getDrives, getMileageStats, getDailyMileage } from '../api'
+import type { Vehicle } from '../api'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState } from '../components/ui'
+import {
+  Wrench, RefreshCw, Wind, Droplets, CloudRain, Crosshair, Snowflake,
+  Thermometer, Gauge, CheckCircle, AlertTriangle, Clock, Plus,
+  ChevronDown, ChevronUp, Calendar, Car, TrendingUp, DollarSign,
+} from 'lucide-react'
+import clsx from 'clsx'
+import { useSettings } from '../hooks/useSettings'
+
+/* ────────────────────────────── Types ────────────────────────────── */
+
+interface MaintenanceItem {
+  id: string
+  name: string
+  description: string
+  intervalKm: number | null
+  intervalMonths: number | null
+  icon: React.ComponentType<{ className?: string }>
+  category: 'tires' | 'fluids' | 'filters' | 'exterior' | 'inspection'
+  estimatedCostUsd: number
+}
+
+interface ServiceRecord {
+  itemId: string
+  date: string
+  odometerKm: number
+  notes: string
+}
+
+/* ────────────────────────── Maintenance schedule ────────────────────────── */
+
+const MAINTENANCE_SCHEDULE: MaintenanceItem[] = [
+  { id: 'tire-rotation', name: 'Tire Rotation', description: 'Rotate tires for even wear', intervalKm: 10000, intervalMonths: 12, icon: RefreshCw, category: 'tires', estimatedCostUsd: 50 },
+  { id: 'cabin-filter', name: 'Cabin Air Filter', description: 'Replace cabin air filter', intervalKm: 30000, intervalMonths: 24, icon: Wind, category: 'filters', estimatedCostUsd: 60 },
+  { id: 'brake-fluid', name: 'Brake Fluid Check', description: 'Test brake fluid moisture content', intervalKm: null, intervalMonths: 24, icon: Droplets, category: 'fluids', estimatedCostUsd: 100 },
+  { id: 'wiper-blades', name: 'Wiper Blades', description: 'Replace windshield wiper blades', intervalKm: null, intervalMonths: 12, icon: CloudRain, category: 'exterior', estimatedCostUsd: 30 },
+  { id: 'wheel-alignment', name: 'Wheel Alignment', description: 'Check and adjust wheel alignment', intervalKm: 20000, intervalMonths: 24, icon: Crosshair, category: 'tires', estimatedCostUsd: 150 },
+  { id: 'hvac-desiccant', name: 'A/C Desiccant Bag', description: 'Replace A/C desiccant bag', intervalKm: null, intervalMonths: 48, icon: Snowflake, category: 'filters', estimatedCostUsd: 40 },
+  { id: 'coolant', name: 'Battery Coolant', description: 'Check battery coolant level and condition', intervalKm: 80000, intervalMonths: 48, icon: Thermometer, category: 'fluids', estimatedCostUsd: 120 },
+  { id: 'tire-pressure-check', name: 'Tire Pressure Check', description: 'Verify and adjust tire pressure', intervalKm: 5000, intervalMonths: 3, icon: Gauge, category: 'tires', estimatedCostUsd: 0 },
+]
+
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  tires: { bg: 'bg-neon-cyan/15', text: 'text-neon-cyan' },
+  fluids: { bg: 'bg-neon-purple/15', text: 'text-neon-purple' },
+  filters: { bg: 'bg-neon-green/15', text: 'text-neon-green' },
+  exterior: { bg: 'bg-neon-amber/15', text: 'text-neon-amber' },
+  inspection: { bg: 'bg-neon-red/15', text: 'text-neon-red' },
+}
+
+const STORAGE_KEY = 'teslasync-maintenance-log'
+const ICE_ANNUAL_COST = 1200
+
+/* ────────────────────────── Helpers ────────────────────────── */
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function monthsFromNow(iso: string): number {
+  const d = new Date(iso)
+  const now = new Date()
+  return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
+}
+
+/** Compute % progress toward the next service for a single item. 0 = just serviced, 100+ = overdue */
+function computeProgress(
+  item: MaintenanceItem,
+  lastRecord: ServiceRecord | undefined,
+  currentOdometerKm: number,
+): { pctKm: number; pctTime: number; pct: number; kmRemaining: number | null; monthsRemaining: number | null } {
+  let pctKm = 0
+  let pctTime = 0
+  let kmRemaining: number | null = null
+  let monthsRemaining: number | null = null
+  if (item.intervalKm!== null) {
+    const lastKm = lastRecord ? lastRecord.odometerKm : 0
+    const driven = currentOdometerKm - lastKm
+    pctKm = Math.min((driven / item.intervalKm) * 100, 150)
+    kmRemaining = item.intervalKm - driven
+  }
+
+  if (item.intervalMonths !== null) {
+    const lastDate = lastRecord ? lastRecord.date : new Date(Date.now() - 365 * 86400000).toISOString()
+    const elapsed = monthsFromNow(lastDate)
+    pctTime = Math.min((elapsed / item.intervalMonths) * 100, 150)
+    monthsRemaining = item.intervalMonths - elapsed
+  }
+
+  const pct = Math.max(pctKm, pctTime)
+  return { pctKm, pctTime, pct, kmRemaining, monthsRemaining }
+}
+
+function statusFromPct(pct: number): 'good' | 'soon' | 'overdue' {
+  if (pct >= 100) return 'overdue'
+  if (pct >= 80) return 'soon'
+  return 'good'
+}
+
+const statusConfig = {
+  good: { color: 'text-neon-green', bg: 'bg-neon-green/15', label: 'Up to date' },
+  soon: { color: 'text-neon-amber', bg: 'bg-neon-amber/15', label: 'Due soon' },
+  overdue: { color: 'text-neon-red', bg: 'bg-neon-red/15', label: 'Overdue' },
+}
+
+/* ────────────────────────── Sub-components ────────────────────────── */
+
+function ProgressBar({ pct, className }: { pct: number; className?: string }) {
+  const clamped = Math.min(pct, 100)
+  const color = pct >= 100 ? 'bg-neon-red' : pct >= 80 ? 'bg-neon-amber' : 'bg-neon-green'
+  const glow = pct >= 100
+    ? 'shadow-[0_0_8px_rgba(239,68,68,.5)]'
+    : pct >= 80
+      ? 'shadow-[0_0_8px_rgba(245,158,11,.4)]'
+      : 'shadow-[0_0_6px_rgba(16,185,129,.35)]'
+
+  return (
+    <div className={clsx('w-full h-2 rounded-full bg-white/5 overflow-hidden', className)}>
+      <div
+        className={clsx('h-full rounded-full transition-all duration-700', color, glow)}
+        style={{ width: `${clamped}%` }}
+      />
+    </div>
+  )
+}
+
+function CategoryBadge({ category }: { category: string }) {
+  const c = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.inspection
+  return (
+    <span className={clsx('text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full', c.bg, c.text)}>
+      {category}
+    </span>
+  )
+}
+
+/* ────────────────────────── Main component ────────────────────────── */
+
+export default function Maintenance() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
+  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+
+  const { convertDistance, distanceUnit, isMiles } = useSettings()
+
+  /* ── Service log (localStorage) ── */
+  const [serviceLog, setServiceLog] = useState<ServiceRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serviceLog))
+  }, [serviceLog])
+
+  /* ── Form state ── */
+  const [showForm, setShowForm] = useState(false)
+  const [formItemId, setFormItemId] = useState(MAINTENANCE_SCHEDULE[0].id)
+  const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [formOdometer, setFormOdometer] = useState('')
+  const [formNotes, setFormNotes] = useState('')
+
+  /* ── Sorting state for table ── */
+  const [sortCol, setSortCol] = useState<'name' | 'category' | 'interval' | 'status'>('status')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  /* ── API queries ── */
+  const { data: stateResp, isLoading: loadingState } = useQuery({
+    queryKey: ['vehicle-state', vehicleId],
+    queryFn: () => getVehicleState(vehicleId!),
+    enabled: vehicleId !== null,
+    refetchInterval: 30000,
+  })
+
+  const { data: drives } = useQuery({
+    queryKey: ['drives-recent', vehicleId],
+    queryFn: () => getDrives(vehicleId!, 5),
+    enabled: vehicleId !== null,
+  })
+
+  const { data: mileageStats, isLoading: loadingStats } = useQuery({
+    queryKey: ['mileage-stats', vehicleId],
+    queryFn: () => getMileageStats(vehicleId!),
+    enabled: vehicleId !== null,
+  })
+
+  const { data: dailyMileage } = useQuery({
+    queryKey: ['daily-mileage-recent', vehicleId],
+    queryFn: () => getDailyMileage(vehicleId!, 90),
+    enabled: vehicleId !== null,
+  })
+
+  /* ── Derive current odometer (km) ── */
+  const currentOdometerKm = useMemo(() => {
+    if (stateResp?.state?.odometer) return stateResp.state.odometer
+    if (dailyMileage?.length) return dailyMileage[0].odometer_end
+    if (drives?.length) {
+      const totalDist = drives.reduce((s, d) => s + d.distance, 0)
+      if (mileageStats?.total_distance) return mileageStats.total_distance
+      return totalDist
+    }
+    return mileageStats?.total_distance ?? 0
+  }, [stateResp, dailyMileage, drives, mileageStats])
+
+  /* ── Avg daily km ── */
+  const avgDailyKm = mileageStats?.avg_daily ?? 0
+
+  /* ── Compute status for each item ── */
+  const itemStatuses = useMemo(() => {
+    return MAINTENANCE_SCHEDULE.map(item => {
+      const records = serviceLog.filter(r => r.itemId === item.id).sort((a, b) => b.date.localeCompare(a.date))
+      const lastRecord = records[0]
+      const progress = computeProgress(item, lastRecord, currentOdometerKm)
+      const status = statusFromPct(progress.pct)
+      return { item, lastRecord, progress, status, records }
+    })
+  }, [serviceLog, currentOdometerKm])
+
+  /* ── Summary counts ── */
+  const counts = useMemo(() => {
+    let good = 0, soon = 0, overdue = 0
+    for (const s of itemStatuses) {
+      if (s.status === 'good') good++
+      else if (s.status === 'soon') soon++
+      else overdue++
+    }
+    return { good, soon, overdue }
+  }, [itemStatuses])
+
+  /* ── Next service item ── */
+  const nextService = useMemo(() => {
+    const sorted = [...itemStatuses].sort((a, b) => b.progress.pct - a.progress.pct)
+    return sorted[0]
+  }, [itemStatuses])
+
+  /* ── Sorted items for table ── */
+  const sortedItems = useMemo(() => {
+    const copy = [...itemStatuses]
+    copy.sort((a, b) => {
+      let cmp = 0
+      switch (sortCol) {
+        case 'name': cmp = a.item.name.localeCompare(b.item.name); break
+        case 'category': cmp = a.item.category.localeCompare(b.item.category); break
+        case 'interval': cmp = (a.item.intervalKm ?? 999999) - (b.item.intervalKm ?? 999999); break
+        case 'status': cmp = a.progress.pct - b.progress.pct; break
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return copy
+  }, [itemStatuses, sortCol, sortDir])
+
+  /* ── Upcoming items sorted by urgency ── */
+  const upcomingItems = useMemo(() => {
+    return [...itemStatuses].sort((a, b) => b.progress.pct - a.progress.pct)
+  }, [itemStatuses])
+
+  /* ── History sorted by date ── */
+  const sortedHistory = useMemo(() => {
+    return [...serviceLog].sort((a, b) => b.date.localeCompare(a.date))
+  }, [serviceLog])
+
+  /* ── Annual cost estimate ── */
+  const annualCost = useMemo(() => {
+    let total = 0
+    for (const item of MAINTENANCE_SCHEDULE) {
+      const months = item.intervalMonths ?? 12
+      const yearlyFraction = 12 / months
+      total += item.estimatedCostUsd * yearlyFraction
+    }
+    return total
+  }, [])
+
+  const savingsVsIce = Math.round(((ICE_ANNUAL_COST - annualCost) / ICE_ANNUAL_COST) * 100)
+
+  /* ── Mileage projection for each item ── */
+  const projections = useMemo(() => {
+    if (avgDailyKm <= 0) return null
+    return itemStatuses.map(({ item, progress }) => {
+      let daysUntilDue: number | null = null
+      if (progress.kmRemaining !== null && progress.kmRemaining > 0) {
+        daysUntilDue = Math.ceil(progress.kmRemaining / avgDailyKm)
+      }
+      if (progress.monthsRemaining !== null && progress.monthsRemaining > 0) {
+        const timeDays = progress.monthsRemaining * 30
+        if (daysUntilDue === null || timeDays < daysUntilDue) daysUntilDue = timeDays
+      }
+      const estDate = daysUntilDue !== null && daysUntilDue > 0
+        ? new Date(Date.now() + daysUntilDue * 86400000).toISOString()
+        : null
+      return { item, daysUntilDue, estDate }
+    })
+  }, [itemStatuses, avgDailyKm])
+
+  /* ── Handlers ── */
+  const handleSort = (col: typeof sortCol) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('desc') }
+  }
+
+  const handleAddRecord = useCallback(() => {
+    const odomKm = parseFloat(formOdometer)
+    if (isNaN(odomKm) || odomKm <= 0) return
+    const record: ServiceRecord = {
+      itemId: formItemId,
+      date: formDate,
+      odometerKm: isMiles ? odomKm / 0.621371 : odomKm,
+      notes: formNotes.trim(),
+    }
+    setServiceLog(prev => [...prev, record])
+    setFormNotes('')
+    setShowForm(false)
+  }, [formItemId, formDate, formOdometer, formNotes, isMiles])
+
+  const handleDeleteRecord = useCallback((idx: number) => {
+    setServiceLog(prev => prev.filter((_, i) => i !== idx))
+  }, [])
+
+  const isLoading = loadingState || loadingStats
+
+  /* ────────────────────────── RENDER ────────────────────────── */
+
+  return (
+    <FadeIn>
+      {/* Header */}
+      <PageHeader
+        title="Maintenance"
+        subtitle="Service schedule, maintenance tracking, and service history"
+        icon={<Wrench className="h-7 w-7 text-neon-cyan" />}
+        actions={
+          vehicles && vehicles.length > 1 ? (
+            <select
+              value={vehicleId ?? ''}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+            >
+              {vehicles.map((v: Vehicle) => (
+                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
+              ))}
+            </select>
+          ) : undefined
+        }
+      />
+
+      {/* ── Current Odometer ── */}
+      <GlassPanel className="p-5 sm:p-6 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Car className="h-6 w-6 text-neon-cyan" />
+          <div>
+            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Current Odometer</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-40 mt-1 rounded" />
+            ) : (
+              <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                {convertDistance(currentOdometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <span className="text-base font-normal ml-1" style={{ color: 'var(--text-secondary)' }}>{distanceUnit}</span>
+              </p>
+            )}
+          </div>
+        </div>
+        {avgDailyKm > 0 && (
+          <div className="text-right">
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Average daily</p>
+            <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {convertDistance(avgDailyKm).toFixed(1)} {distanceUnit}/day
+            </p>
+          </div>
+        )}
+      </GlassPanel>
+
+      {/* ── Service Overview Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <StatCard
+          label="Up to Date"
+          value={String(counts.good)}
+          icon={<CheckCircle className="h-5 w-5" />}
+          color="green"
+          subtitle="items on schedule"
+        />
+        <StatCard
+          label="Due Soon"
+          value={String(counts.soon)}
+          icon={<Clock className="h-5 w-5" />}
+          color="amber"
+          subtitle="within 20% of interval"
+        />
+        <StatCard
+          label="Overdue"
+          value={String(counts.overdue)}
+          icon={<AlertTriangle className="h-5 w-5" />}
+          color="red"
+          subtitle="past service interval"
+        />
+        <StatCard
+          label="Next Service"
+          value={nextService ? nextService.item.name : '—'}
+          icon={<TrendingUp className="h-5 w-5" />}
+          color="cyan"
+          subtitle={
+            nextService
+              ? nextService.status === 'overdue'
+                ? 'Overdue!'
+                : `${Math.round(nextService.progress.pct)}% of interval`
+              : ''
+          }
+        />
+      </div>
+
+      {/* ── Overdue Alert ── */}
+      {counts.overdue > 0 && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
+          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
+          <p className="text-sm text-neon-red">
+            {counts.overdue} maintenance {counts.overdue === 1 ? 'item is' : 'items are'} overdue. Schedule service soon.
+          </p>
+        </div>
+      )}
+
+      {/* ── Upcoming Maintenance ── */}
+      <GlassPanel className="p-5 sm:p-6 mb-6">
+        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Clock className="h-4 w-4 text-neon-cyan" />
+          Upcoming Maintenance
+        </h3>
+        <div className="space-y-3">
+          {upcomingItems.map(({ item, lastRecord, progress, status }) => {
+            const Icon = item.icon
+            const cfg = statusConfig[status]
+            return (
+              <div key={item.id} className="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={clsx('p-2 rounded-lg shrink-0', cfg.bg)}>
+                    <Icon className={clsx('h-5 w-5', cfg.color)} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{item.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-[140px]">
+                  <ProgressBar pct={progress.pct} className="mb-1" />
+                  <div className="flex justify-between text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                    <span>
+                      {lastRecord ? `Last: ${formatDate(lastRecord.date)}` : 'Never serviced'}
+                    </span>
+                    <span>{Math.round(progress.pct)}%</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {status === 'overdue' ? (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-neon-red/20 text-neon-red uppercase tracking-wider animate-pulse">
+                      Overdue
+                    </span>
+                  ) : (
+                    <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+                      {progress.kmRemaining !== null && progress.kmRemaining > 0
+                        ? `${convertDistance(progress.kmRemaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${distanceUnit}`
+                        : ''}
+                      {progress.kmRemaining !== null && progress.kmRemaining > 0 && progress.monthsRemaining !== null && progress.monthsRemaining > 0
+                        ? ' / '
+                        : ''}
+                      {progress.monthsRemaining !== null && progress.monthsRemaining > 0
+                        ? `${progress.monthsRemaining} mo`
+                        : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </GlassPanel>
+
+      {/* ── Maintenance Schedule Table ── */}
+      <GlassPanel className="p-5 sm:p-6 mb-6 overflow-x-auto">
+        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Calendar className="h-4 w-4 text-neon-cyan" />
+          Maintenance Schedule
+        </h3>
+        <table className="w-full text-sm" style={{ color: 'var(--text-primary)' }}>
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              {([
+                ['name', 'Item'],
+                ['category', 'Category'],
+                ['interval', 'Interval'],
+                ['status', 'Status'],
+              ] as const).map(([col, label]) => (
+                <th
+                  key={col}
+                  className="pb-3 pr-4 cursor-pointer select-none hover:text-neon-cyan transition-colors"
+                  onClick={() => handleSort(col)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {label}
+                    {sortCol === col && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
+                  </span>
+                </th>
+              ))}
+              <th className="pb-3 pr-4">Last Service</th>
+              <th className="pb-3">Next Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedItems.map(({ item, lastRecord, progress, status }) => {
+              const cfg = statusConfig[status]
+              return (
+                <tr key={item.id} className="border-t border-white/5 hover:bg-white/[.02] transition-colors">
+                  <td className="py-3 pr-4">
+                    <div className="flex items-center gap-2">
+                      <item.icon className={clsx('h-4 w-4 shrink-0', cfg.color)} />
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <CategoryBadge category={item.category} />
+                  </td>
+                  <td className="py-3 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {item.intervalKm !== null && (
+                      <span>{convertDistance(item.intervalKm).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span>
+                    )}
+                    {item.intervalKm !== null && item.intervalMonths !== null && ' / '}
+                    {item.intervalMonths !== null && (
+                      <span>{item.intervalMonths} mo</span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider', cfg.bg, cfg.color)}>
+                      {cfg.label}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {lastRecord ? formatDate(lastRecord.date) : '—'}
+                  </td>
+                  <td className="py-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {status === 'overdue' ? (
+                      <span className="text-neon-red font-semibold">Now</span>
+                    ) : progress.kmRemaining !== null && progress.kmRemaining > 0 ? (
+                      <span>{convertDistance(progress.kmRemaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span>
+                    ) : progress.monthsRemaining !== null && progress.monthsRemaining > 0 ? (
+                      <span>{progress.monthsRemaining} months</span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </GlassPanel>
+
+      {/* ── Log Service Form ── */}
+      <GlassPanel className="p-5 sm:p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Plus className="h-4 w-4 text-neon-cyan" />
+            Log Service
+          </h3>
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className={clsx(
+              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+              showForm
+                ? 'bg-white/10 text-[var(--text-primary)]'
+                : 'bg-neon-cyan/15 text-neon-cyan hover:bg-neon-cyan/25',
+            )}
+          >
+            {showForm ? 'Cancel' : 'Add Record'}
+          </button>
+        </div>
+
+        {showForm && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            {/* Item selector */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>Service Item</label>
+              <select
+                value={formItemId}
+                onChange={e => setFormItemId(e.target.value)}
+                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+              >
+                {MAINTENANCE_SCHEDULE.map(i => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>Date</label>
+              <input
+                type="date"
+                value={formDate}
+                onChange={e => setFormDate(e.target.value)}
+                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            {/* Odometer */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>
+                Odometer ({distanceUnit})
+              </label>
+              <input
+                type="number"
+                placeholder={convertDistance(currentOdometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                value={formOdometer}
+                onChange={e => setFormOdometer(e.target.value)}
+                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>Notes</label>
+              <input
+                type="text"
+                placeholder="Optional notes…"
+                value={formNotes}
+                onChange={e => setFormNotes(e.target.value)}
+                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+              <button
+                onClick={handleAddRecord}
+                className="px-5 py-2 rounded-lg text-sm font-semibold bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 transition-all shadow-[0_0_12px_rgba(0,240,255,.15)]"
+              >
+                Save Record
+              </button>
+            </div>
+          </div>
+        )}
+      </GlassPanel>
+
+      {/* ── Service History Log ── */}
+      <GlassPanel className="p-5 sm:p-6 mb-6">
+        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Clock className="h-4 w-4 text-neon-cyan" />
+          Service History
+        </h3>
+        {sortedHistory.length === 0 ? (
+          <EmptyState
+            icon={<Wrench className="h-10 w-10" />}
+            title="No service records yet"
+            description="Use the form above to log your first maintenance service."
+          />
+        ) : (
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
+            {sortedHistory.map((record, idx) => {
+              const item = MAINTENANCE_SCHEDULE.find(m => m.id === record.itemId)
+              if (!item) return null
+              const Icon = item.icon
+              return (
+                <div key={`${record.itemId}-${record.date}-${idx}`} className="glass-card p-3 flex items-center gap-3">
+                  <div className="p-1.5 rounded-lg bg-neon-cyan/10 shrink-0">
+                    <Icon className="h-4 w-4 text-neon-cyan" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      {formatDate(record.date)} · {convertDistance(record.odometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}
+                      {record.notes && ` · ${record.notes}`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteRecord(serviceLog.indexOf(record))}
+                    className="text-neon-red/60 hover:text-neon-red text-xs px-2 py-1 rounded transition-colors"
+                    title="Remove record"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </GlassPanel>
+
+      {/* ── Estimated Annual Cost ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <GlassPanel className="p-5 sm:p-6">
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <DollarSign className="h-4 w-4 text-neon-green" />
+            Estimated Annual Cost
+          </h3>
+          <div className="space-y-2.5 mb-5">
+            {MAINTENANCE_SCHEDULE.filter(i => i.estimatedCostUsd > 0).map(item => {
+              const months = item.intervalMonths ?? 12
+              const yearlyFraction = 12 / months
+              const yearlyCost = item.estimatedCostUsd * yearlyFraction
+              return (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <item.icon className="h-3.5 w-3.5 text-neon-cyan" />
+                    <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
+                  </div>
+                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                    ~${Math.round(yearlyCost)}/yr
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="border-t border-white/10 pt-3 flex items-center justify-between">
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Total Estimated</span>
+            <span className="text-xl font-bold text-neon-green">~${Math.round(annualCost)}/yr</span>
+          </div>
+          <div className="mt-3 p-3 rounded-lg bg-neon-green/5 border border-neon-green/20">
+            <p className="text-xs text-neon-green">
+              <span className="font-bold">{savingsVsIce}% cheaper</span> than average ICE vehicle (${ICE_ANNUAL_COST.toLocaleString()}/year)
+            </p>
+          </div>
+        </GlassPanel>
+
+        {/* ── Vehicle Mileage Projection ── */}
+        <GlassPanel className="p-5 sm:p-6">
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <TrendingUp className="h-4 w-4 text-neon-purple" />
+            Service Projections
+          </h3>
+          {!projections || avgDailyKm <= 0 ? (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Not enough driving data to project service dates.
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {projections
+                .filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0)
+                .sort((a, b) => (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0))
+                .slice(0, 6)
+                .map(({ item, daysUntilDue, estDate }) => {
+                  const months = daysUntilDue !== null ? Math.round(daysUntilDue / 30) : null
+                  return (
+                    <div key={item.id} className="flex items-center justify-between text-sm glass-card p-3">
+                      <div className="flex items-center gap-2">
+                        <item.icon className="h-3.5 w-3.5 text-neon-purple" />
+                        <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-medium text-xs" style={{ color: 'var(--text-primary)' }}>
+                          {months !== null && months > 0 ? `~${months} month${months !== 1 ? 's' : ''}` : 'Soon'}
+                        </span>
+                        {estDate && (
+                          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                            {formatDate(estDate)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              {projections.filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0).length === 0 && (
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  All items are overdue or have no mileage interval.
+                </p>
+              )}
+            </div>
+          )}
+          {avgDailyKm > 0 && (
+            <div className="mt-4 p-3 rounded-lg bg-neon-purple/5 border border-neon-purple/20">
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Based on your average of{' '}
+                <span className="font-semibold text-neon-purple">
+                  {convertDistance(avgDailyKm).toFixed(1)} {distanceUnit}/day
+                </span>
+              </p>
+            </div>
+          )}
+        </GlassPanel>
+      </div>
+    </FadeIn>
+  )
+}
