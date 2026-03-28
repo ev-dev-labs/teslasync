@@ -93,6 +93,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	chatbotHandler := NewChatbotHandler(db)
 	tirePressureHandler := NewTirePressureHandler(db)
+	motorHandler := NewMotorHandler(db)
+	climateHandler := NewClimateHandler(db)
+	securityHandler := NewSecurityHandler(db)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	vampireDrainHandler := NewVampireDrainHandler(db)
 	visitedLocationHandler := NewVisitedLocationHandler(db)
@@ -217,6 +220,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/tire-pressure", func(r chi.Router) {
 			r.Get("/", tirePressureHandler.List)
 			r.Get("/latest", tirePressureHandler.Latest)
+		})
+
+		// Motor/Powertrain
+		r.Route("/motor", func(r chi.Router) {
+			r.Get("/", motorHandler.List)
+			r.Get("/latest", motorHandler.Latest)
+		})
+
+		// Climate/HVAC
+		r.Route("/climate", func(r chi.Router) {
+			r.Get("/", climateHandler.List)
+			r.Get("/latest", climateHandler.Latest)
+		})
+
+		// Security/Access
+		r.Route("/security", func(r chi.Router) {
+			r.Get("/", securityHandler.List)
+			r.Get("/latest", securityHandler.Latest)
 		})
 
 		// Software Updates

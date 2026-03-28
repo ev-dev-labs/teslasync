@@ -332,6 +332,52 @@ export interface TirePressureSnapshot {
   created_at: string
 }
 
+export interface MotorSnapshot {
+  id: number
+  vehicle_id: number
+  di_state?: string
+  di_torque?: number
+  di_axle_speed?: number
+  di_stator_temp?: number
+  pedal_position?: number
+  brake_pedal?: boolean
+  lateral_accel?: number
+  longitudinal_accel?: number
+  vehicle_speed?: number
+  gear?: string
+  created_at: string
+}
+
+export interface ClimateSnapshot {
+  id: number
+  vehicle_id: number
+  inside_temp?: number
+  outside_temp?: number
+  hvac_power?: number
+  hvac_fan_speed?: number
+  hvac_left_temp_request?: number
+  hvac_right_temp_request?: number
+  cabin_overheat_mode?: string
+  defrost_mode?: boolean
+  battery_heater_on?: boolean
+  created_at: string
+}
+
+export interface SecurityEvent {
+  id: number
+  vehicle_id: number
+  locked?: boolean
+  sentry_mode?: boolean
+  door_state?: string
+  fd_window?: string
+  fp_window?: string
+  rd_window?: string
+  rp_window?: string
+  homelink_nearby?: boolean
+  guest_mode?: boolean
+  created_at: string
+}
+
 export interface SoftwareUpdate {
   id: number
   vehicle_id: number
@@ -596,6 +642,30 @@ export const getTirePressure = (vehicleId: number, limit = 100, offset = 0) =>
 /** Fetches the most recent tire pressure reading for a vehicle. */
 export const getLatestTirePressure = (vehicleId: number) =>
   request<TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`)
+
+// === Motor/Powertrain ===
+/** Fetches paginated motor/powertrain snapshots for a vehicle. */
+export const getMotorData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent motor/powertrain reading for a vehicle. */
+export const getMotorLatest = (vehicleId: number) =>
+  request<MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`)
+
+// === Climate/HVAC ===
+/** Fetches paginated climate/HVAC snapshots for a vehicle. */
+export const getClimateData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<ClimateSnapshot[]>(`/climate?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent climate/HVAC reading for a vehicle. */
+export const getClimateLatest = (vehicleId: number) =>
+  request<ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`)
+
+// === Security/Access ===
+/** Fetches paginated security events for a vehicle. */
+export const getSecurityEvents = (vehicleId: number, limit = 100, offset = 0) =>
+  request<SecurityEvent[]>(`/security?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent security event for a vehicle. */
+export const getSecurityLatest = (vehicleId: number) =>
+  request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`)
 
 // === Software Updates ===
 /** Fetches software update history, optionally filtered by vehicle. */

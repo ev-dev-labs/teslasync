@@ -24,6 +24,9 @@ type TelemetryHandler struct {
 	stateRepo      *database.VehicleStateRepo
 	mileageRepo    *database.MileageRepo
 	tireRepo       *database.TirePressureRepo
+	motorRepo      *database.MotorRepo
+	climateRepo    *database.ClimateRepo
+	securityRepo   *database.SecurityRepo
 	mqttClient     *mqtt.Client
 	logRepo        *database.APICallLogRepo
 	eventHub       *EventHub
@@ -69,6 +72,9 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		stateRepo:      database.NewVehicleStateRepo(db),
 		mileageRepo:    database.NewMileageRepo(db),
 		tireRepo:       database.NewTirePressureRepo(db),
+		motorRepo:      database.NewMotorRepo(db),
+		climateRepo:    database.NewClimateRepo(db),
+		securityRepo:   database.NewSecurityRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
@@ -231,6 +237,15 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 			// Store tire pressure snapshots
 			h.trackTirePressure(bgCtx, vehicleID, signals)
+
+			// Store motor/powertrain snapshots
+			h.trackMotor(bgCtx, vehicleID, signals)
+
+			// Store climate/HVAC snapshots
+			h.trackClimate(bgCtx, vehicleID, signals)
+
+			// Store security events
+			h.trackSecurity(bgCtx, vehicleID, signals)
 		}()
 	}
 }
@@ -581,6 +596,194 @@ func formatFloat(v float64) string {
 		return fmt.Sprintf("%d", int64(v))
 	}
 	return fmt.Sprintf("%.6f", v)
+}
+
+func toString(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		return fmt.Sprintf("%v", val)
+	case bool:
+		if val {
+			return "true"
+		}
+		return "false"
+	default:
+		return fmt.Sprintf("%v", val)
+	}
+}
+
+func toBool(v interface{}) bool {
+	switch val := v.(type) {
+	case bool:
+		return val
+	case float64:
+		return val != 0
+	case string:
+		return val == "true" || val == "1"
+	default:
+		return false
+	}
+}
+
+// trackMotor stores motor/powertrain snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasTorque := signals["DiTorquemotor"]
+	_, hasSpeed := signals["VehicleSpeed"]
+	_, hasPedal := signals["PedalPosition"]
+	_, hasAccel := signals["LateralAcceleration"]
+	if !hasTorque && !hasSpeed && !hasPedal && !hasAccel {
+		return
+	}
+
+	snap := &models.MotorSnapshot{VehicleID: vehicleID}
+	if v, ok := signals["DiStateR"]; ok {
+		s := toString(v)
+		snap.DiState = &s
+	}
+	if v, ok := signals["DiTorquemotor"]; ok {
+		f := toFloat(v)
+		snap.DiTorque = &f
+	}
+	if v, ok := signals["DiAxleSpeedR"]; ok {
+		f := toFloat(v)
+		snap.DiAxleSpeed = &f
+	}
+	if v, ok := signals["DiStatorTempR"]; ok {
+		f := toFloat(v)
+		snap.DiStatorTemp = &f
+	}
+	if v, ok := signals["PedalPosition"]; ok {
+		f := toFloat(v)
+		snap.PedalPosition = &f
+	}
+	if v, ok := signals["BrakePedal"]; ok {
+		b := toBool(v)
+		snap.BrakePedal = &b
+	}
+	if v, ok := signals["LateralAcceleration"]; ok {
+		f := toFloat(v)
+		snap.LateralAccel = &f
+	}
+	if v, ok := signals["LongitudinalAcceleration"]; ok {
+		f := toFloat(v)
+		snap.LongitudinalAccel = &f
+	}
+	if v, ok := signals["VehicleSpeed"]; ok {
+		f := toFloat(v)
+		snap.VehicleSpeed = &f
+	}
+	if v, ok := signals["Gear"]; ok {
+		s := toString(v)
+		snap.Gear = &s
+	}
+	if err := h.motorRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store motor snapshot")
+	}
+}
+
+// trackClimate stores climate/HVAC snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasInside := signals["InsideTemp"]
+	_, hasHvac := signals["HvacPower"]
+	_, hasFan := signals["HvacFanSpeed"]
+	if !hasInside && !hasHvac && !hasFan {
+		return
+	}
+
+	snap := &models.ClimateSnapshot{VehicleID: vehicleID}
+	if v, ok := signals["InsideTemp"]; ok {
+		f := toFloat(v)
+		snap.InsideTemp = &f
+	}
+	if v, ok := signals["OutsideTemp"]; ok {
+		f := toFloat(v)
+		snap.OutsideTemp = &f
+	}
+	if v, ok := signals["HvacPower"]; ok {
+		f := toFloat(v)
+		snap.HvacPower = &f
+	}
+	if v, ok := signals["HvacFanSpeed"]; ok {
+		i := int(toFloat(v))
+		snap.HvacFanSpeed = &i
+	}
+	if v, ok := signals["HvacLeftTemperatureRequest"]; ok {
+		f := toFloat(v)
+		snap.HvacLeftTempRequest = &f
+	}
+	if v, ok := signals["HvacRightTemperatureRequest"]; ok {
+		f := toFloat(v)
+		snap.HvacRightTempRequest = &f
+	}
+	if v, ok := signals["CabinOverheatProtectionMode"]; ok {
+		s := toString(v)
+		snap.CabinOverheatMode = &s
+	}
+	if v, ok := signals["DefrostMode"]; ok {
+		b := toBool(v)
+		snap.DefrostMode = &b
+	}
+	if v, ok := signals["BatteryHeaterOn"]; ok {
+		b := toBool(v)
+		snap.BatteryHeaterOn = &b
+	}
+	if err := h.climateRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store climate snapshot")
+	}
+}
+
+// trackSecurity stores security/access events when relevant signals arrive.
+func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasLocked := signals["Locked"]
+	_, hasSentry := signals["SentryMode"]
+	_, hasDoor := signals["DoorState"]
+	_, hasWindow := signals["FdWindow"]
+	if !hasLocked && !hasSentry && !hasDoor && !hasWindow {
+		return
+	}
+
+	ev := &models.SecurityEvent{VehicleID: vehicleID}
+	if v, ok := signals["Locked"]; ok {
+		b := toBool(v)
+		ev.Locked = &b
+	}
+	if v, ok := signals["SentryMode"]; ok {
+		b := toBool(v)
+		ev.SentryMode = &b
+	}
+	if v, ok := signals["DoorState"]; ok {
+		s := toString(v)
+		ev.DoorState = &s
+	}
+	if v, ok := signals["FdWindow"]; ok {
+		s := toString(v)
+		ev.FdWindow = &s
+	}
+	if v, ok := signals["FpWindow"]; ok {
+		s := toString(v)
+		ev.FpWindow = &s
+	}
+	if v, ok := signals["RdWindow"]; ok {
+		s := toString(v)
+		ev.RdWindow = &s
+	}
+	if v, ok := signals["RpWindow"]; ok {
+		s := toString(v)
+		ev.RpWindow = &s
+	}
+	if v, ok := signals["HomelinkNearby"]; ok {
+		b := toBool(v)
+		ev.HomelinkNearby = &b
+	}
+	if v, ok := signals["GuestModeEnabled"]; ok {
+		b := toBool(v)
+		ev.GuestMode = &b
+	}
+	if err := h.securityRepo.Insert(ctx, ev); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security event")
+	}
 }
 
 // formatSignalName converts camelCase signal names to snake_case for MQTT topic consistency.

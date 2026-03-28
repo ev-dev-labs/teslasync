@@ -31,6 +31,9 @@ import {
   Shield,
   FileText,
   Wrench,
+  Thermometer,
+  Lock,
+  Cog,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -68,6 +71,9 @@ const navI18nKeys: Record<string, string> = {
   'Geofences': 'nav.geofences',
   'Notifications': 'nav.notifications',
   'Settings': 'nav.settings',
+  'Driving Dynamics': 'nav.drivingDynamics',
+  'Climate Control': 'nav.climateControl',
+  'Security & Access': 'nav.securityAccess',
 }
 
 function SSEStatusDot({ connected }: { connected: boolean }) {
@@ -100,6 +106,8 @@ const navSections = [
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/efficiency', icon: Zap, label: 'Efficiency', color: 'text-amber-400' },
       { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
+      { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },
+      { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
       { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
       { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
       { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
@@ -112,6 +120,7 @@ const navSections = [
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
       { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
+      { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
     ],
   },
   {
