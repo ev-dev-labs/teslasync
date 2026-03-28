@@ -76,7 +76,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  su.version AS \"Version\",\n  su.status AS \"Status\",\n  su.installed_at AS \"Installed At\",\n  su.scheduled_at AS \"Scheduled At\",\n  su.created_at AS \"First Seen\"\nFROM software_updates su\nWHERE su.vehicle_id = ${vehicle_id}\nORDER BY su.created_at DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  su.version AS \"📦 Version\",\n  su.status AS \"📊 Status\",\n  su.installed_at AS \"📅 Installed\",\n  su.scheduled_at AS \"📅 Scheduled\",\n  su.created_at AS \"📅 First Seen\"\nFROM software_updates su\nWHERE su.vehicle_id = ${vehicle_id}\nORDER BY su.created_at DESC\nLIMIT 50",
           "refId": "A"
         }
       ],

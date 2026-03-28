@@ -282,7 +282,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, p.battery_level AS \"Battery %\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, p.battery_level AS \"🔋 Battery %\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],

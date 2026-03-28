@@ -186,7 +186,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN sentry_mode THEN 1 ELSE 0 END AS \"Sentry Mode\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, CASE WHEN sentry_mode THEN 1 ELSE 0 END AS \"🛡️ Sentry\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -528,7 +528,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS \"Time\", CASE WHEN locked THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"Lock\", CASE WHEN sentry_mode THEN '🛡️ Active' ELSE '⬜ Off' END AS \"Sentry\", COALESCE(door_state, '-') AS \"Doors\", COALESCE(fd_window, '-') AS \"FD Win\", COALESCE(fp_window, '-') AS \"FP Win\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 50",
+          "rawSql": "SELECT created_at AS \"🕐 Time\", CASE WHEN locked THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN '🛡️ Active' ELSE '⬜ Off' END AS \"🛡️ Sentry\", COALESCE(door_state, '-') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"🪟 FD\", COALESCE(fp_window, '-') AS \"🪟 FP\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 50",
           "refId": "A"
         }
       ],

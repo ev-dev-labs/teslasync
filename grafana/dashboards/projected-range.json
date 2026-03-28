@@ -187,7 +187,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"Battery %\",\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"🔋 Battery %\",\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
           "refId": "A"
         }
       ],

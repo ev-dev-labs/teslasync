@@ -265,7 +265,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT SUM(drive_count) AS \"Drives\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT SUM(drive_count) AS \"🛣️ Drives\" FROM daily_mileage WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
           "refId": "A"
         }
       ],
@@ -346,7 +346,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date::timestamptz AS time,\n  distance_km AS \"Distance km\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
+          "rawSql": "SELECT\n  date::timestamptz AS time,\n  distance_km AS \"📏 Distance\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
           "refId": "A"
         }
       ],
@@ -496,7 +496,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS \"Month\",\n  ROUND(SUM(distance_km)::numeric, 1) AS \"Distance km\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nGROUP BY DATE_TRUNC('month', date)\nORDER BY DATE_TRUNC('month', date)",
+          "rawSql": "SELECT\n  TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS \"📅 Month\",\n  ROUND(SUM(distance_km)::numeric, 1) AS \"📏 Distance\"\nFROM daily_mileage\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nGROUP BY DATE_TRUNC('month', date)\nORDER BY DATE_TRUNC('month', date)",
           "refId": "A"
         }
       ],

@@ -76,7 +76,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  v.display_name AS \"Vehicle\",\n  v.model AS \"Model\",\n  v.state AS \"State\",\n  (SELECT ROUND(p.odometer::numeric, 1) FROM positions p WHERE p.vehicle_id = v.id ORDER BY p.created_at DESC LIMIT 1) AS \"Odometer km\",\n  (SELECT p.battery_level FROM positions p WHERE p.vehicle_id = v.id ORDER BY p.created_at DESC LIMIT 1) AS \"Battery %\",\n  (SELECT COUNT(*) FROM drives d WHERE d.vehicle_id = v.id) AS \"Total Drives\",\n  (SELECT ROUND(SUM(d2.distance)::numeric, 1) FROM drives d2 WHERE d2.vehicle_id = v.id) AS \"Total km\",\n  (SELECT COUNT(*) FROM charging_sessions cs WHERE cs.vehicle_id = v.id) AS \"Total Charges\",\n  (SELECT ROUND(SUM(cs2.charge_energy_added)::numeric, 1) FROM charging_sessions cs2 WHERE cs2.vehicle_id = v.id) AS \"Total kWh\",\n  (SELECT su.version FROM software_updates su WHERE su.vehicle_id = v.id AND su.status = 'installed' ORDER BY su.installed_at DESC LIMIT 1) AS \"SW Version\"\nFROM vehicles v\nORDER BY v.display_name",
+          "rawSql": "SELECT\n  v.display_name AS \"🚗 Vehicle\",\n  v.model AS \"🚗 Model\",\n  v.state AS \"📊 State\",\n  (SELECT ROUND(p.odometer::numeric, 1) FROM positions p WHERE p.vehicle_id = v.id ORDER BY p.created_at DESC LIMIT 1) AS \"📏 Odometer\",\n  (SELECT p.battery_level FROM positions p WHERE p.vehicle_id = v.id ORDER BY p.created_at DESC LIMIT 1) AS \"🔋 Battery %\",\n  (SELECT COUNT(*) FROM drives d WHERE d.vehicle_id = v.id) AS \"🛣️ Total Drives\",\n  (SELECT ROUND(SUM(d2.distance)::numeric, 1) FROM drives d2 WHERE d2.vehicle_id = v.id) AS \"📏 Total Dist\",\n  (SELECT COUNT(*) FROM charging_sessions cs WHERE cs.vehicle_id = v.id) AS \"⚡ Charges\",\n  (SELECT ROUND(SUM(cs2.charge_energy_added)::numeric, 1) FROM charging_sessions cs2 WHERE cs2.vehicle_id = v.id) AS \"⚡ Total kWh\",\n  (SELECT su.version FROM software_updates su WHERE su.vehicle_id = v.id AND su.status = 'installed' ORDER BY su.installed_at DESC LIMIT 1) AS \"📦 Version\"\nFROM vehicles v\nORDER BY v.display_name",
           "refId": "A"
         }
       ],
@@ -145,7 +145,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT v.display_name AS \"Vehicle\", ROUND(SUM(d.distance)::numeric, 1) AS \"Distance km\"\nFROM drives d JOIN vehicles v ON d.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY \"Distance km\" DESC",
+          "rawSql": "SELECT v.display_name AS \"🚗 Vehicle\", ROUND(SUM(d.distance)::numeric, 1) AS \"📏 Distance\"\nFROM drives d JOIN vehicles v ON d.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY \"Distance km\" DESC",
           "refId": "A"
         }
       ],
@@ -214,7 +214,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT v.display_name AS \"Vehicle\", ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"Energy kWh\"\nFROM charging_sessions cs JOIN vehicles v ON cs.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY \"Energy kWh\" DESC",
+          "rawSql": "SELECT v.display_name AS \"🚗 Vehicle\", ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"⚡ Energy\"\nFROM charging_sessions cs JOIN vehicles v ON cs.vehicle_id = v.id\nGROUP BY v.display_name ORDER BY \"Energy kWh\" DESC",
           "refId": "A"
         }
       ],

@@ -215,7 +215,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(capacity_kwh::numeric, 1) AS \"kWh\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(capacity_kwh::numeric, 1) AS \"⚡ kWh\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -703,7 +703,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN end_battery_level < 20 THEN '0-19%'\n    WHEN end_battery_level < 40 THEN '20-39%'\n    WHEN end_battery_level < 60 THEN '40-59%'\n    WHEN end_battery_level < 80 THEN '60-79%'\n    WHEN end_battery_level < 90 THEN '80-89%'\n    ELSE '90-100%'\n  END AS \"Range\",\n  COUNT(*) AS \"Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND end_battery_level IS NOT NULL\nGROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT\n  CASE\n    WHEN end_battery_level < 20 THEN '0-19%'\n    WHEN end_battery_level < 40 THEN '20-39%'\n    WHEN end_battery_level < 60 THEN '40-59%'\n    WHEN end_battery_level < 80 THEN '60-79%'\n    WHEN end_battery_level < 90 THEN '80-89%'\n    ELSE '90-100%'\n  END AS \"Range\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND end_battery_level IS NOT NULL\nGROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ],
