@@ -34,6 +34,10 @@ import {
   Thermometer,
   Lock,
   Cog,
+  TrendingUp,
+  DollarSign,
+  Battery,
+  Trophy,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -100,9 +104,13 @@ const navSections = [
     title: 'Intelligence',
     items: [
       { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
+      { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
       { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
+      { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
       { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
+      { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
+      { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/efficiency', icon: Zap, label: 'Efficiency', color: 'text-amber-400' },
       { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
