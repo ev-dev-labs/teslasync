@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom'
 import {
   getVehicles, getAuthStatus, getVehicleState, getDrives, getChargingSessions,
   getFleetAnalytics, getAlerts, syncVehicles as syncVehiclesApi, Vehicle, VehicleState, getVehicleStatus,
+  getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure,
 } from '../api'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
   TrendingUp, Gauge, MapPin, Thermometer, Eye, Navigation, RefreshCw,
+  Cog, Snowflake, ShieldCheck, CircleDot,
 } from 'lucide-react'
 import {
   GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge,
@@ -101,7 +103,7 @@ export default function Dashboard() {
   const { data: alerts } = useQuery({
     queryKey: ['alerts'], queryFn: () => getAlerts(10),
   })
-  const { convertDistance, convertSpeed, convertTemp, convertEfficiency, isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit } = useSettings()
+  const { convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure, isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
   const { connected } = useRealtimeEvents({
     onVehicleUpdate: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
   })
@@ -144,6 +146,32 @@ export default function Dashboard() {
     enabled: otherVehicles.length > 0,
   })
 
+  // Live telemetry queries for primary vehicle
+  const { data: motorData } = useQuery({
+    queryKey: ['motor-latest', primaryVehicle?.id],
+    queryFn: () => getMotorLatest(primaryVehicle!.id),
+    enabled: !!primaryVehicle,
+    refetchInterval: 5000,
+  })
+  const { data: climateData } = useQuery({
+    queryKey: ['climate-latest', primaryVehicle?.id],
+    queryFn: () => getClimateLatest(primaryVehicle!.id),
+    enabled: !!primaryVehicle,
+    refetchInterval: 5000,
+  })
+  const { data: securityData } = useQuery({
+    queryKey: ['security-latest', primaryVehicle?.id],
+    queryFn: () => getSecurityLatest(primaryVehicle!.id),
+    enabled: !!primaryVehicle,
+    refetchInterval: 5000,
+  })
+  const { data: tireData } = useQuery({
+    queryKey: ['tire-latest', primaryVehicle?.id],
+    queryFn: () => getLatestTirePressure(primaryVehicle!.id),
+    enabled: !!primaryVehicle,
+    refetchInterval: 5000,
+  })
+
   const onlineCount = vehicles?.filter(v => v.state === 'online').length ?? 0
   const totalCount = vehicles?.length ?? 0
   const totalDistance = analytics?.total_distance_km ?? 0
@@ -173,6 +201,10 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['drives'] }),
       queryClient.invalidateQueries({ queryKey: ['charging'] }),
       queryClient.invalidateQueries({ queryKey: ['alerts'] }),
+      queryClient.invalidateQueries({ queryKey: ['motor-latest'] }),
+      queryClient.invalidateQueries({ queryKey: ['climate-latest'] }),
+      queryClient.invalidateQueries({ queryKey: ['security-latest'] }),
+      queryClient.invalidateQueries({ queryKey: ['tire-latest'] }),
     ])
     setIsRefreshing(false)
   }
@@ -569,6 +601,238 @@ export default function Dashboard() {
                   </GlassPanel>
                 </Link>
               ))}
+            </div>
+          </FadeIn>
+
+          {/* ============ LIVE TELEMETRY ============ */}
+          <FadeIn delay={0.3}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
+              <h3 className="section-title flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-secondary)]">
+                <Activity className="h-4 w-4 text-neon-cyan" /> Live Telemetry
+              </h3>
+              <div className="h-px flex-1 bg-gradient-to-r from-[var(--glass-border)] via-[var(--glass-border)] to-transparent" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* --- Drivetrain Status --- */}
+              <GlassPanel hover glow="purple" className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+                  <Cog className="h-3.5 w-3.5 text-neon-purple" /> Drivetrain
+                </h4>
+                {motorData ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Torque</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {motorData.di_torque != null ? `${motorData.di_torque} Nm` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Motor Temp</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {motorData.di_stator_temp != null ? `${convertTemp(motorData.di_stator_temp).toFixed(0)}${tempUnit}` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Gear</span>
+                      {motorData.gear ? (
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          motorData.gear === 'D' ? 'bg-neon-green/10 text-neon-green' :
+                          motorData.gear === 'R' ? 'bg-neon-red/10 text-neon-red' :
+                          motorData.gear === 'N' ? 'bg-neon-amber/10 text-neon-amber' :
+                          'bg-white/5 text-[var(--text-secondary)]'
+                        }`}>
+                          {motorData.gear}
+                        </span>
+                      ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">G-Force</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {motorData.lateral_accel != null || motorData.longitudinal_accel != null
+                          ? `${Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)).toFixed(2)}g`
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
+                  </div>
+                )}
+              </GlassPanel>
+
+              {/* --- Climate Status --- */}
+              <GlassPanel hover glow="cyan" className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+                  <Thermometer className="h-3.5 w-3.5 text-neon-cyan" /> Climate
+                </h4>
+                {climateData ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Cabin</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {climateData.inside_temp != null ? `${convertTemp(climateData.inside_temp).toFixed(0)}${tempUnit}` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Outside</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {climateData.outside_temp != null ? `${convertTemp(climateData.outside_temp).toFixed(0)}${tempUnit}` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">HVAC Power</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {climateData.hvac_power != null ? `${climateData.hvac_power.toFixed(1)} kW` : '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-[var(--text-secondary)]">Fan</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{climateData.hvac_fan_speed ?? 0}/6</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${((climateData.hvac_fan_speed ?? 0) / 6) * 100}%`,
+                            background: 'linear-gradient(90deg, #00f0ff, #a855f7)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {climateData.defrost_mode && (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+                          <Snowflake className="h-2.5 w-2.5" /> Defrost
+                        </span>
+                      )}
+                      {climateData.battery_heater_on && (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
+                          <Zap className="h-2.5 w-2.5" /> Bat Heater
+                        </span>
+                      )}
+                      {!climateData.defrost_mode && !climateData.battery_heater_on && (
+                        <span className="text-[10px] text-[var(--text-muted)]">No active modes</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
+                  </div>
+                )}
+              </GlassPanel>
+
+              {/* --- Security Status --- */}
+              <GlassPanel hover glow="green" className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+                  <Shield className="h-3.5 w-3.5 text-neon-green" /> Security
+                </h4>
+                {securityData ? (() => {
+                  const doorStates = (securityData.door_state ?? '').split(',').map(s => s.trim()).filter(Boolean)
+                  const openDoors = doorStates.filter(s => s.toLowerCase().includes('open'))
+                  const windows = [
+                    { label: 'FD', val: securityData.fd_window },
+                    { label: 'FP', val: securityData.fp_window },
+                    { label: 'RD', val: securityData.rd_window },
+                    { label: 'RP', val: securityData.rp_window },
+                  ]
+                  const openWindows = windows.filter(w => w.val && w.val.toLowerCase() !== 'closed')
+                  return (
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--text-secondary)]">Lock</span>
+                        <span className={`text-sm font-bold flex items-center gap-1 ${securityData.locked ? 'text-neon-green' : 'text-neon-red'}`}>
+                          {securityData.locked ? '🔒' : '🔓'} {securityData.locked ? 'Locked' : 'Unlocked'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--text-secondary)]">Sentry</span>
+                        <span className={`text-sm font-bold flex items-center gap-1 ${securityData.sentry_mode ? 'text-neon-cyan' : 'text-[var(--text-muted)]'}`}>
+                          🛡️ {securityData.sentry_mode ? 'Active' : 'Off'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--text-secondary)]">Doors</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          openDoors.length === 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
+                        }`}>
+                          {openDoors.length === 0 ? 'All Closed' : `${openDoors.length} Open`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--text-secondary)]">Windows</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          openWindows.length === 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
+                        }`}>
+                          {openWindows.length === 0 ? 'All Closed' : `${openWindows.length} Open`}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })() : (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
+                  </div>
+                )}
+              </GlassPanel>
+
+              {/* --- Tire Pressure Quick Card --- */}
+              <GlassPanel hover glow="cyan" className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+                  <CircleDot className="h-3.5 w-3.5 text-neon-cyan" /> Tire Pressure
+                </h4>
+                {tireData ? (() => {
+                  const tires = [
+                    { label: 'FL', value: tireData.front_left },
+                    { label: 'FR', value: tireData.front_right },
+                    { label: 'RL', value: tireData.rear_left },
+                    { label: 'RR', value: tireData.rear_right },
+                  ]
+                  const getPressureColor = (bar: number | null) => {
+                    if (bar == null) return 'text-[var(--text-muted)]'
+                    const psi = bar * 14.5038
+                    if (psi < 30 || psi > 45) return 'text-neon-red'
+                    if (psi < 33 || psi > 42) return 'text-neon-amber'
+                    return 'text-neon-green'
+                  }
+                  const allNormal = tires.every(t => {
+                    if (t.value == null) return true
+                    const psi = t.value * 14.5038
+                    return psi >= 33 && psi <= 42
+                  })
+                  return (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {tires.map(t => (
+                          <div key={t.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+                            <p className="text-[10px] text-[var(--text-muted)] uppercase">{t.label}</p>
+                            <p className={`text-sm font-bold ${getPressureColor(t.value)}`}>
+                              {t.value != null ? `${convertPressure(t.value).toFixed(1)}` : '—'}
+                            </p>
+                            <p className="text-[9px] text-[var(--text-muted)]">{pressureUnit}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-center">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          allNormal ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
+                        }`}>
+                          <ShieldCheck className="h-2.5 w-2.5" />
+                          {allNormal ? 'All Normal' : 'Warning'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })() : (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
+                  </div>
+                )}
+              </GlassPanel>
             </div>
           </FadeIn>
         </>

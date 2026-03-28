@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getChargingSessions, ChargingSession, Vehicle } from '../api'
-import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download } from 'lucide-react'
+import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download, Cable, Activity, Gauge } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts'
 import clsx from 'clsx'
+import { useSettings } from '../hooks/useSettings'
 
 type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power'
 type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home'
@@ -48,11 +49,20 @@ function getChargerCategory(type: string | null): 'supercharger' | 'dc' | 'home'
 const chargerColors = { supercharger: '#ef4444', dc: '#f59e0b', home: '#10b981' }
 const chargerLabels = { supercharger: 'Supercharger', dc: 'DC Fast', home: 'Home / AC' }
 
-function SessionCard({ session }: { session: ChargingSession }) {
+function SessionCard({ session, convertDistance, distanceUnit }: { session: ChargingSession; convertDistance: (km: number) => number; distanceUnit: string }) {
   const batteryGain = (session.end_battery_level ?? session.start_battery_level) - session.start_battery_level
   const avgRate = session.duration_min > 0 ? (session.charge_energy_added / (session.duration_min / 60)).toFixed(1) : null
   const cat = getChargerCategory(session.fast_charger_type)
   const costPerKwh = session.cost && session.charge_energy_added > 0 ? session.cost / session.charge_energy_added : null
+  const efficiency = session.charge_energy_added > 0 && session.charge_energy_used && session.charge_energy_used > 0
+    ? (session.charge_energy_added / session.charge_energy_used) * 100 : null
+  const rangeGained = session.start_range_km != null && session.end_range_km != null
+    ? convertDistance(session.end_range_km - session.start_range_km) : null
+  const chargerSpec = [
+    session.charger_voltage != null ? `${session.charger_voltage}V` : null,
+    session.charger_phases != null ? `${session.charger_phases}-phase` : null,
+    session.charger_actual_current != null ? `${session.charger_actual_current}A` : null,
+  ].filter(Boolean).join(' / ')
 
   return (
     <Link to={`/charging/${session.id}`}>
@@ -67,7 +77,7 @@ function SessionCard({ session }: { session: ChargingSession }) {
             label={`${session.end_battery_level ?? session.start_battery_level}%`}
           />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDate(session.start_date)}</p>
               <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1',
                 cat === 'supercharger' ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' :
@@ -76,6 +86,11 @@ function SessionCard({ session }: { session: ChargingSession }) {
               )}>
                 {chargerLabels[cat]}
               </span>
+              {session.conn_charge_cable && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1 bg-neon-purple/10 text-neon-purple ring-neon-purple/20">
+                  <Cable className="h-2.5 w-2.5 inline mr-0.5" />{session.conn_charge_cable}
+                </span>
+              )}
               {batteryGain > 0 && <span className="text-xs text-neon-green font-medium">+{batteryGain}%</span>}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
@@ -85,7 +100,15 @@ function SessionCard({ session }: { session: ChargingSession }) {
               {avgRate && <span className="flex items-center gap-1"><Plug className="h-3 w-3" /> ~{avgRate} kW avg</span>}
               {session.cost !== null && <span className="flex items-center gap-1 text-neon-green"><DollarSign className="h-3 w-3" /> ${session.cost.toFixed(2)}</span>}
               {costPerKwh !== null && <span className="text-gray-600">(${costPerKwh.toFixed(3)}/kWh)</span>}
+              {efficiency !== null && <span className="flex items-center gap-1 text-neon-cyan"><Activity className="h-3 w-3" /> {efficiency.toFixed(1)}% eff</span>}
+              {rangeGained !== null && rangeGained > 0 && <span className="flex items-center gap-1 text-neon-purple">+{rangeGained.toFixed(0)} {distanceUnit}</span>}
             </div>
+            {chargerSpec && (
+              <div className="mt-1 text-[10px] text-[var(--text-muted)]">
+                <Gauge className="h-2.5 w-2.5 inline mr-1" />{chargerSpec}
+                {session.fast_charger_brand && <span className="ml-2">· {session.fast_charger_brand}</span>}
+              </div>
+            )}
           </div>
           <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-neon-green transition-colors" />
         </div>
@@ -95,6 +118,7 @@ function SessionCard({ session }: { session: ChargingSession }) {
 }
 
 export default function Charging() {
+  const { convertDistance, distanceUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<SortKey>('date')
@@ -193,6 +217,85 @@ export default function Charging() {
     })
     return { ac, dc, total: { energy: ac.energy + dc.energy, cost: ac.cost + dc.cost, freeEnergy: ac.freeEnergy + dc.freeEnergy, freeCount: ac.freeCount + dc.freeCount } }
   }, [sessions])
+
+  // Charging efficiency stats
+  const efficiencyStats = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null
+    const withEfficiency = sessions.filter(s => s.charge_energy_used && s.charge_energy_used > 0 && s.charge_energy_added > 0)
+    if (withEfficiency.length === 0) return null
+    const efficiencies = withEfficiency.map(s => ({
+      id: s.id,
+      date: s.start_date,
+      efficiency: (s.charge_energy_added / s.charge_energy_used!) * 100,
+      added: s.charge_energy_added,
+      used: s.charge_energy_used!,
+    }))
+    const totalAdded = withEfficiency.reduce((sum, s) => sum + s.charge_energy_added, 0)
+    const totalUsed = withEfficiency.reduce((sum, s) => sum + s.charge_energy_used!, 0)
+    const avgEfficiency = totalUsed > 0 ? (totalAdded / totalUsed) * 100 : 0
+    const sorted = [...efficiencies].sort((a, b) => b.efficiency - a.efficiency)
+    const best = sorted[0]
+    const worst = sorted[sorted.length - 1]
+    const wallLoss = totalUsed - totalAdded
+    return { avgEfficiency, best, worst, wallLoss, totalAdded, totalUsed, count: withEfficiency.length }
+  }, [sessions])
+
+  // Charger specs breakdown
+  const chargerSpecsBreakdown = useMemo(() => {
+    if (!sessions || sessions.length === 0) return null
+    const byVoltage: Record<string, { count: number; energy: number; power: number }> = {}
+    const byPhase: Record<string, { count: number; energy: number }> = {}
+    const byCable: Record<string, { count: number; energy: number }> = {}
+    const byBrand: Record<string, { count: number; energy: number; power: number }> = {}
+    sessions.forEach(s => {
+      if (s.charger_voltage != null) {
+        const vKey = s.charger_voltage <= 130 ? '120V' : s.charger_voltage <= 260 ? '240V' : '480V+'
+        if (!byVoltage[vKey]) byVoltage[vKey] = { count: 0, energy: 0, power: 0 }
+        byVoltage[vKey].count++
+        byVoltage[vKey].energy += s.charge_energy_added
+        byVoltage[vKey].power += s.charger_power ?? 0
+      }
+      if (s.charger_phases != null) {
+        const pKey = `${s.charger_phases}-phase`
+        if (!byPhase[pKey]) byPhase[pKey] = { count: 0, energy: 0 }
+        byPhase[pKey].count++
+        byPhase[pKey].energy += s.charge_energy_added
+      }
+      if (s.conn_charge_cable) {
+        if (!byCable[s.conn_charge_cable]) byCable[s.conn_charge_cable] = { count: 0, energy: 0 }
+        byCable[s.conn_charge_cable].count++
+        byCable[s.conn_charge_cable].energy += s.charge_energy_added
+      }
+      if (s.fast_charger_brand) {
+        if (!byBrand[s.fast_charger_brand]) byBrand[s.fast_charger_brand] = { count: 0, energy: 0, power: 0 }
+        byBrand[s.fast_charger_brand].count++
+        byBrand[s.fast_charger_brand].energy += s.charge_energy_added
+        byBrand[s.fast_charger_brand].power += s.charger_power ?? 0
+      }
+    })
+    const toArr = (obj: Record<string, { count: number; energy: number; power?: number }>) =>
+      Object.entries(obj).map(([name, v]) => ({ name, ...v, avgPower: v.power ? v.power / v.count : undefined })).sort((a, b) => b.count - a.count)
+    return {
+      voltage: toArr(byVoltage),
+      phase: toArr(byPhase),
+      cable: toArr(byCable),
+      brand: toArr(byBrand),
+    }
+  }, [sessions])
+
+  // Enhanced statistics
+  const enhancedStats = useMemo(() => {
+    if (!sessions || sessions.length === 0 || !stats) return null
+    const avgDuration = stats.totalDuration / stats.count
+    const chargerTypes = sessions.reduce<Record<string, number>>((acc, s) => {
+      const t = s.fast_charger_type || 'AC/Home'
+      acc[t] = (acc[t] || 0) + 1
+      return acc
+    }, {})
+    const mostCommonType = Object.entries(chargerTypes).sort((a, b) => b[1] - a[1])[0]
+    const avgCostPerSession = stats.totalCost / stats.count
+    return { avgDuration, mostCommonType, avgCostPerSession }
+  }, [sessions, stats])
 
   // Filtered + sorted sessions
   const filteredSessions = useMemo(() => {
@@ -459,6 +562,148 @@ export default function Charging() {
         </FadeIn>
       )}
 
+      {/* Enhanced Statistics Summary */}
+      {stats && enhancedStats && (
+        <FadeIn delay={0.22}>
+          <GlassPanel className="p-5">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <TrendingUp className="h-4 w-4 text-neon-cyan" /> Detailed Statistics
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
+              <div>
+                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={stats.count} /></p>
+                <p className="text-[10px] text-[var(--text-muted)]">Total Sessions</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{formatDuration(enhancedStats.avgDuration)}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Avg Duration</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-neon-purple">{stats.avgPower.toFixed(1)} kW</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Avg Power</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{enhancedStats.mostCommonType[0]}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Top Charger ({enhancedStats.mostCommonType[1]}×)</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-neon-amber">${stats.totalCost.toFixed(2)}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Total Cost</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-neon-green">${stats.avgCostPerKwh.toFixed(3)}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Avg $/kWh</p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Charging Efficiency Panel */}
+      {efficiencyStats && (
+        <FadeIn delay={0.24}>
+          <GlassPanel className="p-5">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Activity className="h-4 w-4 text-neon-green" /> Charging Efficiency
+              <span className="text-xs text-[var(--text-muted)] font-normal ml-2">Wall-to-battery energy conversion ({efficiencyStats.count} sessions with data)</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="glass-card text-center">
+                <p className="text-2xl font-bold text-neon-cyan">{efficiencyStats.avgEfficiency.toFixed(1)}%</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Average Efficiency</p>
+                <div className="mt-2 h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                  <div className="h-full rounded-full bg-neon-cyan" style={{ width: `${Math.min(efficiencyStats.avgEfficiency, 100)}%` }} />
+                </div>
+              </div>
+              <div className="glass-card text-center">
+                <p className="text-2xl font-bold text-neon-green">{efficiencyStats.best.efficiency.toFixed(1)}%</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Best Session</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{formatDate(efficiencyStats.best.date)}</p>
+              </div>
+              <div className="glass-card text-center">
+                <p className="text-2xl font-bold text-neon-red">{efficiencyStats.worst.efficiency.toFixed(1)}%</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Worst Session</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{formatDate(efficiencyStats.worst.date)}</p>
+              </div>
+              <div className="glass-card text-center">
+                <p className="text-2xl font-bold text-neon-amber">{efficiencyStats.wallLoss.toFixed(1)} kWh</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Wall-to-Battery Loss</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{efficiencyStats.totalUsed.toFixed(1)} kWh drawn → {efficiencyStats.totalAdded.toFixed(1)} kWh stored</p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Charger Specs Breakdown Panel */}
+      {chargerSpecsBreakdown && (chargerSpecsBreakdown.voltage.length > 0 || chargerSpecsBreakdown.cable.length > 0 || chargerSpecsBreakdown.brand.length > 0) && (
+        <FadeIn delay={0.26}>
+          <GlassPanel className="p-5">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Gauge className="h-4 w-4 text-neon-purple" /> Charger Specs Breakdown
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* By Voltage */}
+              {chargerSpecsBreakdown.voltage.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1"><Zap className="h-3 w-3" /> By Voltage</p>
+                  <div className="space-y-2">
+                    {chargerSpecsBreakdown.voltage.map(v => (
+                      <div key={v.name} className="flex justify-between items-center text-xs">
+                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} sessions · {v.energy.toFixed(0)} kWh</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* By Phase */}
+              {chargerSpecsBreakdown.phase.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1"><Activity className="h-3 w-3" /> By Phase</p>
+                  <div className="space-y-2">
+                    {chargerSpecsBreakdown.phase.map(v => (
+                      <div key={v.name} className="flex justify-between items-center text-xs">
+                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} sessions · {v.energy.toFixed(0)} kWh</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* By Cable Type */}
+              {chargerSpecsBreakdown.cable.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1"><Cable className="h-3 w-3" /> By Cable</p>
+                  <div className="space-y-2">
+                    {chargerSpecsBreakdown.cable.map(v => (
+                      <div key={v.name} className="flex justify-between items-center text-xs">
+                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} sessions · {v.energy.toFixed(0)} kWh</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* By Brand */}
+              {chargerSpecsBreakdown.brand.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1"><Plug className="h-3 w-3" /> By Brand</p>
+                  <div className="space-y-2">
+                    {chargerSpecsBreakdown.brand.map(v => (
+                      <div key={v.name} className="flex justify-between items-center text-xs">
+                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} · {v.avgPower != null ? `${v.avgPower.toFixed(0)} kW avg` : `${v.energy.toFixed(0)} kWh`}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
       {/* Session list */}
       {isLoading ? (
         <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-20" />)}</div>
@@ -523,7 +768,7 @@ export default function Charging() {
           </FadeIn>
           <StaggerContainer className="space-y-3">
             {filteredSessions.map((s: ChargingSession) => (
-              <StaggerItem key={s.id}><SessionCard session={s} /></StaggerItem>
+              <StaggerItem key={s.id}><SessionCard session={s} convertDistance={convertDistance} distanceUnit={distanceUnit} /></StaggerItem>
             ))}
           </StaggerContainer>
           <Pagination page={page} pageSize={pageSize} total={filteredSessions.length < pageSize ? (page - 1) * pageSize + filteredSessions.length : page * pageSize + 1} onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1) }} />
