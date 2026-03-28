@@ -143,7 +143,7 @@
           "name": "CartoDB Dark Matter",
           "type": "xyz",
           "config": {
-            "url": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+            "url": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
             "attribution": "CARTO"
           }
         },
