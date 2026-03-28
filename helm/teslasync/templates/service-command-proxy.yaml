@@ -1,0 +1,19 @@
+{{- if .Values.commandProxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslasync.fullname" . }}-command-proxy
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: command-proxy
+spec:
+  type: {{ .Values.commandProxy.service.type }}
+  selector:
+    {{- include "teslasync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: command-proxy
+  ports:
+    - name: https
+      port: {{ .Values.commandProxy.service.port }}
+      targetPort: https
+      protocol: TCP
+{{- end }}

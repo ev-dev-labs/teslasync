@@ -274,3 +274,13 @@ imagePullSecrets:
 {{- toString (.Values.exportWorker.external.port | default 8082) }}
 {{- end }}
 {{- end }}
+
+{{/* ── Vehicle Command Proxy connection helpers ────────────────────────── */}}
+
+{{- define "teslasync.commandProxy.url" -}}
+{{- if .Values.commandProxy.enabled }}
+{{- printf "https://%s-command-proxy:%v" (include "teslasync.fullname" .) (int (.Values.commandProxy.service.port | default 4443)) }}
+{{- else if .Values.commandProxy.external.url }}
+{{- .Values.commandProxy.external.url }}
+{{- end }}
+{{- end }}

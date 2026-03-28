@@ -40,3 +40,7 @@ data:
   NOTIFICATION_WORKER_PORT: {{ include "teslasync.notificationWorker.port" . | quote }}
   EXPORT_WORKER_HOST: {{ include "teslasync.exportWorker.host" . | quote }}
   EXPORT_WORKER_PORT: {{ include "teslasync.exportWorker.port" . | quote }}
+  {{- $proxyURL := include "teslasync.commandProxy.url" . }}
+  {{- if $proxyURL }}
+  TESLA_COMMAND_PROXY_URL: {{ $proxyURL | quote }}
+  {{- end }}

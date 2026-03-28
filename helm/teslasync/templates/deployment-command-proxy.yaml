@@ -1,0 +1,74 @@
+{{- if .Values.commandProxy.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-command-proxy
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: command-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: command-proxy
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: command-proxy
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: command-proxy
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.commandProxy.image.repository }}:{{ .Values.commandProxy.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.commandProxy.image.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: 4443
+              protocol: TCP
+          env:
+            - name: TESLA_HTTP_PROXY_HOST
+              value: "0.0.0.0"
+            - name: TESLA_HTTP_PROXY_PORT
+              value: "4443"
+            - name: TESLA_HTTP_PROXY_TLS_CERT
+              value: "/data/tls-cert.pem"
+            - name: TESLA_HTTP_PROXY_TLS_KEY
+              value: "/data/tls-key.pem"
+            - name: TESLA_KEY_FILE
+              value: "/data/private-key.pem"
+          volumeMounts:
+            - name: proxy-data
+              mountPath: /data
+              readOnly: true
+          livenessProbe:
+            tcpSocket:
+              port: https
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: https
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.commandProxy.resources | nindent 12 }}
+      volumes:
+        - name: proxy-data
+          secret:
+            secretName: {{ .Values.commandProxy.secretName | default (printf "%s-command-proxy" (include "teslasync.fullname" .)) }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

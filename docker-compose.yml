@@ -265,6 +265,41 @@ services:
         reservations:
           memory: 64M
 
+  # Vehicle Command Proxy (optional — enables signed vehicle commands)
+  # Routes commands through Tesla's Vehicle Command SDK for end-to-end signing.
+  # Required for 2021+ Model S/X and all Model 3/Y vehicles.
+  # Setup: 1) Generate keypair via /dev-tools/generate-keypair
+  #        2) Save private key to ./certs/private-key.pem
+  #        3) Register public key with Tesla and pair with vehicle
+  #        4) Set TESLA_COMMAND_PROXY_URL=https://vehicle-command-proxy:4443 in .env
+  vehicle-command-proxy:
+    image: tesla/vehicle-command:latest
+    container_name: teslasync-vehicle-command-proxy
+    restart: unless-stopped
+    profiles:
+      - commands
+    environment:
+      - TESLA_HTTP_PROXY_HOST=0.0.0.0
+      - TESLA_HTTP_PROXY_PORT=4443
+      - TESLA_HTTP_PROXY_TLS_CERT=/data/tls-cert.pem
+      - TESLA_HTTP_PROXY_TLS_KEY=/data/tls-key.pem
+      - TESLA_KEY_FILE=/data/private-key.pem
+      - TESLA_VERBOSE=${TESLA_VERBOSE:-false}
+    volumes:
+      - ${COMMAND_PROXY_DATA_DIR:-./data/vehicle-command}:/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://localhost:4443/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+
 volumes:
   postgres_data:
   grafana_data:

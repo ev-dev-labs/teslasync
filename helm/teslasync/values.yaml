@@ -186,6 +186,40 @@ exportWorker:
     port: 8082
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Vehicle Command Proxy
+#
+# Routes vehicle commands through Tesla's Vehicle Command SDK for end-to-end
+# signed command authentication. Required for 2021+ Model S/X and all Model 3/Y.
+# See: https://github.com/teslamotors/vehicle-command
+# ─────────────────────────────────────────────────────────────────────────────
+commandProxy:
+  enabled: false
+
+  image:
+    repository: tesla/vehicle-command
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 4443
+
+  # -- Name of K8s Secret containing: private-key.pem, tls-cert.pem, tls-key.pem
+  secretName: ""
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
+
+  # -- External command proxy — used when commandProxy.enabled is false.
+  external:
+    url: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Encryption
 # ─────────────────────────────────────────────────────────────────────────────
 encryption:

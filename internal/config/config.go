@@ -52,12 +52,13 @@ func (d DatabaseConfig) DSN() string {
 }
 
 type TeslaConfig struct {
-	ClientID     string
-	ClientSecret string
-	BaseURL      string
-	AuthURL      string
-	RedirectURI  string
-	Timeout      time.Duration
+	ClientID        string
+	ClientSecret    string
+	BaseURL         string
+	AuthURL         string
+	RedirectURI     string
+	CommandProxyURL string // Vehicle Command Proxy URL for signed commands
+	Timeout         time.Duration
 }
 
 type MQTTConfig struct {
@@ -129,12 +130,13 @@ func Load() (*Config, error) {
 		},
 
 		Tesla: TeslaConfig{
-			ClientID:     envStr("TESLA_CLIENT_ID", ""),
-			ClientSecret: envStr("TESLA_CLIENT_SECRET", ""),
-			BaseURL:      envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
-			AuthURL:      envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
-			RedirectURI:  envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
-			Timeout:      envDuration("TESLA_TIMEOUT", 30*time.Second),
+			ClientID:        envStr("TESLA_CLIENT_ID", ""),
+			ClientSecret:    envStr("TESLA_CLIENT_SECRET", ""),
+			BaseURL:         envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
+			AuthURL:         envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
+			RedirectURI:     envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
+			CommandProxyURL: envStr("TESLA_COMMAND_PROXY_URL", ""),
+			Timeout:         envDuration("TESLA_TIMEOUT", 30*time.Second),
 		},
 
 		MQTT: MQTTConfig{
