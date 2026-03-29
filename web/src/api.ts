@@ -669,6 +669,202 @@ export const getSecurityEvents = (vehicleId: number, limit = 100, offset = 0) =>
 export const getSecurityLatest = (vehicleId: number) =>
   request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`)
 
+// === Charging Telemetry ===
+export interface ChargingTelemetry {
+  id: number
+  vehicle_id: number
+  battery_level?: number
+  soc?: number
+  charge_state?: string
+  detailed_charge_state?: string
+  charge_limit_soc?: number
+  charge_amps?: number
+  charge_current_request?: number
+  charge_current_request_max?: number
+  charge_enable_request?: boolean
+  charger_voltage?: number
+  charger_phases?: number
+  charge_rate_mph?: number
+  dc_charging_power?: number
+  dc_charging_energy_in?: number
+  ac_charging_power?: number
+  ac_charging_energy_in?: number
+  energy_remaining?: number
+  est_battery_range?: number
+  ideal_battery_range?: number
+  rated_range?: number
+  pack_voltage?: number
+  pack_current?: number
+  charge_port_door_open?: boolean
+  charge_port_latch?: string
+  charge_port_cold_weather_mode?: boolean
+  charging_cable_type?: string
+  fast_charger_present?: boolean
+  fast_charger_type?: string
+  time_to_full_charge?: number
+  estimated_hours_to_charge?: number
+  scheduled_charging_mode?: string
+  scheduled_charging_pending?: boolean
+  preconditioning_enabled?: boolean
+  brick_voltage_max?: number
+  brick_voltage_min?: number
+  num_brick_voltage_max?: number
+  num_brick_voltage_min?: number
+  module_temp_max?: number
+  module_temp_min?: number
+  num_module_temp_max?: number
+  num_module_temp_min?: number
+  battery_heater_on?: boolean
+  not_enough_power_to_heat?: boolean
+  bms_state?: string
+  bms_fullcharge_complete?: boolean
+  dcdc_enable?: boolean
+  isolation_resistance?: number
+  lifetime_energy_used?: number
+  supercharger_session_trip_planner?: boolean
+  powershare_status?: string
+  powershare_type?: string
+  powershare_stop_reason?: string
+  powershare_hours_left?: number
+  powershare_power_kw?: number
+  created_at: string
+}
+
+/** Fetches paginated charging telemetry records for a vehicle. */
+export const getChargingTelemetry = (vehicleId: number, limit = 100, offset = 0) =>
+  request<ChargingTelemetry[]>(`/charging-telemetry?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent charging telemetry reading for a vehicle. */
+export const getChargingTelemetryLatest = (vehicleId: number) =>
+  request<ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`)
+
+// === Media ===
+export interface MediaSnapshot {
+  id: number
+  vehicle_id: number
+  now_playing_title?: string
+  now_playing_artist?: string
+  now_playing_album?: string
+  now_playing_station?: string
+  now_playing_duration?: number
+  now_playing_elapsed?: number
+  playback_status?: string
+  playback_source?: string
+  audio_volume?: number
+  audio_volume_max?: number
+  created_at: string
+}
+
+/** Fetches paginated media snapshots for a vehicle. */
+export const getMediaData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<MediaSnapshot[]>(`/media?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent media snapshot for a vehicle. */
+export const getMediaLatest = (vehicleId: number) =>
+  request<MediaSnapshot | null>(`/media/latest?vehicle_id=${vehicleId}`)
+
+// === Vehicle Config ===
+export interface VehicleConfigSnapshot {
+  id: number
+  vehicle_id: number
+  car_type?: string
+  trim?: string
+  exterior_color?: string
+  roof_color?: string
+  wheel_type?: string
+  rear_seat_heaters?: string
+  sunroof_installed?: string
+  efficiency_package?: string
+  europe_vehicle?: boolean
+  right_hand_drive?: boolean
+  remote_start_enabled?: boolean
+  charge_port?: string
+  offroad_lightbar_present?: boolean
+  version?: string
+  vehicle_name?: string
+  software_update_version?: string
+  software_update_download_pct?: number
+  software_update_install_pct?: number
+  software_update_expected_duration?: number
+  created_at: string
+}
+
+/** Fetches paginated vehicle config snapshots for a vehicle. */
+export const getVehicleConfigData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<VehicleConfigSnapshot[]>(`/vehicle-config?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent vehicle config snapshot for a vehicle. */
+export const getVehicleConfigLatest = (vehicleId: number) =>
+  request<VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`)
+
+// === Location Snapshots ===
+export interface LocationSnapshot {
+  id: number
+  vehicle_id: number
+  destination_name?: string
+  destination_lat?: number
+  destination_lon?: number
+  origin_lat?: number
+  origin_lon?: number
+  miles_to_arrival?: number
+  minutes_to_arrival?: number
+  route_line?: string
+  route_traffic_delay_min?: number
+  located_at_home?: boolean
+  located_at_work?: boolean
+  located_at_favorite?: boolean
+  gps_state?: boolean
+  created_at: string
+}
+
+/** Fetches paginated location snapshots for a vehicle. */
+export const getLocationSnapshots = (vehicleId: number, limit = 100, offset = 0) =>
+  request<LocationSnapshot[]>(`/location-snapshots?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent location snapshot for a vehicle. */
+export const getLocationSnapshotLatest = (vehicleId: number) =>
+  request<LocationSnapshot | null>(`/location-snapshots/latest?vehicle_id=${vehicleId}`)
+
+// === Safety ===
+export interface SafetySnapshot {
+  id: number
+  vehicle_id: number
+  automatic_blind_spot_camera?: boolean
+  automatic_emergency_braking_off?: boolean
+  blind_spot_collision_warning?: boolean
+  cruise_follow_distance?: string
+  emergency_lane_departure_avoidance?: boolean
+  forward_collision_warning?: string
+  lane_departure_avoidance?: string
+  speed_limit_warning?: string
+  pin_to_drive_enabled?: boolean
+  miles_since_reset?: number
+  self_driving_miles_since_reset?: number
+  created_at: string
+}
+
+/** Fetches paginated safety snapshots for a vehicle. */
+export const getSafetyData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<SafetySnapshot[]>(`/safety?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent safety snapshot for a vehicle. */
+export const getSafetyLatest = (vehicleId: number) =>
+  request<SafetySnapshot | null>(`/safety/latest?vehicle_id=${vehicleId}`)
+
+// === User Preferences ===
+export interface UserPreferenceSnapshot {
+  id: number
+  vehicle_id: number
+  setting_24hr_time?: boolean
+  setting_charge_unit?: string
+  setting_distance_unit?: string
+  setting_temperature_unit?: string
+  setting_tire_pressure_unit?: string
+  created_at: string
+}
+
+/** Fetches paginated user preference snapshots for a vehicle. */
+export const getUserPreferences = (vehicleId: number, limit = 100, offset = 0) =>
+  request<UserPreferenceSnapshot[]>(`/user-preferences?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent user preference snapshot for a vehicle. */
+export const getUserPreferenceLatest = (vehicleId: number) =>
+  request<UserPreferenceSnapshot | null>(`/user-preferences/latest?vehicle_id=${vehicleId}`)
+
 // === Software Updates ===
 /** Fetches software update history, optionally filtered by vehicle. */
 export const getSoftwareUpdates = (vehicleId?: number, limit = 100, offset = 0) =>

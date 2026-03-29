@@ -96,6 +96,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	motorHandler := NewMotorHandler(db)
 	climateHandler := NewClimateHandler(db)
 	securityHandler := NewSecurityHandler(db)
+	chargingTelemetryHandler := NewChargingTelemetryHandler(db)
+	mediaHandler := NewMediaHandler(db)
+	vehicleConfigHandler := NewVehicleConfigHandler(db)
+	locationSnapshotHandler := NewLocationSnapshotHandler(db)
+	safetyHandler := NewSafetyHandler(db)
+	userPreferenceHandler := NewUserPreferenceHandler(db)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	vampireDrainHandler := NewVampireDrainHandler(db)
 	visitedLocationHandler := NewVisitedLocationHandler(db)
@@ -241,6 +247,42 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/security", func(r chi.Router) {
 			r.Get("/", securityHandler.List)
 			r.Get("/latest", securityHandler.Latest)
+		})
+
+		// Charging Telemetry
+		r.Route("/charging-telemetry", func(r chi.Router) {
+			r.Get("/", chargingTelemetryHandler.List)
+			r.Get("/latest", chargingTelemetryHandler.Latest)
+		})
+
+		// Media
+		r.Route("/media", func(r chi.Router) {
+			r.Get("/", mediaHandler.List)
+			r.Get("/latest", mediaHandler.Latest)
+		})
+
+		// Vehicle Config
+		r.Route("/vehicle-config", func(r chi.Router) {
+			r.Get("/", vehicleConfigHandler.List)
+			r.Get("/latest", vehicleConfigHandler.Latest)
+		})
+
+		// Location Snapshots
+		r.Route("/location-snapshots", func(r chi.Router) {
+			r.Get("/", locationSnapshotHandler.List)
+			r.Get("/latest", locationSnapshotHandler.Latest)
+		})
+
+		// Safety
+		r.Route("/safety", func(r chi.Router) {
+			r.Get("/", safetyHandler.List)
+			r.Get("/latest", safetyHandler.Latest)
+		})
+
+		// User Preferences
+		r.Route("/user-preferences", func(r chi.Router) {
+			r.Get("/", userPreferenceHandler.List)
+			r.Get("/latest", userPreferenceHandler.Latest)
 		})
 
 		// Software Updates
