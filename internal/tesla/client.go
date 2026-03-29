@@ -224,7 +224,7 @@ type FleetTelemetrySubscription struct {
 // FleetTelemetryConfigPayload describes the streaming server and fields to subscribe.
 type FleetTelemetryConfigPayload struct {
 	Hostname   string                          `json:"hostname"`
-	CA         string                          `json:"ca,omitempty"`
+	CA         *string                         `json:"ca,omitempty"`
 	Fields     map[string]FleetTelemetryField  `json:"fields"`
 	AlertTypes []string                        `json:"alert_types,omitempty"`
 	Port       int                             `json:"port"`

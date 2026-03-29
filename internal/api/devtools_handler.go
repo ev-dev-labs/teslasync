@@ -704,9 +704,9 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		fields[f] = field
 	}
 
-	caValue := req.CA
-	if len(strings.TrimSpace(caValue)) == 0 {
-		caValue = ""
+	var caPtr *string
+	if ca := strings.TrimSpace(req.CA); ca != "" {
+		caPtr = &ca
 	}
 
 	sub := tesla.FleetTelemetrySubscription{
@@ -714,7 +714,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		Config: tesla.FleetTelemetryConfigPayload{
 			Hostname: req.Hostname,
 			Port:     req.Port,
-			CA:       caValue,
+			CA:       caPtr,
 			Fields:   fields,
 		},
 	}
