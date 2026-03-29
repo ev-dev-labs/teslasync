@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -703,12 +704,17 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		fields[f] = field
 	}
 
+	caValue := req.CA
+	if len(strings.TrimSpace(caValue)) == 0 {
+		caValue = ""
+	}
+
 	sub := tesla.FleetTelemetrySubscription{
 		VINs: req.VINs,
 		Config: tesla.FleetTelemetryConfigPayload{
 			Hostname:   req.Hostname,
 			Port:       req.Port,
-			CA:         req.CA,
+			CA:         caValue,
 			Fields:     fields,
 			AlertTypes: []string{"service"},
 		},
