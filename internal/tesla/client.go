@@ -173,13 +173,18 @@ func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain strin
 }
 
 // SubscribeFleetTelemetry configures vehicles to connect to a self-hosted fleet-telemetry server.
+// This endpoint must be called through the Vehicle Command HTTP Proxy for signing.
 // POST /api/1/vehicles/fleet_telemetry_config
 func (c *Client) SubscribeFleetTelemetry(ctx context.Context, config FleetTelemetrySubscription) ([]byte, int, error) {
 	body, err := json.Marshal(config)
 	if err != nil {
 		return nil, 0, fmt.Errorf("marshal fleet telemetry config: %w", err)
 	}
-	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_telemetry_config", bytes.NewReader(body))
+	path := "/api/1/vehicles/fleet_telemetry_config"
+	if c.commandProxyURL != "" {
+		return c.doProxyRequestWithResponse(ctx, http.MethodPost, path, bytes.NewReader(body))
+	}
+	return c.doRequest(ctx, http.MethodPost, path, bytes.NewReader(body))
 }
 
 // GetFleetTelemetryConfig fetches a vehicle's fleet telemetry configuration.
@@ -705,4 +710,56 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 	}
 
 	return nil
+}
+
+// doProxyRequestWithResponse sends a request through the Vehicle Command Proxy
+// and returns the raw response body and status code (for endpoints like fleet_telemetry_config).
+func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error) {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, 0, fmt.Errorf("rate limiter: %w", err)
+	}
+
+	reqURL := c.commandProxyURL + path
+
+	var reqBodyBytes []byte
+	if body != nil {
+		reqBodyBytes, _ = io.ReadAll(body)
+		body = bytes.NewReader(reqBodyBytes)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
+	if err != nil {
+		return nil, 0, fmt.Errorf("create proxy request: %w", err)
+	}
+
+	c.mu.RLock()
+	token := c.accessToken
+	c.mu.RUnlock()
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	start := time.Now()
+	resp, err := c.proxyClient.Do(req)
+	duration := time.Since(start).Milliseconds()
+
+	if err != nil {
+		log.Error().Err(err).Str("url", reqURL).Msg("proxy request failed")
+		return nil, 0, fmt.Errorf("proxy request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	log.Debug().
+		Str("url", reqURL).
+		Int("status", resp.StatusCode).
+		Int64("duration_ms", duration).
+		Msg("proxy request sent")
+
+	if c.logCallback != nil {
+		c.logCallback(method, reqURL, resp.StatusCode, reqBodyBytes, respBody, int(duration), nil)
+	}
+
+	return respBody, resp.StatusCode, nil
 }
