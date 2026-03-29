@@ -505,18 +505,6 @@ function PublicKeySetupTool() {
 }
 
 function VehicleKeyPairingTool() {
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
-  }})
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('')
-  const [result, setResult] = useState<Record<string, unknown> | null>(null)
-  const mut = useMutation({
-    mutationFn: () => apiFetch('pair-vehicle-key', 'POST', { vin: selectedVehicle }),
-    onSuccess: (data: Record<string, unknown>) => setResult(data),
-    onError: (err) => setResult({ error: (err as Error).message }),
-  })
   const akUrl = `https://tesla.com/_ak/${window.location.hostname}`
   return (
     <ToolCard icon={Car} color="green" title="Pair Key to Vehicle" description="Pair your public key with a vehicle for commands and fleet telemetry">
