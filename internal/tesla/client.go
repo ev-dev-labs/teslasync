@@ -233,7 +233,8 @@ type FleetTelemetryConfigPayload struct {
 
 // FleetTelemetryField describes a single telemetry field subscription.
 type FleetTelemetryField struct {
-	IntervalSeconds int `json:"interval_seconds"`
+	IntervalSeconds int      `json:"interval_seconds"`
+	MinimumDelta    *float64 `json:"minimum_delta,omitempty"`
 }
 
 // GetPartnerToken obtains a client_credentials token for partner-level API calls.

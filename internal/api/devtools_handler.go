@@ -690,8 +690,17 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 			"Locked", "SentryMode",
 		}
 	}
+	// Fields that require minimum_delta to be explicitly set
+	minDeltaFields := map[string]float64{
+		"SelfDrivingMilesSinceReset": 1.0,
+		"MilesSinceReset":           1.0,
+	}
 	for _, f := range req.Fields {
-		fields[f] = tesla.FleetTelemetryField{IntervalSeconds: req.Interval}
+		field := tesla.FleetTelemetryField{IntervalSeconds: req.Interval}
+		if delta, ok := minDeltaFields[f]; ok {
+			field.MinimumDelta = &delta
+		}
+		fields[f] = field
 	}
 
 	sub := tesla.FleetTelemetrySubscription{
