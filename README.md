@@ -27,12 +27,13 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **46 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
+- **51 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
-- **16 Grafana dashboards** — Pre-built dashboards for deep analytics
+- **26 Grafana dashboards** — Pre-built dashboards for deep analytics
+- **228 Tesla fleet telemetry fields** — 100% coverage of all available Tesla signals
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
 - **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
 - **25 Developer Tools** — Built-in Tesla API diagnostics, VIN decoder, JWT decoder, partner registration, and 20+ utilities
@@ -64,6 +65,11 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - 📊 **Weekly Digest** — Auto-generated weekly car summary with highlights, fun facts, week-over-week comparison
 - 🔧 **Maintenance** — Service schedule tracker with odometer-based progress bars, service log, cost estimates
 - 📦 **Data Export** — Export drives, charging, positions in CSV/JSON format with job management
+- ⚡ **Energy Flow** — Pack voltage/current, cell balance, module temps, BMS status, powershare
+- 🔩 **Drivetrain Health** — Quad-motor thermal monitoring, stator/heatsink/inverter temps
+- 🎵 **Media Player** — Now playing, volume, playback history, source distribution
+- 🛡️ **Safety Settings** — ADAS configuration, collision warnings, FSD statistics
+- 🗺️ **Navigation** — Active route, destination, home/work/favorite indicators
 
 ### 🎮 Remote Vehicle Control
 - Wake / Lock / Unlock
@@ -80,7 +86,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### 🎨 Modern UX
 - **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
 - **5 Color Themes** — Dynamic theme switching with CSS variables
-- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 46 pages
+- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 51 pages
 - **Animated Car SVG** — Subtle automobile animations on loading states and docs
 - **Code-Split Routes** — Lightning-fast page loads with React lazy loading
 - **PWA-Ready** — Installable as a native app with custom splash screen
@@ -97,6 +103,12 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
   - `motor_snapshots` — Drivetrain telemetry (torque, RPM, G-forces, pedal position)
   - `climate_snapshots` — HVAC telemetry (temps, fan speed, power, defrost)
   - `security_events` — Security state (locks, sentry, doors, windows)
+  - `charging_telemetry` — 55-column real-time charging data (pack voltage/current, cell voltages, BMS, powershare)
+  - `media_snapshots` — Now playing, volume, playback source
+  - `vehicle_config_snapshots` — Trim, color, software updates
+  - `location_snapshots` — Navigation destination, route, home/work/favorite detection
+  - `safety_snapshots` — ADAS settings, collision warnings, FSD miles
+  - `user_preference_snapshots` — Unit settings, time format
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **MQTT Workers** — Notification worker + export worker for async processing
 - **Redis Caching** — Fast lookups for vehicle state and sessions
@@ -109,7 +121,9 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Public Key Management** — Generate ECDSA P-256 keypairs, auto-serve at `.well-known` path, upload existing keys
 - **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
 - **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
-- **Fleet Telemetry** — Status monitoring, 80+ signals across 7 categories (Location, Battery, Charging, Climate, Tires, Motor/Powertrain, Security), enable/disable visibility in system status
+- **Fleet Telemetry** — Status monitoring, 228 signals with 100% Tesla coverage across all categories, enable/disable visibility in system status
+- **Vehicle Data Queries** — Fleet telemetry errors table with download, vehicle data queries tool
+- **Tesla Fleet API** — Nearby charging sites, release notes, recent alerts, service data
 
 ## Architecture
 
@@ -119,7 +133,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
  │                                                                  │
  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
  │  │  React SPA   │  │  PWA Shell   │  │  Grafana Dashboards  │  │
- │  │  (Vite 5)    │  │  (manifest)  │  │  (16 dashboards)     │  │
+ │  │  (Vite 5)    │  │  (manifest)  │  │  (26 dashboards)     │  │
  │  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
  └─────────┼─────────────────┼─────────────────────┼──────────────┘
            │                 │                     │ SQL
@@ -218,7 +232,7 @@ Navigate to **Settings** in the web UI and connect your Tesla account via OAuth2
 
 ## Grafana Dashboards
 
-TeslaSync ships with **16 pre-built Grafana dashboards**:
+TeslaSync ships with **26 pre-built Grafana dashboards**:
 
 | Dashboard | Description |
 |-----------|-------------|
@@ -238,6 +252,16 @@ TeslaSync ships with **16 pre-built Grafana dashboards**:
 | Trips | Multi-drive journey tracking |
 | Statistics | Long-term averages, totals, best/worst |
 | Projected Range | Range prediction and degradation forecast |
+| Motor / Powertrain | Motor torque, axle speed, G-forces, pedal position |
+| Climate / HVAC | Cabin/outside temps, HVAC power, fan speed, defrost |
+| Security / Access | Lock state, sentry mode, doors, windows, HomeLink |
+| Tire Pressure Detail | Per-tire trends, balance scoring, alert thresholds |
+| Fleet Health | Multi-vehicle health comparison, utilization, cost |
+| API Usage | Request counts, cost tracking, rate limit monitoring |
+| Energy Flow | Pack voltage/current, charging power, cell spread, BMS |
+| Drivetrain Thermal | Stator/heatsink/inverter temps, motor currents |
+| Comfort & Media | Seat heaters, HVAC modes, now playing, volume |
+| Vehicle Intelligence | Config, software, safety, navigation, preferences |
 
 ## Development
 
@@ -333,6 +357,12 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | GET | `/api/v1/motor` | Motor/drivetrain telemetry |
 | GET | `/api/v1/climate` | Climate/HVAC telemetry |
 | GET | `/api/v1/security` | Security state & events |
+| GET | `/api/v1/charging-telemetry` | Charging telemetry (pack, cells, BMS) |
+| GET | `/api/v1/media` | Media snapshots |
+| GET | `/api/v1/vehicle-config` | Vehicle config snapshots |
+| GET | `/api/v1/location-snapshots` | Location/navigation snapshots |
+| GET | `/api/v1/safety` | Safety/ADAS snapshots |
+| GET | `/api/v1/user-preferences` | User preference snapshots |
 | GET | `/api/v1/drives/:id/positions` | Drive route positions |
 
 ### Notifications
@@ -367,6 +397,11 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | POST | `/api/v1/dev-tools/upload-public-key` | Upload existing public key |
 | GET | `/api/v1/dev-tools/public-key-status` | Public key configuration status |
 | DELETE | `/api/v1/dev-tools/public-key` | Remove stored public key |
+| GET | `/api/v1/dev-tools/nearby-charging` | Nearby Superchargers via Tesla API |
+| GET | `/api/v1/dev-tools/release-notes` | Firmware release notes via Tesla API |
+| GET | `/api/v1/dev-tools/recent-alerts` | Vehicle alerts from Tesla API |
+| GET | `/api/v1/dev-tools/service-data` | Service history via Tesla API |
+| POST | `/api/v1/auth/disconnect` | Disconnect Tesla account (clear tokens) |
 | GET | `/.well-known/appspecific/com.tesla.3p.public-key.pem` | Serve Tesla public key |
 
 ## MQTT Topics

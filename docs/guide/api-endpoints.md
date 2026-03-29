@@ -98,7 +98,16 @@ Check whether valid Tesla credentials are stored.
 
 ---
 
-## Vehicles
+### POST `/api/v1/auth/disconnect`
+
+Disconnect the Tesla account — clears the stored OAuth tokens from the database and resets the in-memory client state.
+
+**Response:**
+```json
+{ "status": "disconnected" }
+```
+
+---
 
 ### GET `/api/v1/vehicles/`
 
@@ -953,6 +962,156 @@ Returns the most recent security event for a vehicle.
 
 ---
 
+## Charging Telemetry
+
+### GET `/api/v1/charging-telemetry?vehicle_id={id}&limit={n}`
+
+Returns charging telemetry snapshots with detailed pack, cell, and BMS data.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of charging telemetry objects with fields including: `pack_voltage`, `pack_current`, `cell_voltages`, `module_temps`, `bms_state`, `charging_power`, `supercharger_state`, `powershare_status`, and more (55 columns total).
+
+### GET `/api/v1/charging-telemetry/latest?vehicle_id={id}`
+
+Returns the most recent charging telemetry snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single charging telemetry object.
+
+---
+
+## Media
+
+### GET `/api/v1/media?vehicle_id={id}&limit={n}`
+
+Returns media/entertainment snapshots.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of media snapshot objects with fields: `playback_status`, `volume`, `source`, `artist`, `title`, `album`.
+
+### GET `/api/v1/media/latest?vehicle_id={id}`
+
+Returns the most recent media snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single media snapshot object.
+
+---
+
+## Vehicle Config
+
+### GET `/api/v1/vehicle-config?vehicle_id={id}&limit={n}`
+
+Returns vehicle configuration snapshots (trim, color, software version).
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of vehicle config snapshot objects.
+
+### GET `/api/v1/vehicle-config/latest?vehicle_id={id}`
+
+Returns the most recent vehicle config snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single vehicle config snapshot object.
+
+---
+
+## Location Snapshots
+
+### GET `/api/v1/location-snapshots?vehicle_id={id}&limit={n}`
+
+Returns location/navigation snapshots with destination, route, and home/work/favorite indicators.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of location snapshot objects with fields: `destination_location`, `route_last_updated`, `home_nearby`, `work_nearby`, `favorite_nearby`.
+
+### GET `/api/v1/location-snapshots/latest?vehicle_id={id}`
+
+Returns the most recent location snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single location snapshot object.
+
+---
+
+## Safety / ADAS
+
+### GET `/api/v1/safety?vehicle_id={id}&limit={n}`
+
+Returns safety and ADAS configuration snapshots.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of safety snapshot objects with fields: `forward_collision_warning`, `lane_departure_avoidance`, `emergency_lane_departure`, `auto_steer`, `fsd_miles_since_reset`.
+
+### GET `/api/v1/safety/latest?vehicle_id={id}`
+
+Returns the most recent safety snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single safety snapshot object.
+
+---
+
+## User Preferences
+
+### GET `/api/v1/user-preferences?vehicle_id={id}&limit={n}`
+
+Returns user preference snapshots (units, time format).
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of user preference objects with fields: `distance_unit`, `temperature_unit`, `24_hour_clock`, `charge_current_request`.
+
+### GET `/api/v1/user-preferences/latest?vehicle_id={id}`
+
+Returns the most recent user preferences for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single user preference object.
+
+---
+
 ## Drive Positions
 
 ### GET `/api/v1/drives/{driveID}/positions`
@@ -1324,6 +1483,10 @@ Built-in utilities for Tesla Fleet API setup and system diagnostics.
 | POST | `/api/v1/dev-tools/mqtt-test` | Test MQTT broker connectivity and publish test message |
 | GET | `/api/v1/dev-tools/env-check` | Check which required environment variables are set/unset |
 | GET | `/api/v1/dev-tools/runtime-info` | Go runtime statistics (goroutines, memory, CPU, uptime) |
+| GET | `/api/v1/dev-tools/nearby-charging` | Nearby Superchargers and charging sites via Tesla Fleet API |
+| GET | `/api/v1/dev-tools/release-notes` | Firmware update release notes via Tesla Fleet API |
+| GET | `/api/v1/dev-tools/recent-alerts` | Vehicle alerts from Tesla (recalls, service reminders) |
+| GET | `/api/v1/dev-tools/service-data` | Service history and status via Tesla Fleet API |
 
 ### Partner Registration Flow
 

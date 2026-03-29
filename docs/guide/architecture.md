@@ -236,6 +236,12 @@ erDiagram
     vehicles ||--o{ software_updates : has
     vehicles ||--o{ alerts : has
     vehicles ||--o{ command_logs : has
+    vehicles ||--o{ charging_telemetry : has
+    vehicles ||--o{ media_snapshots : has
+    vehicles ||--o{ vehicle_config_snapshots : has
+    vehicles ||--o{ location_snapshots : has
+    vehicles ||--o{ safety_snapshots : has
+    vehicles ||--o{ user_preference_snapshots : has
     trips ||--o{ trip_drives : contains
     trip_drives }o--|| drives : references
     drives }o--o| addresses : "start/end"
@@ -282,7 +288,7 @@ erDiagram
 
 ## Database Tables
 
-The schema spans 5 migrations and 24+ tables. Column names, types, and constraints are taken directly from the migration SQL files.
+The schema spans 5 migrations and 30+ tables. Column names, types, and constraints are taken directly from the migration SQL files.
 
 ### Core Tables
 
@@ -535,6 +541,104 @@ Stores vehicle security and access state changes.
 | `homelink_nearby` | `BOOLEAN` | HomeLink detected |
 | `guest_mode` | `BOOLEAN` | Guest mode active |
 | `created_at` | `TIMESTAMPTZ` | Event timestamp |
+
+#### Charging Telemetry (`charging_telemetry`)
+
+55-column table storing real-time charging data from fleet telemetry (migration 000017).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `pack_voltage` | `DOUBLE PRECISION` | Battery pack voltage (V) |
+| `pack_current` | `DOUBLE PRECISION` | Battery pack current (A) |
+| `charging_power` | `DOUBLE PRECISION` | Total charging power (kW) |
+| `ac_charging_power` | `DOUBLE PRECISION` | AC charging power (kW) |
+| `dc_charging_power` | `DOUBLE PRECISION` | DC charging power (kW) |
+| `supercharger_state` | `VARCHAR(20)` | Supercharger connection state |
+| `bms_state` | `VARCHAR(20)` | BMS operating state |
+| `bms_fullchargecomplete` | `BOOLEAN` | BMS full charge flag |
+| `powershare_status` | `VARCHAR(20)` | Powershare (V2H/V2G) status |
+| `cell_voltages` | `JSONB` | Individual cell voltages |
+| `module_temps` | `JSONB` | Module temperature readings |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+*Plus ~40 additional columns for detailed BMS, cell balance, and charging circuit data.*
+
+#### Media Snapshots (`media_snapshots`)
+
+Stores media/entertainment state from fleet telemetry (migration 000017).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `playback_status` | `VARCHAR(20)` | Playing / Paused / Stopped |
+| `volume` | `DOUBLE PRECISION` | Volume level (0–11) |
+| `source` | `VARCHAR(50)` | Media source (Spotify, Radio, etc.) |
+| `artist` | `TEXT` | Current artist |
+| `title` | `TEXT` | Current track title |
+| `album` | `TEXT` | Current album |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+#### Vehicle Config Snapshots (`vehicle_config_snapshots`)
+
+Stores vehicle configuration state from fleet telemetry (migration 000017).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `trim_badging` | `VARCHAR(50)` | Trim level |
+| `exterior_color` | `VARCHAR(50)` | Paint color |
+| `roof_color` | `VARCHAR(50)` | Roof color |
+| `spoiler_type` | `VARCHAR(50)` | Spoiler type |
+| `software_version` | `VARCHAR(100)` | Current firmware version |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+#### Location Snapshots (`location_snapshots`)
+
+Stores navigation/destination state from fleet telemetry (migration 000017).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `destination_location` | `TEXT` | Active navigation destination |
+| `route_last_updated` | `TIMESTAMPTZ` | Last route update time |
+| `home_nearby` | `BOOLEAN` | Near home location |
+| `work_nearby` | `BOOLEAN` | Near work location |
+| `favorite_nearby` | `BOOLEAN` | Near a saved favorite |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+#### Safety Snapshots (`safety_snapshots`)
+
+Stores ADAS and safety configuration from fleet telemetry (migration 000017).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `forward_collision_warning` | `VARCHAR(20)` | FCW sensitivity setting |
+| `lane_departure_avoidance` | `VARCHAR(20)` | LDA mode |
+| `emergency_lane_departure` | `BOOLEAN` | Emergency lane departure active |
+| `auto_steer` | `VARCHAR(20)` | Autosteer mode |
+| `fsd_miles_since_reset` | `DOUBLE PRECISION` | FSD miles since last reset |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+#### User Preference Snapshots (`user_preference_snapshots`)
+
+Stores user unit/format preferences from fleet telemetry (migration 000017).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `distance_unit` | `VARCHAR(5)` | km or mi |
+| `temperature_unit` | `VARCHAR(5)` | C or F |
+| `24_hour_clock` | `BOOLEAN` | 24-hour time format |
+| `charge_current_request` | `INTEGER` | Requested charge current (A) |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
 
 ### Mileage & Trip Tables
 

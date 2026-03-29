@@ -2,6 +2,64 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [0.7.0] — 2026-03-29
+
+### 🚀 New Features
+
+#### Comprehensive Telemetry Expansion (228/228 Tesla Fields)
+- New DB migration (000017): 78 new columns + 6 new tables for complete Tesla signal coverage
+- charging_telemetry: 55-column real-time charging data (pack voltage/current, cell voltages, BMS, powershare)
+- media_snapshots: now playing, volume, playback source
+- vehicle_config_snapshots: trim, color, software updates
+- location_snapshots: navigation destination, route, home/work/favorite detection
+- safety_snapshots: ADAS settings, collision warnings, FSD miles
+- user_preference_snapshots: unit settings, time format
+- Expanded motor_snapshots: quad-motor support (torque/speed/state/temps for F/R/REL/RER)
+- Expanded climate_snapshots: seat heaters (5 positions), steering wheel heat, auto climate
+- Expanded security_events: lights, tonneau, seat belts, valet/service modes
+
+#### 5 New UI Pages (51 total)
+- **Energy Flow** — Pack voltage/current, cell balance, module temps, BMS status, powershare
+- **Drivetrain Health** — Quad-motor thermal monitoring, stator/heatsink/inverter temps
+- **Media Player** — Now playing, volume, playback history, source distribution
+- **Safety Settings** — ADAS configuration, collision warnings, FSD statistics
+- **Navigation** — Active route, destination, home/work/favorite indicators
+
+#### 4 New Grafana Dashboards (26 total)
+- Energy Flow: pack voltage/current, charging power, cell spread, BMS
+- Drivetrain Thermal: stator/heatsink/inverter temps, motor currents
+- Comfort & Media: seat heaters, HVAC modes, now playing, volume
+- Vehicle Intelligence: config, software, safety, navigation, preferences
+
+#### 4 New Tesla Fleet API Integrations
+- Nearby Charging Sites — show Superchargers near vehicle
+- Release Notes — firmware update release notes
+- Recent Alerts — vehicle alerts from Tesla (recalls, service)
+- Service Data — service history and status
+
+#### Enhanced Existing Pages
+- Dashboard: added media/entertainment and navigation live cards
+- VehicleDetail: added energy/charging pack data and media/nav panels
+- Settings: Re-authorize and Disconnect buttons for Tesla account
+
+### 🔧 Fleet Telemetry Fixes
+- Fleet telemetry config uses MQTT dispatcher (was HTTP)
+- Let's Encrypt ISRG Root X1 CA certificate auto-included in subscription
+- Added vehicle_location OAuth scope for location telemetry fields
+- Added prompt=consent to force OAuth scope re-approval
+- 228/228 Tesla fields verified against official Available Data page
+- Key pairing via tesla.com/_ak link (replaced broken API call)
+- .well-known path bypasses Authentik authentication
+- Fixed fleet telemetry image: tesla/fleet-telemetry (Docker Hub, not GHCR)
+- Command proxy: writable filesystem fix
+- Removed invalid fields: Latitude, Longitude (standalone), FrunkOpen, TrunkOpen, WindowState
+- Added minimum_delta for SelfDrivingMilesSinceReset
+- Removed invalid alert_type "security"
+
+### 🐛 Bug Fixes
+- Disconnect properly clears DB token + in-memory client state
+- TokenRepo.Delete() method for clean disconnection
+
 ## [0.6.0] - 2026-03-28
 
 ### 🚀 New Features
