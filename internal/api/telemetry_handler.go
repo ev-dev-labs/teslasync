@@ -27,6 +27,12 @@ type TelemetryHandler struct {
 	motorRepo      *database.MotorRepo
 	climateRepo    *database.ClimateRepo
 	securityRepo   *database.SecurityRepo
+	chargingTelemetryRepo *database.ChargingTelemetryRepo
+	mediaRepo      *database.MediaRepo
+	vehicleConfigRepo *database.VehicleConfigRepo
+	locationRepo   *database.LocationSnapshotRepo
+	safetyRepo     *database.SafetyRepo
+	userPrefRepo   *database.UserPreferenceRepo
 	mqttClient     *mqtt.Client
 	logRepo        *database.APICallLogRepo
 	eventHub       *EventHub
@@ -75,6 +81,12 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		motorRepo:      database.NewMotorRepo(db),
 		climateRepo:    database.NewClimateRepo(db),
 		securityRepo:   database.NewSecurityRepo(db),
+		chargingTelemetryRepo: database.NewChargingTelemetryRepo(db),
+		mediaRepo:      database.NewMediaRepo(db),
+		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
+		locationRepo:   database.NewLocationSnapshotRepo(db),
+		safetyRepo:     database.NewSafetyRepo(db),
+		userPrefRepo:   database.NewUserPreferenceRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
@@ -246,6 +258,24 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 			// Store security events
 			h.trackSecurity(bgCtx, vehicleID, signals)
+
+			// Store charging telemetry
+			h.trackCharging(bgCtx, vehicleID, signals)
+
+			// Store media snapshots
+			h.trackMedia(bgCtx, vehicleID, signals)
+
+			// Store vehicle config snapshots
+			h.trackVehicleConfig(bgCtx, vehicleID, signals)
+
+			// Store location/navigation snapshots
+			h.trackLocation(bgCtx, vehicleID, signals)
+
+			// Store safety settings snapshots
+			h.trackSafety(bgCtx, vehicleID, signals)
+
+			// Store user preference snapshots
+			h.trackUserPreferences(bgCtx, vehicleID, signals)
 		}()
 	}
 }
@@ -686,6 +716,142 @@ func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, sign
 		s := toString(v)
 		snap.Gear = &s
 	}
+	if v, ok := signals["DiTorqueActualF"]; ok {
+		f := toFloat(v)
+		snap.DiTorqueActualF = &f
+	}
+	if v, ok := signals["DiTorqueActualR"]; ok {
+		f := toFloat(v)
+		snap.DiTorqueActualR = &f
+	}
+	if v, ok := signals["DiTorqueActualREL"]; ok {
+		f := toFloat(v)
+		snap.DiTorqueActualREL = &f
+	}
+	if v, ok := signals["DiTorqueActualRER"]; ok {
+		f := toFloat(v)
+		snap.DiTorqueActualRER = &f
+	}
+	if v, ok := signals["DiAxleSpeedF"]; ok {
+		f := toFloat(v)
+		snap.DiAxleSpeedF = &f
+	}
+	if v, ok := signals["DiAxleSpeedREL"]; ok {
+		f := toFloat(v)
+		snap.DiAxleSpeedREL = &f
+	}
+	if v, ok := signals["DiAxleSpeedRER"]; ok {
+		f := toFloat(v)
+		snap.DiAxleSpeedRER = &f
+	}
+	if v, ok := signals["DiStateF"]; ok {
+		s := toString(v)
+		snap.DiStateF = &s
+	}
+	if v, ok := signals["DiStateREL"]; ok {
+		s := toString(v)
+		snap.DiStateREL = &s
+	}
+	if v, ok := signals["DiStateRER"]; ok {
+		s := toString(v)
+		snap.DiStateRER = &s
+	}
+	if v, ok := signals["DiStatorTempF"]; ok {
+		f := toFloat(v)
+		snap.DiStatorTempF = &f
+	}
+	if v, ok := signals["DiStatorTempREL"]; ok {
+		f := toFloat(v)
+		snap.DiStatorTempREL = &f
+	}
+	if v, ok := signals["DiStatorTempRER"]; ok {
+		f := toFloat(v)
+		snap.DiStatorTempRER = &f
+	}
+	if v, ok := signals["DiHeatsinkTF"]; ok {
+		f := toFloat(v)
+		snap.DiHeatsinkTF = &f
+	}
+	if v, ok := signals["DiHeatsinkTR"]; ok {
+		f := toFloat(v)
+		snap.DiHeatsinkTR = &f
+	}
+	if v, ok := signals["DiHeatsinkTREL"]; ok {
+		f := toFloat(v)
+		snap.DiHeatsinkTREL = &f
+	}
+	if v, ok := signals["DiHeatsinkTRER"]; ok {
+		f := toFloat(v)
+		snap.DiHeatsinkTRER = &f
+	}
+	if v, ok := signals["DiInverterTF"]; ok {
+		f := toFloat(v)
+		snap.DiInverterTF = &f
+	}
+	if v, ok := signals["DiInverterTR"]; ok {
+		f := toFloat(v)
+		snap.DiInverterTR = &f
+	}
+	if v, ok := signals["DiInverterTREL"]; ok {
+		f := toFloat(v)
+		snap.DiInverterTREL = &f
+	}
+	if v, ok := signals["DiInverterTRER"]; ok {
+		f := toFloat(v)
+		snap.DiInverterTRER = &f
+	}
+	if v, ok := signals["DiMotorCurrentF"]; ok {
+		f := toFloat(v)
+		snap.DiMotorCurrentF = &f
+	}
+	if v, ok := signals["DiMotorCurrentR"]; ok {
+		f := toFloat(v)
+		snap.DiMotorCurrentR = &f
+	}
+	if v, ok := signals["DiMotorCurrentREL"]; ok {
+		f := toFloat(v)
+		snap.DiMotorCurrentREL = &f
+	}
+	if v, ok := signals["DiMotorCurrentRER"]; ok {
+		f := toFloat(v)
+		snap.DiMotorCurrentRER = &f
+	}
+	if v, ok := signals["DiVBatF"]; ok {
+		f := toFloat(v)
+		snap.DiVBatF = &f
+	}
+	if v, ok := signals["DiVBatR"]; ok {
+		f := toFloat(v)
+		snap.DiVBatR = &f
+	}
+	if v, ok := signals["DiVBatREL"]; ok {
+		f := toFloat(v)
+		snap.DiVBatREL = &f
+	}
+	if v, ok := signals["DiVBatRER"]; ok {
+		f := toFloat(v)
+		snap.DiVBatRER = &f
+	}
+	if v, ok := signals["DiSlaveTorqueCmd"]; ok {
+		f := toFloat(v)
+		snap.DiSlaveTorqueCmd = &f
+	}
+	if v, ok := signals["Hvil"]; ok {
+		s := toString(v)
+		snap.Hvil = &s
+	}
+	if v, ok := signals["BrakePedalPos"]; ok {
+		f := toFloat(v)
+		snap.BrakePedalPos = &f
+	}
+	if v, ok := signals["CruiseSetSpeed"]; ok {
+		f := toFloat(v)
+		snap.CruiseSetSpeed = &f
+	}
+	if v, ok := signals["DriveRail"]; ok {
+		b := toBool(v)
+		snap.DriveRail = &b
+	}
 	if err := h.motorRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store motor snapshot")
 	}
@@ -736,6 +902,90 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 	if v, ok := signals["BatteryHeaterOn"]; ok {
 		b := toBool(v)
 		snap.BatteryHeaterOn = &b
+	}
+	if v, ok := signals["HvacACEnabled"]; ok {
+		b := toBool(v)
+		snap.HvacACEnabled = &b
+	}
+	if v, ok := signals["HvacAutoMode"]; ok {
+		s := toString(v)
+		snap.HvacAutoMode = &s
+	}
+	if v, ok := signals["HvacFanStatus"]; ok {
+		i := int(toFloat(v))
+		snap.HvacFanStatus = &i
+	}
+	if v, ok := signals["HvacSteeringWheelHeatAuto"]; ok {
+		b := toBool(v)
+		snap.HvacSteeringWheelHeatAuto = &b
+	}
+	if v, ok := signals["HvacSteeringWheelHeatLevel"]; ok {
+		i := int(toFloat(v))
+		snap.HvacSteeringWheelHeatLevel = &i
+	}
+	if v, ok := signals["ClimateKeeperMode"]; ok {
+		s := toString(v)
+		snap.ClimateKeeperMode = &s
+	}
+	if v, ok := signals["CabinOverheatProtectionTempLimit"]; ok {
+		s := toString(v)
+		snap.CabinOverheatProtectionTempLimit = &s
+	}
+	if v, ok := signals["DefrostForPreconditioning"]; ok {
+		b := toBool(v)
+		snap.DefrostForPreconditioning = &b
+	}
+	if v, ok := signals["SeatHeaterLeft"]; ok {
+		i := int(toFloat(v))
+		snap.SeatHeaterLeft = &i
+	}
+	if v, ok := signals["SeatHeaterRight"]; ok {
+		i := int(toFloat(v))
+		snap.SeatHeaterRight = &i
+	}
+	if v, ok := signals["SeatHeaterRearLeft"]; ok {
+		i := int(toFloat(v))
+		snap.SeatHeaterRearLeft = &i
+	}
+	if v, ok := signals["SeatHeaterRearCenter"]; ok {
+		i := int(toFloat(v))
+		snap.SeatHeaterRearCenter = &i
+	}
+	if v, ok := signals["SeatHeaterRearRight"]; ok {
+		i := int(toFloat(v))
+		snap.SeatHeaterRearRight = &i
+	}
+	if v, ok := signals["SeatVentEnabled"]; ok {
+		b := toBool(v)
+		snap.SeatVentEnabled = &b
+	}
+	if v, ok := signals["ClimateSeatCoolingFrontLeft"]; ok {
+		i := int(toFloat(v))
+		snap.ClimateSeatCoolingFrontLeft = &i
+	}
+	if v, ok := signals["ClimateSeatCoolingFrontRight"]; ok {
+		i := int(toFloat(v))
+		snap.ClimateSeatCoolingFrontRight = &i
+	}
+	if v, ok := signals["AutoSeatClimateLeft"]; ok {
+		b := toBool(v)
+		snap.AutoSeatClimateLeft = &b
+	}
+	if v, ok := signals["AutoSeatClimateRight"]; ok {
+		b := toBool(v)
+		snap.AutoSeatClimateRight = &b
+	}
+	if v, ok := signals["RearDefrostEnabled"]; ok {
+		b := toBool(v)
+		snap.RearDefrostEnabled = &b
+	}
+	if v, ok := signals["RearDisplayHvacEnabled"]; ok {
+		b := toBool(v)
+		snap.RearDisplayHvacEnabled = &b
+	}
+	if v, ok := signals["WiperHeatEnabled"]; ok {
+		b := toBool(v)
+		snap.WiperHeatEnabled = &b
 	}
 	if err := h.climateRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store climate snapshot")
@@ -789,8 +1039,617 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		b := toBool(v)
 		ev.GuestMode = &b
 	}
+	if v, ok := signals["HomelinkDeviceCount"]; ok {
+		i := int(toFloat(v))
+		ev.HomelinkDeviceCount = &i
+	}
+	if v, ok := signals["GuestModeMobileAccessState"]; ok {
+		s := toString(v)
+		ev.GuestModeMobileAccessState = &s
+	}
+	if v, ok := signals["DriverSeatOccupied"]; ok {
+		b := toBool(v)
+		ev.DriverSeatOccupied = &b
+	}
+	if v, ok := signals["CenterDisplay"]; ok {
+		s := toString(v)
+		ev.CenterDisplay = &s
+	}
+	if v, ok := signals["SpeedLimitMode"]; ok {
+		b := toBool(v)
+		ev.SpeedLimitMode = &b
+	}
+	if v, ok := signals["ValetModeEnabled"]; ok {
+		b := toBool(v)
+		ev.ValetModeEnabled = &b
+	}
+	if v, ok := signals["ServiceMode"]; ok {
+		b := toBool(v)
+		ev.ServiceMode = &b
+	}
+	if v, ok := signals["CurrentLimitMph"]; ok {
+		f := toFloat(v)
+		ev.CurrentLimitMph = &f
+	}
+	if v, ok := signals["PairedPhoneKeyAndKeyFobQty"]; ok {
+		i := int(toFloat(v))
+		ev.PairedPhoneKeyCount = &i
+	}
+	if v, ok := signals["LightsHazardsActive"]; ok {
+		b := toBool(v)
+		ev.LightsHazardsActive = &b
+	}
+	if v, ok := signals["LightsHighBeams"]; ok {
+		b := toBool(v)
+		ev.LightsHighBeams = &b
+	}
+	if v, ok := signals["LightsTurnSignal"]; ok {
+		s := toString(v)
+		ev.LightsTurnSignal = &s
+	}
+	if v, ok := signals["TonneauPosition"]; ok {
+		s := toString(v)
+		ev.TonneauPosition = &s
+	}
+	if v, ok := signals["TonneauOpenPercent"]; ok {
+		f := toFloat(v)
+		ev.TonneauOpenPercent = &f
+	}
+	if v, ok := signals["TonneauTentMode"]; ok {
+		s := toString(v)
+		ev.TonneauTentMode = &s
+	}
+	if v, ok := signals["DriverSeatBelt"]; ok {
+		b := toBool(v)
+		ev.DriverSeatBelt = &b
+	}
+	if v, ok := signals["PassengerSeatBelt"]; ok {
+		b := toBool(v)
+		ev.PassengerSeatBelt = &b
+	}
 	if err := h.securityRepo.Insert(ctx, ev); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security event")
+	}
+}
+
+// trackCharging stores charging telemetry when relevant signals arrive.
+func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasChargeState := signals["ChargeState"]
+	_, hasDetailedCharge := signals["DetailedChargeState"]
+	_, hasDCPower := signals["DCChargingPower"]
+	_, hasACPower := signals["ACChargingPower"]
+	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower {
+		return
+	}
+
+	snap := &models.ChargingTelemetry{VehicleID: vehicleID}
+	if v, ok := signals["BatteryLevel"]; ok {
+		f := toFloat(v)
+		snap.BatteryLevel = &f
+	}
+	if v, ok := signals["Soc"]; ok {
+		f := toFloat(v)
+		snap.Soc = &f
+	}
+	if v, ok := signals["ChargeState"]; ok {
+		s := toString(v)
+		snap.ChargeState = &s
+	}
+	if v, ok := signals["DetailedChargeState"]; ok {
+		s := toString(v)
+		snap.DetailedChargeState = &s
+	}
+	if v, ok := signals["ChargeLimitSoc"]; ok {
+		i := int(toFloat(v))
+		snap.ChargeLimitSoc = &i
+	}
+	if v, ok := signals["ChargeAmps"]; ok {
+		f := toFloat(v)
+		snap.ChargeAmps = &f
+	}
+	if v, ok := signals["ChargeCurrentRequest"]; ok {
+		f := toFloat(v)
+		snap.ChargeCurrentRequest = &f
+	}
+	if v, ok := signals["ChargeCurrentRequestMax"]; ok {
+		f := toFloat(v)
+		snap.ChargeCurrentRequestMax = &f
+	}
+	if v, ok := signals["ChargeEnableRequest"]; ok {
+		b := toBool(v)
+		snap.ChargeEnableRequest = &b
+	}
+	if v, ok := signals["ChargerVoltage"]; ok {
+		f := toFloat(v)
+		snap.ChargerVoltage = &f
+	}
+	if v, ok := signals["ChargerPhases"]; ok {
+		i := int(toFloat(v))
+		snap.ChargerPhases = &i
+	}
+	if v, ok := signals["ChargeRateMilePerHour"]; ok {
+		f := toFloat(v)
+		snap.ChargeRateMph = &f
+	}
+	if v, ok := signals["DCChargingPower"]; ok {
+		f := toFloat(v)
+		snap.DCChargingPower = &f
+	}
+	if v, ok := signals["DCChargingEnergyIn"]; ok {
+		f := toFloat(v)
+		snap.DCChargingEnergyIn = &f
+	}
+	if v, ok := signals["ACChargingPower"]; ok {
+		f := toFloat(v)
+		snap.ACChargingPower = &f
+	}
+	if v, ok := signals["ACChargingEnergyIn"]; ok {
+		f := toFloat(v)
+		snap.ACChargingEnergyIn = &f
+	}
+	if v, ok := signals["EnergyRemaining"]; ok {
+		f := toFloat(v)
+		snap.EnergyRemaining = &f
+	}
+	if v, ok := signals["EstBatteryRange"]; ok {
+		f := toFloat(v)
+		snap.EstBatteryRange = &f
+	}
+	if v, ok := signals["IdealBatteryRange"]; ok {
+		f := toFloat(v)
+		snap.IdealBatteryRange = &f
+	}
+	if v, ok := signals["RatedRange"]; ok {
+		f := toFloat(v)
+		snap.RatedRange = &f
+	}
+	if v, ok := signals["PackVoltage"]; ok {
+		f := toFloat(v)
+		snap.PackVoltage = &f
+	}
+	if v, ok := signals["PackCurrent"]; ok {
+		f := toFloat(v)
+		snap.PackCurrent = &f
+	}
+	if v, ok := signals["ChargePortDoorOpen"]; ok {
+		b := toBool(v)
+		snap.ChargePortDoorOpen = &b
+	}
+	if v, ok := signals["ChargePortLatch"]; ok {
+		s := toString(v)
+		snap.ChargePortLatch = &s
+	}
+	if v, ok := signals["ChargePortColdWeatherMode"]; ok {
+		b := toBool(v)
+		snap.ChargePortColdWeatherMode = &b
+	}
+	if v, ok := signals["ChargingCableType"]; ok {
+		s := toString(v)
+		snap.ChargingCableType = &s
+	}
+	if v, ok := signals["FastChargerPresent"]; ok {
+		b := toBool(v)
+		snap.FastChargerPresent = &b
+	}
+	if v, ok := signals["FastChargerType"]; ok {
+		s := toString(v)
+		snap.FastChargerType = &s
+	}
+	if v, ok := signals["TimeToFullCharge"]; ok {
+		f := toFloat(v)
+		snap.TimeToFullCharge = &f
+	}
+	if v, ok := signals["EstimatedHoursToChargeTermination"]; ok {
+		f := toFloat(v)
+		snap.EstimatedHoursToCharge = &f
+	}
+	if v, ok := signals["ScheduledChargingMode"]; ok {
+		s := toString(v)
+		snap.ScheduledChargingMode = &s
+	}
+	if v, ok := signals["ScheduledChargingPending"]; ok {
+		b := toBool(v)
+		snap.ScheduledChargingPending = &b
+	}
+	if v, ok := signals["PreconditioningEnabled"]; ok {
+		b := toBool(v)
+		snap.PreconditioningEnabled = &b
+	}
+	if v, ok := signals["BrickVoltageMax"]; ok {
+		f := toFloat(v)
+		snap.BrickVoltageMax = &f
+	}
+	if v, ok := signals["BrickVoltageMin"]; ok {
+		f := toFloat(v)
+		snap.BrickVoltageMin = &f
+	}
+	if v, ok := signals["NumBrickVoltageMax"]; ok {
+		i := int(toFloat(v))
+		snap.NumBrickVoltageMax = &i
+	}
+	if v, ok := signals["NumBrickVoltageMin"]; ok {
+		i := int(toFloat(v))
+		snap.NumBrickVoltageMin = &i
+	}
+	if v, ok := signals["ModuleTempMax"]; ok {
+		f := toFloat(v)
+		snap.ModuleTempMax = &f
+	}
+	if v, ok := signals["ModuleTempMin"]; ok {
+		f := toFloat(v)
+		snap.ModuleTempMin = &f
+	}
+	if v, ok := signals["NumModuleTempMax"]; ok {
+		i := int(toFloat(v))
+		snap.NumModuleTempMax = &i
+	}
+	if v, ok := signals["NumModuleTempMin"]; ok {
+		i := int(toFloat(v))
+		snap.NumModuleTempMin = &i
+	}
+	if v, ok := signals["BatteryHeaterOn"]; ok {
+		b := toBool(v)
+		snap.BatteryHeaterOn = &b
+	}
+	if v, ok := signals["NotEnoughPowerToHeat"]; ok {
+		b := toBool(v)
+		snap.NotEnoughPowerToHeat = &b
+	}
+	if v, ok := signals["BmsState"]; ok {
+		s := toString(v)
+		snap.BmsState = &s
+	}
+	if v, ok := signals["BmsFullchargecomplete"]; ok {
+		b := toBool(v)
+		snap.BmsFullchargeComplete = &b
+	}
+	if v, ok := signals["DcdcEnable"]; ok {
+		b := toBool(v)
+		snap.DcdcEnable = &b
+	}
+	if v, ok := signals["IsolationResistance"]; ok {
+		f := toFloat(v)
+		snap.IsolationResistance = &f
+	}
+	if v, ok := signals["LifetimeEnergyUsed"]; ok {
+		f := toFloat(v)
+		snap.LifetimeEnergyUsed = &f
+	}
+	if v, ok := signals["SuperchargerSessionTripPlanner"]; ok {
+		b := toBool(v)
+		snap.SuperchargerSessionTripPlanner = &b
+	}
+	if v, ok := signals["PowershareStatus"]; ok {
+		s := toString(v)
+		snap.PowershareStatus = &s
+	}
+	if v, ok := signals["PowershareType"]; ok {
+		s := toString(v)
+		snap.PowershareType = &s
+	}
+	if v, ok := signals["PowershareStopReason"]; ok {
+		s := toString(v)
+		snap.PowershareStopReason = &s
+	}
+	if v, ok := signals["PowershareHoursLeft"]; ok {
+		i := int(toFloat(v))
+		snap.PowershareHoursLeft = &i
+	}
+	if v, ok := signals["PowersharePowerKw"]; ok {
+		f := toFloat(v)
+		snap.PowersharePowerKw = &f
+	}
+	if err := h.chargingTelemetryRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store charging telemetry")
+	}
+}
+
+// trackMedia stores media playback snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasTitle := signals["MediaNowPlayingTitle"]
+	_, hasStatus := signals["MediaPlaybackStatus"]
+	if !hasTitle && !hasStatus {
+		return
+	}
+
+	snap := &models.MediaSnapshot{VehicleID: vehicleID}
+	if v, ok := signals["MediaNowPlayingTitle"]; ok {
+		s := toString(v)
+		snap.NowPlayingTitle = &s
+	}
+	if v, ok := signals["MediaNowPlayingArtist"]; ok {
+		s := toString(v)
+		snap.NowPlayingArtist = &s
+	}
+	if v, ok := signals["MediaNowPlayingAlbum"]; ok {
+		s := toString(v)
+		snap.NowPlayingAlbum = &s
+	}
+	if v, ok := signals["MediaNowPlayingStation"]; ok {
+		s := toString(v)
+		snap.NowPlayingStation = &s
+	}
+	if v, ok := signals["MediaNowPlayingDuration"]; ok {
+		i := int(toFloat(v))
+		snap.NowPlayingDuration = &i
+	}
+	if v, ok := signals["MediaNowPlayingElapsed"]; ok {
+		i := int(toFloat(v))
+		snap.NowPlayingElapsed = &i
+	}
+	if v, ok := signals["MediaPlaybackStatus"]; ok {
+		s := toString(v)
+		snap.PlaybackStatus = &s
+	}
+	if v, ok := signals["MediaPlaybackSource"]; ok {
+		s := toString(v)
+		snap.PlaybackSource = &s
+	}
+	if v, ok := signals["MediaAudioVolume"]; ok {
+		f := toFloat(v)
+		snap.AudioVolume = &f
+	}
+	if v, ok := signals["MediaAudioVolumeMax"]; ok {
+		f := toFloat(v)
+		snap.AudioVolumeMax = &f
+	}
+	if err := h.mediaRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store media snapshot")
+	}
+}
+
+// trackVehicleConfig stores vehicle configuration snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasVersion := signals["Version"]
+	_, hasName := signals["VehicleName"]
+	_, hasCarType := signals["CarType"]
+	if !hasVersion && !hasName && !hasCarType {
+		return
+	}
+
+	snap := &models.VehicleConfigSnapshot{VehicleID: vehicleID}
+	if v, ok := signals["CarType"]; ok {
+		s := toString(v)
+		snap.CarType = &s
+	}
+	if v, ok := signals["Trim"]; ok {
+		s := toString(v)
+		snap.Trim = &s
+	}
+	if v, ok := signals["ExteriorColor"]; ok {
+		s := toString(v)
+		snap.ExteriorColor = &s
+	}
+	if v, ok := signals["RoofColor"]; ok {
+		s := toString(v)
+		snap.RoofColor = &s
+	}
+	if v, ok := signals["WheelType"]; ok {
+		s := toString(v)
+		snap.WheelType = &s
+	}
+	if v, ok := signals["RearSeatHeaters"]; ok {
+		s := toString(v)
+		snap.RearSeatHeaters = &s
+	}
+	if v, ok := signals["SunroofInstalled"]; ok {
+		s := toString(v)
+		snap.SunroofInstalled = &s
+	}
+	if v, ok := signals["EfficiencyPackage"]; ok {
+		s := toString(v)
+		snap.EfficiencyPackage = &s
+	}
+	if v, ok := signals["EuropeVehicle"]; ok {
+		b := toBool(v)
+		snap.EuropeVehicle = &b
+	}
+	if v, ok := signals["RightHandDrive"]; ok {
+		b := toBool(v)
+		snap.RightHandDrive = &b
+	}
+	if v, ok := signals["RemoteStartEnabled"]; ok {
+		b := toBool(v)
+		snap.RemoteStartEnabled = &b
+	}
+	if v, ok := signals["ChargePort"]; ok {
+		s := toString(v)
+		snap.ChargePort = &s
+	}
+	if v, ok := signals["OffroadLightbarPresent"]; ok {
+		b := toBool(v)
+		snap.OffroadLightbarPresent = &b
+	}
+	if v, ok := signals["Version"]; ok {
+		s := toString(v)
+		snap.Version = &s
+	}
+	if v, ok := signals["VehicleName"]; ok {
+		s := toString(v)
+		snap.VehicleName = &s
+	}
+	if v, ok := signals["SoftwareUpdateVersion"]; ok {
+		s := toString(v)
+		snap.SoftwareUpdateVersion = &s
+	}
+	if v, ok := signals["SoftwareUpdateDownloadPercentComplete"]; ok {
+		i := int(toFloat(v))
+		snap.SoftwareUpdateDownloadPct = &i
+	}
+	if v, ok := signals["SoftwareUpdateInstallPercentComplete"]; ok {
+		i := int(toFloat(v))
+		snap.SoftwareUpdateInstallPct = &i
+	}
+	if v, ok := signals["SoftwareUpdateExpectedDurationMinutes"]; ok {
+		i := int(toFloat(v))
+		snap.SoftwareUpdateExpectedDuration = &i
+	}
+	if err := h.vehicleConfigRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store vehicle config snapshot")
+	}
+}
+
+// trackLocation stores navigation/location snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasDest := signals["DestinationName"]
+	_, hasMiles := signals["MilesToArrival"]
+	_, hasRoute := signals["RouteLine"]
+	if !hasDest && !hasMiles && !hasRoute {
+		return
+	}
+
+	snap := &models.LocationSnapshot{VehicleID: vehicleID}
+	if v, ok := signals["DestinationName"]; ok {
+		s := toString(v)
+		snap.DestinationName = &s
+	}
+	if v, ok := signals["DestinationLocation"].(map[string]interface{}); ok {
+		if lat, ok2 := v["latitude"]; ok2 {
+			f := toFloat(lat)
+			snap.DestinationLat = &f
+		}
+		if lon, ok2 := v["longitude"]; ok2 {
+			f := toFloat(lon)
+			snap.DestinationLon = &f
+		}
+	}
+	if v, ok := signals["OriginLocation"].(map[string]interface{}); ok {
+		if lat, ok2 := v["latitude"]; ok2 {
+			f := toFloat(lat)
+			snap.OriginLat = &f
+		}
+		if lon, ok2 := v["longitude"]; ok2 {
+			f := toFloat(lon)
+			snap.OriginLon = &f
+		}
+	}
+	if v, ok := signals["MilesToArrival"]; ok {
+		f := toFloat(v)
+		snap.MilesToArrival = &f
+	}
+	if v, ok := signals["MinutesToArrival"]; ok {
+		f := toFloat(v)
+		snap.MinutesToArrival = &f
+	}
+	if v, ok := signals["RouteLine"]; ok {
+		s := toString(v)
+		snap.RouteLine = &s
+	}
+	if v, ok := signals["RouteTrafficMinutesDelay"]; ok {
+		f := toFloat(v)
+		snap.RouteTrafficDelayMin = &f
+	}
+	if v, ok := signals["LocatedAtHome"]; ok {
+		b := toBool(v)
+		snap.LocatedAtHome = &b
+	}
+	if v, ok := signals["LocatedAtWork"]; ok {
+		b := toBool(v)
+		snap.LocatedAtWork = &b
+	}
+	if v, ok := signals["LocatedAtFavorite"]; ok {
+		b := toBool(v)
+		snap.LocatedAtFavorite = &b
+	}
+	if v, ok := signals["GpsState"]; ok {
+		b := toBool(v)
+		snap.GpsState = &b
+	}
+	if err := h.locationRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store location snapshot")
+	}
+}
+
+// trackSafety stores safety settings snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasBelt := signals["DriverSeatBelt"]
+	_, hasAEB := signals["AutomaticEmergencyBrakingOff"]
+	_, hasFCW := signals["ForwardCollisionWarning"]
+	if !hasBelt && !hasAEB && !hasFCW {
+		return
+	}
+
+	snap := &models.SafetySnapshot{VehicleID: vehicleID}
+	if v, ok := signals["AutomaticBlindSpotCamera"]; ok {
+		b := toBool(v)
+		snap.AutomaticBlindSpotCamera = &b
+	}
+	if v, ok := signals["AutomaticEmergencyBrakingOff"]; ok {
+		b := toBool(v)
+		snap.AutomaticEmergencyBrakingOff = &b
+	}
+	if v, ok := signals["BlindSpotCollisionWarningChime"]; ok {
+		b := toBool(v)
+		snap.BlindSpotCollisionWarning = &b
+	}
+	if v, ok := signals["CruiseFollowDistance"]; ok {
+		s := toString(v)
+		snap.CruiseFollowDistance = &s
+	}
+	if v, ok := signals["EmergencyLaneDepartureAvoidance"]; ok {
+		b := toBool(v)
+		snap.EmergencyLaneDepartureAvoidance = &b
+	}
+	if v, ok := signals["ForwardCollisionWarning"]; ok {
+		s := toString(v)
+		snap.ForwardCollisionWarning = &s
+	}
+	if v, ok := signals["LaneDepartureAvoidance"]; ok {
+		s := toString(v)
+		snap.LaneDepartureAvoidance = &s
+	}
+	if v, ok := signals["SpeedLimitWarning"]; ok {
+		s := toString(v)
+		snap.SpeedLimitWarning = &s
+	}
+	if v, ok := signals["PinToDriveEnabled"]; ok {
+		b := toBool(v)
+		snap.PinToDriveEnabled = &b
+	}
+	if v, ok := signals["MilesSinceReset"]; ok {
+		f := toFloat(v)
+		snap.MilesSinceReset = &f
+	}
+	if v, ok := signals["SelfDrivingMilesSinceReset"]; ok {
+		f := toFloat(v)
+		snap.SelfDrivingMilesSinceReset = &f
+	}
+	if err := h.safetyRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store safety snapshot")
+	}
+}
+
+// trackUserPreferences stores user preference snapshots when relevant signals arrive.
+func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	_, hasDist := signals["SettingDistanceUnit"]
+	_, hasTemp := signals["SettingTemperatureUnit"]
+	if !hasDist && !hasTemp {
+		return
+	}
+
+	snap := &models.UserPreferenceSnapshot{VehicleID: vehicleID}
+	if v, ok := signals["Setting24HourTime"]; ok {
+		b := toBool(v)
+		snap.Setting24hrTime = &b
+	}
+	if v, ok := signals["SettingChargeUnit"]; ok {
+		s := toString(v)
+		snap.SettingChargeUnit = &s
+	}
+	if v, ok := signals["SettingDistanceUnit"]; ok {
+		s := toString(v)
+		snap.SettingDistanceUnit = &s
+	}
+	if v, ok := signals["SettingTemperatureUnit"]; ok {
+		s := toString(v)
+		snap.SettingTemperatureUnit = &s
+	}
+	if v, ok := signals["SettingTirePressureUnit"]; ok {
+		s := toString(v)
+		snap.SettingTirePressureUnit = &s
+	}
+	if err := h.userPrefRepo.Insert(ctx, snap); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store user preference snapshot")
 	}
 }
 

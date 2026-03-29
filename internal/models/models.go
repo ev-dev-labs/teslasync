@@ -471,6 +471,40 @@ type MotorSnapshot struct {
 	LongitudinalAccel  *float64   `json:"longitudinal_accel,omitempty" db:"longitudinal_accel"`
 	VehicleSpeed       *float64   `json:"vehicle_speed,omitempty" db:"vehicle_speed"`
 	Gear               *string    `json:"gear,omitempty" db:"gear"`
+	DiTorqueActualF    *float64   `json:"di_torque_actual_f,omitempty" db:"di_torque_actual_f"`
+	DiTorqueActualR    *float64   `json:"di_torque_actual_r,omitempty" db:"di_torque_actual_r"`
+	DiTorqueActualREL  *float64   `json:"di_torque_actual_rel,omitempty" db:"di_torque_actual_rel"`
+	DiTorqueActualRER  *float64   `json:"di_torque_actual_rer,omitempty" db:"di_torque_actual_rer"`
+	DiAxleSpeedF       *float64   `json:"di_axle_speed_f,omitempty" db:"di_axle_speed_f"`
+	DiAxleSpeedREL     *float64   `json:"di_axle_speed_rel,omitempty" db:"di_axle_speed_rel"`
+	DiAxleSpeedRER     *float64   `json:"di_axle_speed_rer,omitempty" db:"di_axle_speed_rer"`
+	DiStateF           *string    `json:"di_state_f,omitempty" db:"di_state_f"`
+	DiStateREL         *string    `json:"di_state_rel,omitempty" db:"di_state_rel"`
+	DiStateRER         *string    `json:"di_state_rer,omitempty" db:"di_state_rer"`
+	DiStatorTempF      *float64   `json:"di_stator_temp_f,omitempty" db:"di_stator_temp_f"`
+	DiStatorTempREL    *float64   `json:"di_stator_temp_rel,omitempty" db:"di_stator_temp_rel"`
+	DiStatorTempRER    *float64   `json:"di_stator_temp_rer,omitempty" db:"di_stator_temp_rer"`
+	DiHeatsinkTF       *float64   `json:"di_heatsink_t_f,omitempty" db:"di_heatsink_t_f"`
+	DiHeatsinkTR       *float64   `json:"di_heatsink_t_r,omitempty" db:"di_heatsink_t_r"`
+	DiHeatsinkTREL     *float64   `json:"di_heatsink_t_rel,omitempty" db:"di_heatsink_t_rel"`
+	DiHeatsinkTRER     *float64   `json:"di_heatsink_t_rer,omitempty" db:"di_heatsink_t_rer"`
+	DiInverterTF       *float64   `json:"di_inverter_t_f,omitempty" db:"di_inverter_t_f"`
+	DiInverterTR       *float64   `json:"di_inverter_t_r,omitempty" db:"di_inverter_t_r"`
+	DiInverterTREL     *float64   `json:"di_inverter_t_rel,omitempty" db:"di_inverter_t_rel"`
+	DiInverterTRER     *float64   `json:"di_inverter_t_rer,omitempty" db:"di_inverter_t_rer"`
+	DiMotorCurrentF    *float64   `json:"di_motor_current_f,omitempty" db:"di_motor_current_f"`
+	DiMotorCurrentR    *float64   `json:"di_motor_current_r,omitempty" db:"di_motor_current_r"`
+	DiMotorCurrentREL  *float64   `json:"di_motor_current_rel,omitempty" db:"di_motor_current_rel"`
+	DiMotorCurrentRER  *float64   `json:"di_motor_current_rer,omitempty" db:"di_motor_current_rer"`
+	DiVBatF            *float64   `json:"di_v_bat_f,omitempty" db:"di_v_bat_f"`
+	DiVBatR            *float64   `json:"di_v_bat_r,omitempty" db:"di_v_bat_r"`
+	DiVBatREL          *float64   `json:"di_v_bat_rel,omitempty" db:"di_v_bat_rel"`
+	DiVBatRER          *float64   `json:"di_v_bat_rer,omitempty" db:"di_v_bat_rer"`
+	DiSlaveTorqueCmd   *float64   `json:"di_slave_torque_cmd,omitempty" db:"di_slave_torque_cmd"`
+	Hvil               *string    `json:"hvil,omitempty" db:"hvil"`
+	BrakePedalPos      *float64   `json:"brake_pedal_pos,omitempty" db:"brake_pedal_pos"`
+	CruiseSetSpeed     *float64   `json:"cruise_set_speed,omitempty" db:"cruise_set_speed"`
+	DriveRail          *bool      `json:"drive_rail,omitempty" db:"drive_rail"`
 	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
 }
 
@@ -487,6 +521,27 @@ type ClimateSnapshot struct {
 	CabinOverheatMode    *string   `json:"cabin_overheat_mode,omitempty" db:"cabin_overheat_mode"`
 	DefrostMode          *bool     `json:"defrost_mode,omitempty" db:"defrost_mode"`
 	BatteryHeaterOn      *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+	HvacACEnabled        *bool     `json:"hvac_ac_enabled,omitempty" db:"hvac_ac_enabled"`
+	HvacAutoMode         *string   `json:"hvac_auto_mode,omitempty" db:"hvac_auto_mode"`
+	HvacFanStatus        *int      `json:"hvac_fan_status,omitempty" db:"hvac_fan_status"`
+	HvacSteeringWheelHeatAuto *bool `json:"hvac_steering_wheel_heat_auto,omitempty" db:"hvac_steering_wheel_heat_auto"`
+	HvacSteeringWheelHeatLevel *int `json:"hvac_steering_wheel_heat_level,omitempty" db:"hvac_steering_wheel_heat_level"`
+	ClimateKeeperMode    *string   `json:"climate_keeper_mode,omitempty" db:"climate_keeper_mode"`
+	CabinOverheatProtectionTempLimit *string `json:"cabin_overheat_protection_temp_limit,omitempty" db:"cabin_overheat_protection_temp_limit"`
+	DefrostForPreconditioning *bool `json:"defrost_for_preconditioning,omitempty" db:"defrost_for_preconditioning"`
+	SeatHeaterLeft       *int      `json:"seat_heater_left,omitempty" db:"seat_heater_left"`
+	SeatHeaterRight      *int      `json:"seat_heater_right,omitempty" db:"seat_heater_right"`
+	SeatHeaterRearLeft   *int      `json:"seat_heater_rear_left,omitempty" db:"seat_heater_rear_left"`
+	SeatHeaterRearCenter *int      `json:"seat_heater_rear_center,omitempty" db:"seat_heater_rear_center"`
+	SeatHeaterRearRight  *int      `json:"seat_heater_rear_right,omitempty" db:"seat_heater_rear_right"`
+	SeatVentEnabled      *bool     `json:"seat_vent_enabled,omitempty" db:"seat_vent_enabled"`
+	ClimateSeatCoolingFrontLeft *int `json:"climate_seat_cooling_front_left,omitempty" db:"climate_seat_cooling_front_left"`
+	ClimateSeatCoolingFrontRight *int `json:"climate_seat_cooling_front_right,omitempty" db:"climate_seat_cooling_front_right"`
+	AutoSeatClimateLeft  *bool     `json:"auto_seat_climate_left,omitempty" db:"auto_seat_climate_left"`
+	AutoSeatClimateRight *bool     `json:"auto_seat_climate_right,omitempty" db:"auto_seat_climate_right"`
+	RearDefrostEnabled   *bool     `json:"rear_defrost_enabled,omitempty" db:"rear_defrost_enabled"`
+	RearDisplayHvacEnabled *bool   `json:"rear_display_hvac_enabled,omitempty" db:"rear_display_hvac_enabled"`
+	WiperHeatEnabled     *bool     `json:"wiper_heat_enabled,omitempty" db:"wiper_heat_enabled"`
 	CreatedAt            time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -503,5 +558,176 @@ type SecurityEvent struct {
 	RpWindow       *string   `json:"rp_window,omitempty" db:"rp_window"`
 	HomelinkNearby *bool     `json:"homelink_nearby,omitempty" db:"homelink_nearby"`
 	GuestMode      *bool     `json:"guest_mode,omitempty" db:"guest_mode"`
+	HomelinkDeviceCount *int `json:"homelink_device_count,omitempty" db:"homelink_device_count"`
+	GuestModeMobileAccessState *string `json:"guest_mode_mobile_access_state,omitempty" db:"guest_mode_mobile_access_state"`
+	DriverSeatOccupied  *bool    `json:"driver_seat_occupied,omitempty" db:"driver_seat_occupied"`
+	CenterDisplay       *string  `json:"center_display,omitempty" db:"center_display"`
+	SpeedLimitMode      *bool    `json:"speed_limit_mode,omitempty" db:"speed_limit_mode"`
+	ValetModeEnabled    *bool    `json:"valet_mode_enabled,omitempty" db:"valet_mode_enabled"`
+	ServiceMode         *bool    `json:"service_mode,omitempty" db:"service_mode"`
+	CurrentLimitMph     *float64 `json:"current_limit_mph,omitempty" db:"current_limit_mph"`
+	PairedPhoneKeyCount *int     `json:"paired_phone_key_count,omitempty" db:"paired_phone_key_count"`
+	LightsHazardsActive *bool    `json:"lights_hazards_active,omitempty" db:"lights_hazards_active"`
+	LightsHighBeams     *bool    `json:"lights_high_beams,omitempty" db:"lights_high_beams"`
+	LightsTurnSignal    *string  `json:"lights_turn_signal,omitempty" db:"lights_turn_signal"`
+	TonneauPosition     *string  `json:"tonneau_position,omitempty" db:"tonneau_position"`
+	TonneauOpenPercent  *float64 `json:"tonneau_open_percent,omitempty" db:"tonneau_open_percent"`
+	TonneauTentMode     *string  `json:"tonneau_tent_mode,omitempty" db:"tonneau_tent_mode"`
+	DriverSeatBelt      *bool    `json:"driver_seat_belt,omitempty" db:"driver_seat_belt"`
+	PassengerSeatBelt   *bool    `json:"passenger_seat_belt,omitempty" db:"passenger_seat_belt"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+}
+
+// ChargingTelemetry represents a point-in-time charging telemetry reading.
+type ChargingTelemetry struct {
+	ID                         int64     `json:"id" db:"id"`
+	VehicleID                  int64     `json:"vehicle_id" db:"vehicle_id"`
+	BatteryLevel               *float64  `json:"battery_level,omitempty" db:"battery_level"`
+	Soc                        *float64  `json:"soc,omitempty" db:"soc"`
+	ChargeState                *string   `json:"charge_state,omitempty" db:"charge_state"`
+	DetailedChargeState        *string   `json:"detailed_charge_state,omitempty" db:"detailed_charge_state"`
+	ChargeLimitSoc             *int      `json:"charge_limit_soc,omitempty" db:"charge_limit_soc"`
+	ChargeAmps                 *float64  `json:"charge_amps,omitempty" db:"charge_amps"`
+	ChargeCurrentRequest       *float64  `json:"charge_current_request,omitempty" db:"charge_current_request"`
+	ChargeCurrentRequestMax    *float64  `json:"charge_current_request_max,omitempty" db:"charge_current_request_max"`
+	ChargeEnableRequest        *bool     `json:"charge_enable_request,omitempty" db:"charge_enable_request"`
+	ChargerVoltage             *float64  `json:"charger_voltage,omitempty" db:"charger_voltage"`
+	ChargerPhases              *int      `json:"charger_phases,omitempty" db:"charger_phases"`
+	ChargeRateMph              *float64  `json:"charge_rate_mph,omitempty" db:"charge_rate_mph"`
+	DCChargingPower            *float64  `json:"dc_charging_power,omitempty" db:"dc_charging_power"`
+	DCChargingEnergyIn         *float64  `json:"dc_charging_energy_in,omitempty" db:"dc_charging_energy_in"`
+	ACChargingPower            *float64  `json:"ac_charging_power,omitempty" db:"ac_charging_power"`
+	ACChargingEnergyIn         *float64  `json:"ac_charging_energy_in,omitempty" db:"ac_charging_energy_in"`
+	EnergyRemaining            *float64  `json:"energy_remaining,omitempty" db:"energy_remaining"`
+	EstBatteryRange            *float64  `json:"est_battery_range,omitempty" db:"est_battery_range"`
+	IdealBatteryRange          *float64  `json:"ideal_battery_range,omitempty" db:"ideal_battery_range"`
+	RatedRange                 *float64  `json:"rated_range,omitempty" db:"rated_range"`
+	PackVoltage                *float64  `json:"pack_voltage,omitempty" db:"pack_voltage"`
+	PackCurrent                *float64  `json:"pack_current,omitempty" db:"pack_current"`
+	ChargePortDoorOpen         *bool     `json:"charge_port_door_open,omitempty" db:"charge_port_door_open"`
+	ChargePortLatch            *string   `json:"charge_port_latch,omitempty" db:"charge_port_latch"`
+	ChargePortColdWeatherMode  *bool     `json:"charge_port_cold_weather_mode,omitempty" db:"charge_port_cold_weather_mode"`
+	ChargingCableType          *string   `json:"charging_cable_type,omitempty" db:"charging_cable_type"`
+	FastChargerPresent         *bool     `json:"fast_charger_present,omitempty" db:"fast_charger_present"`
+	FastChargerType            *string   `json:"fast_charger_type,omitempty" db:"fast_charger_type"`
+	TimeToFullCharge           *float64  `json:"time_to_full_charge,omitempty" db:"time_to_full_charge"`
+	EstimatedHoursToCharge     *float64  `json:"estimated_hours_to_charge,omitempty" db:"estimated_hours_to_charge"`
+	ScheduledChargingMode      *string   `json:"scheduled_charging_mode,omitempty" db:"scheduled_charging_mode"`
+	ScheduledChargingPending   *bool     `json:"scheduled_charging_pending,omitempty" db:"scheduled_charging_pending"`
+	PreconditioningEnabled     *bool     `json:"preconditioning_enabled,omitempty" db:"preconditioning_enabled"`
+	BrickVoltageMax            *float64  `json:"brick_voltage_max,omitempty" db:"brick_voltage_max"`
+	BrickVoltageMin            *float64  `json:"brick_voltage_min,omitempty" db:"brick_voltage_min"`
+	NumBrickVoltageMax         *int      `json:"num_brick_voltage_max,omitempty" db:"num_brick_voltage_max"`
+	NumBrickVoltageMin         *int      `json:"num_brick_voltage_min,omitempty" db:"num_brick_voltage_min"`
+	ModuleTempMax              *float64  `json:"module_temp_max,omitempty" db:"module_temp_max"`
+	ModuleTempMin              *float64  `json:"module_temp_min,omitempty" db:"module_temp_min"`
+	NumModuleTempMax           *int      `json:"num_module_temp_max,omitempty" db:"num_module_temp_max"`
+	NumModuleTempMin           *int      `json:"num_module_temp_min,omitempty" db:"num_module_temp_min"`
+	BatteryHeaterOn            *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+	NotEnoughPowerToHeat       *bool     `json:"not_enough_power_to_heat,omitempty" db:"not_enough_power_to_heat"`
+	BmsState                   *string   `json:"bms_state,omitempty" db:"bms_state"`
+	BmsFullchargeComplete      *bool     `json:"bms_fullcharge_complete,omitempty" db:"bms_fullcharge_complete"`
+	DcdcEnable                 *bool     `json:"dcdc_enable,omitempty" db:"dcdc_enable"`
+	IsolationResistance        *float64  `json:"isolation_resistance,omitempty" db:"isolation_resistance"`
+	LifetimeEnergyUsed         *float64  `json:"lifetime_energy_used,omitempty" db:"lifetime_energy_used"`
+	SuperchargerSessionTripPlanner *bool  `json:"supercharger_session_trip_planner,omitempty" db:"supercharger_session_trip_planner"`
+	PowershareStatus           *string   `json:"powershare_status,omitempty" db:"powershare_status"`
+	PowershareType             *string   `json:"powershare_type,omitempty" db:"powershare_type"`
+	PowershareStopReason       *string   `json:"powershare_stop_reason,omitempty" db:"powershare_stop_reason"`
+	PowershareHoursLeft        *int      `json:"powershare_hours_left,omitempty" db:"powershare_hours_left"`
+	PowersharePowerKw          *float64  `json:"powershare_power_kw,omitempty" db:"powershare_power_kw"`
+	CreatedAt                  time.Time `json:"created_at" db:"created_at"`
+}
+
+// MediaSnapshot represents a point-in-time media playback telemetry reading.
+type MediaSnapshot struct {
+	ID                  int64     `json:"id" db:"id"`
+	VehicleID           int64     `json:"vehicle_id" db:"vehicle_id"`
+	NowPlayingTitle     *string   `json:"now_playing_title,omitempty" db:"now_playing_title"`
+	NowPlayingArtist    *string   `json:"now_playing_artist,omitempty" db:"now_playing_artist"`
+	NowPlayingAlbum     *string   `json:"now_playing_album,omitempty" db:"now_playing_album"`
+	NowPlayingStation   *string   `json:"now_playing_station,omitempty" db:"now_playing_station"`
+	NowPlayingDuration  *int      `json:"now_playing_duration,omitempty" db:"now_playing_duration"`
+	NowPlayingElapsed   *int      `json:"now_playing_elapsed,omitempty" db:"now_playing_elapsed"`
+	PlaybackStatus      *string   `json:"playback_status,omitempty" db:"playback_status"`
+	PlaybackSource      *string   `json:"playback_source,omitempty" db:"playback_source"`
+	AudioVolume         *float64  `json:"audio_volume,omitempty" db:"audio_volume"`
+	AudioVolumeMax      *float64  `json:"audio_volume_max,omitempty" db:"audio_volume_max"`
+	CreatedAt           time.Time `json:"created_at" db:"created_at"`
+}
+
+// VehicleConfigSnapshot represents a point-in-time vehicle configuration snapshot.
+type VehicleConfigSnapshot struct {
+	ID                          int64     `json:"id" db:"id"`
+	VehicleID                   int64     `json:"vehicle_id" db:"vehicle_id"`
+	CarType                     *string   `json:"car_type,omitempty" db:"car_type"`
+	Trim                        *string   `json:"trim,omitempty" db:"trim"`
+	ExteriorColor               *string   `json:"exterior_color,omitempty" db:"exterior_color"`
+	RoofColor                   *string   `json:"roof_color,omitempty" db:"roof_color"`
+	WheelType                   *string   `json:"wheel_type,omitempty" db:"wheel_type"`
+	RearSeatHeaters             *string   `json:"rear_seat_heaters,omitempty" db:"rear_seat_heaters"`
+	SunroofInstalled            *string   `json:"sunroof_installed,omitempty" db:"sunroof_installed"`
+	EfficiencyPackage           *string   `json:"efficiency_package,omitempty" db:"efficiency_package"`
+	EuropeVehicle               *bool     `json:"europe_vehicle,omitempty" db:"europe_vehicle"`
+	RightHandDrive              *bool     `json:"right_hand_drive,omitempty" db:"right_hand_drive"`
+	RemoteStartEnabled          *bool     `json:"remote_start_enabled,omitempty" db:"remote_start_enabled"`
+	ChargePort                  *string   `json:"charge_port,omitempty" db:"charge_port"`
+	OffroadLightbarPresent      *bool     `json:"offroad_lightbar_present,omitempty" db:"offroad_lightbar_present"`
+	Version                     *string   `json:"version,omitempty" db:"version"`
+	VehicleName                 *string   `json:"vehicle_name,omitempty" db:"vehicle_name"`
+	SoftwareUpdateVersion       *string   `json:"software_update_version,omitempty" db:"software_update_version"`
+	SoftwareUpdateDownloadPct   *int      `json:"software_update_download_pct,omitempty" db:"software_update_download_pct"`
+	SoftwareUpdateInstallPct    *int      `json:"software_update_install_pct,omitempty" db:"software_update_install_pct"`
+	SoftwareUpdateExpectedDuration *int   `json:"software_update_expected_duration,omitempty" db:"software_update_expected_duration"`
+	CreatedAt                   time.Time `json:"created_at" db:"created_at"`
+}
+
+// LocationSnapshot represents a point-in-time navigation/location telemetry reading.
+type LocationSnapshot struct {
+	ID                     int64     `json:"id" db:"id"`
+	VehicleID              int64     `json:"vehicle_id" db:"vehicle_id"`
+	DestinationName        *string   `json:"destination_name,omitempty" db:"destination_name"`
+	DestinationLat         *float64  `json:"destination_lat,omitempty" db:"destination_lat"`
+	DestinationLon         *float64  `json:"destination_lon,omitempty" db:"destination_lon"`
+	OriginLat              *float64  `json:"origin_lat,omitempty" db:"origin_lat"`
+	OriginLon              *float64  `json:"origin_lon,omitempty" db:"origin_lon"`
+	MilesToArrival         *float64  `json:"miles_to_arrival,omitempty" db:"miles_to_arrival"`
+	MinutesToArrival       *float64  `json:"minutes_to_arrival,omitempty" db:"minutes_to_arrival"`
+	RouteLine              *string   `json:"route_line,omitempty" db:"route_line"`
+	RouteTrafficDelayMin   *float64  `json:"route_traffic_delay_min,omitempty" db:"route_traffic_delay_min"`
+	LocatedAtHome          *bool     `json:"located_at_home,omitempty" db:"located_at_home"`
+	LocatedAtWork          *bool     `json:"located_at_work,omitempty" db:"located_at_work"`
+	LocatedAtFavorite      *bool     `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
+	GpsState               *bool     `json:"gps_state,omitempty" db:"gps_state"`
+	CreatedAt              time.Time `json:"created_at" db:"created_at"`
+}
+
+// SafetySnapshot represents a point-in-time safety settings telemetry reading.
+type SafetySnapshot struct {
+	ID                              int64     `json:"id" db:"id"`
+	VehicleID                       int64     `json:"vehicle_id" db:"vehicle_id"`
+	AutomaticBlindSpotCamera        *bool     `json:"automatic_blind_spot_camera,omitempty" db:"automatic_blind_spot_camera"`
+	AutomaticEmergencyBrakingOff    *bool     `json:"automatic_emergency_braking_off,omitempty" db:"automatic_emergency_braking_off"`
+	BlindSpotCollisionWarning       *bool     `json:"blind_spot_collision_warning,omitempty" db:"blind_spot_collision_warning"`
+	CruiseFollowDistance            *string   `json:"cruise_follow_distance,omitempty" db:"cruise_follow_distance"`
+	EmergencyLaneDepartureAvoidance *bool     `json:"emergency_lane_departure_avoidance,omitempty" db:"emergency_lane_departure_avoidance"`
+	ForwardCollisionWarning         *string   `json:"forward_collision_warning,omitempty" db:"forward_collision_warning"`
+	LaneDepartureAvoidance          *string   `json:"lane_departure_avoidance,omitempty" db:"lane_departure_avoidance"`
+	SpeedLimitWarning               *string   `json:"speed_limit_warning,omitempty" db:"speed_limit_warning"`
+	PinToDriveEnabled               *bool     `json:"pin_to_drive_enabled,omitempty" db:"pin_to_drive_enabled"`
+	MilesSinceReset                 *float64  `json:"miles_since_reset,omitempty" db:"miles_since_reset"`
+	SelfDrivingMilesSinceReset      *float64  `json:"self_driving_miles_since_reset,omitempty" db:"self_driving_miles_since_reset"`
+	CreatedAt                       time.Time `json:"created_at" db:"created_at"`
+}
+
+// UserPreferenceSnapshot represents a point-in-time user preference telemetry reading.
+type UserPreferenceSnapshot struct {
+	ID                      int64     `json:"id" db:"id"`
+	VehicleID               int64     `json:"vehicle_id" db:"vehicle_id"`
+	Setting24hrTime         *bool     `json:"setting_24hr_time,omitempty" db:"setting_24hr_time"`
+	SettingChargeUnit       *string   `json:"setting_charge_unit,omitempty" db:"setting_charge_unit"`
+	SettingDistanceUnit     *string   `json:"setting_distance_unit,omitempty" db:"setting_distance_unit"`
+	SettingTemperatureUnit  *string   `json:"setting_temperature_unit,omitempty" db:"setting_temperature_unit"`
+	SettingTirePressureUnit *string   `json:"setting_tire_pressure_unit,omitempty" db:"setting_tire_pressure_unit"`
+	CreatedAt               time.Time `json:"created_at" db:"created_at"`
 }
