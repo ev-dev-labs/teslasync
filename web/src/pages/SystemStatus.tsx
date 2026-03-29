@@ -658,7 +658,7 @@ function AuditLogTable() {
 
 // Signal grouping for the expandable signal details view
 const SIGNAL_GROUPS: { label: string; color: string; signals: string[] }[] = [
-  { label: 'Location', color: '#3b82f6', signals: ['Latitude', 'Longitude', 'GpsHeading', 'GpsState', 'VehicleSpeed', 'Odometer', 'Gear'] },
+  { label: 'Location', color: '#3b82f6', signals: ['Location', 'GpsHeading', 'GpsState', 'VehicleSpeed', 'Odometer', 'Gear'] },
   { label: 'Battery', color: '#10b981', signals: ['BatteryLevel', 'Soc', 'PackVoltage', 'PackCurrent', 'PackPower', 'EstBatteryRange', 'IdealBatteryRange', 'EnergyRemaining', 'BrickVoltageMax', 'BrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'IsolationResistance'] },
   { label: 'Charging', color: '#f59e0b', signals: ['ChargeState', 'DetailedChargeState', 'ChargeAmps', 'ChargerVoltage', 'ChargerPhases', 'ChargeLimitSoc', 'ChargeCurrentRequest', 'ChargeRateMilePerHour', 'DCChargingPower', 'ACChargingPower', 'DCChargingEnergyIn', 'ACChargingEnergyIn', 'FastChargerPresent', 'FastChargerType', 'ChargingCableType', 'TimeToFullCharge', 'BatteryHeaterOn'] },
   { label: 'Climate', color: '#8b5cf6', signals: ['InsideTemp', 'OutsideTemp', 'HvacPower', 'HvacFanSpeed', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest', 'CabinOverheatProtectionMode', 'DefrostMode', 'PreconditioningEnabled'] },

@@ -121,9 +121,9 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 				"endpoint": "/api/v1/telemetry",
 				"protocol": "HTTP POST (JSON)",
 				"supported_signals": []string{
-					"Latitude", "Longitude", "VehicleSpeed", "PackPower",
-					"BatteryLevel", "StateOfCharge", "InsideTemp", "OutsideTemp",
-					"Odometer", "Heading",
+					"Location", "GpsHeading", "VehicleSpeed",
+					"BatteryLevel", "Soc", "InsideTemp", "OutsideTemp",
+					"Odometer", "Gear",
 				},
 			}
 		}

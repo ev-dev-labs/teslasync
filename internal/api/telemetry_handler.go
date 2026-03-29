@@ -554,12 +554,12 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 		},
 		"supported_signals": []string{
 			// Location
-			"Location", "Latitude", "Longitude", "GpsHeading", "GpsState",
+			"Location", "GpsHeading", "GpsState",
 			// Driving
-			"VehicleSpeed", "Odometer", "Gear", "PackPower",
+			"VehicleSpeed", "Odometer", "Gear",
 			"LateralAcceleration", "LongitudinalAcceleration",
 			// Battery & Charging
-			"BatteryLevel", "Soc", "StateOfCharge", "EstBatteryRange", "IdealBatteryRange",
+			"BatteryLevel", "Soc", "EstBatteryRange", "IdealBatteryRange",
 			"EnergyRemaining", "ChargeState", "DetailedChargeState",
 			"ChargeAmps", "ChargerVoltage", "ChargerPhases", "ChargeLimitSoc",
 			"ChargeCurrentRequest", "ChargeRateMilePerHour", "DCChargingPower", "ACChargingPower",
