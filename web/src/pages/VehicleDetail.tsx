@@ -1,13 +1,13 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure } from '../api'
+import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest } from '../api'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
   Cpu, BatteryCharging, ChevronRight, Cog, ShieldAlert, DoorClosed,
-  Car, Fan, Snowflake, CircleDot,
+  Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -106,6 +106,21 @@ export default function VehicleDetail() {
     queryKey: ['tire-latest', vehicleId],
     queryFn: () => getLatestTirePressure(vehicleId),
     refetchInterval: 3000,
+  })
+  const { data: chargingTelemetry } = useQuery({
+    queryKey: ['charging-telemetry-latest', vehicleId],
+    queryFn: () => getChargingTelemetryLatest(vehicleId),
+    refetchInterval: 5000,
+  })
+  const { data: mediaData } = useQuery({
+    queryKey: ['media-latest', vehicleId],
+    queryFn: () => getMediaLatest(vehicleId),
+    refetchInterval: 5000,
+  })
+  const { data: locationData } = useQuery({
+    queryKey: ['location-latest', vehicleId],
+    queryFn: () => getLocationSnapshotLatest(vehicleId),
+    refetchInterval: 5000,
   })
 
   const state = stateData?.state
@@ -601,6 +616,174 @@ export default function VehicleDetail() {
                 })() : (
                   <p className="text-xs text-gray-600 text-center py-6">No tire pressure data available</p>
                 )}
+              </GlassPanel>
+            </FadeIn>
+
+            {/* ---- Energy & Charging Panel ---- */}
+            <FadeIn delay={0.22}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <BatteryCharging className="h-4 w-4 text-neon-cyan" /> Energy &amp; Charging
+                </h3>
+                {chargingTelemetry ? (
+                  <div className="space-y-4">
+                    {/* Pack Voltage / Current */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
+                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Pack Voltage</p>
+                        <p className="text-2xl font-bold text-[var(--text-primary)]">
+                          {chargingTelemetry.pack_voltage != null ? chargingTelemetry.pack_voltage.toFixed(1) : '—'}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)]">V</p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
+                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Pack Current</p>
+                        <p className="text-2xl font-bold text-[var(--text-primary)]">
+                          {chargingTelemetry.pack_current != null ? chargingTelemetry.pack_current.toFixed(1) : '—'}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)]">A</p>
+                      </div>
+                    </div>
+
+                    {/* Energy Remaining */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Energy Remaining</span>
+                      <span className="text-sm font-mono text-[var(--text-primary)]">
+                        {chargingTelemetry.energy_remaining != null ? `${chargingTelemetry.energy_remaining.toFixed(1)} kWh` : '—'}
+                      </span>
+                    </div>
+
+                    {/* BMS State */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">BMS State</span>
+                      <span className={clsx(
+                        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                        chargingTelemetry.bms_state === 'Standby' ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                          : chargingTelemetry.bms_state === 'Charging' ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
+                          : chargingTelemetry.bms_state === 'Fault' ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                          : 'border-gray-500/30 bg-gray-500/10 text-gray-400',
+                      )}>
+                        {chargingTelemetry.bms_state ?? 'Unknown'}
+                      </span>
+                    </div>
+
+                    {/* Cell voltage spread */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Cell Voltage Spread</span>
+                      <span className={clsx('text-sm font-mono',
+                        chargingTelemetry.brick_voltage_max != null && chargingTelemetry.brick_voltage_min != null
+                          && (chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) > 0.05
+                          ? 'text-amber-400' : 'text-[var(--text-primary)]')}>
+                        {chargingTelemetry.brick_voltage_max != null && chargingTelemetry.brick_voltage_min != null
+                          ? `${((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000).toFixed(0)} mV`
+                          : '—'}
+                      </span>
+                    </div>
+
+                    {/* Battery heater */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Battery Heater</span>
+                      <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                        chargingTelemetry.battery_heater_on
+                          ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
+                          : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        <Zap className="h-3 w-3" /> {chargingTelemetry.battery_heater_on ? 'Active' : 'Off'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600 text-center py-6">No charging telemetry available</p>
+                )}
+              </GlassPanel>
+            </FadeIn>
+
+            {/* ---- Media & Navigation Panel ---- */}
+            <FadeIn delay={0.24}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Headphones className="h-4 w-4 text-neon-purple" /> Media &amp; Navigation
+                </h3>
+                <div className="space-y-5">
+                  {/* Now Playing */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2">Now Playing</p>
+                    {mediaData ? (
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-2">
+                        <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                          {mediaData.now_playing_title || 'Nothing playing'}
+                        </p>
+                        <p className="text-xs text-[var(--text-secondary)] truncate">
+                          {mediaData.now_playing_artist || 'Unknown artist'}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {mediaData.playback_source && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[var(--text-muted)]">
+                              {mediaData.playback_source}
+                            </span>
+                          )}
+                          {mediaData.playback_status && (
+                            <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                              mediaData.playback_status === 'Playing' ? 'bg-green-500/10 text-green-400'
+                                : mediaData.playback_status === 'Paused' ? 'bg-amber-500/10 text-amber-400'
+                                : 'bg-white/5 text-[var(--text-muted)]')}>
+                              {mediaData.playback_status}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">No media data</p>
+                    )}
+                  </div>
+
+                  {/* Navigation destination */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 flex items-center gap-1">
+                      <Navigation2 className="h-3 w-3" /> Navigation
+                    </p>
+                    {locationData ? (
+                      <div className="space-y-3">
+                        {locationData.destination_name ? (
+                          <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4">
+                            <p className="text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 text-neon-cyan flex-shrink-0" />
+                              {locationData.destination_name}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
+                              {locationData.miles_to_arrival != null && (
+                                <span>{locationData.miles_to_arrival.toFixed(1)} mi</span>
+                              )}
+                              {locationData.minutes_to_arrival != null && (
+                                <span>{Math.round(locationData.minutes_to_arrival)} min</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500">No active destination</p>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {locationData.located_at_home && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                              🏠 Home
+                            </span>
+                          )}
+                          {locationData.located_at_work && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                              🏢 Work
+                            </span>
+                          )}
+                          {locationData.located_at_favorite && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              ⭐ Favorite
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">No location data</p>
+                    )}
+                  </div>
+                </div>
               </GlassPanel>
             </FadeIn>
           </div>

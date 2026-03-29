@@ -5,12 +5,13 @@ import {
   getVehicles, getAuthStatus, getVehicleState, getDrives, getChargingSessions,
   getFleetAnalytics, getAlerts, syncVehicles as syncVehiclesApi, Vehicle, VehicleState, getVehicleStatus,
   getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure,
+  getMediaLatest, getLocationSnapshotLatest,
 } from '../api'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
   TrendingUp, Gauge, MapPin, Thermometer, Eye, Navigation, RefreshCw,
-  Cog, Snowflake, ShieldCheck, CircleDot,
+  Cog, Snowflake, ShieldCheck, CircleDot, Headphones, Navigation2,
 } from 'lucide-react'
 import {
   GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge,
@@ -171,8 +172,20 @@ export default function Dashboard() {
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
   })
+  const { data: mediaData } = useQuery({
+    queryKey: ['media-latest', primaryVehicle?.id],
+    queryFn: () => getMediaLatest(primaryVehicle!.id),
+    enabled: !!primaryVehicle,
+    refetchInterval: 5000,
+  })
+  const { data: locationData } = useQuery({
+    queryKey: ['location-latest', primaryVehicle?.id],
+    queryFn: () => getLocationSnapshotLatest(primaryVehicle!.id),
+    enabled: !!primaryVehicle,
+    refetchInterval: 5000,
+  })
 
-  const onlineCount = vehicles?.filter(v => v.state === 'online').length ?? 0
+  const onlineCount= vehicles?.filter(v => v.state === 'online').length ?? 0
   const totalCount = vehicles?.length ?? 0
   const totalDistance = analytics?.total_distance_km ?? 0
   const totalEnergy = analytics?.total_energy_kwh ?? 0
@@ -614,7 +627,7 @@ export default function Dashboard() {
               <div className="h-px flex-1 bg-gradient-to-r from-[var(--glass-border)] via-[var(--glass-border)] to-transparent" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* --- Drivetrain Status --- */}
               <GlassPanel hover glow="purple" className="p-4">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
@@ -828,6 +841,112 @@ export default function Dashboard() {
                     </div>
                   )
                 })() : (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
+                  </div>
+                )}
+              </GlassPanel>
+
+              {/* --- Media / Entertainment --- */}
+              <GlassPanel hover glow="purple" className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+                  <Headphones className="h-3.5 w-3.5 text-neon-purple" /> Media
+                </h4>
+                {mediaData ? (
+                  <div className="space-y-2.5">
+                    <div>
+                      <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                        {mediaData.now_playing_title || '—'}
+                      </p>
+                      <p className="text-xs text-[var(--text-secondary)] truncate">
+                        {mediaData.now_playing_artist || 'Unknown artist'}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Status</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        mediaData.playback_status === 'Playing' ? 'bg-neon-green/10 text-neon-green'
+                          : mediaData.playback_status === 'Paused' ? 'bg-neon-amber/10 text-neon-amber'
+                          : 'bg-white/5 text-[var(--text-muted)]'
+                      }`}>
+                        {mediaData.playback_status ?? '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-[var(--text-secondary)]">Volume</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">
+                          {mediaData.audio_volume != null ? `${mediaData.audio_volume}` : '—'}
+                          {mediaData.audio_volume_max != null ? `/${mediaData.audio_volume_max}` : ''}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${mediaData.audio_volume != null && mediaData.audio_volume_max
+                              ? (mediaData.audio_volume / mediaData.audio_volume_max) * 100
+                              : 0}%`,
+                            background: 'linear-gradient(90deg, #a855f7, #00f0ff)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
+                  </div>
+                )}
+              </GlassPanel>
+
+              {/* --- Navigation --- */}
+              <GlassPanel hover glow="cyan" className="p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+                  <Navigation2 className="h-3.5 w-3.5 text-neon-cyan" /> Navigation
+                </h4>
+                {locationData ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Destination</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)] truncate max-w-[120px]">
+                        {locationData.destination_name || '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">Distance</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {locationData.miles_to_arrival != null ? `${locationData.miles_to_arrival.toFixed(1)} mi` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-secondary)]">ETA</span>
+                      <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {locationData.minutes_to_arrival != null ? `${Math.round(locationData.minutes_to_arrival)} min` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {locationData.located_at_home && (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400">
+                          🏠 Home
+                        </span>
+                      )}
+                      {locationData.located_at_work && (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
+                          🏢 Work
+                        </span>
+                      )}
+                      {locationData.located_at_favorite && (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400">
+                          ⭐ Favorite
+                        </span>
+                      )}
+                      {!locationData.located_at_home && !locationData.located_at_work && !locationData.located_at_favorite && (
+                        <span className="text-[10px] text-[var(--text-muted)]">No saved location</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
                   <div className="space-y-2.5">
                     {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5" />)}
                   </div>
