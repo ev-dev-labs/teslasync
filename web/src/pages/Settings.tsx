@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, syncVehicles, getVehicles, getVersionInfo, AppSettings, Vehicle } from '../api'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, AppSettings, Vehicle } from '../api'
 import { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
@@ -80,6 +80,16 @@ export default function Settings() {
     },
     onError: (err: Error) => {
       toast.error('Token refresh failed', err.message || 'Could not refresh authentication token')
+    },
+  })
+  const disconnectMut = useMutation({
+    mutationFn: disconnectAuth,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth-status'] })
+      toast.success('Tesla account disconnected')
+    },
+    onError: (err: Error) => {
+      toast.error('Disconnect failed', err.message || 'Could not disconnect')
     },
   })
   const syncMut = useMutation({
@@ -196,6 +206,22 @@ export default function Settings() {
                 >
                   <Car className={clsx('h-4 w-4', syncMut.isPending && 'animate-spin')} />
                   Sync Vehicles
+                </button>
+                <button
+                  onClick={handleLogin}
+                  disabled={authUrlMut.isPending}
+                  className="flex items-center gap-2 rounded-lg border border-neon-cyan/30 px-4 py-2.5 text-sm text-neon-cyan hover:bg-neon-cyan/5 transition-colors disabled:opacity-40"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Re-authorize
+                </button>
+                <button
+                  onClick={() => { if (confirm('Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.')) disconnectMut.mutate() }}
+                  disabled={disconnectMut.isPending}
+                  className="flex items-center gap-2 rounded-lg border border-neon-red/30 px-4 py-2.5 text-sm text-neon-red hover:bg-neon-red/5 transition-colors disabled:opacity-40"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Disconnect
                 </button>
               </>
             )}

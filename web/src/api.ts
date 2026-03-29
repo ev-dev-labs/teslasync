@@ -506,6 +506,8 @@ export const getAuthURL = () => request<{ auth_url: string; state: string }>('/a
 /** Refreshes the Tesla OAuth access token using the stored refresh token. */
 export const refreshAuth = () => request<{ status: string }>('/auth/refresh', { method: 'POST' })
 
+export const disconnectAuth = () => request<{ status: string }>('/auth/disconnect', { method: 'POST' })
+
 // === Vehicles ===
 /** Fetches all tracked vehicles. */
 export const getVehicles = () => request<Vehicle[]>('/vehicles')

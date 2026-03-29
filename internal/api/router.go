@@ -132,6 +132,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
+			r.Post("/disconnect", authHandler.Disconnect)
 		})
 
 		// Vehicles
