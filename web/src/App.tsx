@@ -51,6 +51,11 @@ const DriveScore = lazy(() => import('./pages/DriveScore'))
 const WeeklyDigest = lazy(() => import('./pages/WeeklyDigest'))
 const Maintenance = lazy(() => import('./pages/Maintenance'))
 const DataExport = lazy(() => import('./pages/DataExport'))
+const EnergyFlow = lazy(() => import('./pages/EnergyFlow'))
+const DrivetrainHealth = lazy(() => import('./pages/DrivetrainHealth'))
+const MediaPlayer = lazy(() => import('./pages/MediaPlayer'))
+const SafetySettings = lazy(() => import('./pages/SafetySettings'))
+const NavigationRoute = lazy(() => import('./pages/NavigationRoute'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -111,6 +116,11 @@ export default function App() {
         <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />
         <Route path="maintenance" element={<SafeRoute name="Maintenance"><Maintenance /></SafeRoute>} />
         <Route path="data-export" element={<SafeRoute name="DataExport"><DataExport /></SafeRoute>} />
+        <Route path="energy-flow" element={<SafeRoute name="EnergyFlow"><EnergyFlow /></SafeRoute>} />
+        <Route path="drivetrain-health" element={<SafeRoute name="DrivetrainHealth"><DrivetrainHealth /></SafeRoute>} />
+        <Route path="media-player" element={<SafeRoute name="MediaPlayer"><MediaPlayer /></SafeRoute>} />
+        <Route path="safety-settings" element={<SafeRoute name="SafetySettings"><SafetySettings /></SafeRoute>} />
+        <Route path="navigation" element={<SafeRoute name="NavigationRoute"><NavigationRoute /></SafeRoute>} />
       </Route>
     </Routes>
   )
