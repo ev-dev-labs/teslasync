@@ -25,7 +25,11 @@ spec:
       containers:
         - name: command-proxy
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
           image: "{{ .Values.commandProxy.image.repository }}:{{ .Values.commandProxy.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.commandProxy.image.pullPolicy }}
           ports:
