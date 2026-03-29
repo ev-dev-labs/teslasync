@@ -107,7 +107,7 @@ func (c *Client) GetAuthURL(state string) string {
 	return fmt.Sprintf(
 		"%s/oauth2/v3/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s",
 		c.authURL, c.clientID, c.redirectURI,
-		"openid+offline_access+vehicle_device_data+vehicle_cmds+vehicle_charging_cmds",
+		"openid+offline_access+vehicle_device_data+vehicle_location+vehicle_cmds+vehicle_charging_cmds",
 		state,
 	)
 }
@@ -249,7 +249,7 @@ func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
 		"grant_type":    {"client_credentials"},
 		"client_id":     {c.clientID},
 		"client_secret": {c.clientSec},
-		"scope":         {"openid vehicle_device_data vehicle_cmds vehicle_charging_cmds"},
+		"scope":         {"openid vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds"},
 		"audience":      {c.baseURL},
 	}
 
