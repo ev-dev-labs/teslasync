@@ -105,7 +105,7 @@ func (c *Client) SetTokens(access, refresh string, expiresAt time.Time) {
 // GetAuthURL returns the Tesla OAuth authorization URL.
 func (c *Client) GetAuthURL(state string) string {
 	return fmt.Sprintf(
-		"%s/oauth2/v3/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s",
+		"%s/oauth2/v3/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s&prompt=consent",
 		c.authURL, c.clientID, c.redirectURI,
 		"openid+offline_access+vehicle_device_data+vehicle_location+vehicle_cmds+vehicle_charging_cmds",
 		state,
