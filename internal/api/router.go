@@ -375,6 +375,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/fleet-telemetry-config", devToolsHandler.FleetTelemetryDeleteConfig)
 			r.Get("/fleet-telemetry-errors", devToolsHandler.FleetTelemetryErrors)
 			r.Post("/fleet-status", devToolsHandler.FleetStatus)
+			r.Get("/nearby-charging", devToolsHandler.NearbyChargingSites)
+			r.Get("/release-notes", devToolsHandler.ReleaseNotes)
+			r.Get("/recent-alerts", devToolsHandler.RecentAlerts)
+			r.Get("/service-data", devToolsHandler.ServiceData)
 		})
 
 		// Export

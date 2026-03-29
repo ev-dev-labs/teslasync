@@ -918,6 +918,78 @@ func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// NearbyChargingSites returns charging sites near the vehicle.
+func (h *DevToolsHandler) NearbyChargingSites(w http.ResponseWriter, r *http.Request) {
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin is required")
+		return
+	}
+	data, status, err := h.teslaClient.GetNearbyChargingSites(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("get nearby charging sites failed")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		w.Write(data)
+	}
+}
+
+// ReleaseNotes returns firmware release notes.
+func (h *DevToolsHandler) ReleaseNotes(w http.ResponseWriter, r *http.Request) {
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin is required")
+		return
+	}
+	data, status, err := h.teslaClient.GetReleaseNotes(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("get release notes failed")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		w.Write(data)
+	}
+}
+
+// RecentAlerts returns recent vehicle alerts from Tesla.
+func (h *DevToolsHandler) RecentAlerts(w http.ResponseWriter, r *http.Request) {
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin is required")
+		return
+	}
+	data, status, err := h.teslaClient.GetRecentAlerts(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("get recent alerts failed")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		w.Write(data)
+	}
+}
+
+// ServiceData returns vehicle service history and status.
+func (h *DevToolsHandler) ServiceData(w http.ResponseWriter, r *http.Request) {
+	vin := r.URL.Query().Get("vin")
+	if vin == "" {
+		writeError(w, http.StatusBadRequest, "vin is required")
+		return
+	}
+	data, status, err := h.teslaClient.GetServiceData(r.Context(), vin)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("get service data failed")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		w.Write(data)
+	}
+}
+
 func errStringOrDefault(err error, def string) string {
 	if err != nil {
 		return err.Error()

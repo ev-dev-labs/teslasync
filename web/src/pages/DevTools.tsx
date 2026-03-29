@@ -7,6 +7,7 @@ import {
   Fingerprint, Hash, HardDrive, Palette, Timer, Network, BookOpen,
   Regex, Lock, ChevronDown, ChevronRight, Play, RefreshCw,
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
+  MapPin, FileText,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
@@ -888,6 +889,68 @@ function FleetStatusTool() {
   )
 }
 
+function VehicleDataTools() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
+    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
+    if (!res.ok) return []
+    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+  }})
+  const [selectedVin, setSelectedVin] = useState('')
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [activeQuery, setActiveQuery] = useState('')
+
+  const fetchData = useMutation({
+    mutationFn: (endpoint: string) => apiFetch(`${endpoint}?vin=${selectedVin}`),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+
+  const handleFetch = (endpoint: string, label: string) => {
+    setActiveQuery(label)
+    setResult(null)
+    fetchData.mutate(endpoint)
+  }
+
+  return (
+    <ToolCard icon={Database} color="purple" title="Vehicle Data Queries" description="Query Tesla Fleet API for vehicle-specific data — charging sites, release notes, alerts, and service history">
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
+        {vehicles && vehicles.length > 0 ? (
+          <select value={selectedVin} onChange={e => { setSelectedVin(e.target.value); setResult(null) }} className={inputClasses}>
+            <option value="">Select a vehicle...</option>
+            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
+              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        <button onClick={() => handleFetch('nearby-charging', 'Nearby Chargers')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {fetchData.isPending && activeQuery === 'Nearby Chargers' ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />}
+          Nearby Chargers
+        </button>
+        <button onClick={() => handleFetch('release-notes', 'Release Notes')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {fetchData.isPending && activeQuery === 'Release Notes' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+          Release Notes
+        </button>
+        <button onClick={() => handleFetch('recent-alerts', 'Recent Alerts')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-amber">
+          {fetchData.isPending && activeQuery === 'Recent Alerts' ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
+          Recent Alerts
+        </button>
+        <button onClick={() => handleFetch('service-data', 'Service Data')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {fetchData.isPending && activeQuery === 'Service Data' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wrench className="h-3 w-3" />}
+          Service Data
+        </button>
+      </div>
+
+      {result !== null && <ResultPanel title={activeQuery} data={result} />}
+    </ToolCard>
+  )
+}
+
 // ─── Guided Onboarding Workflow ──────────────────────────────────
 
 interface OnboardingStep {
@@ -1245,6 +1308,7 @@ function FleetApiSection() {
       <FleetTelemetrySubscribeTool />
       <FleetTelemetryConfigTool />
       <FleetStatusTool />
+      <VehicleDataTools />
     </div>
   )
 }
