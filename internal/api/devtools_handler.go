@@ -701,7 +701,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 			Port:       req.Port,
 			CA:         req.CA,
 			Fields:     fields,
-			AlertTypes: []string{"service", "security"},
+			AlertTypes: []string{"service"},
 		},
 	}
 
