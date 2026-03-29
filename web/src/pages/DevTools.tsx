@@ -551,7 +551,7 @@ const TELEMETRY_FIELDS = [
   { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'CruiseSetSpeed', 'BrakePedal', 'DriveRail'] },
   { category: 'Charging', fields: ['BatteryLevel', 'ChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargerVoltage', 'DCChargingPower', 'ACChargingPower', 'EnergyRemaining', 'EstBatteryRange', 'ChargePortDoorOpen', 'ChargingCableType'] },
   { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'ClimateKeeperMode', 'DefrostMode', 'CabinOverheatProtectionMode'] },
-  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'TrunkOpen', 'FrunkOpen', 'WindowState', 'DriverSeatOccupied', 'CenterDisplay'] },
+  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'DriverSeatOccupied', 'CenterDisplay', 'GuestModeEnabled'] },
   { category: 'Safety', fields: ['DriverSeatBelt', 'AutomaticEmergencyBrakingOff', 'BlindSpotCollisionWarningChime'] },
   { category: 'Powertrain', fields: ['DiTorqueActualR', 'DiTorqueActualF', 'DiAxleSpeedF', 'DiAxleSpeedR'] },
 ]
