@@ -699,15 +699,27 @@ function FleetTelemetryConfigTool() {
   const [selectedVin, setSelectedVin] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [errorsResult, setErrorsResult] = useState<Record<string, unknown> | null>(null)
+  const [configExists, setConfigExists] = useState(false)
 
   const getConfig = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`),
-    onSuccess: (data: Record<string, unknown>) => setResult(data),
-    onError: (err) => setResult({ error: (err as Error).message }),
+    onSuccess: (data: Record<string, unknown>) => {
+      setResult(data)
+      // Check if config exists (response has config data, not just null/empty)
+      const resp = data?.response as Record<string, unknown> | null | undefined
+      setConfigExists(resp != null && Object.keys(resp).length > 0)
+    },
+    onError: (err) => {
+      setResult({ error: (err as Error).message })
+      setConfigExists(false)
+    },
   })
   const deleteConfig = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`, 'DELETE'),
-    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onSuccess: (data: Record<string, unknown>) => {
+      setResult(data)
+      setConfigExists(false)
+    },
     onError: (err) => setResult({ error: (err as Error).message }),
   })
   const getErrors = useMutation({
@@ -716,12 +728,20 @@ function FleetTelemetryConfigTool() {
     onError: (err) => setErrorsResult({ error: (err as Error).message }),
   })
 
+  // Reset state when vehicle changes
+  const handleVinChange = (vin: string) => {
+    setSelectedVin(vin)
+    setResult(null)
+    setErrorsResult(null)
+    setConfigExists(false)
+  }
+
   return (
     <ToolCard icon={Eye} color="green" title="Fleet Telemetry Status" description="View, manage, and debug fleet telemetry configuration per vehicle">
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVin} onChange={e => setSelectedVin(e.target.value)} className={inputClasses}>
+          <select value={selectedVin} onChange={e => handleVinChange(e.target.value)} className={inputClasses}>
             <option value="">Select a vehicle...</option>
             {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
               <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
@@ -732,20 +752,30 @@ function FleetTelemetryConfigTool() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-3">
         <button onClick={() => getConfig.mutate()} disabled={getConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
           {getConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
-          View Config
+          Get Config
         </button>
         <button onClick={() => getErrors.mutate()} disabled={getErrors.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
           {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
           View Errors
         </button>
-        <button onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle?')) deleteConfig.mutate() }} disabled={deleteConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-red">
+        <button
+          onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle? The vehicle will stop streaming telemetry data.')) deleteConfig.mutate() }}
+          disabled={deleteConfig.isPending || !selectedVin || !configExists}
+          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-red' : 'text-gray-600')}
+          title={!configExists ? 'Click "Get Config" first to check if a configuration exists' : 'Remove fleet telemetry config from this vehicle'}
+        >
           {deleteConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-          Remove Config
+          Delete Config
         </button>
       </div>
+
+      {!configExists && result === null && selectedVin && (
+        <p className="text-[10px] text-[var(--text-muted)] mb-2">Click "Get Config" to check the current fleet telemetry configuration for this vehicle.</p>
+      )}
+
       {result !== null && <ResultPanel title="Fleet Telemetry Config" data={result} />}
       {errorsResult !== null && <ResultPanel title="Fleet Telemetry Errors" data={errorsResult} />}
     </ToolCard>
