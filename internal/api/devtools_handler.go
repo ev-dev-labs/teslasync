@@ -712,11 +712,10 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	sub := tesla.FleetTelemetrySubscription{
 		VINs: req.VINs,
 		Config: tesla.FleetTelemetryConfigPayload{
-			Hostname:   req.Hostname,
-			Port:       req.Port,
-			CA:         caValue,
-			Fields:     fields,
-			AlertTypes: []string{"service"},
+			Hostname: req.Hostname,
+			Port:     req.Port,
+			CA:       caValue,
+			Fields:   fields,
 		},
 	}
 
