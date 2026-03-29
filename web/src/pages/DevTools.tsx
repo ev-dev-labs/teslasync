@@ -559,7 +559,7 @@ function FleetTelemetrySubscribeTool() {
   const [interval, setInterval] = useState('10')
   const [ca, setCa] = useState('')
   const [selectedFields, setSelectedFields] = useState<string[]>([
-    'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Latitude', 'Longitude',
+    'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Location', 'GpsHeading',
     'ChargeState', 'ChargeLimitSoc', 'InsideTemp', 'OutsideTemp', 'Locked', 'SentryMode',
   ])
   const [showFields, setShowFields] = useState(false)
