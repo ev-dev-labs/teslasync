@@ -700,12 +700,12 @@ function FleetTelemetryConfigTool() {
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [errorsResult, setErrorsResult] = useState<Record<string, unknown> | null>(null)
   const [configExists, setConfigExists] = useState(false)
+  const [errorsLoaded, setErrorsLoaded] = useState(false)
 
   const getConfig = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`),
     onSuccess: (data: Record<string, unknown>) => {
       setResult(data)
-      // Check if config exists (response has config data, not just null/empty)
       const resp = data?.response as Record<string, unknown> | null | undefined
       setConfigExists(resp != null && Object.keys(resp).length > 0)
     },
@@ -724,17 +724,46 @@ function FleetTelemetryConfigTool() {
   })
   const getErrors = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${selectedVin}`),
-    onSuccess: (data: Record<string, unknown>) => setErrorsResult(data),
-    onError: (err) => setErrorsResult({ error: (err as Error).message }),
+    onSuccess: (data: Record<string, unknown>) => {
+      setErrorsResult(data)
+      setErrorsLoaded(true)
+    },
+    onError: (err) => {
+      setErrorsResult({ error: (err as Error).message })
+      setErrorsLoaded(true)
+    },
   })
 
-  // Reset state when vehicle changes
   const handleVinChange = (vin: string) => {
     setSelectedVin(vin)
     setResult(null)
     setErrorsResult(null)
     setConfigExists(false)
+    setErrorsLoaded(false)
   }
+
+  const downloadErrors = () => {
+    if (!errorsResult) return
+    const blob = new Blob([JSON.stringify(errorsResult, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `fleet-telemetry-errors-${selectedVin}-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Extract errors array for table display
+  const errorsList = (() => {
+    if (!errorsResult) return []
+    const resp = errorsResult.response as Record<string, unknown>[] | Record<string, unknown> | null
+    if (Array.isArray(resp)) return resp
+    if (resp && typeof resp === 'object' && 'errors' in resp) {
+      const errs = (resp as Record<string, unknown>).errors
+      if (Array.isArray(errs)) return errs as Record<string, unknown>[]
+    }
+    return []
+  })()
 
   return (
     <ToolCard icon={Eye} color="green" title="Fleet Telemetry Status" description="View, manage, and debug fleet telemetry configuration per vehicle">
@@ -757,7 +786,12 @@ function FleetTelemetryConfigTool() {
           {getConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
           Get Config
         </button>
-        <button onClick={() => getErrors.mutate()} disabled={getErrors.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+        <button
+          onClick={() => getErrors.mutate()}
+          disabled={getErrors.isPending || !selectedVin || !configExists}
+          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-amber' : 'text-gray-600')}
+          title={!configExists ? 'Click "Get Config" first' : 'Fetch recent fleet telemetry errors for this vehicle'}
+        >
           {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
           View Errors
         </button>
@@ -777,7 +811,54 @@ function FleetTelemetryConfigTool() {
       )}
 
       {result !== null && <ResultPanel title="Fleet Telemetry Config" data={result} />}
-      {errorsResult !== null && <ResultPanel title="Fleet Telemetry Errors" data={errorsResult} />}
+
+      {errorsLoaded && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Fleet Telemetry Errors {errorsList.length > 0 && <span className="text-neon-amber">({errorsList.length})</span>}
+            </h4>
+            {errorsList.length > 0 && (
+              <button onClick={downloadErrors} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
+                <Download className="h-3 w-3" /> Download JSON
+              </button>
+            )}
+          </div>
+          {errorsList.length > 0 ? (
+            <div className="glass-panel rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--glass-border)]">
+                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Time</th>
+                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Error</th>
+                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {errorsList.map((err, i) => (
+                    <tr key={i} className="border-b border-[var(--glass-border)] last:border-0">
+                      <td className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap font-mono">
+                        {err.created_at ? new Date(err.created_at as string).toLocaleString() : err.timestamp ? new Date(err.timestamp as string).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-neon-red font-medium">{(err.name || err.error || err.code || '—') as string}</td>
+                      <td className="px-3 py-2 text-[var(--text-muted)] max-w-xs truncate">{(err.body || err.message || err.description || JSON.stringify(err)) as string}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="glass-panel rounded-lg p-4 text-center">
+              <CheckCircle className="h-5 w-5 text-neon-green mx-auto mb-1" />
+              <p className="text-xs text-neon-green">No telemetry errors found</p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">The vehicle is streaming without issues</p>
+            </div>
+          )}
+          {errorsResult && !Array.isArray(errorsResult.response) && typeof errorsResult.error === 'string' && (
+            <ResultPanel title="Error Response" data={errorsResult} />
+          )}
+        </div>
+      )}
     </ToolCard>
   )
 }
