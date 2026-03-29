@@ -547,13 +547,14 @@ function VehicleKeyPairingTool() {
 // ─── Fleet Telemetry Tools ──────────────────────────────────────
 
 const TELEMETRY_FIELDS = [
-  { category: 'Location', fields: ['Latitude', 'Longitude', 'Location', 'DestinationLocation', 'DestinationName'] },
-  { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'CruiseSetSpeed', 'BrakePedal', 'DriveRail'] },
-  { category: 'Charging', fields: ['BatteryLevel', 'ChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargerVoltage', 'DCChargingPower', 'ACChargingPower', 'EnergyRemaining', 'EstBatteryRange', 'ChargePortDoorOpen', 'ChargingCableType'] },
-  { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'ClimateKeeperMode', 'DefrostMode', 'CabinOverheatProtectionMode'] },
-  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'DriverSeatOccupied', 'CenterDisplay', 'GuestModeEnabled'] },
-  { category: 'Safety', fields: ['DriverSeatBelt', 'AutomaticEmergencyBrakingOff', 'BlindSpotCollisionWarningChime'] },
-  { category: 'Powertrain', fields: ['DiTorqueActualR', 'DiTorqueActualF', 'DiAxleSpeedF', 'DiAxleSpeedR'] },
+  { category: 'Location', fields: ['Location', 'Latitude', 'Longitude', 'GpsHeading', 'GpsState', 'DestinationLocation', 'DestinationName', 'MilesToArrival', 'MinutesToArrival', 'RouteLine'] },
+  { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'Gear', 'CruiseSetSpeed', 'BrakePedal', 'PedalPosition', 'DriveRail', 'LateralAcceleration', 'LongitudinalAcceleration'] },
+  { category: 'Charging', fields: ['BatteryLevel', 'Soc', 'ChargeState', 'DetailedChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargerVoltage', 'ChargerPhases', 'DCChargingPower', 'ACChargingPower', 'EnergyRemaining', 'EstBatteryRange', 'IdealBatteryRange', 'RatedRange', 'PackVoltage', 'PackCurrent', 'ChargePortDoorOpen', 'ChargingCableType', 'FastChargerPresent', 'FastChargerType', 'TimeToFullCharge', 'BrickVoltageMax', 'BrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'BatteryHeaterOn'] },
+  { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'HvacFanSpeed', 'HvacPower', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest', 'ClimateKeeperMode', 'DefrostMode', 'CabinOverheatProtectionMode', 'SeatHeaterLeft', 'SeatHeaterRight'] },
+  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow', 'RdWindow', 'RpWindow', 'HomelinkNearby', 'GuestModeEnabled', 'DriverSeatOccupied', 'CenterDisplay', 'SpeedLimitMode', 'ValetModeEnabled', 'Version', 'VehicleName'] },
+  { category: 'Safety', fields: ['DriverSeatBelt', 'AutomaticEmergencyBrakingOff', 'BlindSpotCollisionWarningChime', 'ForwardCollisionWarning', 'LaneDepartureAvoidance'] },
+  { category: 'Powertrain', fields: ['DiTorquemotor', 'DiTorqueActualR', 'DiTorqueActualF', 'DiAxleSpeedF', 'DiAxleSpeedR', 'DiStateR', 'DiStateF', 'DiStatorTempR', 'DiStatorTempF'] },
+  { category: 'Tires', fields: ['TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr'] },
 ]
 
 function FleetTelemetrySubscribeTool() {
