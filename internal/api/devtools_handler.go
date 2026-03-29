@@ -684,7 +684,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		// Default essential fields
 		req.Fields = []string{
 			"VehicleSpeed", "Odometer", "Soc", "BatteryLevel",
-			"Location", "Latitude", "Longitude",
+			"Location", "GpsHeading",
 			"ChargeState", "ChargeLimitSoc",
 			"InsideTemp", "OutsideTemp",
 			"Locked", "SentryMode",
