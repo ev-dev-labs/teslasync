@@ -1,11 +1,11 @@
 services:
-  teslasync:
+  teslasync-api:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         VERSION: ${VERSION:-dev}
-    container_name: teslasync
+    container_name: teslasync-api
     restart: unless-stopped
     ports:
       - "${TESLASYNC_PORT:-8080}:8080"
@@ -27,6 +27,11 @@ services:
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
       - POLL_INTERVAL=${POLL_INTERVAL:-30s}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
+      - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
+      - FLEET_TELEMETRY_PORT=${FLEET_TELEMETRY_PORT:-4443}
+      - FLEET_TELEMETRY_TOPIC_BASE=${FLEET_TELEMETRY_TOPIC_BASE:-telemetry}
+      - FLEET_TELEMETRY_BATCH_MS=${FLEET_TELEMETRY_BATCH_MS:-100}
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,7 +61,7 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     depends_on:
-      teslasync:
+      teslasync-api:
         condition: service_healthy
     deploy:
       resources:
@@ -235,11 +240,13 @@ services:
         reservations:
           memory: 64M
 
-  # Fleet Telemetry Server (optional — set FLEET_TELEMETRY_ENABLED=true to enable)
-  # Receives streaming data from Tesla vehicles via WebSocket and relays to TeslaSync API.
+  # Fleet Telemetry Server (optional — docker compose --profile telemetry up)
+  # Receives streaming data from Tesla vehicles via WebSocket and publishes
+  # to MQTT (Mosquitto). TeslaSync's MQTT subscriber picks up the signals.
   # Requires TLS certificates and Tesla Developer account with Fleet Telemetry access.
+  # See: https://github.com/teslamotors/fleet-telemetry
   fleet-telemetry:
-    image: ghcr.io/teslamotors/fleet-telemetry:latest
+    image: tesla/fleet-telemetry:latest
     container_name: teslasync-fleet-telemetry
     restart: unless-stopped
     profiles:
@@ -251,14 +258,49 @@ services:
       - ${FLEET_TELEMETRY_TLS_CERT:-./certs/server.crt}:/certs/server.crt:ro
       - ${FLEET_TELEMETRY_TLS_KEY:-./certs/server.key}:/certs/server.key:ro
     depends_on:
-      teslasync:
-        condition: service_healthy
+      mosquitto:
+        condition: service_started
     deploy:
       resources:
         limits:
           memory: 256M
         reservations:
           memory: 64M
+
+  # Vehicle Command Proxy (optional — enables signed vehicle commands)
+  # Routes commands through Tesla's Vehicle Command SDK for end-to-end signing.
+  # Required for 2021+ Model S/X and all Model 3/Y vehicles.
+  # Setup: 1) Generate keypair via /dev-tools/generate-keypair
+  #        2) Save private key to ./certs/private-key.pem
+  #        3) Register public key with Tesla and pair with vehicle
+  #        4) Set TESLA_COMMAND_PROXY_URL=https://vehicle-command-proxy:4443 in .env
+  vehicle-command-proxy:
+    image: tesla/vehicle-command:latest
+    container_name: teslasync-vehicle-command-proxy
+    restart: unless-stopped
+    profiles:
+      - commands
+    environment:
+      - TESLA_HTTP_PROXY_HOST=0.0.0.0
+      - TESLA_HTTP_PROXY_PORT=4443
+      - TESLA_HTTP_PROXY_TLS_CERT=/data/tls-cert.pem
+      - TESLA_HTTP_PROXY_TLS_KEY=/data/tls-key.pem
+      - TESLA_KEY_FILE=/data/private-key.pem
+      - TESLA_VERBOSE=${TESLA_VERBOSE:-false}
+    volumes:
+      - ${COMMAND_PROXY_DATA_DIR:-./data/vehicle-command}:/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://localhost:4443/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
 
 volumes:
   postgres_data:

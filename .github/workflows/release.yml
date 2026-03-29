@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: release
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -27,6 +27,7 @@ jobs:
     outputs:
       new_tag: ${{ steps.bump.outputs.new_tag }}
       version: ${{ steps.bump.outputs.version }}
+      is_prerelease: ${{ steps.bump.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,11 +60,25 @@ jobs:
             PATCH=$((PATCH + 1))
           fi
 
-          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          BASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          # Non-main branches get a prerelease suffix
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            BRANCH=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${BASE_VERSION}-rc.${BRANCH}.${SHORT_SHA}"
+            NEW_TAG="v${VERSION}"
+            IS_PRERELEASE="true"
+          else
+            VERSION="${BASE_VERSION}"
+            NEW_TAG="v${VERSION}"
+            IS_PRERELEASE="false"
+          fi
+
           echo "New tag: $NEW_TAG"
           echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag
         run: |
@@ -107,15 +122,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine image tags
+        id: tags
+        run: |
+          BASE="ghcr.io/${{ github.repository }}-${{ matrix.image }}"
+          VERSION="${{ needs.version-tag.outputs.version }}"
+          if [ "${{ needs.version-tag.outputs.is_prerelease }}" = "true" ]; then
+            echo "tags=${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${BASE}:${VERSION},${BASE}:latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ${{ matrix.file }}
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}-${{ matrix.image }}:${{ needs.version-tag.outputs.version }}
-            ghcr.io/${{ github.repository }}-${{ matrix.image }}:latest
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-args: ${{ matrix.build-args }}
@@ -143,6 +167,7 @@ jobs:
   release-notes:
     name: Create GitHub Release
     needs: [version-tag, docker, helm]
+    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.helm.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -153,7 +178,14 @@ jobs:
         run: |
           TAG="${{ needs.version-tag.outputs.new_tag }}"
           VERSION="${{ needs.version-tag.outputs.version }}"
+          IS_PRE="${{ needs.version-tag.outputs.is_prerelease }}"
           PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TAG}$" | head -1)
+
+          if [ "$IS_PRE" = "true" ]; then
+            LABEL="⚠️ Pre-release (branch: ${{ github.ref_name }})"
+          else
+            LABEL="🚀 TeslaSync ${TAG}"
+          fi
 
           if [ -n "$PREV" ]; then
             CHANGELOG=$(git log "${PREV}..HEAD" --pretty=format:"- %s (@%an)" --no-merges)
@@ -164,7 +196,7 @@ jobs:
           fi
 
           cat > release-notes.md << NOTES_EOF
-          ## 🚀 TeslaSync ${TAG}
+          ## ${LABEL}
 
           ### 📦 Docker Images
 
@@ -211,4 +243,5 @@ jobs:
           tag_name: ${{ needs.version-tag.outputs.new_tag }}
           name: TeslaSync ${{ needs.version-tag.outputs.new_tag }}
           body_path: release-notes.md
+          prerelease: ${{ needs.version-tag.outputs.is_prerelease == 'true' }}
           generate_release_notes: false

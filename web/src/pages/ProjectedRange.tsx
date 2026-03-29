@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getMileageStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { useSettings } from '../hooks/useSettings'
 import { Target, Battery, Thermometer, TrendingDown, Gauge } from 'lucide-react'
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -24,6 +25,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 export default function ProjectedRange() {
+  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -43,7 +45,7 @@ export default function ProjectedRange() {
   // Projected range based on battery degradation trend
   const trendData = (battery?.monthly_trend ?? []).map(m => ({
     month: m.month,
-    range_km: m.range_km,
+    range_km: convertDistance(m.range_km),
     capacity_pct: m.capacity_pct,
   }))
 
@@ -63,7 +65,7 @@ export default function ProjectedRange() {
     if (t < 20) factor = 1.0 - (20 - t) * 0.015
     else if (t > 30) factor = 1.0 - (t - 30) * 0.005
     factor = Math.max(0.5, Math.min(1.0, factor))
-    return { temp: `${t}°C`, range_km: Math.round(currentRange * factor), factor: Math.round(factor * 100) }
+    return { temp: `${Math.round(convertTemp(t))}${tempUnit}`, range_km: Math.round(convertDistance(currentRange * factor)), factor: Math.round(factor * 100) }
   })
 
   // Project future range (12 months)
@@ -75,7 +77,7 @@ export default function ProjectedRange() {
     now.setMonth(now.getMonth() + monthsAhead)
     return {
       month: now.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }),
-      range_km: Math.round(projectedRange),
+      range_km: Math.round(convertDistance(projectedRange)),
       degradation: projectedDeg.toFixed(1),
     }
   })
@@ -106,11 +108,11 @@ export default function ProjectedRange() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 sm:mb-8">
           {[
-            { label: 'Current Range', value: `${currentRange.toFixed(0)} km`, sub: `${(currentRange * 0.621371).toFixed(0)} mi`, icon: Gauge, color: '#00f0ff' },
-            { label: 'When New', value: `${newRange.toFixed(0)} km`, sub: `${(newRange * 0.621371).toFixed(0)} mi`, icon: Battery, color: '#10b981' },
+            { label: 'Current Range', value: `${convertDistance(currentRange).toFixed(0)} ${distanceUnit}`, sub: '', icon: Gauge, color: '#00f0ff' },
+            { label: 'When New', value: `${convertDistance(newRange).toFixed(0)} ${distanceUnit}`, sub: '', icon: Battery, color: '#10b981' },
             { label: 'Degradation', value: `${(battery?.degradation_pct ?? 0).toFixed(1)}%`, sub: `${battery?.total_cycles ?? 0} cycles`, icon: TrendingDown, color: '#f59e0b' },
             { label: 'Health Score', value: `${battery?.health_score ?? 0}/100`, sub: `${(battery?.current_capacity_pct ?? 0).toFixed(1)}% capacity`, icon: Battery, color: '#8b5cf6' },
-            { label: 'Days of Range', value: daysOfRange, sub: `at ${avgDailyKm.toFixed(0)} km/day avg`, icon: Target, color: '#ec4899' },
+            { label: 'Days of Range', value: daysOfRange, sub: `at ${convertDistance(avgDailyKm).toFixed(0)} ${distanceUnit}/day avg`, icon: Target, color: '#ec4899' },
           ].map(card => (
             <GlassPanel key={card.label} className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -137,7 +139,7 @@ export default function ProjectedRange() {
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="range_km" stroke="#00f0ff" strokeWidth={2} dot={{ r: 3 }} name="Range (km)" />
+                <Line type="monotone" dataKey="range_km" stroke="#00f0ff" strokeWidth={2} dot={{ r: 3 }} name={`Range (${distanceUnit})`} />
                 <ReferenceLine y={newRange} stroke="#10b981" strokeDasharray="5 5" label={{ value: 'New', fill: '#10b981', fontSize: 10 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -162,7 +164,7 @@ export default function ProjectedRange() {
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
               <ReferenceLine y={currentRange} stroke="#00f0ff" strokeDasharray="5 5" label={{ value: 'Ideal', fill: '#00f0ff', fontSize: 10 }} />
-              <Area type="monotone" dataKey="range_km" stroke="#f59e0b" fill="url(#tempGrad)" strokeWidth={2} name="Range (km)" />
+              <Area type="monotone" dataKey="range_km" stroke="#f59e0b" fill="url(#tempGrad)" strokeWidth={2} name={`Range (${distanceUnit})`} />
             </AreaChart>
           </ResponsiveContainer>
         </GlassPanel>
@@ -187,7 +189,7 @@ export default function ProjectedRange() {
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
               <ReferenceLine y={currentRange} stroke="#00f0ff" strokeDasharray="5 5" label={{ value: 'Current', fill: '#00f0ff', fontSize: 10 }} />
-              <Area type="monotone" dataKey="range_km" stroke="#8b5cf6" fill="url(#projGrad)" strokeWidth={2} name="Projected Range (km)" />
+              <Area type="monotone" dataKey="range_km" stroke="#8b5cf6" fill="url(#projGrad)" strokeWidth={2} name={`Projected Range (${distanceUnit})`} />
             </AreaChart>
           </ResponsiveContainer>
         )}

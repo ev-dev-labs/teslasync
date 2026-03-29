@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -63,7 +76,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  t.name AS \"Trip Name\",\n  t.start_date AS \"Start Date\",\n  t.end_date AS \"End Date\",\n  ROUND(t.total_distance_km::numeric, 1) AS \"Distance km\",\n  ROUND(t.total_energy_kwh::numeric, 1) AS \"Energy kWh\",\n  ROUND(t.total_cost::numeric, 2) AS \"Cost $\",\n  t.drive_count AS \"Drives\",\n  t.charge_count AS \"Charges\",\n  ROUND((t.total_energy_kwh * 1000 / NULLIF(t.total_distance_km, 0))::numeric, 1) AS \"Wh/km\"\nFROM trips t\nWHERE t.vehicle_id = ${vehicle_id}\nORDER BY t.start_date DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  t.name AS \"✈️ Trip\",\n  t.start_date AS \"📅 Start\",\n  t.end_date AS \"📅 End\",\n  ROUND(t.total_distance_km::numeric, 1) AS \"📏 Distance\",\n  ROUND(t.total_energy_kwh::numeric, 1) AS \"⚡ Energy\",\n  ROUND(t.total_cost::numeric, 2) AS \"💰 Cost\",\n  t.drive_count AS \"🛣️ Drives\",\n  t.charge_count AS \"⚡ Charges\",\n  ROUND((t.total_energy_kwh * 1000 / NULLIF(t.total_distance_km, 0))::numeric, 1) AS \"⚡ Wh/km\"\nFROM trips t\nWHERE t.vehicle_id = ${vehicle_id}\nORDER BY t.start_date DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
@@ -81,8 +94,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -90,7 +103,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -100,6 +113,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -109,7 +174,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Trip History",
+  "title": "TeslaSync ✈️ Trip History",
   "uid": "teslasync-trips",
   "version": 1,
   "weekStart": ""

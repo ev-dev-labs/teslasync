@@ -234,9 +234,11 @@ type CommandLog struct {
 
 // EnergyStatsRow represents a single day of energy data.
 type EnergyStatsRow struct {
-	Date     string  `json:"date"`
-	Consumed float64 `json:"consumed_kwh"`
-	Cost     float64 `json:"cost"`
+	Date       string  `json:"date"`
+	EnergyKWh  float64 `json:"energy_kwh"`
+	DistanceKm float64 `json:"distance_km"`
+	Efficiency float64 `json:"efficiency"`
+	Cost       float64 `json:"cost"`
 }
 
 // BatterySnapshot represents a point-in-time battery health reading.
@@ -351,14 +353,14 @@ type VampireDrainEvent struct {
 
 // DailyMileage represents mileage data for a single day.
 type DailyMileage struct {
-	ID            int64   `json:"id" db:"id"`
-	VehicleID     int64   `json:"vehicle_id" db:"vehicle_id"`
-	Date          string  `json:"date" db:"date"`
-	DistanceKm    float64 `json:"distance_km" db:"distance_km"`
-	OdometerStart float64 `json:"odometer_start" db:"odometer_start"`
-	OdometerEnd   float64 `json:"odometer_end" db:"odometer_end"`
-	DriveCount    int     `json:"drive_count" db:"drive_count"`
-	EnergyUsedKWh float64 `json:"energy_used_kwh" db:"energy_used_kwh"`
+	ID            int64     `json:"id" db:"id"`
+	VehicleID     int64     `json:"vehicle_id" db:"vehicle_id"`
+	Date          time.Time `json:"date" db:"date"`
+	DistanceKm    float64   `json:"distance_km" db:"distance_km"`
+	OdometerStart float64   `json:"odometer_start" db:"odometer_start"`
+	OdometerEnd   float64   `json:"odometer_end" db:"odometer_end"`
+	DriveCount    int       `json:"drive_count" db:"drive_count"`
+	EnergyUsedKWh float64  `json:"energy_used_kwh" db:"energy_used_kwh"`
 }
 
 // VisitedLocation represents an aggregated visited place.
@@ -453,4 +455,53 @@ type ExportJobRequest struct {
 	VehicleID *int64     `json:"vehicle_id,omitempty"`
 	StartDate *time.Time `json:"start_date,omitempty"`
 	EndDate   *time.Time `json:"end_date,omitempty"`
+}
+
+// MotorSnapshot represents a point-in-time motor/powertrain telemetry reading.
+type MotorSnapshot struct {
+	ID                 int64      `json:"id" db:"id"`
+	VehicleID          int64      `json:"vehicle_id" db:"vehicle_id"`
+	DiState            *string    `json:"di_state,omitempty" db:"di_state"`
+	DiTorque           *float64   `json:"di_torque,omitempty" db:"di_torque"`
+	DiAxleSpeed        *float64   `json:"di_axle_speed,omitempty" db:"di_axle_speed"`
+	DiStatorTemp       *float64   `json:"di_stator_temp,omitempty" db:"di_stator_temp"`
+	PedalPosition      *float64   `json:"pedal_position,omitempty" db:"pedal_position"`
+	BrakePedal         *bool      `json:"brake_pedal,omitempty" db:"brake_pedal"`
+	LateralAccel       *float64   `json:"lateral_accel,omitempty" db:"lateral_accel"`
+	LongitudinalAccel  *float64   `json:"longitudinal_accel,omitempty" db:"longitudinal_accel"`
+	VehicleSpeed       *float64   `json:"vehicle_speed,omitempty" db:"vehicle_speed"`
+	Gear               *string    `json:"gear,omitempty" db:"gear"`
+	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
+}
+
+// ClimateSnapshot represents a point-in-time climate/HVAC telemetry reading.
+type ClimateSnapshot struct {
+	ID                   int64     `json:"id" db:"id"`
+	VehicleID            int64     `json:"vehicle_id" db:"vehicle_id"`
+	InsideTemp           *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
+	OutsideTemp          *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
+	HvacPower            *float64  `json:"hvac_power,omitempty" db:"hvac_power"`
+	HvacFanSpeed         *int      `json:"hvac_fan_speed,omitempty" db:"hvac_fan_speed"`
+	HvacLeftTempRequest  *float64  `json:"hvac_left_temp_request,omitempty" db:"hvac_left_temp_request"`
+	HvacRightTempRequest *float64  `json:"hvac_right_temp_request,omitempty" db:"hvac_right_temp_request"`
+	CabinOverheatMode    *string   `json:"cabin_overheat_mode,omitempty" db:"cabin_overheat_mode"`
+	DefrostMode          *bool     `json:"defrost_mode,omitempty" db:"defrost_mode"`
+	BatteryHeaterOn      *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+	CreatedAt            time.Time `json:"created_at" db:"created_at"`
+}
+
+// SecurityEvent represents a point-in-time security/access telemetry reading.
+type SecurityEvent struct {
+	ID             int64     `json:"id" db:"id"`
+	VehicleID      int64     `json:"vehicle_id" db:"vehicle_id"`
+	Locked         *bool     `json:"locked,omitempty" db:"locked"`
+	SentryMode     *bool     `json:"sentry_mode,omitempty" db:"sentry_mode"`
+	DoorState      *string   `json:"door_state,omitempty" db:"door_state"`
+	FdWindow       *string   `json:"fd_window,omitempty" db:"fd_window"`
+	FpWindow       *string   `json:"fp_window,omitempty" db:"fp_window"`
+	RdWindow       *string   `json:"rd_window,omitempty" db:"rd_window"`
+	RpWindow       *string   `json:"rp_window,omitempty" db:"rp_window"`
+	HomelinkNearby *bool     `json:"homelink_nearby,omitempty" db:"homelink_nearby"`
+	GuestMode      *bool     `json:"guest_mode,omitempty" db:"guest_mode"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 }

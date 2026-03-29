@@ -43,8 +43,13 @@ type Worker struct {
 	eventBus      *events.Bus
 	cfg           config.WorkerConfig
 
+	// Fleet Telemetry integration — when enabled, telemetry is primary and
+	// the worker only polls as a fallback for non-streaming vehicles.
+	FleetTelemetryEnabled bool
+
 	// Optional streaming checker — when set, vehicles that are actively
-	// streaming via Fleet Telemetry get reduced polling (5-minute heartbeat).
+	// streaming via Fleet Telemetry are skipped entirely (telemetry-primary
+	// mode) or get reduced polling (hybrid mode).
 	IsVehicleStreaming func(vin string) bool
 
 	// Track active sessions per vehicle (guarded by sessionMu)
@@ -55,28 +60,43 @@ type Worker struct {
 	// Per-vehicle health tracking for adaptive backoff (guarded by mu)
 	mu             sync.Mutex
 	vehicleHealth  map[int64]*vehicleHealth
+
+	// Vehicle discovery ticker interval when fleet telemetry is primary
+	discoveryInterval    time.Duration
+	lastDiscovery        time.Time
+	fallbackPollInterval time.Duration // overrides cfg.PollInterval when fleet telemetry is primary
 }
 
 // New creates a new Worker that polls the Tesla API at the configured interval,
 // persists data to the database, and publishes updates via MQTT.
 func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerConfig, eb *events.Bus, enc *crypto.Encryptor) *Worker {
 	return &Worker{
-		db:            db,
-		vehicleRepo:   database.NewVehicleRepo(db),
-		posRepo:       database.NewPositionRepo(db),
-		driveRepo:     database.NewDriveRepo(db),
-		chargeRepo:    database.NewChargingRepo(db),
-		tokenRepo:     database.NewTokenRepo(db, enc),
-		alertRuleRepo: database.NewAlertRuleRepo(db),
-		alertRepo:     database.NewAlertRepo(db),
-		settingsRepo:  database.NewSettingsRepo(db),
-		teslaClient:   tc,
-		mqttClient:    mc,
-		eventBus:      eb,
-		cfg:           cfg,
-		activeDrives:  make(map[int64]int64),
-		activeCharges: make(map[int64]int64),
-		vehicleHealth: make(map[int64]*vehicleHealth),
+		db:                db,
+		vehicleRepo:       database.NewVehicleRepo(db),
+		posRepo:           database.NewPositionRepo(db),
+		driveRepo:         database.NewDriveRepo(db),
+		chargeRepo:        database.NewChargingRepo(db),
+		tokenRepo:         database.NewTokenRepo(db, enc),
+		alertRuleRepo:     database.NewAlertRuleRepo(db),
+		alertRepo:         database.NewAlertRepo(db),
+		settingsRepo:      database.NewSettingsRepo(db),
+		teslaClient:       tc,
+		mqttClient:        mc,
+		eventBus:          eb,
+		cfg:               cfg,
+		activeDrives:      make(map[int64]int64),
+		activeCharges:     make(map[int64]int64),
+		vehicleHealth:     make(map[int64]*vehicleHealth),
+		discoveryInterval: 5 * time.Minute,
+	}
+}
+
+// SetFallbackPollInterval sets the polling interval used when fleet telemetry
+// is the primary data source. In this mode, the worker only polls non-streaming
+// vehicles as a fallback, so a longer interval (e.g., 60s) reduces API costs.
+func (w *Worker) SetFallbackPollInterval(d time.Duration) {
+	if d > 0 {
+		w.fallbackPollInterval = d
 	}
 }
 
@@ -89,7 +109,19 @@ func (w *Worker) Start(ctx context.Context) {
 		log.Warn().Err(err).Msg("no stored tokens, waiting for authentication")
 	}
 
-	ticker := time.NewTicker(w.cfg.PollInterval)
+	// When fleet telemetry is the primary data source, use the fallback poll
+	// interval (default 60s) instead of the normal poll interval (default 15s).
+	// This reduces Tesla API calls since telemetry handles active vehicles.
+	pollInterval := w.cfg.PollInterval
+	if w.FleetTelemetryEnabled && w.fallbackPollInterval > 0 {
+		pollInterval = w.fallbackPollInterval
+		log.Info().
+			Dur("fallback_interval", pollInterval).
+			Dur("normal_interval", w.cfg.PollInterval).
+			Msg("fleet telemetry primary — worker using fallback poll interval")
+	}
+
+	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	// Token refresh ticker (every 30 minutes)
@@ -187,6 +219,13 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		return
 	}
 
+	// When fleet telemetry is primary, periodically discover new vehicles
+	// via a lightweight ListVehicles call (no per-vehicle data fetching).
+	if w.FleetTelemetryEnabled && time.Since(w.lastDiscovery) >= w.discoveryInterval {
+		w.discoverVehicles(ctx)
+		w.lastDiscovery = time.Now()
+	}
+
 	vehicles, err := w.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list vehicles for polling")
@@ -194,23 +233,28 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 	}
 
 	for _, vehicle := range vehicles {
-		// Hybrid mode: if vehicle is streaming via Fleet Telemetry, reduce
-		// polling to a 5-minute heartbeat (just for state/wake detection).
-		if w.IsVehicleStreaming != nil && w.IsVehicleStreaming(vehicle.VIN) {
+		// Fleet Telemetry Primary Mode: if vehicle is actively streaming,
+		// skip polling entirely — telemetry is the data source.
+		if w.FleetTelemetryEnabled && w.IsVehicleStreaming != nil && w.IsVehicleStreaming(vehicle.VIN) {
+			log.Debug().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Msg("skipping poll — vehicle streaming via Fleet Telemetry (primary)")
+			continue
+		}
+
+		// Legacy hybrid mode (Fleet Telemetry not primary, but streaming check exists):
+		// reduce polling to a 5-minute heartbeat for streaming vehicles.
+		if !w.FleetTelemetryEnabled && w.IsVehicleStreaming != nil && w.IsVehicleStreaming(vehicle.VIN) {
 			w.mu.Lock()
 			vh, exists := w.vehicleHealth[vehicle.ID]
 			if exists && time.Since(vh.lastError) < 5*time.Minute {
-				// Last poll was less than 5 minutes ago — skip this vehicle
 				w.mu.Unlock()
-				log.Debug().Int64("vehicle_id", vehicle.ID).Msg("skipping vehicle (streaming via Fleet Telemetry)")
+				log.Debug().Int64("vehicle_id", vehicle.ID).Msg("skipping vehicle (streaming via Fleet Telemetry, heartbeat mode)")
 				continue
 			}
-			// Mark last poll time so we don't poll again for 5 minutes
 			if !exists {
 				vh = &vehicleHealth{}
 				w.vehicleHealth[vehicle.ID] = vh
 			}
-			vh.lastError = time.Now() // reuse lastError as "last polled" marker
+			vh.lastError = time.Now()
 			w.mu.Unlock()
 		}
 
@@ -224,7 +268,49 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		}
 		w.mu.Unlock()
 
+		if w.FleetTelemetryEnabled {
+			log.Info().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Msg("polling via Tesla API (fallback — vehicle not streaming)")
+		}
 		w.pollVehicleSafe(ctx, vehicle)
+	}
+}
+
+// discoverVehicles calls Tesla's ListVehicles endpoint to discover new vehicles
+// and add them to the database. This is a lightweight call (no per-vehicle data)
+// used in fleet-telemetry-primary mode to keep the vehicle list current.
+func (w *Worker) discoverVehicles(ctx context.Context) {
+	if !w.teslaClient.HasValidToken() {
+		return
+	}
+
+	listCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	teslaVehicles, err := w.teslaClient.ListVehicles(listCtx)
+	if err != nil {
+		log.Warn().Err(err).Msg("fleet telemetry: vehicle discovery failed")
+		return
+	}
+
+	for _, tv := range teslaVehicles {
+		existing, _ := w.vehicleRepo.GetByVIN(ctx, tv.VIN)
+		if existing != nil {
+			continue
+		}
+
+		// New vehicle discovered — create it
+		v := &models.Vehicle{
+			VehicleID:   tv.VehicleID,
+			VIN:         tv.VIN,
+			DisplayName: tv.DisplayName,
+			State:       tv.State,
+			Healthy:     true,
+		}
+		if err := w.vehicleRepo.Create(ctx, v); err != nil {
+			log.Error().Err(err).Str("vin", tv.VIN).Msg("fleet telemetry: failed to create discovered vehicle")
+		} else {
+			log.Info().Str("vin", tv.VIN).Str("name", tv.DisplayName).Msg("fleet telemetry: new vehicle discovered and added")
+		}
 	}
 }
 

@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -94,7 +107,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level = 100\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  CASE WHEN '${unit_length}' = 'mi' THEN ROUND((rated_range * 0.621371)::numeric, 1) ELSE ROUND(rated_range::numeric, 1) END AS \"Rated Range\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level >= 95\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -174,7 +187,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"Battery %\",\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  battery_level AS \"🔋 Battery %\",\n  rated_range AS \"Rated Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -255,7 +268,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(AVG(rated_range / NULLIF(battery_level, 0) * 100)::numeric, 1) AS \"Projected Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(created_at, '1d') AS time,\n  ROUND(AVG(rated_range / NULLIF(battery_level, 0) * 100)::numeric, 1) AS \"Projected Range km\"\nFROM positions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\n  AND rated_range IS NOT NULL\n  AND battery_level > 10\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -273,8 +286,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -282,7 +295,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -292,6 +305,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -301,7 +366,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Range Projection",
+  "title": "TeslaSync 🎯 Range Projection",
   "uid": "teslasync-projected-range",
   "version": 1,
   "weekStart": ""

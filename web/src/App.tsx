@@ -41,6 +41,16 @@ const Admin = lazy(() => import('./pages/Admin'))
 const ApiLogs = lazy(() => import('./pages/ApiLogs'))
 const DevTools = lazy(() => import('./pages/DevTools'))
 const QuickStats = lazy(() => import('./pages/QuickStats'))
+const DrivingDynamics = lazy(() => import('./pages/DrivingDynamics'))
+const ClimateControl = lazy(() => import('./pages/ClimateControl'))
+const SecurityAccess = lazy(() => import('./pages/SecurityAccess'))
+const ChargingCurve = lazy(() => import('./pages/ChargingCurve'))
+const CostAnalysis = lazy(() => import('./pages/CostAnalysis'))
+const BatteryCells = lazy(() => import('./pages/BatteryCells'))
+const DriveScore = lazy(() => import('./pages/DriveScore'))
+const WeeklyDigest = lazy(() => import('./pages/WeeklyDigest'))
+const Maintenance = lazy(() => import('./pages/Maintenance'))
+const DataExport = lazy(() => import('./pages/DataExport'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -91,6 +101,16 @@ export default function App() {
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
+        <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
+        <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
+        <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />
+        <Route path="charging-curve" element={<SafeRoute name="ChargingCurve"><ChargingCurve /></SafeRoute>} />
+        <Route path="cost-analysis" element={<SafeRoute name="CostAnalysis"><CostAnalysis /></SafeRoute>} />
+        <Route path="battery-cells" element={<SafeRoute name="BatteryCells"><BatteryCells /></SafeRoute>} />
+        <Route path="drive-score" element={<SafeRoute name="DriveScore"><DriveScore /></SafeRoute>} />
+        <Route path="weekly-digest" element={<SafeRoute name="WeeklyDigest"><WeeklyDigest /></SafeRoute>} />
+        <Route path="maintenance" element={<SafeRoute name="Maintenance"><Maintenance /></SafeRoute>} />
+        <Route path="data-export" element={<SafeRoute name="DataExport"><DataExport /></SafeRoute>} />
       </Route>
     </Routes>
   )

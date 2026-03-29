@@ -1,12 +1,13 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus } from '../api'
+import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure } from '../api'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
-  Cpu, BatteryCharging, ChevronRight,
+  Cpu, BatteryCharging, ChevronRight, Cog, ShieldAlert, DoorClosed,
+  Car, Fan, Snowflake, CircleDot,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,6 +15,7 @@ import {
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge } from '../components/ui'
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
+import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
@@ -49,6 +51,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 export default function VehicleDetail() {
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
+  const { convertDistance, convertSpeed, convertTemp, distanceUnit, speedUnit, tempUnit } = useSettings()
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -81,6 +84,30 @@ export default function VehicleDetail() {
     onSuccess: () => { setTimeout(() => refetchState(), 5000) },
   })
 
+  const { data: motorData } = useQuery({
+    queryKey: ['motor-latest', vehicleId],
+    queryFn: () => getMotorLatest(vehicleId),
+    refetchInterval: 3000,
+  })
+
+  const { data: climateData } = useQuery({
+    queryKey: ['climate-latest', vehicleId],
+    queryFn: () => getClimateLatest(vehicleId),
+    refetchInterval: 3000,
+  })
+
+  const { data: securityData } = useQuery({
+    queryKey: ['security-latest', vehicleId],
+    queryFn: () => getSecurityLatest(vehicleId),
+    refetchInterval: 3000,
+  })
+
+  const { data: tireData } = useQuery({
+    queryKey: ['tire-latest', vehicleId],
+    queryFn: () => getLatestTirePressure(vehicleId),
+    refetchInterval: 3000,
+  })
+
   const state = stateData?.state
   const status = vehicle ? getVehicleStatus(vehicle, state) : 'offline'
   const trail: LatLngExpression[] = positions
@@ -90,7 +117,7 @@ export default function VehicleDetail() {
   const batteryData = positions?.map(p => ({
     time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     battery: p.battery_level,
-    speed: p.speed ?? 0,
+    speed: convertSpeed(p.speed ?? 0),
   })).reverse() ?? []
 
   return (
@@ -155,13 +182,13 @@ export default function VehicleDetail() {
                       size={110}
                     />
                     <RadialGauge
-                      value={Math.round(state.rated_range)} max={600}
-                      label="Range" unit="km"
+                      value={Math.round(convertDistance(state.rated_range))} max={Math.round(convertDistance(600))}
+                      label="Range" unit={distanceUnit}
                       color="#00f0ff" size={110}
                     />
                     <RadialGauge
-                      value={state.speed} max={250}
-                      label="Speed" unit="km/h"
+                      value={Math.round(convertSpeed(state.speed))} max={Math.round(convertSpeed(250))}
+                      label="Speed" unit={speedUnit}
                       color={state.speed > 0 ? '#a855f7' : '#374151'}
                       size={110}
                     />
@@ -176,9 +203,9 @@ export default function VehicleDetail() {
                   {/* Metric bars */}
                   <div className="space-y-3">
                     <MetricBar value={state.battery_level} max={100} color={state.battery_level > 50 ? '#10b981' : '#f59e0b'} label="Battery Level" sublabel={`${state.battery_level}%`} />
-                    <MetricBar value={state.rated_range} max={600} color="#00f0ff" label="Estimated Range" sublabel={`${Math.round(state.rated_range)} km`} />
+                    <MetricBar value={convertDistance(state.rated_range)} max={convertDistance(600)} color="#00f0ff" label="Estimated Range" sublabel={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`} />
                     {state.is_charging && (
-                      <MetricBar value={state.charge_rate} max={state.charger_power || 100} color="#10b981" label="Charge Rate" sublabel={`${state.charge_rate} km/h added`} />
+                      <MetricBar value={convertSpeed(state.charge_rate)} max={state.charger_power || 100} color="#10b981" label="Charge Rate" sublabel={`${Math.round(convertSpeed(state.charge_rate))} ${speedUnit} added`} />
                     )}
                   </div>
 
@@ -206,18 +233,18 @@ export default function VehicleDetail() {
             <StaggerItem>
               <InfoTile icon={Battery} label="Battery" value={`${state.battery_level}%`}
                 color={state.battery_level > 50 ? 'text-neon-green' : state.battery_level > 20 ? 'text-neon-amber' : 'text-neon-red'}
-                sub={`${Math.round(state.rated_range)} km range`} />
+                sub={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit} range`} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Gauge} label="Speed" value={`${state.speed} km/h`}
+              <InfoTile icon={Gauge} label="Speed" value={`${Math.round(convertSpeed(state.speed))} ${speedUnit}`}
                 sub={state.speed > 0 ? 'Driving' : 'Parked'} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Thermometer} label="Inside" value={`${state.inside_temp}°C`}
-                sub={`Outside: ${state.outside_temp}°C`} />
+              <InfoTile icon={Thermometer} label="Inside" value={`${convertTemp(state.inside_temp).toFixed(1)}${tempUnit}`}
+                sub={`Outside: ${convertTemp(state.outside_temp).toFixed(1)}${tempUnit}`} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(state.odometer).toLocaleString()} km`} />
+              <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(convertDistance(state.odometer)).toLocaleString()} ${distanceUnit}`} />
             </StaggerItem>
             <StaggerItem>
               <InfoTile icon={BatteryCharging} label="Charger" value={state.is_charging ? `${state.charger_power} kW` : 'Not charging'}
@@ -229,6 +256,354 @@ export default function VehicleDetail() {
                 color={state.sentry_mode ? 'text-neon-red' : 'text-[var(--text-muted)]'} />
             </StaggerItem>
           </StaggerContainer>
+
+          {/* ============ LIVE TELEMETRY ============ */}
+          <FadeIn delay={0.12}>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+              </span>
+              <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Live Telemetry</h2>
+            </div>
+          </FadeIn>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* ---- Powertrain Panel ---- */}
+            <FadeIn delay={0.14}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Cog className="h-4 w-4 text-neon-cyan" /> Powertrain
+                </h3>
+                {motorData ? (
+                  <div className="space-y-4">
+                    {/* Motor state badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Motor State</span>
+                      <span className={clsx(
+                        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                        motorData.di_state === 'Enabled' ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                          : motorData.di_state === 'Standby' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                          : 'border-gray-500/30 bg-gray-500/10 text-gray-400',
+                      )}>
+                        <CircleDot className="h-3 w-3" />
+                        {motorData.di_state ?? 'Unknown'}
+                      </span>
+                    </div>
+
+                    {/* Torque gauge */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-[var(--text-muted)]">Torque</span>
+                        <span className="text-[var(--text-primary)] font-mono">{motorData.di_torque?.toFixed(0) ?? '—'} Nm</span>
+                      </div>
+                      <div className="relative h-3 rounded-full bg-white/[0.04] overflow-hidden">
+                        <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
+                        {motorData.di_torque != null && (
+                          <div
+                            className={clsx('absolute inset-y-0 rounded-full transition-all duration-300',
+                              motorData.di_torque >= 0 ? 'bg-green-500/60' : 'bg-red-500/60')}
+                            style={motorData.di_torque >= 0
+                              ? { left: '50%', width: `${Math.min(Math.abs(motorData.di_torque) / 500 * 50, 50)}%` }
+                              : { right: '50%', width: `${Math.min(Math.abs(motorData.di_torque) / 500 * 50, 50)}%` }}
+                          />
+                        )}
+                      </div>
+                      <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-0.5">
+                        <span>-500</span><span>0</span><span>+500</span>
+                      </div>
+                    </div>
+
+                    {/* Axle Speed */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Axle Speed</span>
+                      <span className="text-sm font-mono text-[var(--text-primary)]">{motorData.di_axle_speed?.toFixed(0) ?? '—'} RPM</span>
+                    </div>
+
+                    {/* Stator Temperature */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Stator Temp</span>
+                      <span className={clsx('text-sm font-mono',
+                        motorData.di_stator_temp != null && motorData.di_stator_temp > 80 ? 'text-red-400' : 'text-[var(--text-primary)]')}>
+                        {motorData.di_stator_temp != null ? `${convertTemp(motorData.di_stator_temp).toFixed(1)} ${tempUnit}` : '—'}
+                      </span>
+                    </div>
+
+                    {/* Throttle position bar */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-[var(--text-muted)]">Throttle Position</span>
+                        <span className="text-[var(--text-primary)] font-mono">{motorData.pedal_position != null ? `${(motorData.pedal_position * 100).toFixed(0)}%` : '—'}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                        <div className="h-full rounded-full bg-neon-cyan/60 transition-all duration-300"
+                          style={{ width: `${(motorData.pedal_position ?? 0) * 100}%` }} />
+                      </div>
+                    </div>
+
+                    {/* Brake indicator */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">Brake</span>
+                      <span className={clsx('inline-flex items-center gap-1 text-xs font-semibold',
+                        motorData.brake_pedal ? 'text-red-400' : 'text-gray-500')}>
+                        <span className={clsx('h-2 w-2 rounded-full', motorData.brake_pedal ? 'bg-red-400' : 'bg-gray-600')} />
+                        {motorData.brake_pedal ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+
+                    {/* G-Forces */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 text-center">
+                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Lateral G</p>
+                        <p className="text-base font-mono text-[var(--text-primary)]">
+                          {motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${motorData.lateral_accel.toFixed(2)}g` : '—'}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 text-center">
+                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Longitudinal G</p>
+                        <p className="text-base font-mono text-[var(--text-primary)]">
+                          {motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${motorData.longitudinal_accel.toFixed(2)}g` : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600 text-center py-6">No motor data available</p>
+                )}
+              </GlassPanel>
+            </FadeIn>
+
+            {/* ---- Climate Panel ---- */}
+            <FadeIn delay={0.16}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Thermometer className="h-4 w-4 text-neon-cyan" /> Climate
+                </h3>
+                {climateData ? (
+                  <div className="space-y-4">
+                    {/* Cabin + Outside temps */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
+                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Cabin</p>
+                        <p className="text-2xl font-bold text-[var(--text-primary)]">
+                          {climateData.inside_temp != null ? convertTemp(climateData.inside_temp).toFixed(1) : '—'}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{tempUnit}</p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
+                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Outside</p>
+                        <p className="text-2xl font-bold text-[var(--text-primary)]">
+                          {climateData.outside_temp != null ? convertTemp(climateData.outside_temp).toFixed(1) : '—'}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{tempUnit}</p>
+                      </div>
+                    </div>
+
+                    {/* Target temps */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--text-muted)]">Left Zone</span>
+                        <span className="text-sm font-mono text-[var(--text-primary)]">
+                          {climateData.hvac_left_temp_request != null ? `${convertTemp(climateData.hvac_left_temp_request).toFixed(1)} ${tempUnit}` : '—'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--text-muted)]">Right Zone</span>
+                        <span className="text-sm font-mono text-[var(--text-primary)]">
+                          {climateData.hvac_right_temp_request != null ? `${convertTemp(climateData.hvac_right_temp_request).toFixed(1)} ${tempUnit}` : '—'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* HVAC Power bar */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-[var(--text-muted)]">HVAC Power</span>
+                        <span className="text-[var(--text-primary)] font-mono">{climateData.hvac_power != null ? `${climateData.hvac_power.toFixed(1)} kW` : '—'}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                        <div className="h-full rounded-full bg-neon-cyan/60 transition-all duration-300"
+                          style={{ width: `${Math.min(((climateData.hvac_power ?? 0) / 8) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+
+                    {/* Fan Speed */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Fan className="h-3 w-3" /> Fan Speed</span>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5, 6].map(level => (
+                          <div key={level} className={clsx('h-3 rounded-sm transition-colors',
+                            level === 1 ? 'w-1.5' : level === 2 ? 'w-2' : level === 3 ? 'w-2.5' : level === 4 ? 'w-3' : level === 5 ? 'w-3.5' : 'w-4',
+                            (climateData.hvac_fan_speed ?? 0) >= level ? 'bg-neon-cyan/70' : 'bg-white/[0.06]',
+                          )} />
+                        ))}
+                        <span className="text-xs font-mono text-[var(--text-primary)] ml-1.5">{climateData.hvac_fan_speed ?? 0}</span>
+                      </div>
+                    </div>
+
+                    {/* System badges */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                        climateData.defrost_mode ? 'border-blue-400/30 bg-blue-400/10 text-blue-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        <Snowflake className="h-3 w-3" /> Defrost {climateData.defrost_mode ? 'ON' : 'OFF'}
+                      </span>
+                      <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                        climateData.battery_heater_on ? 'border-amber-400/30 bg-amber-400/10 text-amber-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        <Zap className="h-3 w-3" /> Battery Heater {climateData.battery_heater_on ? 'ON' : 'OFF'}
+                      </span>
+                      <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
+                        climateData.cabin_overheat_mode && climateData.cabin_overheat_mode !== 'Off'
+                          ? 'border-red-400/30 bg-red-400/10 text-red-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        <ShieldAlert className="h-3 w-3" /> Overheat Protection {climateData.cabin_overheat_mode ?? 'Off'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600 text-center py-6">No climate data available</p>
+                )}
+              </GlassPanel>
+            </FadeIn>
+
+            {/* ---- Security Panel ---- */}
+            <FadeIn delay={0.18}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Shield className="h-4 w-4 text-neon-cyan" /> Security
+                </h3>
+                {securityData ? (
+                  <div className="space-y-4">
+                    {/* Lock status */}
+                    <div className="flex items-center gap-4">
+                      <div className={clsx('rounded-xl p-3 border',
+                        securityData.locked ? 'border-green-500/30 bg-green-500/10' : 'border-amber-500/30 bg-amber-500/10')}>
+                        {securityData.locked
+                          ? <Lock className="h-6 w-6 text-green-400" />
+                          : <Unlock className="h-6 w-6 text-amber-400" />}
+                      </div>
+                      <div>
+                        <p className={clsx('text-lg font-semibold', securityData.locked ? 'text-green-400' : 'text-amber-400')}>
+                          {securityData.locked ? 'Locked' : 'Unlocked'}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)]">Vehicle lock status</p>
+                      </div>
+                    </div>
+
+                    {/* Sentry Mode */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Eye className="h-3 w-3" /> Sentry Mode</span>
+                      <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                        securityData.sentry_mode ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        <ShieldAlert className="h-3 w-3" />
+                        {securityData.sentry_mode ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+
+                    {/* Door State */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><DoorClosed className="h-3 w-3" /> Door State</span>
+                      <span className="text-sm font-mono text-[var(--text-primary)]">{securityData.door_state ?? '—'}</span>
+                    </div>
+
+                    {/* Windows grid */}
+                    <div>
+                      <p className="text-xs text-[var(--text-muted)] mb-2">Windows</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          ['FD', securityData.fd_window],
+                          ['FP', securityData.fp_window],
+                          ['RD', securityData.rd_window],
+                          ['RP', securityData.rp_window],
+                        ] as const).map(([label, val]) => (
+                          <div key={label} className="flex items-center justify-between rounded-lg bg-white/[0.02] border border-white/[0.06] px-3 py-2">
+                            <span className="text-[11px] text-[var(--text-muted)]">{label}</span>
+                            <span className={clsx('text-[11px] font-semibold',
+                              val === 'Closed' ? 'text-green-400' : val ? 'text-amber-400' : 'text-gray-500')}>
+                              {val ?? '—'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* HomeLink + Guest Mode */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> HomeLink</span>
+                      <span className={clsx('text-xs font-medium',
+                        securityData.homelink_nearby ? 'text-green-400' : 'text-gray-500')}>
+                        {securityData.homelink_nearby ? 'Nearby' : 'Not detected'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Shield className="h-3 w-3" /> Guest Mode</span>
+                      <span className={clsx('text-xs font-medium',
+                        securityData.guest_mode ? 'text-amber-400' : 'text-gray-500')}>
+                        {securityData.guest_mode ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600 text-center py-6">No security data available</p>
+                )}
+              </GlassPanel>
+            </FadeIn>
+
+            {/* ---- Tire Pressure Panel ---- */}
+            <FadeIn delay={0.2}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Gauge className="h-4 w-4 text-neon-cyan" /> Tire Pressure
+                </h3>
+                {tireData ? (() => {
+                  const toPsi = (bar: number | null) => bar != null ? bar * 14.5038 : null
+                  const tires = [
+                    { label: 'FL', psi: toPsi(tireData.front_left) },
+                    { label: 'FR', psi: toPsi(tireData.front_right) },
+                    { label: 'RL', psi: toPsi(tireData.rear_left) },
+                    { label: 'RR', psi: toPsi(tireData.rear_right) },
+                  ]
+                  const getColor = (psi: number | null) => {
+                    if (psi == null) return 'text-gray-500'
+                    if (psi < 30 || psi > 50) return 'text-red-400'
+                    if (psi < 35 || psi > 45) return 'text-amber-400'
+                    return 'text-green-400'
+                  }
+                  const getBorder = (psi: number | null) => {
+                    if (psi == null) return 'border-gray-600/30'
+                    if (psi < 30 || psi > 50) return 'border-red-500/30'
+                    if (psi < 35 || psi > 45) return 'border-amber-500/30'
+                    return 'border-green-500/30'
+                  }
+                  const allGood = tires.every(t => t.psi != null && t.psi >= 35 && t.psi <= 45)
+                  const anyBad = tires.some(t => t.psi != null && (t.psi < 30 || t.psi > 50))
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        {tires.map(t => (
+                          <div key={t.label} className={clsx('rounded-xl border bg-white/[0.02] p-4 text-center', getBorder(t.psi))}>
+                            <p className="text-[10px] text-[var(--text-muted)] mb-1">{t.label}</p>
+                            <p className={clsx('text-xl font-bold font-mono', getColor(t.psi))}>
+                              {t.psi != null ? t.psi.toFixed(1) : '—'}
+                            </p>
+                            <p className="text-[10px] text-[var(--text-muted)]">PSI</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-center">
+                        <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
+                          allGood ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                            : anyBad ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                            : 'border-amber-500/30 bg-amber-500/10 text-amber-400')}>
+                          {allGood ? '✓ All Normal' : anyBad ? '✗ Attention Needed' : '⚠ Check Pressure'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })() : (
+                  <p className="text-xs text-gray-600 text-center py-6">No tire pressure data available</p>
+                )}
+              </GlassPanel>
+            </FadeIn>
+          </div>
 
           {/* ============ MAP + CHARTS ROW ============ */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -279,7 +654,7 @@ export default function VehicleDetail() {
                         <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                         <Tooltip content={<ChartTooltip />} />
                         <Area yAxisId="left" type="monotone" dataKey="battery" stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Battery %" />
-                        <Area yAxisId="right" type="monotone" dataKey="speed" stroke="#00f0ff" fill="#00f0ff" fillOpacity={0.1} name="Speed km/h" />
+                        <Area yAxisId="right" type="monotone" dataKey="speed" stroke="#00f0ff" fill="#00f0ff" fillOpacity={0.1} name={`Speed ${speedUnit}`} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -313,7 +688,7 @@ export default function VehicleDetail() {
                         </div>
                         <div className="flex-1 text-sm">
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
-                            <AnimatedNumber value={d.distance} decimals={1} suffix=" km" />
+                            <AnimatedNumber value={convertDistance(d.distance)} decimals={1} suffix={` ${distanceUnit}`} />
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">{new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                         </div>

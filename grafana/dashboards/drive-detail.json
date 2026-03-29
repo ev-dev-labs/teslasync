@@ -1,0 +1,576 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "arrow-left",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "⬅️ Back to Drive History",
+      "type": "link",
+      "url": "/d/teslasync-drives?var-vehicle_id=${vehicle_id}"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(distance::numeric, 1) AS \"🛣️ Distance (km)\",\n  ROUND(duration_min::numeric) AS \"⏱️ Duration (min)\",\n  ROUND(speed_max::numeric) AS \"🏎️ Max Speed (km/h)\",\n  start_battery_level AS \"🔋 Start %\",\n  end_battery_level AS \"🔋 End %\",\n  ROUND(outside_temp_avg::numeric, 1) AS \"🌡️ Temp (°C)\"\nFROM drives WHERE id = ${drive_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Drive Summary",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "type": "geomap",
+      "title": "🗺️ Route",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.latitude, p.longitude, p.speed, p.battery_level, p.created_at AS time FROM positions p JOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW()) WHERE d.id = ${drive_id} ORDER BY p.created_at",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "view": {
+          "allLayers": true,
+          "id": "fit",
+          "lat": 0,
+          "lon": 0,
+          "zoom": 10
+        },
+        "basemap": {
+          "name": "CartoDB Dark Matter",
+          "type": "xyz",
+          "config": {
+            "url": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+            "attribution": "CARTO"
+          }
+        },
+        "layers": [
+          {
+            "type": "route",
+            "name": "Drive Route",
+            "config": {
+              "style": {
+                "color": {
+                  "fixed": "#00f0ff"
+                },
+                "lineWidth": 3,
+                "opacity": 0.8
+              }
+            },
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "tooltip": true
+          },
+          {
+            "type": "markers",
+            "name": "Start/End",
+            "config": {
+              "style": {
+                "color": {
+                  "field": "speed",
+                  "fixed": "#10b981"
+                },
+                "opacity": 0.7,
+                "size": {
+                  "fixed": 5
+                }
+              },
+              "showLegend": true
+            },
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "velocitykmh"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.created_at AS time, p.speed AS \"Speed (km/h)\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Speed Over Route",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.created_at AS time, p.battery_level AS \"🔋 Battery %\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Level During Drive",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.created_at AS time, p.inside_temp AS \"Cabin (°C)\", p.outside_temp AS \"Outside (°C)\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature During Drive",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "kwatt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.created_at AS time, p.power AS \"Power (kW)\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Power Draw",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT m.created_at AS time, m.di_torque AS \"Torque (Nm)\", m.vehicle_speed AS \"Speed (km/h)\"\nFROM motor_snapshots m\nJOIN drives d ON m.vehicle_id = d.vehicle_id AND m.created_at >= d.start_date AND m.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY m.created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Motor Data During Drive",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 42
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.created_at AS time, p.elevation AS \"Elevation (m)\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id} AND p.elevation IS NOT NULL\nORDER BY p.created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Elevation Profile",
+      "type": "timeseries",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "drive_id",
+        "type": "textbox",
+        "current": {
+          "text": "1",
+          "value": "1"
+        },
+        "label": "Drive ID"
+      },
+      {
+        "name": "vehicle_id",
+        "type": "textbox",
+        "current": {
+          "text": "1",
+          "value": "1"
+        },
+        "label": "Vehicle ID"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync 🗺️ Drive Detail",
+  "uid": "teslasync-drive-detail",
+  "version": 1,
+  "weekStart": ""
+}

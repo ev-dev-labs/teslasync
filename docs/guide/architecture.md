@@ -282,7 +282,7 @@ erDiagram
 
 ## Database Tables
 
-The schema spans 5 migrations and 21+ tables. Column names, types, and constraints are taken directly from the migration SQL files.
+The schema spans 5 migrations and 24+ tables. Column names, types, and constraints are taken directly from the migration SQL files.
 
 ### Core Tables
 
@@ -477,6 +477,64 @@ Temporal versioning — when `cost_per_kwh` changes, old rates are preserved so 
 | `outside_temp_avg` | `DOUBLE PRECISION` | Average ambient temp °C |
 | `sentry_mode` | `BOOLEAN` | Whether Sentry Mode was active |
 | `created_at` | `TIMESTAMPTZ` | Created timestamp |
+
+#### Motor Snapshots (`motor_snapshots`)
+
+Stores motor/powertrain telemetry data from fleet telemetry stream.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `di_state` | `VARCHAR(20)` | Drive inverter state (Enabled/Standby/Disabled) |
+| `di_torque` | `DOUBLE PRECISION` | Motor torque output (Nm) |
+| `di_axle_speed` | `DOUBLE PRECISION` | Rear axle speed (RPM) |
+| `di_stator_temp` | `DOUBLE PRECISION` | Stator temperature (°C) |
+| `pedal_position` | `DOUBLE PRECISION` | Accelerator pedal position (%) |
+| `brake_pedal` | `BOOLEAN` | Brake pedal engaged |
+| `lateral_accel` | `DOUBLE PRECISION` | Lateral acceleration (g) |
+| `longitudinal_accel` | `DOUBLE PRECISION` | Longitudinal acceleration (g) |
+| `vehicle_speed` | `DOUBLE PRECISION` | Vehicle speed (km/h) |
+| `gear` | `VARCHAR(5)` | Transmission gear (D/R/N/P) |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+#### Climate Snapshots (`climate_snapshots`)
+
+Stores HVAC and climate telemetry data.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `inside_temp` | `DOUBLE PRECISION` | Cabin temperature (°C) |
+| `outside_temp` | `DOUBLE PRECISION` | Ambient temperature (°C) |
+| `hvac_power` | `DOUBLE PRECISION` | HVAC power consumption (kW) |
+| `hvac_fan_speed` | `INTEGER` | Fan speed level (0-6) |
+| `hvac_left_temp_request` | `DOUBLE PRECISION` | Left zone target (°C) |
+| `hvac_right_temp_request` | `DOUBLE PRECISION` | Right zone target (°C) |
+| `cabin_overheat_mode` | `VARCHAR(10)` | Cabin overheat protection |
+| `defrost_mode` | `BOOLEAN` | Defrost active |
+| `battery_heater_on` | `BOOLEAN` | Battery heater active |
+| `created_at` | `TIMESTAMPTZ` | Snapshot timestamp |
+
+#### Security Events (`security_events`)
+
+Stores vehicle security and access state changes.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `BIGSERIAL PK` | Primary key |
+| `vehicle_id` | `BIGINT FK` | Foreign key to vehicles |
+| `locked` | `BOOLEAN` | Vehicle lock status |
+| `sentry_mode` | `BOOLEAN` | Sentry mode active |
+| `door_state` | `VARCHAR(20)` | Door closure state |
+| `fd_window` | `VARCHAR(20)` | Front driver window state |
+| `fp_window` | `VARCHAR(20)` | Front passenger window state |
+| `rd_window` | `VARCHAR(20)` | Rear driver window state |
+| `rp_window` | `VARCHAR(20)` | Rear passenger window state |
+| `homelink_nearby` | `BOOLEAN` | HomeLink detected |
+| `guest_mode` | `BOOLEAN` | Guest mode active |
+| `created_at` | `TIMESTAMPTZ` | Event timestamp |
 
 ### Mileage & Trip Tables
 

@@ -47,7 +47,7 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalEnergy, totalCost, err := h.energyRepo.GetTotalEnergy(r.Context(), vehicleID, days)
+	totalEnergy, totalCost, totalDistance, err := h.energyRepo.GetTotalEnergy(r.Context(), vehicleID, days)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get total energy")
 		writeError(w, http.StatusInternalServerError, "failed to get energy stats")
@@ -58,11 +58,23 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		breakdown = make([]*models.EnergyStatsRow, 0)
 	}
 
+	var avgEfficiency float64
+	if totalDistance > 0 {
+		avgEfficiency = totalEnergy / totalDistance * 1000 // Wh/km
+	}
+
+	co2Saved := totalEnergy * 0.4 // ~400g CO2 saved per kWh vs gasoline
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":      vehicleID,
-		"period_days":     days,
-		"total_kwh":       totalEnergy,
-		"total_cost":      totalCost,
-		"daily_breakdown": breakdown,
+		"vehicle_id":               vehicleID,
+		"period_days":              days,
+		"total_energy_used_kwh":    totalEnergy,
+		"total_energy_charged_kwh": totalEnergy,
+		"total_kwh":                totalEnergy,
+		"total_cost":               totalCost,
+		"total_distance_km":        totalDistance,
+		"avg_efficiency_wh_km":     avgEfficiency,
+		"co2_saved_kg":             co2Saved,
+		"daily_breakdown":          breakdown,
 	})
 }

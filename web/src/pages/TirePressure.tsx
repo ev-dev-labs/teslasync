@@ -1,27 +1,28 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getTirePressure, getLatestTirePressure } from '../api'
+import { getVehicles, getTirePressure } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
+import { useSettings } from '../hooks/useSettings'
 
 interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+function ChartTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)} PSI
+          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)} {unit}
         </p>
       ))}
     </div>
   )
 }
 
-function PressureGauge({ label, value, min = 30, max = 50 }: { label: string; value: number | null; min?: number; max?: number }) {
+function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { label: string; value: number | null; min?: number; max?: number; unit?: string }) {
   const psi = value ?? 0
   const pct = Math.min(100, Math.max(0, ((psi - min) / (max - min)) * 100))
   const isLow = psi > 0 && psi < 35
@@ -51,7 +52,7 @@ function PressureGauge({ label, value, min = 30, max = 50 }: { label: string; va
           <><TrendingUp className="h-3.5 w-3.5 text-neon-amber" /><span className="text-xs text-neon-amber">High</span></>
         )}
       </div>
-      <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${psi.toFixed(1)} PSI` : 'N/A'}</span>
+      <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${psi.toFixed(1)} ${unit}` : 'N/A'}</span>
     </div>
   )
 }
@@ -194,28 +195,47 @@ export default function TirePressure() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { convertPressure, pressureUnit } = useSettings()
 
-  const { data: latest, isLoading: loadingLatest } = useQuery({
-    queryKey: ['tire-pressure-latest', vehicleId],
-    queryFn: () => getLatestTirePressure(vehicleId!),
-    enabled: vehicleId !== null,
-  })
+  // Thresholds in the display unit
+  const lowThreshold = convertPressure(2.4)   // ~35 PSI
 
   const { data: history, isLoading: loadingHistory } = useQuery({
     queryKey: ['tire-pressure-history', vehicleId],
     queryFn: () => getTirePressure(vehicleId!, 200),
     enabled: vehicleId !== null,
+    refetchInterval: 10000,
   })
+
+  // Build composite latest from history: most recent non-null value for each tire
+  const compositeLatest = useMemo(() => {
+    if (!history || history.length === 0) return null
+    let fl: number | null = null, fr: number | null = null, rl: number | null = null, rr: number | null = null
+    for (const s of history) {
+      if (fl === null && s.front_left !== null) fl = s.front_left
+      if (fr === null && s.front_right !== null) fr = s.front_right
+      if (rl === null && s.rear_left !== null) rl = s.rear_left
+      if (rr === null && s.rear_right !== null) rr = s.rear_right
+      if (fl !== null && fr !== null && rl !== null && rr !== null) break
+    }
+    return { front_left: fl, front_right: fr, rear_left: rl, rear_right: rr }
+  }, [history])
+
+  // Convert all values for display
+  const convFL = compositeLatest?.front_left != null ? convertPressure(compositeLatest.front_left) : null
+  const convFR = compositeLatest?.front_right != null ? convertPressure(compositeLatest.front_right) : null
+  const convRL = compositeLatest?.rear_left != null ? convertPressure(compositeLatest.rear_left) : null
+  const convRR = compositeLatest?.rear_right != null ? convertPressure(compositeLatest.rear_right) : null
 
   const chartData = (history ?? []).slice().reverse().map(s => ({
     time: new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    fl: s.front_left,
-    fr: s.front_right,
-    rl: s.rear_left,
-    rr: s.rear_right,
+    fl: s.front_left != null ? convertPressure(s.front_left) : null,
+    fr: s.front_right != null ? convertPressure(s.front_right) : null,
+    rl: s.rear_left != null ? convertPressure(s.rear_left) : null,
+    rr: s.rear_right != null ? convertPressure(s.rear_right) : null,
   }))
 
-  const anyLow = latest && [latest.front_left, latest.front_right, latest.rear_left, latest.rear_right].some(v => v !== null && v < 35)
+  const anyLow = [convFL, convFR, convRL, convRR].some(v => v !== null && v < lowThreshold)
 
   return (
     <FadeIn>
@@ -240,30 +260,30 @@ export default function TirePressure() {
         </div>
       )}
 
-      {!loadingLatest && latest && (
+      {!loadingHistory && compositeLatest && (
         <div className="mb-8">
           <GlassPanel className="p-6 flex justify-center">
             <TireCarVisualization
-              fl={latest.front_left}
-              fr={latest.front_right}
-              rl={latest.rear_left}
-              rr={latest.rear_right}
+              fl={convFL}
+              fr={convFR}
+              rl={convRL}
+              rr={convRR}
             />
           </GlassPanel>
         </div>
       )}
 
-      {loadingLatest ? (
+      {loadingHistory ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[1,2,3,4].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <PressureGauge label="Front Left" value={latest?.front_left ?? null} />
-            <PressureGauge label="Front Right" value={latest?.front_right ?? null} />
-            <PressureGauge label="Rear Left" value={latest?.rear_left ?? null} />
-            <PressureGauge label="Rear Right" value={latest?.rear_right ?? null} />
+            <PressureGauge label="Front Left" value={convFL} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+            <PressureGauge label="Front Right" value={convFR} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+            <PressureGauge label="Rear Left" value={convRL} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+            <PressureGauge label="Rear Right" value={convRR} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
           </div>
         </>
       )}
@@ -278,8 +298,8 @@ export default function TirePressure() {
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <YAxis domain={[28, 52]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip />} />
+              <YAxis domain={[convertPressure(2.0), convertPressure(3.6)]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickFormatter={v => `${v.toFixed(0)}`} />
+              <Tooltip content={<ChartTooltip unit={pressureUnit} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="fl" name="Front Left" stroke="#00f0ff" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="fr" name="Front Right" stroke="#a855f7" strokeWidth={2} dot={false} />

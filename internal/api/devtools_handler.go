@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -684,24 +685,37 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		// Default essential fields
 		req.Fields = []string{
 			"VehicleSpeed", "Odometer", "Soc", "BatteryLevel",
-			"Location", "Latitude", "Longitude",
+			"Location", "GpsHeading",
 			"ChargeState", "ChargeLimitSoc",
 			"InsideTemp", "OutsideTemp",
 			"Locked", "SentryMode",
 		}
 	}
+	// Fields that require minimum_delta to be explicitly set
+	minDeltaFields := map[string]float64{
+		"SelfDrivingMilesSinceReset": 1.0,
+		"MilesSinceReset":           1.0,
+	}
 	for _, f := range req.Fields {
-		fields[f] = tesla.FleetTelemetryField{IntervalSeconds: req.Interval}
+		field := tesla.FleetTelemetryField{IntervalSeconds: req.Interval}
+		if delta, ok := minDeltaFields[f]; ok {
+			field.MinimumDelta = &delta
+		}
+		fields[f] = field
+	}
+
+	var caPtr *string
+	if ca := strings.TrimSpace(req.CA); ca != "" {
+		caPtr = &ca
 	}
 
 	sub := tesla.FleetTelemetrySubscription{
 		VINs: req.VINs,
 		Config: tesla.FleetTelemetryConfigPayload{
-			Hostname:   req.Hostname,
-			Port:       req.Port,
-			CA:         req.CA,
-			Fields:     fields,
-			AlertTypes: []string{"service", "security"},
+			Hostname: req.Hostname,
+			Port:     req.Port,
+			CA:       caPtr,
+			Fields:   fields,
 		},
 	}
 

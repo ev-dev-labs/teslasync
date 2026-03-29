@@ -27,7 +27,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **30 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
+- **46 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
@@ -55,6 +55,15 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Vampire Drain** — Idle battery drain analysis with sentry mode correlation
 - **Fleet Comparison** — Side-by-side vehicle metrics, utilization, and cost allocation
 - **Smart Insights Engine** — Auto-generated insights from driving and charging patterns
+- 🏎️ **Driving Dynamics** — Motor torque, G-forces, acceleration patterns, pedal usage, stator temperature
+- 🌡️ **Climate Control** — HVAC power & fan speed, thermal comfort scoring, cabin/outside temperature trends
+- ⚡ **Charging Curve** — Charge rate vs SOC% visualization, session comparison, charging speed degradation
+- 💰 **Cost Analysis** — Monthly cost trends, gas vs electric savings calculator, cost per mile, lifetime savings
+- 🔋 **Battery Cells** — Cell voltage spread, module temperature balance, 4×23 pack visualization, degradation correlation
+- 🏆 **Drive Score** — Gamified 0-100 efficiency scoring, smoothness/speed breakdown, improvement tips
+- 📊 **Weekly Digest** — Auto-generated weekly car summary with highlights, fun facts, week-over-week comparison
+- 🔧 **Maintenance** — Service schedule tracker with odometer-based progress bars, service log, cost estimates
+- 📦 **Data Export** — Export drives, charging, positions in CSV/JSON format with job management
 
 ### 🎮 Remote Vehicle Control
 - Wake / Lock / Unlock
@@ -65,10 +74,13 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - Horn / Flash Lights
 - Speed Limit toggle
 
+### 🔒 Security & Access
+- Lock status, sentry mode, door/window state visualization, event timeline
+
 ### 🎨 Modern UX
 - **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
 - **5 Color Themes** — Dynamic theme switching with CSS variables
-- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 29 pages
+- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 46 pages
 - **Animated Car SVG** — Subtle automobile animations on loading states and docs
 - **Code-Split Routes** — Lightning-fast page loads with React lazy loading
 - **PWA-Ready** — Installable as a native app with custom splash screen
@@ -82,6 +94,9 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Prometheus Metrics** — `/metrics` endpoint for monitoring
 - **Structured Logging** — JSON logs via zerolog
 - **PostgreSQL 17** — Natively partitioned tables for position data
+  - `motor_snapshots` — Drivetrain telemetry (torque, RPM, G-forces, pedal position)
+  - `climate_snapshots` — HVAC telemetry (temps, fan speed, power, defrost)
+  - `security_events` — Security state (locks, sentry, doors, windows)
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **MQTT Workers** — Notification worker + export worker for async processing
 - **Redis Caching** — Fast lookups for vehicle state and sessions
@@ -94,7 +109,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Public Key Management** — Generate ECDSA P-256 keypairs, auto-serve at `.well-known` path, upload existing keys
 - **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
 - **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
-- **Fleet Telemetry** — Status monitoring, signal support, enable/disable visibility in system status
+- **Fleet Telemetry** — Status monitoring, 80+ signals across 7 categories (Location, Battery, Charging, Climate, Tires, Motor/Powertrain, Security), enable/disable visibility in system status
 
 ## Architecture
 
@@ -315,6 +330,10 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | GET | `/api/v1/timeline` | Vehicle state timeline |
 | GET | `/api/v1/locations` | Visited locations |
 | GET | `/api/v1/vampire-drain/events` | Vampire drain events |
+| GET | `/api/v1/motor` | Motor/drivetrain telemetry |
+| GET | `/api/v1/climate` | Climate/HVAC telemetry |
+| GET | `/api/v1/security` | Security state & events |
+| GET | `/api/v1/drives/:id/positions` | Drive route positions |
 
 ### Notifications
 

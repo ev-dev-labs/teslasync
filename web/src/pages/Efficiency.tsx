@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
+import { useSettings } from '../hooks/useSettings'
 import { Zap, TrendingUp, Thermometer, Gauge, Fuel, BarChart3 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
@@ -24,6 +25,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 export default function Efficiency() {
+  const { convertDistance, convertSpeed, convertTemp, convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [startDate, setStartDate] = useState(() => {
@@ -52,9 +54,9 @@ export default function Efficiency() {
   // Daily efficiency chart
   const dailyEfficiency = (energy?.daily_breakdown ?? []).map(d => ({
     date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    efficiency: d.efficiency,
+    efficiency: convertEfficiency(d.efficiency),
     energy: d.energy_kwh,
-    distance: d.distance_km,
+    distance: convertDistance(d.distance_km),
   }))
 
   // Speed vs efficiency from drives
@@ -66,9 +68,10 @@ export default function Efficiency() {
       return { speed: d.speed_max!, efficiency: Math.round(efficiency), distance: d.distance }
     })
     .filter(d => d.efficiency > 0 && d.efficiency < 500)
+    .map(d => ({ ...d, speed: Math.round(convertSpeed(d.speed)), efficiency: Math.round(convertEfficiency(d.efficiency)) }))
 
   // Temperature vs efficiency from analytics
-  const tempEffData = analytics?.drive_analytics?.temp_vs_efficiency ?? []
+  const tempEffData = (analytics?.drive_analytics?.temp_vs_efficiency ?? []).map((d: { temp: number; efficiency: number }) => ({ ...d, temp: Math.round(convertTemp(d.temp)), efficiency: Math.round(convertEfficiency(d.efficiency)) }))
 
   // Speed distribution
   const speedDist = analytics?.drive_analytics?.speed_distribution ?? []
@@ -78,13 +81,13 @@ export default function Efficiency() {
     if (!drives || drives.length === 0) return []
     const buckets: Record<string, { count: number; totalEff: number; totalDist: number; totalSpeed: number }> = {}
     const ranges = [
-      { min: -Infinity, max: -10, label: '< -10°C' },
-      { min: -10, max: 0, label: '-10 to 0°C' },
-      { min: 0, max: 10, label: '0 to 10°C' },
-      { min: 10, max: 20, label: '10 to 20°C' },
-      { min: 20, max: 30, label: '20 to 30°C' },
-      { min: 30, max: 40, label: '30 to 40°C' },
-      { min: 40, max: Infinity, label: '> 40°C' },
+      { min: -Infinity, max: -10, label: `< ${Math.round(convertTemp(-10))}${tempUnit}` },
+      { min: -10, max: 0, label: `${Math.round(convertTemp(-10))} to ${Math.round(convertTemp(0))}${tempUnit}` },
+      { min: 0, max: 10, label: `${Math.round(convertTemp(0))} to ${Math.round(convertTemp(10))}${tempUnit}` },
+      { min: 10, max: 20, label: `${Math.round(convertTemp(10))} to ${Math.round(convertTemp(20))}${tempUnit}` },
+      { min: 20, max: 30, label: `${Math.round(convertTemp(20))} to ${Math.round(convertTemp(30))}${tempUnit}` },
+      { min: 30, max: 40, label: `${Math.round(convertTemp(30))} to ${Math.round(convertTemp(40))}${tempUnit}` },
+      { min: 40, max: Infinity, label: `> ${Math.round(convertTemp(40))}${tempUnit}` },
     ]
     ranges.forEach(r => { buckets[r.label] = { count: 0, totalEff: 0, totalDist: 0, totalSpeed: 0 } })
     drives.forEach(d => {
@@ -111,7 +114,7 @@ export default function Efficiency() {
         avgSpeed: buckets[r.label].count > 0 ? buckets[r.label].totalSpeed / buckets[r.label].count : 0,
       }))
       .filter(b => b.count > 0)
-  }, [drives])
+  }, [drives, isFahrenheit])
 
   // Per-drive consumption stats
   const consumptionStats = useMemo(() => {
@@ -169,10 +172,10 @@ export default function Efficiency() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 sm:mb-8">
           {[
-            { label: 'Avg Efficiency', value: `${avgEff.toFixed(0)} Wh/km`, sub: `${(avgEff * 1.60934).toFixed(0)} Wh/mi`, icon: Gauge, color: '#00f0ff' },
+            { label: 'Avg Efficiency', value: `${convertEfficiency(avgEff).toFixed(0)} ${efficiencyUnit}`, sub: '', icon: Gauge, color: '#00f0ff' },
             { label: 'Energy Used', value: `${totalEnergy.toFixed(1)} kWh`, sub: `selected period`, icon: Zap, color: '#f59e0b' },
-            { label: 'Distance', value: `${totalDist.toFixed(0)} km`, sub: `${(totalDist * 0.621371).toFixed(0)} mi`, icon: TrendingUp, color: '#10b981' },
-            { label: 'Cost', value: `$${energy?.total_cost?.toFixed(2) ?? '0'}`, sub: `$${totalDist > 0 ? ((energy?.total_cost ?? 0) / totalDist * 100).toFixed(1) : '0'}/100km`, icon: Fuel, color: '#8b5cf6' },
+            { label: 'Distance', value: `${convertDistance(totalDist).toFixed(0)} ${distanceUnit}`, sub: 'selected period', icon: TrendingUp, color: '#10b981' },
+            { label: 'Cost', value: `$${energy?.total_cost?.toFixed(2) ?? '0'}`, sub: `$${totalDist > 0 ? ((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100).toFixed(1) : '0'}/100${distanceUnit}`, icon: Fuel, color: '#8b5cf6' },
             { label: 'CO₂ Saved', value: `${co2Saved.toFixed(0)} kg`, sub: 'vs ICE vehicle', icon: Thermometer, color: '#ec4899' },
           ].map(card => (
             <GlassPanel key={card.label} className="p-4">
@@ -189,7 +192,7 @@ export default function Efficiency() {
 
       {/* Daily Efficiency Trend */}
       <GlassPanel className="p-4 sm:p-6 mb-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend (Wh/km)</h3>
+        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend ({efficiencyUnit})</h3>
         {dailyEfficiency.length === 0 ? (
           <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No efficiency data</div>
         ) : (
@@ -205,7 +208,7 @@ export default function Efficiency() {
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name="Efficiency (Wh/km)" />
+              <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name={`Efficiency (${efficiencyUnit})`} />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -221,8 +224,8 @@ export default function Efficiency() {
             <ResponsiveContainer width="100%" height={280}>
               <ScatterChart>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
-                <XAxis dataKey="speed" name="Speed (km/h)" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis dataKey="efficiency" name="Wh/km" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <XAxis dataKey="speed" name={`Speed (${speedUnit})`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <YAxis dataKey="efficiency" name={efficiencyUnit} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Scatter data={speedEffData} name="Drives">
                   {speedEffData.map((_, i) => <Cell key={i} fill="#00f0ff" fillOpacity={0.6} />)}
@@ -243,8 +246,8 @@ export default function Efficiency() {
             <ResponsiveContainer width="100%" height={280}>
               <ScatterChart>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
-                <XAxis dataKey="temp" name="Temp (°C)" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <YAxis dataKey="efficiency" name="Wh/km" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <XAxis dataKey="temp" name={`Temp (${tempUnit})`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <YAxis dataKey="efficiency" name={efficiencyUnit} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Scatter data={tempEffData} name="Drives">
                   {tempEffData.map((_, i) => <Cell key={i} fill="#f59e0b" fillOpacity={0.6} />)}
@@ -285,9 +288,9 @@ export default function Efficiency() {
                 <tr className="text-xs uppercase tracking-wider text-[var(--text-muted)] border-b border-white/5">
                   <th className="text-left py-2 pr-4">Temp Range</th>
                   <th className="text-right py-2 px-3">Drives</th>
-                  <th className="text-right py-2 px-3">Avg Wh/km</th>
-                  <th className="text-right py-2 px-3">km/kWh</th>
-                  <th className="text-right py-2 px-3">Total km</th>
+                  <th className="text-right py-2 px-3">Avg {efficiencyUnit}</th>
+                  <th className="text-right py-2 px-3">{distanceUnit}/kWh</th>
+                  <th className="text-right py-2 px-3">Total {distanceUnit}</th>
                   <th className="text-right py-2 px-3">Avg Speed</th>
                 </tr>
               </thead>
@@ -298,12 +301,12 @@ export default function Efficiency() {
                     <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{b.count}</td>
                     <td className="text-right py-2 px-3">
                       <span style={{ color: b.avgEff < 160 ? '#10b981' : b.avgEff < 200 ? '#f59e0b' : '#ef4444' }}>
-                        {b.avgEff.toFixed(0)}
+                        {convertEfficiency(b.avgEff).toFixed(0)}
                       </span>
                     </td>
-                    <td className="text-right py-2 px-3 text-neon-cyan">{b.avgEff > 0 ? (1000 / b.avgEff).toFixed(1) : '—'}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{b.totalDist.toFixed(0)}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{b.avgSpeed.toFixed(0)} km/h</td>
+                    <td className="text-right py-2 px-3 text-neon-cyan">{b.avgEff > 0 ? (1000 / convertEfficiency(b.avgEff)).toFixed(1) : '—'}</td>
+                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{convertDistance(b.totalDist).toFixed(0)}</td>
+                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{convertSpeed(b.avgSpeed).toFixed(0)} {speedUnit}</td>
                   </tr>
                 ))}
               </tbody>
@@ -322,10 +325,9 @@ export default function Efficiency() {
             <div className="space-y-3">
               {[
                 { label: 'Drives Analyzed', value: consumptionStats.count.toString() },
-                { label: 'Total Distance', value: `${consumptionStats.totalDist.toFixed(0)} km` },
-                { label: 'Avg Consumption', value: `${consumptionStats.avgEff.toFixed(0)} Wh/km` },
-                { label: 'Avg Efficiency', value: `${consumptionStats.kmPerKwh.toFixed(1)} km/kWh` },
-                { label: 'Avg Consumption (mi)', value: `${(consumptionStats.avgEff * 1.60934).toFixed(0)} Wh/mi` },
+                { label: 'Total Distance', value: `${convertDistance(consumptionStats.totalDist).toFixed(0)} ${distanceUnit}` },
+                { label: 'Avg Consumption', value: `${convertEfficiency(consumptionStats.avgEff).toFixed(0)} ${efficiencyUnit}` },
+                { label: 'Avg Efficiency', value: `${(1000 / convertEfficiency(consumptionStats.avgEff)).toFixed(1)} ${distanceUnit}/kWh` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
@@ -342,9 +344,8 @@ export default function Efficiency() {
             <div className="space-y-3">
               {[
                 { label: 'Total Energy Used', value: `${totalEnergy.toFixed(1)} kWh` },
-                { label: 'Distance Covered', value: `${totalDist.toFixed(0)} km (${(totalDist * 0.621371).toFixed(0)} mi)` },
-                { label: 'Cost per km', value: totalDist > 0 ? `$${((energy?.total_cost ?? 0) / totalDist).toFixed(3)}` : '$0' },
-                { label: 'Cost per mile', value: totalDist > 0 ? `$${((energy?.total_cost ?? 0) / (totalDist * 0.621371)).toFixed(3)}` : '$0' },
+                { label: 'Distance Covered', value: `${convertDistance(totalDist).toFixed(0)} ${distanceUnit}` },
+                { label: `Cost per ${distanceUnit}`, value: totalDist > 0 ? `$${((energy?.total_cost ?? 0) / convertDistance(totalDist)).toFixed(3)}` : '$0' },
                 { label: 'CO₂ Saved vs ICE', value: `${co2Saved.toFixed(0)} kg` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">

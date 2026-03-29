@@ -28,6 +28,7 @@ func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 }
 
 // allowedCommands is the whitelist of Tesla commands that can be sent via the API.
+// Names must match the frontend command names and the `commands` map in tesla/client.go.
 var allowedCommands = map[string]bool{
 	"wake_up":                  true,
 	"lock":                     true,
@@ -40,11 +41,15 @@ var allowedCommands = map[string]bool{
 	"charge_start":             true,
 	"charge_stop":              true,
 	"set_charge_limit":         true,
-	"open_charge_port":         true,
-	"close_charge_port":        true,
-	"actuate_trunk":            true,
-	"actuate_frunk":            true,
-	"set_sentry_mode":          true,
+	"set_charging_amps":        true,
+	"charge_port_open":         true,
+	"charge_port_close":        true,
+	"frunk_open":               true,
+	"trunk_open":               true,
+	"sentry_on":                true,
+	"sentry_off":               true,
+	"speed_limit_on":           true,
+	"speed_limit_off":          true,
 	"vent_windows":             true,
 	"close_windows":            true,
 	"remote_start_drive":       true,

@@ -878,6 +878,91 @@ Latest tire pressure reading.
 
 ---
 
+## Motor / Powertrain
+
+### GET `/api/v1/motor?vehicle_id={id}&limit={n}`
+
+Returns motor/powertrain telemetry snapshots for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of motor snapshots with fields: `di_state`, `di_torque` (Nm), `di_axle_speed` (RPM), `di_stator_temp` (°C), `pedal_position` (%), `brake_pedal`, `lateral_accel` (g), `longitudinal_accel` (g), `vehicle_speed` (km/h), `gear`
+
+### GET `/api/v1/motor/latest?vehicle_id={id}`
+
+Returns the most recent motor snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single motor snapshot object.
+
+---
+
+## Climate / HVAC
+
+### GET `/api/v1/climate?vehicle_id={id}&limit={n}`
+
+Returns climate/HVAC telemetry snapshots for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of climate snapshots with fields: `inside_temp` (°C), `outside_temp` (°C), `hvac_power` (kW), `hvac_fan_speed` (0-6), `hvac_left_temp_request` (°C), `hvac_right_temp_request` (°C), `cabin_overheat_mode`, `defrost_mode`, `battery_heater_on`
+
+### GET `/api/v1/climate/latest?vehicle_id={id}`
+
+Returns the most recent climate snapshot for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single climate snapshot object.
+
+---
+
+## Security / Access
+
+### GET `/api/v1/security?vehicle_id={id}&limit={n}`
+
+Returns security/access telemetry events for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+| `limit` | | Maximum records to return (default 100) |
+
+**Response:** Array of security events with fields: `locked`, `sentry_mode`, `door_state`, `fd_window`, `fp_window`, `rd_window`, `rp_window`, `homelink_nearby`, `guest_mode`
+
+### GET `/api/v1/security/latest?vehicle_id={id}`
+
+Returns the most recent security event for a vehicle.
+
+| Query Param | Required | Description |
+|-------------|----------|-------------|
+| `vehicle_id` | ✅ | Vehicle database ID |
+
+**Response:** Single security event object.
+
+---
+
+## Drive Positions
+
+### GET `/api/v1/drives/{driveID}/positions`
+
+Returns GPS positions within a drive's time window. Server-side filtered by the drive's start and end timestamps.
+
+**Response:** Array of position objects with latitude, longitude, speed, heading, battery_level, temperatures, etc.
+
+---
+
 ## Vampire Drain
 
 ### GET `/api/v1/vampire-drain/`

@@ -287,6 +287,22 @@ export interface NotificationStats {
   enabled_channels: number
 }
 
+// === Worker Health Types ===
+
+export interface WorkerStatus {
+  name: string
+  host: string
+  status: 'healthy' | 'unhealthy' | 'down'
+  latency_ms: number
+  error?: string
+}
+
+export interface WorkersHealth {
+  workers: WorkerStatus[]
+  total: number
+  healthy_count: number
+}
+
 // === Chatbot Types ===
 
 export interface ChatMessage {
@@ -313,6 +329,52 @@ export interface TirePressureSnapshot {
   front_right: number | null
   rear_left: number | null
   rear_right: number | null
+  created_at: string
+}
+
+export interface MotorSnapshot {
+  id: number
+  vehicle_id: number
+  di_state?: string
+  di_torque?: number
+  di_axle_speed?: number
+  di_stator_temp?: number
+  pedal_position?: number
+  brake_pedal?: boolean
+  lateral_accel?: number
+  longitudinal_accel?: number
+  vehicle_speed?: number
+  gear?: string
+  created_at: string
+}
+
+export interface ClimateSnapshot {
+  id: number
+  vehicle_id: number
+  inside_temp?: number
+  outside_temp?: number
+  hvac_power?: number
+  hvac_fan_speed?: number
+  hvac_left_temp_request?: number
+  hvac_right_temp_request?: number
+  cabin_overheat_mode?: string
+  defrost_mode?: boolean
+  battery_heater_on?: boolean
+  created_at: string
+}
+
+export interface SecurityEvent {
+  id: number
+  vehicle_id: number
+  locked?: boolean
+  sentry_mode?: boolean
+  door_state?: string
+  fd_window?: string
+  fp_window?: string
+  rd_window?: string
+  rp_window?: string
+  homelink_nearby?: boolean
+  guest_mode?: boolean
   created_at: string
 }
 
@@ -470,6 +532,8 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 }
 /** Fetches a single drive session by ID. */
 export const getDrive = (id: number) => request<Drive>(`/drives/${id}`)
+/** Fetches positions within a drive's time window. */
+export const getDrivePositions = (driveId: number) => request<Position[]>(`/drives/${driveId}/positions`)
 
 // === Charging ===
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
@@ -559,6 +623,10 @@ export const getNotificationLogs = (limit = 50, offset = 0) =>
 /** Fetches aggregate notification statistics (sent, failed, pending counts). */
 export const getNotificationStats = () => request<NotificationStats>('/notifications/stats')
 
+// === Workers Health ===
+/** Fetches health status of background worker services. */
+export const getWorkersHealth = () => request<WorkersHealth>('/system/workers')
+
 // === Chatbot ===
 /** Sends a user message and receives an AI assistant response. */
 export const sendChatMessage = (message: string, sessionId?: string) =>
@@ -576,6 +644,30 @@ export const getTirePressure = (vehicleId: number, limit = 100, offset = 0) =>
 /** Fetches the most recent tire pressure reading for a vehicle. */
 export const getLatestTirePressure = (vehicleId: number) =>
   request<TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`)
+
+// === Motor/Powertrain ===
+/** Fetches paginated motor/powertrain snapshots for a vehicle. */
+export const getMotorData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent motor/powertrain reading for a vehicle. */
+export const getMotorLatest = (vehicleId: number) =>
+  request<MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`)
+
+// === Climate/HVAC ===
+/** Fetches paginated climate/HVAC snapshots for a vehicle. */
+export const getClimateData = (vehicleId: number, limit = 100, offset = 0) =>
+  request<ClimateSnapshot[]>(`/climate?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent climate/HVAC reading for a vehicle. */
+export const getClimateLatest = (vehicleId: number) =>
+  request<ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`)
+
+// === Security/Access ===
+/** Fetches paginated security events for a vehicle. */
+export const getSecurityEvents = (vehicleId: number, limit = 100, offset = 0) =>
+  request<SecurityEvent[]>(`/security?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+/** Fetches the most recent security event for a vehicle. */
+export const getSecurityLatest = (vehicleId: number) =>
+  request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`)
 
 // === Software Updates ===
 /** Fetches software update history, optionally filtered by vehicle. */
@@ -919,15 +1011,36 @@ export const submitImportJob = (type: 'import_drives' | 'import_charging', file:
 // --- Fleet Telemetry ---
 export interface TelemetryStatus {
   enabled: boolean
+  mode: string
   endpoint: string
   protocol: string
   supported_signals: string[]
   mqtt_publishing: boolean
+  speed_comparison?: {
+    fleet_telemetry_latency: string
+    fleet_api_polling: string
+    speedup: string
+  }
+  aggregate_stats?: {
+    streaming_vehicles: number
+    total_vehicles_seen: number
+    total_signals_received: number
+    total_batches_processed: number
+    avg_signals_per_second: string
+    stale_timeout: string
+  }
   streaming_vehicles: Record<string, {
     vin: string
     last_received: string
+    first_received: string
     signal_count: number
+    batch_count: number
     is_streaming: boolean
+    data_source: string
+    signals_per_second: number
+    latency_ms: number
+    uptime_seconds: number
+    last_signals?: Record<string, unknown>
   }>
 }
 

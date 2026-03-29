@@ -505,41 +505,28 @@ function PublicKeySetupTool() {
 }
 
 function VehicleKeyPairingTool() {
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
-  }})
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('')
-  const [result, setResult] = useState<Record<string, unknown> | null>(null)
-  const mut = useMutation({
-    mutationFn: () => apiFetch('pair-vehicle-key', 'POST', { vin: selectedVehicle }),
-    onSuccess: (data: Record<string, unknown>) => setResult(data),
-    onError: (err) => setResult({ error: (err as Error).message }),
-  })
+  const akUrl = `https://tesla.com/_ak/${window.location.hostname}`
   return (
     <ToolCard icon={Car} color="green" title="Pair Key to Vehicle" description="Pair your public key with a vehicle for commands and fleet telemetry">
-      <div className="mb-3">
-        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
-        {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className={inputClasses}>
-            <option value="">Select a vehicle...</option>
-            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
-              <option key={v.id} value={v.vin}>{v.display_name} ({v.vin})</option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-xs text-[var(--text-muted)]">No vehicles found. Sync vehicles in Settings first.</p>
-        )}
+      <div className="p-3 rounded-lg bg-neon-cyan/5 border border-neon-cyan/20 mb-3">
+        <p className="text-xs text-[var(--text-primary)] mb-2 font-medium">Open this link on your phone to pair the key with your vehicle:</p>
+        <a href={akUrl} target="_blank" rel="noopener noreferrer" className="text-neon-cyan text-sm font-mono hover:underline break-all flex items-center gap-2">
+          <ExternalLink className="h-4 w-4 shrink-0" />
+          {akUrl}
+        </a>
       </div>
       <div className="p-3 rounded-lg bg-neon-amber/5 border border-neon-amber/20 mb-3">
-        <p className="text-[10px] text-neon-amber flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> The vehicle owner must approve the key on the car's touchscreen after pairing.</p>
+        <p className="text-[10px] text-neon-amber flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> After opening the link, go to your vehicle and tap your key card on the center console to approve.</p>
       </div>
-      <button onClick={() => mut.mutate()} disabled={mut.isPending || !selectedVehicle} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
-        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
-        Pair Key
-      </button>
-      {result !== null && <ResultPanel title="Key Pairing Result" data={result} />}
+      <div className="space-y-2 text-xs text-[var(--text-secondary)]">
+        <p className="font-medium text-[var(--text-primary)]">Steps:</p>
+        <ol className="list-decimal list-inside space-y-1 text-[var(--text-muted)]">
+          <li>Open the link above on your phone (logged into your Tesla account)</li>
+          <li>Tesla will send a key-pairing request to your vehicle</li>
+          <li>Go to your vehicle and tap your key card on the center console</li>
+          <li>Once approved, commands and fleet telemetry will work</li>
+        </ol>
+      </div>
     </ToolCard>
   )
 }
@@ -547,13 +534,17 @@ function VehicleKeyPairingTool() {
 // ─── Fleet Telemetry Tools ──────────────────────────────────────
 
 const TELEMETRY_FIELDS = [
-  { category: 'Location', fields: ['Latitude', 'Longitude', 'Location', 'DestinationLocation', 'DestinationName'] },
-  { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'CruiseSetSpeed', 'BrakePedal', 'DriveRail'] },
-  { category: 'Charging', fields: ['BatteryLevel', 'ChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargerVoltage', 'DCChargingPower', 'ACChargingPower', 'EnergyRemaining', 'EstBatteryRange', 'ChargePortDoorOpen', 'ChargingCableType'] },
-  { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'ClimateKeeperMode', 'DefrostMode', 'CabinOverheatProtectionMode'] },
-  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'TrunkOpen', 'FrunkOpen', 'WindowState', 'DriverSeatOccupied', 'CenterDisplay'] },
-  { category: 'Safety', fields: ['DriverSeatBelt', 'AutomaticEmergencyBrakingOff', 'BlindSpotCollisionWarningChime'] },
-  { category: 'Powertrain', fields: ['DiTorqueActualR', 'DiTorqueActualF', 'DiAxleSpeedF', 'DiAxleSpeedR'] },
+  { category: 'Location', fields: ['Location', 'GpsHeading', 'GpsState', 'DestinationLocation', 'DestinationName', 'MilesToArrival', 'MinutesToArrival', 'RouteLine', 'RouteLastUpdated', 'OriginLocation', 'LocatedAtHome', 'LocatedAtWork', 'LocatedAtFavorite', 'RouteTrafficMinutesDelay'] },
+  { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'Gear', 'CruiseSetSpeed', 'BrakePedal', 'BrakePedalPos', 'PedalPosition', 'DriveRail', 'LateralAcceleration', 'LongitudinalAcceleration', 'RouteTrafficMinutesDelay', 'LifetimeEnergyUsedDrive'] },
+  { category: 'Charging', fields: ['BatteryLevel', 'Soc', 'ChargeState', 'DetailedChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargeCurrentRequest', 'ChargeCurrentRequestMax', 'ChargeEnableRequest', 'ChargerVoltage', 'ChargerPhases', 'ChargeRateMilePerHour', 'DCChargingPower', 'DCChargingEnergyIn', 'ACChargingPower', 'ACChargingEnergyIn', 'EnergyRemaining', 'EstBatteryRange', 'IdealBatteryRange', 'RatedRange', 'PackVoltage', 'PackCurrent', 'ChargePortDoorOpen', 'ChargePortLatch', 'ChargePortColdWeatherMode', 'ChargingCableType', 'FastChargerPresent', 'FastChargerType', 'TimeToFullCharge', 'EstimatedHoursToChargeTermination', 'ExpectedEnergyPercentAtTripArrival', 'SuperchargerSessionTripPlanner', 'ScheduledChargingMode', 'ScheduledChargingPending', 'ScheduledChargingStartTime', 'PreconditioningEnabled', 'BrickVoltageMax', 'BrickVoltageMin', 'NumBrickVoltageMax', 'NumBrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'NumModuleTempMax', 'NumModuleTempMin', 'BatteryHeaterOn', 'NotEnoughPowerToHeat', 'BMSState', 'BmsFullchargecomplete', 'DCDCEnable', 'IsolationResistance', 'LifetimeEnergyUsed', 'PowershareStatus', 'PowershareType', 'PowershareStopReason', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW'] },
+  { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'HvacFanSpeed', 'HvacFanStatus', 'HvacPower', 'HvacACEnabled', 'HvacAutoMode', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest', 'HvacSteeringWheelHeatAuto', 'HvacSteeringWheelHeatLevel', 'ClimateKeeperMode', 'DefrostMode', 'DefrostForPreconditioning', 'CabinOverheatProtectionMode', 'CabinOverheatProtectionTemperatureLimit', 'SeatHeaterLeft', 'SeatHeaterRight', 'SeatHeaterRearLeft', 'SeatHeaterRearCenter', 'SeatHeaterRearRight', 'SeatVentEnabled', 'ClimateSeatCoolingFrontLeft', 'ClimateSeatCoolingFrontRight', 'AutoSeatClimateLeft', 'AutoSeatClimateRight', 'RearDefrostEnabled', 'RearDisplayHvacEnabled', 'WiperHeatEnabled'] },
+  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow', 'RdWindow', 'RpWindow', 'HomelinkNearby', 'HomelinkDeviceCount', 'GuestModeEnabled', 'GuestModeMobileAccessState', 'DriverSeatOccupied', 'CenterDisplay', 'CurrentLimitMph', 'SpeedLimitMode', 'ValetModeEnabled', 'ServiceMode', 'Version', 'VehicleName', 'SoftwareUpdateVersion', 'SoftwareUpdateDownloadPercentComplete', 'SoftwareUpdateInstallationPercentComplete', 'SoftwareUpdateExpectedDurationMinutes', 'SoftwareUpdateScheduledStartTime', 'PairedPhoneKeyAndKeyFobQty', 'LightsHazardsActive', 'LightsHighBeams', 'LightsTurnSignal', 'TonneauPosition', 'TonneauOpenPercent', 'TonneauTentMode'] },
+  { category: 'Safety', fields: ['DriverSeatBelt', 'PassengerSeatBelt', 'AutomaticEmergencyBrakingOff', 'AutomaticBlindSpotCamera', 'BlindSpotCollisionWarningChime', 'CruiseFollowDistance', 'EmergencyLaneDepartureAvoidance', 'ForwardCollisionWarning', 'LaneDepartureAvoidance', 'SpeedLimitWarning', 'PinToDriveEnabled', 'MilesSinceReset', 'SelfDrivingMilesSinceReset'] },
+  { category: 'Powertrain', fields: ['DiTorquemotor', 'DiTorqueActualR', 'DiTorqueActualF', 'DiTorqueActualREL', 'DiTorqueActualRER', 'DiSlaveTorqueCmd', 'DiAxleSpeedF', 'DiAxleSpeedR', 'DiAxleSpeedREL', 'DiAxleSpeedRER', 'DiStateR', 'DiStateF', 'DiStateREL', 'DiStateRER', 'DiStatorTempR', 'DiStatorTempF', 'DiStatorTempREL', 'DiStatorTempRER', 'DiHeatsinkTR', 'DiHeatsinkTF', 'DiHeatsinkTREL', 'DiHeatsinkTRER', 'DiInverterTR', 'DiInverterTF', 'DiInverterTREL', 'DiInverterTRER', 'DiMotorCurrentR', 'DiMotorCurrentF', 'DiMotorCurrentREL', 'DiMotorCurrentRER', 'DiVBatR', 'DiVBatF', 'DiVBatREL', 'DiVBatRER', 'Hvil'] },
+  { category: 'Tires & Service', fields: ['TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr', 'TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr'] },
+  { category: 'Media', fields: ['MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaNowPlayingStation', 'MediaNowPlayingDuration', 'MediaNowPlayingElapsed', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume', 'MediaAudioVolumeIncrement', 'MediaAudioVolumeMax'] },
+  { category: 'User Preference', fields: ['Setting24HourTime', 'SettingChargeUnit', 'SettingDistanceUnit', 'SettingTemperatureUnit', 'SettingTirePressureUnit'] },
+  { category: 'Vehicle Config', fields: ['CarType', 'Trim', 'ExteriorColor', 'RoofColor', 'WheelType', 'RearSeatHeaters', 'SunroofInstalled', 'EfficiencyPackage', 'EuropeVehicle', 'RightHandDrive', 'RemoteStartEnabled', 'ChargePort', 'OffroadLightbarPresent'] },
 ]
 
 function FleetTelemetrySubscribeTool() {
@@ -568,7 +559,7 @@ function FleetTelemetrySubscribeTool() {
   const [interval, setInterval] = useState('10')
   const [ca, setCa] = useState('')
   const [selectedFields, setSelectedFields] = useState<string[]>([
-    'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Latitude', 'Longitude',
+    'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Location', 'GpsHeading',
     'ChargeState', 'ChargeLimitSoc', 'InsideTemp', 'OutsideTemp', 'Locked', 'SentryMode',
   ])
   const [showFields, setShowFields] = useState(false)

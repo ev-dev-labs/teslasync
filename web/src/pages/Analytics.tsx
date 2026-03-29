@@ -15,6 +15,7 @@ import {
   LineChart
 } from 'recharts'
 import clsx from 'clsx'
+import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, NEON_COLORS, axisTick, axisTickSm, chartGrid, safe, fmt } from '../components/Charts'
 
 function StatCard({ label, value, unit, sub, color = 'var(--text-primary)' }: {
@@ -78,6 +79,7 @@ export default function Analytics() {
   })
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const [tab, setTab] = useState<'overview' | 'driving' | 'charging' | 'battery'>('overview')
+  const { convertDistance, convertSpeed, convertTemp, convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit } = useSettings()
 
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['fleet-analytics', startDate],
@@ -98,9 +100,9 @@ export default function Analytics() {
   const gasSavings = totalDistance > 0 ? totalDistance * 0.085 * 1.5 - totalCost : 0
 
   const pieData = comparison.map((v, i) => ({
-    name: v.name, value: safe(v.distance), fill: NEON_COLORS[i % NEON_COLORS.length],
+    name: v.name, value: convertDistance(safe(v.distance)), fill: NEON_COLORS[i % NEON_COLORS.length],
   }))
-  const sortedByEfficiency = [...comparison].sort((a, b) => safe(a.efficiency) - safe(b.efficiency))
+  const sortedByEfficiency = [...comparison].sort((a, b) => convertEfficiency(safe(a.efficiency)) - convertEfficiency(safe(b.efficiency)))
 
   const radarData = useMemo(() => {
     if (comparison.length < 2) return []
@@ -151,10 +153,10 @@ export default function Analytics() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 items-center">
-            <RadialGauge value={Math.round(totalDistance)} max={Math.max(totalDistance, 1000)} label="Distance" unit="km" color="#00f0ff" />
+            <RadialGauge value={Math.round(convertDistance(totalDistance))} max={Math.max(convertDistance(totalDistance), 1000)} label="Distance" unit={distanceUnit} color="#00f0ff" />
             <RadialGauge value={totalDrives} max={Math.max(totalDrives, 50)} label="Drives" unit="" color="#a855f7" />
             <RadialGauge value={Math.round(totalEnergy)} max={Math.max(totalEnergy, 500)} label="Energy" unit="kWh" color="#10b981" />
-            <RadialGauge value={Math.round(avgEfficiency)} max={300} label="Efficiency" unit="Wh/km" color={avgEfficiency < 180 ? '#10b981' : '#f59e0b'} />
+            <RadialGauge value={Math.round(convertEfficiency(avgEfficiency))} max={300} label="Efficiency" unit={efficiencyUnit} color={avgEfficiency < 180 ? '#10b981' : '#f59e0b'} />
             <div className="flex flex-col items-center text-center">
               <p className="text-xl font-bold text-neon-green">$<AnimatedNumber value={Math.round(gasSavings)} /></p>
               <p className="text-[10px] uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>Gas Savings</p>
@@ -192,7 +194,7 @@ export default function Analytics() {
                         <BarChart data={comparison}>
                           {grid}<XAxis dataKey="name" tick={tick} /><YAxis tick={tick} />
                           <Tooltip content={<ChartTooltip />} />
-                          <Bar dataKey="distance" name="Distance (km)" fill="#00f0ff" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="distance" name={`Distance (${distanceUnit})`} fill="#00f0ff" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -258,8 +260,8 @@ export default function Analytics() {
                     </h3>
                     <div className="max-w-2xl space-y-1">
                       {sortedByEfficiency.map((v, i) => (
-                        <LeaderboardRow key={v.id} rank={i + 1} name={v.name} value={safe(v.efficiency)} unit="Wh/km"
-                          maxValue={Math.max(...sortedByEfficiency.map(x => safe(x.efficiency)), 1)} color={NEON_COLORS[i % NEON_COLORS.length]} />
+                        <LeaderboardRow key={v.id} rank={i + 1} name={v.name} value={convertEfficiency(safe(v.efficiency))} unit={efficiencyUnit}
+                          maxValue={Math.max(...sortedByEfficiency.map(x => convertEfficiency(safe(x.efficiency))), 1)} color={NEON_COLORS[i % NEON_COLORS.length]} />
                       ))}
                     </div>
                   </GlassPanel>
@@ -300,7 +302,7 @@ export default function Analytics() {
                             <YAxis yAxisId="right" orientation="right" tick={tickSm} />
                             <Tooltip content={<ChartTooltip />} />
                             <Bar yAxisId="left" dataKey="drives" name="Drives" fill="#00f0ff" fillOpacity={0.5} radius={[4, 4, 0, 0]} />
-                            <Line yAxisId="right" type="monotone" dataKey="avg_distance" name="Avg km" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 3 }} />
+                            <Line yAxisId="right" type="monotone" dataKey="avg_distance" name={`Avg ${distanceUnit}`} stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 3 }} />
                           </ComposedChart>
                         </ResponsiveContainer>
                       </div>
@@ -343,11 +345,11 @@ export default function Analytics() {
                     <Gauge className="h-4 w-4 text-neon-cyan" /> Performance Summary
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <StatCard label="Top Speed" value={fmt(da.speed_stats?.max, 0)} unit=" km/h" color="#ef4444" />
-                    <StatCard label="Avg Speed" value={fmt(da.speed_stats?.avg, 0)} unit=" km/h" color="#00f0ff" />
+                    <StatCard label="Top Speed" value={fmt(convertSpeed(safe(da.speed_stats?.max)), 0)} unit={` ${speedUnit}`} color="#ef4444" />
+                    <StatCard label="Avg Speed" value={fmt(convertSpeed(safe(da.speed_stats?.avg)), 0)} unit={` ${speedUnit}`} color="#00f0ff" />
                     <StatCard label="Peak Power" value={fmt(da.power_stats?.max, 0)} unit=" kW" color="#a855f7" sub={`Regen: ${fmt(da.regen_stats?.min, 0)} kW`} />
-                    <StatCard label="Avg Drive" value={fmt(da.distance_stats?.avg)} unit=" km" color="#10b981" sub={`${fmt(da.duration_stats?.avg, 0)} min avg`} />
-                    <StatCard label="Longest" value={fmt(da.distance_stats?.max)} unit=" km" color="#f59e0b" sub={`${fmt(da.duration_stats?.max, 0)} min max`} />
+                    <StatCard label="Avg Drive" value={fmt(convertDistance(safe(da.distance_stats?.avg)))} unit={` ${distanceUnit}`} color="#10b981" sub={`${fmt(da.duration_stats?.avg, 0)} min avg`} />
+                    <StatCard label="Longest" value={fmt(convertDistance(safe(da.distance_stats?.max)))} unit={` ${distanceUnit}`} color="#f59e0b" sub={`${fmt(da.duration_stats?.max, 0)} min max`} />
                     <StatCard label="Efficiency" value={fmt(da.efficiency_stats?.avg)} unit="%" color="#10b981" sub={`P95: ${fmt(da.efficiency_stats?.p95)}%`} />
                   </div>
                 </GlassPanel>
@@ -359,7 +361,7 @@ export default function Analytics() {
                   <FadeIn delay={0.1}>
                     <GlassPanel className="p-4 sm:p-6">
                       <h3 className="section-title mb-4 sm:mb-6 flex items-center gap-2">
-                        <Gauge className="h-4 w-4 text-neon-red" /> Speed Distribution (km/h)
+                        <Gauge className="h-4 w-4 text-neon-red" /> Speed Distribution ({speedUnit})
                       </h3>
                       <div className="h-40 sm:h-48 lg:h-56">
                         <ResponsiveContainer width="100%" height="100%">
@@ -378,7 +380,7 @@ export default function Analytics() {
                   <FadeIn delay={0.15}>
                     <GlassPanel className="p-4 sm:p-6">
                       <h3 className="section-title mb-4 sm:mb-6 flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-neon-cyan" /> Trip Distance Distribution (km)
+                        <MapPin className="h-4 w-4 text-neon-cyan" /> Trip Distance Distribution ({distanceUnit})
                       </h3>
                       <div className="h-40 sm:h-48 lg:h-56">
                         <ResponsiveContainer width="100%" height="100%">
@@ -411,7 +413,7 @@ export default function Analytics() {
                             <YAxis yAxisId="right" orientation="right" tick={tickSm} />
                             <Tooltip content={<ChartTooltip />} />
                             <Bar yAxisId="left" dataKey="drives" name="Drives" fill="#a855f7" fillOpacity={0.5} radius={[3, 3, 0, 0]} />
-                            <Line yAxisId="right" type="monotone" dataKey="distance" name="Distance (km)" stroke="#00f0ff" strokeWidth={2} dot={false} />
+                            <Line yAxisId="right" type="monotone" dataKey="distance" name={`Distance (${distanceUnit})`} stroke="#00f0ff" strokeWidth={2} dot={false} />
                           </ComposedChart>
                         </ResponsiveContainer>
                       </div>
@@ -429,7 +431,7 @@ export default function Analytics() {
                         <ResponsiveContainer width="100%" height="100%">
                           <ScatterChart>
                             {grid}
-                            <XAxis type="number" dataKey="temp" name="Temp" unit="C" tick={tickSm} />
+                            <XAxis type="number" dataKey="temp" name="Temp" unit={tempUnit} tick={tickSm} />
                             <YAxis type="number" dataKey="efficiency" name="Efficiency" unit="%" tick={tickSm} />
                             <ZAxis type="number" dataKey="distance" range={[20, 200]} />
                             <Tooltip
@@ -438,7 +440,7 @@ export default function Analytics() {
                                 const d = payload[0].payload as { temp: number; efficiency: number; distance: number }
                                 return (
                                   <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-                                    <p style={{ color: 'var(--text-primary)' }}>{d.temp}C | {d.efficiency}% eff | {d.distance} km</p>
+                                    <p style={{ color: 'var(--text-primary)' }}>{fmt(convertTemp(d.temp))}{tempUnit} | {d.efficiency}% eff | {fmt(convertDistance(d.distance))} {distanceUnit}</p>
                                   </div>
                                 )
                               }}
@@ -467,7 +469,7 @@ export default function Analytics() {
                           <YAxis yAxisId="left" tick={tickSm} />
                           <YAxis yAxisId="right" orientation="right" tick={tickSm} />
                           <Tooltip content={<ChartTooltip />} />
-                          <Area yAxisId="left" type="monotone" dataKey="distance" name="Distance (km)" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
+                          <Area yAxisId="left" type="monotone" dataKey="distance" name={`Distance (${distanceUnit})`} stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
                           <Line yAxisId="right" type="monotone" dataKey="drives" name="Drives" stroke="#a855f7" strokeWidth={2} dot={false} />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -488,9 +490,9 @@ export default function Analytics() {
                         <div>
                           <p className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Outside Temperature</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            <StatCard label="Min" value={fmt(da.temperature.outside.min)} unit="C" color="#00f0ff" />
-                            <StatCard label="Avg" value={fmt(da.temperature.outside.avg)} unit="C" color="#10b981" />
-                            <StatCard label="Max" value={fmt(da.temperature.outside.max)} unit="C" color="#ef4444" />
+                            <StatCard label="Min" value={fmt(convertTemp(da.temperature.outside.min))} unit={tempUnit} color="#00f0ff" />
+                            <StatCard label="Avg" value={fmt(convertTemp(da.temperature.outside.avg))} unit={tempUnit} color="#10b981" />
+                            <StatCard label="Max" value={fmt(convertTemp(da.temperature.outside.max))} unit={tempUnit} color="#ef4444" />
                           </div>
                         </div>
                       )}
@@ -498,9 +500,9 @@ export default function Analytics() {
                         <div>
                           <p className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Inside Temperature</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            <StatCard label="Min" value={fmt(da.temperature.inside.min)} unit="C" color="#00f0ff" />
-                            <StatCard label="Avg" value={fmt(da.temperature.inside.avg)} unit="C" color="#10b981" />
-                            <StatCard label="Max" value={fmt(da.temperature.inside.max)} unit="C" color="#ef4444" />
+                            <StatCard label="Min" value={fmt(convertTemp(da.temperature.inside.min))} unit={tempUnit} color="#00f0ff" />
+                            <StatCard label="Avg" value={fmt(convertTemp(da.temperature.inside.avg))} unit={tempUnit} color="#10b981" />
+                            <StatCard label="Max" value={fmt(convertTemp(da.temperature.inside.max))} unit={tempUnit} color="#ef4444" />
                           </div>
                         </div>
                       )}
@@ -681,7 +683,7 @@ export default function Analytics() {
                         <StatCard label="Health Score" value={fmt(bt[bt.length - 1]?.health_score, 0)} unit="%" color={bt[bt.length - 1]?.health_score > 90 ? '#10b981' : '#f59e0b'} />
                         <StatCard label="Capacity" value={fmt(bt[bt.length - 1]?.capacity_kwh)} unit=" kWh" color="#00f0ff" />
                         <StatCard label="Degradation" value={fmt(bt[bt.length - 1]?.degradation_pct)} unit="%" color={bt[bt.length - 1]?.degradation_pct < 5 ? '#10b981' : '#ef4444'} />
-                        <StatCard label="Est Range" value={fmt(bt[bt.length - 1]?.range_km, 0)} unit=" km" color="#a855f7" />
+                        <StatCard label="Est Range" value={fmt(convertDistance(safe(bt[bt.length - 1]?.range_km)), 0)} unit={` ${distanceUnit}`} color="#a855f7" />
                         <StatCard label="Cycles" value={bt[bt.length - 1]?.cycle_count ?? 0} color="#f59e0b" />
                       </div>
                     </GlassPanel>
@@ -740,7 +742,7 @@ export default function Analytics() {
                               <XAxis dataKey="date" tick={tickSm} tickFormatter={(d: string) => d.slice(5)} />
                               <YAxis tick={tickSm} />
                               <Tooltip content={<ChartTooltip />} />
-                              <Line type="monotone" dataKey="range_km" name="Range (km)" stroke="#a855f7" strokeWidth={2} dot={false} />
+                              <Line type="monotone" dataKey="range_km" name={`Range (${distanceUnit})`} stroke="#a855f7" strokeWidth={2} dot={false} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getVehicleStatus } from '../api'
 import { useToast } from '../components/Toast'
+import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
 
 interface CommandButtonProps {
@@ -77,6 +78,7 @@ function CommandGroup({ title, children }: { title: string; children: React.Reac
 function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string } | null>(null)
   const status = getVehicleStatus(vehicle, state)
   const name = vehicle.display_name || vehicle.vin
@@ -134,8 +136,8 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
               {[
                 { icon: Battery, label: 'Battery', value: `${state.battery_level}%`, color: state.battery_level > 50 ? 'text-neon-green' : state.battery_level > 20 ? 'text-neon-amber' : 'text-neon-red' },
-                { icon: Zap, label: 'Range', value: `${Math.round(state.rated_range)} km`, color: 'text-[var(--text-primary)]' },
-                { icon: Thermometer, label: 'Inside', value: `${state.inside_temp}°C`, color: state.inside_temp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
+                { icon: Zap, label: 'Range', value: `${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
+                { icon: Thermometer, label: 'Inside', value: `${convertTemp(state.inside_temp).toFixed(1)}${tempUnit}`, color: state.inside_temp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
                 { icon: Wifi, label: 'Status', value: status, color: status === 'online' || status === 'driving' ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -227,7 +229,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
           <CommandButton
             icon={<Wind className="h-5 w-5" />}
             label="Climate"
-            sublabel={state?.is_climate_on ? `ON · ${state.inside_temp}°C` : 'OFF'}
+            sublabel={state?.is_climate_on ? `ON · ${convertTemp(state.inside_temp).toFixed(0)}${tempUnit}` : 'OFF'}
             onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')}
             loading={cmd.isPending}
             active={state?.is_climate_on}

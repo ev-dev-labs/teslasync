@@ -180,7 +180,7 @@ body {
   font-size: 10px !important;
 }
 .leaflet-tile-pane {
-  filter: saturate(0.3) brightness(0.4) contrast(1.2);
+  filter: saturate(0.4) brightness(0.75) contrast(1.1);
 }
 :root.light-mode .leaflet-tile-pane {
   filter: none;
@@ -401,6 +401,9 @@ body {
 }
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1.5rem);
 }
 .safe-left {
   padding-left: env(safe-area-inset-left, 0px);

@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import { Link } from 'react-router-dom'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { useSettings } from '../hooks/useSettings'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
   const savings = gasCost - evCost
@@ -40,6 +41,7 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
 }
 
 export default function Energy() {
+  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [startDate, setStartDate] = useState(() => {
@@ -140,7 +142,7 @@ export default function Energy() {
         <GlassPanel className="p-4 sm:p-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
             <RadialGauge value={totalEnergy} max={Math.max(totalEnergy * 1.3, 100)} label="Energy Used" unit="kWh" color="#00f0ff" />
-            <RadialGauge value={avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000 / totalDistance) : 0)} max={300} label="Efficiency" unit="Wh/km" color="#10b981" />
+            <RadialGauge value={convertEfficiency(avgEfficiency || (totalDistance > 0 ? (totalEnergy * 1000 / totalDistance) : 0))} max={convertEfficiency(300)} label="Efficiency" unit={efficiencyUnit} color="#10b981" />
             <RadialGauge value={co2Saved} max={Math.max(co2Saved * 1.5, 50)} label="CO₂ Saved" unit="kg" color="#a855f7" />
             <RadialGauge value={totalCost} max={Math.max(totalCost * 1.5, 50)} label="Total Cost" unit="$" color="#f59e0b" />
           </div>
@@ -150,9 +152,9 @@ export default function Energy() {
       {/* Quick metrics strip */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Cost per km', value: `$${costPerKm.toFixed(3)}`, color: 'text-neon-cyan' },
+          { label: `Cost per ${distanceUnit}`, value: `$${(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0).toFixed(3)}`, color: 'text-neon-cyan' },
           { label: 'Cost per kWh', value: `$${costPerKwh.toFixed(3)}`, color: 'text-neon-green' },
-          { label: 'Total Distance', value: `${totalDistance.toFixed(0)} km`, color: 'text-[var(--text-primary)]' },
+          { label: 'Total Distance', value: `${convertDistance(totalDistance).toFixed(0)} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: 'Sessions', value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
           { label: 'Monthly Est.', value: `$${monthlyProjectedCost.toFixed(2)}`, color: 'text-neon-amber' },
           { label: 'Yearly Est.', value: `$${yearlyProjectedCost.toFixed(2)}`, color: 'text-neon-red' },
@@ -213,7 +215,7 @@ export default function Energy() {
                         <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
                         <Tooltip content={<ChartTooltip />} />
                         <Bar yAxisId="left" dataKey="energy_kwh" name="Energy (kWh)" fill="url(#energyBarGrad)" fillOpacity={0.6} radius={[3, 3, 0, 0]} animationDuration={800} />
-                        <Line yAxisId="right" type="monotone" dataKey="efficiency" name="Wh/km" stroke="#10b981" strokeWidth={2} dot={false} animationDuration={800} />
+                        <Line yAxisId="right" type="monotone" dataKey="efficiency" name={efficiencyUnit} stroke="#10b981" strokeWidth={2} dot={false} animationDuration={800} />
                         {dailyEnergy.length > 14 && <Brush dataKey="date" height={20} stroke="#6b7280" fill="rgba(255,255,255,0.02)" travellerWidth={8} />}
                       </ComposedChart>
                     </ResponsiveContainer>
@@ -247,8 +249,8 @@ export default function Energy() {
                         <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
                         <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                         <Tooltip content={<ChartTooltip />} />
-                        <Area type="monotone" dataKey="efficiency" name="Wh/km" stroke="#10b981" fill="url(#effGrad)" strokeWidth={2} animationDuration={800} />
-                        <Area type="monotone" dataKey="distance_km" name="Distance (km)" stroke="#00f0ff" fill="url(#distGrad2)" strokeWidth={1} strokeDasharray="4 4" animationDuration={800} />
+                        <Area type="monotone" dataKey="efficiency" name={efficiencyUnit} stroke="#10b981" fill="url(#effGrad)" strokeWidth={2} animationDuration={800} />
+                        <Area type="monotone" dataKey="distance_km" name={`Distance (${distanceUnit})`} stroke="#00f0ff" fill="url(#distGrad2)" strokeWidth={1} strokeDasharray="4 4" animationDuration={800} />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (

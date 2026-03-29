@@ -6,6 +6,7 @@ import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton } from '../compon
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForward, Zap, Shield, Lock, Eye } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
 
 function createVehicleIcon(status: string, heading: number = 0) {
@@ -37,6 +38,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
   vehicle: Vehicle; state?: VehicleState | null; selected: boolean; onClick: () => void
 }) {
   const status = getVehicleStatus(vehicle, state)
+  const { convertSpeed, convertDistance, convertTemp, speedUnit, distanceUnit, tempUnit } = useSettings()
   return (
     <button
       onClick={onClick}
@@ -58,9 +60,9 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
         <>
           <MetricBar label="Battery" value={state.battery_level} max={100} color={state.battery_level > 20 ? '#10b981' : '#ef4444'} />
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Gauge className="h-3 w-3 text-neon-cyan" />{state.speed} km/h</span>
-            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Navigation className="h-3 w-3 text-neon-cyan" />{Math.round(state.rated_range)} km</span>
-            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Thermometer className="h-3 w-3 text-neon-amber" />{state.inside_temp}°/{state.outside_temp}°C</span>
+            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Gauge className="h-3 w-3 text-neon-cyan" />{Math.round(convertSpeed(state.speed))} {speedUnit}</span>
+            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Navigation className="h-3 w-3 text-neon-cyan" />{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span>
+            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Thermometer className="h-3 w-3 text-neon-amber" />{convertTemp(state.inside_temp).toFixed(0)}°/{convertTemp(state.outside_temp).toFixed(0)}{tempUnit}</span>
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Battery className="h-3 w-3 text-neon-green" />{state.power} kW</span>
           </div>
           {/* Status icons */}
@@ -80,6 +82,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
 
 export default function LiveMap() {
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const { convertSpeed, convertDistance, convertTemp, speedUnit, distanceUnit, tempUnit } = useSettings()
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [replayMode, setReplayMode] = useState(false)
   const [replayIdx, setReplayIdx] = useState(0)
@@ -206,8 +209,8 @@ export default function LiveMap() {
             <GlassPanel className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <RadialGauge value={selectedState.battery_level} max={100} label="Battery" unit="%" size={70} color="#10b981" />
-                <RadialGauge value={selectedState.speed} max={200} label="Speed" unit="km/h" size={70} color="#00f0ff" />
-                <RadialGauge value={Math.round(selectedState.rated_range)} max={600} label="Range" unit="km" size={70} color="#a855f7" />
+                <RadialGauge value={Math.round(convertSpeed(selectedState.speed))} max={200} label="Speed" unit={speedUnit} size={70} color="#00f0ff" />
+                <RadialGauge value={Math.round(convertDistance(selectedState.rated_range))} max={600} label="Range" unit={distanceUnit} size={70} color="#a855f7" />
               </div>
             </GlassPanel>
           )}
@@ -241,7 +244,7 @@ export default function LiveMap() {
               </div>
               {replayPos && (
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] text-[var(--text-muted)]">
-                  <span><Gauge className="h-2.5 w-2.5 inline" /> {replayPos.speed ?? 0} km/h</span>
+                  <span><Gauge className="h-2.5 w-2.5 inline" /> {Math.round(convertSpeed(replayPos.speed ?? 0))} {speedUnit}</span>
                   <span><Battery className="h-2.5 w-2.5 inline" /> {replayPos.battery_level}%</span>
                   <span><Navigation className="h-2.5 w-2.5 inline" /> {replayPos.elevation?.toFixed(0) ?? '—'}m</span>
                 </div>
@@ -257,7 +260,7 @@ export default function LiveMap() {
                 {recentDrives.slice(0, 3).map(d => (
                   <div key={d.id} className="flex items-center justify-between text-[11px]">
                     <span className="text-[var(--text-secondary)]">{new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                    <span className="text-neon-cyan font-medium">{d.distance.toFixed(1)} km</span>
+                    <span className="text-neon-cyan font-medium">{convertDistance(d.distance).toFixed(1)} {distanceUnit}</span>
                     <span className="text-gray-600">{d.duration_min}m</span>
                   </div>
                 ))}
@@ -301,9 +304,9 @@ export default function LiveMap() {
                       <p className="text-xs text-[var(--text-muted)]">{v.model} {v.trim_badging}</p>
                       <div className="mt-2 text-xs space-y-1">
                         <p>🔋 Battery: {s.battery_level}%</p>
-                        <p>⚡ Speed: {s.speed} km/h</p>
-                        <p>📍 Range: {Math.round(s.rated_range)} km</p>
-                        <p>🌡️ Temp: {s.inside_temp}°C / {s.outside_temp}°C</p>
+                        <p>⚡ Speed: {Math.round(convertSpeed(s.speed))} {speedUnit}</p>
+                        <p>📍 Range: {Math.round(convertDistance(s.rated_range))} {distanceUnit}</p>
+                        <p>🌡️ Temp: {convertTemp(s.inside_temp).toFixed(0)}{tempUnit} / {convertTemp(s.outside_temp).toFixed(0)}{tempUnit}</p>
                         <p>{s.is_locked ? '🔒' : '🔓'} {s.is_locked ? 'Locked' : 'Unlocked'}</p>
                       </div>
                     </div>
@@ -338,7 +341,7 @@ export default function LiveMap() {
             <div className="absolute bottom-4 right-4 z-[1000] glass-panel p-3">
               <p className="text-[10px] text-[var(--text-secondary)] mb-1.5 font-medium">Speed Legend</p>
               <div className="space-y-1">
-                {[{ speed: 'Parked', color: '#6b7280' }, { speed: '< 30 km/h', color: '#10b981' }, { speed: '30–60', color: '#00f0ff' }, { speed: '60–100', color: '#f59e0b' }, { speed: '100+', color: '#ef4444' }].map(l => (
+                {[{ speed: 'Parked', color: '#6b7280' }, { speed: `< 30 ${speedUnit}`, color: '#10b981' }, { speed: '30–60', color: '#00f0ff' }, { speed: '60–100', color: '#f59e0b' }, { speed: '100+', color: '#ef4444' }].map(l => (
                   <div key={l.speed} className="flex items-center gap-2 text-[10px]">
                     <div className="h-2 w-6 rounded-full" style={{ backgroundColor: l.color, boxShadow: `0 0 4px ${l.color}40` }} />
                     <span className="text-[var(--text-muted)]">{l.speed}</span>

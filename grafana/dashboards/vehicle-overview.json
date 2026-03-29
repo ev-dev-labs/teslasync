@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -202,7 +215,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(odometer::numeric, 1) AS \"Odometer km\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(odometer::numeric, 1) AS \"📏 Odometer\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -261,7 +274,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT state AS \"State\" FROM vehicles WHERE id = ${vehicle_id} LIMIT 1",
+          "rawSql": "SELECT state AS \"📊 State\" FROM vehicles WHERE id = ${vehicle_id} LIMIT 1",
           "refId": "A"
         }
       ],
@@ -380,7 +393,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT version AS \"Version\" FROM software_updates WHERE vehicle_id = ${vehicle_id} AND status = 'installed' ORDER BY installed_at DESC LIMIT 1",
+          "rawSql": "SELECT version AS \"📦 Version\" FROM software_updates WHERE vehicle_id = ${vehicle_id} AND status = 'installed' ORDER BY installed_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -439,7 +452,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT COUNT(*) AS \"🛣️ Drives\" FROM drives WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -558,7 +571,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Charges\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT COUNT(*) AS \"⚡ Charges\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -618,7 +631,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(charge_energy_added)::numeric, 1) AS \"kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(SUM(charge_energy_added)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -738,7 +751,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND((SUM(charge_energy_added) * 1000 / NULLIF(SUM(d.distance), 0))::numeric, 1) AS \"Wh/km\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND((SUM(charge_energy_added) * 1000 / NULLIF(SUM(d.distance), 0))::numeric, 1) AS \"⚡ Wh/km\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -788,7 +801,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT display_name AS \"Name\", model AS \"Model\", trim_badging AS \"Trim\", vin AS \"VIN\",\n  exterior_color AS \"Color\", wheel_type AS \"Wheels\", state AS \"State\",\n  created_at AS \"Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
+          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_badging AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  exterior_color AS \"🎨 Color\", wheel_type AS \"🛞 Wheels\", state AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -838,7 +851,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT d.start_date AS \"Date\",\n  COALESCE(sa.display_name, 'Unknown') AS \"From\",\n  COALESCE(ea.display_name, 'Unknown') AS \"To\",\n  ROUND(d.distance::numeric, 1) AS \"Distance km\",\n  ROUND(d.duration_min::numeric) AS \"Duration min\",\n  d.start_battery_level AS \"Start %\",\n  d.end_battery_level AS \"End %\"\nFROM drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_date DESC LIMIT 1",
+          "rawSql": "SELECT d.start_date AS \"📅 Date\",\n  COALESCE(sa.display_name, 'Unknown') AS \"📍 From\",\n  COALESCE(ea.display_name, 'Unknown') AS \"📍 To\",\n  ROUND(d.distance::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_level AS \"🔋 Start %\",\n  d.end_battery_level AS \"🔋 End %\"\nFROM drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_date DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -888,12 +901,189 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cs.start_date AS \"Date\",\n  COALESCE(a.display_name, 'Unknown') AS \"Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh\",\n  cs.start_battery_level AS \"Start %\",\n  cs.end_battery_level AS \"End %\",\n  ROUND(cs.duration_min::numeric) AS \"Duration min\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.start_date DESC LIMIT 1",
+          "rawSql": "SELECT cs.start_date AS \"📅 Date\",\n  COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"⚡ kWh\",\n  cs.start_battery_level AS \"🔋 Start %\",\n  cs.end_battery_level AS \"🔋 End %\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.start_date DESC LIMIT 1",
           "refId": "A"
         }
       ],
       "title": "Last Charge",
       "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "id": 100,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT di_torque AS \"Torque (Nm)\", di_stator_temp AS \"Stator Temp (°C)\", vehicle_speed AS \"Speed (km/h)\", gear AS \"Gear\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Motor Status",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "id": 101,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT inside_temp AS \"Cabin (°C)\", outside_temp AS \"Outside (°C)\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Climate",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 102,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE WHEN locked THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\", COALESCE(door_state, 'Unknown') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"FD Window\", COALESCE(fp_window, '-') AS \"FP Window\" FROM security_events WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Security Status",
+      "type": "stat",
       "transparent": false
     }
   ],
@@ -906,8 +1096,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -915,7 +1105,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -925,6 +1115,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -934,7 +1176,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Vehicle Overview",
+  "title": "TeslaSync 🚘 Vehicle Overview",
   "uid": "teslasync-vehicle-overview",
   "version": 1,
   "weekStart": ""

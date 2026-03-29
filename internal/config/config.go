@@ -23,9 +23,13 @@ type Config struct {
 }
 
 type FleetTelemetryConfig struct {
-	Enabled bool
-	Host    string
-	Port    int
+	Enabled              bool
+	Host                 string
+	Port                 int
+	TopicBase            string        // MQTT topic base for fleet-telemetry (e.g., "telemetry")
+	BatchMs              int           // Signal batching window in milliseconds
+	StaleTimeout         time.Duration // How long without signals before a vehicle is considered stale (fallback to API polling)
+	FallbackPollInterval time.Duration // How often to poll non-streaming vehicles when telemetry is enabled
 }
 
 type DatabaseConfig struct {
@@ -50,12 +54,13 @@ func (d DatabaseConfig) DSN() string {
 }
 
 type TeslaConfig struct {
-	ClientID     string
-	ClientSecret string
-	BaseURL      string
-	AuthURL      string
-	RedirectURI  string
-	Timeout      time.Duration
+	ClientID        string
+	ClientSecret    string
+	BaseURL         string
+	AuthURL         string
+	RedirectURI     string
+	CommandProxyURL string // Vehicle Command Proxy URL for signed commands
+	Timeout         time.Duration
 }
 
 type MQTTConfig struct {
@@ -127,12 +132,13 @@ func Load() (*Config, error) {
 		},
 
 		Tesla: TeslaConfig{
-			ClientID:     envStr("TESLA_CLIENT_ID", ""),
-			ClientSecret: envStr("TESLA_CLIENT_SECRET", ""),
-			BaseURL:      envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
-			AuthURL:      envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
-			RedirectURI:  envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
-			Timeout:      envDuration("TESLA_TIMEOUT", 30*time.Second),
+			ClientID:        envStr("TESLA_CLIENT_ID", ""),
+			ClientSecret:    envStr("TESLA_CLIENT_SECRET", ""),
+			BaseURL:         envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
+			AuthURL:         envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
+			RedirectURI:     envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
+			CommandProxyURL: envStr("TESLA_COMMAND_PROXY_URL", ""),
+			Timeout:         envDuration("TESLA_TIMEOUT", 30*time.Second),
 		},
 
 		MQTT: MQTTConfig{
@@ -170,9 +176,13 @@ func Load() (*Config, error) {
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{
-			Enabled: envBool("FLEET_TELEMETRY_ENABLED", false),
-			Host:    envStr("FLEET_TELEMETRY_HOST", ""),
-			Port:    envInt("FLEET_TELEMETRY_PORT", 4443),
+			Enabled:              envBool("FLEET_TELEMETRY_ENABLED", false),
+			Host:                 envStr("FLEET_TELEMETRY_HOST", ""),
+			Port:                 envInt("FLEET_TELEMETRY_PORT", 4443),
+			TopicBase:            envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
+			BatchMs:              envInt("FLEET_TELEMETRY_BATCH_MS", 100),
+			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 5*time.Minute),
+			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 60*time.Second),
 		},
 	}
 

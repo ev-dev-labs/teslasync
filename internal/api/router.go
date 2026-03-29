@@ -93,6 +93,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
 	chatbotHandler := NewChatbotHandler(db)
 	tirePressureHandler := NewTirePressureHandler(db)
+	motorHandler := NewMotorHandler(db)
+	climateHandler := NewClimateHandler(db)
+	securityHandler := NewSecurityHandler(db)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
 	vampireDrainHandler := NewVampireDrainHandler(db)
 	visitedLocationHandler := NewVisitedLocationHandler(db)
@@ -104,7 +107,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
-		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub)
+		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute)
 	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 
@@ -144,7 +147,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Drives
 		r.Route("/drives", func(r chi.Router) {
 			r.Get("/", driveHandler.ListByVehicle)
-			r.Get("/{driveID}", driveHandler.Get)
+			r.Route("/{driveID}", func(r chi.Router) {
+				r.Get("/", driveHandler.Get)
+				r.Get("/positions", driveHandler.Positions)
+			})
 		})
 
 		// Charging
@@ -219,6 +225,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/latest", tirePressureHandler.Latest)
 		})
 
+		// Motor/Powertrain
+		r.Route("/motor", func(r chi.Router) {
+			r.Get("/", motorHandler.List)
+			r.Get("/latest", motorHandler.Latest)
+		})
+
+		// Climate/HVAC
+		r.Route("/climate", func(r chi.Router) {
+			r.Get("/", climateHandler.List)
+			r.Get("/latest", climateHandler.Latest)
+		})
+
+		// Security/Access
+		r.Route("/security", func(r chi.Router) {
+			r.Get("/", securityHandler.List)
+			r.Get("/latest", securityHandler.Latest)
+		})
+
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
@@ -269,6 +293,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			}
 			r.Get("/version", VersionHandler(ver, cfg))
 			r.Get("/update-check", UpdateCheckHandler())
+			r.Get("/workers", WorkersHealthHandler())
 		})
 
 		// API Call Logs

@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -35,12 +48,292 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 20,
+        "h": 4,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  COUNT(DISTINCT a.state) AS \"🗺️ States\",\n  COUNT(DISTINCT a.country) AS \"🌍 Countries\",\n  COUNT(*) AS \"📍 Locations\",\n  SUM(vl.visit_count) AS \"🔄 Total Visits\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Total Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Location Summary Stats",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 2,
+      "options": {
+        "view": {
+          "id": "fit",
+          "allLayers": true
+        },
+        "basemap": {
+          "type": "xyz",
+          "config": {
+            "url": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+            "attribution": "CARTO"
+          }
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Locations",
+            "config": {
+              "style": {
+                "color": {
+                  "fixed": "#00f0ff"
+                },
+                "opacity": 0.8,
+                "size": {
+                  "field": "visits",
+                  "min": 5,
+                  "max": 25
+                }
+              },
+              "showLegend": true
+            },
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "tooltip": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  a.latitude,\n  a.longitude,\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"name\",\n  vl.visit_count AS \"visits\",\n  a.city AS \"city\",\n  a.state AS \"state\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\n  AND a.latitude IS NOT NULL\nORDER BY vl.visit_count DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Locations Map",
+      "type": "geomap",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 3,
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "auto",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "stacking": "none",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY 2 DESC\nLIMIT 15",
+          "refId": "A"
+        }
+      ],
+      "title": "Visits by City",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  COALESCE(a.city, 'Unknown') AS \"🏙️ City\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.city\nORDER BY 2 DESC\nLIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "title": "Time Spent by City",
+      "type": "piechart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 5,
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "auto",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "stacking": "none",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  COALESCE(a.state, 'Unknown') AS \"📊 State\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.state\nORDER BY 2 DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Visits by State",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 6,
       "options": {
         "showHeader": true,
         "footer": {
@@ -49,7 +342,7 @@
         "cellHeight": "sm",
         "sortBy": [
           {
-            "displayName": "Date",
+            "displayName": "Visits",
             "desc": true
           }
         ]
@@ -63,13 +356,161 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\",\n  a.city AS \"City\",\n  a.state AS \"State\",\n  vl.visit_count AS \"Visits\",\n  ROUND(vl.total_duration_min::numeric) AS \"Total Minutes\",\n  ROUND((vl.total_duration_min / 60)::numeric, 1) AS \"Total Hours\",\n  vl.last_visited AS \"Last Visited\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 100",
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' THEN '🏠'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨'\n    WHEN a.display_name LIKE '%Resort%' THEN '🏖️'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧'\n    ELSE '📍'\n  END || ' ' || COALESCE(a.display_name, 'Unknown') AS \"📍 Location\",\n  COALESCE(a.city, '') AS \"🏙️ City\",\n  COALESCE(a.state, '') AS \"🗺️ State\",\n  COALESCE(a.country, '') AS \"🌍 Country\",\n  vl.visit_count AS \"🔄 Visits\",\n  ROUND(vl.total_duration_min / 60) AS \"⏱️ Hours\",\n  TO_CHAR(vl.last_visited, 'YYYY-MM-DD') AS \"📅 Last Visit\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nORDER BY vl.visit_count DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
-      "title": "Visited Locations",
+      "title": "Top Locations",
       "type": "table",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 7,
+      "options": {
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CASE\n    WHEN a.display_name LIKE '%Home%' OR a.display_name LIKE '%Residence%' THEN '🏠 Home'\n    WHEN a.display_name LIKE '%Office%' THEN '🏢 Work'\n    WHEN a.display_name LIKE '%Supercharger%' THEN '⚡ Supercharger'\n    WHEN a.display_name LIKE '%Hotel%' THEN '🏨 Hotel'\n    WHEN a.display_name LIKE '%Costco%' OR a.display_name LIKE '%Walmart%' THEN '🛒 Shopping'\n    WHEN a.display_name LIKE '%Service%' THEN '🔧 Service'\n    ELSE '📍 Other'\n  END AS \"🏷️ Type\",\n  SUM(vl.visit_count) AS \"🔄 Visits\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY 1\nORDER BY 2 DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Location Type Distribution",
+      "type": "piechart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 8,
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "barWidth": 0.8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(a.country, 'Unknown') AS \"🌍 Country\",\n  SUM(vl.visit_count) AS \"🔄 Visits\",\n  COUNT(DISTINCT a.city) AS \"🏙️ Cities\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.country\nORDER BY \"🔄 Visits\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "🌍 Visits by Country",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 9,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(a.country, 'Unknown') AS \"🌍 Country\",\n  ROUND(SUM(vl.total_duration_min) / 60) AS \"⏱️ Hours\"\nFROM visited_locations vl\nJOIN addresses a ON vl.address_id = a.id\nWHERE vl.vehicle_id = ${vehicle_id}\nGROUP BY a.country\nORDER BY \"⏱️ Hours\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "🌍 Time by Country",
+      "type": "piechart"
     }
   ],
   "schemaVersion": 39,
@@ -81,8 +522,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -90,7 +531,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -100,6 +541,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -109,7 +602,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Visited Locations",
+  "title": "TeslaSync 📍 Visited Locations",
   "uid": "teslasync-locations",
   "version": 1,
   "weekStart": ""

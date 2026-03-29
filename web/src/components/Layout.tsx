@@ -31,6 +31,16 @@ import {
   Shield,
   FileText,
   Wrench,
+  Thermometer,
+  Lock,
+  Cog,
+  TrendingUp,
+  DollarSign,
+  Battery,
+  Trophy,
+  CalendarCheck,
+  Wrench as WrenchIcon,
+  HardDriveDownload,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -68,6 +78,9 @@ const navI18nKeys: Record<string, string> = {
   'Geofences': 'nav.geofences',
   'Notifications': 'nav.notifications',
   'Settings': 'nav.settings',
+  'Driving Dynamics': 'nav.drivingDynamics',
+  'Climate Control': 'nav.climateControl',
+  'Security & Access': 'nav.securityAccess',
 }
 
 function SSEStatusDot({ connected }: { connected: boolean }) {
@@ -88,18 +101,25 @@ const navSections = [
       { to: '/live', icon: Radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400' },
       { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
+      { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
     ],
   },
   {
     title: 'Intelligence',
     items: [
       { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
+      { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
       { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
+      { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
       { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
+      { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
+      { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
       { to: '/efficiency', icon: Zap, label: 'Efficiency', color: 'text-amber-400' },
       { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
+      { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },
+      { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
       { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
       { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
       { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
@@ -112,6 +132,7 @@ const navSections = [
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
       { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
+      { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
     ],
   },
   {
@@ -122,6 +143,7 @@ const navSections = [
       { to: '/trips', icon: Navigation, label: 'Trips', color: 'text-violet-400' },
       { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
       { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
+      { to: '/maintenance', icon: WrenchIcon, label: 'Maintenance', color: 'text-amber-400' },
     ],
   },
   {
@@ -137,6 +159,7 @@ const navSections = [
       { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
       { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
     ],
@@ -183,7 +206,7 @@ export default function Layout() {
   const mainRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+    <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -270,7 +293,7 @@ export default function Layout() {
                         <Icon className={clsx('h-[18px] w-[18px] transition-all duration-200', color, isActive ? 'opacity-100 drop-shadow-[0_0_6px_currentColor]' : 'opacity-40 group-hover:opacity-80')} />
                       </span>
                       <span className={clsx('relative z-10 transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
-                        {navI18nKeys[label] ? t(navI18nKeys[label]) : label}
+                        {navI18nKeys[label] ? (t(navI18nKeys[label]) === navI18nKeys[label] ? label : t(navI18nKeys[label])) : label}
                       </span>
                       {/* Badge for Alerts */}
                       {to === '/alerts' && unreadAlerts > 0 && (
@@ -352,7 +375,7 @@ export default function Layout() {
 
         <ServiceStatusBanner />
         <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
-          <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-[1600px] px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

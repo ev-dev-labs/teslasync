@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -381,7 +394,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  vde.start_date AS \"Date\",\n  vde.start_battery AS \"Start %\",\n  vde.end_battery AS \"End %\",\n  vde.battery_lost AS \"Lost %\",\n  ROUND(vde.range_lost_km::numeric, 1) AS \"Range Lost km\",\n  ROUND(vde.duration_hours::numeric, 1) AS \"Duration hrs\",\n  ROUND(vde.drain_rate_pct_per_hour::numeric, 2) AS \"Rate %/hr\",\n  ROUND(vde.outside_temp_avg::numeric, 1) AS \"Temp °C\",\n  CASE WHEN vde.sentry_mode THEN 'Yes' ELSE 'No' END AS \"Sentry Mode\"\nFROM vampire_drain_events vde\nWHERE vde.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(vde.start_date)\nORDER BY vde.start_date DESC\nLIMIT 100",
+          "rawSql": "SELECT\n  vde.start_date AS \"📅 Date\",\n  vde.start_battery AS \"🔋 Start %\",\n  vde.end_battery AS \"🔋 End %\",\n  vde.battery_lost AS \"📉 Lost %\",\n  ROUND(vde.range_lost_km::numeric, 1) AS \"📉 Range Lost\",\n  ROUND(vde.duration_hours::numeric, 1) AS \"⏱️ Hours\",\n  ROUND(vde.drain_rate_pct_per_hour::numeric, 2) AS \"🧛 Rate %/hr\",\n  ROUND(vde.outside_temp_avg::numeric, 1) AS \"🌡️ Temp\",\n  CASE WHEN vde.sentry_mode THEN 'Yes' ELSE 'No' END AS \"🛡️ Sentry\"\nFROM vampire_drain_events vde\nWHERE vde.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(vde.start_date)\nORDER BY vde.start_date DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -399,8 +412,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -408,7 +421,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -418,6 +431,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -427,7 +492,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Vampire Drain Analysis",
+  "title": "TeslaSync 🧛 Vampire Drain",
   "uid": "teslasync-vampire-drain",
   "version": 1,
   "weekStart": ""

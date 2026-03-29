@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -63,7 +76,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  cs.start_date AS \"Date\",\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"kWh Added\",\n  ROUND(cs.cost::numeric, 2) AS \"Cost $\",\n  cs.start_battery_level AS \"Start %\",\n  cs.end_battery_level AS \"End %\",\n  ROUND(cs.charger_power::numeric) AS \"Power kW\",\n  COALESCE(cs.fast_charger_type, 'AC') AS \"Type\",\n  COALESCE(cs.fast_charger_brand, '-') AS \"Brand\",\n  ROUND(cs.duration_min::numeric) AS \"Duration min\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.start_date)\nORDER BY cs.start_date DESC\nLIMIT 200",
+          "rawSql": "SELECT\n  cs.start_date AS \"📅 Date\",\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"📍 Location\",\n  ROUND(cs.charge_energy_added::numeric, 1) AS \"⚡ kWh Added\",\n  ROUND(cs.cost::numeric, 2) AS \"💰 Cost\",\n  cs.start_battery_level AS \"🔋 Start %\",\n  cs.end_battery_level AS \"🔋 End %\",\n  ROUND(cs.charger_power::numeric) AS \"🔌 Power\",\n  COALESCE(cs.fast_charger_type, 'AC') AS \"🏷️ Type\",\n  COALESCE(cs.fast_charger_brand, '-') AS \"🏷️ Brand\",\n  ROUND(cs.duration_min::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.start_date)\nORDER BY cs.start_date DESC\nLIMIT 200",
           "refId": "A"
         }
       ],
@@ -81,8 +94,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -90,7 +103,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -100,6 +113,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -109,7 +174,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Charging History",
+  "title": "TeslaSync ⚡ Charging History",
   "uid": "teslasync-charging",
   "version": 1,
   "weekStart": ""

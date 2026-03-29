@@ -19,7 +19,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -73,7 +86,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(charge_energy_added)::numeric, 1) AS \"kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT ROUND(SUM(charge_energy_added)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -253,7 +266,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Sessions\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT COUNT(*) AS \"🔄 Sessions\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -313,7 +326,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(charge_energy_added)::numeric, 1) AS \"kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
+          "rawSql": "SELECT ROUND(AVG(charge_energy_added)::numeric, 1) AS \"⚡ kWh\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)",
           "refId": "A"
         }
       ],
@@ -454,7 +467,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_date, '1M') AS time,\n  SUM(charge_energy_added) AS \"Energy kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(start_date, '1M') AS time,\n  SUM(charge_energy_added) AS \"⚡ Energy\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -535,7 +548,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_date, '1M') AS time,\n  SUM(cost) AS \"Cost $\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND cost IS NOT NULL\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(start_date, '1M') AS time,\n  SUM(cost) AS \"💰 Cost\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND cost IS NOT NULL\nGROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
@@ -592,7 +605,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(fast_charger_type, 'AC') AS \"Type\",\n  COUNT(*) AS \"Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY COALESCE(fast_charger_type, 'AC')\nORDER BY \"Sessions\" DESC",
+          "rawSql": "SELECT\n  COALESCE(fast_charger_type, 'AC') AS \"🏷️ Type\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\nGROUP BY COALESCE(fast_charger_type, 'AC')\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -712,7 +725,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"Location\",\n  COUNT(*) AS \"Sessions\",\n  ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"Total Cost $\",\n  ROUND(AVG(cs.charge_energy_added)::numeric, 1) AS \"Avg kWh\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_date)\nGROUP BY a.id, a.display_name, a.city\nORDER BY \"Sessions\" DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  COALESCE(a.display_name, a.city, 'Unknown') AS \"📍 Location\",\n  COUNT(*) AS \"🔄 Sessions\",\n  ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS \"⚡ Total kWh\",\n  ROUND(SUM(cs.cost)::numeric, 2) AS \"💰 Total Cost\",\n  ROUND(AVG(cs.charge_energy_added)::numeric, 1) AS \"⚡ Avg kWh\"\nFROM charging_sessions cs\nLEFT JOIN addresses a ON cs.address_id = a.id\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.start_date)\nGROUP BY a.id, a.display_name, a.city\nORDER BY 2 DESC\nLIMIT 20",
           "refId": "A"
         }
       ],
@@ -730,8 +743,8 @@
       {
         "current": {
           "selected": true,
-          "text": "All",
-          "value": "$__all"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -739,7 +752,7 @@
         },
         "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
@@ -749,6 +762,58 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "C",
+          "value": "C",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_temp",
+        "label": "Temperature",
+        "options": [
+          {
+            "text": "C",
+            "value": "C",
+            "selected": true
+          },
+          {
+            "text": "F",
+            "value": "F",
+            "selected": false
+          }
+        ],
+        "query": "C,F",
+        "type": "custom"
       }
     ]
   },
@@ -758,7 +823,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync — Charging Analytics",
+  "title": "TeslaSync 📊 Charging Analytics",
   "uid": "teslasync-charging-stats",
   "version": 1,
   "weekStart": ""
