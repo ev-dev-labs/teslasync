@@ -54,6 +54,7 @@ import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates } from '../api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
+import { useSettings } from '../hooks/useSettings'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -179,6 +180,7 @@ export default function Layout() {
 
   // SSE connection status
   const { connected: sseConnected } = useRealtimeEvents()
+  const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: 60_000, refetchInterval: 60_000 })
@@ -343,7 +345,7 @@ export default function Layout() {
                 style={{ boxShadow: `0 0 6px ${primaryState.state.battery_level > 20 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }} />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{primaryVehicle.display_name || 'Vehicle'}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(primaryState.state.rated_range)} km</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(convertDistance(primaryState.state.rated_range))} {distanceUnit}</p>
               </div>
               <Zap className="h-3 w-3 text-neon-cyan/50" />
             </div>

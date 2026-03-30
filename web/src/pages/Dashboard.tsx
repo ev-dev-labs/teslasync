@@ -916,7 +916,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Distance</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {locationData.miles_to_arrival != null ? `${locationData.miles_to_arrival.toFixed(1)} mi` : '—'}
+                        {locationData.miles_to_arrival != null ? `${convertDistance(locationData.miles_to_arrival * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
