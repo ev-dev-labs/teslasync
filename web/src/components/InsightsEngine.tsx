@@ -146,8 +146,8 @@ function analyzeBatteryHealth(report: BatteryReport): Insight | null {
 
   let yearlyRate = degradation
   if (trend.length >= 2) {
-    const first = trend[0].capacity_pct
-    const last = trend[trend.length - 1].capacity_pct
+    const first = trend[0]?.capacity_pct ?? 0
+    const last = trend[trend.length - 1]?.capacity_pct ?? 0
     const months = trend.length
     yearlyRate = months > 0 ? ((first - last) / months) * 12 : degradation
   }

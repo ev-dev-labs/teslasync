@@ -286,14 +286,14 @@ export default function Charging() {
   // Enhanced statistics
   const enhancedStats = useMemo(() => {
     if (!sessions || sessions.length === 0 || !stats) return null
-    const avgDuration = stats.totalDuration / stats.count
+    const avgDuration = stats.count > 0 ? stats.totalDuration / stats.count : 0
     const chargerTypes = sessions.reduce<Record<string, number>>((acc, s) => {
       const t = s.fast_charger_type || 'AC/Home'
       acc[t] = (acc[t] || 0) + 1
       return acc
     }, {})
     const mostCommonType = Object.entries(chargerTypes).sort((a, b) => b[1] - a[1])[0]
-    const avgCostPerSession = stats.totalCost / stats.count
+    const avgCostPerSession = stats.count > 0 ? stats.totalCost / stats.count : 0
     return { avgDuration, mostCommonType, avgCostPerSession }
   }, [sessions, stats])
 

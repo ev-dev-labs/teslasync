@@ -63,7 +63,7 @@ export default function BatteryHealth() {
     if (trendData.length < 2) return []
     const first = trendData[0].capacity_pct
     const last = trendData[trendData.length - 1].capacity_pct
-    const ratePerMonth = (first - last) / trendData.length
+    const ratePerMonth = trendData.length > 1 ? (first - last) / (trendData.length - 1) : 0
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     const now = new Date()
     return Array.from({ length: 24 }, (_, i) => {
@@ -81,7 +81,7 @@ export default function BatteryHealth() {
     if (!sessions || sessions.length === 0) return null
     const startLevels = sessions.map(s => s.start_battery_level)
     const endLevels = sessions.filter(s => s.end_battery_level).map(s => s.end_battery_level!)
-    const avgStart = startLevels.reduce((a, b) => a + b, 0) / startLevels.length
+    const avgStart = startLevels.length > 0 ? startLevels.reduce((a, b) => a + b, 0) / startLevels.length : 0
     const avgEnd = endLevels.length > 0 ? endLevels.reduce((a, b) => a + b, 0) / endLevels.length : 80
     const chargesAbove90 = endLevels.filter(l => l > 90).length
     const chargesBelow10 = startLevels.filter(l => l < 10).length

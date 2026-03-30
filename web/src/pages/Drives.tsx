@@ -170,7 +170,7 @@ export default function Drives() {
     return drives
       .filter(d => d.speed_max && d.duration_min > 0)
       .map(d => {
-        const avgSpd = d.distance / (d.duration_min / 60)
+        const avgSpd = d.duration_min > 0 ? d.distance / (d.duration_min / 60) : 0
         const eff = getEfficiency(d)
         return eff ? { speed: Math.round(avgSpd), efficiency: Math.round(eff) } : null
       })

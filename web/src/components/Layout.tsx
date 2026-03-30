@@ -185,8 +185,8 @@ export default function Layout() {
   const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: checkForUpdates, staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
-  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000 })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: getVehicles, refetchInterval: 60_000 })
+  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000, retry: 1 })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: getVehicles, refetchInterval: 60_000, retry: 1 })
   const primaryVehicle = vehicles?.[0]
   const { data: primaryState } = useQuery({
     queryKey: ['primary-state-sidebar', primaryVehicle?.id],
