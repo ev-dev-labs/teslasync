@@ -698,7 +698,9 @@ func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, sign
 	_, hasSpeed := signals["VehicleSpeed"]
 	_, hasPedal := signals["PedalPosition"]
 	_, hasAccel := signals["LateralAcceleration"]
-	if !hasTorque && !hasSpeed && !hasPedal && !hasAccel {
+	_, hasGear := signals["Gear"]
+	_, hasOdometer := signals["Odometer"]
+	if !hasTorque && !hasSpeed && !hasPedal && !hasAccel && !hasGear && !hasOdometer {
 		return
 	}
 
@@ -887,9 +889,10 @@ func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, sign
 // trackClimate stores climate/HVAC snapshots when relevant signals arrive.
 func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	_, hasInside := signals["InsideTemp"]
+	_, hasOutside := signals["OutsideTemp"]
 	_, hasHvac := signals["HvacPower"]
 	_, hasFan := signals["HvacFanSpeed"]
-	if !hasInside && !hasHvac && !hasFan {
+	if !hasInside && !hasOutside && !hasHvac && !hasFan {
 		return
 	}
 
@@ -1145,7 +1148,11 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 	_, hasDetailedCharge := signals["DetailedChargeState"]
 	_, hasDCPower := signals["DCChargingPower"]
 	_, hasACPower := signals["ACChargingPower"]
-	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower {
+	_, hasBatteryLevel := signals["BatteryLevel"]
+	_, hasSoc := signals["Soc"]
+	_, hasChargeRate := signals["ChargeRateMilePerHour"]
+	_, hasChargeAmps := signals["ChargeAmps"]
+	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower && !hasBatteryLevel && !hasSoc && !hasChargeRate && !hasChargeAmps {
 		return
 	}
 
