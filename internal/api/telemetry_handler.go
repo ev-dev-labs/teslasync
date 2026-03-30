@@ -570,7 +570,20 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 	}
 
 	if !hasLocation {
-		return nil
+		// No GPS location — still create position if we have battery/temp/speed data
+		hasBattery := false
+		if _, ok := signals["BatteryLevel"]; ok {
+			hasBattery = true
+		} else if _, ok := signals["Soc"]; ok {
+			hasBattery = true
+		}
+		_, hasTemp := signals["InsideTemp"]
+		_, hasOutTemp := signals["OutsideTemp"]
+		_, hasSpeed := signals["VehicleSpeed"]
+		_, hasOdometer := signals["Odometer"]
+		if !hasBattery && !hasTemp && !hasOutTemp && !hasSpeed && !hasOdometer {
+			return nil
+		}
 	}
 
 	// Driving signals
@@ -1204,7 +1217,17 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 	_, hasSoc := signals["Soc"]
 	_, hasChargeRate := signals["ChargeRateMilePerHour"]
 	_, hasChargeAmps := signals["ChargeAmps"]
-	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower && !hasBatteryLevel && !hasSoc && !hasChargeRate && !hasChargeAmps {
+	_, hasChargerVoltage := signals["ChargerVoltage"]
+	_, hasEstRange := signals["EstBatteryRange"]
+	_, hasIdealRange := signals["IdealBatteryRange"]
+	_, hasEnergyRemaining := signals["EnergyRemaining"]
+	_, hasPackVoltage := signals["PackVoltage"]
+	_, hasPackCurrent := signals["PackCurrent"]
+	_, hasChargeLimitSoc := signals["ChargeLimitSoc"]
+	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower &&
+		!hasBatteryLevel && !hasSoc && !hasChargeRate && !hasChargeAmps &&
+		!hasChargerVoltage && !hasEstRange && !hasIdealRange && !hasEnergyRemaining &&
+		!hasPackVoltage && !hasPackCurrent && !hasChargeLimitSoc {
 		return
 	}
 
