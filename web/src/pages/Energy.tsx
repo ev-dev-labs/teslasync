@@ -319,8 +319,8 @@ export default function Energy() {
                             <span className="text-xs text-[var(--text-muted)]">{b.count} sessions</span>
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-neon-cyan">{b.energy.toFixed(1)} kWh</span>
-                            <span className="text-neon-green">${b.cost.toFixed(2)}</span>
+                            <span className="text-neon-cyan">{(b.energy ?? 0).toFixed(1)} kWh</span>
+                            <span className="text-neon-green">${(b.cost ?? 0).toFixed(2)}</span>
                             <span className="text-gray-600">${b.energy > 0 ? (b.cost / b.energy).toFixed(3) : '0'}/kWh</span>
                           </div>
                         </div>
@@ -360,7 +360,7 @@ export default function Energy() {
                               {new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </Link>
                           </td>
-                          <td className="py-3 pr-4 text-neon-cyan font-medium">{s.charge_energy_added.toFixed(1)} kWh</td>
+                          <td className="py-3 pr-4 text-neon-cyan font-medium">{(s.charge_energy_added ?? 0).toFixed(1)} kWh</td>
                           <td className="py-3 pr-4">
                             <span className="text-[var(--text-muted)]">{s.start_battery_level}%</span>
                             <span className="text-gray-700 mx-1">→</span>
@@ -376,8 +376,8 @@ export default function Energy() {
                               {s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}
                             </span>
                           </td>
-                          <td className="py-3 pr-4">{s.cost !== null ? `$${s.cost.toFixed(2)}` : '—'}</td>
-                          <td className="py-3 text-[var(--text-muted)]">{s.cost !== null && s.charge_energy_added > 0 ? `$${(s.cost / s.charge_energy_added).toFixed(3)}` : '—'}</td>
+                          <td className="py-3 pr-4">{typeof s.cost === 'number' ? `$${s.cost.toFixed(2)}` : '—'}</td>
+                          <td className="py-3 text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${(s.cost / s.charge_energy_added).toFixed(3)}` : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
