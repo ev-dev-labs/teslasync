@@ -313,8 +313,13 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 		h.lastWriteMu.Lock()
 		lastWrite := h.lastWriteAt[vin]
-		shouldWrite := time.Since(lastWrite) >= snapshotWriteInterval
-		if shouldWrite {
+		isFirstSignal := lastWrite.IsZero()
+		shouldWrite := !isFirstSignal && time.Since(lastWrite) >= snapshotWriteInterval
+		if isFirstSignal {
+			// First signal for this vehicle — start the throttle timer but don't write yet.
+			// Let the accumulator collect signals for the full interval first.
+			h.lastWriteAt[vin] = time.Now()
+		} else if shouldWrite {
 			h.lastWriteAt[vin] = time.Now()
 		}
 		h.lastWriteMu.Unlock()
@@ -1136,6 +1141,8 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		return
 	}
 
+	log.Debug().Int64("vehicle_id", vehicleID).Bool("locked", hasLocked).Bool("sentry", hasSentry).Bool("door", hasDoor).Bool("window", hasWindow).Msg("telemetry: trackSecurity gate passed")
+
 	ev := &models.SecurityEvent{VehicleID: vehicleID}
 	if v, ok := signals["Locked"]; ok {
 		b := toBool(v)
@@ -1243,6 +1250,8 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 	}
 	if err := h.securityRepo.Insert(ctx, ev); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store security event")
+	} else {
+		log.Debug().Int64("vehicle_id", vehicleID).Int64("id", ev.ID).Msg("telemetry: security event stored")
 	}
 }
 
