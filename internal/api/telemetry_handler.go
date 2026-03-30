@@ -161,6 +161,9 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// Find vehicle by VIN and store position
 	var vehicleID int64
 	err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID)
+	if err != nil {
+		log.Warn().Err(err).Str("vin", vin).Msg("telemetry: vehicle not found or DB error")
+	}
 	if err == nil && pos != nil {
 		pos.VehicleID = vehicleID
 		if err := h.posRepo.Insert(ctx, pos); err != nil {
@@ -233,7 +236,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
 	if vehicleID > 0 {
 		go func() {
-			bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
 			// Update vehicle to online/healthy
