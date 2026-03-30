@@ -43,6 +43,10 @@ type TelemetryHandler struct {
 	// Per-vehicle streaming health tracking
 	mu             sync.RWMutex
 	streamingState map[string]*VehicleStreamState // keyed by VIN
+
+	// Per-vehicle write throttling to prevent DB overload
+	lastWriteMu sync.RWMutex
+	lastWriteAt map[string]time.Time // keyed by VIN
 }
 
 // VehicleStreamState tracks streaming health per vehicle.
@@ -94,6 +98,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
 		staleTimeout:   staleTimeout,
 		streamingState: make(map[string]*VehicleStreamState),
+		lastWriteAt:    make(map[string]time.Time),
 	}
 }
 
@@ -234,18 +239,37 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	}
 
 	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
+	// Throttle snapshot writes to once every 10 seconds per vehicle to prevent
+	// DB connection pool exhaustion from high-frequency telemetry batches.
 	if vehicleID > 0 {
+		const snapshotWriteInterval = 10 * time.Second
+		h.lastWriteMu.RLock()
+		lastWrite := h.lastWriteAt[vin]
+		h.lastWriteMu.RUnlock()
+		shouldWrite := time.Since(lastWrite) >= snapshotWriteInterval
+
+		if shouldWrite {
+			h.lastWriteMu.Lock()
+			h.lastWriteAt[vin] = time.Now()
+			h.lastWriteMu.Unlock()
+		}
+
 		go func() {
 			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			// Update vehicle to online/healthy
-			if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, "online", true); err != nil {
-				log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
+			// Always update vehicle state (lightweight, single UPDATE)
+			if shouldWrite {
+				if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, "online", true); err != nil {
+					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
+				}
+				h.trackStateTransition(bgCtx, vehicleID, signals)
 			}
 
-			// Track vehicle state transitions (online/driving/charging)
-			h.trackStateTransition(bgCtx, vehicleID, signals)
+			// Throttled snapshot writes — only run every 10s per vehicle
+			if !shouldWrite {
+				return
+			}
 
 			// Update daily mileage from odometer readings
 			h.trackMileage(bgCtx, vehicleID, signals)
