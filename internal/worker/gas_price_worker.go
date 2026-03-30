@@ -116,11 +116,11 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 	}
 
 	url := fmt.Sprintf(
-		"https://api.eia.gov/v2/petroleum/pri/grt/data/?api_key=%s&frequency=weekly&data[]=value&facets[product][]=EPM0&facets[duession][]=PG&sort[0][column]=period&sort[0][direction]=desc&length=1",
+		"https://api.eia.gov/v2/petroleum/pri/grt/data/?api_key=%s&frequency=weekly&data[]=value&facets[product][]=EPM0&facets[duoarea][]=NUS&sort[0][column]=period&sort[0][direction]=desc&length=1",
 		w.cfg.APIKey,
 	)
 
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, url, nil)
