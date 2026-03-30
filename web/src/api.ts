@@ -58,6 +58,8 @@ export interface Position {
   created_at: string
   fan_status?: number
 }
+
+export interface Drive {
   id: number
   vehicle_id: number
   start_date: string
