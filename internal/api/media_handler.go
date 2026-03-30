@@ -48,5 +48,9 @@ func (h *MediaHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to get media data")
 		return
 	}
+	if snap == nil {
+		writeError(w, http.StatusNotFound, "no media data available")
+		return
+	}
 	writeJSON(w, http.StatusOK, snap)
 }
