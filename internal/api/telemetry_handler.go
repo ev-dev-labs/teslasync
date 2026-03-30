@@ -243,16 +243,13 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// DB connection pool exhaustion from high-frequency telemetry batches.
 	if vehicleID > 0 {
 		const snapshotWriteInterval = 10 * time.Second
-		h.lastWriteMu.RLock()
+		h.lastWriteMu.Lock()
 		lastWrite := h.lastWriteAt[vin]
-		h.lastWriteMu.RUnlock()
 		shouldWrite := time.Since(lastWrite) >= snapshotWriteInterval
-
 		if shouldWrite {
-			h.lastWriteMu.Lock()
 			h.lastWriteAt[vin] = time.Now()
-			h.lastWriteMu.Unlock()
 		}
+		h.lastWriteMu.Unlock()
 
 		go func() {
 			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

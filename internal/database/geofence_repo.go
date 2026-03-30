@@ -65,19 +65,31 @@ func (r *GeofenceRepo) GetByID(ctx context.Context, id int64) (*models.Geofence,
 
 func (r *GeofenceRepo) Update(ctx context.Context, g *models.Geofence) error {
 	now := time.Now().UTC()
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	// Close the old rate period if cost changed
-	_, _ = r.db.Pool.Exec(ctx,
+	if _, err := tx.Exec(ctx,
 		`UPDATE geofence_electricity_rates SET effective_to = $2 WHERE geofence_id = $1 AND effective_to IS NULL`,
-		g.ID, now)
+		g.ID, now); err != nil {
+		return err
+	}
 	// Insert new rate period if cost is set
 	if g.CostPerKwh != nil {
-		_, _ = r.db.Pool.Exec(ctx,
+		if _, err := tx.Exec(ctx,
 			`INSERT INTO geofence_electricity_rates (geofence_id, cost_per_kwh, effective_from) VALUES ($1, $2, $3)`,
-			g.ID, *g.CostPerKwh, now)
+			g.ID, *g.CostPerKwh, now); err != nil {
+			return err
+		}
 	}
 	query := `UPDATE geofences SET name=$2, latitude=$3, longitude=$4, radius=$5, cost_per_kwh=$6, updated_at=$7 WHERE id=$1`
-	_, err := r.db.Pool.Exec(ctx, query, g.ID, g.Name, g.Latitude, g.Longitude, g.Radius, g.CostPerKwh, now)
-	return err
+	if _, err := tx.Exec(ctx, query, g.ID, g.Name, g.Latitude, g.Longitude, g.Radius, g.CostPerKwh, now); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (r *GeofenceRepo) Delete(ctx context.Context, id int64) error {

@@ -117,9 +117,21 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	var batteryTrend []batteryPoint
 
 	for _, v := range vehicles {
-		drives, _ := h.driveRepo.GetByVehicle(r.Context(), v.ID, 10000, 0, time.Time{}, time.Time{})
-		sessions, _ := h.chargingRepo.GetByVehicle(r.Context(), v.ID, 10000, 0, time.Time{}, time.Time{})
-		batSnaps, _ := h.batteryRepo.GetByVehicle(r.Context(), v.ID, 365)
+		drives, err := h.driveRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, time.Time{})
+		if err != nil {
+			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get drives")
+			drives = nil
+		}
+		sessions, err := h.chargingRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, time.Time{})
+		if err != nil {
+			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
+			sessions = nil
+		}
+		batSnaps, err := h.batteryRepo.GetByVehicle(r.Context(), v.ID, 365)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get battery snapshots")
+			batSnaps = nil
+		}
 
 		var dist float64
 		var driveCount int

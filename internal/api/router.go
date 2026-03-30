@@ -111,6 +111,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := NewBackupHandler(db)
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
+	apiKeyHandler := NewAPIKeyHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute)
@@ -343,6 +344,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/api-logs", func(r chi.Router) {
 			r.Get("/", apiCallLogHandler.List)
 			r.Get("/stats", apiCallLogHandler.Stats)
+		})
+
+		// API Keys
+		r.Route("/api-keys", func(r chi.Router) {
+			r.Get("/", apiKeyHandler.List)
+			r.Post("/", apiKeyHandler.Create)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Delete("/", apiKeyHandler.Delete)
+				r.Post("/revoke", apiKeyHandler.Revoke)
+			})
 		})
 
 		// Fleet Telemetry ingestion

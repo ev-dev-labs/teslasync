@@ -53,7 +53,6 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 				"model":        model,
 			})
 		}
-		rows.Close()
 	}
 
 	// Search drives by start/end address
@@ -84,7 +83,6 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 				"address":    addressName,
 			})
 		}
-		rows2.Close()
 	}
 
 	// Search visited locations
@@ -112,7 +110,6 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 				"visit_count":  visitCount,
 			})
 		}
-		rows3.Close()
 	}
 
 	if results == nil {
