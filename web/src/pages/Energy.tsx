@@ -13,7 +13,7 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useSettings } from '../hooks/useSettings'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
-  const savings = gasCost - evCost
+  const savings = (gasCost ?? 0) - (evCost ?? 0)
   const savingsPct = gasCost > 0 ? (savings / gasCost * 100) : 0
   return (
     <GlassPanel className="p-5">
@@ -24,17 +24,17 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
       <div className="flex items-center gap-4 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>EV Cost</p>
-          <p className="text-lg font-bold text-neon-cyan">${evCost.toFixed(2)}</p>
+          <p className="text-lg font-bold text-neon-cyan">${(evCost ?? 0).toFixed(2)}</p>
         </div>
         <ArrowRight className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Gas Equivalent</p>
-          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>${gasCost.toFixed(2)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>${(gasCost ?? 0).toFixed(2)}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-neon-green">Saving ${savings.toFixed(2)}</span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">{savingsPct.toFixed(0)}% less</span>
+        <span className="text-sm font-bold text-neon-green">Saving ${(savings ?? 0).toFixed(2)}</span>
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">{(savingsPct ?? 0).toFixed(0)}% less</span>
       </div>
     </GlassPanel>
   )
@@ -153,11 +153,11 @@ export default function Energy() {
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
           { label: `Cost per ${distanceUnit}`, value: `$${(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0).toFixed(3)}`, color: 'text-neon-cyan' },
-          { label: 'Cost per kWh', value: `$${costPerKwh.toFixed(3)}`, color: 'text-neon-green' },
-          { label: 'Total Distance', value: `${convertDistance(totalDistance).toFixed(0)} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
+          { label: 'Cost per kWh', value: `$${(costPerKwh ?? 0).toFixed(3)}`, color: 'text-neon-green' },
+          { label: 'Total Distance', value: `${convertDistance(totalDistance ?? 0).toFixed(0)} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: 'Sessions', value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
-          { label: 'Monthly Est.', value: `$${monthlyProjectedCost.toFixed(2)}`, color: 'text-neon-amber' },
-          { label: 'Yearly Est.', value: `$${yearlyProjectedCost.toFixed(2)}`, color: 'text-neon-red' },
+          { label: 'Monthly Est.', value: `$${(monthlyProjectedCost ?? 0).toFixed(2)}`, color: 'text-neon-amber' },
+          { label: 'Yearly Est.', value: `$${(yearlyProjectedCost ?? 0).toFixed(2)}`, color: 'text-neon-red' },
         ].map(m => (
           <StaggerItem key={m.label}>
             <GlassPanel className="p-3 text-center">
