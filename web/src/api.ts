@@ -1322,3 +1322,37 @@ export interface TelemetryStatus {
 
 export const getTelemetryStatus = () =>
   request<TelemetryStatus>('/telemetry')
+
+// --- Gas Price Auto-Poll ---
+export interface GasPriceStatus {
+  enabled: boolean
+  poll_interval: string
+  last_poll_time: string
+  current_price: number
+}
+
+export interface GasPriceHistory {
+  id: number
+  price_per_unit: number
+  unit: string
+  efficiency_mpg: number
+  effective_from: string
+  effective_to: string | null
+  created_at: string
+}
+
+/** Fetches current gas price poll status. */
+export const getGasPriceStatus = () =>
+  request<GasPriceStatus>('/gas-price/status')
+/** Triggers an immediate gas price poll from the EIA API. */
+export const pollGasPrice = () =>
+  request<{ status: string }>('/gas-price/poll', { method: 'POST' })
+/** Toggles gas price auto-polling on or off. */
+export const toggleGasPrice = (enabled: boolean) =>
+  request<{ enabled: boolean }>('/gas-price/toggle', { method: 'POST', body: JSON.stringify({ enabled }) })
+/** Updates the gas price poll interval. */
+export const updateGasPriceConfig = (pollInterval: string) =>
+  request<{ poll_interval: string }>('/gas-price/config', { method: 'PUT', body: JSON.stringify({ poll_interval: pollInterval }) })
+/** Fetches gas price history records. */
+export const getGasPriceHistory = (limit = 50, offset = 0) =>
+  request<GasPriceHistory[]>(`/gas-price/history?limit=${limit}&offset=${offset}`)

@@ -405,6 +405,23 @@ config:
   webEndpoint: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Gas Price Auto-Poll (EIA API)
+#
+# Automatically fetches the US average regular gasoline price from the
+# U.S. Energy Information Administration (EIA) API. Used for EV vs ICE
+# cost comparison in the dashboard.
+#
+# Requires a free EIA API key: https://www.eia.gov/opendata/register.php
+# ─────────────────────────────────────────────────────────────────────────────
+gasPrice:
+  # -- Enable automatic gas price polling on startup.
+  enabled: false
+  # -- Poll interval: "daily", "7d", "15d", "30d"
+  pollInterval: "7d"
+  # -- EIA API key (required for gas price polling).
+  apiKey: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
 # ─────────────────────────────────────────────────────────────────────────────
 tesla:

@@ -199,6 +199,19 @@ func main() {
 	})
 	log.Info().Msg("maintenance worker started")
 
+	// Gas price worker — polls EIA API for US average gasoline price
+	var gasPriceWorker *worker.GasPriceWorker
+	if cfg.GasPrice.APIKey != "" {
+		gasPriceWorker = worker.NewGasPriceWorker(db, cfg.GasPrice)
+		resilience.SafeGoLoop(ctx, "gas-price-worker", func(loopCtx context.Context) {
+			gasPriceWorker.Start(loopCtx)
+		})
+		log.Info().
+			Bool("enabled", cfg.GasPrice.Enabled).
+			Str("poll_interval", cfg.GasPrice.PollInterval).
+			Msg("gas price worker started")
+	}
+
 	// Periodic component health checker — creates system alerts on state changes
 	alertRepo := database.NewAlertRepo(db)
 	notifRepo := database.NewNotificationRepo(db)
@@ -301,6 +314,7 @@ func main() {
 		AppVersion:       Version,
 		Encryptor:        encryptor,
 		TelemetryHandler: telemetryHandler,
+		GasPriceWorker:   gasPriceWorker,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

@@ -12,6 +12,9 @@ const defaults: AppSettings = {
   mode: 'dark',
   custom_primary: '#00b4d8',
   custom_accent: '#e63946',
+  gas_price_per_unit: 0,
+  gas_unit: 'gallon',
+  gas_efficiency_mpg: 25,
 }
 
 /**

@@ -19,13 +19,15 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
 // RouterOptions holds optional parameters for NewRouter.
 type RouterOptions struct {
 	AppVersion       string
 	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler // If set, reuses existing handler (for hybrid mode wiring)
+	TelemetryHandler *TelemetryHandler       // If set, reuses existing handler (for hybrid mode wiring)
+	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -185,6 +187,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/settings", settingsHandler.Get)
 		r.Put("/settings", settingsHandler.Update)
 		r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
+
+		// Gas Price Auto-Poll
+		if opt.GasPriceWorker != nil {
+			gasPriceHandler := NewGasPriceHandler(db, opt.GasPriceWorker)
+			r.Route("/gas-price", func(r chi.Router) {
+				r.Get("/status", gasPriceHandler.Status)
+				r.Post("/poll", gasPriceHandler.Poll)
+				r.Post("/toggle", gasPriceHandler.Toggle)
+				r.Put("/config", gasPriceHandler.UpdateConfig)
+				r.Get("/history", gasPriceHandler.History)
+			})
+		}
 
 		// Alerts
 		r.Route("/alerts", func(r chi.Router) {

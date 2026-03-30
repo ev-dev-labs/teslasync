@@ -20,6 +20,14 @@ type Config struct {
 	Auth           AuthConfig
 	Retention      RetentionConfig
 	FleetTelemetry FleetTelemetryConfig
+	GasPrice       GasPriceConfig
+}
+
+// GasPriceConfig controls automated gas price polling from the EIA API.
+type GasPriceConfig struct {
+	Enabled      bool
+	PollInterval string // "daily", "7d", "15d", "30d"
+	APIKey       string
 }
 
 type FleetTelemetryConfig struct {
@@ -183,6 +191,12 @@ func Load() (*Config, error) {
 			BatchMs:              envInt("FLEET_TELEMETRY_BATCH_MS", 100),
 			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 5*time.Minute),
 			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 60*time.Second),
+		},
+
+		GasPrice: GasPriceConfig{
+			Enabled:      envBool("GAS_PRICE_ENABLED", false),
+			PollInterval: envStr("GAS_PRICE_POLL_INTERVAL", "7d"),
+			APIKey:       envStr("GAS_PRICE_API_KEY", ""),
 		},
 	}
 
