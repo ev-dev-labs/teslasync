@@ -260,7 +260,8 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 			// Always update vehicle state (lightweight, single UPDATE)
 			if shouldWrite {
-				if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, "online", true); err != nil {
+				detectedState := h.detectVehicleState(signals)
+				if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, detectedState, true); err != nil {
 					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
 				}
 				h.trackStateTransition(bgCtx, vehicleID, signals)
@@ -307,30 +308,46 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	}
 }
 
-// trackStateTransition detects the vehicle state from signals and records transitions.
-func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	// Determine current state from signals
-	newState := "online"
+// detectVehicleState determines the vehicle state from telemetry signals.
+func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) string {
+	// Check for driving state
 	if speed, ok := signals["VehicleSpeed"]; ok && toFloat(speed) > 0 {
-		newState = "driving"
-	} else if gear, ok := signals["Gear"]; ok {
+		return "driving"
+	}
+	if gear, ok := signals["Gear"]; ok {
 		gs := fmt.Sprintf("%v", gear)
 		if gs == "D" || gs == "R" {
-			newState = "driving"
+			return "driving"
 		}
 	}
+
+	// Check for charging state
 	if cs, ok := signals["ChargeState"]; ok {
 		csStr := fmt.Sprintf("%v", cs)
 		if csStr == "Charging" || csStr == "Starting" {
-			newState = "charging"
+			return "charging"
 		}
 	}
 	if dcs, ok := signals["DetailedChargeState"]; ok {
 		dcsStr := fmt.Sprintf("%v", dcs)
 		if dcsStr == "Charging" || dcsStr == "Starting" {
-			newState = "charging"
+			return "charging"
 		}
 	}
+	// Infer charging from rate/amps when ChargeState isn't sent
+	if rate, ok := signals["ChargeRateMilePerHour"]; ok && toFloat(rate) > 0 {
+		return "charging"
+	}
+	if amps, ok := signals["ChargeAmps"]; ok && toFloat(amps) > 0 {
+		return "charging"
+	}
+
+	return "online"
+}
+
+// trackStateTransition detects the vehicle state from signals and records transitions.
+func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+	newState := h.detectVehicleState(signals)
 
 	currentState, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
 	if currentState == newState {
