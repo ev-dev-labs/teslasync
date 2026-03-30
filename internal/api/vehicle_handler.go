@@ -302,17 +302,51 @@ func (h *VehicleHandler) buildStateFromDB(r *http.Request, vehicle *models.Vehic
 		}
 	}
 
-	// Enrich with charging telemetry
-	if currentState == "charging" {
-		state.IsCharging = true
-		if ct, err := h.chargingTelRepo.GetLatest(ctx, vehicle.ID); err == nil && ct != nil {
+	// Enrich with charging telemetry (always check — may have fresher battery data)
+	if ct, err := h.chargingTelRepo.GetLatest(ctx, vehicle.ID); err == nil && ct != nil {
+		// Use charging telemetry battery level if fresher than position
+		if ct.BatteryLevel != nil && (ct.CreatedAt.After(pos.CreatedAt) || state.BatteryLevel == 0) {
+			state.BatteryLevel = int(*ct.BatteryLevel)
+		}
+		if ct.Soc != nil && state.BatteryLevel == 0 {
+			state.BatteryLevel = int(*ct.Soc)
+		}
+		// Override range from charging telemetry if available
+		if ct.RatedRange != nil {
+			state.RatedRange = *ct.RatedRange
+		}
+		if ct.EstBatteryRange != nil && state.RatedRange == 0 {
+			state.RatedRange = *ct.EstBatteryRange
+		}
+		if ct.IdealBatteryRange != nil {
+			state.IdealRange = *ct.IdealBatteryRange
+		}
+
+		// Detect charging from telemetry data
+		isCharging := false
+		if ct.ChargeRateMph != nil && *ct.ChargeRateMph > 0 {
+			isCharging = true
+		}
+		if ct.ChargeAmps != nil && *ct.ChargeAmps > 0 {
+			isCharging = true
+		}
+		if ct.ChargeState != nil {
+			cs := *ct.ChargeState
+			if cs == "Charging" || cs == "Starting" {
+				isCharging = true
+			}
+		}
+
+		if isCharging {
+			state.IsCharging = true
+			state.State = "charging"
 			if ct.ChargeRateMph != nil {
 				state.ChargeRate = *ct.ChargeRateMph
 			}
 			power := 0.0
 			if ct.DCChargingPower != nil && *ct.DCChargingPower > 0 {
 				power = *ct.DCChargingPower
-			} else if ct.ACChargingPower != nil {
+			} else if ct.ACChargingPower != nil && *ct.ACChargingPower > 0 {
 				power = *ct.ACChargingPower
 			} else if ct.ChargeAmps != nil && ct.ChargerVoltage != nil {
 				power = (*ct.ChargeAmps * *ct.ChargerVoltage) / 1000.0
