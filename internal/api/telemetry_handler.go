@@ -47,6 +47,10 @@ type TelemetryHandler struct {
 	// Per-vehicle write throttling to prevent DB overload
 	lastWriteMu sync.Mutex
 	lastWriteAt map[string]time.Time // keyed by VIN
+
+	// Per-vehicle signal accumulator — merges signals across batches within throttle window
+	accumulatedSignalsMu sync.Mutex
+	accumulatedSignals   map[string]map[string]interface{} // keyed by VIN
 }
 
 // VehicleStreamState tracks streaming health per vehicle.
@@ -97,8 +101,9 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
 		staleTimeout:   staleTimeout,
-		streamingState: make(map[string]*VehicleStreamState),
-		lastWriteAt:    make(map[string]time.Time),
+		streamingState:     make(map[string]*VehicleStreamState),
+		lastWriteAt:        make(map[string]time.Time),
+		accumulatedSignals: make(map[string]map[string]interface{}),
 	}
 }
 
@@ -138,6 +143,18 @@ func (h *TelemetryHandler) cleanupStaleEntries() {
 		}
 	}
 	h.lastWriteMu.Unlock()
+
+	h.accumulatedSignalsMu.Lock()
+	for vin := range h.accumulatedSignals {
+		// Clean up accumulated signals for VINs no longer streaming
+		h.mu.RLock()
+		_, still := h.streamingState[vin]
+		h.mu.RUnlock()
+		if !still {
+			delete(h.accumulatedSignals, vin)
+		}
+	}
+	h.accumulatedSignalsMu.Unlock()
 }
 
 type telemetrySignal struct {
@@ -279,8 +296,21 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
 	// Throttle snapshot writes to once every 10 seconds per vehicle to prevent
 	// DB connection pool exhaustion from high-frequency telemetry batches.
+	// Signals are accumulated across batches within the throttle window so that
+	// individual MQTT messages don't cause data loss.
 	if vehicleID > 0 {
 		const snapshotWriteInterval = 10 * time.Second
+
+		// Accumulate signals from this batch
+		h.accumulatedSignalsMu.Lock()
+		if h.accumulatedSignals[vin] == nil {
+			h.accumulatedSignals[vin] = make(map[string]interface{})
+		}
+		for k, v := range signals {
+			h.accumulatedSignals[vin][k] = v
+		}
+		h.accumulatedSignalsMu.Unlock()
+
 		h.lastWriteMu.Lock()
 		lastWrite := h.lastWriteAt[vin]
 		shouldWrite := time.Since(lastWrite) >= snapshotWriteInterval
@@ -293,52 +323,61 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			// Always update vehicle state (lightweight, single UPDATE)
+			// Drain accumulated signals for this write cycle
+			var writeSignals map[string]interface{}
 			if shouldWrite {
-				detectedState := h.detectVehicleState(signals)
+				h.accumulatedSignalsMu.Lock()
+				writeSignals = h.accumulatedSignals[vin]
+				h.accumulatedSignals[vin] = make(map[string]interface{})
+				h.accumulatedSignalsMu.Unlock()
+			}
+
+			// Always update vehicle state (lightweight, single UPDATE)
+			if shouldWrite && writeSignals != nil {
+				detectedState := h.detectVehicleState(writeSignals)
 				if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, detectedState, true); err != nil {
 					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
 				}
-				h.trackStateTransition(bgCtx, vehicleID, signals)
+				h.trackStateTransition(bgCtx, vehicleID, writeSignals)
 			}
 
 			// Throttled snapshot writes — only run every 10s per vehicle
-			if !shouldWrite {
+			if !shouldWrite || writeSignals == nil {
 				return
 			}
 
 			// Update daily mileage from odometer readings
-			h.trackMileage(bgCtx, vehicleID, signals)
+			h.trackMileage(bgCtx, vehicleID, writeSignals)
 
 			// Store tire pressure snapshots
-			h.trackTirePressure(bgCtx, vehicleID, signals)
+			h.trackTirePressure(bgCtx, vehicleID, writeSignals)
 
 			// Store motor/powertrain snapshots
-			h.trackMotor(bgCtx, vehicleID, signals)
+			h.trackMotor(bgCtx, vehicleID, writeSignals)
 
 			// Store climate/HVAC snapshots
-			h.trackClimate(bgCtx, vehicleID, signals)
+			h.trackClimate(bgCtx, vehicleID, writeSignals)
 
 			// Store security events
-			h.trackSecurity(bgCtx, vehicleID, signals)
+			h.trackSecurity(bgCtx, vehicleID, writeSignals)
 
 			// Store charging telemetry
-			h.trackCharging(bgCtx, vehicleID, signals)
+			h.trackCharging(bgCtx, vehicleID, writeSignals)
 
 			// Store media snapshots
-			h.trackMedia(bgCtx, vehicleID, signals)
+			h.trackMedia(bgCtx, vehicleID, writeSignals)
 
 			// Store vehicle config snapshots
-			h.trackVehicleConfig(bgCtx, vehicleID, signals)
+			h.trackVehicleConfig(bgCtx, vehicleID, writeSignals)
 
 			// Store location/navigation snapshots
-			h.trackLocation(bgCtx, vehicleID, signals)
+			h.trackLocation(bgCtx, vehicleID, writeSignals)
 
 			// Store safety settings snapshots
-			h.trackSafety(bgCtx, vehicleID, signals)
+			h.trackSafety(bgCtx, vehicleID, writeSignals)
 
 			// Store user preference snapshots
-			h.trackUserPreferences(bgCtx, vehicleID, signals)
+			h.trackUserPreferences(bgCtx, vehicleID, writeSignals)
 		}()
 	}
 }
