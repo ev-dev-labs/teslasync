@@ -1,0 +1,11 @@
+-- Reverse migration 18: Remove unit conversion functions
+DROP FUNCTION IF EXISTS convert_distance(DOUBLE PRECISION, TEXT);
+DROP FUNCTION IF EXISTS convert_speed(DOUBLE PRECISION, TEXT);
+DROP FUNCTION IF EXISTS convert_temp(DOUBLE PRECISION, TEXT);
+DROP FUNCTION IF EXISTS convert_efficiency(DOUBLE PRECISION, TEXT);
+DROP FUNCTION IF EXISTS convert_pressure(DOUBLE PRECISION, TEXT);
+DROP FUNCTION IF EXISTS unit_distance();
+DROP FUNCTION IF EXISTS unit_speed();
+DROP FUNCTION IF EXISTS unit_temp();
+DROP FUNCTION IF EXISTS unit_efficiency();
+DROP FUNCTION IF EXISTS unit_pressure();
