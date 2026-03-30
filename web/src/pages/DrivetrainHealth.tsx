@@ -257,10 +257,10 @@ export default function DrivetrainHealth() {
 
   /* ── Motor positions: map available data to motor cards ── */
   const motors = useMemo(() => [
-    { name: 'Front Motor', stator: null, heatsink: null, inverter: null, current: null },
-    { name: 'Rear Motor', stator: latest?.di_stator_temp ?? null, heatsink: null, inverter: null, current: null },
-    { name: 'Rear-Left Motor', stator: null, heatsink: null, inverter: null, current: null },
-    { name: 'Rear-Right Motor', stator: null, heatsink: null, inverter: null, current: null },
+    { name: 'Front Motor', stator: latest?.di_stator_temp_f ?? null, heatsink: latest?.di_heatsink_t_f ?? null, inverter: latest?.di_inverter_t_f ?? null, current: latest?.di_motor_current_f ?? null },
+    { name: 'Rear Motor', stator: latest?.di_stator_temp ?? null, heatsink: latest?.di_heatsink_t_r ?? null, inverter: latest?.di_inverter_t_r ?? null, current: latest?.di_motor_current_r ?? null },
+    { name: 'Rear-Left Motor', stator: latest?.di_stator_temp_rel ?? null, heatsink: latest?.di_heatsink_t_rel ?? null, inverter: latest?.di_inverter_t_rel ?? null, current: latest?.di_motor_current_rel ?? null },
+    { name: 'Rear-Right Motor', stator: latest?.di_stator_temp_rer ?? null, heatsink: latest?.di_heatsink_t_rer ?? null, inverter: latest?.di_inverter_t_rer ?? null, current: latest?.di_motor_current_rer ?? null },
   ], [latest])
 
   /* ── Drive state helpers ── */
