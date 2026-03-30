@@ -309,7 +309,7 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
   return (
     <div className={clsx(
       'glass-panel p-4 flex items-start gap-4 transition-all duration-200 group',
-      !alert.read && `${sev.border} ${sev.bg.replace('/10', '/5')}`
+      !alert.is_read && `${sev.border} ${sev.bg.replace('/10', '/5')}`
     )}>
       <div className="flex flex-col items-center gap-1 shrink-0">
         <div className={clsx('rounded-xl p-2.5 ring-1', sev.bg, sev.border)}>
@@ -319,12 +319,12 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className={clsx('text-sm font-medium', alert.read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
+            <p className={clsx('text-sm font-medium', alert.is_read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
               {alert.title}
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2">{alert.message}</p>
           </div>
-          {!alert.read && (
+          {!alert.is_read && (
             <span className={clsx('h-2 w-2 rounded-full shrink-0 mt-1.5 animate-pulse', sev.dot)} />
           )}
         </div>
@@ -334,8 +334,8 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
             {alert.severity}
           </span>
           <span className="text-[10px] text-gray-600">{alert.type.replace(/_/g, ' ')}</span>
-          {!alert.read && (
-            <button onClick={onMarkRead} className="ml-auto flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors opacity-0 group-hover:opacity-100">
+          {!alert.is_read && (
+            <button onClick={onMarkRead}className="ml-auto flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors opacity-0 group-hover:opacity-100">
               <Eye className="h-3 w-3" /> Mark read
             </button>
           )}
@@ -1150,16 +1150,16 @@ export default function Alerts() {
 
   // ─ Computed ─
   const filteredAlerts = useMemo(() => alerts?.filter(a => {
-    if (filter === 'unread') return !a.read
+    if (filter === 'unread') return !a.is_read
     if (filter === 'critical') return a.severity === 'critical'
     return true
   }) ?? [], [alerts, filter])
 
-  const unreadCount = useMemo(() => alerts?.filter(a => !a.read).length ?? 0, [alerts])
-  const criticalCount = useMemo(() => alerts?.filter(a => a.severity === 'critical' && !a.read).length ?? 0, [alerts])
+  const unreadCount = useMemo(() => alerts?.filter(a => !a.is_read).length ?? 0, [alerts])
+  const criticalCount = useMemo(() => alerts?.filter(a => a.severity === 'critical' && !a.is_read).length ?? 0, [alerts])
   const infoCount = useMemo(() => alerts?.filter(a => a.severity === 'info').length ?? 0, [alerts])
   const warningCount = useMemo(() => alerts?.filter(a => a.severity === 'warning').length ?? 0, [alerts])
-  const readCount = useMemo(() => alerts?.filter(a => a.read).length ?? 0, [alerts])
+  const readCount = useMemo(() => alerts?.filter(a => a.is_read).length ?? 0, [alerts])
   const totalCount = alerts?.length ?? 0
 
   const alertsByType = useMemo(() => {

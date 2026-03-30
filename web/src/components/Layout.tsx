@@ -194,7 +194,7 @@ export default function Layout() {
     enabled: !!primaryVehicle,
     refetchInterval: 60_000,
   })
-  const unreadAlerts = alerts?.filter(a => !a.read).length ?? 0
+  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
   const isConnected = !!primaryState?.live
 

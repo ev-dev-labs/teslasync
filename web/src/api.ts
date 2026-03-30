@@ -184,7 +184,7 @@ export interface Alert {
   severity: 'info' | 'warning' | 'critical'
   title: string
   message: string
-  read: boolean
+  is_read: boolean
   created_at: string
 }
 

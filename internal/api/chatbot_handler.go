@@ -342,7 +342,7 @@ func (h *ChatbotHandler) queryAlerts(ctx context.Context) string {
 	if err := h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts`).Scan(&total); err != nil {
 		return "I couldn't retrieve alert data right now."
 	}
-	if err := h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts WHERE read = false`).Scan(&unread); err != nil {
+	if err := h.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts WHERE is_read = false`).Scan(&unread); err != nil {
 		return "I couldn't retrieve alert data right now."
 	}
 	return fmt.Sprintf("You have **%d alert%s** total, **%d unread**.", total, plural(total), unread)

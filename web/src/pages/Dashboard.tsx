@@ -189,7 +189,7 @@ export default function Dashboard() {
   const totalCount = vehicles?.length ?? 0
   const totalDistance = analytics?.total_distance_km ?? 0
   const totalEnergy = analytics?.total_energy_kwh ?? 0
-  const unreadAlerts = alerts?.filter(a => !a.read).length ?? 0
+  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
 
   // Last-updated timestamp state
   const [, setTick] = useState(0)
