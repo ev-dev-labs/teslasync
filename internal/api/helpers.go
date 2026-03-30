@@ -15,6 +15,8 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	if data != nil {
 		_ = json.NewEncoder(w).Encode(data)
+	} else {
+		_, _ = w.Write([]byte("null"))
 	}
 }
 
