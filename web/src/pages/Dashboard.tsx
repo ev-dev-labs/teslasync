@@ -134,7 +134,7 @@ export default function Dashboard() {
   // Get states for all other vehicles
   const otherVehicles = vehicles?.slice(1) ?? []
   const { data: otherStates } = useQuery({
-    queryKey: ['other-vehicle-states', otherVehicles.map(v => v.id)],
+    queryKey: ['other-vehicle-states', otherVehicles.map(v => v.id).sort()],
     queryFn: async () => {
       const entries = await Promise.all(
         otherVehicles.map(async v => {

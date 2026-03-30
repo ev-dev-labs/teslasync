@@ -56,9 +56,8 @@ export interface Position {
   outside_temp: number | null
   is_climate_on: boolean | null
   created_at: string
+  fan_status?: number
 }
-
-export interface Drive {
   id: number
   vehicle_id: number
   start_date: string
@@ -110,6 +109,8 @@ export interface Geofence {
   longitude: number
   radius: number
   cost_per_kwh: number | null
+  created_at: string
+  updated_at: string
 }
 
 export interface AppSettings {
@@ -274,6 +275,8 @@ export interface NotificationLog {
   error: string
   created_at: string
   sent_at: string | null
+  scheduled_at?: string
+  latency_ms?: number
 }
 
 export interface NotificationStats {
