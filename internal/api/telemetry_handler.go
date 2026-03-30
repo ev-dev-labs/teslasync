@@ -45,7 +45,7 @@ type TelemetryHandler struct {
 	streamingState map[string]*VehicleStreamState // keyed by VIN
 
 	// Per-vehicle write throttling to prevent DB overload
-	lastWriteMu sync.RWMutex
+	lastWriteMu sync.Mutex
 	lastWriteAt map[string]time.Time // keyed by VIN
 }
 
@@ -100,6 +100,44 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		streamingState: make(map[string]*VehicleStreamState),
 		lastWriteAt:    make(map[string]time.Time),
 	}
+}
+
+// StartCleanup runs periodic cleanup of stale streaming state entries.
+// Call this once at startup; it stops when ctx is cancelled.
+func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				h.cleanupStaleEntries()
+			}
+		}
+	}()
+}
+
+func (h *TelemetryHandler) cleanupStaleEntries() {
+	now := time.Now()
+	cutoff := 3 * h.staleTimeout // remove entries 3x past stale timeout
+
+	h.mu.Lock()
+	for vin, state := range h.streamingState {
+		if now.Sub(state.LastReceived) > cutoff {
+			delete(h.streamingState, vin)
+		}
+	}
+	h.mu.Unlock()
+
+	h.lastWriteMu.Lock()
+	for vin, lastWrite := range h.lastWriteAt {
+		if now.Sub(lastWrite) > cutoff {
+			delete(h.lastWriteAt, vin)
+		}
+	}
+	h.lastWriteMu.Unlock()
 }
 
 type telemetrySignal struct {
