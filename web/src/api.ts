@@ -195,8 +195,6 @@ export interface AlertRule {
   enabled: boolean
   threshold: number
   vehicle_id: number | null
-  notify_push: boolean
-  notify_mqtt: boolean
   created_at: string
   updated_at: string
 }
@@ -345,6 +343,40 @@ export interface MotorSnapshot {
   longitudinal_accel?: number
   vehicle_speed?: number
   gear?: string
+  di_torque_actual_f?: number
+  di_torque_actual_r?: number
+  di_torque_actual_rel?: number
+  di_torque_actual_rer?: number
+  di_axle_speed_f?: number
+  di_axle_speed_rel?: number
+  di_axle_speed_rer?: number
+  di_state_f?: string
+  di_state_rel?: string
+  di_state_rer?: string
+  di_stator_temp_f?: number
+  di_stator_temp_rel?: number
+  di_stator_temp_rer?: number
+  di_heatsink_t_f?: number
+  di_heatsink_t_r?: number
+  di_heatsink_t_rel?: number
+  di_heatsink_t_rer?: number
+  di_inverter_t_f?: number
+  di_inverter_t_r?: number
+  di_inverter_t_rel?: number
+  di_inverter_t_rer?: number
+  di_motor_current_f?: number
+  di_motor_current_r?: number
+  di_motor_current_rel?: number
+  di_motor_current_rer?: number
+  di_v_bat_f?: number
+  di_v_bat_r?: number
+  di_v_bat_rel?: number
+  di_v_bat_rer?: number
+  di_slave_torque_cmd?: number
+  hvil?: string
+  brake_pedal_pos?: number
+  cruise_set_speed?: number
+  drive_rail?: boolean
   created_at: string
 }
 
@@ -360,6 +392,27 @@ export interface ClimateSnapshot {
   cabin_overheat_mode?: string
   defrost_mode?: boolean
   battery_heater_on?: boolean
+  hvac_ac_enabled?: boolean
+  hvac_auto_mode?: string
+  hvac_fan_status?: number
+  hvac_steering_wheel_heat_auto?: boolean
+  hvac_steering_wheel_heat_level?: number
+  climate_keeper_mode?: string
+  cabin_overheat_protection_temp_limit?: string
+  defrost_for_preconditioning?: boolean
+  seat_heater_left?: number
+  seat_heater_right?: number
+  seat_heater_rear_left?: number
+  seat_heater_rear_center?: number
+  seat_heater_rear_right?: number
+  seat_vent_enabled?: boolean
+  climate_seat_cooling_front_left?: number
+  climate_seat_cooling_front_right?: number
+  auto_seat_climate_left?: boolean
+  auto_seat_climate_right?: boolean
+  rear_defrost_enabled?: boolean
+  rear_display_hvac_enabled?: boolean
+  wiper_heat_enabled?: boolean
   created_at: string
 }
 
@@ -375,6 +428,23 @@ export interface SecurityEvent {
   rp_window?: string
   homelink_nearby?: boolean
   guest_mode?: boolean
+  homelink_device_count?: number
+  guest_mode_mobile_access_state?: string
+  driver_seat_occupied?: boolean
+  center_display?: string
+  speed_limit_mode?: boolean
+  valet_mode_enabled?: boolean
+  service_mode?: boolean
+  current_limit_mph?: number
+  paired_phone_key_count?: number
+  lights_hazards_active?: boolean
+  lights_high_beams?: boolean
+  lights_turn_signal?: string
+  tonneau_position?: string
+  tonneau_open_percent?: number
+  tonneau_tent_mode?: string
+  driver_seat_belt?: boolean
+  passenger_seat_belt?: boolean
   created_at: string
 }
 
