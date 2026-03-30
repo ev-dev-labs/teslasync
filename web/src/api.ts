@@ -111,8 +111,8 @@ export interface Geofence {
   longitude: number
   radius: number
   cost_per_kwh: number | null
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface AppSettings {

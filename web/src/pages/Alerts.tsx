@@ -559,8 +559,6 @@ function CreateRuleModal({ open, onClose, vehicles, channels }: {
         threshold: parseFloat(f.threshold) || 0,
         vehicle_id: f.vehicle_id === 'all' ? null : parseInt(f.vehicle_id),
         enabled: f.enabled,
-        notify_push: f.notify_push,
-        notify_mqtt: f.notify_mqtt,
       })
     },
     onSuccess: () => {
