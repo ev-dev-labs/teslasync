@@ -49,7 +49,7 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if snap == nil {
-		writeError(w, http.StatusNotFound, "no location data available")
+		writeJSON(w, http.StatusOK, nil)
 		return
 	}
 	writeJSON(w, http.StatusOK, snap)

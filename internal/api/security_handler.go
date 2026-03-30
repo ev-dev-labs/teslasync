@@ -49,7 +49,7 @@ func (h *SecurityHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if evt == nil {
-		writeError(w, http.StatusNotFound, "no security data available")
+		writeJSON(w, http.StatusOK, nil)
 		return
 	}
 	writeJSON(w, http.StatusOK, evt)
