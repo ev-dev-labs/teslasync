@@ -1,22 +1,13 @@
 # Binaries
-bin/
 *.exe
-
-# Go
-coverage.out
-vendor/
-
-# Frontend
-web/node_modules/
-web/dist/
-
-# Environment
-.env
-.env.local
+*.exe~
+*.dll
+*.so
+*.dylib
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 
@@ -24,48 +15,27 @@ web/dist/
 .DS_Store
 Thumbs.db
 
-# Docker volumes
-postgres_data/
-grafana_data/
-mosquitto_data/
-redis_data/
-
-# Temporary
-tmp/
-*.log
-
-# Plan tracking
-.plan/
-
-# Helm
-helm/teslasync/charts/
-*.tgz
-
-# Docs build output
-docs/.vitepress/dist/
-docs/.vitepress/cache/
-docs/node_modules/
-
-# Test coverage
-*.out
+# Go
+vendor/
 coverage/
 
-# Go debug
-__debug_bin*
-dlv
+# Node
+node_modules/
+dist/
+.env.local
+.env.*.local
 
-# Python (for any scripts)
-__pycache__/
-*.pyc
-.venv/
-
-# Terraform (future)
-.terraform/
-*.tfstate*
-
-# Secrets
+# TeslaSync
+certs/
 *.pem
 *.key
+.env
 
+# Python
+__pycache__/
+
+# Test files
 test_*.py
+test_*.js
 publish_test.sh
+package-lock.json
