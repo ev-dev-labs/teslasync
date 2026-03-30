@@ -164,6 +164,10 @@ Create a `config.json` pointing to TeslaSync as the data consumer:
 The `records.V.dispatcher.url` should point to your TeslaSync instance's telemetry ingestion endpoint. If both services are on the same Docker network, use the container name (e.g., `http://teslasync:8080`).
 :::
 
+::: warning
+As of v0.7.0, the Fleet Telemetry server should use the **MQTT dispatcher** (not HTTP). The `config.json` above shows the legacy HTTP dispatcher for reference. See the updated configuration below for the recommended MQTT-based setup.
+:::
+
 ### Step 2 — Configure Your Tesla Developer Account
 
 1. Log in to [developer.tesla.com](https://developer.tesla.com)
@@ -288,22 +292,21 @@ TeslaSync exposes `POST /api/v1/telemetry` to receive data from the Fleet Teleme
 
 ### Supported Signals
 
-| Signal | Type | Unit | Description |
-|---|---|---|---|
-| `Latitude` | float64 | degrees | GPS latitude (−90 to 90) |
-| `Longitude` | float64 | degrees | GPS longitude (−180 to 180) |
-| `VehicleSpeed` | float64 | km/h | Current speed |
-| `PackPower` | float64 | kW | Battery power (negative = regenerating) |
-| `BatteryLevel` | int | % | State of charge (0–100) |
-| `StateOfCharge` | int | % | Alias for `BatteryLevel` |
-| `InsideTemp` | float64 | °C | Cabin temperature |
-| `OutsideTemp` | float64 | °C | Ambient temperature |
-| `Odometer` | float64 | mi/km | Total distance driven |
-| `Heading` | int | degrees | Compass heading (0–359) |
-| `Elevation` | float64 | meters | Altitude above sea level |
-| `FanStatus` | int | level | HVAC fan speed (0–4) |
-| `IsClimate` | bool | — | Climate control active |
-| `TirePressure` | float64 | bar | Tire pressure (all four) |
+TeslaSync supports **228 Tesla fleet telemetry fields** — 100% coverage of all available signals. Signals are organized across the following categories:
+
+| Category | Signal Count | Examples |
+|---|---|---|
+| Location & Navigation | ~15 | DestinationLocation, RouteLastUpdated, HomeLink nearby |
+| Battery & Energy | ~25 | PackVoltage, PackCurrent, BmsFullchargecomplete, ModuleTemp* |
+| Charging | ~55 | ACChargingPower, DCChargingPower, SuperchargerState, cell voltages |
+| Climate & Comfort | ~30 | SeatHeater*, SteeringWheelHeat, AutoSeatClimateLeft/Right |
+| Motor & Drivetrain | ~30 | DITorque*, DIAxleSpeed*, DIStatorTemp*, DIHeatsinkTemp* |
+| Security & Access | ~20 | Locked, SentryMode, DoorState, TonneauState, SeatBelt* |
+| Vehicle Config | ~15 | TrimBadging, ExteriorColor, RoofColor, SpoilerType |
+| Safety & ADAS | ~15 | ForwardCollisionWarning, LaneDepartureAvoidance, FSD miles |
+| Media | ~10 | MediaPlaybackStatus, MediaVolume, MediaSource |
+| User Preferences | ~10 | DistanceUnit, TemperatureUnit, 24HourClock |
+| General | ~3 | VehicleSpeed, Odometer, GuestMode |
 
 ## MQTT Integration
 
@@ -458,6 +461,10 @@ The `POST /api/v1/telemetry` endpoint currently does **not** require authenticat
 - **Reverse proxy** — Use Nginx/Caddy to add IP allowlisting or mTLS in front of the endpoint
 - **API keys** — TeslaSync's API key system (when fully enabled) supports `read-write` and `admin` permission levels
 
+::: tip
+The `/.well-known/appspecific/com.tesla.3p.public-key.pem` path must **bypass** any authentication middleware (e.g., Authentik, Authelia). Tesla's servers need to fetch this key without credentials.
+:::
+
 ### MQTT Broker
 
 The default `mosquitto.conf` allows anonymous access:
@@ -511,6 +518,23 @@ In hybrid mode, increase `WORKER_POLL_INTERVAL` to reduce API costs while keepin
 ## Fleet Telemetry Status in UI
 
 TeslaSync v0.4.0 adds Fleet Telemetry visibility to the **System Status** page.
+
+### OAuth Scopes
+
+Fleet Telemetry requires the following OAuth scopes for full signal coverage:
+
+| Scope | Required For |
+|---|---|
+| `openid` | Authentication |
+| `offline_access` | Token refresh |
+| `vehicle_device_data` | Vehicle telemetry and state data |
+| `vehicle_cmds` | Remote commands |
+| `vehicle_charging_cmds` | Charging control |
+| `vehicle_location` | Location telemetry fields (DestinationLocation, etc.) |
+
+::: tip
+If you added `vehicle_location` after initial authorization, use the **Re-authorize** button in Settings (which adds `prompt=consent`) to force Tesla to re-approve all scopes.
+:::
 
 ### Status Card
 

@@ -41,6 +41,7 @@ import {
   CalendarCheck,
   Wrench as WrenchIcon,
   HardDriveDownload,
+  Headphones,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -102,6 +103,7 @@ const navSections = [
       { to: '/vehicles', icon: Car, label: 'Fleet', color: 'text-sky-400' },
       { to: '/compare', icon: GitCompare, label: 'Compare', color: 'text-orange-400' },
       { to: '/weekly-digest', icon: CalendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
+      { to: '/navigation', icon: Navigation, label: 'Navigation', color: 'text-teal-400' },
     ],
   },
   {
@@ -123,6 +125,8 @@ const navSections = [
       { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
       { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
       { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/energy-flow', icon: Zap, label: 'Energy Flow', color: 'text-yellow-400' },
+      { to: '/drivetrain-health', icon: Cog, label: 'Drivetrain Health', color: 'text-red-400' },
     ],
   },
   {
@@ -133,6 +137,7 @@ const navSections = [
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
       { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
       { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
+      { to: '/safety-settings', icon: Shield, label: 'Safety Settings', color: 'text-amber-400' },
     ],
   },
   {
@@ -150,6 +155,7 @@ const navSections = [
     title: 'AI',
     items: [
       { to: '/chatbot', icon: Bot, label: 'Chatbot', color: 'text-cyan-400' },
+      { to: '/media-player', icon: Headphones, label: 'Media Player', color: 'text-pink-400' },
     ],
   },
   {

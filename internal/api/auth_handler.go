@@ -125,3 +125,15 @@ func generateState() (string, error) {
 	}
 	return hex.EncodeToString(b), nil
 }
+
+// Disconnect removes the stored Tesla token, effectively logging out.
+func (h *AuthHandler) Disconnect(w http.ResponseWriter, r *http.Request) {
+	if err := h.tokenRepo.Delete(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to disconnect")
+		return
+	}
+	// Clear in-memory tokens so the client stops making API calls
+	h.teslaClient.SetTokens("", "", time.Time{})
+	log.Info().Msg("Tesla account disconnected")
+	writeJSON(w, http.StatusOK, map[string]string{"status": "disconnected"})
+}

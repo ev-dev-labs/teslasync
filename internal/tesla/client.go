@@ -105,9 +105,9 @@ func (c *Client) SetTokens(access, refresh string, expiresAt time.Time) {
 // GetAuthURL returns the Tesla OAuth authorization URL.
 func (c *Client) GetAuthURL(state string) string {
 	return fmt.Sprintf(
-		"%s/oauth2/v3/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s",
+		"%s/oauth2/v3/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s&prompt=consent",
 		c.authURL, c.clientID, c.redirectURI,
-		"openid+offline_access+vehicle_device_data+vehicle_cmds+vehicle_charging_cmds",
+		"openid+offline_access+vehicle_device_data+vehicle_location+vehicle_cmds+vehicle_charging_cmds",
 		state,
 	)
 }
@@ -208,6 +208,34 @@ func (c *Client) GetFleetTelemetryErrors(ctx context.Context, vin string) ([]byt
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
+// GetNearbyChargingSites returns charging sites near the vehicle's current location.
+// GET /api/1/vehicles/{vin}/nearby_charging_sites
+func (c *Client) GetNearbyChargingSites(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/nearby_charging_sites", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetReleaseNotes returns firmware release notes for a vehicle.
+// GET /api/1/vehicles/{vin}/release_notes
+func (c *Client) GetReleaseNotes(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/release_notes", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetRecentAlerts returns recent vehicle alerts (recalls, service reminders).
+// GET /api/1/vehicles/{vin}/recent_alerts
+func (c *Client) GetRecentAlerts(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/recent_alerts", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetServiceData returns service history and status for a vehicle.
+// GET /api/1/vehicles/{vin}/service_data
+func (c *Client) GetServiceData(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/service_data", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
 // GetFleetStatus provides vehicle state information (firmware, telemetry version, etc.).
 // POST /api/1/vehicles/fleet_status
 func (c *Client) GetFleetStatus(ctx context.Context, vins []string) ([]byte, int, error) {
@@ -249,7 +277,7 @@ func (c *Client) GetPartnerToken(ctx context.Context) (string, error) {
 		"grant_type":    {"client_credentials"},
 		"client_id":     {c.clientID},
 		"client_secret": {c.clientSec},
-		"scope":         {"openid vehicle_device_data vehicle_cmds vehicle_charging_cmds"},
+		"scope":         {"openid vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds"},
 		"audience":      {c.baseURL},
 	}
 

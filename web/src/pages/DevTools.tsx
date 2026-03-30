@@ -7,6 +7,7 @@ import {
   Fingerprint, Hash, HardDrive, Palette, Timer, Network, BookOpen,
   Regex, Lock, ChevronDown, ChevronRight, Play, RefreshCw,
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
+  MapPin, FileText,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
@@ -699,29 +700,78 @@ function FleetTelemetryConfigTool() {
   const [selectedVin, setSelectedVin] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [errorsResult, setErrorsResult] = useState<Record<string, unknown> | null>(null)
+  const [configExists, setConfigExists] = useState(false)
+  const [errorsLoaded, setErrorsLoaded] = useState(false)
 
   const getConfig = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`),
-    onSuccess: (data: Record<string, unknown>) => setResult(data),
-    onError: (err) => setResult({ error: (err as Error).message }),
+    onSuccess: (data: Record<string, unknown>) => {
+      setResult(data)
+      const resp = data?.response as Record<string, unknown> | null | undefined
+      setConfigExists(resp != null && Object.keys(resp).length > 0)
+    },
+    onError: (err) => {
+      setResult({ error: (err as Error).message })
+      setConfigExists(false)
+    },
   })
   const deleteConfig = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${selectedVin}`, 'DELETE'),
-    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onSuccess: (data: Record<string, unknown>) => {
+      setResult(data)
+      setConfigExists(false)
+    },
     onError: (err) => setResult({ error: (err as Error).message }),
   })
   const getErrors = useMutation({
     mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${selectedVin}`),
-    onSuccess: (data: Record<string, unknown>) => setErrorsResult(data),
-    onError: (err) => setErrorsResult({ error: (err as Error).message }),
+    onSuccess: (data: Record<string, unknown>) => {
+      setErrorsResult(data)
+      setErrorsLoaded(true)
+    },
+    onError: (err) => {
+      setErrorsResult({ error: (err as Error).message })
+      setErrorsLoaded(true)
+    },
   })
+
+  const handleVinChange = (vin: string) => {
+    setSelectedVin(vin)
+    setResult(null)
+    setErrorsResult(null)
+    setConfigExists(false)
+    setErrorsLoaded(false)
+  }
+
+  const downloadErrors = () => {
+    if (!errorsResult) return
+    const blob = new Blob([JSON.stringify(errorsResult, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `fleet-telemetry-errors-${selectedVin}-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Extract errors array for table display
+  const errorsList = (() => {
+    if (!errorsResult) return []
+    const resp = errorsResult.response as Record<string, unknown>[] | Record<string, unknown> | null
+    if (Array.isArray(resp)) return resp
+    if (resp && typeof resp === 'object' && 'errors' in resp) {
+      const errs = (resp as Record<string, unknown>).errors
+      if (Array.isArray(errs)) return errs as Record<string, unknown>[]
+    }
+    return []
+  })()
 
   return (
     <ToolCard icon={Eye} color="green" title="Fleet Telemetry Status" description="View, manage, and debug fleet telemetry configuration per vehicle">
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVin} onChange={e => setSelectedVin(e.target.value)} className={inputClasses}>
+          <select value={selectedVin} onChange={e => handleVinChange(e.target.value)} className={inputClasses}>
             <option value="">Select a vehicle...</option>
             {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
               <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
@@ -732,22 +782,84 @@ function FleetTelemetryConfigTool() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-3">
         <button onClick={() => getConfig.mutate()} disabled={getConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
           {getConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
-          View Config
+          Get Config
         </button>
-        <button onClick={() => getErrors.mutate()} disabled={getErrors.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+        <button
+          onClick={() => getErrors.mutate()}
+          disabled={getErrors.isPending || !selectedVin || !configExists}
+          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-amber' : 'text-gray-600')}
+          title={!configExists ? 'Click "Get Config" first' : 'Fetch recent fleet telemetry errors for this vehicle'}
+        >
           {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
           View Errors
         </button>
-        <button onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle?')) deleteConfig.mutate() }} disabled={deleteConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-red">
+        <button
+          onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle? The vehicle will stop streaming telemetry data.')) deleteConfig.mutate() }}
+          disabled={deleteConfig.isPending || !selectedVin || !configExists}
+          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-red' : 'text-gray-600')}
+          title={!configExists ? 'Click "Get Config" first to check if a configuration exists' : 'Remove fleet telemetry config from this vehicle'}
+        >
           {deleteConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-          Remove Config
+          Delete Config
         </button>
       </div>
+
+      {!configExists && result === null && selectedVin && (
+        <p className="text-[10px] text-[var(--text-muted)] mb-2">Click "Get Config" to check the current fleet telemetry configuration for this vehicle.</p>
+      )}
+
       {result !== null && <ResultPanel title="Fleet Telemetry Config" data={result} />}
-      {errorsResult !== null && <ResultPanel title="Fleet Telemetry Errors" data={errorsResult} />}
+
+      {errorsLoaded && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Fleet Telemetry Errors {errorsList.length > 0 && <span className="text-neon-amber">({errorsList.length})</span>}
+            </h4>
+            {errorsList.length > 0 && (
+              <button onClick={downloadErrors} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
+                <Download className="h-3 w-3" /> Download JSON
+              </button>
+            )}
+          </div>
+          {errorsList.length > 0 ? (
+            <div className="glass-panel rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--glass-border)]">
+                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Time</th>
+                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Error</th>
+                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {errorsList.map((err, i) => (
+                    <tr key={i} className="border-b border-[var(--glass-border)] last:border-0">
+                      <td className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap font-mono">
+                        {err.created_at ? new Date(err.created_at as string).toLocaleString() : err.timestamp ? new Date(err.timestamp as string).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-neon-red font-medium">{(err.name || err.error || err.code || '—') as string}</td>
+                      <td className="px-3 py-2 text-[var(--text-muted)] max-w-xs truncate">{(err.body || err.message || err.description || JSON.stringify(err)) as string}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="glass-panel rounded-lg p-4 text-center">
+              <CheckCircle className="h-5 w-5 text-neon-green mx-auto mb-1" />
+              <p className="text-xs text-neon-green">No telemetry errors found</p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">The vehicle is streaming without issues</p>
+            </div>
+          )}
+          {errorsResult && !Array.isArray(errorsResult.response) && typeof errorsResult.error === 'string' && (
+            <ResultPanel title="Error Response" data={errorsResult} />
+          )}
+        </div>
+      )}
     </ToolCard>
   )
 }
@@ -773,6 +885,68 @@ function FleetStatusTool() {
         Check Fleet Status
       </button>
       {result !== null && <ResultPanel title="Fleet Status" data={result} />}
+    </ToolCard>
+  )
+}
+
+function VehicleDataTools() {
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
+    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
+    if (!res.ok) return []
+    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+  }})
+  const [selectedVin, setSelectedVin] = useState('')
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [activeQuery, setActiveQuery] = useState('')
+
+  const fetchData = useMutation({
+    mutationFn: (endpoint: string) => apiFetch(`${endpoint}?vin=${selectedVin}`),
+    onSuccess: (data: Record<string, unknown>) => setResult(data),
+    onError: (err) => setResult({ error: (err as Error).message }),
+  })
+
+  const handleFetch = (endpoint: string, label: string) => {
+    setActiveQuery(label)
+    setResult(null)
+    fetchData.mutate(endpoint)
+  }
+
+  return (
+    <ToolCard icon={Database} color="purple" title="Vehicle Data Queries" description="Query Tesla Fleet API for vehicle-specific data — charging sites, release notes, alerts, and service history">
+      <div className="mb-3">
+        <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
+        {vehicles && vehicles.length > 0 ? (
+          <select value={selectedVin} onChange={e => { setSelectedVin(e.target.value); setResult(null) }} className={inputClasses}>
+            <option value="">Select a vehicle...</option>
+            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
+              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        <button onClick={() => handleFetch('nearby-charging', 'Nearby Chargers')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {fetchData.isPending && activeQuery === 'Nearby Chargers' ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />}
+          Nearby Chargers
+        </button>
+        <button onClick={() => handleFetch('release-notes', 'Release Notes')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {fetchData.isPending && activeQuery === 'Release Notes' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+          Release Notes
+        </button>
+        <button onClick={() => handleFetch('recent-alerts', 'Recent Alerts')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-amber">
+          {fetchData.isPending && activeQuery === 'Recent Alerts' ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
+          Recent Alerts
+        </button>
+        <button onClick={() => handleFetch('service-data', 'Service Data')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
+          {fetchData.isPending && activeQuery === 'Service Data' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wrench className="h-3 w-3" />}
+          Service Data
+        </button>
+      </div>
+
+      {result !== null && <ResultPanel title={activeQuery} data={result} />}
     </ToolCard>
   )
 }
@@ -1134,6 +1308,7 @@ function FleetApiSection() {
       <FleetTelemetrySubscribeTool />
       <FleetTelemetryConfigTool />
       <FleetStatusTool />
+      <VehicleDataTools />
     </div>
   )
 }
