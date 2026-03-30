@@ -12,10 +12,11 @@ import (
 // SettingsHandler handles user settings.
 type SettingsHandler struct {
 	settingsRepo *database.SettingsRepo
+	db           *database.DB
 }
 
 func NewSettingsHandler(db *database.DB) *SettingsHandler {
-	return &SettingsHandler{settingsRepo: database.NewSettingsRepo(db)}
+	return &SettingsHandler{settingsRepo: database.NewSettingsRepo(db), db: db}
 }
 
 func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +60,21 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if len(s.Language) > 10 {
 		writeError(w, http.StatusBadRequest, "language must be 10 characters or less")
 		return
+	}
+
+	// Record gas price change in history if price or unit changed
+	if s.GasPricePerUnit > 0 {
+		oldSettings, _ := h.settingsRepo.Get(r.Context())
+		if oldSettings == nil || oldSettings.GasPricePerUnit != s.GasPricePerUnit ||
+			oldSettings.GasUnit != s.GasUnit || oldSettings.GasEfficiencyMPG != s.GasEfficiencyMPG {
+			// Close previous period
+			h.db.Pool.Exec(r.Context(),
+				`UPDATE gas_price_history SET effective_to = NOW() WHERE effective_to IS NULL`)
+			// Insert new period
+			h.db.Pool.Exec(r.Context(),
+				`INSERT INTO gas_price_history (price_per_unit, unit, efficiency_mpg, effective_from) VALUES ($1, $2, $3, NOW())`,
+				s.GasPricePerUnit, s.GasUnit, s.GasEfficiencyMPG)
+		}
 	}
 
 	if err := h.settingsRepo.Upsert(r.Context(), &s); err != nil {
