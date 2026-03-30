@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -160,8 +161,10 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// PRIMARY: If fleet telemetry is streaming for this vehicle, build state from DB
-	if h.telemetryHandler != nil && h.telemetryHandler.IsVehicleStreaming(vehicle.VIN) {
+	// PRIMARY: If fleet telemetry is streaming for this vehicle, try to build state from DB
+	// but fall through to API if core data (position) is stale
+	telemetryStreaming := h.telemetryHandler != nil && h.telemetryHandler.IsVehicleStreaming(vehicle.VIN)
+	if telemetryStreaming {
 		state := h.buildStateFromDB(r, vehicle)
 		if state != nil {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -171,10 +174,10 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		// If DB state build failed, fall through to API
+		// If DB state build failed (stale/missing data), fall through to API
 	}
 
-	// FALLBACK: Use Tesla Fleet API
+	// FALLBACK: Use Tesla Fleet API (also used when telemetry data is stale)
 	suspended, _ := h.settingsRepo.IsAPISuspended(r.Context())
 	if suspended || !h.teslaClient.HasValidToken() {
 		pos, _ := h.positionRepo.GetLatest(r.Context(), id)
@@ -234,13 +237,24 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildStateFromDB constructs a VehicleState from the latest DB records
-// written by fleet telemetry. Returns nil if no data available.
+// written by fleet telemetry. Returns nil if position data is stale (>5 min)
+// or missing, signaling the caller to fall back to Fleet API.
 func (h *VehicleHandler) buildStateFromDB(r *http.Request, vehicle *models.Vehicle) *models.VehicleState {
 	ctx := r.Context()
 
 	pos, err := h.positionRepo.GetLatest(ctx, vehicle.ID)
 	if err != nil || pos == nil {
 		return nil
+	}
+
+	// If position is stale (>5 min), telemetry isn't providing full data — fall back to API
+	if time.Since(pos.CreatedAt) > 5*time.Minute {
+		// Check if charging telemetry is fresh even if position isn't
+		ct, ctErr := h.chargingTelRepo.GetLatest(ctx, vehicle.ID)
+		if ctErr != nil || ct == nil || time.Since(ct.CreatedAt) > 5*time.Minute {
+			return nil // all data stale, use API
+		}
+		// Charging telemetry is fresh — build state from it + stale position as base
 	}
 
 	// Determine vehicle state from state history
