@@ -116,7 +116,7 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 	}
 
 	url := fmt.Sprintf(
-		"https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=%s&frequency=weekly&data[]=value&facets[product][]=EMM_EPMR_PTE_NUS_DPG&sort[0][column]=period&sort[0][direction]=desc&length=1",
+		"https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=%s&frequency=weekly&data[]=value&facets[product][]=EPMR&facets[duoarea][]=NUS&sort[0][column]=period&sort[0][direction]=desc&length=1",
 		w.cfg.APIKey,
 	)
 
