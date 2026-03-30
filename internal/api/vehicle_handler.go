@@ -317,7 +317,8 @@ func (h *VehicleHandler) buildStateFromDB(r *http.Request, vehicle *models.Vehic
 	}
 
 	// Enrich with charging telemetry (always check — may have fresher battery data)
-	if ct, err := h.chargingTelRepo.GetLatest(ctx, vehicle.ID); err == nil && ct != nil {
+	// Merge last 20 records to get composite view (vehicle sends different signals per batch)
+	if ct, err := h.chargingTelRepo.GetLatestMerged(ctx, vehicle.ID, 20); err == nil && ct != nil {
 		// Use charging telemetry battery level / SOC if fresher than position
 		if ct.CreatedAt.After(pos.CreatedAt) {
 			if ct.BatteryLevel != nil {

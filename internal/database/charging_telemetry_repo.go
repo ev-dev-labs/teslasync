@@ -80,3 +80,33 @@ func (r *ChargingTelemetryRepo) GetLatest(ctx context.Context, vehicleID int64) 
 	}
 	return snaps[0], nil
 }
+
+// GetLatestMerged returns a composite of the most recent charging telemetry
+// by merging the last N records. The vehicle sends different signals in
+// different batches, so the latest single record may be sparse. This fills
+// in nil fields from older records within the lookback window.
+func (r *ChargingTelemetryRepo) GetLatestMerged(ctx context.Context, vehicleID int64, lookback int) (*models.ChargingTelemetry, error) {
+	snaps, err := r.GetByVehicle(ctx, vehicleID, lookback)
+	if err != nil || len(snaps) == 0 {
+		return nil, err
+	}
+	merged := *snaps[0] // start with the newest
+	for _, s := range snaps[1:] {
+		if merged.BatteryLevel == nil && s.BatteryLevel != nil { merged.BatteryLevel = s.BatteryLevel }
+		if merged.Soc == nil && s.Soc != nil { merged.Soc = s.Soc }
+		if merged.ChargeState == nil && s.ChargeState != nil { merged.ChargeState = s.ChargeState }
+		if merged.ChargeAmps == nil && s.ChargeAmps != nil { merged.ChargeAmps = s.ChargeAmps }
+		if merged.ChargerVoltage == nil && s.ChargerVoltage != nil { merged.ChargerVoltage = s.ChargerVoltage }
+		if merged.ChargeRateMph == nil && s.ChargeRateMph != nil { merged.ChargeRateMph = s.ChargeRateMph }
+		if merged.DCChargingPower == nil && s.DCChargingPower != nil { merged.DCChargingPower = s.DCChargingPower }
+		if merged.ACChargingPower == nil && s.ACChargingPower != nil { merged.ACChargingPower = s.ACChargingPower }
+		if merged.EstBatteryRange == nil && s.EstBatteryRange != nil { merged.EstBatteryRange = s.EstBatteryRange }
+		if merged.IdealBatteryRange == nil && s.IdealBatteryRange != nil { merged.IdealBatteryRange = s.IdealBatteryRange }
+		if merged.RatedRange == nil && s.RatedRange != nil { merged.RatedRange = s.RatedRange }
+		if merged.TimeToFullCharge == nil && s.TimeToFullCharge != nil { merged.TimeToFullCharge = s.TimeToFullCharge }
+		if merged.PackVoltage == nil && s.PackVoltage != nil { merged.PackVoltage = s.PackVoltage }
+		if merged.PackCurrent == nil && s.PackCurrent != nil { merged.PackCurrent = s.PackCurrent }
+		if merged.ChargeLimitSoc == nil && s.ChargeLimitSoc != nil { merged.ChargeLimitSoc = s.ChargeLimitSoc }
+	}
+	return &merged, nil
+}
