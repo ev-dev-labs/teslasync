@@ -126,6 +126,9 @@ export interface AppSettings {
   mode: string
   custom_primary: string
   custom_accent: string
+  gas_price_per_unit: number
+  gas_unit: string
+  gas_efficiency_mpg: number
 }
 
 export interface VehicleState {

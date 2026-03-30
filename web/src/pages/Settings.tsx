@@ -44,6 +44,9 @@ export default function Settings() {
     mode: 'dark',
     custom_primary: '#00b4d8',
     custom_accent: '#e63946',
+    gas_price_per_unit: 3.50,
+    gas_unit: 'gallon',
+    gas_efficiency_mpg: 25,
   })
   const [saved, setSaved] = useState(false)
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
@@ -368,6 +371,40 @@ export default function Settings() {
                     className="glass-input w-full pl-7 pr-3 py-2.5 text-sm"
                   />
                 </div>
+              </SettingField>
+
+              <SettingField label="Gas Price (for EV vs ICE comparison)">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={form.gas_price_per_unit}
+                      onChange={e => setForm({ ...form, gas_price_per_unit: parseFloat(e.target.value) || 0 })}
+                      className="glass-input w-full pl-7 pr-3 py-2.5 text-sm"
+                    />
+                  </div>
+                  <select
+                    value={form.gas_unit}
+                    onChange={e => setForm({ ...form, gas_unit: e.target.value })}
+                    className="glass-input px-3 py-2.5 text-sm w-28"
+                  >
+                    <option value="gallon">/ gallon</option>
+                    <option value="liter">/ liter</option>
+                  </select>
+                </div>
+              </SettingField>
+
+              <SettingField label="Comparison Vehicle MPG">
+                <input
+                  type="number"
+                  step="0.5"
+                  value={form.gas_efficiency_mpg}
+                  onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
+                  className="glass-input w-full px-3 py-2.5 text-sm"
+                  placeholder="Average MPG of equivalent gas car"
+                />
               </SettingField>
             </div>
           )}
