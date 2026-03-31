@@ -153,10 +153,7 @@ function SourceIcon({ source, className }: { source?: string; className?: string
 }
 
 /** Filter out Go nil string representations */
-function cleanNil(v?: string | null): string | undefined {
-  if (!v || v === '<nil>' || v === 'nil' || v === 'null') return undefined
-  return v
-}
+import { cleanNil } from '../lib/cleanNil'
 
 /* ── Pie chart colors ─────────────────────────────────────────────────────── */
 

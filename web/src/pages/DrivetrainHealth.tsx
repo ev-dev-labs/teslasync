@@ -6,6 +6,7 @@ import { Cog, Thermometer, Activity, Gauge, AlertTriangle, CheckCircle, Trending
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { cleanNil } from '../lib/cleanNil'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface TooltipPayload { name: string; value: number; color?: string }
@@ -264,14 +265,14 @@ export default function DrivetrainHealth() {
   ], [latest])
 
   /* ── Drive state helpers ── */
-  const diStateColor = latest?.di_state === 'drive' ? 'text-neon-green'
-    : latest?.di_state === 'idle' ? 'text-neon-cyan'
-    : latest?.di_state === 'charge' ? 'text-yellow-400'
+  const diStateColor = cleanNil(latest?.di_state) === 'drive' ? 'text-neon-green'
+    : cleanNil(latest?.di_state) === 'idle' ? 'text-neon-cyan'
+    : cleanNil(latest?.di_state) === 'charge' ? 'text-yellow-400'
     : 'text-[var(--text-muted)]'
 
-  const gearColor = latest?.gear === 'D' ? 'text-neon-green'
-    : latest?.gear === 'R' ? 'text-neon-amber'
-    : latest?.gear === 'P' ? 'text-neon-cyan'
+  const gearColor = cleanNil(latest?.gear) === 'D' ? 'text-neon-green'
+    : cleanNil(latest?.gear) === 'R' ? 'text-neon-amber'
+    : cleanNil(latest?.gear) === 'P' ? 'text-neon-cyan'
     : 'text-[var(--text-muted)]'
 
   const noData = !isLoading && (!history || history.length === 0)
@@ -334,8 +335,8 @@ export default function DrivetrainHealth() {
       {/* ── Live drive state row ── */}
       {!noData && latest && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
-          <StatusBadge label="Drive Inverter State" value={latest.di_state} color={diStateColor} />
-          <StatusBadge label="Gear" value={latest.gear} color={gearColor} />
+          <StatusBadge label="Drive Inverter State" value={cleanNil(latest.di_state)} color={diStateColor} />
+          <StatusBadge label="Gear" value={cleanNil(latest.gear)} color={gearColor} />
           <div className="glass-card p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Activity className="h-5 w-5 text-neon-cyan" />
@@ -536,11 +537,11 @@ export default function DrivetrainHealth() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>DI State</p>
-              <p className={clsx('text-lg font-bold', diStateColor)}>{latest.di_state ?? '--'}</p>
+              <p className={clsx('text-lg font-bold', diStateColor)}>{cleanNil(latest.di_state) ?? '--'}</p>
             </div>
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Gear</p>
-              <p className={clsx('text-lg font-bold', gearColor)}>{latest.gear ?? '--'}</p>
+              <p className={clsx('text-lg font-bold', gearColor)}>{cleanNil(latest.gear) ?? '--'}</p>
             </div>
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Stator Temp</p>
