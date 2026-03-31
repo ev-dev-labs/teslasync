@@ -433,3 +433,11 @@ body {
   background: rgba(128, 128, 128, 0.15);
   border-radius: 2px;
 }
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
