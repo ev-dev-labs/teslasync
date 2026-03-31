@@ -124,7 +124,7 @@
               }
             ]
           },
-          "unit": "km"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -155,7 +155,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(rated_range::numeric, 1) AS \"Range km\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(rated_range)::numeric, 1) AS \"Range\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -184,7 +184,7 @@
               }
             ]
           },
-          "unit": "km"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -215,7 +215,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(odometer::numeric, 1) AS \"📏 Odometer\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_distance(odometer)::numeric, 1) AS \"📏 Odometer\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -303,7 +303,7 @@
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -334,7 +334,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(outside_temp::numeric, 1) AS \"°C\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(convert_temp(outside_temp)::numeric, 1) AS \"Temp\" FROM positions WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -481,7 +481,7 @@
               }
             ]
           },
-          "unit": "km"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -512,7 +512,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(distance)::numeric, 1) AS \"km\" FROM drives WHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(convert_distance(SUM(distance))::numeric, 1) AS \"Distance\" FROM drives WHERE vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -751,7 +751,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND((SUM(charge_energy_added) * 1000 / NULLIF(SUM(d.distance), 0))::numeric, 1) AS \"⚡ Wh/km\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND((convert_efficiency(SUM(charge_energy_added) * 1000 / NULLIF(SUM(d.distance), 0)))::numeric, 1) AS \"⚡ Efficiency\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -851,7 +851,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT d.start_date AS \"📅 Date\",\n  COALESCE(sa.display_name, 'Unknown') AS \"📍 From\",\n  COALESCE(ea.display_name, 'Unknown') AS \"📍 To\",\n  ROUND(d.distance::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_level AS \"🔋 Start %\",\n  d.end_battery_level AS \"🔋 End %\"\nFROM drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_date DESC LIMIT 1",
+          "rawSql": "SELECT d.start_date AS \"📅 Date\",\n  COALESCE(sa.display_name, 'Unknown') AS \"📍 From\",\n  COALESCE(ea.display_name, 'Unknown') AS \"📍 To\",\n  ROUND(convert_distance(d.distance)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  d.start_battery_level AS \"🔋 Start %\",\n  d.end_battery_level AS \"🔋 End %\"\nFROM drives d\nLEFT JOIN addresses sa ON d.start_address_id = sa.id\nLEFT JOIN addresses ea ON d.end_address_id = ea.id\nWHERE d.vehicle_id = ${vehicle_id}\nORDER BY d.start_date DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -960,7 +960,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT di_torque AS \"Torque (Nm)\", di_stator_temp AS \"Stator Temp (°C)\", vehicle_speed AS \"Speed (km/h)\", gear AS \"Gear\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT di_torque AS \"Torque (Nm)\", convert_temp(di_stator_temp) AS \"Stator Temp\", convert_speed(vehicle_speed) AS \"Speed\", gear AS \"Gear\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -1019,7 +1019,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT inside_temp AS \"Cabin (°C)\", outside_temp AS \"Outside (°C)\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_temp(inside_temp) AS \"Cabin\", convert_temp(outside_temp) AS \"Outside\", hvac_power AS \"HVAC (kW)\", hvac_fan_speed AS \"Fan Speed\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

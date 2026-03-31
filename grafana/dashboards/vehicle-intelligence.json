@@ -262,7 +262,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT active_route_destination AS \"Destination\", active_route_miles_to_arrival AS \"Miles to Arrival\", active_route_minutes_to_arrival AS \"Minutes to Arrival\", active_route_energy_at_arrival AS \"Energy at Arrival %\", active_route_traffic_minutes_delay AS \"Traffic Delay Min\", created_at AS \"Time\" FROM location_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 10",
+          "rawSql": "SELECT active_route_destination AS \"Destination\", convert_distance(active_route_miles_to_arrival) AS \"Distance to Arrival\", active_route_minutes_to_arrival AS \"Minutes to Arrival\", active_route_energy_at_arrival AS \"Energy at Arrival %\", active_route_traffic_minutes_delay AS \"Traffic Delay Min\", created_at AS \"Time\" FROM location_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 10",
           "refId": "A"
         }
       ],

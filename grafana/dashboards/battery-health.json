@@ -303,7 +303,7 @@
               }
             ]
           },
-          "unit": "km"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -363,7 +363,7 @@
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -394,7 +394,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(avg_cell_temp_c::numeric, 1) AS \"°C\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT ROUND(avg_cell_temp_c::numeric, 1) AS \"Temp\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

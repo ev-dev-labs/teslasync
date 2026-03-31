@@ -88,7 +88,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(distance::numeric, 1) AS \"🛣️ Distance (km)\",\n  ROUND(duration_min::numeric) AS \"⏱️ Duration (min)\",\n  ROUND(speed_max::numeric) AS \"🏎️ Max Speed (km/h)\",\n  start_battery_level AS \"🔋 Start %\",\n  end_battery_level AS \"🔋 End %\",\n  ROUND(outside_temp_avg::numeric, 1) AS \"🌡️ Temp (°C)\"\nFROM drives WHERE id = ${drive_id}",
+          "rawSql": "SELECT\n  ROUND(convert_distance(distance)::numeric, 1) AS \"🛣️ Distance\",\n  ROUND(duration_min::numeric) AS \"⏱️ Duration (min)\",\n  ROUND(convert_speed(speed_max)::numeric) AS \"🏎️ Max Speed\",\n  start_battery_level AS \"🔋 Start %\",\n  end_battery_level AS \"🔋 End %\",\n  ROUND(convert_temp(outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\"\nFROM drives WHERE id = ${drive_id}",
           "refId": "A"
         }
       ],
@@ -127,7 +127,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.latitude, p.longitude, p.speed, p.battery_level, p.created_at AS time FROM positions p JOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW()) WHERE d.id = ${drive_id} ORDER BY p.created_at",
+          "rawSql": "SELECT p.latitude, p.longitude, convert_speed(p.speed) AS speed, p.battery_level, p.created_at AS time FROM positions p JOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW()) WHERE d.id = ${drive_id} ORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -202,7 +202,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "velocitykmh"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -233,7 +233,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, p.speed AS \"Speed (km/h)\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, convert_speed(p.speed) AS \"Speed\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -300,7 +300,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "celsius"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -331,7 +331,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT p.created_at AS time, p.inside_temp AS \"Cabin (°C)\", p.outside_temp AS \"Outside (°C)\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
+          "rawSql": "SELECT p.created_at AS time, convert_temp(p.inside_temp) AS \"Cabin\", convert_temp(p.outside_temp) AS \"Outside\"\nFROM positions p\nJOIN drives d ON p.vehicle_id = d.vehicle_id AND p.created_at >= d.start_date AND p.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY p.created_at",
           "refId": "A"
         }
       ],
@@ -428,7 +428,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT m.created_at AS time, m.di_torque AS \"Torque (Nm)\", m.vehicle_speed AS \"Speed (km/h)\"\nFROM motor_snapshots m\nJOIN drives d ON m.vehicle_id = d.vehicle_id AND m.created_at >= d.start_date AND m.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY m.created_at",
+          "rawSql": "SELECT m.created_at AS time, m.di_torque AS \"Torque (Nm)\", convert_speed(m.vehicle_speed) AS \"Speed\"\nFROM motor_snapshots m\nJOIN drives d ON m.vehicle_id = d.vehicle_id AND m.created_at >= d.start_date AND m.created_at <= COALESCE(d.end_date, NOW())\nWHERE d.id = ${drive_id}\nORDER BY m.created_at",
           "refId": "A"
         }
       ],

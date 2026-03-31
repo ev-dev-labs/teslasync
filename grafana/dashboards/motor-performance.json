@@ -233,7 +233,7 @@
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -267,7 +267,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, di_stator_temp AS \"Stator Temp (°C)\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, convert_temp(di_stator_temp) AS \"Stator Temp\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -475,7 +475,7 @@
               }
             ]
           },
-          "unit": "velocitykmh"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -509,7 +509,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, vehicle_speed AS \"Speed (km/h)\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, convert_speed(vehicle_speed) AS \"Speed\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -633,7 +633,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT AVG(di_torque) AS \"Avg Torque (Nm)\", MAX(di_torque) AS \"Peak Torque (Nm)\", AVG(di_stator_temp) AS \"Avg Stator Temp (°C)\", MAX(lateral_accel) AS \"Peak Lateral G\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
+          "rawSql": "SELECT AVG(di_torque) AS \"Avg Torque (Nm)\", MAX(di_torque) AS \"Peak Torque (Nm)\", convert_temp(AVG(di_stator_temp)) AS \"Avg Stator Temp\", MAX(lateral_accel) AS \"Peak Lateral G\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
           "refId": "A"
         }
       ],
