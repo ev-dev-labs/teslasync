@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -114,7 +115,10 @@ func (r *VehicleStateRepo) GetCurrentState(ctx context.Context, vehicleID int64)
 	var state string
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID).Scan(&state)
 	if err != nil {
-		return "", nil // no current state is fine
+		if err == pgx.ErrNoRows {
+			return "", nil // no current state is fine
+		}
+		return "", err // real DB error
 	}
 	return state, nil
 }

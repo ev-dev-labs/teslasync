@@ -54,6 +54,7 @@ import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates } from '../api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
+import { useSettings } from '../hooks/useSettings'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -179,14 +180,15 @@ export default function Layout() {
 
   // SSE connection status
   const { connected: sseConnected } = useRealtimeEvents()
+  const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
   const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: 60_000, refetchInterval: 60_000 })
   const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: checkForUpdates, staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
-  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000 })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: getVehicles, refetchInterval: 60_000 })
+  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000, retry: 1 })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: getVehicles, refetchInterval: 60_000, retry: 1 })
   const primaryVehicle = vehicles?.[0]
   const { data: primaryState } = useQuery({
     queryKey: ['primary-state-sidebar', primaryVehicle?.id],
@@ -194,7 +196,7 @@ export default function Layout() {
     enabled: !!primaryVehicle,
     refetchInterval: 60_000,
   })
-  const unreadAlerts = alerts?.filter(a => !a.read).length ?? 0
+  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
   const isConnected = !!primaryState?.live
 
@@ -343,7 +345,7 @@ export default function Layout() {
                 style={{ boxShadow: `0 0 6px ${primaryState.state.battery_level > 20 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }} />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium text-[var(--text-secondary)] truncate">{primaryVehicle.display_name || 'Vehicle'}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(primaryState.state.rated_range)} km</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(convertDistance(primaryState.state.rated_range))} {distanceUnit}</p>
               </div>
               <Zap className="h-3 w-3 text-neon-cyan/50" />
             </div>

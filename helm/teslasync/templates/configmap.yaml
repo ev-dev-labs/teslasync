@@ -44,3 +44,7 @@ data:
   {{- if $proxyURL }}
   TESLA_COMMAND_PROXY_URL: {{ $proxyURL | quote }}
   {{- end }}
+  {{- if .Values.gasPrice }}
+  GAS_PRICE_ENABLED: {{ .Values.gasPrice.enabled | default false | quote }}
+  GAS_PRICE_POLL_INTERVAL: {{ .Values.gasPrice.pollInterval | default "7d" | quote }}
+  {{- end }}

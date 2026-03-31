@@ -48,5 +48,9 @@ func (h *SecurityHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to get security data")
 		return
 	}
+	if evt == nil {
+		writeJSON(w, http.StatusOK, nil)
+		return
+	}
 	writeJSON(w, http.StatusOK, evt)
 }

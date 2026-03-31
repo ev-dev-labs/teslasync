@@ -64,7 +64,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
             </div>
             <div>
               <p className="text-xs text-[var(--text-muted)]">Temp</p>
-              <p className="text-sm font-bold text-[var(--text-primary)]">{convertTemp(state.inside_temp).toFixed(0)}°</p>
+              <p className="text-sm font-bold text-[var(--text-primary)]">{state.inside_temp != null ? `${convertTemp(state.inside_temp).toFixed(0)}°` : '—'}</p>
             </div>
           </div>
         ) : (
@@ -134,7 +134,7 @@ export default function Dashboard() {
   // Get states for all other vehicles
   const otherVehicles = vehicles?.slice(1) ?? []
   const { data: otherStates } = useQuery({
-    queryKey: ['other-vehicle-states', otherVehicles.map(v => v.id)],
+    queryKey: ['other-vehicle-states', otherVehicles.map(v => v.id).sort()],
     queryFn: async () => {
       const entries = await Promise.all(
         otherVehicles.map(async v => {
@@ -189,7 +189,7 @@ export default function Dashboard() {
   const totalCount = vehicles?.length ?? 0
   const totalDistance = analytics?.total_distance_km ?? 0
   const totalEnergy = analytics?.total_energy_kwh ?? 0
-  const unreadAlerts = alerts?.filter(a => !a.read).length ?? 0
+  const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
 
   // Last-updated timestamp state
   const [, setTick] = useState(0)
@@ -353,11 +353,11 @@ export default function Dashboard() {
                             </div>
                             <div>
                               <p className="text-[var(--text-muted)]">Rate</p>
-                              <p className="text-sm font-bold text-[var(--text-primary)]">{convertDistance(primaryState.charge_rate).toFixed(0)} {distanceUnit}/h</p>
+                              <p className="text-sm font-bold text-[var(--text-primary)]">{convertDistance(primaryState.charge_rate ?? 0).toFixed(0)} {distanceUnit}/h</p>
                             </div>
                             <div>
                               <p className="text-[var(--text-muted)]">Time to Full</p>
-                              <p className="text-sm font-bold text-[var(--text-primary)]">{primaryState.time_to_full_charge > 0 ? `${primaryState.time_to_full_charge.toFixed(1)}h` : '—'}</p>
+                              <p className="text-sm font-bold text-[var(--text-primary)]">{primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 ? `${primaryState.time_to_full_charge.toFixed(1)}h` : '—'}</p>
                             </div>
                           </div>
                         </div>
@@ -366,8 +366,8 @@ export default function Dashboard() {
                       {/* Quick telemetry grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
-                          { icon: Thermometer, label: 'Inside', value: `${convertTemp(primaryState.inside_temp).toFixed(1)}${tempUnit}`, color: '#f97316' },
-                          { icon: Thermometer, label: 'Outside', value: `${convertTemp(primaryState.outside_temp).toFixed(1)}${tempUnit}`, color: '#3b82f6' },
+                          { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? convertTemp(primaryState.inside_temp).toFixed(1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
+                          { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? convertTemp(primaryState.outside_temp).toFixed(1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
                           { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
                           { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
                           { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
@@ -916,7 +916,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Distance</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {locationData.miles_to_arrival != null ? `${locationData.miles_to_arrival.toFixed(1)} mi` : '—'}
+                        {locationData.miles_to_arrival != null ? `${convertDistance(locationData.miles_to_arrival * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

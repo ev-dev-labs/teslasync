@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, AppSettings, Vehicle } from '../api'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, AppSettings, Vehicle } from '../api'
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link } from 'lucide-react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link, Fuel, Zap } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -30,6 +30,7 @@ export default function Settings() {
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { data: version } = useQuery({ queryKey: ['version'], queryFn: getVersionInfo, staleTime: 60_000 })
+  const { data: gasPriceStatus, refetch: refetchGasPrice } = useQuery({ queryKey: ['gas-price-status'], queryFn: getGasPriceStatus, retry: false, refetchInterval: 30_000 })
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
   const toast = useToast()
 
@@ -44,6 +45,9 @@ export default function Settings() {
     mode: 'dark',
     custom_primary: '#00b4d8',
     custom_accent: '#e63946',
+    gas_price_per_unit: 3.50,
+    gas_unit: 'gallon',
+    gas_efficiency_mpg: 25,
   })
   const [saved, setSaved] = useState(false)
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
@@ -369,6 +373,40 @@ export default function Settings() {
                   />
                 </div>
               </SettingField>
+
+              <SettingField label="Gas Price (for EV vs ICE comparison)">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={form.gas_price_per_unit}
+                      onChange={e => setForm({ ...form, gas_price_per_unit: parseFloat(e.target.value) || 0 })}
+                      className="glass-input w-full pl-7 pr-3 py-2.5 text-sm"
+                    />
+                  </div>
+                  <select
+                    value={form.gas_unit}
+                    onChange={e => setForm({ ...form, gas_unit: e.target.value })}
+                    className="glass-input px-3 py-2.5 text-sm w-28"
+                  >
+                    <option value="gallon">/ gallon</option>
+                    <option value="liter">/ liter</option>
+                  </select>
+                </div>
+              </SettingField>
+
+              <SettingField label="Comparison Vehicle MPG">
+                <input
+                  type="number"
+                  step="0.5"
+                  value={form.gas_efficiency_mpg}
+                  onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
+                  className="glass-input w-full px-3 py-2.5 text-sm"
+                  placeholder="Average MPG of equivalent gas car"
+                />
+              </SettingField>
             </div>
           )}
 
@@ -394,6 +432,95 @@ export default function Settings() {
                 </motion.span>
               )}
             </AnimatePresence>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Gas Price Auto-Poll */}
+      <FadeIn delay={0.12}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 ring-1 ring-orange-500/20">
+              <Fuel className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Gas Price Auto-Poll</h2>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Automatically fetch US average gas prices from EIA</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Toggle auto-polling */}
+            <SettingField label="Auto-Poll">
+              <button
+                onClick={() => {
+                  const next = !gasPriceStatus?.enabled
+                  toggleGasPrice(next).then(() => { refetchGasPrice(); toast.info(next ? 'Auto-poll enabled' : 'Auto-poll disabled') })
+                }}
+                className={clsx(
+                  'flex items-center gap-3 w-full rounded-xl border p-3.5 transition-all duration-200',
+                  gasPriceStatus?.enabled
+                    ? 'border-neon-green/40 bg-neon-green/5 text-neon-green'
+                    : 'border-[var(--glass-border)] bg-[var(--surface-2)] text-[var(--text-muted)]'
+                )}
+              >
+                {gasPriceStatus?.enabled ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                <span className="text-sm font-medium">{gasPriceStatus?.enabled ? 'Running' : 'Stopped'}</span>
+              </button>
+            </SettingField>
+
+            {/* Poll interval dropdown */}
+            <SettingField label="Poll Interval">
+              <select
+                value={gasPriceStatus?.poll_interval || '7d'}
+                onChange={e => {
+                  updateGasPriceConfig(e.target.value).then(() => { refetchGasPrice(); toast.info('Poll interval updated') })
+                }}
+                className="glass-input w-full px-3 py-2.5 text-sm"
+              >
+                <option value="daily">Daily</option>
+                <option value="7d">Weekly</option>
+                <option value="15d">Bi-weekly</option>
+                <option value="30d">Monthly</option>
+              </select>
+            </SettingField>
+          </div>
+
+          {/* Current price & last polled */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
+              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Current Price</p>
+              <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {gasPriceStatus?.current_price ? `$${gasPriceStatus.current_price.toFixed(3)}/gal` : '—'}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
+              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Last Polled</p>
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                {gasPriceStatus?.last_poll_time && gasPriceStatus.last_poll_time !== '0001-01-01T00:00:00Z'
+                  ? new Date(gasPriceStatus.last_poll_time).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+          </div>
+
+          {/* Poll Now button */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                pollGasPrice().then(() => {
+                  toast.info('Gas price poll triggered')
+                  setTimeout(() => refetchGasPrice(), 3000)
+                })
+              }}
+              className="neon-button flex items-center gap-2 px-5 py-2.5 text-sm font-medium"
+            >
+              <Zap className="h-4 w-4" />
+              Poll Now
+            </button>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              Source: U.S. Energy Information Administration
+            </p>
           </div>
         </GlassPanel>
       </FadeIn>

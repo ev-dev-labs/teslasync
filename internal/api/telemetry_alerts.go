@@ -30,6 +30,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus) *Telemetr
 func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
+		log.Warn().Err(err).Msg("telemetry: failed to load alert rules, skipping evaluation")
 		return
 	}
 

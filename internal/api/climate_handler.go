@@ -48,5 +48,9 @@ func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to get climate data")
 		return
 	}
+	if snap == nil {
+		writeJSON(w, http.StatusOK, nil)
+		return
+	}
 	writeJSON(w, http.StatusOK, snap)
 }

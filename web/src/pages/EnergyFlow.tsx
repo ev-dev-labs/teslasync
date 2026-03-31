@@ -312,11 +312,11 @@ export default function EnergyFlow() {
             </div>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Charger Voltage</p>
-              <p className="text-lg font-bold text-yellow-400">{latest?.charger_voltage != null ? `${latest.charger_voltage} V` : '--'}</p>
+              <p className="text-lg font-bold text-yellow-400">{latest?.charger_voltage != null ? `${latest.charger_voltage.toFixed(1)} V` : '--'}</p>
             </div>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Charge Amps</p>
-              <p className="text-lg font-bold text-neon-green">{latest?.charge_amps != null ? `${latest.charge_amps} A` : '--'}</p>
+              <p className="text-lg font-bold text-neon-green">{latest?.charge_amps != null ? `${latest.charge_amps.toFixed(1)} A` : '--'}</p>
             </div>
           </div>
           {/* Power flow chart */}

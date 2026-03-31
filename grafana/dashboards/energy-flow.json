@@ -325,7 +325,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, battery_level AS \"SOC %\", est_battery_range AS \"Est Range\", rated_range AS \"Rated Range\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, battery_level AS \"SOC %\", convert_distance(est_battery_range) AS \"Est Range\", convert_distance(rated_range) AS \"Rated Range\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -485,7 +485,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, module_temp_max AS \"Max Module °C\", module_temp_min AS \"Min Module °C\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND module_temp_max IS NOT NULL ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, convert_temp(module_temp_max) AS \"Max Module Temp\", convert_temp(module_temp_min) AS \"Min Module Temp\" FROM charging_telemetry WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND module_temp_max IS NOT NULL ORDER BY created_at",
           "refId": "A"
         }
       ],

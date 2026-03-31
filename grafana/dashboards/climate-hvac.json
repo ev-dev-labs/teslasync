@@ -73,7 +73,7 @@
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         },
         "overrides": [
           {
@@ -138,7 +138,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  inside_temp AS \"Cabin Temp (°C)\",\n  outside_temp AS \"Outside Temp (°C)\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  convert_temp(inside_temp) AS \"Cabin Temp\",\n  convert_temp(outside_temp) AS \"Outside Temp\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -347,7 +347,7 @@
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -381,7 +381,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  inside_temp AS \"Actual Cabin\",\n  hvac_left_temp_request AS \"Left Target\",\n  hvac_right_temp_request AS \"Right Target\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  convert_temp(inside_temp) AS \"Actual Cabin\",\n  convert_temp(hvac_left_temp_request) AS \"Left Target\",\n  convert_temp(hvac_right_temp_request) AS \"Right Target\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -476,7 +476,7 @@
               }
             ]
           },
-          "unit": "celsius",
+          "unit": "none",
           "min": -10,
           "max": 50
         },
@@ -510,7 +510,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  AVG(inside_temp) AS \"Avg Cabin Temp\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)",
+          "rawSql": "SELECT\n  convert_temp(AVG(inside_temp)) AS \"Avg Cabin Temp\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)",
           "refId": "A"
         }
       ],

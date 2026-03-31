@@ -436,7 +436,7 @@ export default function BatteryCells() {
     // Charging habit tip based on session data
     if (sessions && sessions.length > 0) {
       const dcCount = sessions.filter(s => s.fast_charger_type).length
-      const dcPct = (dcCount / sessions.length) * 100
+      const dcPct = sessions.length > 0 ? (dcCount / sessions.length) * 100 : 0
       if (dcPct > 50) {
         tips.push({
           icon: <Zap className="h-4 w-4" />,

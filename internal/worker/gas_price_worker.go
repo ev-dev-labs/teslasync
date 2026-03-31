@@ -1,0 +1,358 @@
+package worker
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+)
+
+// eiaResponse models the JSON returned by the EIA petroleum price API.
+type eiaResponse struct {
+	Response struct {
+		Data []struct {
+			Value  string `json:"value"`
+			Period string `json:"period"`
+		} `json:"data"`
+	} `json:"response"`
+}
+
+// GasPriceWorker polls the EIA API for the latest US average gasoline price.
+type GasPriceWorker struct {
+	db  *database.DB
+	cfg config.GasPriceConfig
+
+	mu           sync.Mutex
+	pollInterval string
+	lastPollTime time.Time
+	lastPrice    float64
+	running      atomic.Bool
+
+	// stopCh is used to signal the ticker loop to stop.
+	stopCh chan struct{}
+	// resumeCh is used to signal the ticker loop to resume.
+	resumeCh chan struct{}
+}
+
+// NewGasPriceWorker creates a new gas price polling worker.
+func NewGasPriceWorker(db *database.DB, cfg config.GasPriceConfig) *GasPriceWorker {
+	return &GasPriceWorker{
+		db:           db,
+		cfg:          cfg,
+		pollInterval: cfg.PollInterval,
+		stopCh:       make(chan struct{}, 1),
+		resumeCh:     make(chan struct{}, 1),
+	}
+}
+
+// Start runs the gas price polling loop. It blocks until ctx is cancelled.
+func (w *GasPriceWorker) Start(ctx context.Context) {
+	// Restore persisted state from the database
+	w.restoreState(ctx)
+
+	if !w.IsRunning() && w.cfg.Enabled {
+		w.running.Store(true)
+	}
+
+	interval := w.tickerDuration()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	log.Info().
+		Bool("enabled", w.cfg.Enabled).
+		Str("poll_interval", w.pollInterval).
+		Dur("ticker_duration", interval).
+		Msg("gas price worker started")
+
+	// Initial poll shortly after startup if enabled
+	if w.IsRunning() {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(30 * time.Second):
+			w.Poll(ctx)
+		}
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-w.stopCh:
+			w.running.Store(false)
+			log.Info().Msg("gas price auto-poll stopped")
+			// Wait for resume or context cancellation
+			select {
+			case <-ctx.Done():
+				return
+			case <-w.resumeCh:
+				w.running.Store(true)
+				// Reset ticker with current interval
+				ticker.Reset(w.tickerDuration())
+				log.Info().Msg("gas price auto-poll resumed")
+			}
+		case <-ticker.C:
+			if w.IsRunning() {
+				w.Poll(ctx)
+			}
+		}
+	}
+}
+
+// Poll fetches the latest gas price from the EIA API and records it.
+func (w *GasPriceWorker) Poll(ctx context.Context) {
+	if w.cfg.APIKey == "" {
+		log.Warn().Msg("gas price poll skipped: no EIA API key configured")
+		return
+	}
+
+	url := fmt.Sprintf(
+		"https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=%s&frequency=weekly&data[]=value&facets[product][]=EPMR&facets[duoarea][]=NUS&sort[0][column]=period&sort[0][direction]=desc&length=1",
+		w.cfg.APIKey,
+	)
+
+	reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, url, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("gas price poll: failed to create request")
+		return
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Error().Err(err).Msg("gas price poll: request failed")
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		log.Error().Int("status", resp.StatusCode).Str("body", string(body)).Msg("gas price poll: non-200 response from EIA")
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		log.Error().Err(err).Msg("gas price poll: failed to read response body")
+		return
+	}
+
+	var eia eiaResponse
+	if err := json.Unmarshal(body, &eia); err != nil {
+		log.Error().Err(err).Msg("gas price poll: failed to parse EIA response")
+		return
+	}
+
+	if len(eia.Response.Data) == 0 {
+		log.Warn().Msg("gas price poll: EIA returned empty data")
+		return
+	}
+
+	priceStr := eia.Response.Data[0].Value
+	period := eia.Response.Data[0].Period
+	price, err := strconv.ParseFloat(priceStr, 64)
+	if err != nil {
+		log.Error().Err(err).Str("value", priceStr).Msg("gas price poll: failed to parse price value")
+		return
+	}
+
+	// Record in gas_price_history (close current period, insert new)
+	if err := w.recordPrice(ctx, price); err != nil {
+		log.Error().Err(err).Float64("price", price).Msg("gas price poll: failed to record price")
+		return
+	}
+
+	// Update settings table with the new price
+	if err := w.updateSettingsPrice(ctx, price); err != nil {
+		log.Error().Err(err).Float64("price", price).Msg("gas price poll: failed to update settings")
+		return
+	}
+
+	w.mu.Lock()
+	w.lastPollTime = time.Now()
+	w.lastPrice = price
+	w.mu.Unlock()
+
+	// Persist poll state
+	w.persistState(ctx)
+
+	log.Info().
+		Float64("price", price).
+		Str("period", period).
+		Msg("gas price poll: updated successfully")
+}
+
+// recordPrice closes the current gas_price_history period and inserts a new one.
+func (w *GasPriceWorker) recordPrice(ctx context.Context, price float64) error {
+	tx, err := w.db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Close current active period
+	if _, err := tx.Exec(ctx,
+		`UPDATE gas_price_history SET effective_to = NOW() WHERE effective_to IS NULL`); err != nil {
+		return fmt.Errorf("close period: %w", err)
+	}
+
+	// Get current efficiency from settings
+	var efficiencyMPG float64
+	var gasUnit string
+	err = tx.QueryRow(ctx,
+		`SELECT gas_unit, gas_efficiency_mpg FROM settings WHERE id = 1`).Scan(&gasUnit, &efficiencyMPG)
+	if err != nil {
+		// Defaults if settings not found
+		gasUnit = "gallon"
+		efficiencyMPG = 25
+	}
+
+	// Insert new period
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO gas_price_history (price_per_unit, unit, efficiency_mpg, effective_from) VALUES ($1, $2, $3, NOW())`,
+		price, gasUnit, efficiencyMPG); err != nil {
+		return fmt.Errorf("insert period: %w", err)
+	}
+
+	return tx.Commit(ctx)
+}
+
+// updateSettingsPrice updates the gas_price_per_unit in the settings table.
+func (w *GasPriceWorker) updateSettingsPrice(ctx context.Context, price float64) error {
+	_, err := w.db.Pool.Exec(ctx,
+		`UPDATE settings SET gas_price_per_unit = $1 WHERE id = 1`, price)
+	return err
+}
+
+// Stop signals the worker to stop auto-polling.
+func (w *GasPriceWorker) Stop() {
+	select {
+	case w.stopCh <- struct{}{}:
+	default:
+	}
+}
+
+// Resume signals the worker to resume auto-polling.
+func (w *GasPriceWorker) Resume() {
+	select {
+	case w.resumeCh <- struct{}{}:
+	default:
+	}
+}
+
+// IsRunning returns whether the worker is currently auto-polling.
+func (w *GasPriceWorker) IsRunning() bool {
+	return w.running.Load()
+}
+
+// SetPollInterval updates the poll interval at runtime.
+func (w *GasPriceWorker) SetPollInterval(interval string) {
+	w.mu.Lock()
+	w.pollInterval = interval
+	w.mu.Unlock()
+}
+
+// Status returns the current worker state.
+func (w *GasPriceWorker) Status() GasPriceStatus {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return GasPriceStatus{
+		Enabled:      w.IsRunning(),
+		PollInterval: w.pollInterval,
+		LastPollTime: w.lastPollTime,
+		CurrentPrice: w.lastPrice,
+	}
+}
+
+// GasPriceStatus holds the polling status for the API response.
+type GasPriceStatus struct {
+	Enabled      bool      `json:"enabled"`
+	PollInterval string    `json:"poll_interval"`
+	LastPollTime time.Time `json:"last_poll_time"`
+	CurrentPrice float64   `json:"current_price"`
+}
+
+// tickerDuration converts the poll interval string to a time.Duration.
+func (w *GasPriceWorker) tickerDuration() time.Duration {
+	w.mu.Lock()
+	interval := w.pollInterval
+	w.mu.Unlock()
+
+	switch interval {
+	case "daily":
+		return 24 * time.Hour
+	case "7d":
+		return 7 * 24 * time.Hour
+	case "15d":
+		return 15 * 24 * time.Hour
+	case "30d":
+		return 30 * 24 * time.Hour
+	default:
+		return 7 * 24 * time.Hour
+	}
+}
+
+// persistState saves the worker's poll state to the database so it survives restarts.
+func (w *GasPriceWorker) persistState(ctx context.Context) {
+	w.mu.Lock()
+	lastPoll := w.lastPollTime
+	lastPrice := w.lastPrice
+	interval := w.pollInterval
+	w.mu.Unlock()
+
+	running := w.IsRunning()
+
+	_, err := w.db.Pool.Exec(ctx, `
+		INSERT INTO gas_price_poll_state (id, enabled, poll_interval, last_poll_time, last_price)
+		VALUES (1, $1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE SET
+			enabled = EXCLUDED.enabled,
+			poll_interval = EXCLUDED.poll_interval,
+			last_poll_time = EXCLUDED.last_poll_time,
+			last_price = EXCLUDED.last_price
+	`, running, interval, lastPoll, lastPrice)
+	if err != nil {
+		log.Warn().Err(err).Msg("gas price worker: failed to persist state")
+	}
+}
+
+// restoreState loads persisted poll state from the database.
+func (w *GasPriceWorker) restoreState(ctx context.Context) {
+	var enabled bool
+	var interval string
+	var lastPoll time.Time
+	var lastPrice float64
+
+	err := w.db.Pool.QueryRow(ctx,
+		`SELECT enabled, poll_interval, last_poll_time, last_price FROM gas_price_poll_state WHERE id = 1`,
+	).Scan(&enabled, &interval, &lastPoll, &lastPrice)
+	if err != nil {
+		// Table may not exist yet or no row — use config defaults
+		return
+	}
+
+	w.mu.Lock()
+	w.pollInterval = interval
+	w.lastPollTime = lastPoll
+	w.lastPrice = lastPrice
+	w.mu.Unlock()
+
+	w.running.Store(enabled)
+	log.Info().
+		Bool("enabled", enabled).
+		Str("poll_interval", interval).
+		Time("last_poll_time", lastPoll).
+		Float64("last_price", lastPrice).
+		Msg("gas price worker: restored persisted state")
+}

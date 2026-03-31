@@ -94,14 +94,14 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
               {batteryGain > 0 && <span className="text-xs text-neon-green font-medium">+{batteryGain}%</span>}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> {session.charge_energy_added.toFixed(1)} kWh</span>
+              <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> {(session.charge_energy_added ?? 0).toFixed(1)} kWh</span>
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDuration(session.duration_min)}</span>
               {session.charger_power !== null && <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {session.charger_power} kW peak</span>}
               {avgRate && <span className="flex items-center gap-1"><Plug className="h-3 w-3" /> ~{avgRate} kW avg</span>}
-              {session.cost !== null && <span className="flex items-center gap-1 text-neon-green"><DollarSign className="h-3 w-3" /> ${session.cost.toFixed(2)}</span>}
-              {costPerKwh !== null && <span className="text-gray-600">(${costPerKwh.toFixed(3)}/kWh)</span>}
-              {efficiency !== null && <span className="flex items-center gap-1 text-neon-cyan"><Activity className="h-3 w-3" /> {efficiency.toFixed(1)}% eff</span>}
-              {rangeGained !== null && rangeGained > 0 && <span className="flex items-center gap-1 text-neon-purple">+{rangeGained.toFixed(0)} {distanceUnit}</span>}
+              {typeof session.cost === 'number' && <span className="flex items-center gap-1 text-neon-green"><DollarSign className="h-3 w-3" /> ${session.cost.toFixed(2)}</span>}
+              {typeof costPerKwh === 'number' && <span className="text-gray-600">(${costPerKwh.toFixed(3)}/kWh)</span>}
+              {typeof efficiency === 'number' && <span className="flex items-center gap-1 text-neon-cyan"><Activity className="h-3 w-3" /> {efficiency.toFixed(1)}% eff</span>}
+              {typeof rangeGained === 'number' && rangeGained > 0 && <span className="flex items-center gap-1 text-neon-purple">+{rangeGained.toFixed(0)} {distanceUnit}</span>}
             </div>
             {chargerSpec && (
               <div className="mt-1 text-[10px] text-[var(--text-muted)]">
@@ -167,7 +167,7 @@ export default function Charging() {
     if (!sessions) return []
     return sessions.slice(0, 20).reverse().map(s => ({
       date: new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      energy: parseFloat(s.charge_energy_added.toFixed(1)),
+      energy: parseFloat((s.charge_energy_added ?? 0).toFixed(1)),
       cost: s.cost ?? 0,
     }))
   }, [sessions])
@@ -286,14 +286,14 @@ export default function Charging() {
   // Enhanced statistics
   const enhancedStats = useMemo(() => {
     if (!sessions || sessions.length === 0 || !stats) return null
-    const avgDuration = stats.totalDuration / stats.count
+    const avgDuration = stats.count > 0 ? stats.totalDuration / stats.count : 0
     const chargerTypes = sessions.reduce<Record<string, number>>((acc, s) => {
       const t = s.fast_charger_type || 'AC/Home'
       acc[t] = (acc[t] || 0) + 1
       return acc
     }, {})
     const mostCommonType = Object.entries(chargerTypes).sort((a, b) => b[1] - a[1])[0]
-    const avgCostPerSession = stats.totalCost / stats.count
+    const avgCostPerSession = stats.count > 0 ? stats.totalCost / stats.count : 0
     return { avgDuration, mostCommonType, avgCostPerSession }
   }, [sessions, stats])
 

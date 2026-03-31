@@ -19,13 +19,15 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
 // RouterOptions holds optional parameters for NewRouter.
 type RouterOptions struct {
 	AppVersion       string
 	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler // If set, reuses existing handler (for hybrid mode wiring)
+	TelemetryHandler *TelemetryHandler       // If set, reuses existing handler (for hybrid mode wiring)
+	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -111,11 +113,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := NewBackupHandler(db)
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
+	apiKeyHandler := NewAPIKeyHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute)
 	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
+
+	// Wire telemetry handler into vehicle handler for streaming-aware state
+	vehicleHandler.SetTelemetryHandler(telemetryHandler)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -181,6 +187,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/settings", settingsHandler.Get)
 		r.Put("/settings", settingsHandler.Update)
 		r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
+
+		// Gas Price Auto-Poll
+		if opt.GasPriceWorker != nil {
+			gasPriceHandler := NewGasPriceHandler(db, opt.GasPriceWorker)
+			r.Route("/gas-price", func(r chi.Router) {
+				r.Get("/status", gasPriceHandler.Status)
+				r.Post("/poll", gasPriceHandler.Poll)
+				r.Post("/toggle", gasPriceHandler.Toggle)
+				r.Put("/config", gasPriceHandler.UpdateConfig)
+				r.Get("/history", gasPriceHandler.History)
+			})
+		}
 
 		// Alerts
 		r.Route("/alerts", func(r chi.Router) {
@@ -343,6 +361,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/api-logs", func(r chi.Router) {
 			r.Get("/", apiCallLogHandler.List)
 			r.Get("/stats", apiCallLogHandler.Stats)
+		})
+
+		// API Keys
+		r.Route("/api-keys", func(r chi.Router) {
+			r.Get("/", apiKeyHandler.List)
+			r.Post("/", apiKeyHandler.Create)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Delete("/", apiKeyHandler.Delete)
+				r.Post("/revoke", apiKeyHandler.Revoke)
+			})
 		})
 
 		// Fleet Telemetry ingestion

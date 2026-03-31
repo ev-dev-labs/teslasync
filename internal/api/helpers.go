@@ -15,6 +15,8 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	if data != nil {
 		_ = json.NewEncoder(w).Encode(data)
+	} else {
+		_, _ = w.Write([]byte("null"))
 	}
 }
 
@@ -87,6 +89,7 @@ func urlParamInt64(r *http.Request, key string) (int64, error) {
 }
 
 // parseDateRange extracts optional start/end date query params (format: 2006-01-02).
+// End date is set to end of day (23:59:59) to include the full day.
 func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 	if s := r.URL.Query().Get("start"); s != "" {
 		if t, err := time.Parse("2006-01-02", s); err == nil {
@@ -95,7 +98,7 @@ func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 	}
 	if s := r.URL.Query().Get("end"); s != "" {
 		if t, err := time.Parse("2006-01-02", s); err == nil {
-			endTime = t
+			endTime = t.Add(24*time.Hour - time.Second) // end of day
 		}
 	}
 	return

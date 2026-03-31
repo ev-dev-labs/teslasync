@@ -113,18 +113,27 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
 }
 
 function FleetSummary({ vehicles }: { vehicles: Vehicle[] }) {
-  // Gather all states
-  const stateQueries = vehicles.map(v => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { data } = useQuery({
-      queryKey: ['vehicle-state', v.id],
-      queryFn: () => getVehicleState(v.id),
-      refetchInterval: 30_000,
-    })
-    return data?.state
+  // Batch-fetch all vehicle states in a single query
+  const { data: allStates } = useQuery({
+    queryKey: ['fleet-vehicle-states', vehicles.map(v => v.id).sort()],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        vehicles.map(async v => {
+          try {
+            const data = await getVehicleState(v.id)
+            return data?.state ?? null
+          } catch {
+            return null
+          }
+        })
+      )
+      return entries
+    },
+    enabled: vehicles.length > 0,
+    refetchInterval: 30_000,
   })
 
-  const states = stateQueries.filter(Boolean)
+  const states = (allStates ?? []).filter(Boolean)
   const avgBattery = states.length > 0 ? states.reduce((s, st) => s + (st?.battery_level ?? 0), 0) / states.length : 0
   const totalRange = states.reduce((s, st) => s + (st?.rated_range ?? 0), 0)
   const chargingCount = states.filter(st => st?.is_charging).length
@@ -160,17 +169,26 @@ function FleetSummary({ vehicles }: { vehicles: Vehicle[] }) {
 
 // Battery comparison bar chart
 function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
-  const stateQueries = vehicles.map(v => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { data } = useQuery({
-      queryKey: ['vehicle-state', v.id],
-      queryFn: () => getVehicleState(v.id),
-      refetchInterval: 30_000,
-    })
-    return { vehicle: v, state: data?.state }
+  const { data: allStates } = useQuery({
+    queryKey: ['fleet-battery-states', vehicles.map(v => v.id).sort()],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        vehicles.map(async v => {
+          try {
+            const data = await getVehicleState(v.id)
+            return { vehicle: v, state: data?.state ?? null }
+          } catch {
+            return { vehicle: v, state: null }
+          }
+        })
+      )
+      return entries
+    },
+    enabled: vehicles.length > 0,
+    refetchInterval: 30_000,
   })
 
-  const bars = stateQueries.filter(q => q.state)
+  const bars = (allStates ?? []).filter(q => q.state)
 
   if (bars.length === 0) return null
 
@@ -220,6 +238,9 @@ export default function Vehicles() {
     mutationFn: deleteVehicle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
+      queryClient.invalidateQueries({ queryKey: ['vehicle-state'] })
+      queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] })
+      queryClient.invalidateQueries({ queryKey: ['fleet-battery-states'] })
       setDeleteTarget(null)
     },
   })

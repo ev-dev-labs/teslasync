@@ -48,5 +48,9 @@ func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "failed to get location snapshot")
 		return
 	}
+	if snap == nil {
+		writeJSON(w, http.StatusOK, nil)
+		return
+	}
 	writeJSON(w, http.StatusOK, snap)
 }

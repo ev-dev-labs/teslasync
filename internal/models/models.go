@@ -171,6 +171,9 @@ type Settings struct {
 	Mode            string  `json:"mode" db:"mode"`                           // dark, light, oled, midnight
 	CustomPrimary   string  `json:"custom_primary" db:"custom_primary"`       // hex color for custom theme
 	CustomAccent    string  `json:"custom_accent" db:"custom_accent"`         // hex color for custom theme
+	GasPricePerUnit float64 `json:"gas_price_per_unit" db:"gas_price_per_unit"` // price per gallon/liter
+	GasUnit         string  `json:"gas_unit" db:"gas_unit"`                   // gallon, liter
+	GasEfficiencyMPG float64 `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
 }
 
 // VehicleState represents a snapshot of vehicle state at a point in time.

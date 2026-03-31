@@ -73,7 +73,7 @@
               }
             ]
           },
-          "unit": "pressurepsi"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -107,7 +107,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  front_left AS \"Front Left PSI\",\n  front_right AS \"Front Right PSI\",\n  rear_left AS \"Rear Left PSI\",\n  rear_right AS \"Rear Right PSI\"\nFROM tire_pressure_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT\n  created_at AS time,\n  convert_pressure(front_left) AS \"Front Left\",\n  convert_pressure(front_right) AS \"Front Right\",\n  convert_pressure(rear_left) AS \"Rear Left\",\n  convert_pressure(rear_right) AS \"Rear Right\"\nFROM tire_pressure_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
           "refId": "A"
         }
       ],
@@ -136,7 +136,7 @@
               }
             ]
           },
-          "unit": "pressurepsi"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -167,7 +167,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT front_left AS \"Front Left PSI\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(front_left) AS \"Front Left\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -196,7 +196,7 @@
               }
             ]
           },
-          "unit": "pressurepsi"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT front_right AS \"Front Right PSI\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(front_right) AS \"Front Right\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -256,7 +256,7 @@
               }
             ]
           },
-          "unit": "pressurepsi"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -287,7 +287,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT rear_left AS \"Rear Left PSI\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(rear_left) AS \"Rear Left\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -316,7 +316,7 @@
               }
             ]
           },
-          "unit": "pressurepsi"
+          "unit": "none"
         }
       },
       "gridPos": {
@@ -347,7 +347,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT rear_right AS \"Rear Right PSI\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure(rear_right) AS \"Rear Right\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

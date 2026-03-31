@@ -85,7 +85,12 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule, _ := h.alertRuleRepo.GetByID(r.Context(), id)
+	rule, err := h.alertRuleRepo.GetByID(r.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("failed to fetch updated alert rule")
+		writeError(w, http.StatusInternalServerError, "rule updated but failed to retrieve")
+		return
+	}
 	writeJSON(w, http.StatusOK, rule)
 }
 
