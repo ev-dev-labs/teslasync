@@ -13,6 +13,9 @@ const modeIcons: Record<string, React.ReactNode> = {
   light: <Sun className="h-4 w-4" />,
   oled: <Monitor className="h-4 w-4" />,
   midnight: <Sparkles className="h-4 w-4" />,
+  auto: <Monitor className="h-4 w-4" />,
+  sunset: <Sun className="h-4 w-4" />,
+  nord: <Sparkles className="h-4 w-4" />,
 }
 
 function SettingField({ label, children }: { label: string; children: React.ReactNode }) {
