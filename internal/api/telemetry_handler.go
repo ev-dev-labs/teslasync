@@ -773,6 +773,9 @@ func formatFloat(v float64) string {
 }
 
 func toString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
 	switch val := v.(type) {
 	case string:
 		return val
@@ -784,7 +787,11 @@ func toString(v interface{}) string {
 		}
 		return "false"
 	default:
-		return fmt.Sprintf("%v", val)
+		s := fmt.Sprintf("%v", val)
+		if s == "<nil>" {
+			return ""
+		}
+		return s
 	}
 }
 
