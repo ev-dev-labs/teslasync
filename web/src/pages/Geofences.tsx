@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getGeofences, createGeofence, updateGeofence, deleteGeofence, Geofence } from '../api'
-import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap } from 'lucide-react'
+import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap, Navigation } from 'lucide-react'
 import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
@@ -78,11 +78,12 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
 function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: {
   editing: number | 'new'
   form: FormData
-  setForm: (f: FormData) => void
+  setForm: (f: FormData | ((prev: FormData) => FormData)) => void
   onSubmit: () => void
   onCancel: () => void
   isSaving: boolean
 }) {
+  const [locStatus, setLocStatus] = useState<string | null>(null)
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -112,6 +113,26 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
               placeholder="Home"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!navigator.geolocation) { setLocStatus('Geolocation not supported'); return }
+              setLocStatus('Getting location...')
+              navigator.geolocation.getCurrentPosition(
+                pos => {
+                  setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
+                  setLocStatus(null)
+                },
+                () => { setLocStatus('Location access denied') },
+                { enableHighAccuracy: true, timeout: 10000 }
+              )
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors hover:bg-white/[0.03]"
+            style={{ borderColor: 'var(--glass-border)', color: 'var(--text-secondary)' }}
+          >
+            <Navigation className="h-3.5 w-3.5" /> Use Current Location
+          </button>
+          {locStatus && <p className="text-[10px] text-center" style={{ color: locStatus.includes('denied') ? 'var(--neon-red, #ef4444)' : 'var(--text-muted)' }}>{locStatus}</p>}
           <div>
             <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Latitude</label>
             <input
