@@ -121,9 +121,26 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 				"endpoint": "/api/v1/telemetry",
 				"protocol": "HTTP POST (JSON)",
 				"supported_signals": []string{
-					"Location", "GpsHeading", "VehicleSpeed",
-					"BatteryLevel", "Soc", "InsideTemp", "OutsideTemp",
-					"Odometer", "Gear",
+					// Location
+					"Location", "GpsHeading", "GpsState",
+					// Driving
+					"VehicleSpeed", "Odometer", "Gear",
+					"LateralAcceleration", "LongitudinalAcceleration",
+					// Battery & Charging
+					"BatteryLevel", "Soc", "EstBatteryRange", "IdealBatteryRange",
+					"EnergyRemaining", "ChargeState", "DetailedChargeState",
+					"ChargeAmps", "ChargerVoltage", "ChargerPhases", "ChargeLimitSoc",
+					"ChargeCurrentRequest", "ChargeRateMilePerHour", "DCChargingPower", "ACChargingPower",
+					"FastChargerPresent", "FastChargerType", "ChargingCableType",
+					// Climate
+					"InsideTemp", "OutsideTemp", "HvacPower", "HvacFanSpeed",
+					"HvacLeftTemperatureRequest", "HvacRightTemperatureRequest",
+					"CabinOverheatProtectionMode", "DefrostMode",
+					// Vehicle State
+					"Locked", "DoorState", "FdWindow", "FpWindow",
+					"SentryMode", "HomelinkNearby", "GuestModeEnabled",
+					// TPMS
+					"TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr",
 				},
 			}
 		}
