@@ -39,3 +39,5 @@ test_*.py
 test_*.js
 publish_test.sh
 package-lock.json
+
+package.json
