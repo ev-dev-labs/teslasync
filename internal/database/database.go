@@ -5,10 +5,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
+
+// DBTX is an interface satisfied by both *pgxpool.Pool and pgx.Tx,
+// allowing repos to work inside or outside a transaction.
+type DBTX interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
 
 // DB wraps a pgx connection pool and provides repository methods.
 type DB struct {
@@ -72,6 +82,28 @@ func (db *DB) Health(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	return db.Pool.Ping(checkCtx)
+}
+
+// WithTx executes fn within a database transaction.
+// It commits on success and rolls back on error or panic.
+func (db *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback(ctx)
+			panic(p)
+		}
+	}()
+
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 // Stats returns current connection pool statistics for monitoring.

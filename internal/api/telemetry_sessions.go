@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -17,6 +18,7 @@ import (
 // from streaming Fleet Telemetry signals. Tracks comprehensive telemetry
 // data throughout sessions for analytics.
 type TelemetrySessionTracker struct {
+	db                *database.DB
 	driveRepo         *database.DriveRepo
 	chargeRepo        *database.ChargingRepo
 	driveTelRepo      *database.DriveTelemetryRepo
@@ -123,6 +125,7 @@ type streamingCharge struct {
 // NewTelemetrySessionTracker creates a session tracker with comprehensive data tracking.
 func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus) *TelemetrySessionTracker {
 	return &TelemetrySessionTracker{
+		db:            db,
 		driveRepo:     database.NewDriveRepo(db),
 		chargeRepo:    database.NewChargingRepo(db),
 		driveTelRepo:  database.NewDriveTelemetryRepo(db),
@@ -586,12 +589,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		powerMin = &active.PowerMin
 	}
 
-	if err := t.driveRepo.Complete(ctx, active.DriveID, time.Now().UTC(),
-		nil, nil, distance, duration, endRatedRange, &endBattery, &maxSpeed, powerMax, powerMin, insideAvg, outsideAvg); err != nil {
-		log.Error().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to complete drive")
-	}
-
-	// Update enhanced fields via partial update
+	// Build enhanced fields map
 	enhancedFields := map[string]interface{}{}
 	if active.StartOdometer != nil { enhancedFields["start_odometer"] = *active.StartOdometer }
 	if active.LastOdometer != nil { enhancedFields["end_odometer"] = *active.LastOdometer }
@@ -654,10 +652,19 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if endLat != nil { enhancedFields["end_latitude"] = *endLat }
 	if endLon != nil { enhancedFields["end_longitude"] = *endLon }
 
-	if len(enhancedFields) > 0 {
-		if err := t.driveRepo.PartialUpdate(ctx, active.DriveID, enhancedFields); err != nil {
-			log.Error().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to update enhanced drive fields")
+	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		if err := t.driveRepo.CompleteWithTx(ctx, tx, active.DriveID, time.Now().UTC(),
+			nil, nil, distance, duration, endRatedRange, &endBattery, &maxSpeed, powerMax, powerMin, insideAvg, outsideAvg); err != nil {
+			return err
 		}
+		if len(enhancedFields) > 0 {
+			if err := t.driveRepo.PartialUpdateWithTx(ctx, tx, active.DriveID, enhancedFields); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to complete drive")
 	}
 
 	// Reverse geocode end address (async)
@@ -862,50 +869,64 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		outsideAvg = &oa
 	}
 
-	if err := t.chargeRepo.Complete(ctx, active.SessionID, time.Now().UTC(),
-		active.EnergyAdded, nil, &endBattery, endRange,
-		active.Phases, active.Voltage, active.Current, active.Power,
-		active.FastChargerType, active.FastChargerBrand, active.ChargeCable, nil, duration); err != nil {
-		log.Error().Err(err).Int64("session_id", active.SessionID).Msg("telemetry: failed to complete charge")
-	}
-
-	// Update enhanced fields
+	// Build enhanced fields
 	enhancedFields := map[string]interface{}{}
 	if active.Latitude != nil { enhancedFields["latitude"] = *active.Latitude }
 	if active.Longitude != nil { enhancedFields["longitude"] = *active.Longitude }
 	if insideAvg != nil { enhancedFields["inside_temp_avg"] = *insideAvg }
 	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
 
-	if len(enhancedFields) > 0 {
-		// Resolve location name async — copy map to avoid race condition
-		if active.Latitude != nil && active.Longitude != nil {
-			fieldsCopy := make(map[string]interface{}, len(enhancedFields)+1)
-			for k, v := range enhancedFields {
-				fieldsCopy[k] = v
-			}
-			go func(sessionID int64, lat, lon float64, fields map[string]interface{}) {
-				gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-				defer cancel()
-				result, err := t.geocoder.ReverseGeocode(gctx, lat, lon)
-				if err != nil {
-					_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
-					return
-				}
-				fields["location_name"] = result.ShortName()
-				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
-			}(active.SessionID, *active.Latitude, *active.Longitude, fieldsCopy)
-		} else {
-			_ = t.chargeRepo.PartialUpdate(ctx, active.SessionID, enhancedFields)
+	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, time.Now().UTC(),
+			active.EnergyAdded, nil, &endBattery, endRange,
+			active.Phases, active.Voltage, active.Current, active.Power,
+			active.FastChargerType, active.FastChargerBrand, active.ChargeCable, nil, duration); err != nil {
+			return err
 		}
+
+		// Synchronous enhanced fields (non-geocoded) in same tx
+		if len(enhancedFields) > 0 {
+			// Only write fields without geocoding inside the tx when no async geocoding needed
+			if active.Latitude == nil || active.Longitude == nil {
+				if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, active.SessionID, enhancedFields); err != nil {
+					return err
+				}
+			}
+		}
+
+		// Auto-calculate charge cost from geofence electricity rate
+		if active.Latitude != nil && active.Longitude != nil && active.EnergyAdded > 0 {
+			geofences, gErr := t.geofenceRepo.FindByCoordinates(ctx, *active.Latitude, *active.Longitude)
+			if gErr == nil && len(geofences) > 0 && geofences[0].CostPerKwh != nil {
+				cost := active.EnergyAdded * *geofences[0].CostPerKwh
+				if err := t.chargeRepo.PartialUpdateWithTx(ctx, tx, active.SessionID, map[string]interface{}{"cost": cost}); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}); err != nil {
+		log.Error().Err(err).Int64("session_id", active.SessionID).Msg("telemetry: failed to complete charge")
 	}
 
-	// Auto-calculate charge cost from geofence electricity rate
-	if active.Latitude != nil && active.Longitude != nil && active.EnergyAdded > 0 {
-		geofences, gErr := t.geofenceRepo.FindByCoordinates(ctx, *active.Latitude, *active.Longitude)
-		if gErr == nil && len(geofences) > 0 && geofences[0].CostPerKwh != nil {
-			cost := active.EnergyAdded * *geofences[0].CostPerKwh
-			_ = t.chargeRepo.PartialUpdate(ctx, active.SessionID, map[string]interface{}{"cost": cost})
+	// Resolve location name async — geocoding stays outside the transaction
+	if len(enhancedFields) > 0 && active.Latitude != nil && active.Longitude != nil {
+		fieldsCopy := make(map[string]interface{}, len(enhancedFields)+1)
+		for k, v := range enhancedFields {
+			fieldsCopy[k] = v
 		}
+		go func(sessionID int64, lat, lon float64, fields map[string]interface{}) {
+			gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			result, err := t.geocoder.ReverseGeocode(gctx, lat, lon)
+			if err != nil {
+				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
+				return
+			}
+			fields["location_name"] = result.ShortName()
+			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
+		}(active.SessionID, *active.Latitude, *active.Longitude, fieldsCopy)
 	}
 
 	log.Info().Int64("vehicle_id", vehicleID).Int64("session_id", active.SessionID).

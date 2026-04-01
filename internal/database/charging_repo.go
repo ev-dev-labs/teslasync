@@ -150,20 +150,6 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 	return c, nil
 }
 
-func ptrStr(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
-func ptrFloat(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
-
 // GetStale returns charging sessions that have no end_date and started before the cutoff time.
 func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.ChargingSession, error) {
 	query := `SELECT id, vehicle_id, start_date, end_date, address_id,
@@ -197,55 +183,36 @@ func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*model
 	return sessions, rows.Err()
 }
 
+// chargingPartialAllowed maps JSON field names to database columns for charging partial updates.
+var chargingPartialAllowed = map[string]string{
+	"end_date":              "end_date",
+	"charge_energy_added":   "charge_energy_added",
+	"charge_energy_used":    "charge_energy_used",
+	"end_battery_level":     "end_battery_level",
+	"end_range_km":          "end_range_km",
+	"charger_phases":        "charger_phases",
+	"charger_voltage":       "charger_voltage",
+	"charger_actual_current":"charger_actual_current",
+	"charger_power":         "charger_power",
+	"fast_charger_type":     "fast_charger_type",
+	"fast_charger_brand":    "fast_charger_brand",
+	"conn_charge_cable":     "conn_charge_cable",
+	"cost":                  "cost",
+	"duration_min":          "duration_min",
+	"start_battery_level":   "start_battery_level",
+	"latitude":              "latitude",
+	"longitude":             "longitude",
+	"location_name":         "location_name",
+	"inside_temp_avg":       "inside_temp_avg",
+	"outside_temp_avg":      "outside_temp_avg",
+}
+
 // PartialUpdate updates only the provided fields on a charging session.
 func (r *ChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
-	allowed := map[string]string{
-		"end_date":              "end_date",
-		"charge_energy_added":   "charge_energy_added",
-		"charge_energy_used":    "charge_energy_used",
-		"end_battery_level":     "end_battery_level",
-		"end_range_km":          "end_range_km",
-		"charger_phases":        "charger_phases",
-		"charger_voltage":       "charger_voltage",
-		"charger_actual_current":"charger_actual_current",
-		"charger_power":         "charger_power",
-		"fast_charger_type":     "fast_charger_type",
-		"fast_charger_brand":    "fast_charger_brand",
-		"conn_charge_cable":     "conn_charge_cable",
-		"cost":                  "cost",
-		"duration_min":          "duration_min",
-		"start_battery_level":   "start_battery_level",
-		"latitude":              "latitude",
-		"longitude":             "longitude",
-		"location_name":         "location_name",
-		"inside_temp_avg":       "inside_temp_avg",
-		"outside_temp_avg":      "outside_temp_avg",
-	}
-
-	setClauses := []string{}
-	args := []interface{}{}
-	argIdx := 1
-	for jsonKey, col := range allowed {
-		if val, ok := fields[jsonKey]; ok {
-			setClauses = append(setClauses, fmt.Sprintf("%s=$%d", col, argIdx))
-			args = append(args, val)
-			argIdx++
-		}
-	}
-	if len(setClauses) == 0 {
+	query, args := buildPartialUpdate("charging_sessions", id, fields, chargingPartialAllowed)
+	if query == "" {
 		return nil
 	}
-
-	query := "UPDATE charging_sessions SET "
-	for i, c := range setClauses {
-		if i > 0 {
-			query += ", "
-		}
-		query += c
-	}
-	query += fmt.Sprintf(" WHERE id=$%d", argIdx)
-	args = append(args, id)
-
 	_, err := r.db.Pool.Exec(ctx, query, args...)
 	return err
 }
@@ -253,5 +220,33 @@ func (r *ChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[s
 // Delete removes a charging session by ID.
 func (r *ChargingRepo) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.Pool.Exec(ctx, "DELETE FROM charging_sessions WHERE id=$1", id)
+	return err
+}
+
+// CompleteWithTx is like Complete but uses the provided transaction.
+func (r *ChargingRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endDate time.Time,
+	energyAdded float64, energyUsed *float64, endBattery *int, endRange *float64,
+	phases, voltage, current *int, power *float64,
+	fastType, fastBrand, cable *string, cost *float64, duration float64) error {
+	query := `
+		UPDATE charging_sessions SET
+		end_date=$2, charge_energy_added=$3, charge_energy_used=$4,
+		end_battery_level=$5, end_range_km=$6, charger_phases=$7, charger_voltage=$8,
+		charger_actual_current=$9, charger_power=$10, fast_charger_type=$11,
+		fast_charger_brand=$12, conn_charge_cable=$13, cost=$14, duration_min=$15
+		WHERE id=$1`
+	_, err := tx.Exec(ctx, query, id, endDate, energyAdded, energyUsed,
+		endBattery, endRange, phases, voltage, current, power,
+		fastType, fastBrand, cable, cost, duration)
+	return err
+}
+
+// PartialUpdateWithTx is like PartialUpdate but uses the provided transaction.
+func (r *ChargingRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, fields map[string]interface{}) error {
+	query, args := buildPartialUpdate("charging_sessions", id, fields, chargingPartialAllowed)
+	if query == "" {
+		return nil
+	}
+	_, err := tx.Exec(ctx, query, args...)
 	return err
 }

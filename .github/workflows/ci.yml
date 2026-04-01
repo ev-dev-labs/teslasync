@@ -58,6 +58,21 @@ jobs:
           DATABASE_NAME: teslasync_test
         run: go test -race -coverprofile=coverage.out ./...
 
+      - name: Test migration rollback
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/teslasync_test?sslmode=disable
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          # Apply all migrations
+          migrate -path migrations -database "$DATABASE_URL" up
+          # Get current version
+          migrate -path migrations -database "$DATABASE_URL" version
+          # Rollback last migration
+          migrate -path migrations -database "$DATABASE_URL" down 1
+          # Re-apply
+          migrate -path migrations -database "$DATABASE_URL" up
+          echo "Migration rollback test passed"
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -106,6 +121,8 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
       - run: npm run lint
+      - name: Run frontend tests
+        run: npm test
 
   build-frontend:
     name: Build Frontend

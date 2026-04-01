@@ -141,88 +141,69 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.D
 	return drives, rows.Err()
 }
 
+// drivePartialAllowed maps JSON field names to database columns for drive partial updates.
+var drivePartialAllowed = map[string]string{
+	"end_date":           "end_date",
+	"distance":           "distance",
+	"duration_min":       "duration_min",
+	"end_range_km":       "end_range_km",
+	"end_battery_level":  "end_battery_level",
+	"speed_max":          "speed_max",
+	"power_max":          "power_max",
+	"power_min":          "power_min",
+	"inside_temp_avg":    "inside_temp_avg",
+	"outside_temp_avg":   "outside_temp_avg",
+	"start_battery_level":"start_battery_level",
+	"start_odometer":       "start_odometer",
+	"end_odometer":         "end_odometer",
+	"speed_avg":            "speed_avg",
+	"speed_min":            "speed_min",
+	"start_rated_range_km": "start_rated_range_km",
+	"end_rated_range_km":   "end_rated_range_km",
+	"rated_range_avg":      "rated_range_avg",
+	"rated_range_max":      "rated_range_max",
+	"rated_range_min":      "rated_range_min",
+	"start_ideal_range_km": "start_ideal_range_km",
+	"end_ideal_range_km":   "end_ideal_range_km",
+	"ideal_range_avg":      "ideal_range_avg",
+	"ideal_range_max":      "ideal_range_max",
+	"ideal_range_min":      "ideal_range_min",
+	"start_est_range_km":   "start_est_range_km",
+	"end_est_range_km":     "end_est_range_km",
+	"est_range_avg":        "est_range_avg",
+	"est_range_max":        "est_range_max",
+	"est_range_min":        "est_range_min",
+	"soc_start":            "soc_start",
+	"soc_end":              "soc_end",
+	"soc_avg":              "soc_avg",
+	"soc_max":              "soc_max",
+	"soc_min":              "soc_min",
+	"usable_soc_start":     "usable_soc_start",
+	"usable_soc_end":       "usable_soc_end",
+	"usable_soc_avg":       "usable_soc_avg",
+	"usable_soc_max":       "usable_soc_max",
+	"usable_soc_min":       "usable_soc_min",
+	"elevation_start":      "elevation_start",
+	"elevation_end":        "elevation_end",
+	"elevation_gain":       "elevation_gain",
+	"elevation_loss":       "elevation_loss",
+	"driver_temp_avg":      "driver_temp_avg",
+	"passenger_temp_avg":   "passenger_temp_avg",
+	"battery_heater_on":    "battery_heater_on",
+	"start_address":        "start_address",
+	"end_address":          "end_address",
+	"start_latitude":       "start_latitude",
+	"start_longitude":      "start_longitude",
+	"end_latitude":         "end_latitude",
+	"end_longitude":        "end_longitude",
+}
+
 // PartialUpdate updates only the provided fields on a drive.
 func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
-	allowed := map[string]string{
-		"end_date":           "end_date",
-		"distance":           "distance",
-		"duration_min":       "duration_min",
-		"end_range_km":       "end_range_km",
-		"end_battery_level":  "end_battery_level",
-		"speed_max":          "speed_max",
-		"power_max":          "power_max",
-		"power_min":          "power_min",
-		"inside_temp_avg":    "inside_temp_avg",
-		"outside_temp_avg":   "outside_temp_avg",
-		"start_battery_level":"start_battery_level",
-		"start_odometer":       "start_odometer",
-		"end_odometer":         "end_odometer",
-		"speed_avg":            "speed_avg",
-		"speed_min":            "speed_min",
-		"start_rated_range_km": "start_rated_range_km",
-		"end_rated_range_km":   "end_rated_range_km",
-		"rated_range_avg":      "rated_range_avg",
-		"rated_range_max":      "rated_range_max",
-		"rated_range_min":      "rated_range_min",
-		"start_ideal_range_km": "start_ideal_range_km",
-		"end_ideal_range_km":   "end_ideal_range_km",
-		"ideal_range_avg":      "ideal_range_avg",
-		"ideal_range_max":      "ideal_range_max",
-		"ideal_range_min":      "ideal_range_min",
-		"start_est_range_km":   "start_est_range_km",
-		"end_est_range_km":     "end_est_range_km",
-		"est_range_avg":        "est_range_avg",
-		"est_range_max":        "est_range_max",
-		"est_range_min":        "est_range_min",
-		"soc_start":            "soc_start",
-		"soc_end":              "soc_end",
-		"soc_avg":              "soc_avg",
-		"soc_max":              "soc_max",
-		"soc_min":              "soc_min",
-		"usable_soc_start":     "usable_soc_start",
-		"usable_soc_end":       "usable_soc_end",
-		"usable_soc_avg":       "usable_soc_avg",
-		"usable_soc_max":       "usable_soc_max",
-		"usable_soc_min":       "usable_soc_min",
-		"elevation_start":      "elevation_start",
-		"elevation_end":        "elevation_end",
-		"elevation_gain":       "elevation_gain",
-		"elevation_loss":       "elevation_loss",
-		"driver_temp_avg":      "driver_temp_avg",
-		"passenger_temp_avg":   "passenger_temp_avg",
-		"battery_heater_on":    "battery_heater_on",
-		"start_address":        "start_address",
-		"end_address":          "end_address",
-		"start_latitude":       "start_latitude",
-		"start_longitude":      "start_longitude",
-		"end_latitude":         "end_latitude",
-		"end_longitude":        "end_longitude",
-	}
-
-	setClauses := []string{}
-	args := []interface{}{}
-	argIdx := 1
-	for jsonKey, col := range allowed {
-		if val, ok := fields[jsonKey]; ok {
-			setClauses = append(setClauses, fmt.Sprintf("%s=$%d", col, argIdx))
-			args = append(args, val)
-			argIdx++
-		}
-	}
-	if len(setClauses) == 0 {
+	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)
+	if query == "" {
 		return nil
 	}
-
-	query := "UPDATE drives SET "
-	for i, c := range setClauses {
-		if i > 0 {
-			query += ", "
-		}
-		query += c
-	}
-	query += fmt.Sprintf(" WHERE id=$%d", argIdx)
-	args = append(args, id)
-
 	_, err := r.db.Pool.Exec(ctx, query, args...)
 	return err
 }
@@ -230,5 +211,28 @@ func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[stri
 // Delete removes a drive by ID.
 func (r *DriveRepo) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.Pool.Exec(ctx, "DELETE FROM drives WHERE id=$1", id)
+	return err
+}
+
+// CompleteWithTx is like Complete but uses the provided transaction.
+func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endDate time.Time, endPosID, endAddrID *int64,
+	distance, duration float64, endRange *float64, endBattery *int, speedMax, powerMax, powerMin, insideAvg, outsideAvg *float64) error {
+	query := `
+		UPDATE drives SET end_date=$2, end_position_id=$3, end_address_id=$4,
+		distance=$5, duration_min=$6, end_range_km=$7, end_battery_level=$8,
+		speed_max=$9, power_max=$10, power_min=$11, inside_temp_avg=$12, outside_temp_avg=$13
+		WHERE id=$1`
+	_, err := tx.Exec(ctx, query, id, endDate, endPosID, endAddrID,
+		distance, duration, endRange, endBattery, speedMax, powerMax, powerMin, insideAvg, outsideAvg)
+	return err
+}
+
+// PartialUpdateWithTx is like PartialUpdate but uses the provided transaction.
+func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, fields map[string]interface{}) error {
+	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)
+	if query == "" {
+		return nil
+	}
+	_, err := tx.Exec(ctx, query, args...)
 	return err
 }

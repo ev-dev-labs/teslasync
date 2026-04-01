@@ -433,28 +433,28 @@ export default function Dashboard() {
           {/* ============ FLEET STATS BAR ============ */}
           <StaggerContainer className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Fleet Size</p>
                 <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={totalCount} /></p>
                 <p className="text-[10px] text-gray-600 mt-1">{onlineCount} online</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Distance (30d)</p>
                 <p className="text-xl sm:text-2xl font-bold text-neon-cyan"><AnimatedNumber value={convertDistance(totalDistance)} suffix={` ${distanceUnit}`} /></p>
                 <MiniChart data={recentDrives?.map(d => d.distance).reverse() ?? [0]} color="#00f0ff" height={24} width={60} />
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Energy (30d)</p>
                 <p className="text-xl sm:text-2xl font-bold text-neon-green"><AnimatedNumber value={totalEnergy} decimals={1} suffix=" kWh" /></p>
                 <MiniChart data={recentCharges?.map(s => s.charge_energy_added).reverse() ?? [0]} color="#10b981" height={24} width={60} />
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Efficiency</p>
                 <p className="text-xl sm:text-2xl font-bold text-neon-amber">
                   <AnimatedNumber value={convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0)} suffix={` ${efficiencyUnit}`} />
@@ -463,7 +463,7 @@ export default function Dashboard() {
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Alerts</p>
                 <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? '#ef4444' : '#10b981' }}>
                   <AnimatedNumber value={unreadAlerts} />
