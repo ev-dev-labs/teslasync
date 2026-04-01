@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest } from '../api'
+import { cleanNil } from '../lib/cleanNil'
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
@@ -302,7 +303,7 @@ export default function VehicleDetail() {
                           : 'border-gray-500/30 bg-gray-500/10 text-gray-400',
                       )}>
                         <CircleDot className="h-3 w-3" />
-                        {motorData.di_state ?? 'Unknown'}
+                        {cleanNil(motorData.di_state) ?? 'Unknown'}
                       </span>
                     </div>
 
@@ -710,23 +711,23 @@ export default function VehicleDetail() {
                     {mediaData ? (
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 space-y-2">
                         <p className="text-sm font-bold text-[var(--text-primary)] truncate">
-                          {mediaData.now_playing_title || 'Nothing playing'}
+                          {cleanNil(mediaData.now_playing_title) || 'Nothing playing'}
                         </p>
                         <p className="text-xs text-[var(--text-secondary)] truncate">
-                          {mediaData.now_playing_artist || 'Unknown artist'}
+                          {cleanNil(mediaData.now_playing_artist) || 'Unknown artist'}
                         </p>
                         <div className="flex items-center gap-2">
-                          {mediaData.playback_source && (
+                          {cleanNil(mediaData.playback_source) && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[var(--text-muted)]">
-                              {mediaData.playback_source}
+                              {cleanNil(mediaData.playback_source)}
                             </span>
                           )}
-                          {mediaData.playback_status && (
+                          {cleanNil(mediaData.playback_status) && (
                             <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
                               mediaData.playback_status === 'Playing' ? 'bg-green-500/10 text-green-400'
                                 : mediaData.playback_status === 'Paused' ? 'bg-amber-500/10 text-amber-400'
                                 : 'bg-white/5 text-[var(--text-muted)]')}>
-                              {mediaData.playback_status}
+                              {cleanNil(mediaData.playback_status)}
                             </span>
                           )}
                         </div>

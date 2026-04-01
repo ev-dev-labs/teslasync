@@ -67,7 +67,9 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
 /* ── Playback status badge ────────────────────────────────────────────────── */
 
 function StatusBadge({ status }: { status?: string }) {
-  const s = (status ?? '').toLowerCase()
+  // Normalize protobuf enum values (MediaStatusPlaying → playing)
+  const raw = cleanNil(status) ?? ''
+  const s = raw.toLowerCase().replace('mediastatus', '')
   if (s === 'playing') {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">
@@ -84,7 +86,7 @@ function StatusBadge({ status }: { status?: string }) {
   }
   return (
     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-white/10 text-[var(--text-muted)]">
-      <Square className="h-3 w-3" /> {status || 'Stopped'}
+      <Square className="h-3 w-3" /> {s || 'Stopped'}
     </span>
   )
 }
@@ -152,6 +154,9 @@ function SourceIcon({ source, className }: { source?: string; className?: string
   return <Music className={className} />
 }
 
+/** Filter out Go nil string representations */
+import { cleanNil } from '../lib/cleanNil'
+
 /* ── Pie chart colors ─────────────────────────────────────────────────────── */
 
 const PIE_COLORS = ['#00f0ff', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6']
@@ -191,7 +196,7 @@ export default function MediaPlayer() {
     if (!history || history.length === 0) return []
     const counts: Record<string, number> = {}
     for (const s of history) {
-      const src = s.playback_source || 'Unknown'
+      const src = cleanNil(s.playback_source) || 'Unknown'
       counts[src] = (counts[src] || 0) + 1
     }
     return Object.entries(counts)
@@ -207,7 +212,7 @@ export default function MediaPlayer() {
     let volumeCount = 0
     for (const s of history) {
       if (s.now_playing_title) tracks.add(`${s.now_playing_title}::${s.now_playing_artist ?? ''}`)
-      const src = s.playback_source || 'Unknown'
+      const src = s.playback_source && s.playback_source !== '<nil>' ? s.playback_source : 'Unknown'
       sourceCounts[src] = (sourceCounts[src] || 0) + 1
       if (s.audio_volume != null) {
         volumeSum += s.audio_volume
@@ -222,7 +227,7 @@ export default function MediaPlayer() {
     }
   }, [history])
 
-  const isPlaying = (latest?.playback_status ?? '').toLowerCase() === 'playing'
+  const isPlaying = cleanNil(latest?.playback_status)?.toLowerCase() === 'playing'
   const volumeMax = latest?.audio_volume_max ?? 11
 
   /* ── Render ────────────────────────────────────────────────────────────── */
@@ -258,33 +263,33 @@ export default function MediaPlayer() {
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0">
                   <p className="text-lg font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-                    {latest.now_playing_title || 'No title'}
+                    {cleanNil(latest.now_playing_title) || 'No title'}
                   </p>
-                  {latest.now_playing_artist && (
+                  {cleanNil(latest.now_playing_artist) && (
                     <p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>
-                      {latest.now_playing_artist}
+                      {cleanNil(latest.now_playing_artist)}
                     </p>
                   )}
-                  {latest.now_playing_album && (
+                  {cleanNil(latest.now_playing_album) && (
                     <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      {latest.now_playing_album}
+                      {cleanNil(latest.now_playing_album)}
                     </p>
                   )}
                 </div>
-                <StatusBadge status={latest.playback_status} />
+                <StatusBadge status={cleanNil(latest.playback_status)} />
               </div>
 
-              {latest.now_playing_station && (
+              {cleanNil(latest.now_playing_station) && (
                 <div className="flex items-center gap-1.5 mb-3">
                   <Radio className="h-3.5 w-3.5 text-neon-cyan" />
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{latest.now_playing_station}</span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{cleanNil(latest.now_playing_station)}</span>
                 </div>
               )}
 
-              {latest.playback_source && (
+              {cleanNil(latest.playback_source) && (
                 <div className="flex items-center gap-1.5 mb-3">
                   <SourceIcon source={latest.playback_source} className="h-3.5 w-3.5 text-neon-cyan" />
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Source: {latest.playback_source}</span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Source: {cleanNil(latest.playback_source)}</span>
                 </div>
               )}
 
@@ -364,19 +369,19 @@ export default function MediaPlayer() {
                       {new Date(row.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-2 px-3 max-w-[180px] truncate" style={{ color: 'var(--text-primary)' }}>
-                      {row.now_playing_title || '—'}
+                      {cleanNil(row.now_playing_title) || '—'}
                     </td>
                     <td className="py-2 px-3 max-w-[140px] truncate hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>
-                      {row.now_playing_artist || '—'}
+                      {cleanNil(row.now_playing_artist) || '—'}
                     </td>
                     <td className="py-2 px-3 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                         <SourceIcon source={row.playback_source} className="h-3 w-3 text-neon-cyan" />
-                        {row.playback_source || '—'}
+                        {cleanNil(row.playback_source) || '—'}
                       </span>
                     </td>
                     <td className="py-2 px-3">
-                      <StatusBadge status={row.playback_status} />
+                      <StatusBadge status={cleanNil(row.playback_status)} />
                     </td>
                   </tr>
                 ))}

@@ -1356,3 +1356,25 @@ export const updateGasPriceConfig = (pollInterval: string) =>
 /** Fetches gas price history records. */
 export const getGasPriceHistory = (limit = 50, offset = 0) =>
   request<GasPriceHistory[]>(`/gas-price/history?limit=${limit}&offset=${offset}`)
+
+// --- Data Repair ---
+
+export interface StaleSessionsResponse {
+  stale_charging: ChargingSession[]
+  stale_drives: Drive[]
+}
+
+export const getStaleSessions = () =>
+  request<StaleSessionsResponse>('/data-repair/stale-sessions')
+export const updateChargingSession = (id: number, data: Partial<ChargingSession>) =>
+  request<ChargingSession>(`/data-repair/charging/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const updateDrive = (id: number, data: Partial<Drive>) =>
+  request<Drive>(`/data-repair/drive/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const closeChargingSession = (id: number) =>
+  request<void>(`/data-repair/charging/${id}/close`, { method: 'POST' })
+export const closeDrive = (id: number) =>
+  request<void>(`/data-repair/drive/${id}/close`, { method: 'POST' })
+export const deleteChargingSession = (id: number) =>
+  request<void>(`/data-repair/charging/${id}`, { method: 'DELETE' })
+export const deleteDrive = (id: number) =>
+  request<void>(`/data-repair/drive/${id}`, { method: 'DELETE' })

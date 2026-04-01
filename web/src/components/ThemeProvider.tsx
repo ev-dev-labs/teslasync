@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { getApiBase } from '../lib/resilience'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
-export type ModeId = 'dark' | 'light' | 'oled' | 'midnight'
+export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord'
 
 interface ColorTheme {
   id: ThemeId
@@ -151,6 +151,45 @@ const modes: Record<ModeId, ModeTheme> = {
     textMuted: '#6875a0',
     colorScheme: 'dark',
   },
+  auto: {
+    id: 'auto',
+    name: 'Auto (System)',
+    bg: '#0a0a0f',
+    surface1: '#0f1019',
+    surface2: '#151621',
+    surface3: '#1a1b2e',
+    glassBorder: 'rgba(255, 255, 255, 0.08)',
+    textPrimary: '#ffffff',
+    textSecondary: '#9ca3af',
+    textMuted: '#6b7280',
+    colorScheme: 'dark',
+  },
+  sunset: {
+    id: 'sunset',
+    name: 'Sunset',
+    bg: '#1a0e0a',
+    surface1: '#241410',
+    surface2: '#2e1a14',
+    surface3: '#3a221a',
+    glassBorder: 'rgba(255, 160, 100, 0.10)',
+    textPrimary: '#fff0e0',
+    textSecondary: '#c8a894',
+    textMuted: '#a07860',
+    colorScheme: 'dark',
+  },
+  nord: {
+    id: 'nord',
+    name: 'Nord',
+    bg: '#2e3440',
+    surface1: '#3b4252',
+    surface2: '#434c5e',
+    surface3: '#4c566a',
+    glassBorder: 'rgba(136, 192, 208, 0.10)',
+    textPrimary: '#eceff4',
+    textSecondary: '#d8dee9',
+    textMuted: '#81a1c1',
+    colorScheme: 'dark',
+  },
 }
 
 interface ThemeContextValue {
@@ -233,7 +272,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const currentThemes = { ...themes, custom: buildCustomTheme(customColors.primary, customColors.accent) }
   const theme = currentThemes[themeId]
-  const mode = modes[modeId]
+
+  // Auto mode: resolve to light or dark based on system preference
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const resolvedMode = modeId === 'auto' ? (systemDark ? modes.dark : modes.light) : modes[modeId]
+  const mode = resolvedMode
 
   useEffect(() => {
     applyThemeCSS(theme, mode)

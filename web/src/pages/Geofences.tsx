@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getGeofences, createGeofence, updateGeofence, deleteGeofence, Geofence } from '../api'
-import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap } from 'lucide-react'
+import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap, Navigation, RefreshCw } from 'lucide-react'
 import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
@@ -78,11 +78,12 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
 function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: {
   editing: number | 'new'
   form: FormData
-  setForm: (f: FormData) => void
+  setForm: (f: FormData | ((prev: FormData) => FormData)) => void
   onSubmit: () => void
   onCancel: () => void
   isSaving: boolean
 }) {
+  const [locStatus, setLocStatus] = useState<string | null>(null)
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -113,7 +114,39 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Latitude</label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <label className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Latitude</label>
+              <button
+                type="button"
+                title="Use current location"
+                onClick={() => {
+                  if (!navigator.geolocation) { setLocStatus('denied'); return }
+                  setLocStatus('locating')
+                  navigator.geolocation.getCurrentPosition(
+                    pos => {
+                      setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
+                      setLocStatus('success')
+                      setTimeout(() => setLocStatus(null), 2000)
+                    },
+                    () => { setLocStatus('denied') },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                  )
+                }}
+                disabled={locStatus === 'locating'}
+                className={clsx(
+                  'p-1 rounded-md transition-all duration-200',
+                  locStatus === 'success' ? 'text-neon-green bg-neon-green/10'
+                    : locStatus === 'denied' ? 'text-red-400 bg-red-500/10'
+                    : locStatus === 'locating' ? 'text-neon-cyan animate-pulse'
+                    : 'text-neon-cyan/60 hover:text-neon-cyan hover:bg-neon-cyan/10'
+                )}
+              >
+                {locStatus === 'locating' ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  : locStatus === 'success' ? <Check className="h-3.5 w-3.5" />
+                  : locStatus === 'denied' ? <X className="h-3.5 w-3.5" />
+                  : <Navigation className="h-3.5 w-3.5" />}
+              </button>
+            </div>
             <input
               type="number"
               step="any"

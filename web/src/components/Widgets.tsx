@@ -101,7 +101,7 @@ export function RadialGauge({ value, max, label, unit, color, size = 120 }: {
   const gradId = `rg-${color.replace('#', '')}`
 
   return (
-    <div className="relative inline-flex flex-col items-center" style={{ width: size, height: size }}>
+    <div className="relative inline-flex flex-col items-center" style={{ width: size, height: size + 18 }}>
       <svg width={size} height={size} className="overflow-visible">
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">

@@ -114,6 +114,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db)
+	dataRepairHandler := NewDataRepairHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute)
@@ -407,6 +408,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/release-notes", devToolsHandler.ReleaseNotes)
 			r.Get("/recent-alerts", devToolsHandler.RecentAlerts)
 			r.Get("/service-data", devToolsHandler.ServiceData)
+		})
+
+		// Data Repair
+		r.Route("/data-repair", func(r chi.Router) {
+			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
+			r.Route("/charging/{id}", func(r chi.Router) {
+				r.Put("/", dataRepairHandler.UpdateCharging)
+				r.Post("/close", dataRepairHandler.CloseCharging)
+				r.Delete("/", dataRepairHandler.DeleteCharging)
+			})
+			r.Route("/drive/{id}", func(r chi.Router) {
+				r.Put("/", dataRepairHandler.UpdateDrive)
+				r.Post("/close", dataRepairHandler.CloseDrive)
+				r.Delete("/", dataRepairHandler.DeleteDrive)
+			})
 		})
 
 		// Export

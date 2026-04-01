@@ -7,6 +7,7 @@ import {
   getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure,
   getMediaLatest, getLocationSnapshotLatest,
 } from '../api'
+import { cleanNil } from '../lib/cleanNil'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
@@ -331,12 +332,12 @@ export default function Dashboard() {
                   {primaryState ? (
                     <div className="mt-4 sm:mt-6">
                       {/* Radial gauges row */}
-                      <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-6 overflow-x-auto pb-1">
-                        <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={primaryState.battery_level > 50 ? '#10b981' : '#f59e0b'} size={80} />
-                        <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={80} />
-                        <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color={primaryState.speed > 0 ? '#a855f7' : '#374151'} size={80} />
-                        <RadialGauge value={Math.round(convertTemp(primaryState.inside_temp))} max={isFahrenheit ? 122 : 50} label="Inside" unit={tempUnit} color="#f97316" size={80} />
-                        <RadialGauge value={Math.round(convertTemp(primaryState.outside_temp))} max={isFahrenheit ? 122 : 50} label="Outside" unit={tempUnit} color="#3b82f6" size={80} />
+                      <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
+                        <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={primaryState.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70} />
+                        <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={70} />
+                        <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color={primaryState.speed > 0 ? '#a855f7' : '#374151'} size={70} />
+                        <RadialGauge value={Math.round(convertTemp(primaryState.inside_temp))} max={isFahrenheit ? 122 : 50} label="Inside" unit={tempUnit} color="#f97316" size={70} />
+                        <RadialGauge value={Math.round(convertTemp(primaryState.outside_temp))} max={isFahrenheit ? 122 : 50} label="Outside" unit={tempUnit} color="#3b82f6" size={70} />
                       </div>
 
                       {/* Charging details when currently charging */}
@@ -649,14 +650,14 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Gear</span>
-                      {motorData.gear ? (
+                      {cleanNil(motorData.gear) ? (
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                           motorData.gear === 'D' ? 'bg-neon-green/10 text-neon-green' :
                           motorData.gear === 'R' ? 'bg-neon-red/10 text-neon-red' :
                           motorData.gear === 'N' ? 'bg-neon-amber/10 text-neon-amber' :
                           'bg-white/5 text-[var(--text-secondary)]'
                         }`}>
-                          {motorData.gear}
+                          {cleanNil(motorData.gear)}
                         </span>
                       ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
                     </div>
@@ -856,20 +857,20 @@ export default function Dashboard() {
                   <div className="space-y-2.5">
                     <div>
                       <p className="text-sm font-bold text-[var(--text-primary)] truncate">
-                        {mediaData.now_playing_title || '—'}
+                        {cleanNil(mediaData.now_playing_title) || '—'}
                       </p>
                       <p className="text-xs text-[var(--text-secondary)] truncate">
-                        {mediaData.now_playing_artist || 'Unknown artist'}
+                        {cleanNil(mediaData.now_playing_artist) || 'Unknown artist'}
                       </p>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Status</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        mediaData.playback_status === 'Playing' ? 'bg-neon-green/10 text-neon-green'
-                          : mediaData.playback_status === 'Paused' ? 'bg-neon-amber/10 text-neon-amber'
+                        cleanNil(mediaData.playback_status) === 'Playing' ? 'bg-neon-green/10 text-neon-green'
+                          : cleanNil(mediaData.playback_status) === 'Paused' ? 'bg-neon-amber/10 text-neon-amber'
                           : 'bg-white/5 text-[var(--text-muted)]'
                       }`}>
-                        {mediaData.playback_status ?? '—'}
+                        {cleanNil(mediaData.playback_status) ?? '—'}
                       </span>
                     </div>
                     <div>

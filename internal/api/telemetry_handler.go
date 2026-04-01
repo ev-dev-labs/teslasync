@@ -718,28 +718,7 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 			"avg_signals_per_second":   fmt.Sprintf("%.1f", avgSignalsPerSec),
 			"stale_timeout":            h.staleTimeout.String(),
 		},
-		"supported_signals": []string{
-			// Location
-			"Location", "GpsHeading", "GpsState",
-			// Driving
-			"VehicleSpeed", "Odometer", "Gear",
-			"LateralAcceleration", "LongitudinalAcceleration",
-			// Battery & Charging
-			"BatteryLevel", "Soc", "EstBatteryRange", "IdealBatteryRange",
-			"EnergyRemaining", "ChargeState", "DetailedChargeState",
-			"ChargeAmps", "ChargerVoltage", "ChargerPhases", "ChargeLimitSoc",
-			"ChargeCurrentRequest", "ChargeRateMilePerHour", "DCChargingPower", "ACChargingPower",
-			"FastChargerPresent", "FastChargerType", "ChargingCableType",
-			// Climate
-			"InsideTemp", "OutsideTemp", "HvacPower", "HvacFanSpeed",
-			"HvacLeftTemperatureRequest", "HvacRightTemperatureRequest",
-			"CabinOverheatProtectionMode", "DefrostMode",
-			// Vehicle State
-			"Locked", "DoorState", "FdWindow", "FpWindow",
-			"SentryMode", "HomelinkNearby", "GuestModeEnabled",
-			// TPMS
-			"TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr",
-		},
+		"supported_signals": SubscribedSignals,
 		"mqtt_publishing":    h.mqttClient != nil,
 		"streaming_vehicles": streamingVehicles,
 	})
@@ -773,6 +752,9 @@ func formatFloat(v float64) string {
 }
 
 func toString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
 	switch val := v.(type) {
 	case string:
 		return val
@@ -784,7 +766,11 @@ func toString(v interface{}) string {
 		}
 		return "false"
 	default:
-		return fmt.Sprintf("%v", val)
+		s := fmt.Sprintf("%v", val)
+		if s == "<nil>" {
+			return ""
+		}
+		return s
 	}
 }
 
