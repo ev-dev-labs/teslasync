@@ -299,6 +299,18 @@ The `/api/v1/system/api-usage` endpoint returns real-time usage statistics:
 
 The Settings page includes an interactive billing calculator where you can adjust driving and charging hours to see estimated monthly costs.
 
+### Backup & Restore
+
+Backup is configured through the UI (**System → Backup & Restore**) or API. No environment variables required — all configuration is stored in the database.
+
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Frequency | 1-30 days | 1 (daily) | How often to run backups |
+| Retention | 1-100 | 30 | Maximum backups to keep |
+| Provider | local/s3/azure/gcs | local | Storage backend |
+| Compression | on/off | on | Gzip compression |
+| Encryption | on/off | off | AES-256 encryption (planned) |
+
 ## Fleet Telemetry Configuration
 
 | Variable | Default | Description |

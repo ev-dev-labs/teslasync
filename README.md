@@ -18,6 +18,13 @@
   <a href="#contributing">Contributing</a>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-1.22-00ADD8?logo=go&logoColor=white" alt="Go 1.22" />
+  <img src="https://img.shields.io/badge/tests-14%20packages-success" alt="Tests" />
+  <img src="https://img.shields.io/badge/coverage-race%20enabled-blue" alt="Coverage" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
+</p>
+
 ---
 
 ## Overview
@@ -27,13 +34,13 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **51 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, and more
+- **52+ interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, backup & restore, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
 - **26 Grafana dashboards** — Pre-built dashboards for deep analytics
-- **228 Tesla fleet telemetry fields** — 100% coverage of all available Tesla signals
+- **231 Tesla fleet telemetry fields** — 100% Tesla Fleet Telemetry Protocol coverage (all signals from `vehicle_data.proto` subscribed AND processed)
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
 - **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
 - **25 Developer Tools** — Built-in Tesla API diagnostics, VIN decoder, JWT decoder, partner registration, and 20+ utilities
@@ -83,10 +90,26 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### 🔒 Security & Access
 - Lock status, sentry mode, door/window state visualization, event timeline
 
+### 💾 Backup & Restore
+- Scheduled automated backups (daily to every 30 days)
+- Full and incremental backup types
+- Multi-provider storage: Local, Amazon S3, Azure Blob, Google Cloud Storage
+- Configurable retention (keep last N backups, max 100)
+- Gzip compression + SHA-256 checksums
+- Complete run history with status tracking
+- Manual quick backup via one click
+- Restore capability (planned)
+
+### 🔭 Distributed Tracing (Optional)
+- OpenTelemetry instrumentation with OTLP gRPC export
+- Jaeger integration (Docker Compose profile + Helm chart)
+- Zero overhead when disabled (noop provider)
+- HTTP request tracing with method/path/status spans
+
 ### 🎨 Modern UX
 - **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
 - **5 Color Themes** — Dynamic theme switching with CSS variables
-- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 51 pages
+- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 52+ pages
 - **Animated Car SVG** — Subtle automobile animations on loading states and docs
 - **Code-Split Routes** — Lightning-fast page loads with React lazy loading
 - **PWA-Ready** — Installable as a native app with custom splash screen
@@ -99,7 +122,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Rate Limiting** — Configurable per-IP rate limiting
 - **Prometheus Metrics** — `/metrics` endpoint for monitoring
 - **Structured Logging** — JSON logs via zerolog
-- **PostgreSQL 17** — Natively partitioned tables for position data
+- **PostgreSQL 17** — Natively partitioned tables for position data, 23 schema migrations, DBTX transaction support for critical paths, [interactive database diagram](https://teslasync-labs.github.io/teslasync/guide/architecture) in docs
   - `motor_snapshots` — Drivetrain telemetry (torque, RPM, G-forces, pedal position)
   - `climate_snapshots` — HVAC telemetry (temps, fan speed, power, defrost)
   - `security_events` — Security state (locks, sentry, doors, windows)
@@ -121,7 +144,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Public Key Management** — Generate ECDSA P-256 keypairs, auto-serve at `.well-known` path, upload existing keys
 - **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
 - **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
-- **Fleet Telemetry** — Status monitoring, 228 signals with 100% Tesla coverage across all categories, enable/disable visibility in system status
+- **Fleet Telemetry** — Status monitoring, 231 signals with 100% Tesla protocol coverage across all categories, enable/disable visibility in system status
 - **Vehicle Data Queries** — Fleet telemetry errors table with download, vehicle data queries tool
 - **Tesla Fleet API** — Nearby charging sites, release notes, recent alerts, service data
 
@@ -190,8 +213,30 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 | **Database** | PostgreSQL 17 with native partitioning |
 | **Cache** | Redis 7 |
 | **Messaging** | MQTT (Mosquitto 2) |
-| **Monitoring** | Grafana 10.4 · Prometheus |
+| **Monitoring** | Grafana 10.4 · Prometheus · OpenTelemetry (optional Jaeger) |
 | **Deployment** | Docker Compose · Helm 3 · GitHub Actions |
+
+### Key Packages
+
+```
+internal/
+├── api/            # HTTP handlers, router, SSE, middleware
+├── backup/         # Scheduled & manual backup engine, multi-provider storage
+├── cache/          # Redis caching layer
+├── config/         # Environment + YAML configuration
+├── crypto/         # ECDSA key management
+├── database/       # PostgreSQL queries (sqlc), DBTX transactions, 23 migrations
+├── events/         # SSE event hub
+├── export/         # CSV/JSON export engine
+├── geocoding/      # Reverse geocoding
+├── models/         # Domain models
+├── mqtt/           # MQTT publisher
+├── notification/   # 7-channel notification dispatch
+├── resilience/     # Circuit breaker, rate limiter
+├── tesla/          # Tesla Fleet API client
+├── tracing/        # OpenTelemetry instrumentation (OTLP gRPC, Jaeger)
+└── worker/         # Background pollers, MQTT workers
+```
 
 ## Quick Start
 
@@ -229,6 +274,14 @@ This starts 8 services: Go API server, React web UI, notification worker, export
 ### 4. Connect Your Tesla
 
 Navigate to **Settings** in the web UI and connect your Tesla account via OAuth2. Vehicles sync automatically.
+
+### 5. Optional Configuration
+
+| Feature | Environment Variable | Description |
+|---------|---------------------|-------------|
+| **OpenTelemetry** | `OTEL_ENABLED=true` | Enable distributed tracing (OTLP gRPC export) |
+| **Jaeger UI** | `docker compose --profile jaeger up -d` | Start Jaeger for trace visualization |
+| **Backup** | Configure via **Settings → Backup & Restore** in the web UI | Schedule, storage provider, retention policy |
 
 ## Grafana Dashboards
 
@@ -274,6 +327,10 @@ make test              # Run tests with coverage
 make lint              # golangci-lint
 ```
 
+- **14 Go test packages** covering API, cache, config, crypto, database, events, export, geocoding, models, MQTT, notification, resilience, Tesla client, and worker
+- **Race condition detection** enabled in CI (`go test -race`)
+- **Migration rollback testing** — all 23 up/down migrations verified in CI
+
 ### Frontend
 
 ```bash
@@ -283,6 +340,8 @@ npm run dev            # Dev server at :3000 (proxies API to :8080)
 npm run build          # Production build
 npm run lint           # ESLint
 ```
+
+- **41 frontend tests** with Vitest
 
 ### Docker
 

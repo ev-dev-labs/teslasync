@@ -68,6 +68,7 @@ export default withMermaid(defineConfig({
             { text: 'Alerts & Notifications', link: '/features/alerts' },
             { text: 'Data Export', link: '/features/data-export' },
             { text: 'Analytics & Charts', link: '/features/analytics' },
+            { text: 'Backup & Restore', link: '/features/backup-restore' },
           ],
         },
       ],

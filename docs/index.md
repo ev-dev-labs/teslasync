@@ -32,6 +32,12 @@ features:
   - icon: 🎮
     title: Remote Vehicle Commands
     details: Lock/unlock, climate control, charge management, sentry mode, frunk/trunk, horn, and flash — all from the web UI.
+  - icon: 💾
+    title: Backup & Restore
+    details: Scheduled automated backups with multi-provider storage (S3, Azure, GCS, Local). Configurable frequency, retention, and compression.
+  - icon: 🔭
+    title: Distributed Tracing
+    details: Optional OpenTelemetry instrumentation with Jaeger integration. Zero overhead when disabled.
 ---
 
 ## Why TeslaSync?
