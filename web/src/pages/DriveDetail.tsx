@@ -561,15 +561,23 @@ export default function DriveDetail() {
                 <h3 className="section-title flex items-center gap-2 mb-4">
                   <Mountain className="h-4 w-4 text-neon-green" /> Elevation Profile
                 </h3>
+                <div className="flex items-center gap-4 mb-3 text-xs">
+                  <span className="flex items-center gap-1 text-neon-green"><ArrowUpRight className="h-3 w-3" />{Math.round(elevGain)} m gain</span>
+                  <span className="flex items-center gap-1 text-neon-red"><ArrowDownRight className="h-3 w-3" />{Math.round(elevLoss)} m loss</span>
+                  <span className="text-[var(--text-muted)]">Net: {Math.round(elevGain - elevLoss)} m</span>
+                </div>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData}>
+                    <ComposedChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                       <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} domain={['dataMin - 5', 'dataMax + 5']} />
+                      <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} domain={['dataMin - 5', 'dataMax + 5']} />
+                      <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Area type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name="Elevation m" />
-                    </AreaChart>
+                      <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                      <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name="Elevation (m)" />
+                      <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`Speed (${u.speedUnit})`} strokeOpacity={0.6} />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </GlassPanel>

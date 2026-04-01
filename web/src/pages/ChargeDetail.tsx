@@ -39,7 +39,7 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color
 }
 
 export default function ChargeDetail() {
-  const { convertDistance, distanceUnit } = useSettings()
+  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { id } = useParams<{ id: string }>()
   const sessionId = Number(id)
 
@@ -346,20 +346,100 @@ export default function ChargeDetail() {
         </FadeIn>
       </div>
 
-      {/* Temperature during charge */}
-      {(session.inside_temp_avg != null || session.outside_temp_avg != null) && (
+      {/* Temperature during charge — telemetry-based chart */}
+      {chargeTelemetry && chargeTelemetry.length > 1 && chargeTelemetry.some(t => t.battery_temp != null || t.inside_temp != null || t.outside_temp != null) && (
+        <FadeIn delay={0.16}>
+          <GlassPanel className="p-6">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Thermometer className="h-4 w-4 text-orange-400" /> Temperature During Charge
+            </h3>
+            <div className="h-48 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chargeTelemetry.map((t, i) => {
+                  const timeMin = chargeTelemetry!.length > 1
+                    ? ((new Date(t.created_at).getTime() - new Date(chargeTelemetry![0].created_at).getTime()) / 60000)
+                    : i * (session.duration_min / Math.max(chargeTelemetry!.length - 1, 1))
+                  return {
+                    time: `${Math.floor(timeMin)}m`,
+                    batteryTemp: t.battery_temp != null ? convertTemp(t.battery_temp) : null,
+                    insideTemp: t.inside_temp != null ? convertTemp(t.inside_temp) : null,
+                    outsideTemp: t.outside_temp != null ? convertTemp(t.outside_temp) : null,
+                  }
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                  {chargeTelemetry.some(t => t.battery_temp != null) && (
+                    <Line type="monotone" dataKey="batteryTemp" stroke="#ef4444" strokeWidth={2} dot={false} name={`Battery ${tempUnit}`} connectNulls />
+                  )}
+                  {chargeTelemetry.some(t => t.inside_temp != null) && (
+                    <Line type="monotone" dataKey="insideTemp" stroke="#f97316" strokeWidth={1.5} dot={false} name={`Inside ${tempUnit}`} connectNulls />
+                  )}
+                  {chargeTelemetry.some(t => t.outside_temp != null) && (
+                    <Line type="monotone" dataKey="outsideTemp" stroke="#3b82f6" strokeWidth={1.5} dot={false} name={`Outside ${tempUnit}`} connectNulls />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Voltage & Current over time */}
+      {chargeTelemetry && chargeTelemetry.length > 1 && chargeTelemetry.some(t => t.voltage != null || t.current_amps != null) && (
+        <FadeIn delay={0.18}>
+          <GlassPanel className="p-6">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Activity className="h-4 w-4 text-neon-purple" /> Voltage & Current
+            </h3>
+            <div className="h-48 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chargeTelemetry.map((t, i) => {
+                  const timeMin = chargeTelemetry!.length > 1
+                    ? ((new Date(t.created_at).getTime() - new Date(chargeTelemetry![0].created_at).getTime()) / 60000)
+                    : i * (session.duration_min / Math.max(chargeTelemetry!.length - 1, 1))
+                  return {
+                    time: `${Math.floor(timeMin)}m`,
+                    voltage: t.voltage,
+                    current: t.current_amps,
+                  }
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis yAxisId="voltage" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis yAxisId="current" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                  {chargeTelemetry.some(t => t.voltage != null) && (
+                    <Line yAxisId="voltage" type="monotone" dataKey="voltage" stroke="#00f0ff" strokeWidth={2} dot={false} name="Voltage (V)" connectNulls />
+                  )}
+                  {chargeTelemetry.some(t => t.current_amps != null) && (
+                    <Line yAxisId="current" type="monotone" dataKey="current" stroke="#f59e0b" strokeWidth={2} dot={false} name="Current (A)" connectNulls />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Temperature summary (fallback when no telemetry) */}
+      {(!chargeTelemetry || chargeTelemetry.length < 2 || !chargeTelemetry.some(t => t.battery_temp != null || t.inside_temp != null)) &&
+        (session.inside_temp_avg != null || session.outside_temp_avg != null) && (
         <FadeIn delay={0.16}>
           <GlassPanel className="p-4">
             <div className="flex items-center justify-center gap-6 text-sm">
               <Thermometer className="h-4 w-4 text-neon-cyan" />
               {session.inside_temp_avg != null && (
                 <span className="text-[var(--text-secondary)]">
-                  Inside: <strong className="text-orange-400">{session.inside_temp_avg.toFixed(1)}°C</strong>
+                  Inside: <strong className="text-orange-400">{convertTemp(session.inside_temp_avg).toFixed(1)} {tempUnit}</strong>
                 </span>
               )}
               {session.outside_temp_avg != null && (
                 <span className="text-[var(--text-secondary)]">
-                  Outside: <strong className="text-blue-400">{session.outside_temp_avg.toFixed(1)}°C</strong>
+                  Outside: <strong className="text-blue-400">{convertTemp(session.outside_temp_avg).toFixed(1)} {tempUnit}</strong>
                 </span>
               )}
             </div>

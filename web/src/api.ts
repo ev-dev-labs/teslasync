@@ -335,8 +335,9 @@ export interface FleetAnalytics {
     duration_stats: StatsSummary
     distance_stats: StatsSummary
     efficiency_stats: StatsSummary
-    daily_trend: { date: string; drives: number; distance: number }[]
+    daily_trend: { date: string; drives: number; distance: number; efficiency?: number }[]
     temp_vs_efficiency: { temp: number; efficiency: number; distance: number }[]
+    duration_distribution?: { range: string; count: number }[]
     temperature: { inside: StatsSummary; outside: StatsSummary }
   }
 
