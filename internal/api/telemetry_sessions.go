@@ -167,8 +167,7 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool) {
 	for _, key := range keys {
 		if v, ok := signals[key]; ok {
-			f := toFloat(v)
-			return f, true
+			return toFloatOk(v)
 		}
 	}
 	return 0, false
@@ -410,17 +409,17 @@ func (t *TelemetrySessionTracker) updateDriveRangeStats(active *streamingDrive, 
 	ir, hasIR := signalFloat(signals, "IdealBatteryRange")
 	er, hasER := signalFloat(signals, "EstBatteryRange")
 
-	if hasRR && rr > 0 {
+	if hasRR {
 		if rr > active.RatedRangeMax { active.RatedRangeMax = rr }
 		if rr < active.RatedRangeMin { active.RatedRangeMin = rr }
 		active.RatedRangeSum += rr
 	}
-	if hasIR && ir > 0 {
+	if hasIR {
 		if ir > active.IdealRangeMax { active.IdealRangeMax = ir }
 		if ir < active.IdealRangeMin { active.IdealRangeMin = ir }
 		active.IdealRangeSum += ir
 	}
-	if hasER && er > 0 {
+	if hasER {
 		if er > active.EstRangeMax { active.EstRangeMax = er }
 		if er < active.EstRangeMin { active.EstRangeMin = er }
 		active.EstRangeSum += er
@@ -434,13 +433,13 @@ func (t *TelemetrySessionTracker) updateDriveSocStats(active *streamingDrive, si
 	soc, hasSoc := signalFloat(signals, "Soc", "BatteryLevel")
 	usoc, hasUSoc := signalFloat(signals, "UsableSoc")
 
-	if hasSoc && soc > 0 {
+	if hasSoc {
 		if soc > active.SocMax { active.SocMax = soc }
 		if soc < active.SocMin { active.SocMin = soc }
 		active.SocSum += soc
 		active.SocCount++
 	}
-	if hasUSoc && usoc > 0 {
+	if hasUSoc {
 		if usoc > active.UsableSocMax { active.UsableSocMax = usoc }
 		if usoc < active.UsableSocMin { active.UsableSocMin = usoc }
 		active.UsableSocSum += usoc
@@ -876,18 +875,23 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
 
 	if len(enhancedFields) > 0 {
-		// Resolve location name async
+		// Resolve location name async — copy map to avoid race condition
 		if active.Latitude != nil && active.Longitude != nil {
-			go func(sessionID int64, lat, lon float64) {
+			fieldsCopy := make(map[string]interface{}, len(enhancedFields)+1)
+			for k, v := range enhancedFields {
+				fieldsCopy[k] = v
+			}
+			go func(sessionID int64, lat, lon float64, fields map[string]interface{}) {
 				gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 				defer cancel()
 				result, err := t.geocoder.ReverseGeocode(gctx, lat, lon)
 				if err != nil {
+					_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 					return
 				}
-				enhancedFields["location_name"] = result.ShortName()
-				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, enhancedFields)
-			}(active.SessionID, *active.Latitude, *active.Longitude)
+				fields["location_name"] = result.ShortName()
+				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
+			}(active.SessionID, *active.Latitude, *active.Longitude, fieldsCopy)
 		} else {
 			_ = t.chargeRepo.PartialUpdate(ctx, active.SessionID, enhancedFields)
 		}
