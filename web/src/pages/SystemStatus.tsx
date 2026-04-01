@@ -6,11 +6,11 @@ import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
-  Satellite, Link, Globe, Rss, ChevronDown, Bell, Package, Download, Send, X,
+  Satellite, Link, Globe, Rss, ChevronDown, Bell, Package, Download, Send,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import clsx from 'clsx'
 
 interface ComponentInfo {
@@ -109,6 +109,7 @@ function formatTimeAgo(date: Date): string {
 
 function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
   const statusColor = getStatusColor(info.status)
+  const [showSignalsModal, setShowSignalsModal] = useState(false)
 
   return (
     <GlassPanel className="p-5 relative overflow-hidden">
@@ -203,6 +204,37 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
           </div>
         )}
       </div>
+
+      {/* Signals Modal */}
+      {showSignalsModal && info.details?.supported_signals && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowSignalsModal(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="glass-panel p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">Subscribed Signals ({info.details.supported_signals.length})</h3>
+              <button onClick={() => setShowSignalsModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+            </div>
+            {SIGNAL_GROUPS.map(group => {
+              const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
+              if (matched.length === 0) return null
+              return (
+                <div key={group.label} className="mb-3">
+                  <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: group.color }}>{group.label} ({matched.length})</p>
+                  <div className="flex flex-wrap gap-1">
+                    {matched.map((s: string) => (
+                      <span key={s} className="px-2 py-0.5 text-[10px] rounded-full" style={{ backgroundColor: `${group.color}15`, color: group.color }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </motion.div>
+        </div>
+      )}
     </GlassPanel>
   )
 }
@@ -1170,7 +1202,6 @@ export default function SystemStatus() {
   const [refreshing, setRefreshing] = useState(false)
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
   const [, setTick] = useState(0)
-  const [showSignalsModal, setShowSignalsModal] = useState(false)
 
   const { data: status, isLoading, refetch, dataUpdatedAt } = useQuery<SystemStatus>({
     queryKey: ['system-status'],
@@ -1472,63 +1503,6 @@ export default function SystemStatus() {
 
       {/* Audit Logs */}
       <AuditLogTable />
-
-      {/* Signals Modal */}
-      <AnimatePresence>
-        {showSignalsModal && status?.fleet_telemetry?.details?.supported_signals && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowSignalsModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="glass-panel p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">Subscribed Signals ({status.fleet_telemetry.details.supported_signals.length})</h3>
-                <button onClick={() => setShowSignalsModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              {SIGNAL_GROUPS.map(group => {
-                const matched = group.signals.filter(s => status.fleet_telemetry!.details!.supported_signals!.includes(s))
-                if (matched.length === 0) return null
-                return (
-                  <div key={group.label} className="mb-3">
-                    <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: group.color }}>{group.label} ({matched.length})</p>
-                    <div className="flex flex-wrap gap-1">
-                      {matched.map(s => (
-                        <span key={s} className="px-2 py-0.5 text-[10px] rounded-full" style={{ backgroundColor: `${group.color}15`, color: group.color }}>{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-              {(() => {
-                const allGrouped = new Set(SIGNAL_GROUPS.flatMap(g => g.signals))
-                const ungrouped = status.fleet_telemetry.details.supported_signals.filter(s => !allGrouped.has(s))
-                if (ungrouped.length === 0) return null
-                return (
-                  <div className="mb-3">
-                    <p className="text-[10px] uppercase tracking-wider mb-1.5 text-[var(--text-muted)]">Other ({ungrouped.length})</p>
-                    <div className="flex flex-wrap gap-1">
-                      {ungrouped.map(s => (
-                        <span key={s} className="px-2 py-0.5 text-[10px] rounded-full bg-white/5 text-[var(--text-secondary)]">{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
