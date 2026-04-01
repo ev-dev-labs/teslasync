@@ -194,7 +194,7 @@ export default function MediaPlayer() {
     if (!history || history.length === 0) return []
     const counts: Record<string, number> = {}
     for (const s of history) {
-      const src = s.playback_source || 'Unknown'
+      const src = cleanNil(s.playback_source) || 'Unknown'
       counts[src] = (counts[src] || 0) + 1
     }
     return Object.entries(counts)
@@ -225,7 +225,7 @@ export default function MediaPlayer() {
     }
   }, [history])
 
-  const isPlaying = (latest?.playback_status ?? '').toLowerCase() === 'playing'
+  const isPlaying = cleanNil(latest?.playback_status)?.toLowerCase() === 'playing'
   const volumeMax = latest?.audio_volume_max ?? 11
 
   /* ── Render ────────────────────────────────────────────────────────────── */
@@ -379,7 +379,7 @@ export default function MediaPlayer() {
                       </span>
                     </td>
                     <td className="py-2 px-3">
-                      <StatusBadge status={row.playback_status} />
+                      <StatusBadge status={cleanNil(row.playback_status)} />
                     </td>
                   </tr>
                 ))}
