@@ -1503,3 +1503,54 @@ export const deleteChargingSession = (id: number) =>
   request<void>(`/data-repair/charging/${id}`, { method: 'DELETE' })
 export const deleteDrive = (id: number) =>
   request<void>(`/data-repair/drive/${id}`, { method: 'DELETE' })
+
+// ── Backup & Restore ────────────────────────────────────
+
+export interface BackupConfig {
+  id: number
+  name: string
+  enabled: boolean
+  backup_type: string
+  frequency_days: number
+  max_retention: number
+  provider: string
+  provider_config: Record<string, string>
+  include_tables: string[] | null
+  compress: boolean
+  encrypt: boolean
+  last_run_at: string | null
+  next_run_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BackupRun {
+  id: number
+  config_id: number | null
+  run_type: string
+  backup_type: string
+  status: string
+  provider: string
+  file_name: string | null
+  file_path: string | null
+  file_size: number
+  record_count: number
+  table_count: number
+  checksum: string | null
+  duration_ms: number
+  error_message: string | null
+  metadata: Record<string, any>
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+export const getBackupConfigs = () => request<BackupConfig[]>('/backup/configs')
+export const getBackupConfig = (id: number) => request<BackupConfig>(`/backup/configs/${id}`)
+export const createBackupConfig = (cfg: Partial<BackupConfig>) => request<BackupConfig>('/backup/configs', { method: 'POST', body: JSON.stringify(cfg), headers: { 'Content-Type': 'application/json' } })
+export const updateBackupConfig = (id: number, cfg: Partial<BackupConfig>) => request<BackupConfig>(`/backup/configs/${id}`, { method: 'PUT', body: JSON.stringify(cfg), headers: { 'Content-Type': 'application/json' } })
+export const deleteBackupConfig = (id: number) => request<void>(`/backup/configs/${id}`, { method: 'DELETE' })
+export const triggerBackup = (configId: number) => request<BackupRun>(`/backup/configs/${configId}/trigger`, { method: 'POST' })
+export const triggerQuickBackup = () => request<BackupRun>('/backup/quick', { method: 'POST' })
+export const getBackupRuns = (limit = 50, offset = 0) => request<BackupRun[]>(`/backup/runs?limit=${limit}&offset=${offset}`)
+export const getBackupRun = (id: number) => request<BackupRun>(`/backup/runs/${id}`)

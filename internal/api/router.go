@@ -115,6 +115,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tripHandler := NewTripHandler(db)
 	vehicleStateHandler := NewVehicleStateHandler(db)
 	backupHandler := NewBackupHandler(db)
+	backupRestoreHandler := NewBackupRestoreHandler(db)
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db)
@@ -437,6 +438,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Post("/close", dataRepairHandler.CloseDrive)
 				r.Delete("/", dataRepairHandler.DeleteDrive)
 			})
+		})
+
+		// Backup & Restore
+		r.Route("/backup", func(r chi.Router) {
+			r.Get("/configs", backupRestoreHandler.ListConfigs)
+			r.Post("/configs", backupRestoreHandler.CreateConfig)
+			r.Get("/configs/{configID}", backupRestoreHandler.GetConfig)
+			r.Put("/configs/{configID}", backupRestoreHandler.UpdateConfig)
+			r.Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
+			r.Post("/configs/{configID}/trigger", backupRestoreHandler.TriggerBackup)
+			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
+			r.Get("/runs", backupRestoreHandler.ListRuns)
+			r.Get("/runs/{runID}", backupRestoreHandler.GetRun)
 		})
 
 		// Export

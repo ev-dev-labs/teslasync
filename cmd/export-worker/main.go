@@ -11,9 +11,11 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/backup"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/export"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
@@ -89,6 +91,45 @@ func main() {
 					log.Error().Err(err).Msg("export cleanup: failed")
 				} else if deleted > 0 {
 					log.Info().Int64("deleted", deleted).Msg("export cleanup: removed old jobs")
+				}
+			}
+		}
+	}()
+
+	// Backup scheduler — checks for due backup configs every 60s
+	go func() {
+		backupCfgRepo := database.NewBackupConfigRepo(db)
+		backupRunRepo := database.NewBackupRunRepo(db)
+		processor := backup.NewProcessor(db)
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+
+		log.Info().Msg("backup scheduler started")
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				dueConfigs, err := backupCfgRepo.GetDueConfigs(ctx)
+				if err != nil {
+					log.Warn().Err(err).Msg("backup: failed to check due configs")
+					continue
+				}
+				for _, cfg := range dueConfigs {
+					run := &models.BackupRun{
+						ConfigID:   &cfg.ID,
+						RunType:    "backup",
+						BackupType: cfg.BackupType,
+						Status:     "queued",
+						Provider:   cfg.Provider,
+						Metadata:   []byte(`{"trigger": "scheduled"}`),
+					}
+					if err := backupRunRepo.Create(ctx, run); err != nil {
+						log.Error().Err(err).Int64("config_id", cfg.ID).Msg("backup: failed to create scheduled run")
+						continue
+					}
+					log.Info().Int64("config_id", cfg.ID).Str("name", cfg.Name).Msg("backup: starting scheduled backup")
+					go processor.RunBackup(ctx, cfg, run)
 				}
 			}
 		}

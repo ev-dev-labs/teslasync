@@ -42,6 +42,7 @@ import {
   Wrench as WrenchIcon,
   HardDriveDownload,
   Headphones,
+  DatabaseBackup,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -167,6 +168,7 @@ const navSections = [
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
       { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
+      { to: '/backup', icon: DatabaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
       { to: '/data-repair', icon: Wrench, label: 'Data Repair', color: 'text-amber-400' },
       { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
