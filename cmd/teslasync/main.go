@@ -22,6 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
@@ -37,6 +38,23 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Initialize OpenTelemetry tracing (optional)
+	if cfg.OpenTelemetry.Enabled {
+		shutdownTracer, err := tracing.Init(ctx, cfg.OpenTelemetry.ServiceName, cfg.OpenTelemetry.Endpoint, cfg.OpenTelemetry.Insecure)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to initialize tracing, continuing without it")
+		} else {
+			log.Info().Str("endpoint", cfg.OpenTelemetry.Endpoint).Str("service", cfg.OpenTelemetry.ServiceName).Msg("OpenTelemetry tracing enabled")
+			defer func() {
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if err := shutdownTracer(shutdownCtx); err != nil {
+					log.Warn().Err(err).Msg("failed to shutdown tracer")
+				}
+			}()
+		}
+	}
 
 	// Component health monitor
 	health := resilience.NewHealthMonitor()

@@ -48,3 +48,9 @@ data:
   GAS_PRICE_ENABLED: {{ .Values.gasPrice.enabled | default false | quote }}
   GAS_PRICE_POLL_INTERVAL: {{ .Values.gasPrice.pollInterval | default "7d" | quote }}
   {{- end }}
+  {{- if .Values.config.openTelemetry.enabled }}
+  OTEL_ENABLED: "true"
+  OTEL_ENDPOINT: {{ .Values.config.openTelemetry.endpoint | quote }}
+  OTEL_SERVICE_NAME: {{ .Values.config.openTelemetry.serviceName | quote }}
+  OTEL_INSECURE: {{ .Values.config.openTelemetry.insecure | quote }}
+  {{- end }}

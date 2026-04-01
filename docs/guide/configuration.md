@@ -307,6 +307,38 @@ The Settings page includes an interactive billing calculator where you can adjus
 | `FLEET_TELEMETRY_HOST` | `` | Hostname of your Fleet Telemetry server |
 | `FLEET_TELEMETRY_PORT` | `4443` | Port for Fleet Telemetry server |
 
+## OpenTelemetry Tracing (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OTEL_ENABLED` | `false` | Enable distributed tracing |
+| `OTEL_ENDPOINT` | `jaeger:4317` | OTLP gRPC collector endpoint |
+| `OTEL_SERVICE_NAME` | `teslasync` | Service name in traces |
+| `OTEL_INSECURE` | `true` | Use insecure gRPC connection |
+
+### Docker Compose
+
+```bash
+# Start with tracing enabled
+OTEL_ENABLED=true docker compose --profile tracing up -d
+
+# Jaeger UI: http://localhost:16686
+```
+
+Jaeger uses a Docker Compose profile, so it only starts when explicitly requested with `--profile tracing`.
+
+### Helm
+
+```yaml
+config:
+  openTelemetry:
+    enabled: true
+    endpoint: "jaeger:4317"
+
+jaeger:
+  enabled: true
+```
+
 ## Tesla Fleet API Region
 
 | Variable | Default | Description |

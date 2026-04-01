@@ -21,6 +21,15 @@ type Config struct {
 	Retention      RetentionConfig
 	FleetTelemetry FleetTelemetryConfig
 	GasPrice       GasPriceConfig
+	OpenTelemetry  OpenTelemetryConfig
+}
+
+// OpenTelemetryConfig controls optional distributed tracing via OpenTelemetry.
+type OpenTelemetryConfig struct {
+	Enabled     bool   `json:"enabled"`
+	Endpoint    string `json:"endpoint"`
+	ServiceName string `json:"service_name"`
+	Insecure    bool   `json:"insecure"`
 }
 
 // GasPriceConfig controls automated gas price polling from the EIA API.
@@ -197,6 +206,13 @@ func Load() (*Config, error) {
 			Enabled:      envBool("GAS_PRICE_ENABLED", false),
 			PollInterval: envStr("GAS_PRICE_POLL_INTERVAL", "7d"),
 			APIKey:       envStr("GAS_PRICE_API_KEY", ""),
+		},
+
+		OpenTelemetry: OpenTelemetryConfig{
+			Enabled:     envBool("OTEL_ENABLED", false),
+			Endpoint:    envStr("OTEL_ENDPOINT", "localhost:4317"),
+			ServiceName: envStr("OTEL_SERVICE_NAME", "teslasync"),
+			Insecure:    envBool("OTEL_INSECURE", true),
 		},
 	}
 

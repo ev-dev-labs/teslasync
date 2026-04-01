@@ -404,6 +404,13 @@ config:
   #   Internal: http://teslasync-web.teslasync.svc.cluster.local
   webEndpoint: ""
 
+  # OpenTelemetry distributed tracing (optional)
+  openTelemetry:
+    enabled: false
+    endpoint: "jaeger:4317"
+    serviceName: "teslasync"
+    insecure: true
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
 #
@@ -590,3 +597,20 @@ grafana:
   external:
     host: ""
     port: 3000
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Jaeger (optional, for distributed tracing)
+#
+# Deploys Jaeger all-in-one for collecting OpenTelemetry traces.
+# Enable alongside config.openTelemetry.enabled to get end-to-end tracing.
+# ─────────────────────────────────────────────────────────────────────────────
+jaeger:
+  enabled: false
+  image: jaegertracing/all-in-one:1.57
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi

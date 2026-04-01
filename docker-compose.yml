@@ -32,6 +32,10 @@ services:
       - FLEET_TELEMETRY_PORT=${FLEET_TELEMETRY_PORT:-4443}
       - FLEET_TELEMETRY_TOPIC_BASE=${FLEET_TELEMETRY_TOPIC_BASE:-telemetry}
       - FLEET_TELEMETRY_BATCH_MS=${FLEET_TELEMETRY_BATCH_MS:-100}
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-api}
+      - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,6 +93,10 @@ services:
       - MQTT_PORT=1883
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - HEALTH_PORT=8081
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
+      - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -222,6 +230,10 @@ services:
       - MQTT_PORT=1883
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - HEALTH_PORT=8082
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-export-worker}
+      - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -239,6 +251,25 @@ services:
           memory: 512M
         reservations:
           memory: 64M
+
+  # Jaeger (optional — docker compose --profile tracing up)
+  # Provides distributed tracing via OpenTelemetry (OTLP gRPC).
+  # Jaeger UI: http://localhost:16686
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: teslasync-jaeger
+    restart: unless-stopped
+    profiles:
+      - tracing
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "${JAEGER_OTLP_PORT:-4317}:4317"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # Fleet Telemetry Server (optional — docker compose --profile telemetry up)
   # Receives streaming data from Tesla vehicles via WebSocket and publishes
