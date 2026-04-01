@@ -67,7 +67,9 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
 /* ── Playback status badge ────────────────────────────────────────────────── */
 
 function StatusBadge({ status }: { status?: string }) {
-  const s = (status ?? '').toLowerCase()
+  // Normalize protobuf enum values (MediaStatusPlaying → playing)
+  const raw = cleanNil(status) ?? ''
+  const s = raw.toLowerCase().replace('mediastatus', '')
   if (s === 'playing') {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">
@@ -84,7 +86,7 @@ function StatusBadge({ status }: { status?: string }) {
   }
   return (
     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-white/10 text-[var(--text-muted)]">
-      <Square className="h-3 w-3" /> {status || 'Stopped'}
+      <Square className="h-3 w-3" /> {s || 'Stopped'}
     </span>
   )
 }
