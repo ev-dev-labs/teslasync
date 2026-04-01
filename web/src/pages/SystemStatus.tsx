@@ -1271,7 +1271,7 @@ export default function SystemStatus() {
 
   const overallStatus = status?.overall ?? 'unknown'
   const overallColor = getStatusColor(overallStatus)
-  const healthyCount = components.filter(([, c]) => ['ok', 'healthy', 'authenticated', 'connected'].includes(c.status.toLowerCase())).length
+  const healthyCount = components.filter(([, c]) => ['ok', 'healthy', 'authenticated', 'connected', 'enabled'].includes(c.status.toLowerCase())).length
   const totalCount = components.length
 
   return (

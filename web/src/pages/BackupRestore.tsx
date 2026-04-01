@@ -669,7 +669,8 @@ export default function BackupRestore() {
                     <select
                       value={form.backup_type}
                       onChange={e => setForm(prev => ({ ...prev, backup_type: e.target.value }))}
-                      className="w-full appearance-none rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
+                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
+                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
                     >
                       {BACKUP_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
                     </select>
@@ -684,7 +685,8 @@ export default function BackupRestore() {
                     <select
                       value={form.frequency_days}
                       onChange={e => setForm(prev => ({ ...prev, frequency_days: Number(e.target.value) }))}
-                      className="w-full appearance-none rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
+                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
+                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
                     >
                       {FREQUENCY_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                     </select>
@@ -715,7 +717,8 @@ export default function BackupRestore() {
                         const newProvider = e.target.value
                         setForm(prev => ({ ...prev, provider: newProvider, provider_config: {} }))
                       }}
-                      className="w-full appearance-none rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
+                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
+                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
                     >
                       {PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                     </select>
