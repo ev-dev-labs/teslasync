@@ -128,7 +128,7 @@ export default function DriveDetail() {
         idealRange: p.ideal_range != null ? u.distanceVal(p.ideal_range) : null,
         ratedRange: p.rated_range != null ? u.distanceVal(p.rated_range) : null,
         estRange: null as number | null,
-        odometer: p.odometer != null ? u.distanceVal(p.odometer) : p.odometer,
+        odometer: p.odometer != null ? u.distanceVal(p.odometer) : null,
         soc: null as number | null,
         usableSoc: null as number | null,
       }))
@@ -150,8 +150,8 @@ export default function DriveDetail() {
     return diff < 0 ? sum + Math.abs(diff) : sum
   }, 0)
 
-  const odometerStart = chartData.length > 0 ? chartData[0].odometer : 0
-  const odometerEnd = chartData.length > 0 ? chartData[chartData.length - 1].odometer : 0
+  const odometerStart = chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0
+  const odometerEnd = chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0
 
   const powerMax = drive?.power_max ?? Math.max(...chartData.map(d => d.power), 0)
   const powerMin = drive?.power_min ?? Math.min(...chartData.map(d => d.power), 0)

@@ -359,6 +359,15 @@ export default function Commands() {
         </div>
       )}
 
+      {statesError && (
+        <GlassPanel className="p-4">
+          <div className="flex items-center gap-2 text-neon-red text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Failed to load vehicle states: {(statesError as Error).message}</span>
+          </div>
+        </GlassPanel>
+      )}
+
       {isLoading ? (
         <div className="space-y-6">
           {[1, 2].map(i => <Skeleton key={i} className="h-72" />)}

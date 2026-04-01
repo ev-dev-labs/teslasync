@@ -122,12 +122,12 @@ export default function Dashboard() {
 
   // Get recent drives and charges for the primary vehicle
   const { data: recentDrives } = useQuery({
-    queryKey: ['drives', primaryVehicle?.id],
+    queryKey: ['drives', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getDrives(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
   })
   const { data: recentCharges } = useQuery({
-    queryKey: ['charging', primaryVehicle?.id],
+    queryKey: ['charging', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getChargingSessions(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
   })
@@ -154,36 +154,42 @@ export default function Dashboard() {
     queryFn: () => getMotorLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: climateData } = useQuery({
     queryKey: ['climate-latest', primaryVehicle?.id],
     queryFn: () => getClimateLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: securityData } = useQuery({
     queryKey: ['security-latest', primaryVehicle?.id],
     queryFn: () => getSecurityLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: tireData } = useQuery({
     queryKey: ['tire-latest', primaryVehicle?.id],
     queryFn: () => getLatestTirePressure(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: mediaData } = useQuery({
     queryKey: ['media-latest', primaryVehicle?.id],
     queryFn: () => getMediaLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: locationData } = useQuery({
     queryKey: ['location-latest', primaryVehicle?.id],
     queryFn: () => getLocationSnapshotLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
 
   const onlineCount= vehicles?.filter(v => v.state === 'online').length ?? 0
