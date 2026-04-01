@@ -15,13 +15,14 @@ func NewLocationSnapshotRepo(db *DB) *LocationSnapshotRepo {
 }
 
 func (r *LocationSnapshotRepo) Insert(ctx context.Context, snap *models.LocationSnapshot) error {
-	query := `INSERT INTO location_snapshots (vehicle_id, destination_name, destination_lat, destination_lon, origin_lat, origin_lon, miles_to_arrival, minutes_to_arrival, route_line, route_traffic_delay_min, located_at_home, located_at_work, located_at_favorite, gps_state)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`
+	query := `INSERT INTO location_snapshots (vehicle_id, destination_name, destination_lat, destination_lon, origin_lat, origin_lon, miles_to_arrival, minutes_to_arrival, route_line, route_traffic_delay_min, located_at_home, located_at_work, located_at_favorite, gps_state, route_last_updated, current_lat, current_lon)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.DestinationName, snap.DestinationLat, snap.DestinationLon,
 		snap.OriginLat, snap.OriginLon, snap.MilesToArrival, snap.MinutesToArrival,
 		snap.RouteLine, snap.RouteTrafficDelayMin,
 		snap.LocatedAtHome, snap.LocatedAtWork, snap.LocatedAtFavorite, snap.GpsState,
+		snap.RouteLastUpdated, snap.CurrentLat, snap.CurrentLon,
 	).Scan(&snap.ID)
 }
 

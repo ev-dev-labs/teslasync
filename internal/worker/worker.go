@@ -349,7 +349,12 @@ func (w *Worker) recordVehicleFailure(vehicleID int64) {
 func (w *Worker) recordVehicleSuccess(vehicleID int64) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	delete(w.vehicleHealth, vehicleID)
+	if vh, ok := w.vehicleHealth[vehicleID]; ok {
+		vh.consecFails = 0
+		vh.backoffUntil = time.Time{}
+		vh.consecAsleep = 0
+		vh.lastError = time.Time{}
+	}
 }
 
 // recordVehicleAsleep applies escalating backoff for a sleeping vehicle.

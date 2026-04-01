@@ -4,12 +4,13 @@ import { getChargingSession, getChargeTelemetry, getVehicle } from '../api'
 import {
   ArrowLeft, Zap, Clock, Battery, DollarSign, Gauge,
   BatteryCharging, Timer, TrendingUp, Cable, Activity,
-  Plug, MapPin, ArrowUpRight, Thermometer,
+  Plug, MapPin, ArrowUpRight, Thermometer, Navigation,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   ComposedChart, Line,
 } from 'recharts'
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { AnimatedNumber, RadialGauge, MetricBar } from '../components/Widgets'
@@ -296,6 +297,97 @@ export default function ChargeDetail() {
           )}
         </GlassPanel>
       </FadeIn>
+
+      {/* Charge Location */}
+      {(session.latitude != null && session.longitude != null) && (
+        <FadeIn delay={0.11}>
+          <GlassPanel className="p-5">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Navigation className="h-4 w-4 text-neon-cyan" /> Charge Location
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Map */}
+              <div className="lg:col-span-2 h-56 sm:h-72 rounded-lg overflow-hidden border border-white/5">
+                <MapContainer
+                  center={[session.latitude!, session.longitude!]}
+                  zoom={15}
+                  scrollWheelZoom
+                  className="h-full w-full"
+                  style={{ background: '#0a0a0f' }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  />
+                  <CircleMarker
+                    center={[session.latitude!, session.longitude!]}
+                    radius={10}
+                    pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.8, weight: 3 }}
+                  >
+                    <Popup>
+                      <div className="text-xs">
+                        <strong>{session.location_name || 'Charge Location'}</strong>
+                        <br />
+                        {session.latitude!.toFixed(5)}, {session.longitude!.toFixed(5)}
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                </MapContainer>
+              </div>
+
+              {/* Address details */}
+              <div className="flex flex-col gap-3">
+                {/* Location name */}
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Location</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-neon-green flex-shrink-0" />
+                    {session.location_name || session.address?.display_name || 'Unknown'}
+                  </p>
+                </div>
+
+                {/* Address breakdown */}
+                {session.address && (
+                  <>
+                    {(session.address.road || session.address.house_number) && (
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Street</p>
+                        <p className="text-sm text-[var(--text-primary)]">
+                          {[session.address.house_number, session.address.road].filter(Boolean).join(' ')}
+                        </p>
+                      </div>
+                    )}
+                    {(session.address.city || session.address.state) && (
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">City / State</p>
+                        <p className="text-sm text-[var(--text-primary)]">
+                          {[session.address.city, session.address.state].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                    )}
+                    {(session.address.country || session.address.postcode) && (
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Country / Postal</p>
+                        <p className="text-sm text-[var(--text-primary)]">
+                          {[session.address.country, session.address.postcode].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Coordinates */}
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Coordinates</p>
+                  <p className="text-xs font-mono text-[var(--text-secondary)]">
+                    {session.latitude!.toFixed(6)}, {session.longitude!.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* Charge Curve Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

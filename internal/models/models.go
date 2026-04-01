@@ -252,6 +252,9 @@ type ChargingSession struct {
 	LocationName   *string  `json:"location_name,omitempty" db:"location_name"`
 	InsideTempAvg  *float64 `json:"inside_temp_avg,omitempty" db:"inside_temp_avg"`
 	OutsideTempAvg *float64 `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
+
+	// Joined address details (populated on detail view)
+	Address *Address `json:"address,omitempty" db:"-"`
 }
 
 // Address represents a reverse-geocoded location.
@@ -474,13 +477,19 @@ type ChatMessage struct {
 
 // TirePressureSnapshot represents a point-in-time tire pressure reading.
 type TirePressureSnapshot struct {
-	ID         int64     `json:"id" db:"id"`
-	VehicleID  int64     `json:"vehicle_id" db:"vehicle_id"`
-	FrontLeft  *float64  `json:"front_left" db:"front_left"`
-	FrontRight *float64  `json:"front_right" db:"front_right"`
-	RearLeft   *float64  `json:"rear_left" db:"rear_left"`
-	RearRight  *float64  `json:"rear_right" db:"rear_right"`
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	ID             int64      `json:"id" db:"id"`
+	VehicleID      int64      `json:"vehicle_id" db:"vehicle_id"`
+	FrontLeft      *float64   `json:"front_left" db:"front_left"`
+	FrontRight     *float64   `json:"front_right" db:"front_right"`
+	RearLeft       *float64   `json:"rear_left" db:"rear_left"`
+	RearRight      *float64   `json:"rear_right" db:"rear_right"`
+	TpmsHardWarn   *string    `json:"tpms_hard_warnings,omitempty" db:"tpms_hard_warnings"`
+	TpmsSoftWarn   *string    `json:"tpms_soft_warnings,omitempty" db:"tpms_soft_warnings"`
+	LastSeenTimeFl *time.Time `json:"last_seen_time_fl,omitempty" db:"last_seen_time_fl"`
+	LastSeenTimeFr *time.Time `json:"last_seen_time_fr,omitempty" db:"last_seen_time_fr"`
+	LastSeenTimeRl *time.Time `json:"last_seen_time_rl,omitempty" db:"last_seen_time_rl"`
+	LastSeenTimeRr *time.Time `json:"last_seen_time_rr,omitempty" db:"last_seen_time_rr"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 }
 
 // VampireDrainEvent represents an energy loss event while parked.
@@ -654,6 +663,8 @@ type MotorSnapshot struct {
 	BrakePedalPos      *float64   `json:"brake_pedal_pos,omitempty" db:"brake_pedal_pos"`
 	CruiseSetSpeed     *float64   `json:"cruise_set_speed,omitempty" db:"cruise_set_speed"`
 	DriveRail          *bool      `json:"drive_rail,omitempty" db:"drive_rail"`
+	LifetimeEnergyGainedRegen *float64 `json:"lifetime_energy_gained_regen,omitempty" db:"lifetime_energy_gained_regen"`
+	LifetimeEnergyUsedDrive   *float64 `json:"lifetime_energy_used_drive,omitempty" db:"lifetime_energy_used_drive"`
 	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
 }
 
@@ -785,6 +796,9 @@ type ChargingTelemetry struct {
 	PowershareStopReason       *string   `json:"powershare_stop_reason,omitempty" db:"powershare_stop_reason"`
 	PowershareHoursLeft        *int      `json:"powershare_hours_left,omitempty" db:"powershare_hours_left"`
 	PowersharePowerKw          *float64  `json:"powershare_power_kw,omitempty" db:"powershare_power_kw"`
+	ScheduledChargingStartTime *string  `json:"scheduled_charging_start_time,omitempty" db:"scheduled_charging_start_time"`
+	ScheduledDepartureTime     *string  `json:"scheduled_departure_time,omitempty" db:"scheduled_departure_time"`
+	ExpectedEnergyPctAtArrival *float64 `json:"expected_energy_pct_at_arrival,omitempty" db:"expected_energy_pct_at_arrival"`
 	CreatedAt                  time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -802,6 +816,7 @@ type MediaSnapshot struct {
 	PlaybackSource      *string   `json:"playback_source,omitempty" db:"playback_source"`
 	AudioVolume         *float64  `json:"audio_volume,omitempty" db:"audio_volume"`
 	AudioVolumeMax      *float64  `json:"audio_volume_max,omitempty" db:"audio_volume_max"`
+	AudioVolumeIncrement *float64 `json:"audio_volume_increment,omitempty" db:"audio_volume_increment"`
 	CreatedAt           time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -828,6 +843,7 @@ type VehicleConfigSnapshot struct {
 	SoftwareUpdateDownloadPct   *int      `json:"software_update_download_pct,omitempty" db:"software_update_download_pct"`
 	SoftwareUpdateInstallPct    *int      `json:"software_update_install_pct,omitempty" db:"software_update_install_pct"`
 	SoftwareUpdateExpectedDuration *int   `json:"software_update_expected_duration,omitempty" db:"software_update_expected_duration"`
+	SoftwareUpdateScheduledStart  *string `json:"software_update_scheduled_start,omitempty" db:"software_update_scheduled_start"`
 	CreatedAt                   time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -848,6 +864,9 @@ type LocationSnapshot struct {
 	LocatedAtWork          *bool     `json:"located_at_work,omitempty" db:"located_at_work"`
 	LocatedAtFavorite      *bool     `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
 	GpsState               *bool     `json:"gps_state,omitempty" db:"gps_state"`
+	RouteLastUpdated       *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
+	CurrentLat             *float64  `json:"current_lat,omitempty" db:"current_lat"`
+	CurrentLon             *float64  `json:"current_lon,omitempty" db:"current_lon"`
 	CreatedAt              time.Time `json:"created_at" db:"created_at"`
 }
 

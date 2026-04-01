@@ -14,6 +14,44 @@ type DriveRepo struct {
 	db *DB
 }
 
+// driveColumns is the full SELECT column list for drives including all enhanced fields.
+const driveColumns = `id, vehicle_id, start_date, end_date, start_position_id, end_position_id,
+	start_address_id, end_address_id, distance, duration_min, start_range_km, end_range_km,
+	speed_max, power_max, power_min, start_battery_level, end_battery_level,
+	inside_temp_avg, outside_temp_avg,
+	start_odometer, end_odometer, speed_avg, speed_min,
+	start_rated_range_km, end_rated_range_km, rated_range_avg, rated_range_max, rated_range_min,
+	start_ideal_range_km, end_ideal_range_km, ideal_range_avg, ideal_range_max, ideal_range_min,
+	start_est_range_km, end_est_range_km, est_range_avg, est_range_max, est_range_min,
+	soc_start, soc_end, soc_avg, soc_max, soc_min,
+	usable_soc_start, usable_soc_end, usable_soc_avg, usable_soc_max, usable_soc_min,
+	elevation_start, elevation_end, elevation_gain, elevation_loss,
+	driver_temp_avg, passenger_temp_avg, battery_heater_on,
+	start_address, end_address,
+	start_latitude, start_longitude, end_latitude, end_longitude`
+
+// scanDrive scans all drive columns into a Drive model.
+func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) {
+	d := &models.Drive{}
+	err := row.Scan(
+		&d.ID, &d.VehicleID, &d.StartDate, &d.EndDate, &d.StartPositionID, &d.EndPositionID,
+		&d.StartAddressID, &d.EndAddressID, &d.Distance, &d.DurationMin, &d.StartRangeKm,
+		&d.EndRangeKm, &d.SpeedMax, &d.PowerMax, &d.PowerMin, &d.StartBatteryLvl,
+		&d.EndBatteryLvl, &d.InsideTempAvg, &d.OutsideTempAvg,
+		&d.StartOdometer, &d.EndOdometer, &d.SpeedAvg, &d.SpeedMin,
+		&d.StartRatedRangeKm, &d.EndRatedRangeKm, &d.RatedRangeAvg, &d.RatedRangeMax, &d.RatedRangeMin,
+		&d.StartIdealRangeKm, &d.EndIdealRangeKm, &d.IdealRangeAvg, &d.IdealRangeMax, &d.IdealRangeMin,
+		&d.StartEstRangeKm, &d.EndEstRangeKm, &d.EstRangeAvg, &d.EstRangeMax, &d.EstRangeMin,
+		&d.SocStart, &d.SocEnd, &d.SocAvg, &d.SocMax, &d.SocMin,
+		&d.UsableSocStart, &d.UsableSocEnd, &d.UsableSocAvg, &d.UsableSocMax, &d.UsableSocMin,
+		&d.ElevationStart, &d.ElevationEnd, &d.ElevationGain, &d.ElevationLoss,
+		&d.DriverTempAvg, &d.PassengerTempAvg, &d.BatteryHeaterOn,
+		&d.StartAddress, &d.EndAddress,
+		&d.StartLatitude, &d.StartLongitude, &d.EndLatitude, &d.EndLongitude,
+	)
+	return d, err
+}
+
 func NewDriveRepo(db *DB) *DriveRepo {
 	return &DriveRepo{db: db}
 }
@@ -41,11 +79,7 @@ func (r *DriveRepo) Complete(ctx context.Context, id int64, endDate time.Time, e
 }
 
 func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error) {
-	query := `SELECT id, vehicle_id, start_date, end_date, start_position_id, end_position_id,
-		start_address_id, end_address_id, distance, duration_min, start_range_km, end_range_km,
-		speed_max, power_max, power_min, start_battery_level, end_battery_level,
-		inside_temp_avg, outside_temp_avg
-		FROM drives WHERE vehicle_id=$1`
+	query := `SELECT ` + driveColumns + ` FROM drives WHERE vehicle_id=$1`
 	args := []interface{}{vehicleID}
 	argIdx := 2
 	if !startTime.IsZero() {
@@ -68,13 +102,8 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 
 	var drives []*models.Drive
 	for rows.Next() {
-		d := &models.Drive{}
-		if err := rows.Scan(
-			&d.ID, &d.VehicleID, &d.StartDate, &d.EndDate, &d.StartPositionID, &d.EndPositionID,
-			&d.StartAddressID, &d.EndAddressID, &d.Distance, &d.DurationMin, &d.StartRangeKm,
-			&d.EndRangeKm, &d.SpeedMax, &d.PowerMax, &d.PowerMin, &d.StartBatteryLvl,
-			&d.EndBatteryLvl, &d.InsideTempAvg, &d.OutsideTempAvg,
-		); err != nil {
+		d, err := scanDrive(rows)
+		if err != nil {
 			return nil, err
 		}
 		drives = append(drives, d)
@@ -83,18 +112,8 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 }
 
 func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error) {
-	query := `SELECT id, vehicle_id, start_date, end_date, start_position_id, end_position_id,
-		start_address_id, end_address_id, distance, duration_min, start_range_km, end_range_km,
-		speed_max, power_max, power_min, start_battery_level, end_battery_level,
-		inside_temp_avg, outside_temp_avg
-		FROM drives WHERE id=$1`
-	d := &models.Drive{}
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
-		&d.ID, &d.VehicleID, &d.StartDate, &d.EndDate, &d.StartPositionID, &d.EndPositionID,
-		&d.StartAddressID, &d.EndAddressID, &d.Distance, &d.DurationMin, &d.StartRangeKm,
-		&d.EndRangeKm, &d.SpeedMax, &d.PowerMax, &d.PowerMin, &d.StartBatteryLvl,
-		&d.EndBatteryLvl, &d.InsideTempAvg, &d.OutsideTempAvg,
-	)
+	query := `SELECT ` + driveColumns + ` FROM drives WHERE id=$1`
+	d, err := scanDrive(r.db.Pool.QueryRow(ctx, query, id))
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -103,11 +122,7 @@ func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error
 
 // GetStale returns drives that have no end_date and started before the cutoff time.
 func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.Drive, error) {
-	query := `SELECT id, vehicle_id, start_date, end_date, start_position_id, end_position_id,
-		start_address_id, end_address_id, distance, duration_min, start_range_km, end_range_km,
-		speed_max, power_max, power_min, start_battery_level, end_battery_level,
-		inside_temp_avg, outside_temp_avg
-		FROM drives WHERE end_date IS NULL AND start_date < $1
+	query := `SELECT ` + driveColumns + ` FROM drives WHERE end_date IS NULL AND start_date < $1
 		ORDER BY start_date DESC`
 	rows, err := r.db.Pool.Query(ctx, query, cutoff)
 	if err != nil {
@@ -117,13 +132,8 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.D
 
 	var drives []*models.Drive
 	for rows.Next() {
-		d := &models.Drive{}
-		if err := rows.Scan(
-			&d.ID, &d.VehicleID, &d.StartDate, &d.EndDate, &d.StartPositionID, &d.EndPositionID,
-			&d.StartAddressID, &d.EndAddressID, &d.Distance, &d.DurationMin, &d.StartRangeKm,
-			&d.EndRangeKm, &d.SpeedMax, &d.PowerMax, &d.PowerMin, &d.StartBatteryLvl,
-			&d.EndBatteryLvl, &d.InsideTempAvg, &d.OutsideTempAvg,
-		); err != nil {
+		d, err := scanDrive(rows)
+		if err != nil {
 			return nil, err
 		}
 		drives = append(drives, d)

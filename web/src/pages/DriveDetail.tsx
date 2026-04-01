@@ -6,7 +6,7 @@ import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
-  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2,
+  BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2, CircleDot,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -71,9 +71,12 @@ export default function DriveDetail() {
   const drivePositions = positions ?? []
   const driveTelemetry = telemetry ?? []
 
-  const trail: LatLngExpression[] = drivePositions
-    .filter(p => p.latitude && p.longitude)
-    .map(p => [p.latitude, p.longitude])
+  // Build route from telemetry (preferred — more granular) or positions (fallback)
+  const routeSource = driveTelemetry.length > 0
+    ? driveTelemetry.filter(t => t.latitude && t.longitude && (t.latitude !== 0 || t.longitude !== 0)).map(t => ({ lat: t.latitude!, lng: t.longitude!, speed: t.speed ?? 0 }))
+    : drivePositions.filter(p => p.latitude && p.longitude).map(p => ({ lat: p.latitude, lng: p.longitude, speed: p.speed ?? 0 }))
+
+  const trail: LatLngExpression[] = routeSource.map(p => [p.lat, p.lng])
 
   const startPos = trail[0] as [number, number] | undefined
   const endPos = trail[trail.length - 1] as [number, number] | undefined
@@ -81,17 +84,16 @@ export default function DriveDetail() {
 
   // Speed-colored trail segments
   const speedSegments: { positions: LatLngExpression[]; color: string }[] = []
-  const filteredPositions = drivePositions.filter(p => p.latitude && p.longitude)
-  for (let i = 1; i < filteredPositions.length; i++) {
-    const prev = filteredPositions[i - 1]
-    const curr = filteredPositions[i]
-    const speed = curr.speed ?? 0
+  for (let i = 1; i < routeSource.length; i++) {
+    const prev = routeSource[i - 1]
+    const curr = routeSource[i]
+    const speed = curr.speed
     let color = '#10b981'
     if (speed >= 100) color = '#ef4444'
     else if (speed >= 60) color = '#f59e0b'
     else if (speed >= 30) color = '#00f0ff'
     speedSegments.push({
-      positions: [[prev.latitude, prev.longitude], [curr.latitude, curr.longitude]],
+      positions: [[prev.lat, prev.lng], [curr.lat, curr.lng]],
       color,
     })
   }
@@ -114,6 +116,12 @@ export default function DriveDetail() {
         odometer: t.odometer != null ? u.distanceVal(t.odometer) : null,
         soc: t.soc,
         usableSoc: t.usable_soc,
+        tireFl: t.tire_pressure_fl != null ? u.pressureVal(t.tire_pressure_fl) : null,
+        tireFr: t.tire_pressure_fr != null ? u.pressureVal(t.tire_pressure_fr) : null,
+        tireRl: t.tire_pressure_rl != null ? u.pressureVal(t.tire_pressure_rl) : null,
+        tireRr: t.tire_pressure_rr != null ? u.pressureVal(t.tire_pressure_rr) : null,
+        climateOn: t.is_climate_on ?? null,
+        fanStatus: t.fan_status ?? null,
       }))
     : drivePositions.map((p, _i) => ({
         time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -131,27 +139,33 @@ export default function DriveDetail() {
         odometer: p.odometer != null ? u.distanceVal(p.odometer) : null,
         soc: null as number | null,
         usableSoc: null as number | null,
+        tireFl: null as number | null,
+        tireFr: null as number | null,
+        tireRl: null as number | null,
+        tireRr: null as number | null,
+        climateOn: null as boolean | null,
+        fanStatus: null as number | null,
       }))
 
-  // === Computed Stats ===
+  // === Computed Stats — prefer drive-level fields from API, fallback to chartData ===
   const maxSpeed = drive?.speed_max != null ? u.speedVal(drive.speed_max) : Math.max(...chartData.map(d => d.speed), 0)
   const movingSpeeds = chartData.filter(d => d.speed > 0).map(d => d.speed)
-  const minSpeed = movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0
-  const avgSpeed = chartData.length > 0 ? chartData.reduce((s, d) => s + d.speed, 0) / chartData.length : 0
+  const minSpeed = drive?.speed_min != null ? u.speedVal(drive.speed_min) : (movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0)
+  const avgSpeed = drive?.speed_avg != null ? u.speedVal(drive.speed_avg) : (chartData.length > 0 ? chartData.reduce((s, d) => s + d.speed, 0) / chartData.length : 0)
 
-  const elevGain = chartData.reduce((sum, d, i) => {
+  const elevGain = drive?.elevation_gain != null ? drive.elevation_gain : chartData.reduce((sum, d, i) => {
     if (i === 0) return 0
     const diff = d.elevation - chartData[i - 1].elevation
     return diff > 0 ? sum + diff : sum
   }, 0)
-  const elevLoss = chartData.reduce((sum, d, i) => {
+  const elevLoss = drive?.elevation_loss != null ? drive.elevation_loss : chartData.reduce((sum, d, i) => {
     if (i === 0) return 0
     const diff = d.elevation - chartData[i - 1].elevation
     return diff < 0 ? sum + Math.abs(diff) : sum
   }, 0)
 
-  const odometerStart = chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0
-  const odometerEnd = chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0
+  const odometerStart = drive?.start_odometer != null ? u.distanceVal(drive.start_odometer) : (chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0)
+  const odometerEnd = drive?.end_odometer != null ? u.distanceVal(drive.end_odometer) : (chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0)
 
   const powerMax = drive?.power_max ?? Math.max(...chartData.map(d => d.power), 0)
   const powerMin = drive?.power_min ?? Math.min(...chartData.map(d => d.power), 0)
@@ -168,12 +182,26 @@ export default function DriveDetail() {
   // Temperature stats
   const insideTemps = chartData.filter(d => d.insideTemp !== null).map(d => d.insideTemp!)
   const outsideTemps = chartData.filter(d => d.outsideTemp !== null).map(d => d.outsideTemp!)
+  const driverTemps = chartData.filter(d => d.driverTemp !== null).map(d => d.driverTemp!)
+  const passengerTemps = chartData.filter(d => d.passengerTemp !== null).map(d => d.passengerTemp!)
   const avgInsideTemp = insideTemps.length > 0 ? insideTemps.reduce((a, b) => a + b, 0) / insideTemps.length : null
   const avgOutsideTemp = outsideTemps.length > 0 ? outsideTemps.reduce((a, b) => a + b, 0) / outsideTemps.length : null
+  const hasAnyTemp = insideTemps.length > 0 || outsideTemps.length > 0 || driverTemps.length > 0 || passengerTemps.length > 0
+
+  // Climate stats
+  const climateOnCount = chartData.filter(d => d.climateOn === true).length
+  const climateOffCount = chartData.filter(d => d.climateOn === false).length
+  const climateStatus = climateOnCount > 0 ? (climateOnCount >= climateOffCount ? 'On' : 'Mostly Off') : (climateOffCount > 0 ? 'Off' : null)
+  const fanValues = chartData.map(d => d.fanStatus).filter((v): v is number => v != null)
+  const avgFanSpeed = fanValues.length > 0 ? fanValues.reduce((a, b) => a + b, 0) / fanValues.length : null
+  const maxFanSpeed = fanValues.length > 0 ? Math.max(...fanValues) : null
 
   // Range stats
   const startRange = chartData.length > 0 ? (chartData[0].idealRange ?? chartData[0].ratedRange) : null
   const endRange = chartData.length > 0 ? (chartData[chartData.length - 1].idealRange ?? chartData[chartData.length - 1].ratedRange) : null
+
+  // Tire pressure stats
+  const hasTirePressure = chartData.some(d => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null)
 
   // Speed histogram
   const speedBucketDefs = [
@@ -503,34 +531,74 @@ export default function DriveDetail() {
       </FadeIn>
 
       {/* === CHARTS SECTION === */}
-      {chartData.length > 1 && (
+      {chartData.length > 1 && (() => {
+        // Compute Mean/Max/Min for each signal
+        const stat = (vals: (number | null)[]) => {
+          const v = vals.filter((x): x is number => x != null)
+          if (v.length === 0) return null
+          return { mean: v.reduce((a, b) => a + b, 0) / v.length, max: Math.max(...v), min: Math.min(...v) }
+        }
+        const speedStats = stat(chartData.map(d => d.speed))
+        const powerStats = stat(chartData.map(d => d.power))
+        const idealRangeStats = stat(chartData.map(d => d.idealRange))
+        const estRangeStats = stat(chartData.map(d => d.estRange ?? d.ratedRange))
+        const socStats = stat(chartData.map(d => d.battery > 0 ? d.battery : null))
+        const usableSocStats = stat(chartData.map(d => d.usableSoc))
+        const batteryHeaterOn = drive?.battery_heater_on
+
+        type LegendItem = { color: string; dash?: boolean; label: string; mean: string; max: string; min: string }
+        const legendItems: LegendItem[] = []
+        if (speedStats) legendItems.push({ color: '#3b82f6', label: `Speed`, mean: `${speedStats.mean.toFixed(1)} ${u.speedUnit}`, max: `${speedStats.max.toFixed(1)} ${u.speedUnit}`, min: `${speedStats.min.toFixed(0)} ${u.speedUnit}` })
+        if (idealRangeStats) legendItems.push({ color: '#c084fc', dash: true, label: `Range (ideal)`, mean: `${idealRangeStats.mean.toFixed(0)} ${u.distanceUnit}`, max: `${idealRangeStats.max.toFixed(0)} ${u.distanceUnit}`, min: `${idealRangeStats.min.toFixed(0)} ${u.distanceUnit}` })
+        if (estRangeStats) legendItems.push({ color: '#a855f7', dash: true, label: `Range (est.)`, mean: `${estRangeStats.mean.toFixed(0)} ${u.distanceUnit}`, max: `${estRangeStats.max.toFixed(0)} ${u.distanceUnit}`, min: `${estRangeStats.min.toFixed(0)} ${u.distanceUnit}` })
+        if (socStats) legendItems.push({ color: '#84cc16', label: `SOC`, mean: `${socStats.mean.toFixed(0)}%`, max: `${socStats.max.toFixed(0)}%`, min: `${socStats.min.toFixed(0)}%` })
+        if (usableSocStats) legendItems.push({ color: '#22d3ee', label: `Usable SOC`, mean: `${usableSocStats.mean.toFixed(0)}%`, max: `${usableSocStats.max.toFixed(0)}%`, min: `${usableSocStats.min.toFixed(0)}%` })
+        legendItems.push({ color: '#ef4444', dash: true, label: `Battery Heater`, mean: batteryHeaterOn ? 'On' : 'Off', max: batteryHeaterOn ? 'On' : 'Off', min: batteryHeaterOn ? 'On' : 'Off' })
+        if (powerStats) legendItems.push({ color: '#f59e0b', label: `Power`, mean: `${powerStats.mean.toFixed(2)} kW`, max: `${powerStats.max.toFixed(0)} kW`, min: `${powerStats.min.toFixed(0)} kW` })
+
+        return (
         <>
-          {/* Row 1: Combined Speed/Range/SOC/Power chart */}
+          {/* Row 1: Comprehensive Drive Chart (TeslaMate-style) */}
           <FadeIn delay={0.12}>
             <GlassPanel className="p-6">
               <h3 className="section-title flex items-center gap-2 mb-4">
-                <Gauge className="h-4 w-4 text-neon-purple" /> Speed · Range · SOC · Power
+                <Activity className="h-4 w-4 text-neon-cyan" /> Drive
               </h3>
-              <div className="h-72">
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} interval="preserveStartEnd" />
-                    <YAxis yAxisId="speed" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-                    <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                    <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} unit=" kW" />
+                    <YAxis yAxisId="speed" hide />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
-                    <Area yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" fill="#a855f7" fillOpacity={0.05} strokeWidth={2} name={'Speed ' + u.speedUnit} />
-                    {chartData.some(d => d.idealRange !== null) && (
-                      <Line yAxisId="speed" type="monotone" dataKey="idealRange" stroke="#10b981" strokeWidth={1.5} dot={false} name={'Range (ideal) ' + u.distanceUnit} strokeDasharray="4 2" />
-                    )}
-                    {chartData.some(d => d.ratedRange !== null) && (
-                      <Line yAxisId="speed" type="monotone" dataKey="ratedRange" stroke="#06b6d4" strokeWidth={1} dot={false} name={'Range (rated) ' + u.distanceUnit} strokeDasharray="2 2" />
-                    )}
-                    <Line yAxisId="power" type="monotone" dataKey="power" stroke="#f59e0b" strokeWidth={1.5} dot={false} name="Power kW" />
                     <ReferenceLine yAxisId="power" y={0} stroke="rgba(255,255,255,0.1)" />
+                    <Area yAxisId="speed" type="monotone" dataKey="speed" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={1.5} name={`Speed (${u.speedUnit})`} />
+                    {chartData.some(d => d.idealRange !== null) && (
+                      <Line yAxisId="speed" type="monotone" dataKey="idealRange" stroke="#c084fc" strokeWidth={1} dot={false} name={`Range ideal (${u.distanceUnit})`} strokeDasharray="4 2" />
+                    )}
+                    {chartData.some(d => d.estRange !== null || d.ratedRange !== null) && (
+                      <Line yAxisId="speed" type="monotone" dataKey={chartData.some(d => d.estRange !== null) ? 'estRange' : 'ratedRange'} stroke="#a855f7" strokeWidth={1} dot={false} name={`Range est. (${u.distanceUnit})`} strokeDasharray="4 2" />
+                    )}
+                    <Line yAxisId="speed" type="monotone" dataKey="battery" stroke="#84cc16" strokeWidth={1.5} dot={false} name="SOC %" />
+                    {chartData.some(d => d.usableSoc !== null) && (
+                      <Line yAxisId="speed" type="monotone" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} dot={false} name="Usable SOC %" />
+                    )}
+                    <Line yAxisId="power" type="monotone" dataKey="power" stroke="#f59e0b" strokeWidth={2} dot={false} name="Power kW" />
                   </ComposedChart>
                 </ResponsiveContainer>
+              </div>
+              {/* Rich legend with Mean/Max/Min stats */}
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-[10px] leading-tight">
+                {legendItems.map(item => (
+                  <span key={item.label} className="flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="inline-block w-4 border-t-2" style={{ borderColor: item.color, borderStyle: item.dash ? 'dashed' : 'solid' }} />
+                    <strong style={{ color: item.color }}>{item.label}</strong>
+                    <span className="text-[var(--text-muted)]">Mean: {item.mean}</span>
+                    <span className="text-[var(--text-muted)]">Max: {item.max}</span>
+                    <span className="text-[var(--text-muted)]">Min: {item.min}</span>
+                  </span>
+                ))}
               </div>
             </GlassPanel>
           </FadeIn>
@@ -586,12 +654,52 @@ export default function DriveDetail() {
 
           {/* Row 3: Temperature + Speed Histogram */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {(insideTemps.length > 0 || outsideTemps.length > 0) && (
+            {hasAnyTemp && (
               <FadeIn delay={0.18}>
                 <GlassPanel className="p-6">
                   <h3 className="section-title flex items-center gap-2 mb-4">
                     <Thermometer className="h-4 w-4 text-orange-400" /> Temperatures
                   </h3>
+                  {/* Temperature & Climate summary stats */}
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    {avgOutsideTemp != null && (
+                      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                        <p className="text-[9px] text-[var(--text-muted)]">Outside Temperature</p>
+                        <p className="text-sm font-bold text-blue-400">{avgOutsideTemp.toFixed(1)}{u.tempUnit}</p>
+                      </div>
+                    )}
+                    {avgInsideTemp != null && (
+                      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                        <p className="text-[9px] text-[var(--text-muted)]">Inside Temperature</p>
+                        <p className="text-sm font-bold text-orange-400">{avgInsideTemp.toFixed(1)}{u.tempUnit}</p>
+                      </div>
+                    )}
+                    {driverTemps.length > 0 && (
+                      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                        <p className="text-[9px] text-[var(--text-muted)]">Driver Temperature</p>
+                        <p className="text-sm font-bold text-rose-400">{(driverTemps.reduce((a, b) => a + b, 0) / driverTemps.length).toFixed(1)}{u.tempUnit}</p>
+                      </div>
+                    )}
+                    {passengerTemps.length > 0 && (
+                      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                        <p className="text-[9px] text-[var(--text-muted)]">Passenger Temperature</p>
+                        <p className="text-sm font-bold text-purple-400">{(passengerTemps.reduce((a, b) => a + b, 0) / passengerTemps.length).toFixed(1)}{u.tempUnit}</p>
+                      </div>
+                    )}
+                    {climateStatus != null && (
+                      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                        <p className="text-[9px] text-[var(--text-muted)]">Climate</p>
+                        <p className={`text-sm font-bold ${climateStatus === 'On' ? 'text-neon-green' : 'text-gray-400'}`}>{climateStatus}</p>
+                      </div>
+                    )}
+                    {maxFanSpeed != null && (
+                      <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                        <p className="text-[9px] text-[var(--text-muted)]">Fan Status</p>
+                        <p className="text-sm font-bold text-cyan-400">Avg {avgFanSpeed?.toFixed(0)} · Max {maxFanSpeed}</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Temperature chart with all 4 lines */}
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData}>
@@ -606,6 +714,12 @@ export default function DriveDetail() {
                         {insideTemps.length > 0 && (
                           <Line type="monotone" dataKey="insideTemp" stroke="#f97316" strokeWidth={2} dot={false} name={'Inside ' + u.tempUnit} connectNulls />
                         )}
+                        {driverTemps.length > 0 && (
+                          <Line type="monotone" dataKey="driverTemp" stroke="#fb7185" strokeWidth={2} dot={false} name={'Driver ' + u.tempUnit} connectNulls />
+                        )}
+                        {passengerTemps.length > 0 && (
+                          <Line type="monotone" dataKey="passengerTemp" stroke="#a855f7" strokeWidth={2} dot={false} name={'Passenger ' + u.tempUnit} connectNulls />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -613,12 +727,12 @@ export default function DriveDetail() {
               </FadeIn>
             )}
 
-            <FadeIn delay={0.2}>
-              <GlassPanel className="p-6">
+            <FadeIn delay={0.2} className="h-full">
+              <GlassPanel className="p-6 h-full flex flex-col">
                 <h3 className="section-title flex items-center gap-2 mb-4">
                   <BarChart3 className="h-4 w-4 text-neon-purple" /> Speed Histogram
                 </h3>
-                <div className="h-56">
+                <div className="flex-1 min-h-[14rem]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={speedHistData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -658,8 +772,63 @@ export default function DriveDetail() {
               </div>
             </GlassPanel>
           </FadeIn>
+
+          {/* Row 5: Tire Pressure During Drive */}
+          {hasTirePressure && (() => {
+            const tpVals = (key: 'tireFl' | 'tireFr' | 'tireRl' | 'tireRr') => {
+              const vals = chartData.map(d => d[key]).filter((v): v is number => v != null && v > 0)
+              return { min: vals.length > 0 ? Math.min(...vals) : null, max: vals.length > 0 ? Math.max(...vals) : null }
+            }
+            const fl = tpVals('tireFl'), fr = tpVals('tireFr'), rl = tpVals('tireRl'), rr = tpVals('tireRr')
+            const tpStats = [
+              { label: 'Front Left', color: '#3b82f6', ...fl },
+              { label: 'Front Right', color: '#10b981', ...fr },
+              { label: 'Rear Left', color: '#f59e0b', ...rl },
+              { label: 'Rear Right', color: '#ef4444', ...rr },
+            ]
+            return (
+              <FadeIn delay={0.24}>
+                <GlassPanel className="p-6">
+                  <h3 className="section-title flex items-center gap-2 mb-4">
+                    <CircleDot className="h-4 w-4 text-neon-cyan" /> Tire Pressure
+                  </h3>
+                  {/* Summary stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+                    {tpStats.map(tp => (
+                      <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+                        <p className="text-[10px] font-semibold mb-2" style={{ color: tp.color }}>{tp.label}</p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Min (above zero): <strong className="text-[var(--text-primary)]">{tp.min != null ? `${tp.min.toFixed(1)}${u.pressureUnit}` : '—'}</strong>
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Max: <strong className="text-[var(--text-primary)]">{tp.max != null ? `${tp.max.toFixed(1)}${u.pressureUnit}` : '—'}</strong>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Chart */}
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
+                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                        <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={`FL (${u.pressureUnit})`} connectNulls />
+                        <Line type="monotone" dataKey="tireFr" stroke="#10b981" strokeWidth={2} dot={false} name={`FR (${u.pressureUnit})`} connectNulls />
+                        <Line type="monotone" dataKey="tireRl" stroke="#f59e0b" strokeWidth={2} dot={false} name={`RL (${u.pressureUnit})`} connectNulls />
+                        <Line type="monotone" dataKey="tireRr" stroke="#ef4444" strokeWidth={2} dot={false} name={`RR (${u.pressureUnit})`} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </GlassPanel>
+              </FadeIn>
+            )
+          })()}
         </>
-      )}
+        )
+      })()}
     </div>
   )
 }

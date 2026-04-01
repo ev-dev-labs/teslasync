@@ -176,7 +176,9 @@ func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool)
 func signalInt(signals map[string]interface{}, keys ...string) (int, bool) {
 	for _, key := range keys {
 		if v, ok := signals[key]; ok {
-			return int(toFloat(v)), true
+			if f, fok := toFloatOk(v); fok {
+				return int(f), true
+			}
 		}
 	}
 	return 0, false

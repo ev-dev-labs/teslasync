@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -466,8 +467,8 @@ func (h *TelemetryHandler) trackMileage(ctx context.Context, vehicleID int64, si
 	if !ok {
 		return
 	}
-	odometer := toFloat(odomVal)
-	if odometer <= 0 {
+	odometer, odOk := toFloatOk(odomVal)
+	if !odOk || odometer <= 0 {
 		return
 	}
 	if err := h.mileageRepo.UpsertDaily(ctx, vehicleID, odometer); err != nil {
@@ -498,26 +499,61 @@ func (h *TelemetryHandler) trackTirePressure(ctx context.Context, vehicleID int6
 		rr, rrOk = signals["TpmsPressureRr"]
 	}
 
-	if !flOk && !frOk && !rlOk && !rrOk {
-		return // no tire pressure in this batch
+	_, hasHardWarn := signals["TpmsHardWarnings"]
+	_, hasSoftWarn := signals["TpmsSoftWarnings"]
+	_, hasLastSeenFL := signals["TpmsLastSeenPressureTimeFl"]
+	if !flOk && !frOk && !rlOk && !rrOk && !hasHardWarn && !hasSoftWarn && !hasLastSeenFL {
+		return // no tire-pressure-related data in this batch
 	}
 
 	snap := &models.TirePressureSnapshot{VehicleID: vehicleID}
 	if flOk {
-		v := toFloat(fl)
-		snap.FrontLeft = &v
+		if v, ok := toFloatOk(fl); ok {
+			snap.FrontLeft = &v
+		}
 	}
 	if frOk {
-		v := toFloat(fr)
-		snap.FrontRight = &v
+		if v, ok := toFloatOk(fr); ok {
+			snap.FrontRight = &v
+		}
 	}
 	if rlOk {
-		v := toFloat(rl)
-		snap.RearLeft = &v
+		if v, ok := toFloatOk(rl); ok {
+			snap.RearLeft = &v
+		}
 	}
 	if rrOk {
-		v := toFloat(rr)
-		snap.RearRight = &v
+		if v, ok := toFloatOk(rr); ok {
+			snap.RearRight = &v
+		}
+	}
+	if v, ok := signals["TpmsHardWarnings"]; ok {
+		s := toString(v)
+		snap.TpmsHardWarn = &s
+	}
+	if v, ok := signals["TpmsSoftWarnings"]; ok {
+		s := toString(v)
+		snap.TpmsSoftWarn = &s
+	}
+	if v, ok := signals["TpmsLastSeenPressureTimeFl"]; ok {
+		if t := toTimestamp(v); t != nil {
+			snap.LastSeenTimeFl = t
+		}
+	}
+	if v, ok := signals["TpmsLastSeenPressureTimeFr"]; ok {
+		if t := toTimestamp(v); t != nil {
+			snap.LastSeenTimeFr = t
+		}
+	}
+	if v, ok := signals["TpmsLastSeenPressureTimeRl"]; ok {
+		if t := toTimestamp(v); t != nil {
+			snap.LastSeenTimeRl = t
+		}
+	}
+	if v, ok := signals["TpmsLastSeenPressureTimeRr"]; ok {
+		if t := toTimestamp(v); t != nil {
+			snap.LastSeenTimeRr = t
+		}
 	}
 	if err := h.tireRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store tire pressure")
@@ -616,17 +652,26 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 
 	// Location — may come as Location object or separate Latitude/Longitude
 	if loc, ok := signals["Location"].(map[string]interface{}); ok {
-		pos.Latitude = toFloat(loc["latitude"])
-		pos.Longitude = toFloat(loc["longitude"])
-		hasLocation = pos.Latitude != 0 || pos.Longitude != 0
+		if lat, lok := toFloatOk(loc["latitude"]); lok {
+			pos.Latitude = lat
+			hasLocation = true
+		}
+		if lng, lok := toFloatOk(loc["longitude"]); lok {
+			pos.Longitude = lng
+			hasLocation = true
+		}
 	}
 	if v, ok := signals["Latitude"]; ok {
-		pos.Latitude = toFloat(v)
-		hasLocation = true
+		if f, fok := toFloatOk(v); fok {
+			pos.Latitude = f
+			hasLocation = true
+		}
 	}
 	if v, ok := signals["Longitude"]; ok {
-		pos.Longitude = toFloat(v)
-		hasLocation = true
+		if f, fok := toFloatOk(v); fok {
+			pos.Longitude = f
+			hasLocation = true
+		}
 	}
 
 	if !hasLocation {
@@ -648,51 +693,69 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 
 	// Driving signals
 	if v, ok := signals["VehicleSpeed"]; ok {
-		f := toFloat(v)
-		pos.Speed = &f
+		if f, fok := toFloatOk(v); fok {
+			pos.Speed = &f
+		}
 	}
 	if v, ok := signals["PackPower"]; ok {
-		f := toFloat(v)
-		pos.Power = &f
+		if f, fok := toFloatOk(v); fok {
+			pos.Power = &f
+		}
 	}
 	if v, ok := signals["GpsHeading"]; ok {
-		i := int(toFloat(v))
-		pos.Heading = &i
+		if f, fok := toFloatOk(v); fok {
+			i := int(f)
+			pos.Heading = &i
+		}
 	} else if v, ok := signals["Heading"]; ok {
-		i := int(toFloat(v))
-		pos.Heading = &i
+		if f, fok := toFloatOk(v); fok {
+			i := int(f)
+			pos.Heading = &i
+		}
 	}
 
-	// Battery & range
+	// Battery & range — use toFloatOk to distinguish 0% from missing signal
 	if v, ok := signals["BatteryLevel"]; ok {
-		pos.BatteryLvl = int(toFloat(v))
+		if f, fok := toFloatOk(v); fok {
+			pos.BatteryLvl = int(f)
+		}
 	} else if v, ok := signals["Soc"]; ok {
-		pos.BatteryLvl = int(toFloat(v))
+		if f, fok := toFloatOk(v); fok {
+			pos.BatteryLvl = int(f)
+		}
 	} else if v, ok := signals["StateOfCharge"]; ok {
-		pos.BatteryLvl = int(toFloat(v))
+		if f, fok := toFloatOk(v); fok {
+			pos.BatteryLvl = int(f)
+		}
 	}
 	if v, ok := signals["IdealBatteryRange"]; ok {
-		f := toFloat(v)
-		pos.IdealRange = &f
+		if f, fok := toFloatOk(v); fok {
+			pos.IdealRange = &f
+		}
 	}
 	if v, ok := signals["EstBatteryRange"]; ok {
-		f := toFloat(v)
-		pos.RatedRange = &f
+		if f, fok := toFloatOk(v); fok {
+			pos.RatedRange = &f
+		}
 	}
 
 	// Climate
 	if v, ok := signals["InsideTemp"]; ok {
-		f := toFloat(v)
-		pos.InsideTemp = &f
+		if f, fok := toFloatOk(v); fok {
+			pos.InsideTemp = &f
+		}
 	}
 	if v, ok := signals["OutsideTemp"]; ok {
-		f := toFloat(v)
-		pos.OutsideTemp = &f
+		if f, fok := toFloatOk(v); fok {
+			pos.OutsideTemp = &f
+		}
 	}
 
-	// Odometer
+	// Odometer — use toFloatOk to avoid storing 0 for missing signal
 	if v, ok := signals["Odometer"]; ok {
-		pos.Odometer = toFloat(v)
+		if f, fok := toFloatOk(v); fok {
+			pos.Odometer = f
+		}
 	}
 
 	return pos
@@ -833,6 +896,34 @@ func toBool(v interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func toTimestamp(v interface{}) *time.Time {
+	switch val := v.(type) {
+	case string:
+		if t, err := time.Parse(time.RFC3339, val); err == nil {
+			return &t
+		}
+		if t, err := time.Parse(time.RFC3339Nano, val); err == nil {
+			return &t
+		}
+		// Try unix timestamp as string
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			sec := int64(f)
+			nsec := int64((f - float64(sec)) * 1e9)
+			t := time.Unix(sec, nsec)
+			return &t
+		}
+	case float64:
+		sec := int64(val)
+		nsec := int64((val - float64(sec)) * 1e9)
+		t := time.Unix(sec, nsec)
+		return &t
+	case int64:
+		t := time.Unix(val, 0)
+		return &t
+	}
+	return nil
 }
 
 // trackMotor stores motor/powertrain snapshots when relevant signals arrive.
@@ -1023,6 +1114,14 @@ func (h *TelemetryHandler) trackMotor(ctx context.Context, vehicleID int64, sign
 	if v, ok := signals["DriveRail"]; ok {
 		b := toBool(v)
 		snap.DriveRail = &b
+	}
+	if v, ok := signals["LifetimeEnergyGainedRegen"]; ok {
+		f := toFloat(v)
+		snap.LifetimeEnergyGainedRegen = &f
+	}
+	if v, ok := signals["LifetimeEnergyUsedDrive"]; ok {
+		f := toFloat(v)
+		snap.LifetimeEnergyUsedDrive = &f
 	}
 	if err := h.motorRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store motor snapshot")
@@ -1530,6 +1629,18 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		f := toFloat(v)
 		snap.PowersharePowerKw = &f
 	}
+	if v, ok := signals["ScheduledChargingStartTime"]; ok {
+		s := toString(v)
+		snap.ScheduledChargingStartTime = &s
+	}
+	if v, ok := signals["ScheduledDepartureTime"]; ok {
+		s := toString(v)
+		snap.ScheduledDepartureTime = &s
+	}
+	if v, ok := signals["ExpectedEnergyPercentAtTripArrival"]; ok {
+		f := toFloat(v)
+		snap.ExpectedEnergyPctAtArrival = &f
+	}
 	if err := h.chargingTelemetryRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store charging telemetry")
 	}
@@ -1583,6 +1694,10 @@ func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, sign
 	if v, ok := signals["MediaAudioVolumeMax"]; ok {
 		f := toFloat(v)
 		snap.AudioVolumeMax = &f
+	}
+	if v, ok := signals["MediaAudioVolumeIncrement"]; ok {
+		f := toFloat(v)
+		snap.AudioVolumeIncrement = &f
 	}
 	if err := h.mediaRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store media snapshot")
@@ -1675,6 +1790,10 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 		i := int(toFloat(v))
 		snap.SoftwareUpdateExpectedDuration = &i
 	}
+	if v, ok := signals["SoftwareUpdateScheduledStartTime"]; ok {
+		s := toString(v)
+		snap.SoftwareUpdateScheduledStart = &s
+	}
 	if err := h.vehicleConfigRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store vehicle config snapshot")
 	}
@@ -1685,7 +1804,9 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 	_, hasDest := signals["DestinationName"]
 	_, hasMiles := signals["MilesToArrival"]
 	_, hasRoute := signals["RouteLine"]
-	if !hasDest && !hasMiles && !hasRoute {
+	_, hasLocation := signals["Location"]
+	_, hasRouteUpdated := signals["RouteLastUpdated"]
+	if !hasDest && !hasMiles && !hasRoute && !hasLocation && !hasRouteUpdated {
 		return
 	}
 
@@ -1745,6 +1866,23 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 	if v, ok := signals["GpsState"]; ok {
 		b := toBool(v)
 		snap.GpsState = &b
+	}
+	if v, ok := signals["RouteLastUpdated"]; ok {
+		if t := toTimestamp(v); t != nil {
+			snap.RouteLastUpdated = t
+		}
+	}
+	if v, ok := signals["Location"]; ok {
+		if loc, ok2 := v.(map[string]interface{}); ok2 {
+			if lat, ok3 := loc["latitude"]; ok3 {
+				f := toFloat(lat)
+				snap.CurrentLat = &f
+			}
+			if lon, ok3 := loc["longitude"]; ok3 {
+				f := toFloat(lon)
+				snap.CurrentLon = &f
+			}
+		}
 	}
 	if err := h.locationRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store location snapshot")

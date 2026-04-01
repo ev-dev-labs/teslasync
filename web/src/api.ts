@@ -151,6 +151,21 @@ export interface ChargingSession {
   location_name: string | null
   inside_temp_avg: number | null
   outside_temp_avg: number | null
+  // Joined address details (detail view only)
+  address?: {
+    id: number
+    display_name: string
+    latitude: number
+    longitude: number
+    name: string | null
+    house_number: string | null
+    road: string | null
+    city: string | null
+    county: string | null
+    state: string | null
+    country: string | null
+    postcode: string | null
+  }
 }
 
 export interface DriveTelemetryReading {

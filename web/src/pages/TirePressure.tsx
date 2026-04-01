@@ -32,7 +32,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
   const bg = isLow ? 'bg-neon-red/20' : isHigh ? 'bg-neon-amber/20' : 'bg-neon-green/20'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <div className="glass-card p-4 sm:p-5 flex flex-col items-center justify-center gap-3 h-full">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -339,33 +339,37 @@ export default function TirePressure() {
       )}
 
       {!loadingHistory && compositeLatest && (
-        <div className="mb-8">
-          <GlassPanel className="p-6 flex justify-center">
-            <TireCarVisualization
-              fl={convFL}
-              fr={convFR}
-              rl={convRL}
-              rr={convRR}
-              unit={pressureUnit}
-              timestamps={compositeLatest?.timestamps}
-            />
-          </GlassPanel>
+        <div className="mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4 items-stretch">
+            {/* Car Visualization — constrained to viewport */}
+            <GlassPanel className="p-4 flex items-center justify-center">
+              <div className="w-full max-h-[55vh]" style={{ aspectRatio: '2/3', maxWidth: '340px' }}>
+                <TireCarVisualization
+                  fl={convFL}
+                  fr={convFR}
+                  rl={convRL}
+                  rr={convRR}
+                  unit={pressureUnit}
+                  timestamps={compositeLatest?.timestamps}
+                />
+              </div>
+            </GlassPanel>
+
+            {/* Pressure Gauges — 2×2 grid beside car, same height */}
+            <div className="grid grid-cols-2 gap-3 h-full">
+              <PressureGauge label="Front Left" value={convFL} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+              <PressureGauge label="Front Right" value={convFR} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+              <PressureGauge label="Rear Left" value={convRL} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+              <PressureGauge label="Rear Right" value={convRR} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
+            </div>
+          </div>
         </div>
       )}
 
-      {loadingHistory ? (
+      {loadingHistory && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[1,2,3,4].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <PressureGauge label="Front Left" value={convFL} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
-            <PressureGauge label="Front Right" value={convFR} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
-            <PressureGauge label="Rear Left" value={convRL} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
-            <PressureGauge label="Rear Right" value={convRR} min={convertPressure(2.0)} max={convertPressure(3.5)} unit={pressureUnit} />
-          </div>
-        </>
       )}
 
       {/* History Chart */}

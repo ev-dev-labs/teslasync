@@ -15,8 +15,6 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	if data != nil {
 		_ = json.NewEncoder(w).Encode(data)
-	} else {
-		_, _ = w.Write([]byte("null"))
 	}
 }
 
@@ -74,9 +72,6 @@ func pagination(r *http.Request) (limit, offset int) {
 		if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 1000 {
 			limit = l
 		}
-	}
-	if limit > 500 {
-		limit = 500
 	}
 	if v := r.URL.Query().Get("offset"); v != "" {
 		if o, err := strconv.Atoi(v); err == nil && o >= 0 {

@@ -91,13 +91,20 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 }
 
 func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingSession, error) {
-	query := `SELECT id, vehicle_id, start_date, end_date, address_id,
-		charge_energy_added, charge_energy_used, start_battery_level, end_battery_level,
-		start_range_km, end_range_km, charger_phases, charger_voltage, charger_actual_current,
-		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min,
-		latitude, longitude, location_name, inside_temp_avg, outside_temp_avg
-		FROM charging_sessions WHERE id=$1`
+	query := `SELECT cs.id, cs.vehicle_id, cs.start_date, cs.end_date, cs.address_id,
+		cs.charge_energy_added, cs.charge_energy_used, cs.start_battery_level, cs.end_battery_level,
+		cs.start_range_km, cs.end_range_km, cs.charger_phases, cs.charger_voltage, cs.charger_actual_current,
+		cs.charger_power, cs.fast_charger_type, cs.fast_charger_brand, cs.conn_charge_cable, cs.cost, cs.duration_min,
+		cs.latitude, cs.longitude, cs.location_name, cs.inside_temp_avg, cs.outside_temp_avg,
+		a.id, a.display_name, a.latitude, a.longitude, a.name, a.house_number,
+		a.road, a.city, a.county, a.state, a.country, a.postcode
+		FROM charging_sessions cs
+		LEFT JOIN addresses a ON a.id = cs.address_id
+		WHERE cs.id=$1`
 	c := &models.ChargingSession{}
+	var addrID *int64
+	var addrDisplay, addrName, addrHouse, addrRoad, addrCity, addrCounty, addrState, addrCountry, addrPost *string
+	var addrLat, addrLon *float64
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&c.ID, &c.VehicleID, &c.StartDate, &c.EndDate, &c.AddressID,
 		&c.ChargeEnergyAdded, &c.ChargeEnergyUsed, &c.StartBatteryLevel, &c.EndBatteryLevel,
@@ -105,11 +112,56 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 		&c.ChargerActualCurrent, &c.ChargerPower, &c.FastChargerType, &c.FastChargerBrand,
 		&c.ConnChargeCable, &c.Cost, &c.DurationMin,
 		&c.Latitude, &c.Longitude, &c.LocationName, &c.InsideTempAvg, &c.OutsideTempAvg,
+		&addrID, &addrDisplay, &addrLat, &addrLon, &addrName, &addrHouse,
+		&addrRoad, &addrCity, &addrCounty, &addrState, &addrCountry, &addrPost,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
-	return c, err
+	if err != nil {
+		return nil, err
+	}
+	if addrID != nil {
+		c.Address = &models.Address{
+			ID:          *addrID,
+			DisplayName: ptrStr(addrDisplay),
+			Latitude:    ptrFloat(addrLat),
+			Longitude:   ptrFloat(addrLon),
+			Name:        addrName,
+			HouseNumber: addrHouse,
+			Road:        addrRoad,
+			City:        addrCity,
+			County:      addrCounty,
+			State:       addrState,
+			Country:     addrCountry,
+			PostCode:    addrPost,
+		}
+		// Populate lat/lon/location_name from address if not set on session
+		if c.Latitude == nil && addrLat != nil {
+			c.Latitude = addrLat
+		}
+		if c.Longitude == nil && addrLon != nil {
+			c.Longitude = addrLon
+		}
+		if c.LocationName == nil && addrDisplay != nil {
+			c.LocationName = addrDisplay
+		}
+	}
+	return c, nil
+}
+
+func ptrStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+func ptrFloat(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 // GetStale returns charging sessions that have no end_date and started before the cutoff time.

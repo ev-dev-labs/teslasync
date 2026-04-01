@@ -15,8 +15,8 @@ func NewChargingTelemetryRepo(db *DB) *ChargingTelemetryRepo {
 }
 
 func (r *ChargingTelemetryRepo) Insert(ctx context.Context, snap *models.ChargingTelemetry) error {
-	query := `INSERT INTO charging_telemetry (vehicle_id, battery_level, soc, charge_state, detailed_charge_state, charge_limit_soc, charge_amps, charge_current_request, charge_current_request_max, charge_enable_request, charger_voltage, charger_phases, charge_rate_mph, dc_charging_power, dc_charging_energy_in, ac_charging_power, ac_charging_energy_in, energy_remaining, est_battery_range, ideal_battery_range, rated_range, pack_voltage, pack_current, charge_port_door_open, charge_port_latch, charge_port_cold_weather_mode, charging_cable_type, fast_charger_present, fast_charger_type, time_to_full_charge, estimated_hours_to_charge, scheduled_charging_mode, scheduled_charging_pending, preconditioning_enabled, brick_voltage_max, brick_voltage_min, num_brick_voltage_max, num_brick_voltage_min, module_temp_max, module_temp_min, num_module_temp_max, num_module_temp_min, battery_heater_on, not_enough_power_to_heat, bms_state, bms_fullcharge_complete, dcdc_enable, isolation_resistance, lifetime_energy_used, supercharger_session_trip_planner, powershare_status, powershare_type, powershare_stop_reason, powershare_hours_left, powershare_power_kw)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55) RETURNING id`
+	query := `INSERT INTO charging_telemetry (vehicle_id, battery_level, soc, charge_state, detailed_charge_state, charge_limit_soc, charge_amps, charge_current_request, charge_current_request_max, charge_enable_request, charger_voltage, charger_phases, charge_rate_mph, dc_charging_power, dc_charging_energy_in, ac_charging_power, ac_charging_energy_in, energy_remaining, est_battery_range, ideal_battery_range, rated_range, pack_voltage, pack_current, charge_port_door_open, charge_port_latch, charge_port_cold_weather_mode, charging_cable_type, fast_charger_present, fast_charger_type, time_to_full_charge, estimated_hours_to_charge, scheduled_charging_mode, scheduled_charging_pending, preconditioning_enabled, brick_voltage_max, brick_voltage_min, num_brick_voltage_max, num_brick_voltage_min, module_temp_max, module_temp_min, num_module_temp_max, num_module_temp_min, battery_heater_on, not_enough_power_to_heat, bms_state, bms_fullcharge_complete, dcdc_enable, isolation_resistance, lifetime_energy_used, supercharger_session_trip_planner, powershare_status, powershare_type, powershare_stop_reason, powershare_hours_left, powershare_power_kw, scheduled_charging_start_time, scheduled_departure_time, expected_energy_pct_at_arrival)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.BatteryLevel, snap.Soc, snap.ChargeState, snap.DetailedChargeState,
 		snap.ChargeLimitSoc, snap.ChargeAmps, snap.ChargeCurrentRequest, snap.ChargeCurrentRequestMax,
@@ -34,6 +34,7 @@ func (r *ChargingTelemetryRepo) Insert(ctx context.Context, snap *models.Chargin
 		snap.SuperchargerSessionTripPlanner,
 		snap.PowershareStatus, snap.PowershareType, snap.PowershareStopReason,
 		snap.PowershareHoursLeft, snap.PowersharePowerKw,
+		snap.ScheduledChargingStartTime, snap.ScheduledDepartureTime, snap.ExpectedEnergyPctAtArrival,
 	).Scan(&snap.ID)
 }
 
