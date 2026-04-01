@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getGeofences, createGeofence, updateGeofence, deleteGeofence, Geofence } from '../api'
-import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap, Navigation } from 'lucide-react'
+import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap, Navigation, RefreshCw } from 'lucide-react'
 import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
@@ -113,26 +113,45 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
               placeholder="Home"
             />
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (!navigator.geolocation) { setLocStatus('Geolocation not supported'); return }
-              setLocStatus('Getting location...')
-              navigator.geolocation.getCurrentPosition(
-                pos => {
-                  setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
-                  setLocStatus(null)
-                },
-                () => { setLocStatus('Location access denied') },
-                { enableHighAccuracy: true, timeout: 10000 }
-              )
-            }}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border transition-colors hover:bg-white/[0.03]"
-            style={{ borderColor: 'var(--glass-border)', color: 'var(--text-secondary)' }}
-          >
-            <Navigation className="h-3.5 w-3.5" /> Use Current Location
-          </button>
-          {locStatus && <p className="text-[10px] text-center" style={{ color: locStatus.includes('denied') ? 'var(--neon-red, #ef4444)' : 'var(--text-muted)' }}>{locStatus}</p>}
+          <div className="flex flex-col justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                if (!navigator.geolocation) { setLocStatus('Geolocation not supported'); return }
+                setLocStatus('locating')
+                navigator.geolocation.getCurrentPosition(
+                  pos => {
+                    setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
+                    setLocStatus('success')
+                    setTimeout(() => setLocStatus(null), 2000)
+                  },
+                  () => { setLocStatus('denied') },
+                  { enableHighAccuracy: true, timeout: 10000 }
+                )
+              }}
+              disabled={locStatus === 'locating'}
+              className={clsx(
+                'w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',
+                locStatus === 'success'
+                  ? 'bg-neon-green/20 text-neon-green border border-neon-green/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                  : locStatus === 'denied'
+                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  : locStatus === 'locating'
+                  ? 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 animate-pulse'
+                  : 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 hover:bg-neon-cyan/20 hover:shadow-[0_0_15px_rgba(0,240,255,0.1)]'
+              )}
+            >
+              {locStatus === 'locating' ? (
+                <><RefreshCw className="h-4 w-4 animate-spin" /> Locating...</>
+              ) : locStatus === 'success' ? (
+                <><Check className="h-4 w-4" /> Location Set</>
+              ) : locStatus === 'denied' ? (
+                <><X className="h-4 w-4" /> Access Denied</>
+              ) : (
+                <><Navigation className="h-4 w-4" /> Use My Location</>
+              )}
+            </button>
+          </div>
           <div>
             <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Latitude</label>
             <input
