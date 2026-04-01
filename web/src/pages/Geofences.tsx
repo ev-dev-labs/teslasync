@@ -113,47 +113,40 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
               placeholder="Home"
             />
           </div>
-          <div className="flex flex-col justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                if (!navigator.geolocation) { setLocStatus('Geolocation not supported'); return }
-                setLocStatus('locating')
-                navigator.geolocation.getCurrentPosition(
-                  pos => {
-                    setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
-                    setLocStatus('success')
-                    setTimeout(() => setLocStatus(null), 2000)
-                  },
-                  () => { setLocStatus('denied') },
-                  { enableHighAccuracy: true, timeout: 10000 }
-                )
-              }}
-              disabled={locStatus === 'locating'}
-              className={clsx(
-                'w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',
-                locStatus === 'success'
-                  ? 'bg-neon-green/20 text-neon-green border border-neon-green/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
-                  : locStatus === 'denied'
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  : locStatus === 'locating'
-                  ? 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 animate-pulse'
-                  : 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 hover:bg-neon-cyan/20 hover:shadow-[0_0_15px_rgba(0,240,255,0.1)]'
-              )}
-            >
-              {locStatus === 'locating' ? (
-                <><RefreshCw className="h-4 w-4 animate-spin" /> Locating...</>
-              ) : locStatus === 'success' ? (
-                <><Check className="h-4 w-4" /> Location Set</>
-              ) : locStatus === 'denied' ? (
-                <><X className="h-4 w-4" /> Access Denied</>
-              ) : (
-                <><Navigation className="h-4 w-4" /> Use My Location</>
-              )}
-            </button>
-          </div>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Latitude</label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <label className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">Latitude</label>
+              <button
+                type="button"
+                title="Use current location"
+                onClick={() => {
+                  if (!navigator.geolocation) { setLocStatus('denied'); return }
+                  setLocStatus('locating')
+                  navigator.geolocation.getCurrentPosition(
+                    pos => {
+                      setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
+                      setLocStatus('success')
+                      setTimeout(() => setLocStatus(null), 2000)
+                    },
+                    () => { setLocStatus('denied') },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                  )
+                }}
+                disabled={locStatus === 'locating'}
+                className={clsx(
+                  'p-1 rounded-md transition-all duration-200',
+                  locStatus === 'success' ? 'text-neon-green bg-neon-green/10'
+                    : locStatus === 'denied' ? 'text-red-400 bg-red-500/10'
+                    : locStatus === 'locating' ? 'text-neon-cyan animate-pulse'
+                    : 'text-neon-cyan/60 hover:text-neon-cyan hover:bg-neon-cyan/10'
+                )}
+              >
+                {locStatus === 'locating' ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  : locStatus === 'success' ? <Check className="h-3.5 w-3.5" />
+                  : locStatus === 'denied' ? <X className="h-3.5 w-3.5" />
+                  : <Navigation className="h-3.5 w-3.5" />}
+              </button>
+            </div>
             <input
               type="number"
               step="any"
