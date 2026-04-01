@@ -5,6 +5,7 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
+import { useSettings } from '../hooks/useSettings'
 
 /* ------------------------------------------------------------------ */
 /*  Chart tooltip                                                      */
@@ -137,6 +138,7 @@ export default function NavigationRoute() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { convertDistance, distanceUnit } = useSettings()
 
   /* Latest snapshot for active navigation & location status */
   const { data: latest, isLoading: loadingLatest } = useQuery({
@@ -295,7 +297,7 @@ export default function NavigationRoute() {
                   <div className="flex items-center gap-1.5">
                     <Route className="h-4 w-4 text-neon-cyan" />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {latest!.miles_to_arrival.toFixed(1)} mi
+                      {convertDistance(latest!.miles_to_arrival * 1.60934).toFixed(1)} {distanceUnit}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>remaining</span>
                   </div>
@@ -439,7 +441,7 @@ export default function NavigationRoute() {
                       </div>
                     </td>
                     <td className="py-2 px-3 text-right whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.miles != null ? `${row.miles.toFixed(1)} mi` : '—'}
+                      {row.miles != null ? `${convertDistance(row.miles * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
                     </td>
                     <td className="py-2 px-3 text-right whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                       {row.minutes != null ? `${Math.round(row.minutes)} min` : '—'}
@@ -509,8 +511,8 @@ export default function NavigationRoute() {
             <StatCard
               icon={Route}
               label="Avg Trip Distance"
-              value={stats.avgDistance > 0 ? `${stats.avgDistance.toFixed(1)} mi` : '—'}
-              sub="miles to arrival average"
+              value={stats.avgDistance > 0 ? `${convertDistance(stats.avgDistance * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
+              sub={`${distanceUnit} to arrival average`}
               color="text-neon-green"
             />
             <StatCard

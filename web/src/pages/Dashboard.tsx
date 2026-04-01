@@ -814,15 +814,13 @@ export default function Dashboard() {
                   ]
                   const getPressureColor = (bar: number | null) => {
                     if (bar == null) return 'text-[var(--text-muted)]'
-                    const psi = bar * 14.5038
-                    if (psi < 30 || psi > 45) return 'text-neon-red'
-                    if (psi < 33 || psi > 42) return 'text-neon-amber'
+                    if (bar < 2.068 || bar > 3.103) return 'text-neon-red'
+                    if (bar < 2.275 || bar > 2.896) return 'text-neon-amber'
                     return 'text-neon-green'
                   }
                   const allNormal = tires.every(t => {
                     if (t.value == null) return true
-                    const psi = t.value * 14.5038
-                    return psi >= 33 && psi <= 42
+                    return t.value >= 2.275 && t.value <= 2.896
                   })
                   return (
                     <div className="space-y-3">

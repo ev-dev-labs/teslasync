@@ -52,7 +52,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 export default function VehicleDetail() {
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
-  const { convertDistance, convertSpeed, convertTemp, distanceUnit, speedUnit, tempUnit } = useSettings()
+  const { convertDistance, convertSpeed, convertTemp, convertPressure, distanceUnit, speedUnit, tempUnit, pressureUnit } = useSettings()
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -570,37 +570,50 @@ export default function VehicleDetail() {
                   <Gauge className="h-4 w-4 text-neon-cyan" /> Tire Pressure
                 </h3>
                 {tireData ? (() => {
-                  const toPsi = (bar: number | null) => bar != null ? bar * 14.5038 : null
+                  const toDisplay = (bar: number | null) => bar != null ? convertPressure(bar) : null
                   const tires = [
-                    { label: 'FL', psi: toPsi(tireData.front_left) },
-                    { label: 'FR', psi: toPsi(tireData.front_right) },
-                    { label: 'RL', psi: toPsi(tireData.rear_left) },
-                    { label: 'RR', psi: toPsi(tireData.rear_right) },
+                    { label: 'FL', pressure: toDisplay(tireData.front_left) },
+                    { label: 'FR', pressure: toDisplay(tireData.front_right) },
+                    { label: 'RL', pressure: toDisplay(tireData.rear_left) },
+                    { label: 'RR', pressure: toDisplay(tireData.rear_right) },
                   ]
-                  const getColor = (psi: number | null) => {
-                    if (psi == null) return 'text-gray-500'
-                    if (psi < 30 || psi > 50) return 'text-red-400'
-                    if (psi < 35 || psi > 45) return 'text-amber-400'
+                  const getColor = (val: number | null) => {
+                    if (val == null) return 'text-gray-500'
+                    const psi = val // already in display unit; thresholds converted below
+                    const lowCrit = convertPressure(2.068) // ~30 PSI
+                    const lowWarn = convertPressure(2.413) // ~35 PSI
+                    const highWarn = convertPressure(3.103) // ~45 PSI
+                    const highCrit = convertPressure(3.447) // ~50 PSI
+                    if (psi < lowCrit || psi > highCrit) return 'text-red-400'
+                    if (psi < lowWarn || psi > highWarn) return 'text-amber-400'
                     return 'text-green-400'
                   }
-                  const getBorder = (psi: number | null) => {
-                    if (psi == null) return 'border-gray-600/30'
-                    if (psi < 30 || psi > 50) return 'border-red-500/30'
-                    if (psi < 35 || psi > 45) return 'border-amber-500/30'
+                  const getBorder = (val: number | null) => {
+                    if (val == null) return 'border-gray-600/30'
+                    const lowCrit = convertPressure(2.068)
+                    const lowWarn = convertPressure(2.413)
+                    const highWarn = convertPressure(3.103)
+                    const highCrit = convertPressure(3.447)
+                    if (val < lowCrit || val > highCrit) return 'border-red-500/30'
+                    if (val < lowWarn || val > highWarn) return 'border-amber-500/30'
                     return 'border-green-500/30'
                   }
-                  const allGood = tires.every(t => t.psi != null && t.psi >= 35 && t.psi <= 45)
-                  const anyBad = tires.some(t => t.psi != null && (t.psi < 30 || t.psi > 50))
+                  const lowWarn = convertPressure(2.413)
+                  const highWarn = convertPressure(3.103)
+                  const allGood = tires.every(t => t.pressure != null && t.pressure >= lowWarn && t.pressure <= highWarn)
+                  const lowCrit = convertPressure(2.068)
+                  const highCrit = convertPressure(3.447)
+                  const anyBad = tires.some(t => t.pressure != null && (t.pressure < lowCrit || t.pressure > highCrit))
                   return (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-3">
                         {tires.map(t => (
-                          <div key={t.label} className={clsx('rounded-xl border bg-white/[0.02] p-4 text-center', getBorder(t.psi))}>
+                          <div key={t.label} className={clsx('rounded-xl border bg-white/[0.02] p-4 text-center', getBorder(t.pressure))}>
                             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t.label}</p>
-                            <p className={clsx('text-xl font-bold font-mono', getColor(t.psi))}>
-                              {t.psi != null ? t.psi.toFixed(1) : '—'}
+                            <p className={clsx('text-xl font-bold font-mono', getColor(t.pressure))}>
+                              {t.pressure != null ? t.pressure.toFixed(1) : '—'}
                             </p>
-                            <p className="text-[10px] text-[var(--text-muted)]">PSI</p>
+                            <p className="text-[10px] text-[var(--text-muted)]">{pressureUnit}</p>
                           </div>
                         ))}
                       </div>
@@ -752,7 +765,7 @@ export default function VehicleDetail() {
                             </p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                               {locationData.miles_to_arrival != null && (
-                                <span>{locationData.miles_to_arrival.toFixed(1)} mi</span>
+                                <span>{convertDistance(locationData.miles_to_arrival * 1.60934).toFixed(1)} {distanceUnit}</span>
                               )}
                               {locationData.minutes_to_arrival != null && (
                                 <span>{Math.round(locationData.minutes_to_arrival)} min</span>

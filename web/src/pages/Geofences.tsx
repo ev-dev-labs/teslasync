@@ -5,6 +5,7 @@ import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, L
 import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
+import { useSettings } from '../hooks/useSettings'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapContainer, TileLayer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
@@ -25,6 +26,7 @@ const GEOFENCE_COLORS = ['#a855f7', '#00f0ff', '#10b981', '#f59e0b', '#ef4444', 
 function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect }: {
   geofence: Geofence; onEdit: () => void; onDelete: () => void; color: string; isSelected: boolean; onSelect: () => void
 }) {
+  const { convertDistance, distanceUnit } = useSettings()
   return (
     <GlassPanel hover glow="purple" className={clsx('p-5 transition-all duration-200 group cursor-pointer', isSelected && 'border-neon-purple/30 bg-neon-purple/5')}>
       <div className="flex items-start gap-4" onClick={onSelect}>
@@ -46,7 +48,7 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
               <Globe className="h-3 w-3" /> {geofence.latitude.toFixed(6)}, {geofence.longitude.toFixed(6)}
             </span>
             <span className="flex items-center gap-1">
-              <Ruler className="h-3 w-3" /> {(geofence.radius / 1000).toFixed(geofence.radius >= 1000 ? 1 : 2)} km
+              <Ruler className="h-3 w-3" /> {convertDistance(geofence.radius / 1000).toFixed(geofence.radius >= 1000 ? 1 : 2)} {distanceUnit}
             </span>
             {geofence.cost_per_kwh != null && (
               <span className="flex items-center gap-1 text-neon-green">
@@ -241,6 +243,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 export default function Geofences() {
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { convertDistance, distanceUnit } = useSettings()
   const { data: geofences, isLoading } = useQuery({ queryKey: ['geofences'], queryFn: getGeofences })
 
   const [editing, setEditing] = useState<number | 'new' | null>(null)
@@ -352,7 +355,7 @@ export default function Geofences() {
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Avg Radius</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-[var(--text-primary)]">{totalArea.toFixed(2)} km²</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{(totalArea * convertDistance(1) ** 2).toFixed(2)} {distanceUnit}²</p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Area</p>
               </div>
               <div className="text-center">

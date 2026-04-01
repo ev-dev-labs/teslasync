@@ -6,9 +6,11 @@ import { Car, RefreshCw, Trash2, ExternalLink, Gauge, Lock, Shield, Battery, Zap
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge, ProgressRing, Skeleton, EmptyState, ConfirmModal } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
 import { TeslaCarViz } from '../components/TeslaCarViz'
+import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
 
 function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Vehicle) => void }) {
+  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { data: stateData } = useQuery({
     queryKey: ['vehicle-state', vehicle.id],
     queryFn: () => getVehicleState(vehicle.id),
@@ -64,16 +66,16 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
                   <ProgressRing value={state.battery_level} size={36} strokeWidth={3} color={batteryColor} label="" />
                   <div>
                     <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level}%</p>
-                    <p className="text-[10px] text-[var(--text-muted)]">{Math.round(state.rated_range)} km</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{Math.round(convertDistance(state.rated_range))} {distanceUnit}</p>
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{state.inside_temp}°C</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{convertTemp(state.inside_temp).toFixed(1)} {tempUnit}</p>
                   <p className="text-[10px] text-[var(--text-muted)]">Interior</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{Math.round(state.odometer).toLocaleString()}</p>
-                  <p className="text-[10px] text-[var(--text-muted)]">km</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{Math.round(convertDistance(state.odometer)).toLocaleString()}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">{distanceUnit}</p>
                 </div>
                 {state.is_charging && (
                   <div className="text-center">
@@ -113,6 +115,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
 }
 
 function FleetSummary({ vehicles }: { vehicles: Vehicle[] }) {
+  const { convertDistance, distanceUnit } = useSettings()
   // Batch-fetch all vehicle states in a single query
   const { data: allStates } = useQuery({
     queryKey: ['fleet-vehicle-states', vehicles.map(v => v.id).sort()],
@@ -154,8 +157,8 @@ function FleetSummary({ vehicles }: { vehicles: Vehicle[] }) {
         </GlassPanel>
         <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-200">
           <Gauge className="h-5 w-5 text-neon-purple mx-auto mb-2" />
-          <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={Math.round(totalRange)} /></p>
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Range km</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={Math.round(convertDistance(totalRange))} /></p>
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Range {distanceUnit}</p>
         </GlassPanel>
         <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-200">
           <Zap className="h-5 w-5 text-neon-amber mx-auto mb-2" />
@@ -169,6 +172,7 @@ function FleetSummary({ vehicles }: { vehicles: Vehicle[] }) {
 
 // Battery comparison bar chart
 function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
+  const { convertDistance, distanceUnit } = useSettings()
   const { data: allStates } = useQuery({
     queryKey: ['fleet-battery-states', vehicles.map(v => v.id).sort()],
     queryFn: async () => {
@@ -212,7 +216,7 @@ function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
                   />
                 </div>
                 <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">{level}%</span>
-                <span className="text-[10px] text-gray-600 w-16 text-right">{Math.round(state?.rated_range ?? 0)} km</span>
+                <span className="text-[10px] text-gray-600 w-16 text-right">{Math.round(convertDistance(state?.rated_range ?? 0))} {distanceUnit}</span>
               </div>
             )
           })}
