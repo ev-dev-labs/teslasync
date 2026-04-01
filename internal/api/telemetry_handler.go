@@ -114,8 +114,8 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 	}
 }
 
-// StartCleanup runs periodic cleanup of stale streaming state entries.
-// Call this once at startup; it stops when ctx is cancelled.
+// StartCleanup runs periodic cleanup of stale streaming state entries
+// and stale drive/charge sessions. Call this once at startup; it stops when ctx is cancelled.
 func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
@@ -126,6 +126,10 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 				return
 			case <-ticker.C:
 				h.cleanupStaleEntries()
+				// Also clean up stale drive/charge sessions
+				if h.sessionTracker != nil {
+					h.sessionTracker.CleanupStaleSessions(ctx, 30*time.Minute)
+				}
 			}
 		}
 	}()

@@ -142,6 +142,9 @@ func main() {
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout) // eventHub wired later via router
 
+		// Start periodic cleanup of stale streaming/session state
+		telemetryHandler.StartCleanup(ctx)
+
 		// Start MQTT subscriber for fleet-telemetry data
 		if mqttClient != nil && cfg.FleetTelemetry.TopicBase != "" {
 			ftSubscriber := mqtt.NewSubscriber(
@@ -340,7 +343,12 @@ func main() {
 	// Phase 1: Stop accepting new work
 	cancel()
 
-	// Phase 2: Drain HTTP connections
+	// Phase 2: Shutdown telemetry handler goroutines
+	if telemetryHandler != nil {
+		telemetryHandler.Shutdown()
+	}
+
+	// Phase 3: Drain HTTP connections
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 

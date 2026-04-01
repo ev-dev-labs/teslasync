@@ -20,6 +20,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -29,10 +30,11 @@ var devToolsStartTime = time.Now()
 
 // DevToolsHandler provides developer utilities for Tesla Fleet API setup.
 type DevToolsHandler struct {
-	teslaClient *tesla.Client
-	db          *database.DB
-	mqttClient  *mqtt.Client
-	cfg         *config.Config
+	teslaClient      *tesla.Client
+	db               *database.DB
+	mqttClient       *mqtt.Client
+	cfg              *config.Config
+	fleetSubRepo     *database.FleetSubscriptionRepo
 }
 
 // DevToolsOption is a functional option for configuring DevToolsHandler.
@@ -59,6 +61,9 @@ func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandl
 	h := &DevToolsHandler{teslaClient: tc}
 	for _, opt := range opts {
 		opt(h)
+	}
+	if h.db != nil {
+		h.fleetSubRepo = database.NewFleetSubscriptionRepo(h.db)
 	}
 	return h
 }
@@ -770,6 +775,33 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	data, status, err := h.teslaClient.SubscribeFleetTelemetry(r.Context(), sub)
 	if err != nil {
 		log.Warn().Err(err).Int("status", status).Msg("fleet telemetry subscription failed")
+	}
+
+	// Persist subscription for audit trail
+	if h.fleetSubRepo != nil {
+		signalNames := make([]string, 0, len(req.Fields))
+		signalNames = append(signalNames, req.Fields...)
+		for _, vin := range req.VINs {
+			subRecord := &models.FleetTelemetrySubscription{
+				VIN:             vin,
+				Signals:         signalNames,
+				IntervalSeconds: req.Interval,
+				Hostname:        req.Hostname,
+				Port:            req.Port,
+				Protocol:        "wss",
+				SubscribedAt:    time.Now().UTC(),
+				Status:          "active",
+				ResponseCode:    &status,
+			}
+			if err != nil {
+				errStr := err.Error()
+				subRecord.ResponseBody = &errStr
+				subRecord.Status = "failed"
+			}
+			if dbErr := h.fleetSubRepo.Create(r.Context(), subRecord); dbErr != nil {
+				log.Warn().Err(dbErr).Str("vin", vin).Msg("failed to persist fleet telemetry subscription")
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
