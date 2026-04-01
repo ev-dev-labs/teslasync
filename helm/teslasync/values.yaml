@@ -405,8 +405,11 @@ config:
   webEndpoint: ""
 
   # OpenTelemetry distributed tracing (optional)
+  # Supports any OTLP-compatible backend: Jaeger, Tempo, Datadog, New Relic, etc.
   openTelemetry:
     enabled: false
+    # For built-in Jaeger (jaeger.enabled=true): use "{{ .Release.Name }}-jaeger:4317"
+    # For external Jaeger/collector: use your endpoint, e.g. "jaeger.monitoring:4317"
     endpoint: "jaeger:4317"
     serviceName: "teslasync"
     insecure: true
@@ -603,6 +606,10 @@ grafana:
 #
 # Deploys Jaeger all-in-one for collecting OpenTelemetry traces.
 # Enable alongside config.openTelemetry.enabled to get end-to-end tracing.
+#
+# If you already have Jaeger/Tempo/OTLP collector running externally,
+# skip this section and just set config.openTelemetry.endpoint to your
+# existing collector address (e.g. "jaeger.monitoring.svc:4317").
 # ─────────────────────────────────────────────────────────────────────────────
 jaeger:
   enabled: false

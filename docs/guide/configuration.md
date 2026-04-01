@@ -328,10 +328,12 @@ Backup is configured through the UI (**System → Backup & Restore**) or API. No
 | `OTEL_SERVICE_NAME` | `teslasync` | Service name in traces |
 | `OTEL_INSECURE` | `true` | Use insecure gRPC connection |
 
-### Docker Compose
+TeslaSync supports any OTLP-compatible tracing backend — Jaeger, Grafana Tempo, Datadog, New Relic, or any OpenTelemetry Collector.
+
+### Option A: Bundled Jaeger (Docker Compose)
 
 ```bash
-# Start with tracing enabled
+# Start with built-in Jaeger
 OTEL_ENABLED=true docker compose --profile tracing up -d
 
 # Jaeger UI: http://localhost:16686
@@ -339,7 +341,24 @@ OTEL_ENABLED=true docker compose --profile tracing up -d
 
 Jaeger uses a Docker Compose profile, so it only starts when explicitly requested with `--profile tracing`.
 
-### Helm
+### Option B: External Jaeger / Collector (Docker Compose)
+
+If you already have Jaeger, Tempo, or any OTLP collector running, just point to it:
+
+```bash
+# .env
+OTEL_ENABLED=true
+OTEL_ENDPOINT=your-jaeger-host:4317    # External Jaeger
+# OTEL_ENDPOINT=tempo:4317             # Grafana Tempo
+# OTEL_ENDPOINT=otel-collector:4317    # OpenTelemetry Collector
+OTEL_SERVICE_NAME=teslasync
+OTEL_INSECURE=true                     # Set to false for TLS
+
+# Start WITHOUT --profile tracing (no bundled Jaeger needed)
+docker compose up -d
+```
+
+### Helm — Bundled Jaeger
 
 ```yaml
 config:
@@ -349,6 +368,21 @@ config:
 
 jaeger:
   enabled: true
+```
+
+### Helm — External Jaeger / Collector
+
+```yaml
+config:
+  openTelemetry:
+    enabled: true
+    endpoint: "jaeger.monitoring.svc:4317"   # Your existing Jaeger
+    # endpoint: "tempo.observability:4317"   # Grafana Tempo
+    insecure: true
+
+# Don't deploy built-in Jaeger
+jaeger:
+  enabled: false
 ```
 
 ## Tesla Fleet API Region
