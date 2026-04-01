@@ -20,11 +20,11 @@ func NewChargingRepo(db *DB) *ChargingRepo {
 
 func (r *ChargingRepo) Create(ctx context.Context, c *models.ChargingSession) error {
 	query := `
-		INSERT INTO charging_sessions (vehicle_id, start_date, address_id, start_battery_level, start_range_km)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO charging_sessions (vehicle_id, start_date, address_id, start_battery_level, start_range_km, latitude, longitude)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
-		c.VehicleID, c.StartDate, c.AddressID, c.StartBatteryLevel, c.StartRangeKm,
+		c.VehicleID, c.StartDate, c.AddressID, c.StartBatteryLevel, c.StartRangeKm, c.Latitude, c.Longitude,
 	).Scan(&c.ID)
 }
 
@@ -49,7 +49,8 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	query := `SELECT id, vehicle_id, start_date, end_date, address_id,
 		charge_energy_added, charge_energy_used, start_battery_level, end_battery_level,
 		start_range_km, end_range_km, charger_phases, charger_voltage, charger_actual_current,
-		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min
+		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min,
+		latitude, longitude, location_name, inside_temp_avg, outside_temp_avg
 		FROM charging_sessions WHERE vehicle_id=$1`
 	args := []interface{}{vehicleID}
 	argIdx := 2
@@ -80,6 +81,7 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 			&c.StartRangeKm, &c.EndRangeKm, &c.ChargerPhases, &c.ChargerVoltage,
 			&c.ChargerActualCurrent, &c.ChargerPower, &c.FastChargerType, &c.FastChargerBrand,
 			&c.ConnChargeCable, &c.Cost, &c.DurationMin,
+			&c.Latitude, &c.Longitude, &c.LocationName, &c.InsideTempAvg, &c.OutsideTempAvg,
 		); err != nil {
 			return nil, err
 		}
@@ -92,7 +94,8 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 	query := `SELECT id, vehicle_id, start_date, end_date, address_id,
 		charge_energy_added, charge_energy_used, start_battery_level, end_battery_level,
 		start_range_km, end_range_km, charger_phases, charger_voltage, charger_actual_current,
-		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min
+		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min,
+		latitude, longitude, location_name, inside_temp_avg, outside_temp_avg
 		FROM charging_sessions WHERE id=$1`
 	c := &models.ChargingSession{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
@@ -101,6 +104,7 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 		&c.StartRangeKm, &c.EndRangeKm, &c.ChargerPhases, &c.ChargerVoltage,
 		&c.ChargerActualCurrent, &c.ChargerPower, &c.FastChargerType, &c.FastChargerBrand,
 		&c.ConnChargeCable, &c.Cost, &c.DurationMin,
+		&c.Latitude, &c.Longitude, &c.LocationName, &c.InsideTempAvg, &c.OutsideTempAvg,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -113,7 +117,8 @@ func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*model
 	query := `SELECT id, vehicle_id, start_date, end_date, address_id,
 		charge_energy_added, charge_energy_used, start_battery_level, end_battery_level,
 		start_range_km, end_range_km, charger_phases, charger_voltage, charger_actual_current,
-		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min
+		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min,
+		latitude, longitude, location_name, inside_temp_avg, outside_temp_avg
 		FROM charging_sessions WHERE end_date IS NULL AND start_date < $1
 		ORDER BY start_date DESC`
 	rows, err := r.db.Pool.Query(ctx, query, cutoff)
@@ -131,6 +136,7 @@ func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*model
 			&c.StartRangeKm, &c.EndRangeKm, &c.ChargerPhases, &c.ChargerVoltage,
 			&c.ChargerActualCurrent, &c.ChargerPower, &c.FastChargerType, &c.FastChargerBrand,
 			&c.ConnChargeCable, &c.Cost, &c.DurationMin,
+			&c.Latitude, &c.Longitude, &c.LocationName, &c.InsideTempAvg, &c.OutsideTempAvg,
 		); err != nil {
 			return nil, err
 		}
@@ -157,6 +163,11 @@ func (r *ChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[s
 		"cost":                  "cost",
 		"duration_min":          "duration_min",
 		"start_battery_level":   "start_battery_level",
+		"latitude":              "latitude",
+		"longitude":             "longitude",
+		"location_name":         "location_name",
+		"inside_temp_avg":       "inside_temp_avg",
+		"outside_temp_avg":      "outside_temp_avg",
 	}
 
 	setClauses := []string{}

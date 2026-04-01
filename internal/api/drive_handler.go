@@ -10,14 +10,16 @@ import (
 
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
-	driveRepo *database.DriveRepo
-	posRepo   *database.PositionRepo
+	driveRepo    *database.DriveRepo
+	posRepo      *database.PositionRepo
+	driveTelRepo *database.DriveTelemetryRepo
 }
 
 func NewDriveHandler(db *database.DB) *DriveHandler {
 	return &DriveHandler{
-		driveRepo: database.NewDriveRepo(db),
-		posRepo:   database.NewPositionRepo(db),
+		driveRepo:    database.NewDriveRepo(db),
+		posRepo:      database.NewPositionRepo(db),
+		driveTelRepo: database.NewDriveTelemetryRepo(db),
 	}
 }
 
@@ -93,4 +95,23 @@ func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		positions = make([]*models.Position, 0)
 	}
 	writeJSON(w, http.StatusOK, positions)
+}
+
+func (h *DriveHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
+	driveID, err := urlParamInt64(r, "driveID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		return
+	}
+
+	readings, err := h.driveTelRepo.GetByDriveID(r.Context(), driveID)
+	if err != nil {
+		log.Error().Err(err).Int64("id", driveID).Msg("failed to get drive telemetry")
+		writeError(w, http.StatusInternalServerError, "failed to get drive telemetry")
+		return
+	}
+	if readings == nil {
+		readings = make([]*models.DriveTelemetryReading, 0)
+	}
+	writeJSON(w, http.StatusOK, readings)
 }

@@ -164,13 +164,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
+				r.Get("/telemetry", driveHandler.TelemetryReadings)
 			})
 		})
 
 		// Charging
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
-			r.Get("/{sessionID}", chargingHandler.Get)
+			r.Route("/{sessionID}", func(r chi.Router) {
+				r.Get("/", chargingHandler.Get)
+				r.Get("/telemetry", chargingHandler.TelemetryReadings)
+			})
 		})
 
 		// Geofences

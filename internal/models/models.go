@@ -82,6 +82,145 @@ type Drive struct {
 	EndBatteryLvl    *int       `json:"end_battery_level,omitempty" db:"end_battery_level"`
 	InsideTempAvg    *float64   `json:"inside_temp_avg,omitempty" db:"inside_temp_avg"`
 	OutsideTempAvg   *float64   `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
+
+	// Enhanced tracking fields (migration 21)
+	StartOdometer    *float64 `json:"start_odometer,omitempty" db:"start_odometer"`
+	EndOdometer      *float64 `json:"end_odometer,omitempty" db:"end_odometer"`
+	SpeedAvg         *float64 `json:"speed_avg,omitempty" db:"speed_avg"`
+	SpeedMin         *float64 `json:"speed_min,omitempty" db:"speed_min"`
+
+	// Rated range stats
+	StartRatedRangeKm *float64 `json:"start_rated_range_km,omitempty" db:"start_rated_range_km"`
+	EndRatedRangeKm   *float64 `json:"end_rated_range_km,omitempty" db:"end_rated_range_km"`
+	RatedRangeAvg     *float64 `json:"rated_range_avg,omitempty" db:"rated_range_avg"`
+	RatedRangeMax     *float64 `json:"rated_range_max,omitempty" db:"rated_range_max"`
+	RatedRangeMin     *float64 `json:"rated_range_min,omitempty" db:"rated_range_min"`
+
+	// Ideal range stats
+	StartIdealRangeKm *float64 `json:"start_ideal_range_km,omitempty" db:"start_ideal_range_km"`
+	EndIdealRangeKm   *float64 `json:"end_ideal_range_km,omitempty" db:"end_ideal_range_km"`
+	IdealRangeAvg     *float64 `json:"ideal_range_avg,omitempty" db:"ideal_range_avg"`
+	IdealRangeMax     *float64 `json:"ideal_range_max,omitempty" db:"ideal_range_max"`
+	IdealRangeMin     *float64 `json:"ideal_range_min,omitempty" db:"ideal_range_min"`
+
+	// Estimated range stats
+	StartEstRangeKm *float64 `json:"start_est_range_km,omitempty" db:"start_est_range_km"`
+	EndEstRangeKm   *float64 `json:"end_est_range_km,omitempty" db:"end_est_range_km"`
+	EstRangeAvg     *float64 `json:"est_range_avg,omitempty" db:"est_range_avg"`
+	EstRangeMax     *float64 `json:"est_range_max,omitempty" db:"est_range_max"`
+	EstRangeMin     *float64 `json:"est_range_min,omitempty" db:"est_range_min"`
+
+	// SOC stats
+	SocStart *float64 `json:"soc_start,omitempty" db:"soc_start"`
+	SocEnd   *float64 `json:"soc_end,omitempty" db:"soc_end"`
+	SocAvg   *float64 `json:"soc_avg,omitempty" db:"soc_avg"`
+	SocMax   *float64 `json:"soc_max,omitempty" db:"soc_max"`
+	SocMin   *float64 `json:"soc_min,omitempty" db:"soc_min"`
+
+	// Usable SOC
+	UsableSocStart *float64 `json:"usable_soc_start,omitempty" db:"usable_soc_start"`
+	UsableSocEnd   *float64 `json:"usable_soc_end,omitempty" db:"usable_soc_end"`
+	UsableSocAvg   *float64 `json:"usable_soc_avg,omitempty" db:"usable_soc_avg"`
+	UsableSocMax   *float64 `json:"usable_soc_max,omitempty" db:"usable_soc_max"`
+	UsableSocMin   *float64 `json:"usable_soc_min,omitempty" db:"usable_soc_min"`
+
+	// Elevation
+	ElevationStart *float64 `json:"elevation_start,omitempty" db:"elevation_start"`
+	ElevationEnd   *float64 `json:"elevation_end,omitempty" db:"elevation_end"`
+	ElevationGain  *float64 `json:"elevation_gain,omitempty" db:"elevation_gain"`
+	ElevationLoss  *float64 `json:"elevation_loss,omitempty" db:"elevation_loss"`
+
+	// Additional temperature stats
+	DriverTempAvg    *float64 `json:"driver_temp_avg,omitempty" db:"driver_temp_avg"`
+	PassengerTempAvg *float64 `json:"passenger_temp_avg,omitempty" db:"passenger_temp_avg"`
+
+	// Battery heater
+	BatteryHeaterOn *bool `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+
+	// Address names (denormalized)
+	StartAddress *string `json:"start_address,omitempty" db:"start_address"`
+	EndAddress   *string `json:"end_address,omitempty" db:"end_address"`
+
+	// Start/end coordinates (denormalized)
+	StartLatitude  *float64 `json:"start_latitude,omitempty" db:"start_latitude"`
+	StartLongitude *float64 `json:"start_longitude,omitempty" db:"start_longitude"`
+	EndLatitude    *float64 `json:"end_latitude,omitempty" db:"end_latitude"`
+	EndLongitude   *float64 `json:"end_longitude,omitempty" db:"end_longitude"`
+}
+
+// DriveTelemetryReading represents a single telemetry snapshot during a drive.
+type DriveTelemetryReading struct {
+	ID              int64     `json:"id" db:"id"`
+	DriveID         int64     `json:"drive_id" db:"drive_id"`
+	VehicleID       int64     `json:"vehicle_id" db:"vehicle_id"`
+	Latitude        *float64  `json:"latitude,omitempty" db:"latitude"`
+	Longitude       *float64  `json:"longitude,omitempty" db:"longitude"`
+	Elevation       *float64  `json:"elevation,omitempty" db:"elevation"`
+	Heading         *int      `json:"heading,omitempty" db:"heading"`
+	Odometer        *float64  `json:"odometer,omitempty" db:"odometer"`
+	Speed           *float64  `json:"speed,omitempty" db:"speed"`
+	Power           *float64  `json:"power,omitempty" db:"power"`
+	BatteryLevel    *int      `json:"battery_level,omitempty" db:"battery_level"`
+	Soc             *float64  `json:"soc,omitempty" db:"soc"`
+	UsableSoc       *float64  `json:"usable_soc,omitempty" db:"usable_soc"`
+	RatedRange      *float64  `json:"rated_range,omitempty" db:"rated_range"`
+	IdealRange      *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
+	EstRange        *float64  `json:"est_range,omitempty" db:"est_range"`
+	InsideTemp      *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
+	OutsideTemp     *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
+	DriverTemp      *float64  `json:"driver_temp,omitempty" db:"driver_temp"`
+	PassengerTemp   *float64  `json:"passenger_temp,omitempty" db:"passenger_temp"`
+	FanStatus       *int      `json:"fan_status,omitempty" db:"fan_status"`
+	IsClimateOn     *bool     `json:"is_climate_on,omitempty" db:"is_climate_on"`
+	TirePressureFL  *float64  `json:"tire_pressure_fl,omitempty" db:"tire_pressure_fl"`
+	TirePressureFR  *float64  `json:"tire_pressure_fr,omitempty" db:"tire_pressure_fr"`
+	TirePressureRL  *float64  `json:"tire_pressure_rl,omitempty" db:"tire_pressure_rl"`
+	TirePressureRR  *float64  `json:"tire_pressure_rr,omitempty" db:"tire_pressure_rr"`
+	BatteryHeaterOn *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+}
+
+// ChargeTelemetryReading represents a single telemetry snapshot during a charging session.
+type ChargeTelemetryReading struct {
+	ID           int64     `json:"id" db:"id"`
+	SessionID    int64     `json:"session_id" db:"session_id"`
+	VehicleID    int64     `json:"vehicle_id" db:"vehicle_id"`
+	BatteryLevel *int      `json:"battery_level,omitempty" db:"battery_level"`
+	Soc          *float64  `json:"soc,omitempty" db:"soc"`
+	PowerKW      *float64  `json:"power_kw,omitempty" db:"power_kw"`
+	Voltage      *float64  `json:"voltage,omitempty" db:"voltage"`
+	CurrentAmps  *float64  `json:"current_amps,omitempty" db:"current_amps"`
+	Phases       *int      `json:"phases,omitempty" db:"phases"`
+	EnergyAdded  *float64  `json:"energy_added,omitempty" db:"energy_added"`
+	RatedRange   *float64  `json:"rated_range,omitempty" db:"rated_range"`
+	IdealRange   *float64  `json:"ideal_range,omitempty" db:"ideal_range"`
+	EstRange     *float64  `json:"est_range,omitempty" db:"est_range"`
+	InsideTemp   *float64  `json:"inside_temp,omitempty" db:"inside_temp"`
+	OutsideTemp  *float64  `json:"outside_temp,omitempty" db:"outside_temp"`
+	BatteryTemp  *float64  `json:"battery_temp,omitempty" db:"battery_temp"`
+	Latitude     *float64  `json:"latitude,omitempty" db:"latitude"`
+	Longitude    *float64  `json:"longitude,omitempty" db:"longitude"`
+	ChargeRate   *float64  `json:"charge_rate,omitempty" db:"charge_rate"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+}
+
+// FleetTelemetrySubscription records a subscription request to Tesla Fleet Telemetry.
+type FleetTelemetrySubscription struct {
+	ID              int64      `json:"id" db:"id"`
+	VehicleID       *int64     `json:"vehicle_id,omitempty" db:"vehicle_id"`
+	VIN             string     `json:"vin" db:"vin"`
+	Signals         []string   `json:"signals" db:"signals"`
+	IntervalSeconds int        `json:"interval_seconds" db:"interval_seconds"`
+	Hostname        string     `json:"hostname" db:"hostname"`
+	Port            int        `json:"port" db:"port"`
+	Protocol        string     `json:"protocol" db:"protocol"`
+	CaPEM           *string    `json:"ca_pem,omitempty" db:"ca_pem"`
+	SubscribedAt    time.Time  `json:"subscribed_at" db:"subscribed_at"`
+	ExpiresAt       *time.Time `json:"expires_at,omitempty" db:"expires_at"`
+	Status          string     `json:"status" db:"status"`
+	ResponseCode    *int       `json:"response_code,omitempty" db:"response_code"`
+	ResponseBody    *string    `json:"response_body,omitempty" db:"response_body"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
 }
 
 // ChargingSession represents a charging event.
@@ -106,6 +245,13 @@ type ChargingSession struct {
 	ConnChargeCable       *string    `json:"conn_charge_cable,omitempty" db:"conn_charge_cable"`
 	Cost                  *float64   `json:"cost,omitempty" db:"cost"`
 	DurationMin           float64    `json:"duration_min" db:"duration_min"`
+
+	// Enhanced tracking fields (migration 21)
+	Latitude       *float64 `json:"latitude,omitempty" db:"latitude"`
+	Longitude      *float64 `json:"longitude,omitempty" db:"longitude"`
+	LocationName   *string  `json:"location_name,omitempty" db:"location_name"`
+	InsideTempAvg  *float64 `json:"inside_temp_avg,omitempty" db:"inside_temp_avg"`
+	OutsideTempAvg *float64 `json:"outside_temp_avg,omitempty" db:"outside_temp_avg"`
 }
 
 // Address represents a reverse-geocoded location.

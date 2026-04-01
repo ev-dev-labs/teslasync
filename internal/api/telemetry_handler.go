@@ -744,6 +744,38 @@ func toFloat(v interface{}) float64 {
 	return 0
 }
 
+// toFloatOk parses a value to float64 and returns whether the signal was present.
+// This distinguishes missing signals (ok=false) from actual zero values (ok=true, val=0).
+func toFloatOk(v interface{}) (float64, bool) {
+	if v == nil {
+		return 0, false
+	}
+	switch val := v.(type) {
+	case float64:
+		return val, true
+	case int:
+		return float64(val), true
+	case int64:
+		return float64(val), true
+	case json.Number:
+		f, err := val.Float64()
+		return f, err == nil
+	case string:
+		if val == "" || val == "<nil>" || val == "nil" || val == "null" {
+			return 0, false
+		}
+		var f float64
+		n, _ := fmt.Sscanf(val, "%f", &f)
+		return f, n > 0
+	case bool:
+		if val {
+			return 1, true
+		}
+		return 0, true
+	}
+	return 0, false
+}
+
 func formatFloat(v float64) string {
 	if v == float64(int64(v)) {
 		return fmt.Sprintf("%d", int64(v))
