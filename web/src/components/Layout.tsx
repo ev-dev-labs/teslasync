@@ -52,7 +52,7 @@ import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
 import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
-import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates } from '../api'
+import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useSettings } from '../hooks/useSettings'
 
@@ -167,6 +167,7 @@ const navSections = [
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
       { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
+      { to: '/data-repair', icon: Wrench, label: 'Data Repair', color: 'text-amber-400' },
       { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
     ],
@@ -199,6 +200,10 @@ export default function Layout() {
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const onlineVehicles = vehicles?.filter(v => v.state === 'online').length ?? 0
   const isConnected = !!primaryState?.live
+
+  // Stale sessions count for Data Repair badge
+  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: getStaleSessions, refetchInterval: 60_000, retry: 1 })
+  const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
 
   const uptimeStr= (() => {
     const secs = versionInfo?.uptime_seconds
@@ -313,6 +318,12 @@ export default function Layout() {
                       {to === '/vehicles' && vehicles && vehicles.length > 0 && (
                         <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-[10px] font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
                           {vehicles.length}
+                        </span>
+                      )}
+                      {/* Badge for Data Repair */}
+                      {to === '/data-repair' && staleCount > 0 && (
+                        <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-[10px] font-bold text-neon-amber ring-1 ring-neon-amber/30">
+                          {staleCount > 9 ? '9+' : staleCount}
                         </span>
                       )}
                       {isActive && (

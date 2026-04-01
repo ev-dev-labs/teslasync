@@ -56,6 +56,7 @@ const DrivetrainHealth = lazy(() => import('./pages/DrivetrainHealth'))
 const MediaPlayer = lazy(() => import('./pages/MediaPlayer'))
 const SafetySettings = lazy(() => import('./pages/SafetySettings'))
 const NavigationRoute = lazy(() => import('./pages/NavigationRoute'))
+const DataRepair = lazy(() => import('./pages/DataRepair'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -121,6 +122,7 @@ export default function App() {
         <Route path="media-player" element={<SafeRoute name="MediaPlayer"><MediaPlayer /></SafeRoute>} />
         <Route path="safety-settings" element={<SafeRoute name="SafetySettings"><SafetySettings /></SafeRoute>} />
         <Route path="navigation" element={<SafeRoute name="NavigationRoute"><NavigationRoute /></SafeRoute>} />
+        <Route path="data-repair" element={<SafeRoute name="DataRepair"><DataRepair /></SafeRoute>} />
       </Route>
     </Routes>
   )

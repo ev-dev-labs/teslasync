@@ -100,3 +100,83 @@ func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error
 	}
 	return d, err
 }
+
+// GetStale returns drives that have no end_date and started before the cutoff time.
+func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.Drive, error) {
+	query := `SELECT id, vehicle_id, start_date, end_date, start_position_id, end_position_id,
+		start_address_id, end_address_id, distance, duration_min, start_range_km, end_range_km,
+		speed_max, power_max, power_min, start_battery_level, end_battery_level,
+		inside_temp_avg, outside_temp_avg
+		FROM drives WHERE end_date IS NULL AND start_date < $1
+		ORDER BY start_date DESC`
+	rows, err := r.db.Pool.Query(ctx, query, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var drives []*models.Drive
+	for rows.Next() {
+		d := &models.Drive{}
+		if err := rows.Scan(
+			&d.ID, &d.VehicleID, &d.StartDate, &d.EndDate, &d.StartPositionID, &d.EndPositionID,
+			&d.StartAddressID, &d.EndAddressID, &d.Distance, &d.DurationMin, &d.StartRangeKm,
+			&d.EndRangeKm, &d.SpeedMax, &d.PowerMax, &d.PowerMin, &d.StartBatteryLvl,
+			&d.EndBatteryLvl, &d.InsideTempAvg, &d.OutsideTempAvg,
+		); err != nil {
+			return nil, err
+		}
+		drives = append(drives, d)
+	}
+	return drives, rows.Err()
+}
+
+// PartialUpdate updates only the provided fields on a drive.
+func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
+	allowed := map[string]string{
+		"end_date":           "end_date",
+		"distance":           "distance",
+		"duration_min":       "duration_min",
+		"end_range_km":       "end_range_km",
+		"end_battery_level":  "end_battery_level",
+		"speed_max":          "speed_max",
+		"power_max":          "power_max",
+		"power_min":          "power_min",
+		"inside_temp_avg":    "inside_temp_avg",
+		"outside_temp_avg":   "outside_temp_avg",
+		"start_battery_level":"start_battery_level",
+	}
+
+	setClauses := []string{}
+	args := []interface{}{}
+	argIdx := 1
+	for jsonKey, col := range allowed {
+		if val, ok := fields[jsonKey]; ok {
+			setClauses = append(setClauses, fmt.Sprintf("%s=$%d", col, argIdx))
+			args = append(args, val)
+			argIdx++
+		}
+	}
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	query := "UPDATE drives SET "
+	for i, c := range setClauses {
+		if i > 0 {
+			query += ", "
+		}
+		query += c
+	}
+	query += fmt.Sprintf(" WHERE id=$%d", argIdx)
+	args = append(args, id)
+
+	_, err := r.db.Pool.Exec(ctx, query, args...)
+	return err
+}
+
+// Delete removes a drive by ID.
+func (r *DriveRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.Pool.Exec(ctx, "DELETE FROM drives WHERE id=$1", id)
+	return err
+}

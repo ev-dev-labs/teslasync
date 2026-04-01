@@ -107,3 +107,88 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 	}
 	return c, err
 }
+
+// GetStale returns charging sessions that have no end_date and started before the cutoff time.
+func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.ChargingSession, error) {
+	query := `SELECT id, vehicle_id, start_date, end_date, address_id,
+		charge_energy_added, charge_energy_used, start_battery_level, end_battery_level,
+		start_range_km, end_range_km, charger_phases, charger_voltage, charger_actual_current,
+		charger_power, fast_charger_type, fast_charger_brand, conn_charge_cable, cost, duration_min
+		FROM charging_sessions WHERE end_date IS NULL AND start_date < $1
+		ORDER BY start_date DESC`
+	rows, err := r.db.Pool.Query(ctx, query, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []*models.ChargingSession
+	for rows.Next() {
+		c := &models.ChargingSession{}
+		if err := rows.Scan(
+			&c.ID, &c.VehicleID, &c.StartDate, &c.EndDate, &c.AddressID,
+			&c.ChargeEnergyAdded, &c.ChargeEnergyUsed, &c.StartBatteryLevel, &c.EndBatteryLevel,
+			&c.StartRangeKm, &c.EndRangeKm, &c.ChargerPhases, &c.ChargerVoltage,
+			&c.ChargerActualCurrent, &c.ChargerPower, &c.FastChargerType, &c.FastChargerBrand,
+			&c.ConnChargeCable, &c.Cost, &c.DurationMin,
+		); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, c)
+	}
+	return sessions, rows.Err()
+}
+
+// PartialUpdate updates only the provided fields on a charging session.
+func (r *ChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
+	allowed := map[string]string{
+		"end_date":              "end_date",
+		"charge_energy_added":   "charge_energy_added",
+		"charge_energy_used":    "charge_energy_used",
+		"end_battery_level":     "end_battery_level",
+		"end_range_km":          "end_range_km",
+		"charger_phases":        "charger_phases",
+		"charger_voltage":       "charger_voltage",
+		"charger_actual_current":"charger_actual_current",
+		"charger_power":         "charger_power",
+		"fast_charger_type":     "fast_charger_type",
+		"fast_charger_brand":    "fast_charger_brand",
+		"conn_charge_cable":     "conn_charge_cable",
+		"cost":                  "cost",
+		"duration_min":          "duration_min",
+		"start_battery_level":   "start_battery_level",
+	}
+
+	setClauses := []string{}
+	args := []interface{}{}
+	argIdx := 1
+	for jsonKey, col := range allowed {
+		if val, ok := fields[jsonKey]; ok {
+			setClauses = append(setClauses, fmt.Sprintf("%s=$%d", col, argIdx))
+			args = append(args, val)
+			argIdx++
+		}
+	}
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	query := "UPDATE charging_sessions SET "
+	for i, c := range setClauses {
+		if i > 0 {
+			query += ", "
+		}
+		query += c
+	}
+	query += fmt.Sprintf(" WHERE id=$%d", argIdx)
+	args = append(args, id)
+
+	_, err := r.db.Pool.Exec(ctx, query, args...)
+	return err
+}
+
+// Delete removes a charging session by ID.
+func (r *ChargingRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.Pool.Exec(ctx, "DELETE FROM charging_sessions WHERE id=$1", id)
+	return err
+}
