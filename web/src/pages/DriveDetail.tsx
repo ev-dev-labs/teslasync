@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getDrive, getDrivePositions, getVehicle } from '../api'
+import { getDrive, getDrivePositions, getDriveTelemetry, getVehicle } from '../api'
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet'
 import { LatLngExpression } from 'leaflet'
 import {
@@ -62,7 +62,14 @@ export default function DriveDetail() {
     enabled: !!driveId && !!drive,
   })
 
+  const { data: telemetry } = useQuery({
+    queryKey: ['drive-telemetry', driveId],
+    queryFn: () => getDriveTelemetry(driveId),
+    enabled: !!driveId && !!drive,
+  })
+
   const drivePositions = positions ?? []
+  const driveTelemetry = telemetry ?? []
 
   const trail: LatLngExpression[] = drivePositions
     .filter(p => p.latitude && p.longitude)
@@ -89,19 +96,42 @@ export default function DriveDetail() {
     })
   }
 
-  // Build comprehensive chart data from positions
-  const chartData = drivePositions.map((p, _i) => ({
-    time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    speed: u.speedVal(p.speed ?? 0),
-    battery: p.battery_level,
-    elevation: p.elevation ?? 0,
-    power: p.power ?? 0,
-    insideTemp: p.inside_temp != null ? u.tempVal(p.inside_temp) : null,
-    outsideTemp: p.outside_temp != null ? u.tempVal(p.outside_temp) : null,
-    idealRange: p.ideal_range != null ? u.distanceVal(p.ideal_range) : null,
-    ratedRange: p.rated_range != null ? u.distanceVal(p.rated_range) : null,
-    odometer: p.odometer != null ? u.distanceVal(p.odometer) : p.odometer,
-  }))
+  // Build enriched chart data: prefer telemetry if available, fallback to positions
+  const chartData = driveTelemetry.length > 0
+    ? driveTelemetry.map(t => ({
+        time: new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        speed: u.speedVal(t.speed ?? 0),
+        battery: t.battery_level ?? t.soc ?? 0,
+        elevation: t.elevation ?? 0,
+        power: t.power ?? 0,
+        insideTemp: t.inside_temp != null ? u.tempVal(t.inside_temp) : null,
+        outsideTemp: t.outside_temp != null ? u.tempVal(t.outside_temp) : null,
+        driverTemp: t.driver_temp != null ? u.tempVal(t.driver_temp) : null,
+        passengerTemp: t.passenger_temp != null ? u.tempVal(t.passenger_temp) : null,
+        idealRange: t.ideal_range != null ? u.distanceVal(t.ideal_range) : null,
+        ratedRange: t.rated_range != null ? u.distanceVal(t.rated_range) : null,
+        estRange: t.est_range != null ? u.distanceVal(t.est_range) : null,
+        odometer: t.odometer != null ? u.distanceVal(t.odometer) : null,
+        soc: t.soc,
+        usableSoc: t.usable_soc,
+      }))
+    : drivePositions.map((p, _i) => ({
+        time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        speed: u.speedVal(p.speed ?? 0),
+        battery: p.battery_level,
+        elevation: p.elevation ?? 0,
+        power: p.power ?? 0,
+        insideTemp: p.inside_temp != null ? u.tempVal(p.inside_temp) : null,
+        outsideTemp: p.outside_temp != null ? u.tempVal(p.outside_temp) : null,
+        driverTemp: null as number | null,
+        passengerTemp: null as number | null,
+        idealRange: p.ideal_range != null ? u.distanceVal(p.ideal_range) : null,
+        ratedRange: p.rated_range != null ? u.distanceVal(p.rated_range) : null,
+        estRange: null as number | null,
+        odometer: p.odometer != null ? u.distanceVal(p.odometer) : p.odometer,
+        soc: null as number | null,
+        usableSoc: null as number | null,
+      }))
 
   // === Computed Stats ===
   const maxSpeed = drive?.speed_max != null ? u.speedVal(drive.speed_max) : Math.max(...chartData.map(d => d.speed), 0)
@@ -215,7 +245,9 @@ export default function DriveDetail() {
           <div className="flex-1">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)] flex items-center gap-3">
               <Route className="h-6 w-6 text-neon-cyan" />
-              Drive Details
+              {drive.start_address && drive.end_address
+                ? <>{drive.start_address} → {drive.end_address}</>
+                : 'Drive Details'}
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">
               {vehicle?.display_name || 'Vehicle'} &middot; {new Date(drive.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
@@ -261,17 +293,32 @@ export default function DriveDetail() {
         </GlassPanel>
       </FadeIn>
 
-      {/* Stat Cards — 2 rows of 4 */}
+      {/* Stat Cards — 2 rows */}
       <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         <StaggerItem><StatCard icon={Route} color="#00f0ff" value={<AnimatedNumber value={u.distanceVal(drive.distance)} decimals={1} suffix={' ' + u.distanceUnit} />} label="Distance" /></StaggerItem>
         <StaggerItem><StatCard icon={Clock} color="#f59e0b" value={`${Math.floor(drive.duration_min / 60)}h ${Math.round(drive.duration_min % 60)}m`} label="Duration" /></StaggerItem>
         <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={maxSpeed} suffix={' ' + u.speedUnit} />} label="Max Speed" /></StaggerItem>
-        <StaggerItem><StatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={avgSpeed} decimals={0} suffix={' ' + u.speedUnit} />} label="Avg Speed" /></StaggerItem>
-        <StaggerItem><StatCard icon={Battery} color="#10b981" value={`${drive.start_battery_level ?? '?'}% → ${drive.end_battery_level ?? '?'}%`} label="Battery" /></StaggerItem>
+        <StaggerItem><StatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={drive.speed_avg != null ? u.speedVal(drive.speed_avg) : avgSpeed} decimals={0} suffix={' ' + u.speedUnit} />} label="Avg Speed" /></StaggerItem>
+        <StaggerItem><StatCard icon={Battery} color="#10b981" value={`${drive.soc_start ?? drive.start_battery_level ?? '?'}% → ${drive.soc_end ?? drive.end_battery_level ?? '?'}%`} label="SOC" /></StaggerItem>
         <StaggerItem><StatCard icon={Zap} color="#f59e0b" value={`${powerMax.toFixed(0)} kW`} label="Max Power" /></StaggerItem>
-        <StaggerItem><StatCard icon={Zap} color="#06b6d4" value={`${powerMin.toFixed(0)} kW`} label="Max Regen" /></StaggerItem>
-        <StaggerItem><StatCard icon={Navigation} color="#6b7280" value={<AnimatedNumber value={elevGain} decimals={0} suffix=" m" />} label="Elev. Gain" /></StaggerItem>
+        <StaggerItem><StatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={drive.elevation_gain ?? elevGain} decimals={0} suffix=" m ↑" />} label="Elev. Gain" /></StaggerItem>
+        <StaggerItem><StatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={drive.elevation_loss ?? elevLoss} decimals={0} suffix=" m ↓" />} label="Elev. Loss" /></StaggerItem>
       </StaggerContainer>
+
+      {/* Battery heater status */}
+      {drive.battery_heater_on != null && (
+        <FadeIn delay={0.075}>
+          <GlassPanel className="p-3">
+            <div className="flex items-center justify-center gap-2 text-xs">
+              <BatteryCharging className="h-3.5 w-3.5 text-neon-amber" />
+              <span className="text-[var(--text-secondary)]">Battery Heater:</span>
+              <span className={drive.battery_heater_on ? 'text-neon-amber font-medium' : 'text-[var(--text-muted)]'}>
+                {drive.battery_heater_on ? 'Active' : 'Off'}
+              </span>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* More Details Section */}
       <FadeIn delay={0.08}>
@@ -433,7 +480,10 @@ export default function DriveDetail() {
               <div className="flex items-center gap-2 text-neon-green mb-1">
                 <MapPin className="h-4 w-4" /> Start
               </div>
-              <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{startPos[0].toFixed(4)}°N, {Math.abs(startPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
+              {drive.start_address
+                ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.start_address}</p>
+                : <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{startPos[0].toFixed(4)}°N, {Math.abs(startPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
+              }
               <p className="text-xs text-[var(--text-muted)]">{new Date(drive.start_date).toLocaleString()}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>
@@ -441,7 +491,10 @@ export default function DriveDetail() {
               <div className="flex items-center gap-2 text-neon-red mb-1">
                 <Flag className="h-4 w-4" /> Destination
               </div>
-              <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{endPos[0].toFixed(4)}°N, {Math.abs(endPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
+              {drive.end_address
+                ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.end_address}</p>
+                : <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{endPos[0].toFixed(4)}°N, {Math.abs(endPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
+              }
               <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>

@@ -75,6 +75,9 @@ func pagination(r *http.Request) (limit, offset int) {
 			limit = l
 		}
 	}
+	if limit > 500 {
+		limit = 500
+	}
 	if v := r.URL.Query().Get("offset"); v != "" {
 		if o, err := strconv.Atoi(v); err == nil && o >= 0 {
 			offset = o

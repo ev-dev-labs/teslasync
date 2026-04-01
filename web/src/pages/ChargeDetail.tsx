@@ -1,10 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getChargingSession, getVehicle } from '../api'
+import { getChargingSession, getChargeTelemetry, getVehicle } from '../api'
 import {
   ArrowLeft, Zap, Clock, Battery, DollarSign, Gauge,
   BatteryCharging, Timer, TrendingUp, Cable, Activity,
-  Plug, MapPin, ArrowUpRight,
+  Plug, MapPin, ArrowUpRight, Thermometer,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -54,6 +54,12 @@ export default function ChargeDetail() {
     enabled: !!session,
   })
 
+  const { data: chargeTelemetry } = useQuery({
+    queryKey: ['charge-telemetry', sessionId],
+    queryFn: () => getChargeTelemetry(sessionId),
+    enabled: !!session,
+  })
+
   if (!session) {
     return (
       <div className="space-y-6">
@@ -97,27 +103,42 @@ export default function ChargeDetail() {
   // Is DC fast charging?
   const isDC = !!(session.fast_charger_type || (session.charger_power && session.charger_power > 22))
 
-  // Generate charge curve
-  const curvePoints = 30
-  const chargeData = Array.from({ length: curvePoints }, (_, i) => {
-    const progress = i / (curvePoints - 1)
-    const batteryAtPoint = session.start_battery_level + batteryGain * progress
-    const maxPower = session.charger_power ?? 50
-    const powerAtPoint = batteryAtPoint < 50
-      ? maxPower
-      : maxPower * Math.max(0.15, 1 - (batteryAtPoint - 50) / 80)
-    const timeMin = progress * session.duration_min
-    const rangeAtPoint = session.start_range_km != null && rangeGained != null
-      ? session.start_range_km + rangeGained * progress
-      : null
-    return {
-      time: `${Math.floor(timeMin)}m`,
-      battery: Math.round(batteryAtPoint),
-      power: Math.round(powerAtPoint * 10) / 10,
-      energy: Math.round(session.charge_energy_added * progress * 10) / 10,
-      range: rangeAtPoint != null ? Math.round(convertDistance(rangeAtPoint)) : null,
-    }
-  })
+  // Generate charge curve — use real telemetry if available, otherwise synthesize
+  const chargeData = chargeTelemetry && chargeTelemetry.length > 0
+    ? chargeTelemetry.map((t, i) => {
+        const timeMin = chargeTelemetry.length > 1
+          ? ((new Date(t.created_at).getTime() - new Date(chargeTelemetry[0].created_at).getTime()) / 60000)
+          : i * (session.duration_min / Math.max(chargeTelemetry.length - 1, 1))
+        return {
+          time: `${Math.floor(timeMin)}m`,
+          battery: t.battery_level ?? t.soc ?? 0,
+          power: t.power_kw ?? 0,
+          energy: t.energy_added ?? 0,
+          range: t.rated_range != null ? Math.round(convertDistance(t.rated_range)) : null,
+        }
+      })
+    : (() => {
+        const curvePoints = 30
+        return Array.from({ length: curvePoints }, (_, i) => {
+          const progress = i / (curvePoints - 1)
+          const batteryAtPoint = session.start_battery_level + batteryGain * progress
+          const maxPower = session.charger_power ?? 50
+          const powerAtPoint = batteryAtPoint < 50
+            ? maxPower
+            : maxPower * Math.max(0.15, 1 - (batteryAtPoint - 50) / 80)
+          const timeMin = progress * session.duration_min
+          const rangeAtPoint = session.start_range_km != null && rangeGained != null
+            ? session.start_range_km + rangeGained * progress
+            : null
+          return {
+            time: `${Math.floor(timeMin)}m`,
+            battery: Math.round(batteryAtPoint),
+            power: Math.round(powerAtPoint * 10) / 10,
+            energy: Math.round(session.charge_energy_added * progress * 10) / 10,
+            range: rangeAtPoint != null ? Math.round(convertDistance(rangeAtPoint)) : null,
+          }
+        })
+      })()
 
   return (
     <div className="space-y-6">
@@ -136,6 +157,7 @@ export default function ChargeDetail() {
               {vehicle?.display_name || 'Vehicle'} &middot; {new Date(session.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               {' '}&middot; {new Date(session.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               {session.end_date && ` → ${new Date(session.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              {session.location_name && <> &middot; <MapPin className="h-3 w-3 inline" /> {session.location_name}</>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -323,6 +345,27 @@ export default function ChargeDetail() {
           </GlassPanel>
         </FadeIn>
       </div>
+
+      {/* Temperature during charge */}
+      {(session.inside_temp_avg != null || session.outside_temp_avg != null) && (
+        <FadeIn delay={0.16}>
+          <GlassPanel className="p-4">
+            <div className="flex items-center justify-center gap-6 text-sm">
+              <Thermometer className="h-4 w-4 text-neon-cyan" />
+              {session.inside_temp_avg != null && (
+                <span className="text-[var(--text-secondary)]">
+                  Inside: <strong className="text-orange-400">{session.inside_temp_avg.toFixed(1)}°C</strong>
+                </span>
+              )}
+              {session.outside_temp_avg != null && (
+                <span className="text-[var(--text-secondary)]">
+                  Outside: <strong className="text-blue-400">{session.outside_temp_avg.toFixed(1)}°C</strong>
+                </span>
+              )}
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* Timestamps */}
       <FadeIn delay={0.18}>

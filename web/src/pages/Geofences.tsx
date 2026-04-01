@@ -84,6 +84,19 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
   isSaving: boolean
 }) {
   const [locStatus, setLocStatus] = useState<string | null>(null)
+
+  const reverseGeocode = async (lat: number, lon: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`
+      )
+      const data = await res.json()
+      return data.display_name?.split(',').slice(0, 3).join(',').trim() || ''
+    } catch {
+      return ''
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -127,6 +140,10 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
                       setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
                       setLocStatus('success')
                       setTimeout(() => setLocStatus(null), 2000)
+                      // Auto-fill name via reverse geocoding
+                      reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name => {
+                        if (name) setForm(f => f.name ? f : { ...f, name })
+                      })
                     },
                     () => { setLocStatus('denied') },
                     { enableHighAccuracy: true, timeout: 10000 }

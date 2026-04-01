@@ -79,6 +79,49 @@ export interface Drive {
   end_battery_level: number | null
   inside_temp_avg: number | null
   outside_temp_avg: number | null
+  // Enhanced tracking (migration 21)
+  start_odometer: number | null
+  end_odometer: number | null
+  speed_avg: number | null
+  speed_min: number | null
+  start_rated_range_km: number | null
+  end_rated_range_km: number | null
+  rated_range_avg: number | null
+  rated_range_max: number | null
+  rated_range_min: number | null
+  start_ideal_range_km: number | null
+  end_ideal_range_km: number | null
+  ideal_range_avg: number | null
+  ideal_range_max: number | null
+  ideal_range_min: number | null
+  start_est_range_km: number | null
+  end_est_range_km: number | null
+  est_range_avg: number | null
+  est_range_max: number | null
+  est_range_min: number | null
+  soc_start: number | null
+  soc_end: number | null
+  soc_avg: number | null
+  soc_max: number | null
+  soc_min: number | null
+  usable_soc_start: number | null
+  usable_soc_end: number | null
+  usable_soc_avg: number | null
+  usable_soc_max: number | null
+  usable_soc_min: number | null
+  elevation_start: number | null
+  elevation_end: number | null
+  elevation_gain: number | null
+  elevation_loss: number | null
+  driver_temp_avg: number | null
+  passenger_temp_avg: number | null
+  battery_heater_on: boolean | null
+  start_address: string | null
+  end_address: string | null
+  start_latitude: number | null
+  start_longitude: number | null
+  end_latitude: number | null
+  end_longitude: number | null
 }
 
 export interface ChargingSession {
@@ -102,6 +145,66 @@ export interface ChargingSession {
   conn_charge_cable: string | null
   cost: number | null
   duration_min: number
+  // Enhanced tracking (migration 21)
+  latitude: number | null
+  longitude: number | null
+  location_name: string | null
+  inside_temp_avg: number | null
+  outside_temp_avg: number | null
+}
+
+export interface DriveTelemetryReading {
+  id: number
+  drive_id: number
+  vehicle_id: number
+  latitude: number | null
+  longitude: number | null
+  elevation: number | null
+  heading: number | null
+  odometer: number | null
+  speed: number | null
+  power: number | null
+  battery_level: number | null
+  soc: number | null
+  usable_soc: number | null
+  rated_range: number | null
+  ideal_range: number | null
+  est_range: number | null
+  inside_temp: number | null
+  outside_temp: number | null
+  driver_temp: number | null
+  passenger_temp: number | null
+  fan_status: number | null
+  is_climate_on: boolean | null
+  tire_pressure_fl: number | null
+  tire_pressure_fr: number | null
+  tire_pressure_rl: number | null
+  tire_pressure_rr: number | null
+  battery_heater_on: boolean | null
+  created_at: string
+}
+
+export interface ChargeTelemetryReading {
+  id: number
+  session_id: number
+  vehicle_id: number
+  battery_level: number | null
+  soc: number | null
+  power_kw: number | null
+  voltage: number | null
+  current_amps: number | null
+  phases: number | null
+  energy_added: number | null
+  rated_range: number | null
+  ideal_range: number | null
+  est_range: number | null
+  inside_temp: number | null
+  outside_temp: number | null
+  battery_temp: number | null
+  latitude: number | null
+  longitude: number | null
+  charge_rate: number | null
+  created_at: string
 }
 
 export interface Geofence {
@@ -614,6 +717,9 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 export const getDrive = (id: number) => request<Drive>(`/drives/${id}`)
 /** Fetches positions within a drive's time window. */
 export const getDrivePositions = (driveId: number) => request<Position[]>(`/drives/${driveId}/positions`)
+/** Fetches detailed telemetry readings for a drive session. */
+export const getDriveTelemetry = (driveId: number) =>
+  request<DriveTelemetryReading[]>(`/drives/${driveId}/telemetry`)
 
 // === Charging ===
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
@@ -625,6 +731,9 @@ export const getChargingSessions = (vehicleId: number, limit = 50, offset = 0, s
 }
 /** Fetches a single charging session by ID. */
 export const getChargingSession = (id: number) => request<ChargingSession>(`/charging/${id}`)
+/** Fetches detailed telemetry readings for a charging session. */
+export const getChargeTelemetry = (sessionId: number) =>
+  request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`)
 
 // === Geofences ===
 /** Fetches all geofences. */

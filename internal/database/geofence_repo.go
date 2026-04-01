@@ -35,7 +35,7 @@ func (r *GeofenceRepo) Create(ctx context.Context, g *models.Geofence) error {
 }
 
 func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*models.Geofence, error) {
-	query := `SELECT id, name, latitude, longitude, radius, cost_per_kwh, created_at, updated_at FROM geofences ORDER BY name`
+	query := `SELECT id, name, latitude, longitude, radius, cost_per_kwh, created_at, updated_at FROM geofences ORDER BY name LIMIT 500`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
 		return nil, err

@@ -64,6 +64,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-API-Key"},
 		ExposedHeaders:   []string{"X-Request-ID", "X-Response-Time"},
+		// AllowCredentials is only enabled when explicit origins are set.
+		// With wildcard ("*"), credentials are disabled per the Fetch spec,
+		// preventing cookie/auth header leakage to arbitrary origins.
 		AllowCredentials: cfg.CORSOrigins != "",
 		MaxAge:           300,
 	}))
@@ -135,6 +138,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth (stricter rate limits to prevent brute force)
 		r.Route("/auth", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(10, 1*time.Minute))
 			r.Get("/login", authHandler.Login)
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
@@ -145,7 +149,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Vehicles
 		r.Route("/vehicles", func(r chi.Router) {
 			r.Get("/", vehicleHandler.List)
-			r.Post("/sync", vehicleHandler.SyncFromTesla)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)
 				r.Delete("/", vehicleHandler.Delete)
@@ -189,9 +193,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Settings
-		r.Get("/settings", settingsHandler.Get)
-		r.Put("/settings", settingsHandler.Update)
-		r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
+		r.Group(func(r chi.Router) {
+			r.Use(httprate.LimitByIP(20, 1*time.Minute))
+			r.Get("/settings", settingsHandler.Get)
+			r.Put("/settings", settingsHandler.Update)
+			r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
+		})
 
 		// Gas Price Auto-Poll
 		if opt.GasPriceWorker != nil {
@@ -386,6 +393,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Developer Tools
 		r.Route("/dev-tools", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(30, 1*time.Minute))
 			r.Get("/fleet-api-info", devToolsHandler.FleetAPIInfo)
 			r.Get("/detect-region", devToolsHandler.DetectRegion)
 			r.Post("/register-partner", devToolsHandler.RegisterPartner)
@@ -416,6 +424,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(20, 1*time.Minute))
 			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
 			r.Route("/charging/{id}", func(r chi.Router) {
 				r.Put("/", dataRepairHandler.UpdateCharging)
@@ -430,7 +439,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Export
-		r.Get("/export/{type}", NewExportHandler(db))
+		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
 
 		// Export Jobs (async, MQTT-backed)
 		var pahoClient pahomqtt.Client

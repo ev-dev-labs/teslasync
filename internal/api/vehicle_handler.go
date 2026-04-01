@@ -12,27 +12,29 @@ import (
 
 // VehicleHandler handles vehicle-related HTTP requests.
 type VehicleHandler struct {
-	vehicleRepo    *database.VehicleRepo
-	positionRepo   *database.PositionRepo
-	settingsRepo   *database.SettingsRepo
-	climateRepo    *database.ClimateRepo
-	securityRepo   *database.SecurityRepo
-	chargingTelRepo *database.ChargingTelemetryRepo
-	stateRepo      *database.VehicleStateRepo
-	teslaClient    *tesla.Client
+	vehicleRepo      *database.VehicleRepo
+	positionRepo     *database.PositionRepo
+	settingsRepo     *database.SettingsRepo
+	climateRepo      *database.ClimateRepo
+	securityRepo     *database.SecurityRepo
+	chargingTelRepo  *database.ChargingTelemetryRepo
+	stateRepo        *database.VehicleStateRepo
+	vehicleConfigRepo *database.VehicleConfigRepo
+	teslaClient      *tesla.Client
 	telemetryHandler *TelemetryHandler
 }
 
 func NewVehicleHandler(db *database.DB, tc *tesla.Client) *VehicleHandler {
 	return &VehicleHandler{
-		vehicleRepo:    database.NewVehicleRepo(db),
-		positionRepo:   database.NewPositionRepo(db),
-		settingsRepo:   database.NewSettingsRepo(db),
-		climateRepo:    database.NewClimateRepo(db),
-		securityRepo:   database.NewSecurityRepo(db),
-		chargingTelRepo: database.NewChargingTelemetryRepo(db),
-		stateRepo:      database.NewVehicleStateRepo(db),
-		teslaClient:    tc,
+		vehicleRepo:      database.NewVehicleRepo(db),
+		positionRepo:     database.NewPositionRepo(db),
+		settingsRepo:     database.NewSettingsRepo(db),
+		climateRepo:      database.NewClimateRepo(db),
+		securityRepo:     database.NewSecurityRepo(db),
+		chargingTelRepo:  database.NewChargingTelemetryRepo(db),
+		stateRepo:        database.NewVehicleStateRepo(db),
+		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
+		teslaClient:      tc,
 	}
 }
 
@@ -387,8 +389,14 @@ func (h *VehicleHandler) buildStateFromDB(r *http.Request, vehicle *models.Vehic
 		}
 	}
 
-	// Software version not available from telemetry — leave empty
-	state.SoftwareVersion = ""
+	// Enrich with firmware version from vehicle config snapshots
+	if cfg, err := h.vehicleConfigRepo.GetLatest(ctx, vehicle.ID); err == nil && cfg != nil {
+		if cfg.SoftwareUpdateVersion != nil && *cfg.SoftwareUpdateVersion != "" {
+			state.SoftwareVersion = *cfg.SoftwareUpdateVersion
+		} else if cfg.Version != nil && *cfg.Version != "" {
+			state.SoftwareVersion = *cfg.Version
+		}
+	}
 
 	return state
 }

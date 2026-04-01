@@ -22,6 +22,7 @@ type TelemetrySessionTracker struct {
 	driveTelRepo      *database.DriveTelemetryRepo
 	chargeTelRepo     *database.ChargeTelemetryReadingRepo
 	posRepo           *database.PositionRepo
+	geofenceRepo      *database.GeofenceRepo
 	eventBus          *events.Bus
 	geocoder          *geocoding.Client
 
@@ -127,6 +128,7 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus) *Telemetr
 		driveTelRepo:  database.NewDriveTelemetryRepo(db),
 		chargeTelRepo: database.NewChargeTelemetryReadingRepo(db),
 		posRepo:       database.NewPositionRepo(db),
+		geofenceRepo:  database.NewGeofenceRepo(db),
 		eventBus:      eventBus,
 		geocoder:      geocoding.NewClient("TeslaSync/1.0"),
 		activeDrives:  make(map[int64]*streamingDrive),
@@ -837,6 +839,13 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 	duration := time.Since(active.StartTime).Minutes()
 
+	// Estimate energy from battery% diff if direct energy signal unavailable
+	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
+		// Estimate: typical Model Y pack is ~75 kWh, so 1% ≈ 0.75 kWh
+		estimatedKWh := float64(endBattery-active.StartBatteryLevel) * 0.75
+		active.EnergyAdded = estimatedKWh
+	}
+
 	// Get end range
 	var endRange *float64
 	if signals != nil {
@@ -881,6 +890,15 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}(active.SessionID, *active.Latitude, *active.Longitude)
 		} else {
 			_ = t.chargeRepo.PartialUpdate(ctx, active.SessionID, enhancedFields)
+		}
+	}
+
+	// Auto-calculate charge cost from geofence electricity rate
+	if active.Latitude != nil && active.Longitude != nil && active.EnergyAdded > 0 {
+		geofences, gErr := t.geofenceRepo.FindByCoordinates(ctx, *active.Latitude, *active.Longitude)
+		if gErr == nil && len(geofences) > 0 && geofences[0].CostPerKwh != nil {
+			cost := active.EnergyAdded * *geofences[0].CostPerKwh
+			_ = t.chargeRepo.PartialUpdate(ctx, active.SessionID, map[string]interface{}{"cost": cost})
 		}
 	}
 

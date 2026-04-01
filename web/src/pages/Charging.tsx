@@ -109,6 +109,12 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
                 {session.fast_charger_brand && <span className="ml-2">· {session.fast_charger_brand}</span>}
               </div>
             )}
+            {session.location_name && (
+              <div className="mt-1 text-[10px] text-[var(--text-secondary)] flex items-center gap-1 truncate">
+                <Home className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate">{session.location_name}</span>
+              </div>
+            )}
           </div>
           <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-neon-green transition-colors" />
         </div>

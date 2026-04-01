@@ -53,7 +53,12 @@ function getEfficiencyScore(eff: number | null): { score: number; label: string;
 }
 
 function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, distanceUnit, speedUnit, efficiencyUnit }: { drive: Drive; convertDistance: (v: number) => number; convertSpeed: (v: number) => number; convertEfficiency: (v: number) => number; distanceUnit: string; speedUnit: string; efficiencyUnit: string }) {
-  const avgSpeed = drive.duration_min > 0 ? convertSpeed(drive.distance / (drive.duration_min / 60)).toFixed(0) : '—'
+  const actualDistance = drive.start_odometer != null && drive.end_odometer != null && drive.end_odometer > drive.start_odometer
+    ? drive.end_odometer - drive.start_odometer
+    : drive.distance
+  const avgSpeed = drive.speed_avg != null
+    ? convertSpeed(drive.speed_avg).toFixed(0)
+    : drive.duration_min > 0 ? convertSpeed(actualDistance / (drive.duration_min / 60)).toFixed(0) : '—'
   const eff = getEfficiency(drive)
   const effConverted = eff ? convertEfficiency(eff) : null
   const score = getEfficiencyScore(eff)
@@ -71,7 +76,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
             <div className="flex items-center gap-3 mb-1">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDate(drive.start_date)}</p>
               <span className="text-xs px-2 py-0.5 rounded-full bg-neon-cyan/10 text-neon-cyan font-medium">
-                {convertDistance(drive.distance).toFixed(1)} {distanceUnit}
+                {convertDistance(actualDistance).toFixed(1)} {distanceUnit}
               </span>
               {drive.speed_max !== null && drive.speed_max > 130 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-red/10 text-neon-red font-medium">
@@ -97,6 +102,12 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
                 </span>
               )}
             </div>
+            {drive.start_address && drive.end_address && (
+              <div className="mt-1 text-[10px] text-[var(--text-secondary)] flex items-center gap-1 truncate">
+                <MapPin className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate">{drive.start_address} → {drive.end_address}</span>
+              </div>
+            )}
           </div>
           <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-neon-cyan transition-colors" />
         </div>

@@ -106,15 +106,31 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
-	// Total calls
-	var total int
-	err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM api_call_logs`).Scan(&total)
+	// Single aggregate query for scalar stats
+	var total, errorCount, last24h int
+	var avgDuration float64
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COUNT(*) FILTER (WHERE status_code >= 400 OR error IS NOT NULL),
+			COALESCE(AVG(duration_ms), 0),
+			COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')
+		FROM api_call_logs
+	`).Scan(&total, &errorCount, &avgDuration, &last24h)
 	if err != nil {
 		return nil, err
 	}
 	stats["total_calls"] = total
+	stats["error_count"] = errorCount
+	if total > 0 {
+		stats["error_rate"] = float64(errorCount) / float64(total) * 100
+	} else {
+		stats["error_rate"] = 0.0
+	}
+	stats["avg_duration_ms"] = avgDuration
+	stats["last_24h"] = last24h
 
-	// Calls by method
+	// Calls by method (still needs its own query for the grouped result)
 	rows, err := r.db.Pool.Query(ctx, `SELECT method, COUNT(*) as count FROM api_call_logs GROUP BY method ORDER BY count DESC`)
 	if err != nil {
 		return nil, err
@@ -130,35 +146,6 @@ func (r *APICallLogRepo) GetStats(ctx context.Context) (map[string]interface{}, 
 		methodCounts[method] = count
 	}
 	stats["by_method"] = methodCounts
-
-	// Error rate
-	var errorCount int
-	err = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM api_call_logs WHERE status_code >= 400 OR error IS NOT NULL`).Scan(&errorCount)
-	if err != nil {
-		return nil, err
-	}
-	if total > 0 {
-		stats["error_rate"] = float64(errorCount) / float64(total) * 100
-	} else {
-		stats["error_rate"] = 0.0
-	}
-	stats["error_count"] = errorCount
-
-	// Avg duration
-	var avgDuration float64
-	err = r.db.Pool.QueryRow(ctx, `SELECT COALESCE(AVG(duration_ms), 0) FROM api_call_logs`).Scan(&avgDuration)
-	if err != nil {
-		return nil, err
-	}
-	stats["avg_duration_ms"] = avgDuration
-
-	// Calls last 24h
-	var last24h int
-	err = r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM api_call_logs WHERE created_at >= NOW() - INTERVAL '24 hours'`).Scan(&last24h)
-	if err != nil {
-		return nil, err
-	}
-	stats["last_24h"] = last24h
 
 	return stats, nil
 }

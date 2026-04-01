@@ -323,6 +323,7 @@ export default function Commands() {
   })
 
   const states = vehicleStates.data ?? {}
+  const statesError = vehicleStates.error
   const onlineCount = vehicles?.filter(v => {
     const s = states[v.id]
     return s && getVehicleStatus(v, s) !== 'offline' && getVehicleStatus(v, s) !== 'asleep'

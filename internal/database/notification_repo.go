@@ -68,7 +68,7 @@ func (r *NotificationRepo) GetChannel(ctx context.Context, id int64) (*models.No
 
 func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.NotificationChannel, error) {
 	rows, err := r.db.Pool.Query(ctx,
-		`SELECT id, name, type, config, enabled, created_at, updated_at FROM notification_channels ORDER BY created_at DESC`,
+		`SELECT id, name, type, config, enabled, created_at, updated_at FROM notification_channels ORDER BY created_at DESC LIMIT 1000`,
 	)
 	if err != nil {
 		return nil, err
@@ -154,26 +154,17 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
-	var total, sent, failed, pending int64
-	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs`).Scan(&total); err != nil {
-		return nil, err
-	}
-	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='sent'`).Scan(&sent); err != nil {
-		return nil, err
-	}
-	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='failed'`).Scan(&failed); err != nil {
-		return nil, err
-	}
-	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_logs WHERE status='pending'`).Scan(&pending); err != nil {
-		return nil, err
-	}
-
-	var channels int64
-	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_channels`).Scan(&channels); err != nil {
-		return nil, err
-	}
-	var enabled int64
-	if err := r.db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM notification_channels WHERE enabled=true`).Scan(&enabled); err != nil {
+	var total, sent, failed, pending, channels, enabled int64
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM notification_logs),
+			(SELECT COUNT(*) FROM notification_logs WHERE status='sent'),
+			(SELECT COUNT(*) FROM notification_logs WHERE status='failed'),
+			(SELECT COUNT(*) FROM notification_logs WHERE status='pending'),
+			(SELECT COUNT(*) FROM notification_channels),
+			(SELECT COUNT(*) FROM notification_channels WHERE enabled=true)
+	`).Scan(&total, &sent, &failed, &pending, &channels, &enabled)
+	if err != nil {
 		return nil, err
 	}
 

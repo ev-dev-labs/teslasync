@@ -60,7 +60,7 @@ func NewAlertRuleRepo(db *DB) *AlertRuleRepo {
 
 func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error) {
 	query := `SELECT id, name, type, enabled, threshold, vehicle_id, created_at, updated_at
-		FROM alert_rules ORDER BY id`
+		FROM alert_rules ORDER BY id LIMIT 1000`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
 		return nil, err

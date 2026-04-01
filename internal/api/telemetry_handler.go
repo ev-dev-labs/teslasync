@@ -40,6 +40,10 @@ type TelemetryHandler struct {
 	alertEvaluator *TelemetryAlertEvaluator
 	staleTimeout   time.Duration
 
+	// Cancellable context for background goroutines — cancelled on Shutdown()
+	bgCtx    context.Context
+	bgCancel context.CancelFunc
+
 	// Per-vehicle streaming health tracking
 	mu             sync.RWMutex
 	streamingState map[string]*VehicleStreamState // keyed by VIN
@@ -79,6 +83,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 	if staleTimeout <= 0 {
 		staleTimeout = 5 * time.Minute
 	}
+	bgCtx, bgCancel := context.WithCancel(context.Background())
 	return &TelemetryHandler{
 		db:             db,
 		posRepo:        database.NewPositionRepo(db),
@@ -101,6 +106,8 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
 		staleTimeout:   staleTimeout,
+		bgCtx:          bgCtx,
+		bgCancel:       bgCancel,
 		streamingState:     make(map[string]*VehicleStreamState),
 		lastWriteAt:        make(map[string]time.Time),
 		accumulatedSignals: make(map[string]map[string]interface{}),
@@ -155,6 +162,11 @@ func (h *TelemetryHandler) cleanupStaleEntries() {
 		}
 	}
 	h.accumulatedSignalsMu.Unlock()
+}
+
+// Shutdown cancels all background goroutines spawned by the handler.
+func (h *TelemetryHandler) Shutdown() {
+	h.bgCancel()
 }
 
 type telemetrySignal struct {
@@ -325,7 +337,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		h.lastWriteMu.Unlock()
 
 		go func() {
-			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			bgCtx, cancel := context.WithTimeout(h.bgCtx, 30*time.Second)
 			defer cancel()
 
 			// Drain accumulated signals for this write cycle
