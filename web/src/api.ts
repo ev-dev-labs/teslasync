@@ -1221,6 +1221,17 @@ export async function getBackupStats(): Promise<BackupStats> {
   return res.json()
 }
 
+export interface MapConfig {
+  provider: 'free' | 'azure' | 'google'
+  api_key: string
+}
+
+export async function getMapConfig(): Promise<MapConfig> {
+  const res = await fetch(`${getApiBase()}/api/v1/system/map-config`)
+  if (!res.ok) return { provider: 'free', api_key: '' }
+  return res.json()
+}
+
 // --- API Call Logs ---
 export interface APICallLog {
   id: number

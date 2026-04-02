@@ -369,6 +369,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/audit", auditHandler.List)
 			r.Get("/errors/stats", ErrorStatsHandler(errorTracker))
 			r.Get("/errors/catalog", ErrorCatalogHandler())
+			r.Get("/map-config", MapConfigHandler(cfg))
 
 			// Version & update endpoints
 			ver := opt.AppVersion
