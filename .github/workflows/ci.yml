@@ -94,36 +94,28 @@ jobs:
         run: npm run build
 
   docker:
-    name: Docker Build
+    name: Docker · ${{ matrix.image }}
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            file: Dockerfile
+          - image: notification-worker
+            file: Dockerfile.notification
+          - image: export-worker
+            file: Dockerfile.export-worker
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
 
-      - name: Build API image
+      - name: Build ${{ matrix.image }}
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
+          file: ${{ matrix.file }}
           push: false
-          cache-from: type=gha,scope=ci-api
-          cache-to: type=gha,mode=max,scope=ci-api
-
-      - name: Build Notification Worker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.notification
-          push: false
-          cache-from: type=gha,scope=ci-notification
-          cache-to: type=gha,mode=max,scope=ci-notification
-
-      - name: Build Export Worker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.export-worker
-          push: false
-          cache-from: type=gha,scope=ci-export
-          cache-to: type=gha,mode=max,scope=ci-export
+          cache-from: type=gha,scope=ci-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.image }}
