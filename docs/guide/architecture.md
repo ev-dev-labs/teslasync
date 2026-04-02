@@ -88,9 +88,10 @@ internal/
 ├── cache/          # Redis + in-memory cache abstraction
 ├── config/         # Environment-based configuration
 ├── crypto/         # AES-256-GCM encryption for data at rest
-├── database/       # PostgreSQL repositories (data access layer)
+├── database/       # PostgreSQL repositories, places cache, DBTX transactions
 ├── events/         # Domain event bus (MQTT-backed)
 ├── export/         # Export worker — async data export & backup processing
+├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
 ├── models/         # Domain models and types
 ├── mqtt/           # MQTT telemetry publisher
 ├── notification/   # Notification worker & channel senders

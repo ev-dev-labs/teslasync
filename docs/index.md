@@ -34,10 +34,13 @@ features:
     details: Lock/unlock, climate control, charge management, sentry mode, frunk/trunk, horn, and flash — all from the web UI.
   - icon: 💾
     title: Backup & Restore
-    details: Scheduled automated backups with multi-provider storage (S3, Azure, GCS, Local). Configurable frequency, retention, and compression.
+    details: Scheduled automated backups with multi-provider storage (S3, Azure, GCS, Local). Download, verify, and restore from the UI.
+  - icon: 🗺️
+    title: Multi-Provider Maps
+    details: Azure Maps, Google Maps, or free CARTO/OSM tiles — auto-selects based on your API key. Layer switcher on all map pages.
   - icon: 🔭
     title: Distributed Tracing
-    details: Optional OpenTelemetry instrumentation with Jaeger integration. Zero overhead when disabled.
+    details: Optional OpenTelemetry with per-repo DB spans, handler tracing, and Jaeger integration. Zero overhead when disabled.
 ---
 
 ## Why TeslaSync?

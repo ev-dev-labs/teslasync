@@ -95,20 +95,34 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - Full and incremental backup types
 - Multi-provider storage: Local, Amazon S3, Azure Blob, Google Cloud Storage
 - Configurable retention (keep last N backups, max 100)
-- Gzip compression + SHA-256 checksums
+- Gzip compression + SHA-256 integrity verification
+- Download, verify, and preview restore from UI
 - Complete run history with status tracking
 - Manual quick backup via one click
-- Restore capability (planned)
+
+### 🗺️ Maps & Geocoding
+- **Multi-provider map tiles** — auto-selects based on configured API key:
+  - 🌐 **CARTO Dark** (default, free, no key needed)
+  - 📍 **Azure Maps** (dark, road, satellite — 250K free/month)
+  - 🔵 **Google Maps** (road, satellite, terrain — 100K free/month)
+  - Free fallbacks: Esri Satellite, OpenStreetMap, OpenTopoMap
+- **Layer switcher** on all 5 map pages (Dark / Satellite / Streets / Terrain)
+- **Geocoding priority**: Geofence name → Places cache → Google/Azure/Nominatim
+- **Places cache** — resolved locations stored locally for ~90% API call reduction
+- **Reverse geocoding** — drives and charging sessions auto-resolve to place names
 
 ### 🔭 Distributed Tracing (Optional)
 - OpenTelemetry instrumentation with OTLP gRPC export
+- Per-repo DB spans with semantic conventions (table, operation, entity IDs)
+- Handler-level spans with custom vehicle/drive attributes
+- Transaction tracing with error recording
 - Jaeger integration (Docker Compose profile + Helm chart)
 - Zero overhead when disabled (noop provider)
-- HTTP request tracing with method/path/status spans
 
 ### 🎨 Modern UX
 - **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
 - **5 Color Themes** — Dynamic theme switching with CSS variables
+- **Map Layer Switcher** — Dark, Satellite, Streets, Terrain on all map pages
 - **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 52+ pages
 - **Animated Car SVG** — Subtle automobile animations on loading states and docs
 - **Code-Split Routes** — Lightning-fast page loads with React lazy loading
@@ -225,10 +239,10 @@ internal/
 ├── cache/          # Redis caching layer
 ├── config/         # Environment + YAML configuration
 ├── crypto/         # ECDSA key management
-├── database/       # PostgreSQL queries (sqlc), DBTX transactions, 23 migrations
+├── database/       # PostgreSQL queries, DBTX transactions, places cache, 24 migrations
 ├── events/         # SSE event hub
 ├── export/         # CSV/JSON export engine
-├── geocoding/      # Reverse geocoding
+├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
 ├── models/         # Domain models
 ├── mqtt/           # MQTT publisher
 ├── notification/   # 7-channel notification dispatch
