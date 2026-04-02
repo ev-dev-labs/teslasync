@@ -7,6 +7,7 @@ vi.mock('../api', () => ({
   createGeofence: vi.fn().mockResolvedValue({ id: 1, name: 'Test', latitude: 37.77, longitude: -122.41, radius: 50, cost_per_kwh: null }),
   updateGeofence: vi.fn().mockResolvedValue({}),
   deleteGeofence: vi.fn().mockResolvedValue(undefined),
+  getMapConfig: vi.fn().mockResolvedValue({ provider: 'free', api_key: '' }),
   getSettings: vi.fn().mockResolvedValue({
     unit_of_length: 'km',
     unit_of_temp: 'C',
@@ -42,6 +43,7 @@ vi.mock('react-leaflet', () => ({
   Marker: () => null,
   Popup: ({ children }: any) => <div>{children}</div>,
   useMapEvents: () => null,
+  useMap: () => ({ invalidateSize: vi.fn() }),
 }))
 
 vi.mock('leaflet', () => ({

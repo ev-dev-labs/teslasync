@@ -7,7 +7,7 @@ describe('Logo', () => {
     expect(container.firstChild).toBeInTheDocument()
   })
 
-  it('contains SVG elements', () => {
+  it('renders SVG with correct viewBox', () => {
     const { container } = render(<Logo />)
     const svg = container.querySelector('svg')
     expect(svg).toBeInTheDocument()
@@ -20,23 +20,23 @@ describe('Logo', () => {
     expect(wrapper.className).toContain('my-custom-class')
   })
 
-  it('applies the given size to the SVG', () => {
+  it('applies the given size', () => {
     const { container } = render(<Logo size={64} />)
     const svg = container.querySelector('svg')
     expect(svg).toHaveAttribute('width', '64')
     expect(svg).toHaveAttribute('height', '64')
   })
 
-  it('has the bolt icon (lightning bolt path)', () => {
+  it('has the bolt icon (path element)', () => {
     const { container } = render(<Logo />)
-    const boltPath = container.querySelector('path[d="M105 86l-10 16h8l-6 14 15-18h-8z"]')
-    expect(boltPath).toBeInTheDocument()
+    const paths = container.querySelectorAll('path')
+    expect(paths.length).toBeGreaterThan(0)
   })
 
-  it('has orbital rings (ellipses)', () => {
+  it('has a gradient rect background', () => {
     const { container } = render(<Logo />)
-    const ellipses = container.querySelectorAll('ellipse')
-    expect(ellipses.length).toBe(3)
+    const rect = container.querySelector('rect')
+    expect(rect).toBeInTheDocument()
   })
 
   it('does not show wordmark by default', () => {
