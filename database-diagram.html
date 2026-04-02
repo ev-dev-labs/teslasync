@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeslaSync Database Diagram</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1b26;
+  color: #c0caf5;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: #16161e;
+  border-bottom: 1px solid #2f3348;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+}
+
+#toolbar h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #7aa2f7;
+  white-space: nowrap;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 24px;
+  background: #2f3348;
+}
+
+.toolbar-stats {
+  font-size: 12px;
+  color: #565f89;
+}
+
+.toolbar-btn {
+  background: #24283b;
+  border: 1px solid #2f3348;
+  color: #c0caf5;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.toolbar-btn:hover { background: #2f3348; }
+
+#search-box {
+  background: #24283b;
+  border: 1px solid #2f3348;
+  color: #c0caf5;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 200px;
+  outline: none;
+}
+#search-box:focus { border-color: #7aa2f7; }
+#search-box::placeholder { color: #565f89; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #9aa5ce;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  cursor: grab;
+}
+
+#canvas-container.grabbing { cursor: grabbing; }
+
+#canvas {
+  position: absolute;
+  transform-origin: 0 0;
+}
+
+#svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.table-box {
+  position: absolute;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+  cursor: move;
+  user-select: none;
+  transition: box-shadow 0.15s;
+  z-index: 10;
+}
+.table-box:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 0 2px rgba(122,162,247,0.3);
+  z-index: 20;
+}
+.table-box.highlighted {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 0 2px rgba(122,162,247,0.8);
+  z-index: 30;
+}
+.table-box.dimmed {
+  opacity: 0.25;
+}
+
+.table-header {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+}
+
+.table-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.col-count {
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.2);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.table-body {
+  background: #1e2030;
+  padding: 4px 0;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.col-row {
+  display: flex;
+  align-items: center;
+  padding: 2px 10px;
+  font-size: 12px;
+  gap: 6px;
+  line-height: 18px;
+}
+.col-row:hover { background: rgba(122,162,247,0.08); }
+
+.pk-row { background: rgba(250,204,21,0.06); }
+.fk-row { background: rgba(96,165,250,0.06); }
+
+.pk-icon, .fk-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.col-name {
+  flex: 1;
+  color: #c0caf5;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-type {
+  color: #7aa2f7;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 10.5px;
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 70px;
+}
+
+.null-badge {
+  font-size: 9px;
+  color: #f7768e;
+  background: rgba(247,118,142,0.1);
+  padding: 0 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.nn-badge {
+  font-size: 9px;
+  color: #9ece6a;
+  background: rgba(158,206,106,0.1);
+  padding: 0 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* FK lines */
+.fk-line {
+  fill: none;
+  stroke: #3b4261;
+  stroke-width: 1.5;
+  opacity: 0.5;
+  transition: stroke 0.15s, opacity 0.15s, stroke-width 0.15s;
+}
+.fk-line.highlighted {
+  stroke: #7aa2f7;
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.fk-dot {
+  fill: #3b4261;
+  transition: fill 0.15s;
+}
+.fk-dot.highlighted {
+  fill: #7aa2f7;
+}
+
+/* Minimap */
+#minimap {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 200px;
+  height: 140px;
+  background: #16161e;
+  border: 1px solid #2f3348;
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 1000;
+}
+#minimap canvas {
+  width: 100%;
+  height: 100%;
+}
+#minimap-viewport {
+  position: absolute;
+  border: 1.5px solid #7aa2f7;
+  background: rgba(122,162,247,0.08);
+  pointer-events: none;
+}
+
+/* Tooltip */
+#tooltip {
+  position: fixed;
+  background: #24283b;
+  border: 1px solid #2f3348;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #c0caf5;
+  z-index: 2000;
+  pointer-events: none;
+  display: none;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+#tooltip .tt-label { color: #7aa2f7; font-weight: 600; }
+#tooltip .tt-arrow { color: #565f89; }
+
+/* Scrollbar */
+.table-body::-webkit-scrollbar { width: 4px; }
+.table-body::-webkit-scrollbar-track { background: transparent; }
+.table-body::-webkit-scrollbar-thumb { background: #3b4261; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h1>🔌 TeslaSync Database</h1>
+  <div class="toolbar-sep"></div>
+  <span class="toolbar-stats">47 tables · 778 columns · 37 relationships</span>
+  <div class="toolbar-sep"></div>
+  <input type="text" id="search-box" placeholder="Search tables or columns…" />
+  <button class="toolbar-btn" onclick="resetView()">Reset View</button>
+  <button class="toolbar-btn" onclick="zoomIn()">Zoom +</button>
+  <button class="toolbar-btn" onclick="zoomOut()">Zoom −</button>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-dot" style="background:#4a9eff;"></span>Core (6)</span><span class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span>Drives (7)</span><span class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span>Charging (3)</span><span class="legend-item"><span class="legend-dot" style="background:#a855f7;"></span>Snapshots (11)</span><span class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span>Alerts (4)</span><span class="legend-item"><span class="legend-dot" style="background:#06b6d4;"></span>Geofences (1)</span><span class="legend-item"><span class="legend-dot" style="background:#f97316;"></span>Commands (1)</span><span class="legend-item"><span class="legend-dot" style="background:#ec4899;"></span>Fleet (1)</span><span class="legend-item"><span class="legend-dot" style="background:#64748b;"></span>Audit (2)</span><span class="legend-item"><span class="legend-dot" style="background:#84cc16;"></span>Export (1)</span><span class="legend-item"><span class="legend-dot" style="background:#6b7280;"></span>Other (10)</span>
+  </div>
+</div>
+
+<div id="canvas-container">
+  <div id="canvas">
+    <svg id="svg-layer" width="4150" height="5316"></svg>
+    <div class="table-box" id="table-addresses"
+         data-table="addresses"
+         style="left:40px;top:996px;width:310px;">
+      <div class="table-header" style="background:#4a9eff;">
+        <span class="table-name">addresses</span>
+        <span class="col-count">13 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="display_name">    <span class="col-name">display_name</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="latitude">    <span class="col-name">latitude</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="longitude">    <span class="col-name">longitude</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="name">    <span class="col-name">name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="house_number">    <span class="col-name">house_number</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="road">    <span class="col-name">road</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="city">    <span class="col-name">city</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="county">    <span class="col-name">county</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="state">    <span class="col-name">state</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="country">    <span class="col-name">country</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="postcode">    <span class="col-name">postcode</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-alert_rules"
+         data-table="alert_rules"
+         style="left:1520px;top:40px;width:310px;">
+      <div class="table-header" style="background:#ef4444;">
+        <span class="table-name">alert_rules</span>
+        <span class="col-count">8 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="name">    <span class="col-name">name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="type">    <span class="col-name">type</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="enabled">    <span class="col-name">enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="threshold">    <span class="col-name">threshold</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-alerts"
+         data-table="alerts"
+         style="left:1520px;top:300px;width:310px;">
+      <div class="table-header" style="background:#ef4444;">
+        <span class="table-name">alerts</span>
+        <span class="col-count">8 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="type">    <span class="col-name">type</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="severity">    <span class="col-name">severity</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="title">    <span class="col-name">title</span>  <span class="col-type">VARCHAR(500)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="message">    <span class="col-name">message</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="is_read">    <span class="col-name">is_read</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-api_call_logs"
+         data-table="api_call_logs"
+         style="left:3000px;top:256px;width:310px;">
+      <div class="table-header" style="background:#64748b;">
+        <span class="table-name">api_call_logs</span>
+        <span class="col-count">10 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="method">    <span class="col-name">method</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="url">    <span class="col-name">url</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="status_code">    <span class="col-name">status_code</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="request_body">    <span class="col-name">request_body</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="response_body">    <span class="col-name">response_body</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="duration_ms">    <span class="col-name">duration_ms</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="error">    <span class="col-name">error</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="source">    <span class="col-name">source</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-api_keys"
+         data-table="api_keys"
+         style="left:40px;top:1366px;width:310px;">
+      <div class="table-header" style="background:#4a9eff;">
+        <span class="table-name">api_keys</span>
+        <span class="col-count">8 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="name">    <span class="col-name">name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="key_hash">    <span class="col-name">key_hash</span>  <span class="col-type">VARCHAR(64)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="key_prefix">    <span class="col-name">key_prefix</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="permissions">    <span class="col-name">permissions</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="last_used_at">    <span class="col-name">last_used_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="expires_at">    <span class="col-name">expires_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-audit_logs"
+         data-table="audit_logs"
+         style="left:3000px;top:40px;width:310px;">
+      <div class="table-header" style="background:#64748b;">
+        <span class="table-name">audit_logs</span>
+        <span class="col-count">6 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="action">    <span class="col-name">action</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="resource">    <span class="col-name">resource</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="details">    <span class="col-name">details</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="ip">    <span class="col-name">ip</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-battery_snapshots"
+         data-table="battery_snapshots"
+         style="left:1150px;top:40px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">battery_snapshots</span>
+        <span class="col-count">9 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="health_score">    <span class="col-name">health_score</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="capacity_kwh">    <span class="col-name">capacity_kwh</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="degradation_pct">    <span class="col-name">degradation_pct</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="est_range_km">    <span class="col-name">est_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="cycle_count">    <span class="col-name">cycle_count</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="avg_cell_temp_c">    <span class="col-name">avg_cell_temp_c</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-charge_telemetry_readings"
+         data-table="charge_telemetry_readings"
+         style="left:780px;top:674px;width:310px;">
+      <div class="table-header" style="background:#f59e0b;">
+        <span class="table-name">charge_telemetry_readings</span>
+        <span class="col-count">20 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="session_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">session_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="battery_level">    <span class="col-name">battery_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc">    <span class="col-name">soc</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="power_kw">    <span class="col-name">power_kw</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="voltage">    <span class="col-name">voltage</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="current_amps">    <span class="col-name">current_amps</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="phases">    <span class="col-name">phases</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="energy_added">    <span class="col-name">energy_added</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range">    <span class="col-name">rated_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ideal_range">    <span class="col-name">ideal_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="est_range">    <span class="col-name">est_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="inside_temp">    <span class="col-name">inside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp">    <span class="col-name">outside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_temp">    <span class="col-name">battery_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="latitude">    <span class="col-name">latitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="longitude">    <span class="col-name">longitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_rate">    <span class="col-name">charge_rate</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-charging_sessions"
+         data-table="charging_sessions"
+         style="left:780px;top:40px;width:310px;">
+      <div class="table-header" style="background:#f59e0b;">
+        <span class="table-name">charging_sessions</span>
+        <span class="col-count">25 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="start_date">    <span class="col-name">start_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_date">    <span class="col-name">end_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="address_id">    <span class="col-name">address_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_energy_added">    <span class="col-name">charge_energy_added</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="charge_energy_used">    <span class="col-name">charge_energy_used</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_battery_level">    <span class="col-name">start_battery_level</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_battery_level">    <span class="col-name">end_battery_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_range_km">    <span class="col-name">start_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_range_km">    <span class="col-name">end_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charger_phases">    <span class="col-name">charger_phases</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charger_voltage">    <span class="col-name">charger_voltage</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charger_actual_current">    <span class="col-name">charger_actual_current</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charger_power">    <span class="col-name">charger_power</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fast_charger_type">    <span class="col-name">fast_charger_type</span>  <span class="col-type">VARCHAR(100)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fast_charger_brand">    <span class="col-name">fast_charger_brand</span>  <span class="col-type">VARCHAR(100)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="conn_charge_cable">    <span class="col-name">conn_charge_cable</span>  <span class="col-type">VARCHAR(100)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="cost">    <span class="col-name">cost</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="duration_min">    <span class="col-name">duration_min</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="latitude">    <span class="col-name">latitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="longitude">    <span class="col-name">longitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="location_name">    <span class="col-name">location_name</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="inside_temp_avg">    <span class="col-name">inside_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp_avg">    <span class="col-name">outside_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-charging_telemetry"
+         data-table="charging_telemetry"
+         style="left:780px;top:1198px;width:310px;">
+      <div class="table-header" style="background:#f59e0b;">
+        <span class="table-name">charging_telemetry</span>
+        <span class="col-count">60 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="battery_level">    <span class="col-name">battery_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc">    <span class="col-name">soc</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_state">    <span class="col-name">charge_state</span>  <span class="col-type">VARCHAR(30)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="detailed_charge_state">    <span class="col-name">detailed_charge_state</span>  <span class="col-type">VARCHAR(30)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_limit_soc">    <span class="col-name">charge_limit_soc</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_amps">    <span class="col-name">charge_amps</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_current_request">    <span class="col-name">charge_current_request</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_current_request_max">    <span class="col-name">charge_current_request_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_enable_request">    <span class="col-name">charge_enable_request</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charger_voltage">    <span class="col-name">charger_voltage</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charger_phases">    <span class="col-name">charger_phases</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_rate_mph">    <span class="col-name">charge_rate_mph</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="dc_charging_power">    <span class="col-name">dc_charging_power</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="dc_charging_energy_in">    <span class="col-name">dc_charging_energy_in</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ac_charging_power">    <span class="col-name">ac_charging_power</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ac_charging_energy_in">    <span class="col-name">ac_charging_energy_in</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="energy_remaining">    <span class="col-name">energy_remaining</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="est_battery_range">    <span class="col-name">est_battery_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ideal_battery_range">    <span class="col-name">ideal_battery_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range">    <span class="col-name">rated_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="pack_voltage">    <span class="col-name">pack_voltage</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="pack_current">    <span class="col-name">pack_current</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_port_door_open">    <span class="col-name">charge_port_door_open</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_port_latch">    <span class="col-name">charge_port_latch</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_port_cold_weather_mode">    <span class="col-name">charge_port_cold_weather_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charging_cable_type">    <span class="col-name">charging_cable_type</span>  <span class="col-type">VARCHAR(30)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fast_charger_present">    <span class="col-name">fast_charger_present</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fast_charger_type">    <span class="col-name">fast_charger_type</span>  <span class="col-type">VARCHAR(30)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="time_to_full_charge">    <span class="col-name">time_to_full_charge</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="estimated_hours_to_charge">    <span class="col-name">estimated_hours_to_charge</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="scheduled_charging_mode">    <span class="col-name">scheduled_charging_mode</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="scheduled_charging_pending">    <span class="col-name">scheduled_charging_pending</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="preconditioning_enabled">    <span class="col-name">preconditioning_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="brick_voltage_max">    <span class="col-name">brick_voltage_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="brick_voltage_min">    <span class="col-name">brick_voltage_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="num_brick_voltage_max">    <span class="col-name">num_brick_voltage_max</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="num_brick_voltage_min">    <span class="col-name">num_brick_voltage_min</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="module_temp_max">    <span class="col-name">module_temp_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="module_temp_min">    <span class="col-name">module_temp_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="num_module_temp_max">    <span class="col-name">num_module_temp_max</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="num_module_temp_min">    <span class="col-name">num_module_temp_min</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_heater_on">    <span class="col-name">battery_heater_on</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="not_enough_power_to_heat">    <span class="col-name">not_enough_power_to_heat</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="bms_state">    <span class="col-name">bms_state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="bms_fullcharge_complete">    <span class="col-name">bms_fullcharge_complete</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="dcdc_enable">    <span class="col-name">dcdc_enable</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="isolation_resistance">    <span class="col-name">isolation_resistance</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lifetime_energy_used">    <span class="col-name">lifetime_energy_used</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="supercharger_session_trip_planner">    <span class="col-name">supercharger_session_trip_planner</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="powershare_status">    <span class="col-name">powershare_status</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="powershare_type">    <span class="col-name">powershare_type</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="powershare_stop_reason">    <span class="col-name">powershare_stop_reason</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="powershare_hours_left">    <span class="col-name">powershare_hours_left</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="powershare_power_kw">    <span class="col-name">powershare_power_kw</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="scheduled_charging_start_time">    <span class="col-name">scheduled_charging_start_time</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="scheduled_departure_time">    <span class="col-name">scheduled_departure_time</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="expected_energy_pct_at_arrival">    <span class="col-name">expected_energy_pct_at_arrival</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-chatbot_messages"
+         data-table="chatbot_messages"
+         style="left:3740px;top:40px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">chatbot_messages</span>
+        <span class="col-count">5 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="session_id">    <span class="col-name">session_id</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="role">    <span class="col-name">role</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="content">    <span class="col-name">content</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-climate_snapshots"
+         data-table="climate_snapshots"
+         style="left:1150px;top:2920px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">climate_snapshots</span>
+        <span class="col-count">33 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="inside_temp">    <span class="col-name">inside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp">    <span class="col-name">outside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_power">    <span class="col-name">hvac_power</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_fan_speed">    <span class="col-name">hvac_fan_speed</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_left_temp_request">    <span class="col-name">hvac_left_temp_request</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_right_temp_request">    <span class="col-name">hvac_right_temp_request</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="cabin_overheat_mode">    <span class="col-name">cabin_overheat_mode</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="defrost_mode">    <span class="col-name">defrost_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_heater_on">    <span class="col-name">battery_heater_on</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="hvac_ac_enabled">    <span class="col-name">hvac_ac_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_auto_mode">    <span class="col-name">hvac_auto_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_fan_status">    <span class="col-name">hvac_fan_status</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_steering_wheel_heat_auto">    <span class="col-name">hvac_steering_wheel_heat_auto</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvac_steering_wheel_heat_level">    <span class="col-name">hvac_steering_wheel_heat_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="climate_keeper_mode">    <span class="col-name">climate_keeper_mode</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="cabin_overheat_protection_temp_limit">    <span class="col-name">cabin_overheat_protection_temp_limit</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="defrost_for_preconditioning">    <span class="col-name">defrost_for_preconditioning</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="seat_heater_left">    <span class="col-name">seat_heater_left</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="seat_heater_right">    <span class="col-name">seat_heater_right</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="seat_heater_rear_left">    <span class="col-name">seat_heater_rear_left</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="seat_heater_rear_center">    <span class="col-name">seat_heater_rear_center</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="seat_heater_rear_right">    <span class="col-name">seat_heater_rear_right</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="seat_vent_enabled">    <span class="col-name">seat_vent_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="climate_seat_cooling_front_left">    <span class="col-name">climate_seat_cooling_front_left</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="climate_seat_cooling_front_right">    <span class="col-name">climate_seat_cooling_front_right</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="auto_seat_climate_left">    <span class="col-name">auto_seat_climate_left</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="auto_seat_climate_right">    <span class="col-name">auto_seat_climate_right</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rear_defrost_enabled">    <span class="col-name">rear_defrost_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rear_display_hvac_enabled">    <span class="col-name">rear_display_hvac_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="wiper_heat_enabled">    <span class="col-name">wiper_heat_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-command_logs"
+         data-table="command_logs"
+         style="left:2260px;top:40px;width:310px;">
+      <div class="table-header" style="background:#f97316;">
+        <span class="table-name">command_logs</span>
+        <span class="col-count">7 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="command">    <span class="col-name">command</span>  <span class="col-type">VARCHAR(100)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="params">    <span class="col-name">params</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="status">    <span class="col-name">status</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="error">    <span class="col-name">error</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-daily_mileage"
+         data-table="daily_mileage"
+         style="left:410px;top:2624px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">daily_mileage</span>
+        <span class="col-count">8 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="date">    <span class="col-name">date</span>  <span class="col-type">DATE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="distance_km">    <span class="col-name">distance_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="odometer_start">    <span class="col-name">odometer_start</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="odometer_end">    <span class="col-name">odometer_end</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="drive_count">    <span class="col-name">drive_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="energy_used_kwh">    <span class="col-name">energy_used_kwh</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-drive_telemetry_readings"
+         data-table="drive_telemetry_readings"
+         style="left:410px;top:1466px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">drive_telemetry_readings</span>
+        <span class="col-count">28 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="drive_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">drive_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="latitude">    <span class="col-name">latitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="longitude">    <span class="col-name">longitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="elevation">    <span class="col-name">elevation</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="heading">    <span class="col-name">heading</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="odometer">    <span class="col-name">odometer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="speed">    <span class="col-name">speed</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="power">    <span class="col-name">power</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_level">    <span class="col-name">battery_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc">    <span class="col-name">soc</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="usable_soc">    <span class="col-name">usable_soc</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range">    <span class="col-name">rated_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ideal_range">    <span class="col-name">ideal_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="est_range">    <span class="col-name">est_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="inside_temp">    <span class="col-name">inside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp">    <span class="col-name">outside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="driver_temp">    <span class="col-name">driver_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="passenger_temp">    <span class="col-name">passenger_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fan_status">    <span class="col-name">fan_status</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="is_climate_on">    <span class="col-name">is_climate_on</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tire_pressure_fl">    <span class="col-name">tire_pressure_fl</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tire_pressure_fr">    <span class="col-name">tire_pressure_fr</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tire_pressure_rl">    <span class="col-name">tire_pressure_rl</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tire_pressure_rr">    <span class="col-name">tire_pressure_rr</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_heater_on">    <span class="col-name">battery_heater_on</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-drives"
+         data-table="drives"
+         style="left:410px;top:40px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">drives</span>
+        <span class="col-count">61 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="start_date">    <span class="col-name">start_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_date">    <span class="col-name">end_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_position_id">    <span class="col-name">start_position_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_position_id">    <span class="col-name">end_position_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_address_id">    <span class="col-name">start_address_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_address_id">    <span class="col-name">end_address_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="distance">    <span class="col-name">distance</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="duration_min">    <span class="col-name">duration_min</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="start_range_km">    <span class="col-name">start_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_range_km">    <span class="col-name">end_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="speed_max">    <span class="col-name">speed_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="power_max">    <span class="col-name">power_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="power_min">    <span class="col-name">power_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_battery_level">    <span class="col-name">start_battery_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_battery_level">    <span class="col-name">end_battery_level</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="inside_temp_avg">    <span class="col-name">inside_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp_avg">    <span class="col-name">outside_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_odometer">    <span class="col-name">start_odometer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_odometer">    <span class="col-name">end_odometer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="speed_avg">    <span class="col-name">speed_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="speed_min">    <span class="col-name">speed_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_rated_range_km">    <span class="col-name">start_rated_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_rated_range_km">    <span class="col-name">end_rated_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range_avg">    <span class="col-name">rated_range_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range_max">    <span class="col-name">rated_range_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range_min">    <span class="col-name">rated_range_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_ideal_range_km">    <span class="col-name">start_ideal_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_ideal_range_km">    <span class="col-name">end_ideal_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ideal_range_avg">    <span class="col-name">ideal_range_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ideal_range_max">    <span class="col-name">ideal_range_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="ideal_range_min">    <span class="col-name">ideal_range_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_est_range_km">    <span class="col-name">start_est_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_est_range_km">    <span class="col-name">end_est_range_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="est_range_avg">    <span class="col-name">est_range_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="est_range_max">    <span class="col-name">est_range_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="est_range_min">    <span class="col-name">est_range_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc_start">    <span class="col-name">soc_start</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc_end">    <span class="col-name">soc_end</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc_avg">    <span class="col-name">soc_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc_max">    <span class="col-name">soc_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="soc_min">    <span class="col-name">soc_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="usable_soc_start">    <span class="col-name">usable_soc_start</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="usable_soc_end">    <span class="col-name">usable_soc_end</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="usable_soc_avg">    <span class="col-name">usable_soc_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="usable_soc_max">    <span class="col-name">usable_soc_max</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="usable_soc_min">    <span class="col-name">usable_soc_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="elevation_start">    <span class="col-name">elevation_start</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="elevation_end">    <span class="col-name">elevation_end</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="elevation_gain">    <span class="col-name">elevation_gain</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="elevation_loss">    <span class="col-name">elevation_loss</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="driver_temp_avg">    <span class="col-name">driver_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="passenger_temp_avg">    <span class="col-name">passenger_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_heater_on">    <span class="col-name">battery_heater_on</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_address">    <span class="col-name">start_address</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_address">    <span class="col-name">end_address</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_latitude">    <span class="col-name">start_latitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_longitude">    <span class="col-name">start_longitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_latitude">    <span class="col-name">end_latitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_longitude">    <span class="col-name">end_longitude</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-export_jobs"
+         data-table="export_jobs"
+         style="left:3370px;top:40px;width:310px;">
+      <div class="table-header" style="background:#84cc16;">
+        <span class="table-name">export_jobs</span>
+        <span class="col-count">15 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="type">    <span class="col-name">type</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="format">    <span class="col-name">format</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="status">    <span class="col-name">status</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="vehicle_id">    <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_date">    <span class="col-name">start_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="end_date">    <span class="col-name">end_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="file_name">    <span class="col-name">file_name</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="file_data">    <span class="col-name">file_data</span>  <span class="col-type">BYTEA</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="file_size">    <span class="col-name">file_size</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="record_count">    <span class="col-name">record_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="error_message">    <span class="col-name">error_message</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="completed_at">    <span class="col-name">completed_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-fleet_telemetry_subscriptions"
+         data-table="fleet_telemetry_subscriptions"
+         style="left:2630px;top:40px;width:310px;">
+      <div class="table-header" style="background:#ec4899;">
+        <span class="table-name">fleet_telemetry_subscriptions</span>
+        <span class="col-count">15 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="vin">    <span class="col-name">vin</span>  <span class="col-type">VARCHAR(17)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="signals">    <span class="col-name">signals</span>  <span class="col-type">_TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="interval_seconds">    <span class="col-name">interval_seconds</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="hostname">    <span class="col-name">hostname</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="port">    <span class="col-name">port</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="protocol">    <span class="col-name">protocol</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="ca_pem">    <span class="col-name">ca_pem</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="subscribed_at">    <span class="col-name">subscribed_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="expires_at">    <span class="col-name">expires_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="status">    <span class="col-name">status</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="response_code">    <span class="col-name">response_code</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="response_body">    <span class="col-name">response_body</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-gas_price_history"
+         data-table="gas_price_history"
+         style="left:3740px;top:234px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">gas_price_history</span>
+        <span class="col-count">7 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="price_per_unit">    <span class="col-name">price_per_unit</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="unit">    <span class="col-name">unit</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="efficiency_mpg">    <span class="col-name">efficiency_mpg</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="effective_from">    <span class="col-name">effective_from</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="effective_to">    <span class="col-name">effective_to</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-gas_price_poll_state"
+         data-table="gas_price_poll_state"
+         style="left:3740px;top:472px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">gas_price_poll_state</span>
+        <span class="col-count">5 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="enabled">    <span class="col-name">enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="poll_interval">    <span class="col-name">poll_interval</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="last_poll_time">    <span class="col-name">last_poll_time</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="last_price">    <span class="col-name">last_price</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-geofence_electricity_rates"
+         data-table="geofence_electricity_rates"
+         style="left:3740px;top:666px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">geofence_electricity_rates</span>
+        <span class="col-count">6 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="geofence_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">geofence_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="cost_per_kwh">    <span class="col-name">cost_per_kwh</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="effective_from">    <span class="col-name">effective_from</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="effective_to">    <span class="col-name">effective_to</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-geofences"
+         data-table="geofences"
+         style="left:1890px;top:40px;width:310px;">
+      <div class="table-header" style="background:#06b6d4;">
+        <span class="table-name">geofences</span>
+        <span class="col-count">8 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="name">    <span class="col-name">name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="latitude">    <span class="col-name">latitude</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="longitude">    <span class="col-name">longitude</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="radius">    <span class="col-name">radius</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="cost_per_kwh">    <span class="col-name">cost_per_kwh</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-location_snapshots"
+         data-table="location_snapshots"
+         style="left:1150px;top:4122px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">location_snapshots</span>
+        <span class="col-count">19 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="destination_name">    <span class="col-name">destination_name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="destination_lat">    <span class="col-name">destination_lat</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="destination_lon">    <span class="col-name">destination_lon</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="origin_lat">    <span class="col-name">origin_lat</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="origin_lon">    <span class="col-name">origin_lon</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="miles_to_arrival">    <span class="col-name">miles_to_arrival</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="minutes_to_arrival">    <span class="col-name">minutes_to_arrival</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="route_line">    <span class="col-name">route_line</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="route_traffic_delay_min">    <span class="col-name">route_traffic_delay_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="located_at_home">    <span class="col-name">located_at_home</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="located_at_work">    <span class="col-name">located_at_work</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="located_at_favorite">    <span class="col-name">located_at_favorite</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="gps_state">    <span class="col-name">gps_state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="route_last_updated">    <span class="col-name">route_last_updated</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="current_lat">    <span class="col-name">current_lat</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="current_lon">    <span class="col-name">current_lon</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-media_snapshots"
+         data-table="media_snapshots"
+         style="left:1150px;top:3730px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">media_snapshots</span>
+        <span class="col-count">14 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="now_playing_title">    <span class="col-name">now_playing_title</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="now_playing_artist">    <span class="col-name">now_playing_artist</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="now_playing_album">    <span class="col-name">now_playing_album</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="now_playing_station">    <span class="col-name">now_playing_station</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="now_playing_duration">    <span class="col-name">now_playing_duration</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="now_playing_elapsed">    <span class="col-name">now_playing_elapsed</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="playback_status">    <span class="col-name">playback_status</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="playback_source">    <span class="col-name">playback_source</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="audio_volume">    <span class="col-name">audio_volume</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="audio_volume_max">    <span class="col-name">audio_volume_max</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="audio_volume_increment">    <span class="col-name">audio_volume_increment</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-motor_snapshots"
+         data-table="motor_snapshots"
+         style="left:1150px;top:1758px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">motor_snapshots</span>
+        <span class="col-count">49 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="di_state">    <span class="col-name">di_state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_torque">    <span class="col-name">di_torque</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_axle_speed">    <span class="col-name">di_axle_speed</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_stator_temp">    <span class="col-name">di_stator_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="pedal_position">    <span class="col-name">pedal_position</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="brake_pedal">    <span class="col-name">brake_pedal</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lateral_accel">    <span class="col-name">lateral_accel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="longitudinal_accel">    <span class="col-name">longitudinal_accel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="vehicle_speed">    <span class="col-name">vehicle_speed</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="gear">    <span class="col-name">gear</span>  <span class="col-type">VARCHAR(5)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="di_torque_actual_f">    <span class="col-name">di_torque_actual_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_torque_actual_r">    <span class="col-name">di_torque_actual_r</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_torque_actual_rel">    <span class="col-name">di_torque_actual_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_torque_actual_rer">    <span class="col-name">di_torque_actual_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_axle_speed_f">    <span class="col-name">di_axle_speed_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_axle_speed_rel">    <span class="col-name">di_axle_speed_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_axle_speed_rer">    <span class="col-name">di_axle_speed_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_state_f">    <span class="col-name">di_state_f</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_state_rel">    <span class="col-name">di_state_rel</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_state_rer">    <span class="col-name">di_state_rer</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_stator_temp_f">    <span class="col-name">di_stator_temp_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_stator_temp_rel">    <span class="col-name">di_stator_temp_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_stator_temp_rer">    <span class="col-name">di_stator_temp_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_heatsink_t_f">    <span class="col-name">di_heatsink_t_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_heatsink_t_r">    <span class="col-name">di_heatsink_t_r</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_heatsink_t_rel">    <span class="col-name">di_heatsink_t_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_heatsink_t_rer">    <span class="col-name">di_heatsink_t_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_inverter_t_f">    <span class="col-name">di_inverter_t_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_inverter_t_r">    <span class="col-name">di_inverter_t_r</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_inverter_t_rel">    <span class="col-name">di_inverter_t_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_inverter_t_rer">    <span class="col-name">di_inverter_t_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_motor_current_f">    <span class="col-name">di_motor_current_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_motor_current_r">    <span class="col-name">di_motor_current_r</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_motor_current_rel">    <span class="col-name">di_motor_current_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_motor_current_rer">    <span class="col-name">di_motor_current_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_v_bat_f">    <span class="col-name">di_v_bat_f</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_v_bat_r">    <span class="col-name">di_v_bat_r</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_v_bat_rel">    <span class="col-name">di_v_bat_rel</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_v_bat_rer">    <span class="col-name">di_v_bat_rer</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="di_slave_torque_cmd">    <span class="col-name">di_slave_torque_cmd</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="hvil">    <span class="col-name">hvil</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="brake_pedal_pos">    <span class="col-name">brake_pedal_pos</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="cruise_set_speed">    <span class="col-name">cruise_set_speed</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="drive_rail">    <span class="col-name">drive_rail</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lifetime_energy_gained_regen">    <span class="col-name">lifetime_energy_gained_regen</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lifetime_energy_used_drive">    <span class="col-name">lifetime_energy_used_drive</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-notification_channels"
+         data-table="notification_channels"
+         style="left:1520px;top:560px;width:310px;">
+      <div class="table-header" style="background:#ef4444;">
+        <span class="table-name">notification_channels</span>
+        <span class="col-count">7 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="name">    <span class="col-name">name</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="type">    <span class="col-name">type</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="config">    <span class="col-name">config</span>  <span class="col-type">JSONB</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="enabled">    <span class="col-name">enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-notification_logs"
+         data-table="notification_logs"
+         style="left:1520px;top:798px;width:310px;">
+      <div class="table-header" style="background:#ef4444;">
+        <span class="table-name">notification_logs</span>
+        <span class="col-count">11 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="channel_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">channel_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="alert_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">alert_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="title">    <span class="col-name">title</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="message">    <span class="col-name">message</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="status">    <span class="col-name">status</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="error">    <span class="col-name">error</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="sent_at">    <span class="col-name">sent_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="scheduled_at">    <span class="col-name">scheduled_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="latency_ms">    <span class="col-name">latency_ms</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-notification_metrics"
+         data-table="notification_metrics"
+         style="left:3740px;top:882px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">notification_metrics</span>
+        <span class="col-count">6 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="channel_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">channel_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="date">    <span class="col-name">date</span>  <span class="col-type">DATE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="total_sent">    <span class="col-name">total_sent</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="total_failed">    <span class="col-name">total_failed</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="avg_latency_ms">    <span class="col-name">avg_latency_ms</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-notification_preferences"
+         data-table="notification_preferences"
+         style="left:3740px;top:1098px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">notification_preferences</span>
+        <span class="col-count">5 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="channel_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">channel_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="event_type">    <span class="col-name">event_type</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="enabled">    <span class="col-name">enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-notification_schedules"
+         data-table="notification_schedules"
+         style="left:3740px;top:1292px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">notification_schedules</span>
+        <span class="col-count">11 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="channel_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">channel_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="title">    <span class="col-name">title</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="message">    <span class="col-name">message</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="cron_expr">    <span class="col-name">cron_expr</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="scheduled_at">    <span class="col-name">scheduled_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="last_run_at">    <span class="col-name">last_run_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="next_run_at">    <span class="col-name">next_run_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="enabled">    <span class="col-name">enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-positions"
+         data-table="positions"
+         style="left:410px;top:2166px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">positions</span>
+        <span class="col-count">17 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="latitude">    <span class="col-name">latitude</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="longitude">    <span class="col-name">longitude</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="speed">    <span class="col-name">speed</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="power">    <span class="col-name">power</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="heading">    <span class="col-name">heading</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="elevation">    <span class="col-name">elevation</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="odometer">    <span class="col-name">odometer</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="ideal_range">    <span class="col-name">ideal_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rated_range">    <span class="col-name">rated_range</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_level">    <span class="col-name">battery_level</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="inside_temp">    <span class="col-name">inside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp">    <span class="col-name">outside_temp</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fan_status">    <span class="col-name">fan_status</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="is_climate_on">    <span class="col-name">is_climate_on</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row pk-row" data-col="created_at">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-safety_snapshots"
+         data-table="safety_snapshots"
+         style="left:1150px;top:4624px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">safety_snapshots</span>
+        <span class="col-count">14 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="automatic_blind_spot_camera">    <span class="col-name">automatic_blind_spot_camera</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="automatic_emergency_braking_off">    <span class="col-name">automatic_emergency_braking_off</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="blind_spot_collision_warning">    <span class="col-name">blind_spot_collision_warning</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="cruise_follow_distance">    <span class="col-name">cruise_follow_distance</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="emergency_lane_departure_avoidance">    <span class="col-name">emergency_lane_departure_avoidance</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="forward_collision_warning">    <span class="col-name">forward_collision_warning</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lane_departure_avoidance">    <span class="col-name">lane_departure_avoidance</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="speed_limit_warning">    <span class="col-name">speed_limit_warning</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="pin_to_drive_enabled">    <span class="col-name">pin_to_drive_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="miles_since_reset">    <span class="col-name">miles_since_reset</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="self_driving_miles_since_reset">    <span class="col-name">self_driving_miles_since_reset</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-schema_migrations"
+         data-table="schema_migrations"
+         style="left:40px;top:1626px;width:310px;">
+      <div class="table-header" style="background:#4a9eff;">
+        <span class="table-name">schema_migrations</span>
+        <span class="col-count">2 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="version">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">version</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="dirty">    <span class="col-name">dirty</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-security_events"
+         data-table="security_events"
+         style="left:3740px;top:1618px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">security_events</span>
+        <span class="col-count">29 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="locked">    <span class="col-name">locked</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="sentry_mode">    <span class="col-name">sentry_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="door_state">    <span class="col-name">door_state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fd_window">    <span class="col-name">fd_window</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="fp_window">    <span class="col-name">fp_window</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rd_window">    <span class="col-name">rd_window</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rp_window">    <span class="col-name">rp_window</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="homelink_nearby">    <span class="col-name">homelink_nearby</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="guest_mode">    <span class="col-name">guest_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="homelink_device_count">    <span class="col-name">homelink_device_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="guest_mode_mobile_access_state">    <span class="col-name">guest_mode_mobile_access_state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="driver_seat_occupied">    <span class="col-name">driver_seat_occupied</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="center_display">    <span class="col-name">center_display</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="speed_limit_mode">    <span class="col-name">speed_limit_mode</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="valet_mode_enabled">    <span class="col-name">valet_mode_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="service_mode">    <span class="col-name">service_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="current_limit_mph">    <span class="col-name">current_limit_mph</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="paired_phone_key_count">    <span class="col-name">paired_phone_key_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lights_hazards_active">    <span class="col-name">lights_hazards_active</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lights_high_beams">    <span class="col-name">lights_high_beams</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="lights_turn_signal">    <span class="col-name">lights_turn_signal</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tonneau_position">    <span class="col-name">tonneau_position</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tonneau_open_percent">    <span class="col-name">tonneau_open_percent</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tonneau_tent_mode">    <span class="col-name">tonneau_tent_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="driver_seat_belt">    <span class="col-name">driver_seat_belt</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="passenger_seat_belt">    <span class="col-name">passenger_seat_belt</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-settings"
+         data-table="settings"
+         style="left:40px;top:604px;width:310px;">
+      <div class="table-header" style="background:#4a9eff;">
+        <span class="table-name">settings</span>
+        <span class="col-count">14 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="unit_of_length">    <span class="col-name">unit_of_length</span>  <span class="col-type">VARCHAR(5)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="unit_of_temp">    <span class="col-name">unit_of_temp</span>  <span class="col-type">VARCHAR(5)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="preferred_range">    <span class="col-name">preferred_range</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="language">    <span class="col-name">language</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="base_cost_per_kwh">    <span class="col-name">base_cost_per_kwh</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="api_suspended">    <span class="col-name">api_suspended</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="theme">    <span class="col-name">theme</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="mode">    <span class="col-name">mode</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="custom_primary">    <span class="col-name">custom_primary</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="custom_accent">    <span class="col-name">custom_accent</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="gas_price_per_unit">    <span class="col-name">gas_price_per_unit</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="gas_unit">    <span class="col-name">gas_unit</span>  <span class="col-type">VARCHAR(10)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="gas_efficiency_mpg">    <span class="col-name">gas_efficiency_mpg</span>  <span class="col-type">DOUBLE</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-software_updates"
+         data-table="software_updates"
+         style="left:1150px;top:1520px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">software_updates</span>
+        <span class="col-count">7 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="version">    <span class="col-name">version</span>  <span class="col-type">VARCHAR(100)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="status">    <span class="col-name">status</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="scheduled_at">    <span class="col-name">scheduled_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="installed_at">    <span class="col-name">installed_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-tesla_public_key"
+         data-table="tesla_public_key"
+         style="left:3740px;top:2340px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">tesla_public_key</span>
+        <span class="col-count">4 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="public_key_pem">    <span class="col-name">public_key_pem</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="fingerprint">    <span class="col-name">fingerprint</span>  <span class="col-type">VARCHAR(64)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-tire_pressure_snapshots"
+         data-table="tire_pressure_snapshots"
+         style="left:1150px;top:322px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">tire_pressure_snapshots</span>
+        <span class="col-count">13 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="front_left">    <span class="col-name">front_left</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="front_right">    <span class="col-name">front_right</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rear_left">    <span class="col-name">rear_left</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rear_right">    <span class="col-name">rear_right</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="tpms_hard_warnings">    <span class="col-name">tpms_hard_warnings</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="tpms_soft_warnings">    <span class="col-name">tpms_soft_warnings</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="last_seen_time_fl">    <span class="col-name">last_seen_time_fl</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="last_seen_time_fr">    <span class="col-name">last_seen_time_fr</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="last_seen_time_rl">    <span class="col-name">last_seen_time_rl</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="last_seen_time_rr">    <span class="col-name">last_seen_time_rr</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-tokens"
+         data-table="tokens"
+         style="left:40px;top:388px;width:310px;">
+      <div class="table-header" style="background:#4a9eff;">
+        <span class="table-name">tokens</span>
+        <span class="col-count">6 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="access_token">    <span class="col-name">access_token</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="refresh_token">    <span class="col-name">refresh_token</span>  <span class="col-type">TEXT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="expires_at">    <span class="col-name">expires_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-trip_drives"
+         data-table="trip_drives"
+         style="left:410px;top:3210px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">trip_drives</span>
+        <span class="col-count">2 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="trip_id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">trip_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row pk-row" data-col="drive_id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">drive_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-trips"
+         data-table="trips"
+         style="left:410px;top:2884px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">trips</span>
+        <span class="col-count">11 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="name">    <span class="col-name">name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_date">    <span class="col-name">start_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_date">    <span class="col-name">end_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="total_distance_km">    <span class="col-name">total_distance_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="total_energy_kwh">    <span class="col-name">total_energy_kwh</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="total_cost">    <span class="col-name">total_cost</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="drive_count">    <span class="col-name">drive_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_count">    <span class="col-name">charge_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-user_preference_snapshots"
+         data-table="user_preference_snapshots"
+         style="left:1150px;top:5016px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">user_preference_snapshots</span>
+        <span class="col-count">8 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="setting_24hr_time">    <span class="col-name">setting_24hr_time</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="setting_charge_unit">    <span class="col-name">setting_charge_unit</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="setting_distance_unit">    <span class="col-name">setting_distance_unit</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="setting_temperature_unit">    <span class="col-name">setting_temperature_unit</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="setting_tire_pressure_unit">    <span class="col-name">setting_tire_pressure_unit</span>  <span class="col-type">VARCHAR(10)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-vampire_drain_events"
+         data-table="vampire_drain_events"
+         style="left:3740px;top:2512px;width:310px;">
+      <div class="table-header" style="background:#6b7280;">
+        <span class="table-name">vampire_drain_events</span>
+        <span class="col-count">13 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_date">    <span class="col-name">start_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_date">    <span class="col-name">end_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="start_battery">    <span class="col-name">start_battery</span>  <span class="col-type">INTEGER</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_battery">    <span class="col-name">end_battery</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="battery_lost">    <span class="col-name">battery_lost</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="range_lost_km">    <span class="col-name">range_lost_km</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="duration_hours">    <span class="col-name">duration_hours</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="drain_rate_pct_per_hour">    <span class="col-name">drain_rate_pct_per_hour</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="outside_temp_avg">    <span class="col-name">outside_temp_avg</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="sentry_mode">    <span class="col-name">sentry_mode</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-vehicle_config_snapshots"
+         data-table="vehicle_config_snapshots"
+         style="left:1150px;top:930px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">vehicle_config_snapshots</span>
+        <span class="col-count">23 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="car_type">    <span class="col-name">car_type</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="trim">    <span class="col-name">trim</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="exterior_color">    <span class="col-name">exterior_color</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="roof_color">    <span class="col-name">roof_color</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="wheel_type">    <span class="col-name">wheel_type</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="rear_seat_heaters">    <span class="col-name">rear_seat_heaters</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="sunroof_installed">    <span class="col-name">sunroof_installed</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="efficiency_package">    <span class="col-name">efficiency_package</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="europe_vehicle">    <span class="col-name">europe_vehicle</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="right_hand_drive">    <span class="col-name">right_hand_drive</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="remote_start_enabled">    <span class="col-name">remote_start_enabled</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="charge_port">    <span class="col-name">charge_port</span>  <span class="col-type">VARCHAR(20)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="offroad_lightbar_present">    <span class="col-name">offroad_lightbar_present</span>  <span class="col-type">BOOLEAN</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="version">    <span class="col-name">version</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="vehicle_name">    <span class="col-name">vehicle_name</span>  <span class="col-type">VARCHAR(100)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="software_update_version">    <span class="col-name">software_update_version</span>  <span class="col-type">VARCHAR(50)</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="software_update_download_pct">    <span class="col-name">software_update_download_pct</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="software_update_install_pct">    <span class="col-name">software_update_install_pct</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="software_update_expected_duration">    <span class="col-name">software_update_expected_duration</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="software_update_scheduled_start">    <span class="col-name">software_update_scheduled_start</span>  <span class="col-type">TEXT</span>  <span class="null-badge">NULL</span></div>
+      </div>
+    </div><div class="table-box" id="table-vehicle_states"
+         data-table="vehicle_states"
+         style="left:1150px;top:692px;width:310px;">
+      <div class="table-header" style="background:#a855f7;">
+        <span class="table-name">vehicle_states</span>
+        <span class="col-count">7 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="state">    <span class="col-name">state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="start_date">    <span class="col-name">start_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="end_date">    <span class="col-name">end_date</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="duration_min">    <span class="col-name">duration_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-vehicles"
+         data-table="vehicles"
+         style="left:40px;top:40px;width:310px;">
+      <div class="table-header" style="background:#4a9eff;">
+        <span class="table-name">vehicles</span>
+        <span class="col-count">12 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="vehicle_id">    <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="vin">    <span class="col-name">vin</span>  <span class="col-type">VARCHAR(17)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="display_name">    <span class="col-name">display_name</span>  <span class="col-type">VARCHAR(255)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="model">    <span class="col-name">model</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="trim_badging">    <span class="col-name">trim_badging</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="exterior_color">    <span class="col-name">exterior_color</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="wheel_type">    <span class="col-name">wheel_type</span>  <span class="col-type">VARCHAR(50)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="state">    <span class="col-name">state</span>  <span class="col-type">VARCHAR(20)</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="healthy">    <span class="col-name">healthy</span>  <span class="col-type">BOOLEAN</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div><div class="col-row" data-col="updated_at">    <span class="col-name">updated_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div><div class="table-box" id="table-visited_locations"
+         data-table="visited_locations"
+         style="left:410px;top:3338px;width:310px;">
+      <div class="table-header" style="background:#22c55e;">
+        <span class="table-name">visited_locations</span>
+        <span class="col-count">7 cols</span>
+      </div>
+      <div class="table-body">
+        <div class="col-row pk-row" data-col="id">  <span class="pk-icon" title="Primary Key">🔑</span>  <span class="col-name">id</span>  <span class="col-type">BIGINT</span>  <span class="nn-badge">NN</span></div><div class="col-row fk-row" data-col="vehicle_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">vehicle_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row fk-row" data-col="address_id">  <span class="fk-icon" title="Foreign Key">🔗</span>  <span class="col-name">address_id</span>  <span class="col-type">BIGINT</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="visit_count">    <span class="col-name">visit_count</span>  <span class="col-type">INTEGER</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="total_duration_min">    <span class="col-name">total_duration_min</span>  <span class="col-type">DOUBLE</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="last_visited">    <span class="col-name">last_visited</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="null-badge">NULL</span></div><div class="col-row" data-col="created_at">    <span class="col-name">created_at</span>  <span class="col-type">TIMESTAMPTZ</span>  <span class="nn-badge">NN</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="minimap">
+  <canvas id="minimap-canvas" width="200" height="140"></canvas>
+  <div id="minimap-viewport"></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+const FK_DATA = [{"from_table": "alert_rules", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "alert_rules_vehicle_id_fkey"}, {"from_table": "alerts", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "alerts_vehicle_id_fkey"}, {"from_table": "battery_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "battery_snapshots_vehicle_id_fkey"}, {"from_table": "charge_telemetry_readings", "from_column": "session_id", "to_table": "charging_sessions", "to_column": "id", "name": "charge_telemetry_readings_session_id_fkey"}, {"from_table": "charge_telemetry_readings", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "charge_telemetry_readings_vehicle_id_fkey"}, {"from_table": "charging_sessions", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "charging_sessions_vehicle_id_fkey"}, {"from_table": "charging_telemetry", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "charging_telemetry_vehicle_id_fkey"}, {"from_table": "climate_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "climate_snapshots_vehicle_id_fkey"}, {"from_table": "command_logs", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "command_logs_vehicle_id_fkey"}, {"from_table": "daily_mileage", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "daily_mileage_vehicle_id_fkey"}, {"from_table": "drive_telemetry_readings", "from_column": "drive_id", "to_table": "drives", "to_column": "id", "name": "drive_telemetry_readings_drive_id_fkey"}, {"from_table": "drive_telemetry_readings", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "drive_telemetry_readings_vehicle_id_fkey"}, {"from_table": "drives", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "drives_vehicle_id_fkey"}, {"from_table": "fleet_telemetry_subscriptions", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "fleet_telemetry_subscriptions_vehicle_id_fkey"}, {"from_table": "geofence_electricity_rates", "from_column": "geofence_id", "to_table": "geofences", "to_column": "id", "name": "geofence_electricity_rates_geofence_id_fkey"}, {"from_table": "location_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "location_snapshots_vehicle_id_fkey"}, {"from_table": "media_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "media_snapshots_vehicle_id_fkey"}, {"from_table": "motor_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "motor_snapshots_vehicle_id_fkey"}, {"from_table": "notification_logs", "from_column": "alert_id", "to_table": "alerts", "to_column": "id", "name": "notification_logs_alert_id_fkey"}, {"from_table": "notification_logs", "from_column": "channel_id", "to_table": "notification_channels", "to_column": "id", "name": "notification_logs_channel_id_fkey"}, {"from_table": "notification_metrics", "from_column": "channel_id", "to_table": "notification_channels", "to_column": "id", "name": "notification_metrics_channel_id_fkey"}, {"from_table": "notification_preferences", "from_column": "channel_id", "to_table": "notification_channels", "to_column": "id", "name": "notification_preferences_channel_id_fkey"}, {"from_table": "notification_schedules", "from_column": "channel_id", "to_table": "notification_channels", "to_column": "id", "name": "notification_schedules_channel_id_fkey"}, {"from_table": "positions", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "positions_vehicle_id_fkey"}, {"from_table": "safety_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "safety_snapshots_vehicle_id_fkey"}, {"from_table": "security_events", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "security_events_vehicle_id_fkey"}, {"from_table": "software_updates", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "software_updates_vehicle_id_fkey"}, {"from_table": "tire_pressure_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "tire_pressure_snapshots_vehicle_id_fkey"}, {"from_table": "trip_drives", "from_column": "drive_id", "to_table": "drives", "to_column": "id", "name": "trip_drives_drive_id_fkey"}, {"from_table": "trip_drives", "from_column": "trip_id", "to_table": "trips", "to_column": "id", "name": "trip_drives_trip_id_fkey"}, {"from_table": "trips", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "trips_vehicle_id_fkey"}, {"from_table": "user_preference_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "user_preference_snapshots_vehicle_id_fkey"}, {"from_table": "vampire_drain_events", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "vampire_drain_events_vehicle_id_fkey"}, {"from_table": "vehicle_config_snapshots", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "vehicle_config_snapshots_vehicle_id_fkey"}, {"from_table": "vehicle_states", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "vehicle_states_vehicle_id_fkey"}, {"from_table": "visited_locations", "from_column": "address_id", "to_table": "addresses", "to_column": "id", "name": "visited_locations_address_id_fkey"}, {"from_table": "visited_locations", "from_column": "vehicle_id", "to_table": "vehicles", "to_column": "id", "name": "visited_locations_vehicle_id_fkey"}];
+const CANVAS_W = 4150;
+const CANVAS_H = 5316;
+
+// ── State ──
+let scale = 0.55;
+let panX = 0, panY = 0;
+let isDraggingCanvas = false;
+let dragStartX, dragStartY, panStartX, panStartY;
+let dragTable = null, dragOffsetX, dragOffsetY;
+
+const container = document.getElementById('canvas-container');
+const canvas = document.getElementById('canvas');
+const svgLayer = document.getElementById('svg-layer');
+const tooltip = document.getElementById('tooltip');
+
+// ── Transform ──
+function applyTransform() {
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  updateMinimap();
+}
+
+function resetView() {
+  scale = 0.55;
+  panX = 20;
+  panY = 20;
+  applyTransform();
+}
+
+function zoomIn() { scale = Math.min(2, scale * 1.2); applyTransform(); }
+function zoomOut() { scale = Math.max(0.1, scale / 1.2); applyTransform(); }
+
+// ── Mouse wheel zoom ──
+container.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = container.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  const newScale = Math.max(0.1, Math.min(2, scale * factor));
+
+  panX = mx - (mx - panX) * (newScale / scale);
+  panY = my - (my - panY) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
+// ── Pan ──
+container.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.table-box')) return;
+  isDraggingCanvas = true;
+  container.classList.add('grabbing');
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  panStartX = panX;
+  panStartY = panY;
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingCanvas) {
+    panX = panStartX + (e.clientX - dragStartX);
+    panY = panStartY + (e.clientY - dragStartY);
+    applyTransform();
+  }
+  if (dragTable) {
+    const x = (e.clientX - container.getBoundingClientRect().left - panX) / scale - dragOffsetX;
+    const y = (e.clientY - container.getBoundingClientRect().top - panY) / scale - dragOffsetY;
+    dragTable.style.left = x + 'px';
+    dragTable.style.top = y + 'px';
+    drawLines();
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  isDraggingCanvas = false;
+  container.classList.remove('grabbing');
+  dragTable = null;
+});
+
+// ── Table drag ──
+document.querySelectorAll('.table-box').forEach(box => {
+  box.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    dragTable = box;
+    const rect = box.getBoundingClientRect();
+    const canvasRect = container.getBoundingClientRect();
+    dragOffsetX = (e.clientX - rect.left) / scale;
+    dragOffsetY = (e.clientY - rect.top) / scale;
+  });
+
+  // Hover: highlight related FK lines
+  const tname = box.dataset.table;
+  box.addEventListener('mouseenter', () => highlightTable(tname));
+  box.addEventListener('mouseleave', () => clearHighlight());
+});
+
+// ── Draw FK lines ──
+function getColPosition(tableName, colName, side) {
+  const box = document.getElementById('table-' + tableName);
+  if (!box) return null;
+  const colRow = box.querySelector(`[data-col="${colName}"]`);
+  if (!colRow) return null;
+
+  const bx = parseFloat(box.style.left);
+  const by = parseFloat(box.style.top);
+  const bw = parseFloat(box.style.width) || 310;
+
+  // Get row offset within table
+  const headerH = box.querySelector('.table-header').offsetHeight;
+  const bodyEl = box.querySelector('.table-body');
+  const rowTop = colRow.offsetTop - bodyEl.offsetTop + bodyEl.parentElement.querySelector('.table-header').offsetHeight;
+  const rowH = colRow.offsetHeight;
+
+  const cy = by + rowTop + rowH / 2;
+
+  if (side === 'left') return { x: bx, y: cy };
+  return { x: bx + bw, y: cy };
+}
+
+function drawLines() {
+  svgLayer.innerHTML = '';
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+  // Arrowhead marker
+  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', 'arrowhead');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '6');
+  marker.setAttribute('refX', '8');
+  marker.setAttribute('refY', '3');
+  marker.setAttribute('orient', 'auto');
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('points', '0 0, 8 3, 0 6');
+  polygon.setAttribute('fill', '#3b4261');
+  polygon.classList.add('fk-dot');
+  marker.appendChild(polygon);
+  defs.appendChild(marker);
+
+  const markerHL = marker.cloneNode(true);
+  markerHL.setAttribute('id', 'arrowhead-hl');
+  markerHL.querySelector('polygon').setAttribute('fill', '#7aa2f7');
+  markerHL.querySelector('polygon').classList.add('fk-dot', 'highlighted');
+  defs.appendChild(markerHL);
+
+  svgLayer.appendChild(defs);
+
+  FK_DATA.forEach((fk, idx) => {
+    const fromBox = document.getElementById('table-' + fk.from_table);
+    const toBox = document.getElementById('table-' + fk.to_table);
+    if (!fromBox || !toBox) return;
+
+    const fromX = parseFloat(fromBox.style.left) + 310 / 2;
+    const toX = parseFloat(toBox.style.left) + 310 / 2;
+
+    // Decide which side to connect from/to
+    let fromSide, toSide;
+    if (fromX < toX) {
+      fromSide = 'right';
+      toSide = 'left';
+    } else {
+      fromSide = 'left';
+      toSide = 'right';
+    }
+
+    const p1 = getColPosition(fk.from_table, fk.from_column, fromSide);
+    const p2 = getColPosition(fk.to_table, fk.to_column, toSide);
+    if (!p1 || !p2) return;
+
+    // Bezier curve
+    const dx = Math.abs(p2.x - p1.x) * 0.5;
+    const cp1x = fromSide === 'right' ? p1.x + dx : p1.x - dx;
+    const cp2x = toSide === 'right' ? p2.x + dx : p2.x - dx;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${p1.x} ${p1.y} C ${cp1x} ${p1.y}, ${cp2x} ${p2.y}, ${p2.x} ${p2.y}`);
+    path.classList.add('fk-line');
+    path.dataset.from = fk.from_table;
+    path.dataset.to = fk.to_table;
+    path.dataset.fkName = fk.name;
+    path.setAttribute('marker-end', 'url(#arrowhead)');
+
+    // Dot at start
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', p1.x);
+    dot.setAttribute('cy', p1.y);
+    dot.setAttribute('r', '3');
+    dot.classList.add('fk-dot');
+    dot.dataset.from = fk.from_table;
+    dot.dataset.to = fk.to_table;
+
+    svgLayer.appendChild(path);
+    svgLayer.appendChild(dot);
+  });
+}
+
+// ── Highlight on hover ──
+function highlightTable(tableName) {
+  // Dim all, highlight related
+  document.querySelectorAll('.table-box').forEach(b => {
+    b.classList.add('dimmed');
+    b.classList.remove('highlighted');
+  });
+
+  const related = new Set([tableName]);
+  FK_DATA.forEach(fk => {
+    if (fk.from_table === tableName) related.add(fk.to_table);
+    if (fk.to_table === tableName) related.add(fk.from_table);
+  });
+
+  related.forEach(t => {
+    const el = document.getElementById('table-' + t);
+    if (el) {
+      el.classList.remove('dimmed');
+      el.classList.add('highlighted');
+    }
+  });
+
+  // Highlight FK lines
+  svgLayer.querySelectorAll('.fk-line').forEach(line => {
+    if (line.dataset.from === tableName || line.dataset.to === tableName) {
+      line.classList.add('highlighted');
+      line.setAttribute('marker-end', 'url(#arrowhead-hl)');
+    } else {
+      line.style.opacity = '0.1';
+    }
+  });
+  svgLayer.querySelectorAll('.fk-dot').forEach(dot => {
+    if (dot.dataset.from === tableName || dot.dataset.to === tableName) {
+      dot.classList.add('highlighted');
+    }
+  });
+}
+
+function clearHighlight() {
+  document.querySelectorAll('.table-box').forEach(b => {
+    b.classList.remove('dimmed', 'highlighted');
+  });
+  svgLayer.querySelectorAll('.fk-line').forEach(line => {
+    line.classList.remove('highlighted');
+    line.style.opacity = '';
+    line.setAttribute('marker-end', 'url(#arrowhead)');
+  });
+  svgLayer.querySelectorAll('.fk-dot').forEach(dot => {
+    dot.classList.remove('highlighted');
+  });
+}
+
+// ── Search ──
+document.getElementById('search-box').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase().trim();
+  document.querySelectorAll('.table-box').forEach(box => {
+    if (!q) {
+      box.classList.remove('dimmed', 'highlighted');
+      return;
+    }
+    const tname = box.dataset.table;
+    const cols = Array.from(box.querySelectorAll('.col-name')).map(el => el.textContent.toLowerCase());
+    const matches = tname.includes(q) || cols.some(c => c.includes(q));
+    box.classList.toggle('dimmed', !matches);
+    box.classList.toggle('highlighted', matches);
+  });
+});
+
+// ── Minimap ──
+function updateMinimap() {
+  const mmCanvas = document.getElementById('minimap-canvas');
+  const ctx = mmCanvas.getContext('2d');
+  const mmW = 200, mmH = 140;
+  const scaleX = mmW / CANVAS_W;
+  const scaleY = mmH / CANVAS_H;
+  const mmScale = Math.min(scaleX, scaleY) * 0.9;
+
+  ctx.clearRect(0, 0, mmW, mmH);
+  ctx.fillStyle = '#1a1b26';
+  ctx.fillRect(0, 0, mmW, mmH);
+
+  // Draw tables as small rectangles
+  document.querySelectorAll('.table-box').forEach(box => {
+    const x = parseFloat(box.style.left) * mmScale;
+    const y = parseFloat(box.style.top) * mmScale;
+    const w = (parseFloat(box.style.width) || 310) * mmScale;
+    const h = box.offsetHeight * mmScale;
+    const header = box.querySelector('.table-header');
+    ctx.fillStyle = header.style.background || '#3b4261';
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(x, y, w, Math.max(h, 2));
+  });
+  ctx.globalAlpha = 1;
+
+  // Viewport rectangle
+  const vp = document.getElementById('minimap-viewport');
+  const cRect = container.getBoundingClientRect();
+  const vpL = (-panX / scale) * mmScale;
+  const vpT = (-panY / scale) * mmScale;
+  const vpW = (cRect.width / scale) * mmScale;
+  const vpH = (cRect.height / scale) * mmScale;
+  vp.style.left = vpL + 'px';
+  vp.style.top = vpT + 'px';
+  vp.style.width = vpW + 'px';
+  vp.style.height = vpH + 'px';
+}
+
+// ── FK tooltip on line hover (via SVG pointer-events) ──
+// We let table hover handle most interaction
+
+// ── Init ──
+resetView();
+drawLines();
+window.addEventListener('resize', () => { drawLines(); updateMinimap(); });
+</script>
+</body>
+</html>

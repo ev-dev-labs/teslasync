@@ -1,0 +1,1 @@
+import{_ as a,o as t,c as i,a2 as s}from"./chunks/framework.BTjPRYTP.js";const m=JSON.parse('{"title":"FAQ","description":"","frontmatter":{},"headers":[],"relativePath":"guide/faq.md","filePath":"guide/faq.md"}'),r={name:"guide/faq.md"};function o(l,e,n,c,h,d){return t(),i("div",null,[...e[0]||(e[0]=[s("",53)])])}const p=a(r,[["render",o]]);export{m as __pageData,p as default};
