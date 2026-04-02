@@ -396,7 +396,7 @@ export default function Layout() {
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Mobile top bar */}
-        <header className="flex items-center gap-4 border-b backdrop-blur-xl px-3 py-2.5 sm:px-5 sm:py-3 lg:hidden safe-top" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}>
+        <header className="flex items-center border-b backdrop-blur-xl px-3 py-2.5 sm:px-5 sm:py-3 lg:hidden safe-top" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
@@ -405,7 +405,9 @@ export default function Layout() {
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Logo size={24} showWordmark />
+          <div className="flex-1 flex justify-center -ml-9">
+            <Logo size={24} showWordmark />
+          </div>
         </header>
 
         <ServiceStatusBanner />
