@@ -48,7 +48,9 @@ export default function OnboardingWizard() {
   useEffect(() => {
     const onboarded = localStorage.getItem(ONBOARDED_KEY)
     if (!onboarded) {
-      setVisible(true)
+      // Delay so the app renders first and user can interact with nav
+      const timer = setTimeout(() => setVisible(true), 1500)
+      return () => clearTimeout(timer)
     }
   }, [])
 
@@ -71,8 +73,8 @@ export default function OnboardingWizard() {
   const StepIcon = step.icon
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 top-12 lg:top-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop — doesn't cover mobile header so hamburger stays clickable */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Modal */}

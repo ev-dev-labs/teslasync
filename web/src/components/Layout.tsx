@@ -259,7 +259,7 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[40] bg-black/60 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -269,8 +269,9 @@ export default function Layout() {
       <aside
         role="navigation"
         aria-label="Main navigation"
+        data-sidebar-open={sidebarOpen}
         className={clsx(
-          'fixed inset-y-0 left-0 z-[50] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:relative lg:z-auto lg:w-64 lg:translate-x-0 lg:shrink-0',
+          'fixed inset-y-0 left-0 z-[56] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'border-r backdrop-blur-xl flex flex-col',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -393,22 +394,27 @@ export default function Layout() {
         </div>
       </aside>
 
+      {/* Mobile top bar — outside main content div so it's above the sidebar stacking context */}
+      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b backdrop-blur-xl px-4 py-3 lg:hidden" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)', touchAction: 'manipulation' }}>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          type="button"
+          aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          aria-expanded={sidebarOpen}
+          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+          className="relative z-10 rounded-xl p-2.5 -ml-1 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] transition-colors active:scale-95"
+        >
+          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+        <div className="flex-1 flex justify-center -ml-10">
+          <Logo size={26} showWordmark />
+        </div>
+      </header>
+
       {/* Main content */}
-      <div className="relative z-0 flex flex-1 flex-col overflow-hidden">
-        {/* Mobile top bar */}
-        <header className="flex items-center border-b backdrop-blur-xl px-3 py-2.5 sm:px-5 sm:py-3 lg:hidden safe-top" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-            aria-expanded={sidebarOpen}
-            className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-white/[0.05] hover:text-[var(--text-primary)] transition-colors"
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-          <div className="flex-1 flex justify-center -ml-9">
-            <Logo size={24} showWordmark />
-          </div>
-        </header>
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+        {/* Spacer for fixed mobile header */}
+        <div className="h-14 shrink-0 lg:hidden" />
 
         <ServiceStatusBanner />
         <main id="main-content" ref={mainRef} role="main" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">

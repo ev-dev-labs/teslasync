@@ -122,22 +122,13 @@
           if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 500); }
         }, 300);
       });
-      // Register production service worker for PWA offline support
+      // Register self-destructing service worker to kill any cached production SW.
+      // The sw.js file immediately clears caches and unregisters itself.
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(function(reg) {
-          // Check for updates every 60 seconds
-          setInterval(function() { reg.update(); }, 60000);
-          reg.addEventListener('updatefound', function() {
-            var newSW = reg.installing;
-            if (newSW) {
-              newSW.addEventListener('statechange', function() {
-                if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
-                  // New version available — show subtle reload prompt
-                  console.log('[SW] New version available');
-                }
-              });
-            }
-          });
+        navigator.serviceWorker.register('/sw.js');
+        // Also force-unregister any stale registrations
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.update(); });
         });
       }
     </script>
