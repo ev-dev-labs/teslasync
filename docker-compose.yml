@@ -44,7 +44,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      test: ["CMD", "/usr/local/bin/teslasync", "healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -103,7 +103,7 @@ services:
       mosquitto:
         condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/healthz"]
+      test: ["CMD", "/usr/local/bin/notification-worker", "healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -240,7 +240,7 @@ services:
       mosquitto:
         condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      test: ["CMD", "/usr/local/bin/export-worker", "healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3

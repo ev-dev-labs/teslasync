@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
 // DBTX is an interface satisfied by both *pgxpool.Pool and pgx.Tx,
@@ -79,16 +80,26 @@ func (db *DB) Migrate(migrationsPath string) error {
 // Health checks database connectivity with a 3-second deadline.
 // Returns nil if the database is reachable, or an error otherwise.
 func (db *DB) Health(ctx context.Context) error {
+	ctx, span := tracing.DBSpan(ctx, "ping", "")
+	defer span.End()
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	return db.Pool.Ping(checkCtx)
+	err := db.Pool.Ping(checkCtx)
+	if err != nil {
+		tracing.EndSpan(span, err)
+	}
+	return err
 }
 
 // WithTx executes fn within a database transaction.
 // It commits on success and rolls back on error or panic.
 func (db *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	ctx, span := tracing.TxSpan(ctx, "transaction")
+	defer span.End()
+
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
+		tracing.EndSpan(span, err)
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer func() {
@@ -100,6 +111,7 @@ func (db *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 
 	if err := fn(tx); err != nil {
 		_ = tx.Rollback(ctx)
+		tracing.EndSpan(span, err)
 		return err
 	}
 

@@ -45,12 +45,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// SSE event hub for real-time updates
 	eventHub := NewEventHub()
 
+	// Error tracker for centralized error aggregation
+	errorTracker := NewErrorTracker(200)
+	globalErrorTracker = errorTracker
+
 	// Global middleware
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(TracingMiddleware)
 	r.Use(LoggerMiddleware)
 	r.Use(RecoveryMiddleware) // Enhanced recovery that logs panics as structured errors
+	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
+	r.Use(PrometheusMiddleware) // HTTP request metrics (duration, count, size)
 	r.Use(chimw.Compress(5))
 
 	// CORS — use explicit origins in production. The wildcard is kept for
@@ -360,6 +366,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/backup/stats", backupHandler.BackupStats)
 			r.Get("/config-validation", ConfigValidation(cfg))
 			r.Get("/audit", auditHandler.List)
+			r.Get("/errors/stats", ErrorStatsHandler(errorTracker))
+			r.Get("/errors/catalog", ErrorCatalogHandler())
 
 			// Version & update endpoints
 			ver := opt.AppVersion
@@ -451,6 +459,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
 			r.Get("/runs", backupRestoreHandler.ListRuns)
 			r.Get("/runs/{runID}", backupRestoreHandler.GetRun)
+			r.Get("/runs/{runID}/download", backupRestoreHandler.DownloadBackup)
+			r.Post("/runs/{runID}/verify", backupRestoreHandler.VerifyBackup)
+			r.Get("/runs/{runID}/preview", backupRestoreHandler.PreviewRestore)
 		})
 
 		// Export

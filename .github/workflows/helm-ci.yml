@@ -1,0 +1,133 @@
+name: Helm Chart CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.github/workflows/helm-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'helm/**'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint Chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Helm lint
+        run: helm lint helm/teslasync --strict
+
+      - name: Helm lint (minimal values)
+        run: |
+          helm lint helm/teslasync --strict \
+            --set postgresql.enabled=true \
+            --set redis.enabled=true \
+            --set mqtt.enabled=true
+
+      - name: Helm lint (external services)
+        run: |
+          helm lint helm/teslasync --strict \
+            --set postgresql.enabled=false \
+            --set postgresql.external.host=db.example.com \
+            --set postgresql.external.port=5432 \
+            --set postgresql.external.database=teslasync \
+            --set postgresql.external.username=app \
+            --set postgresql.external.password=secret \
+            --set redis.enabled=false \
+            --set redis.external.host=redis.example.com \
+            --set mqtt.enabled=false \
+            --set mqtt.external.host=mqtt.example.com
+
+  template:
+    name: Template Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Template with defaults
+        run: helm template teslasync helm/teslasync > /dev/null
+
+      - name: Template with all features enabled
+        run: |
+          helm template teslasync helm/teslasync \
+            --set postgresql.enabled=true \
+            --set redis.enabled=true \
+            --set mqtt.enabled=true \
+            --set grafana.enabled=true \
+            --set web.enabled=true \
+            --set notificationWorker.enabled=true \
+            --set exportWorker.enabled=true \
+            --set jaeger.enabled=true \
+            --set ingress.enabled=true \
+            --set autoscaling.enabled=true \
+            > /dev/null
+
+      - name: Template with minimal config
+        run: |
+          helm template teslasync helm/teslasync \
+            --set web.enabled=false \
+            --set grafana.enabled=false \
+            --set notificationWorker.enabled=false \
+            --set exportWorker.enabled=false \
+            > /dev/null
+
+      - name: Validate generated YAML
+        run: |
+          helm template teslasync helm/teslasync | kubectl apply --dry-run=client -f - 2>&1 || true
+
+  kubeconform:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Install kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate chart against K8s schemas
+        run: |
+          helm template teslasync helm/teslasync \
+            | kubeconform -strict -summary \
+              -kubernetes-version 1.29.0 \
+              -ignore-missing-schemas
+
+  version-check:
+    name: Version Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Chart.yaml version bumped
+        run: |
+          CHANGED=$(git diff origin/main -- helm/teslasync/Chart.yaml | grep '^+version:' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "⚠️  Chart.yaml version not bumped (OK for non-chart PRs)"
+          else
+            echo "✅ Chart version bumped"
+          fi

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
 // DriveRepo provides drive session data access.
@@ -57,13 +58,17 @@ func NewDriveRepo(db *DB) *DriveRepo {
 }
 
 func (r *DriveRepo) Create(ctx context.Context, d *models.Drive) error {
+	ctx, span := tracing.DBSpan(ctx, "insert", "drives", tracing.VehicleID(d.VehicleID))
+	defer span.End()
 	query := `
 		INSERT INTO drives (vehicle_id, start_date, start_position_id, start_address_id, start_range_km, start_battery_level)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`
-	return r.db.Pool.QueryRow(ctx, query,
+	err := r.db.Pool.QueryRow(ctx, query,
 		d.VehicleID, d.StartDate, d.StartPositionID, d.StartAddressID, d.StartRangeKm, d.StartBatteryLvl,
 	).Scan(&d.ID)
+	tracing.EndSpan(span, err)
+	return err
 }
 
 func (r *DriveRepo) Complete(ctx context.Context, id int64, endDate time.Time, endPosID, endAddrID *int64,
@@ -79,6 +84,8 @@ func (r *DriveRepo) Complete(ctx context.Context, id int64, endDate time.Time, e
 }
 
 func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error) {
+	ctx, span := tracing.DBSpan(ctx, "select", "drives", tracing.VehicleID(vehicleID))
+	defer span.End()
 	query := `SELECT ` + driveColumns + ` FROM drives WHERE vehicle_id=$1`
 	args := []interface{}{vehicleID}
 	argIdx := 2
@@ -112,11 +119,14 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 }
 
 func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error) {
+	ctx, span := tracing.DBSpan(ctx, "select", "drives", tracing.DriveID(id))
+	defer span.End()
 	query := `SELECT ` + driveColumns + ` FROM drives WHERE id=$1`
 	d, err := scanDrive(r.db.Pool.QueryRow(ctx, query, id))
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
+	tracing.EndSpan(span, err)
 	return d, err
 }
 

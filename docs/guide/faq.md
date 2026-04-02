@@ -17,11 +17,16 @@ Any Tesla vehicle accessible through the Tesla Fleet API, including Model S, 3, 
 No. TeslaSync uses the official Tesla Fleet API — the same interface Tesla's own app uses. It does not modify vehicle firmware or bypass any protections.
 
 ### How much data does TeslaSync collect?
-With default settings (15-second polling), approximately:
-- **Positions**: ~5,760 rows/day per vehicle (~2 million/year)
-- **Drives**: 1 row per drive session
-- **Charging**: 1 row per charge session
-- **Storage**: ~500 MB/year per vehicle (with default retention)
+TeslaSync uses Tesla's **Fleet Telemetry streaming** (not polling) — your vehicle pushes data in real time via MQTT. With **231 subscribed signals** across 11 subsystems, data is written to **15+ snapshot and telemetry tables**:
+
+- **Positions**: ~1,440–2,880 rows/day per vehicle while driving (GPS streamed every 30s)
+- **Snapshot tables**: Battery, climate, tire pressure, motor, media, safety, location, vehicle state, and more — updated on every state change
+- **Drive telemetry**: High-frequency readings (~25 fields per row) during each drive session
+- **Charge telemetry**: Detailed charge curves (~18 fields per row) during each charge session
+- **Session summaries**: 1 row per drive, 1 row per charge session (with aggregated stats)
+- **Storage estimate**: ~1–3 GB/year per vehicle (compressed, with default 365-day retention)
+
+Data volume varies based on driving frequency and how often signals change. The 100ms batching window deduplicates rapid signal updates to reduce write load.
 
 ## Setup & Configuration
 

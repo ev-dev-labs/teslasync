@@ -1,0 +1,236 @@
+# docker-compose.dev.yml — Development stack with ALL components enabled.
+# Usage:  docker compose -f docker-compose.dev.yml up --build
+#
+# Includes: API, Web (Nginx), Notification Worker, Export Worker,
+#           PostgreSQL, Redis, Mosquitto, Grafana, Jaeger (tracing).
+# All tracing and telemetry features are enabled by default.
+
+services:
+  teslasync-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+    container_name: teslasync-api-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - TESLASYNC_PORT=8080
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=teslasync
+      - DATABASE_PASSWORD=teslasync
+      - DATABASE_NAME=teslasync
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TESLA_CLIENT_ID=${TESLA_CLIENT_ID:-dev-client-id}
+      - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET:-dev-client-secret}
+      - TESLA_REDIRECT_URI=http://localhost:8080/api/v1/auth/callback
+      - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - POLL_INTERVAL=30s
+      - LOG_LEVEL=debug
+      - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
+      - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
+      - FLEET_TELEMETRY_PORT=4443
+      - FLEET_TELEMETRY_TOPIC_BASE=telemetry
+      - FLEET_TELEMETRY_BATCH_MS=100
+      # Tracing enabled by default in dev
+      - OTEL_ENABLED=true
+      - OTEL_ENDPOINT=jaeger:4317
+      - OTEL_SERVICE_NAME=teslasync-api
+      - OTEL_INSECURE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/teslasync", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: teslasync-web-dev
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      teslasync-api:
+        condition: service_healthy
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+      args:
+        VERSION: dev
+    container_name: teslasync-notification-worker-dev
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=teslasync
+      - DATABASE_PASSWORD=teslasync
+      - DATABASE_NAME=teslasync
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - LOG_LEVEL=debug
+      - HEALTH_PORT=8081
+      - OTEL_ENABLED=true
+      - OTEL_ENDPOINT=jaeger:4317
+      - OTEL_SERVICE_NAME=teslasync-notification-worker
+      - OTEL_INSECURE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/notification-worker", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  export-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.export-worker
+      args:
+        VERSION: dev
+    container_name: teslasync-export-worker-dev
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=teslasync
+      - DATABASE_PASSWORD=teslasync
+      - DATABASE_NAME=teslasync
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - LOG_LEVEL=debug
+      - HEALTH_PORT=8082
+      - OTEL_ENABLED=true
+      - OTEL_ENDPOINT=jaeger:4317
+      - OTEL_SERVICE_NAME=teslasync-export-worker
+      - OTEL_INSECURE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/export-worker", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Infrastructure ────────────────────────────────────────
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: teslasync-postgres-dev
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=teslasync
+      - POSTGRES_PASSWORD=teslasync
+      - POSTGRES_DB=teslasync
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teslasync"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: teslasync-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - dev_redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: teslasync-mosquitto-dev
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - dev_mosquitto_data:/mosquitto/data
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: teslasync-grafana-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=teslasync
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=teslasync
+      - POSTGRES_PASSWORD=teslasync
+      - POSTGRES_DB=teslasync
+    volumes:
+      - dev_grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Observability ─────────────────────────────────────────
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: teslasync-jaeger-dev
+    restart: unless-stopped
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+volumes:
+  dev_postgres_data:
+  dev_redis_data:
+  dev_mosquitto_data:
+  dev_grafana_data:

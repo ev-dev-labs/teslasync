@@ -145,7 +145,7 @@ func Load() (*Config, error) {
 			MinConns:        envInt("DATABASE_MIN_CONNS", 5),
 			ConnMaxLifetime: envDuration("DATABASE_CONN_MAX_LIFETIME", 5*time.Minute),
 			ConnMaxIdleTime: envDuration("DATABASE_CONN_MAX_IDLE_TIME", 1*time.Minute),
-			MigrationsPath:  envStr("DATABASE_MIGRATIONS", "file://migrations"),
+			MigrationsPath:  envStr("DATABASE_MIGRATIONS", "file:///migrations"),
 		},
 
 		Tesla: TeslaConfig{

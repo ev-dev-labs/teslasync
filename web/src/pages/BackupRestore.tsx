@@ -8,6 +8,9 @@ import {
   triggerBackup,
   triggerQuickBackup,
   getBackupRuns,
+  downloadBackup,
+  verifyBackup,
+  previewRestore,
 } from '../api'
 import type { BackupConfig } from '../api'
 import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal } from '../components/ui'
@@ -34,6 +37,9 @@ import {
   ChevronDown,
   RefreshCw,
   AlertCircle,
+  Download,
+  Lock,
+  Eye,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
@@ -192,6 +198,13 @@ export default function BackupRestore() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<ConfigFormState>(EMPTY_FORM)
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: number; name: string }>({ open: false, id: 0, name: '' })
+  const [verifyResults, setVerifyResults] = useState<Record<number, { verified: boolean; error?: string; checksum?: string } | 'loading'>>({})
+  const [previewModal, setPreviewModal] = useState<{
+    open: boolean
+    runId: number | null
+    loading: boolean
+    data: { tables: { name: string; rows: number }[]; metadata: Record<string, unknown>; checksum_verified: boolean } | null
+  }>({ open: false, runId: null, loading: false, data: null })
 
   // Queries
   const { data: configs, isLoading: configsLoading } = useQuery({
@@ -256,6 +269,34 @@ export default function BackupRestore() {
     },
     onError: () => toast.error('Failed to start quick backup'),
   })
+
+  // Action handlers for completed runs
+  async function handleVerify(runId: number) {
+    setVerifyResults(prev => ({ ...prev, [runId]: 'loading' }))
+    try {
+      const result = await verifyBackup(runId)
+      setVerifyResults(prev => ({ ...prev, [runId]: result }))
+      if (result.verified) {
+        toast.success('Backup verified — checksum valid')
+      } else {
+        toast.error(result.error ?? 'Backup verification failed')
+      }
+    } catch {
+      setVerifyResults(prev => ({ ...prev, [runId]: { verified: false, error: 'Request failed' } }))
+      toast.error('Failed to verify backup')
+    }
+  }
+
+  async function handlePreview(runId: number) {
+    setPreviewModal({ open: true, runId, loading: true, data: null })
+    try {
+      const data = await previewRestore(runId)
+      setPreviewModal({ open: true, runId, loading: false, data })
+    } catch {
+      toast.error('Failed to load restore preview')
+      setPreviewModal({ open: false, runId: null, loading: false, data: null })
+    }
+  }
 
   // Derived stats
   const stats = useMemo(() => {
@@ -517,6 +558,7 @@ export default function BackupRestore() {
                       <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Records</th>
                       <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Duration</th>
                       <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Created</th>
+                      <th className="text-center px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -567,6 +609,49 @@ export default function BackupRestore() {
                           {/* Created */}
                           <td className="px-4 py-3 text-xs text-[var(--text-muted)] whitespace-nowrap">
                             {formatDate(run.created_at)}
+                          </td>
+                          {/* Actions */}
+                          <td className="px-4 py-3">
+                            {run.status === 'completed' ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => downloadBackup(run.id)}
+                                  title="Download backup"
+                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-cyan hover:bg-neon-cyan/10 transition-all"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleVerify(run.id)}
+                                  disabled={verifyResults[run.id] === 'loading'}
+                                  title="Verify backup integrity"
+                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-amber hover:bg-neon-amber/10 transition-all disabled:opacity-50 relative"
+                                >
+                                  {verifyResults[run.id] === 'loading' ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Lock className="h-3.5 w-3.5" />
+                                  )}
+                                  {verifyResults[run.id] && verifyResults[run.id] !== 'loading' && (
+                                    <span className={clsx(
+                                      'absolute -top-1 -right-1 text-[9px] leading-none',
+                                      (verifyResults[run.id] as { verified: boolean }).verified ? 'text-neon-green' : 'text-neon-red'
+                                    )}>
+                                      {(verifyResults[run.id] as { verified: boolean }).verified ? '✅' : '❌'}
+                                    </span>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handlePreview(run.id)}
+                                  title="Preview / Restore"
+                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-purple hover:bg-neon-purple/10 transition-all"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[var(--text-muted)] text-xs">—</span>
+                            )}
                           </td>
                         </tr>
                       )
@@ -803,6 +888,115 @@ export default function BackupRestore() {
                 >
                   {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingId !== null ? 'Save Changes' : 'Create Configuration'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Restore Preview Modal */}
+      <AnimatePresence>
+        {previewModal.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative glass-panel p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto scrollbar-thin"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-neon-purple" />
+                  Restore Preview
+                </h3>
+                <button
+                  onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
+                  className="rounded-lg p-1.5 hover:bg-white/5 transition-colors"
+                >
+                  <X className="h-5 w-5 text-[var(--text-muted)]" />
+                </button>
+              </div>
+
+              {previewModal.loading ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
+                  <p className="text-sm text-[var(--text-muted)]">Loading preview…</p>
+                </div>
+              ) : previewModal.data ? (
+                <div className="space-y-5">
+                  {/* Checksum Status */}
+                  <div className={clsx(
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 ring-1',
+                    previewModal.data.checksum_verified
+                      ? 'bg-neon-green/10 ring-neon-green/20'
+                      : 'bg-neon-red/10 ring-neon-red/20',
+                  )}>
+                    {previewModal.data.checksum_verified
+                      ? <CheckCircle2 className="h-4 w-4 text-neon-green shrink-0" />
+                      : <XCircle className="h-4 w-4 text-neon-red shrink-0" />}
+                    <span className={clsx('text-xs font-medium', previewModal.data.checksum_verified ? 'text-neon-green' : 'text-neon-red')}>
+                      {previewModal.data.checksum_verified ? 'Checksum verified' : 'Checksum verification failed'}
+                    </span>
+                  </div>
+
+                  {/* Metadata */}
+                  {Object.keys(previewModal.data.metadata).length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Backup Metadata</p>
+                      <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] divide-y divide-white/[0.06]">
+                        {Object.entries(previewModal.data.metadata).map(([key, value]) => (
+                          <div key={key} className="flex items-center justify-between px-3 py-2">
+                            <span className="text-xs text-[var(--text-muted)]">{key}</span>
+                            <span className="text-xs text-[var(--text-secondary)] font-mono">{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Table List */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                      Tables ({previewModal.data.tables.length})
+                    </p>
+                    <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-white/[0.06]">
+                            <th className="text-left px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Table</th>
+                            <th className="text-right px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Rows</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewModal.data.tables.map(t => (
+                            <tr key={t.name} className="border-b border-white/[0.03]">
+                              <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">{t.name}</td>
+                              <td className="px-3 py-2 text-xs text-[var(--text-secondary)] text-right font-mono">{t.rows.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end mt-6 pt-4 border-t border-white/[0.06]">
+                <button
+                  onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
+                  className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all"
+                >
+                  Close
                 </button>
               </div>
             </motion.div>

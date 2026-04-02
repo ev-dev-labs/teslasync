@@ -27,6 +27,19 @@ import (
 )
 
 func main() {
+	// Built-in healthcheck for distroless containers (no wget/curl available)
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		port := os.Getenv("TESLASYNC_PORT")
+		if port == "" {
+			port = "8080"
+		}
+		resp, err := http.Get("http://localhost:" + port + "/healthz")
+		if err != nil || resp.StatusCode != 200 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)

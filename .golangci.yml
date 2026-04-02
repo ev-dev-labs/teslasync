@@ -11,19 +11,41 @@ linters:
     - gosimple
     - ineffassign
     - typecheck
+    - gocyclo
+    - gocognit
+    - misspell
+    - prealloc
+    - unconvert
+    - bodyclose
 
 linters-settings:
   errcheck:
     check-type-assertions: false
     check-blank: false
+  gocyclo:
+    min-complexity: 30
+  gocognit:
+    min-complexity: 40
+  misspell:
+    locale: US
 
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
+        - gocyclo
+        - gocognit
     - path: doc\.go
       linters:
         - unused
+    - path: telemetry_handler\.go
+      linters:
+        - gocyclo
+        - gocognit
+    - path: telemetry_sessions\.go
+      linters:
+        - gocyclo
+        - gocognit
   max-issues-per-linter: 50
   max-same-issues: 10

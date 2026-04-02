@@ -1,124 +1,165 @@
 openapi: 3.0.3
 info:
   title: TeslaSync API
-  description: Tesla Fleet Intelligence Platform REST API
-  version: 0.1.0
+  version: 1.0.0
+  description: Self-hosted Tesla Fleet Intelligence API
+  license:
+    name: MIT
   contact:
     name: TeslaSync
     url: https://github.com/ev-dev-labs/teslasync
-  license:
-    name: MIT
 
 servers:
   - url: http://localhost:8080/api/v1
     description: Local development
 
 tags:
-  - name: Authentication
-    description: Tesla OAuth and user authentication
+  - name: Auth
+    description: Authentication and OAuth management
   - name: Vehicles
-    description: Vehicle management and live state
+    description: Vehicle management and telemetry
   - name: Drives
-    description: Drive history and details
+    description: Drive session tracking
   - name: Charging
-    description: Charging session history
+    description: Charging session tracking
   - name: Geofences
-    description: Geofence CRUD operations
+    description: Geofence management
   - name: Settings
     description: Application settings
   - name: Alerts
-    description: Alert history and alert rules
+    description: Alert management and rules
   - name: Analytics
-    description: Fleet-wide analytics
+    description: Fleet analytics
   - name: Notifications
-    description: Notification channels and delivery
-  - name: Chatbot
-    description: AI-powered natural language queries
-  - name: TirePressure
+    description: Notification channels and scheduling
+  - name: Tire Pressure
     description: Tire pressure monitoring
-  - name: SoftwareUpdates
-    description: Vehicle software update history
-  - name: VampireDrain
+  - name: Motor
+    description: Motor and powertrain data
+  - name: Climate
+    description: Climate and HVAC data
+  - name: Security
+    description: Security and access events
+  - name: Charging Telemetry
+    description: Charging telemetry readings
+  - name: Media
+    description: Media state readings
+  - name: Vehicle Config
+    description: Vehicle configuration snapshots
+  - name: Location
+    description: Location snapshots
+  - name: Safety
+    description: Safety event readings
+  - name: User Preferences
+    description: User preference snapshots
+  - name: Software Updates
+    description: Software update events
+  - name: Vampire Drain
     description: Vampire drain tracking
-  - name: Locations
-    description: Visited locations
+  - name: Visited Locations
+    description: Visited location tracking
   - name: Mileage
-    description: Daily and monthly mileage statistics
+    description: Mileage tracking and statistics
   - name: Trips
-    description: Multi-drive trip aggregation
-  - name: VehicleState
-    description: Vehicle state timeline and summaries
-  - name: Search
-    description: Global search across vehicles, drives, and locations
-  - name: Webhook
-    description: Inbound webhooks for external systems
-  - name: Export
-    description: Data export (CSV / JSON)
+    description: Trip tracking
+  - name: States
+    description: Vehicle state timeline
   - name: System
-    description: Health checks, metrics, and system status
-  - name: Users
-    description: User login and profile
+    description: System health and management
+  - name: API Keys
+    description: API key management
+  - name: Telemetry
+    description: Fleet Telemetry ingestion
+  - name: Dev Tools
+    description: Development and debugging tools
+  - name: Data Repair
+    description: Data repair and session management
+  - name: Backup
+    description: Backup and restore
+  - name: Export
+    description: Data export and import
+  - name: Gas Price
+    description: Gas price tracking
+  - name: Chatbot
+    description: AI chatbot interface
 
 paths:
-  # ──────────────────────────────────────────────
-  # Authentication
-  # ──────────────────────────────────────────────
+  # ─── Auth ───────────────────────────────────────────────────────────
   /auth/login:
     get:
+      operationId: authLogin
       summary: Initiate Tesla OAuth login
-      tags: [Authentication]
+      description: Redirects to Tesla OAuth authorization page.
+      tags: [Auth]
       responses:
-        '200':
-          description: OAuth URL and CSRF state
+        "302":
+          description: Redirect to Tesla OAuth
+        "500":
+          description: Internal error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  auth_url:
-                    type: string
-                    example: https://auth.tesla.com/oauth2/v3/authorize?client_id=...
-                  state:
-                    type: string
-                    example: abc123
+                $ref: "#/components/schemas/ErrorResponse"
 
   /auth/callback:
     get:
+      operationId: authCallback
       summary: Tesla OAuth callback
-      tags: [Authentication]
+      description: Handles the OAuth callback from Tesla and exchanges the code for tokens.
+      tags: [Auth]
       parameters:
         - name: code
           in: query
           required: true
           schema:
             type: string
-          description: Authorization code from Tesla
+          description: OAuth authorization code
       responses:
-        '302':
-          description: Redirects to /?auth=success
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: authenticated successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /auth/refresh:
     post:
+      operationId: authRefresh
       summary: Refresh Tesla OAuth token
-      tags: [Authentication]
+      description: Refreshes the current Tesla OAuth access token.
+      tags: [Auth]
       responses:
-        '200':
+        "200":
           description: Token refreshed
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  message:
                     type: string
-                    example: refreshed
+                    example: token refreshed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /auth/status:
     get:
+      operationId: authStatus
       summary: Check authentication status
-      tags: [Authentication]
+      description: Returns the current authentication status including token validity.
+      tags: [Auth]
       responses:
-        '200':
+        "200":
           description: Auth status
           content:
             application/json:
@@ -130,219 +171,218 @@ paths:
                   expires_at:
                     type: string
                     format: date-time
-                  expired:
-                    type: boolean
-              example:
-                authenticated: true
-                expires_at: "2025-01-15T12:00:00Z"
-                expired: false
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Users
-  # ──────────────────────────────────────────────
-  /users/login:
+  /auth/disconnect:
     post:
-      summary: Login with username and password
-      tags: [Users]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [username, password]
-              properties:
-                username:
-                  type: string
-                  example: admin
-                password:
-                  type: string
-                  format: password
+      operationId: authDisconnect
+      summary: Disconnect Tesla account
+      description: Disconnects the linked Tesla account and revokes tokens.
+      tags: [Auth]
       responses:
-        '200':
-          description: JWT token
+        "200":
+          description: Account disconnected
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  token:
+                  message:
                     type: string
-                  user:
-                    type: string
-                  role:
-                    type: string
-                    enum: [admin]
-                  expires:
-                    type: string
-                    format: date-time
-              example:
-                token: eyJhbGciOiJIUzI1NiIs...
-                user: admin
-                role: admin
-                expires: "2025-01-16T12:00:00Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                    example: disconnected
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /users/me:
-    get:
-      summary: Get current user info
-      tags: [Users]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Current user profile
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  authenticated:
-                    type: boolean
-                  user_id:
-                    type: integer
-                  username:
-                    type: string
-                  role:
-                    type: string
-
-  # ──────────────────────────────────────────────
-  # Vehicles
-  # ──────────────────────────────────────────────
+  # ─── Vehicles ───────────────────────────────────────────────────────
   /vehicles:
     get:
-      summary: List all vehicles
+      operationId: listVehicles
+      summary: List all tracked vehicles
+      description: Returns all vehicles being tracked by TeslaSync.
       tags: [Vehicles]
       responses:
-        '200':
-          description: Vehicle list
+        "200":
+          description: List of vehicles
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Vehicle'
-              example:
-                - id: 1
-                  vehicle_id: 123456789
-                  vin: 5YJ3E1EA1PF000001
-                  display_name: My Tesla
-                  state: online
-                  healthy: true
+                  $ref: "#/components/schemas/Vehicle"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vehicles/sync:
     post:
+      operationId: syncVehicles
       summary: Sync vehicles from Tesla API
+      description: Fetches the latest vehicle list from Tesla and syncs with local database. Rate limited.
       tags: [Vehicles]
       responses:
-        '200':
-          description: Synced vehicles
+        "200":
+          description: Vehicles synced
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  synced:
+                  message:
+                    type: string
+                    example: vehicles synced
+                  count:
                     type: integer
-                  vehicles:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Vehicle'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/TeslaAPIError"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vehicles/{vehicleID}:
     get:
-      summary: Get vehicle by ID
+      operationId: getVehicle
+      summary: Get single vehicle
+      description: Returns details for a specific vehicle.
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
+        - $ref: "#/components/parameters/vehicleID"
       responses:
-        '200':
+        "200":
           description: Vehicle details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Vehicle'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Vehicle"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
     delete:
-      summary: Delete a vehicle
+      operationId: deleteVehicle
+      summary: Delete vehicle and associated data
+      description: Deletes a vehicle and all its associated data (drives, charging, positions, etc.).
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
+        - $ref: "#/components/parameters/vehicleID"
       responses:
-        '204':
+        "200":
           description: Vehicle deleted
-
-  /vehicles/{vehicleID}/positions:
-    get:
-      summary: Get vehicle position history
-      tags: [Vehicles]
-      parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-      responses:
-        '200':
-          description: Position list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Position'
-
-  /vehicles/{vehicleID}/state:
-    get:
-      summary: Get current vehicle state (live or cached)
-      tags: [Vehicles]
-      parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
-      responses:
-        '200':
-          description: Current state
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  state:
-                    $ref: '#/components/schemas/VehicleState'
-                  vehicle:
-                    $ref: '#/components/schemas/Vehicle'
-                  position:
-                    $ref: '#/components/schemas/Position'
-                  live:
-                    type: boolean
+                  message:
+                    type: string
+                    example: vehicle deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /vehicles/{vehicleID}/positions:
+    get:
+      operationId: getVehiclePositions
+      summary: Get vehicle position history
+      description: Returns historical position data for a vehicle.
+      tags: [Vehicles]
+      parameters:
+        - $ref: "#/components/parameters/vehicleID"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: List of positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Position"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /vehicles/{vehicleID}/state:
+    get:
+      operationId: getVehicleState
+      summary: Get current live vehicle state
+      description: Returns the current live state of the vehicle from the Tesla API.
+      tags: [Vehicles]
+      parameters:
+        - $ref: "#/components/parameters/vehicleID"
+      responses:
+        "200":
+          description: Current vehicle state
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Full vehicle state object from Tesla API
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Vehicle offline or asleep
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vehicles/{vehicleID}/wake:
     post:
-      summary: Wake up a vehicle
+      operationId: wakeVehicle
+      summary: Wake up vehicle
+      description: Sends a wake-up command to the vehicle. Rate limited.
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
+        - $ref: "#/components/parameters/vehicleID"
       responses:
-        '200':
+        "200":
           description: Wake command sent
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  message:
                     type: string
-                    example: waking
-        '502':
-          description: Tesla API error
+                    example: wake command sent
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/TeslaAPIError"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vehicles/{vehicleID}/command:
     post:
-      summary: Send a command to a vehicle
+      operationId: sendVehicleCommand
+      summary: Send command to vehicle
+      description: Sends a command to the vehicle via the Tesla API. Rate limited.
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
+        - $ref: "#/components/parameters/vehicleID"
       requestBody:
         required: true
         content:
@@ -353,338 +393,633 @@ paths:
               properties:
                 command:
                   type: string
+                  description: Command name to send
                   example: honk_horn
-                params:
-                  type: object
-                  additionalProperties: true
       responses:
-        '200':
-          description: Command result
+        "200":
+          description: Command executed
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                  result:
+                  message:
                     type: string
+                  result:
+                    type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/TeslaAPIError"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vehicles/{vehicleID}/energy:
     get:
-      summary: Get vehicle energy statistics
+      operationId: getVehicleEnergy
+      summary: Get energy stats
+      description: Returns energy consumption and regeneration statistics for the vehicle.
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-            maximum: 3650
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-          description: Start date (YYYY-MM-DD), overrides days
+        - $ref: "#/components/parameters/vehicleID"
       responses:
-        '200':
+        "200":
           description: Energy statistics
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  vehicle_id:
-                    type: integer
-                  period_days:
-                    type: integer
-                  total_kwh:
+                  total_energy_used_kwh:
                     type: number
-                  total_cost:
+                  total_energy_regen_kwh:
                     type: number
-                  daily_breakdown:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/EnergyStatsRow'
+                  efficiency_wh_per_km:
+                    type: number
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vehicles/{vehicleID}/battery:
     get:
-      summary: Get battery health report
+      operationId: getVehicleBattery
+      summary: Get battery report
+      description: Returns battery health and degradation report for the vehicle.
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/vehicleIDPath'
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 3650
-            maximum: 3650
+        - $ref: "#/components/parameters/vehicleID"
       responses:
-        '200':
-          description: Battery health report
+        "200":
+          description: Battery report
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatteryReport'
-
-  # ──────────────────────────────────────────────
-  # Drives
-  # ──────────────────────────────────────────────
+                type: object
+                properties:
+                  current_capacity_kwh:
+                    type: number
+                  original_capacity_kwh:
+                    type: number
+                  degradation_percent:
+                    type: number
+                  health_score:
+                    type: number
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Drives ─────────────────────────────────────────────────────────
   /drives:
     get:
-      summary: List drives for a vehicle
+      operationId: listDrives
+      summary: List drives
+      description: Returns a paginated list of drive sessions.
       tags: [Drives]
       parameters:
         - name: vehicle_id
           in: query
-          required: true
           schema:
             type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-        - name: start
+          description: Filter by vehicle ID
+        - name: limit
           in: query
           schema:
-            type: string
-            format: date
-        - name: end
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 1000
+        - name: offset
           in: query
           schema:
-            type: string
-            format: date
+            type: integer
+            default: 0
+            minimum: 0
       responses:
-        '200':
-          description: Drive list
+        "200":
+          description: List of drives
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Drive'
+                  $ref: "#/components/schemas/Drive"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /drives/{driveID}:
     get:
-      summary: Get drive by ID
+      operationId: getDrive
+      summary: Get single drive
+      description: Returns details for a specific drive session.
       tags: [Drives]
       parameters:
-        - name: driveID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/driveID"
       responses:
-        '200':
+        "200":
           description: Drive details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Drive'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Drive"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Charging
-  # ──────────────────────────────────────────────
+  /drives/{driveID}/positions:
+    get:
+      operationId: getDrivePositions
+      summary: Get drive positions
+      description: Returns the GPS positions recorded during a drive.
+      tags: [Drives]
+      parameters:
+        - $ref: "#/components/parameters/driveID"
+      responses:
+        "200":
+          description: List of positions for the drive
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Position"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /drives/{driveID}/telemetry:
+    get:
+      operationId: getDriveTelemetry
+      summary: Get drive telemetry readings
+      description: Returns detailed telemetry data recorded during a drive.
+      tags: [Drives]
+      parameters:
+        - $ref: "#/components/parameters/driveID"
+      responses:
+        "200":
+          description: Drive telemetry data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                      format: date-time
+                    speed:
+                      type: number
+                    power:
+                      type: number
+                    battery_level:
+                      type: integer
+                    outside_temp:
+                      type: number
+                    elevation:
+                      type: number
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Charging ───────────────────────────────────────────────────────
   /charging:
     get:
-      summary: List charging sessions for a vehicle
+      operationId: listChargingSessions
+      summary: List charging sessions
+      description: Returns a paginated list of charging sessions.
       tags: [Charging]
       parameters:
         - name: vehicle_id
           in: query
-          required: true
           schema:
             type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: end
-          in: query
-          schema:
-            type: string
-            format: date
+          description: Filter by vehicle ID
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
-        '200':
-          description: Charging session list
+        "200":
+          description: List of charging sessions
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ChargingSession'
+                  $ref: "#/components/schemas/ChargingSession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /charging/{sessionID}:
     get:
-      summary: Get charging session by ID
+      operationId: getChargingSession
+      summary: Get single charging session
+      description: Returns details for a specific charging session.
       tags: [Charging]
       parameters:
-        - name: sessionID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/sessionID"
       responses:
-        '200':
+        "200":
           description: Charging session details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChargingSession'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ChargingSession"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Geofences
-  # ──────────────────────────────────────────────
-  /geofences:
+  /charging/{sessionID}/telemetry:
     get:
-      summary: List all geofences
-      tags: [Geofences]
+      operationId: getChargingTelemetry
+      summary: Get charging telemetry readings
+      description: Returns telemetry data recorded during a charging session.
+      tags: [Charging]
+      parameters:
+        - $ref: "#/components/parameters/sessionID"
       responses:
-        '200':
-          description: Geofence list
+        "200":
+          description: Charging telemetry data
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Geofence'
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                      format: date-time
+                    battery_level:
+                      type: integer
+                    charge_rate:
+                      type: number
+                    charger_power:
+                      type: number
+                    voltage:
+                      type: number
+                    current:
+                      type: number
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Geofences ──────────────────────────────────────────────────────
+  /geofences:
+    get:
+      operationId: listGeofences
+      summary: List all geofences
+      description: Returns all configured geofences.
+      tags: [Geofences]
+      responses:
+        "200":
+          description: List of geofences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Geofence"
+        "500":
+          $ref: "#/components/responses/InternalError"
     post:
-      summary: Create a geofence
+      operationId: createGeofence
+      summary: Create geofence
+      description: Creates a new geofence.
       tags: [Geofences]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GeofenceInput'
-            example:
-              name: Home
-              latitude: 37.7749
-              longitude: -122.4194
-              radius: 100
+              type: object
+              required: [name, latitude, longitude, radius]
+              properties:
+                name:
+                  type: string
+                  example: Home
+                latitude:
+                  type: number
+                  example: 37.7749
+                longitude:
+                  type: number
+                  example: -122.4194
+                radius:
+                  type: number
+                  description: Radius in meters
+                  example: 100
       responses:
-        '201':
+        "201":
           description: Geofence created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Geofence'
+                $ref: "#/components/schemas/Geofence"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /geofences/{geofenceID}:
     get:
-      summary: Get geofence by ID
+      operationId: getGeofence
+      summary: Get single geofence
+      description: Returns details for a specific geofence.
       tags: [Geofences]
       parameters:
-        - name: geofenceID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/geofenceID"
       responses:
-        '200':
+        "200":
           description: Geofence details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Geofence'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Geofence"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
     put:
-      summary: Update a geofence
+      operationId: updateGeofence
+      summary: Update geofence
+      description: Updates an existing geofence.
       tags: [Geofences]
       parameters:
-        - name: geofenceID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/geofenceID"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GeofenceInput'
+              type: object
+              properties:
+                name:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                radius:
+                  type: number
       responses:
-        '200':
+        "200":
           description: Geofence updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Geofence'
+                $ref: "#/components/schemas/Geofence"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
     delete:
-      summary: Delete a geofence
+      operationId: deleteGeofence
+      summary: Delete geofence
+      description: Deletes a geofence.
       tags: [Geofences]
       parameters:
-        - name: geofenceID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/geofenceID"
       responses:
-        '204':
+        "200":
           description: Geofence deleted
-
-  # ──────────────────────────────────────────────
-  # Settings
-  # ──────────────────────────────────────────────
-  /settings:
-    get:
-      summary: Get application settings
-      tags: [Settings]
-      responses:
-        '200':
-          description: Current settings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Settings'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: geofence deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Settings ───────────────────────────────────────────────────────
+  /settings:
+    get:
+      operationId: getSettings
+      summary: Get application settings
+      description: Returns the current application settings.
+      tags: [Settings]
+      responses:
+        "200":
+          description: Application settings
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
     put:
+      operationId: updateSettings
       summary: Update application settings
+      description: Updates application settings.
       tags: [Settings]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Settings'
+              type: object
       responses:
-        '200':
+        "200":
           description: Settings updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Settings'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: settings updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Alerts
-  # ──────────────────────────────────────────────
-  /alerts:
-    get:
-      summary: List alerts
-      tags: [Alerts]
-      parameters:
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
+  /settings/suspend-api:
+    post:
+      operationId: suspendApi
+      summary: Toggle API suspend mode
+      description: Toggles the Tesla API suspend mode to reduce API calls.
+      tags: [Settings]
       responses:
-        '200':
-          description: Alert list
+        "200":
+          description: API suspend mode toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suspended:
+                    type: boolean
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Gas Price ──────────────────────────────────────────────────────
+  /gas-price/status:
+    get:
+      operationId: getGasPriceStatus
+      summary: Get gas price polling status
+      description: Returns the current gas price polling status and configuration.
+      tags: [Gas Price]
+      responses:
+        "200":
+          description: Gas price status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  last_poll:
+                    type: string
+                    format: date-time
+                  current_price:
+                    type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /gas-price/poll:
+    post:
+      operationId: pollGasPrice
+      summary: Trigger manual gas price poll
+      description: Triggers an immediate gas price poll.
+      tags: [Gas Price]
+      responses:
+        "200":
+          description: Gas price polled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price:
+                    type: number
+                  updated_at:
+                    type: string
+                    format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /gas-price/toggle:
+    post:
+      operationId: toggleGasPrice
+      summary: Toggle gas price auto-polling
+      description: Toggles the automatic gas price polling on or off.
+      tags: [Gas Price]
+      responses:
+        "200":
+          description: Gas price polling toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /gas-price/config:
+    put:
+      operationId: updateGasPriceConfig
+      summary: Update gas price configuration
+      description: Updates gas price polling configuration.
+      tags: [Gas Price]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: config updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /gas-price/history:
+    get:
+      operationId: getGasPriceHistory
+      summary: Get gas price history
+      description: Returns historical gas price data.
+      tags: [Gas Price]
+      responses:
+        "200":
+          description: Gas price history
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Alert'
+                  type: object
+                  properties:
+                    price:
+                      type: number
+                    recorded_at:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Alerts ─────────────────────────────────────────────────────────
+  /alerts:
+    get:
+      operationId: listAlerts
+      summary: List all alerts
+      description: Returns a paginated list of alerts.
+      tags: [Alerts]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by vehicle ID
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /alerts/{alertID}/read:
     post:
-      summary: Mark an alert as read
+      operationId: markAlertRead
+      summary: Mark alert as read
+      description: Marks a specific alert as read.
       tags: [Alerts]
       parameters:
         - name: alertID
@@ -693,32 +1028,42 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Alert marked as read
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  message:
                     type: string
-                    example: ok
+                    example: alert marked as read
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /alerts/rules:
     get:
+      operationId: listAlertRules
       summary: List alert rules
+      description: Returns all configured alert rules.
       tags: [Alerts]
       responses:
-        '200':
-          description: Alert rule list
+        "200":
+          description: List of alert rules
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AlertRule'
+                  $ref: "#/components/schemas/AlertRule"
+        "500":
+          $ref: "#/components/responses/InternalError"
     post:
-      summary: Create an alert rule
+      operationId: createAlertRule
+      summary: Create alert rule
+      description: Creates a new alert rule.
       tags: [Alerts]
       requestBody:
         required: true
@@ -726,37 +1071,37 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, type]
+              required: [name, type, threshold, vehicle_id]
               properties:
                 name:
                   type: string
-                  example: Low Battery Warning
+                  example: Low Battery Alert
                 type:
                   type: string
+                  enum: [battery_low, speed_limit, geofence_enter, geofence_exit, sentry_mode]
                   example: battery_low
-                enabled:
-                  type: boolean
-                  default: true
                 threshold:
                   type: number
                   example: 20
-                severity:
-                  type: string
-                  enum: [info, warning, critical]
                 vehicle_id:
                   type: integer
-                  nullable: true
       responses:
-        '201':
+        "201":
           description: Alert rule created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlertRule'
+                $ref: "#/components/schemas/AlertRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /alerts/rules/{ruleID}:
     put:
-      summary: Update an alert rule
+      operationId: updateAlertRule
+      summary: Update alert rule
+      description: Updates an existing alert rule.
       tags: [Alerts]
       parameters:
         - name: ruleID
@@ -771,19 +1116,31 @@ paths:
             schema:
               type: object
               properties:
-                enabled:
-                  type: boolean
+                name:
+                  type: string
+                type:
+                  type: string
                 threshold:
                   type: number
+                enabled:
+                  type: boolean
       responses:
-        '200':
+        "200":
           description: Alert rule updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlertRule'
+                $ref: "#/components/schemas/AlertRule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
     delete:
-      summary: Delete an alert rule
+      operationId: deleteAlertRule
+      summary: Delete alert rule
+      description: Deletes an alert rule.
       tags: [Alerts]
       parameters:
         - name: ruleID
@@ -792,63 +1149,73 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
-          description: Rule deleted
+        "200":
+          description: Alert rule deleted
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  message:
                     type: string
-                    example: deleted
+                    example: alert rule deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Analytics
-  # ──────────────────────────────────────────────
+  # ─── Analytics ──────────────────────────────────────────────────────
   /analytics/fleet:
     get:
+      operationId: getFleetAnalytics
       summary: Get fleet-wide analytics
+      description: Returns aggregated analytics across all vehicles.
       tags: [Analytics]
-      parameters:
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-            maximum: 3650
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-          description: Start date (YYYY-MM-DD), overrides days
       responses:
-        '200':
+        "200":
           description: Fleet analytics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FleetAnalytics'
+                type: object
+                properties:
+                  total_vehicles:
+                    type: integer
+                  total_drives:
+                    type: integer
+                  total_distance_km:
+                    type: number
+                  total_energy_kwh:
+                    type: number
+                  total_charging_sessions:
+                    type: integer
+                  total_charging_cost:
+                    type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Notifications
-  # ──────────────────────────────────────────────
+  # ─── Notifications ─────────────────────────────────────────────────
   /notifications:
     get:
+      operationId: listNotificationChannels
       summary: List notification channels
+      description: Returns all configured notification channels.
       tags: [Notifications]
       responses:
-        '200':
-          description: Channel list
+        "200":
+          description: List of notification channels
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/NotificationChannel'
+                  $ref: "#/components/schemas/NotificationChannel"
+        "500":
+          $ref: "#/components/responses/InternalError"
     post:
-      summary: Create a notification channel
+      operationId: createNotificationChannel
+      summary: Create notification channel
+      description: Creates a new notification channel.
       tags: [Notifications]
       requestBody:
         required: true
@@ -856,88 +1223,207 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, type]
+              required: [name, type, config]
               properties:
                 name:
                   type: string
-                  example: Discord Alerts
+                  example: My Webhook
                 type:
                   type: string
-                  enum: [discord, email, slack, telegram, webhook, ntfy, pushover]
+                  enum: [email, webhook, telegram, pushover]
                 config:
                   type: object
-                  additionalProperties:
-                    type: string
-                  example:
-                    webhook_url: https://discord.com/api/webhooks/...
-                enabled:
-                  type: boolean
-                  default: true
+                  description: Channel-specific configuration
       responses:
-        '201':
-          description: Channel created
+        "201":
+          description: Notification channel created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationChannel'
+                $ref: "#/components/schemas/NotificationChannel"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /notifications/logs:
     get:
-      summary: Get notification delivery logs
+      operationId: getNotificationLogs
+      summary: Get notification logs
+      description: Returns recent notification delivery logs.
       tags: [Notifications]
-      parameters:
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
       responses:
-        '200':
+        "200":
           description: Notification logs
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/NotificationLog'
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    channel_id:
+                      type: integer
+                    status:
+                      type: string
+                    message:
+                      type: string
+                    sent_at:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /notifications/stats:
     get:
-      summary: Get notification delivery statistics
+      operationId: getNotificationStats
+      summary: Get notification statistics
+      description: Returns notification delivery statistics.
       tags: [Notifications]
       responses:
-        '200':
-          description: Notification stats
+        "200":
+          description: Notification statistics
           content:
             application/json:
               schema:
                 type: object
+                properties:
+                  total_sent:
+                    type: integer
+                  total_failed:
+                    type: integer
+                  success_rate:
+                    type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /notifications/{channelID}:
+  /notifications/analytics:
     get:
-      summary: Get notification channel by ID
+      operationId: getNotificationAnalytics
+      summary: Get notification analytics
+      description: Returns detailed notification analytics.
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Notification analytics
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /notifications/schedules:
+    get:
+      operationId: listNotificationSchedules
+      summary: List notification schedules
+      description: Returns all configured notification schedules.
+      tags: [Notifications]
+      responses:
+        "200":
+          description: List of notification schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    cron:
+                      type: string
+                    enabled:
+                      type: boolean
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createNotificationSchedule
+      summary: Create notification schedule
+      description: Creates a new notification schedule.
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, cron]
+              properties:
+                name:
+                  type: string
+                cron:
+                  type: string
+      responses:
+        "201":
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /notifications/schedules/{scheduleID}:
+    delete:
+      operationId: deleteNotificationSchedule
+      summary: Delete notification schedule
+      description: Deletes a notification schedule.
       tags: [Notifications]
       parameters:
-        - name: channelID
+        - name: scheduleID
           in: path
           required: true
           schema:
             type: integer
       responses:
-        '200':
-          description: Channel details
+        "200":
+          description: Schedule deleted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationChannel'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      summary: Update a notification channel
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: schedule deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /notifications/{channelID}:
+    get:
+      operationId: getNotificationChannel
+      summary: Get single notification channel
+      description: Returns details for a specific notification channel.
       tags: [Notifications]
       parameters:
-        - name: channelID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/channelID"
+      responses:
+        "200":
+          description: Notification channel details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationChannel"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateNotificationChannel
+      summary: Update notification channel
+      description: Updates an existing notification channel.
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/channelID"
       requestBody:
         required: true
         content:
@@ -951,101 +1437,176 @@ paths:
                   type: string
                 config:
                   type: object
-                  additionalProperties:
-                    type: string
                 enabled:
                   type: boolean
       responses:
-        '200':
+        "200":
           description: Channel updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationChannel'
+                $ref: "#/components/schemas/NotificationChannel"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
     delete:
-      summary: Delete a notification channel
+      operationId: deleteNotificationChannel
+      summary: Delete notification channel
+      description: Deletes a notification channel.
       tags: [Notifications]
       parameters:
-        - name: channelID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/channelID"
       responses:
-        '200':
+        "200":
           description: Channel deleted
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  message:
                     type: string
-                    example: deleted
+                    example: channel deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /notifications/{channelID}/toggle:
     post:
-      summary: Toggle notification channel enabled state
+      operationId: toggleNotificationChannel
+      summary: Toggle notification channel
+      description: Toggles a notification channel on or off.
       tags: [Notifications]
       parameters:
-        - name: channelID
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                enabled:
-                  type: boolean
+        - $ref: "#/components/parameters/channelID"
       responses:
-        '200':
+        "200":
           description: Channel toggled
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: integer
                   enabled:
                     type: boolean
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /notifications/{channelID}/test:
     post:
-      summary: Send a test notification through a channel
+      operationId: testNotificationChannel
+      summary: Test notification channel
+      description: Sends a test notification through the channel.
       tags: [Notifications]
       parameters:
-        - name: channelID
-          in: path
-          required: true
-          schema:
-            type: integer
+        - $ref: "#/components/parameters/channelID"
       responses:
-        '200':
-          description: Test result
+        "200":
+          description: Test notification sent
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
                   message:
                     type: string
-                  error:
-                    type: string
+                    example: test notification sent
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          description: Notification delivery failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Chatbot
-  # ──────────────────────────────────────────────
+  /notifications/{channelID}/preferences:
+    get:
+      operationId: getChannelPreferences
+      summary: Get channel preferences
+      description: Returns notification preferences for a channel.
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/channelID"
+      responses:
+        "200":
+          description: Channel preferences
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateChannelPreferences
+      summary: Update channel preferences
+      description: Updates notification preferences for a channel.
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/channelID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /notifications/{channelID}/metrics:
+    get:
+      operationId: getChannelMetrics
+      summary: Get channel metrics
+      description: Returns delivery metrics for a specific notification channel.
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/channelID"
+      responses:
+        "200":
+          description: Channel metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_sent:
+                    type: integer
+                  total_failed:
+                    type: integer
+                  last_sent_at:
+                    type: string
+                    format: date-time
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Chatbot ────────────────────────────────────────────────────────
   /chatbot:
     post:
-      summary: Send a natural language query
+      operationId: sendChatMessage
+      summary: Send chat message
+      description: Sends a message to the AI chatbot and receives a response.
       tags: [Chatbot]
       requestBody:
         required: true
@@ -1057,12 +1618,12 @@ paths:
               properties:
                 message:
                   type: string
-                  example: How far did I drive last week?
+                  example: How much did I spend on charging last month?
                 session_id:
                   type: string
       responses:
-        '200':
-          description: Chatbot response
+        "200":
+          description: Chat response
           content:
             application/json:
               schema:
@@ -1072,442 +1633,686 @@ paths:
                     type: string
                   session_id:
                     type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /chatbot/history:
     get:
-      summary: Get chat history for a session
+      operationId: getChatHistory
+      summary: Get chat history
+      description: Returns chat message history.
       tags: [Chatbot]
-      parameters:
-        - name: session_id
-          in: query
-          required: true
-          schema:
-            type: string
       responses:
-        '200':
+        "200":
           description: Chat history
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ChatMessage'
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                      enum: [user, assistant]
+                    content:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /chatbot/sessions:
     get:
-      summary: List chatbot sessions
+      operationId: listChatSessions
+      summary: List chat sessions
+      description: Returns a list of chat sessions.
       tags: [Chatbot]
       responses:
-        '200':
-          description: Session ID list
+        "200":
+          description: Chat sessions
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: string
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+                    message_count:
+                      type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Tire Pressure
-  # ──────────────────────────────────────────────
+  # ─── Tire Pressure ─────────────────────────────────────────────────
   /tire-pressure:
     get:
-      summary: List tire pressure snapshots
-      tags: [TirePressure]
+      operationId: listTirePressure
+      summary: List tire pressure readings
+      description: Returns paginated tire pressure readings.
+      tags: [Tire Pressure]
       parameters:
         - name: vehicle_id
           in: query
-          required: true
           schema:
             type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
-        '200':
-          description: Tire pressure history
+        "200":
+          description: Tire pressure readings
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TirePressureSnapshot'
+                  $ref: "#/components/schemas/TirePressureReading"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /tire-pressure/latest:
     get:
+      operationId: getLatestTirePressure
       summary: Get latest tire pressure reading
-      tags: [TirePressure]
+      description: Returns the most recent tire pressure reading.
+      tags: [Tire Pressure]
       parameters:
         - name: vehicle_id
           in: query
-          required: true
           schema:
             type: integer
       responses:
-        '200':
-          description: Latest tire pressure snapshot
+        "200":
+          description: Latest tire pressure reading
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TirePressureSnapshot'
+                $ref: "#/components/schemas/TirePressureReading"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Software Updates
-  # ──────────────────────────────────────────────
-  /software-updates:
+  # ─── Motor ──────────────────────────────────────────────────────────
+  /motor:
     get:
-      summary: List software updates
-      tags: [SoftwareUpdates]
+      operationId: listMotorReadings
+      summary: List motor/powertrain readings
+      description: Returns paginated motor and powertrain readings.
+      tags: [Motor]
       parameters:
         - name: vehicle_id
           in: query
           schema:
             type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
-        '200':
-          description: Software update list
+        "200":
+          description: Motor readings
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SoftwareUpdate'
+                  $ref: "#/components/schemas/MotorReading"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Vampire Drain
-  # ──────────────────────────────────────────────
-  /vampire-drain:
+  /motor/latest:
     get:
-      summary: List vampire drain events
-      tags: [VampireDrain]
+      operationId: getLatestMotorReading
+      summary: Get latest motor reading
+      description: Returns the most recent motor/powertrain reading.
+      tags: [Motor]
       parameters:
         - name: vehicle_id
           in: query
-          required: true
           schema:
             type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: end
-          in: query
-          schema:
-            type: string
-            format: date
       responses:
-        '200':
+        "200":
+          description: Latest motor reading
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MotorReading"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Climate ────────────────────────────────────────────────────────
+  /climate:
+    get:
+      operationId: listClimateReadings
+      summary: List climate/HVAC readings
+      description: Returns paginated climate and HVAC readings.
+      tags: [Climate]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Climate readings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClimateReading"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /climate/latest:
+    get:
+      operationId: getLatestClimateReading
+      summary: Get latest climate reading
+      description: Returns the most recent climate/HVAC reading.
+      tags: [Climate]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest climate reading
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClimateReading"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Security ───────────────────────────────────────────────────────
+  /security:
+    get:
+      operationId: listSecurityEvents
+      summary: List security/access events
+      description: Returns paginated security and access events.
+      tags: [Security]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Security events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SecurityEvent"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /security/latest:
+    get:
+      operationId: getLatestSecurityEvent
+      summary: Get latest security event
+      description: Returns the most recent security/access event.
+      tags: [Security]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest security event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityEvent"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Charging Telemetry ─────────────────────────────────────────────
+  /charging-telemetry:
+    get:
+      operationId: listChargingTelemetryReadings
+      summary: List charging telemetry
+      description: Returns paginated charging telemetry readings.
+      tags: [Charging Telemetry]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Charging telemetry readings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChargingTelemetryReading"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /charging-telemetry/latest:
+    get:
+      operationId: getLatestChargingTelemetryReading
+      summary: Get latest charging telemetry
+      description: Returns the most recent charging telemetry reading.
+      tags: [Charging Telemetry]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest charging telemetry reading
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargingTelemetryReading"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Media ──────────────────────────────────────────────────────────
+  /media:
+    get:
+      operationId: listMediaReadings
+      summary: List media state readings
+      description: Returns paginated media state readings.
+      tags: [Media]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Media state readings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MediaReading"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /media/latest:
+    get:
+      operationId: getLatestMediaReading
+      summary: Get latest media state
+      description: Returns the most recent media state reading.
+      tags: [Media]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest media state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaReading"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Vehicle Config ────────────────────────────────────────────────
+  /vehicle-config:
+    get:
+      operationId: listVehicleConfigs
+      summary: List vehicle config snapshots
+      description: Returns paginated vehicle configuration snapshots.
+      tags: [Vehicle Config]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Vehicle config snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VehicleConfigSnapshot"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /vehicle-config/latest:
+    get:
+      operationId: getLatestVehicleConfig
+      summary: Get latest vehicle config
+      description: Returns the most recent vehicle configuration snapshot.
+      tags: [Vehicle Config]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest vehicle config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleConfigSnapshot"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Location Snapshots ────────────────────────────────────────────
+  /location-snapshots:
+    get:
+      operationId: listLocationSnapshots
+      summary: List location snapshots
+      description: Returns paginated location snapshots.
+      tags: [Location]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Location snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LocationSnapshot"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /location-snapshots/latest:
+    get:
+      operationId: getLatestLocationSnapshot
+      summary: Get latest location snapshot
+      description: Returns the most recent location snapshot.
+      tags: [Location]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest location snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocationSnapshot"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Safety ─────────────────────────────────────────────────────────
+  /safety:
+    get:
+      operationId: listSafetyEvents
+      summary: List safety event readings
+      description: Returns paginated safety event readings.
+      tags: [Safety]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Safety event readings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SafetyEvent"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /safety/latest:
+    get:
+      operationId: getLatestSafetyEvent
+      summary: Get latest safety event
+      description: Returns the most recent safety event reading.
+      tags: [Safety]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest safety event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyEvent"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── User Preferences ──────────────────────────────────────────────
+  /user-preferences:
+    get:
+      operationId: listUserPreferences
+      summary: List user preference snapshots
+      description: Returns paginated user preference snapshots.
+      tags: [User Preferences]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: User preference snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserPreferenceSnapshot"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /user-preferences/latest:
+    get:
+      operationId: getLatestUserPreferences
+      summary: Get latest user preferences
+      description: Returns the most recent user preference snapshot.
+      tags: [User Preferences]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest user preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferenceSnapshot"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Software Updates ──────────────────────────────────────────────
+  /software-updates:
+    get:
+      operationId: listSoftwareUpdates
+      summary: List software update events
+      description: Returns paginated software update events.
+      tags: [Software Updates]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Software update events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    vehicle_id:
+                      type: integer
+                    version:
+                      type: string
+                    status:
+                      type: string
+                    started_at:
+                      type: string
+                      format: date-time
+                    completed_at:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Vampire Drain ─────────────────────────────────────────────────
+  /vampire-drain:
+    get:
+      operationId: listVampireDrainEvents
+      summary: List vampire drain events
+      description: Returns paginated vampire drain events.
+      tags: [Vampire Drain]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
           description: Vampire drain events
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/VampireDrainEvent'
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    vehicle_id:
+                      type: integer
+                    start_time:
+                      type: string
+                      format: date-time
+                    end_time:
+                      type: string
+                      format: date-time
+                    energy_lost_kwh:
+                      type: number
+                    start_battery_level:
+                      type: integer
+                    end_battery_level:
+                      type: integer
+                    duration_hours:
+                      type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /vampire-drain/stats:
     get:
+      operationId: getVampireDrainStats
       summary: Get vampire drain statistics
-      tags: [VampireDrain]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Aggregated vampire drain stats
-          content:
-            application/json:
-              schema:
-                type: object
-
-  # ──────────────────────────────────────────────
-  # Locations
-  # ──────────────────────────────────────────────
-  /locations:
-    get:
-      summary: List visited locations
-      tags: [Locations]
+      description: Returns vampire drain statistics.
+      tags: [Vampire Drain]
       parameters:
         - name: vehicle_id
           in: query
           schema:
             type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
       responses:
-        '200':
-          description: Visited location list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VisitedLocation'
-
-  # ──────────────────────────────────────────────
-  # Mileage
-  # ──────────────────────────────────────────────
-  /mileage/daily:
-    get:
-      summary: Get daily mileage
-      tags: [Mileage]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-      responses:
-        '200':
-          description: Daily mileage records
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/DailyMileage'
-
-  /mileage/monthly:
-    get:
-      summary: Get monthly mileage aggregation
-      tags: [Mileage]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Monthly mileage data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    month:
-                      type: string
-                      example: "2025-01"
-                    distance_km:
-                      type: number
-                    drive_count:
-                      type: integer
-
-  /mileage/stats:
-    get:
-      summary: Get mileage statistics
-      tags: [Mileage]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Mileage statistics
-          content:
-            application/json:
-              schema:
-                type: object
-
-  # ──────────────────────────────────────────────
-  # Trips
-  # ──────────────────────────────────────────────
-  /trips:
-    get:
-      summary: List trips
-      tags: [Trips]
-      parameters:
-        - name: vehicle_id
-          in: query
-          schema:
-            type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: end
-          in: query
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: Trip list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Trip'
-
-  # ──────────────────────────────────────────────
-  # Vehicle State Timeline
-  # ──────────────────────────────────────────────
-  /states/timeline:
-    get:
-      summary: Get vehicle state timeline
-      tags: [VehicleState]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-        - $ref: '#/components/parameters/limit'
-        - $ref: '#/components/parameters/offset'
-      responses:
-        '200':
-          description: State timeline
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VehicleStateRecord'
-
-  /states/summary:
-    get:
-      summary: Get vehicle state summary
-      tags: [VehicleState]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-            maximum: 3650
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: State summary
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /states/daily:
-    get:
-      summary: Get daily state breakdown
-      tags: [VehicleState]
-      parameters:
-        - name: vehicle_id
-          in: query
-          required: true
-          schema:
-            type: integer
-        - name: days
-          in: query
-          schema:
-            type: integer
-            default: 30
-            maximum: 3650
-        - name: start
-          in: query
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: Daily state breakdown
-          content:
-            application/json:
-              schema:
-                type: object
-
-  # ──────────────────────────────────────────────
-  # Webhook
-  # ──────────────────────────────────────────────
-  /webhook:
-    post:
-      summary: Receive inbound webhook from external systems
-      description: Accepts events from Home Assistant, IFTTT, Node-RED, etc.
-      tags: [Webhook]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [event]
-              properties:
-                event:
-                  type: string
-                  enum: [alert, command, note]
-                title:
-                  type: string
-                message:
-                  type: string
-                severity:
-                  type: string
-                  enum: [info, warning, critical]
-                vehicle:
-                  type: string
-                  description: VIN or display name
-                data:
-                  type: object
-                  additionalProperties: true
-            example:
-              event: alert
-              title: Garage Door Open
-              message: Vehicle left with garage door open
-              severity: warning
-      responses:
-        '200':
-          description: Webhook processed
+        "200":
+          description: Vampire drain statistics
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: string
-                    example: alert_created
-                  id:
+                  total_events:
                     type: integer
+                  total_energy_lost_kwh:
+                    type: number
+                  avg_drain_rate_kwh_per_hour:
+                    type: number
+                  worst_drain_kwh:
+                    type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Search
-  # ──────────────────────────────────────────────
-  /search:
+  # ─── Visited Locations ─────────────────────────────────────────────
+  /locations:
     get:
-      summary: Global search across vehicles, drives, and locations
-      tags: [Search]
+      operationId: listVisitedLocations
+      summary: List visited locations
+      description: Returns paginated list of visited locations.
+      tags: [Visited Locations]
       parameters:
-        - name: q
+        - name: vehicle_id
           in: query
-          required: true
           schema:
-            type: string
-            minLength: 2
-          description: Search query (min 2 characters)
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
       responses:
-        '200':
-          description: Search results grouped by type
+        "200":
+          description: Visited locations
           content:
             application/json:
               schema:
@@ -1515,43 +2320,34 @@ paths:
                 items:
                   type: object
                   properties:
-                    type:
-                      type: string
-                      enum: [vehicle, drive, location]
                     id:
                       type: integer
-                    display_name:
+                    name:
                       type: string
-              example:
-                - type: vehicle
-                  id: 1
-                  display_name: My Tesla
-                  vin: 5YJ3E1EA1PF000001
-                - type: location
-                  id: 5
-                  display_name: Supercharger SF
-                  visit_count: 12
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                    visit_count:
+                      type: integer
+                    last_visited:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Export
-  # ──────────────────────────────────────────────
-  /export/{type}:
+  # ─── Mileage ────────────────────────────────────────────────────────
+  /mileage/daily:
     get:
-      summary: Export data as CSV or JSON
-      tags: [Export]
+      operationId: getDailyMileage
+      summary: Get daily mileage
+      description: Returns daily mileage breakdown for a vehicle.
+      tags: [Mileage]
       parameters:
-        - name: type
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [drives, charging]
-        - name: format
+        - name: vehicle_id
           in: query
           schema:
-            type: string
-            enum: [csv, json]
-            default: csv
+            type: integer
         - name: start_date
           in: query
           schema:
@@ -1563,8 +2359,1845 @@ paths:
             type: string
             format: date
       responses:
-        '200':
-          description: File download
+        "200":
+          description: Daily mileage data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    distance_km:
+                      type: number
+                    drive_count:
+                      type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /mileage/monthly:
+    get:
+      operationId: getMonthlyMileage
+      summary: Get monthly mileage
+      description: Returns monthly mileage breakdown for a vehicle.
+      tags: [Mileage]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Monthly mileage data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    month:
+                      type: string
+                    distance_km:
+                      type: number
+                    drive_count:
+                      type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /mileage/stats:
+    get:
+      operationId: getMileageStats
+      summary: Get mileage statistics
+      description: Returns mileage statistics for a vehicle.
+      tags: [Mileage]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Mileage statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_distance_km:
+                    type: number
+                  avg_daily_km:
+                    type: number
+                  avg_monthly_km:
+                    type: number
+                  total_drives:
+                    type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Trips ──────────────────────────────────────────────────────────
+  /trips:
+    get:
+      operationId: listTrips
+      summary: List trips
+      description: Returns paginated list of trips.
+      tags: [Trips]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    vehicle_id:
+                      type: integer
+                    start_time:
+                      type: string
+                      format: date-time
+                    end_time:
+                      type: string
+                      format: date-time
+                    distance_km:
+                      type: number
+                    duration_minutes:
+                      type: number
+                    drive_count:
+                      type: integer
+                    energy_used_kwh:
+                      type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── States ─────────────────────────────────────────────────────────
+  /states/timeline:
+    get:
+      operationId: getStateTimeline
+      summary: Get vehicle state timeline
+      description: Returns a timeline of vehicle state changes.
+      tags: [States]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: State timeline
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    state:
+                      type: string
+                    start_time:
+                      type: string
+                      format: date-time
+                    end_time:
+                      type: string
+                      format: date-time
+                    duration_minutes:
+                      type: number
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /states/summary:
+    get:
+      operationId: getStateSummary
+      summary: Get vehicle state summary
+      description: Returns a summary of time spent in each vehicle state.
+      tags: [States]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: State summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  driving_minutes:
+                    type: number
+                  charging_minutes:
+                    type: number
+                  sleeping_minutes:
+                    type: number
+                  idle_minutes:
+                    type: number
+                  offline_minutes:
+                    type: number
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /states/daily:
+    get:
+      operationId: getDailyStates
+      summary: Get daily state breakdown
+      description: Returns state breakdown for a specific day.
+      tags: [States]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Daily state breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    state:
+                      type: string
+                    start_time:
+                      type: string
+                      format: date-time
+                    end_time:
+                      type: string
+                      format: date-time
+                    duration_minutes:
+                      type: number
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Events (SSE) ──────────────────────────────────────────────────
+  /events:
+    get:
+      operationId: getEventStream
+      summary: SSE event stream for real-time updates
+      description: Server-Sent Events stream for real-time vehicle updates. Keep the connection open to receive events.
+      tags: [System]
+      responses:
+        "200":
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── System ─────────────────────────────────────────────────────────
+  /system/status:
+    get:
+      operationId: getSystemStatus
+      summary: Comprehensive system health
+      description: Returns comprehensive system health status including database, API, and worker states.
+      tags: [System]
+      responses:
+        "200":
+          description: System status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  uptime_seconds:
+                    type: integer
+                  database:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                      size_bytes:
+                        type: integer
+                  tesla_api:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                      suspended:
+                        type: boolean
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/health:
+    get:
+      operationId: getSystemHealth
+      summary: Extended health check
+      description: Returns extended health check information.
+      tags: [System]
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  checks:
+                    type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/api-usage:
+    get:
+      operationId: getApiUsage
+      summary: API usage statistics
+      description: Returns Tesla API usage statistics.
+      tags: [System]
+      responses:
+        "200":
+          description: API usage stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_calls:
+                    type: integer
+                  calls_today:
+                    type: integer
+                  rate_limit_remaining:
+                    type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/compression-stats:
+    get:
+      operationId: getCompressionStats
+      summary: Database compression stats
+      description: Returns database compression statistics.
+      tags: [System]
+      responses:
+        "200":
+          description: Compression statistics
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/backup:
+    get:
+      operationId: legacyExportData
+      summary: Legacy export data endpoint
+      description: Legacy endpoint for exporting data.
+      tags: [System]
+      responses:
+        "200":
+          description: Export data
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/backup/stats:
+    get:
+      operationId: getBackupStats
+      summary: Backup statistics
+      description: Returns backup statistics.
+      tags: [System]
+      responses:
+        "200":
+          description: Backup statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_backups:
+                    type: integer
+                  last_backup_at:
+                    type: string
+                    format: date-time
+                  total_size_bytes:
+                    type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/config-validation:
+    get:
+      operationId: validateConfig
+      summary: Validate configuration
+      description: Validates the current application configuration.
+      tags: [System]
+      responses:
+        "200":
+          description: Configuration validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/audit:
+    get:
+      operationId: listAuditLog
+      summary: List audit log entries
+      description: Returns paginated audit log entries.
+      tags: [System]
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    action:
+                      type: string
+                    actor:
+                      type: string
+                    details:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/errors/stats:
+    get:
+      operationId: getErrorStats
+      summary: Error aggregation statistics
+      description: Returns aggregated error statistics.
+      tags: [System]
+      responses:
+        "200":
+          description: Error statistics
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/errors/catalog:
+    get:
+      operationId: getErrorCatalog
+      summary: List all error codes
+      description: Returns the complete catalog of error codes.
+      tags: [System]
+      responses:
+        "200":
+          description: Error code catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    category:
+                      type: string
+                    http_status:
+                      type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/version:
+    get:
+      operationId: getVersion
+      summary: Get application version
+      description: Returns the current application version.
+      tags: [System]
+      responses:
+        "200":
+          description: Version info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  commit:
+                    type: string
+                  build_date:
+                    type: string
+
+  /system/update-check:
+    get:
+      operationId: checkForUpdates
+      summary: Check for available updates
+      description: Checks if a newer version is available.
+      tags: [System]
+      responses:
+        "200":
+          description: Update check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_version:
+                    type: string
+                  latest_version:
+                    type: string
+                  update_available:
+                    type: boolean
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /system/workers:
+    get:
+      operationId: getWorkerStatus
+      summary: Worker health status
+      description: Returns the status of background workers.
+      tags: [System]
+      responses:
+        "200":
+          description: Worker status
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── API Logs ───────────────────────────────────────────────────────
+  /api-logs:
+    get:
+      operationId: listApiLogs
+      summary: List API call logs
+      description: Returns paginated API call logs.
+      tags: [System]
+      parameters:
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: API call logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    method:
+                      type: string
+                    path:
+                      type: string
+                    status_code:
+                      type: integer
+                    duration_ms:
+                      type: number
+                    timestamp:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api-logs/stats:
+    get:
+      operationId: getApiLogStats
+      summary: API call statistics
+      description: Returns aggregated API call statistics.
+      tags: [System]
+      responses:
+        "200":
+          description: API call statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_calls:
+                    type: integer
+                  avg_response_ms:
+                    type: number
+                  error_rate:
+                    type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── API Keys ───────────────────────────────────────────────────────
+  /api-keys:
+    get:
+      operationId: listApiKeys
+      summary: List API keys
+      description: Returns all API keys (secrets are masked).
+      tags: [API Keys]
+      responses:
+        "200":
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    key_prefix:
+                      type: string
+                    expires_at:
+                      type: string
+                      format: date-time
+                    revoked:
+                      type: boolean
+                    created_at:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createApiKey
+      summary: Create new API key
+      description: Creates a new API key. The full key is only returned once.
+      tags: [API Keys]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: My Integration
+                expires_at:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  key:
+                    type: string
+                    description: Full API key (only shown once)
+                  expires_at:
+                    type: string
+                    format: date-time
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api-keys/{id}:
+    delete:
+      operationId: deleteApiKey
+      summary: Delete API key
+      description: Permanently deletes an API key.
+      tags: [API Keys]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: API key deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: api key deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api-keys/{id}/revoke:
+    post:
+      operationId: revokeApiKey
+      summary: Revoke API key
+      description: Revokes an API key without deleting it.
+      tags: [API Keys]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: API key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: api key revoked
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Telemetry ──────────────────────────────────────────────────────
+  /telemetry:
+    post:
+      operationId: ingestTelemetry
+      summary: Ingest Fleet Telemetry data
+      description: Ingests raw telemetry data from Tesla Fleet Telemetry.
+      tags: [Telemetry]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw telemetry payload from Fleet Telemetry
+      responses:
+        "200":
+          description: Telemetry ingested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: telemetry ingested
+                  records:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      operationId: getTelemetryStatus
+      summary: Get telemetry ingestion status
+      description: Returns the status of telemetry ingestion.
+      tags: [Telemetry]
+      responses:
+        "200":
+          description: Telemetry status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  total_records:
+                    type: integer
+                  last_ingested_at:
+                    type: string
+                    format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Dev Tools ──────────────────────────────────────────────────────
+  /dev-tools/fleet-api-info:
+    get:
+      operationId: getFleetApiInfo
+      summary: Get Fleet API information
+      description: Returns information about the Tesla Fleet API configuration.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Fleet API info
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/detect-region:
+    get:
+      operationId: detectRegion
+      summary: Detect Tesla API region
+      description: Detects the appropriate Tesla API region for the current account.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Region detection result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  region:
+                    type: string
+                  base_url:
+                    type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/register-partner:
+    post:
+      operationId: registerPartner
+      summary: Register as Tesla partner
+      description: Registers the application as a Tesla partner.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Partner registration result
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/test-api:
+    get:
+      operationId: testApiConnectivity
+      summary: Test API connectivity
+      description: Tests connectivity to the Tesla API.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: API connectivity test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                  latency_ms:
+                    type: number
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/token-info:
+    get:
+      operationId: getTokenInfo
+      summary: Get current token info
+      description: Returns information about the current OAuth token.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Token information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  expires_at:
+                    type: string
+                    format: date-time
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/db-stats:
+    get:
+      operationId: getDbStats
+      summary: Database statistics
+      description: Returns database statistics including table sizes and record counts.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Database statistics
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/migration-status:
+    get:
+      operationId: getMigrationStatus
+      summary: Database migration status
+      description: Returns the status of database migrations.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Migration status
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/mqtt-test:
+    post:
+      operationId: testMqtt
+      summary: Test MQTT connectivity
+      description: Tests connectivity to the MQTT broker.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: MQTT test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                  broker:
+                    type: string
+        "503":
+          description: MQTT unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/env-check:
+    get:
+      operationId: envCheck
+      summary: Environment configuration check
+      description: Checks the environment configuration for issues.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Environment check result
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/runtime-info:
+    get:
+      operationId: getRuntimeInfo
+      summary: Go runtime information
+      description: Returns Go runtime information including goroutines, memory, etc.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Runtime information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  go_version:
+                    type: string
+                  goroutines:
+                    type: integer
+                  memory_alloc_mb:
+                    type: number
+                  gc_runs:
+                    type: integer
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/generate-keypair:
+    post:
+      operationId: generateKeypair
+      summary: Generate public/private keypair
+      description: Generates a new public/private keypair for Tesla Fleet API authentication.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Keypair generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public_key:
+                    type: string
+                  message:
+                    type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/upload-public-key:
+    post:
+      operationId: uploadPublicKey
+      summary: Upload public key to Tesla
+      description: Uploads the public key to Tesla for partner authentication.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Public key uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/public-key-status:
+    get:
+      operationId: getPublicKeyStatus
+      summary: Check public key registration status
+      description: Checks if the public key is registered with Tesla.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Public key status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  registered:
+                    type: boolean
+                  domain:
+                    type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/public-key:
+    delete:
+      operationId: deletePublicKey
+      summary: Delete public key
+      description: Deletes the locally stored public key.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Public key deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: public key deleted
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/pair-vehicle-key:
+    post:
+      operationId: pairVehicleKey
+      summary: Pair vehicle key
+      description: Pairs a key with a vehicle for end-to-end command authentication.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Key pairing initiated
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/fleet-telemetry-subscribe:
+    post:
+      operationId: subscribeTelemetry
+      summary: Subscribe to Fleet Telemetry
+      description: Subscribes to Tesla Fleet Telemetry streaming.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Subscription result
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/fleet-telemetry-config:
+    get:
+      operationId: getFleetTelemetryConfig
+      summary: Get Fleet Telemetry config
+      description: Returns the current Fleet Telemetry configuration.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Fleet Telemetry config
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteFleetTelemetryConfig
+      summary: Delete Fleet Telemetry config
+      description: Deletes the Fleet Telemetry configuration.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Config deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: fleet telemetry config deleted
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/fleet-telemetry-errors:
+    get:
+      operationId: getFleetTelemetryErrors
+      summary: Get Fleet Telemetry errors
+      description: Returns recent Fleet Telemetry errors.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Fleet Telemetry errors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    error:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/fleet-status:
+    post:
+      operationId: getFleetStatus
+      summary: Get fleet status
+      description: Gets the fleet status from the Tesla API.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Fleet status
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/nearby-charging:
+    get:
+      operationId: getNearbyCharging
+      summary: Find nearby charging sites
+      description: Finds nearby Tesla charging sites.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Nearby charging sites
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/release-notes:
+    get:
+      operationId: getReleaseNotes
+      summary: Get release notes
+      description: Returns application release notes.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Release notes
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/recent-alerts:
+    get:
+      operationId: getRecentAlerts
+      summary: Get recent alerts
+      description: Returns recent alerts from the Tesla API.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Recent alerts
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /dev-tools/service-data:
+    get:
+      operationId: getServiceData
+      summary: Get service data
+      description: Returns vehicle service data from the Tesla API.
+      tags: [Dev Tools]
+      responses:
+        "200":
+          description: Service data
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Data Repair ───────────────────────────────────────────────────
+  /data-repair/stale-sessions:
+    get:
+      operationId: listStaleSessions
+      summary: List stale/orphaned sessions
+      description: Returns stale or orphaned drive and charging sessions.
+      tags: [Data Repair]
+      responses:
+        "200":
+          description: Stale sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stale_drives:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        vehicle_id:
+                          type: integer
+                        start_time:
+                          type: string
+                          format: date-time
+                  stale_charging:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        vehicle_id:
+                          type: integer
+                        start_time:
+                          type: string
+                          format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/charging/{id}:
+    put:
+      operationId: updateChargingData
+      summary: Update charging session data
+      description: Manually updates charging session data for repair purposes.
+      tags: [Data Repair]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Charging session updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: charging session updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteChargingData
+      summary: Delete charging session
+      description: Permanently deletes a charging session.
+      tags: [Data Repair]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Charging session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: charging session deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/charging/{id}/close:
+    post:
+      operationId: closeChargingSession
+      summary: Force close charging session
+      description: Forces a stale charging session to close.
+      tags: [Data Repair]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Charging session closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: charging session closed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Session still active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/drive/{id}:
+    put:
+      operationId: updateDriveData
+      summary: Update drive session data
+      description: Manually updates drive session data for repair purposes.
+      tags: [Data Repair]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Drive session updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: drive session updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteDriveData
+      summary: Delete drive session
+      description: Permanently deletes a drive session.
+      tags: [Data Repair]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Drive session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: drive session deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/drive/{id}/close:
+    post:
+      operationId: closeDriveSession
+      summary: Force close drive session
+      description: Forces a stale drive session to close.
+      tags: [Data Repair]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Drive session closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: drive session closed
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Session still active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Backup ─────────────────────────────────────────────────────────
+  /backup/configs:
+    get:
+      operationId: listBackupConfigs
+      summary: List backup configs
+      description: Returns all backup configurations.
+      tags: [Backup]
+      responses:
+        "200":
+          description: List of backup configs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BackupConfig"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createBackupConfig
+      summary: Create backup config
+      description: Creates a new backup configuration.
+      tags: [Backup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, schedule, retention_days, storage_type]
+              properties:
+                name:
+                  type: string
+                  example: Daily Backup
+                schedule:
+                  type: string
+                  description: Cron expression
+                  example: "0 2 * * *"
+                retention_days:
+                  type: integer
+                  example: 30
+                storage_type:
+                  type: string
+                  enum: [local, s3]
+                  example: local
+      responses:
+        "201":
+          description: Backup config created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/configs/{configID}:
+    get:
+      operationId: getBackupConfig
+      summary: Get backup config
+      description: Returns details for a specific backup configuration.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/configID"
+      responses:
+        "200":
+          description: Backup config details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupConfig"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateBackupConfig
+      summary: Update backup config
+      description: Updates an existing backup configuration.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/configID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                schedule:
+                  type: string
+                retention_days:
+                  type: integer
+                storage_type:
+                  type: string
+                  enum: [local, s3]
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Backup config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupConfig"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteBackupConfig
+      summary: Delete backup config
+      description: Deletes a backup configuration.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/configID"
+      responses:
+        "200":
+          description: Backup config deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: backup config deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/configs/{configID}/trigger:
+    post:
+      operationId: triggerBackup
+      summary: Trigger manual backup
+      description: Triggers a manual backup run for a configuration.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/configID"
+      responses:
+        "200":
+          description: Backup triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupRun"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/quick:
+    post:
+      operationId: quickBackup
+      summary: Quick one-time backup
+      description: Creates a quick one-time backup without a configuration.
+      tags: [Backup]
+      responses:
+        "200":
+          description: Quick backup started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupRun"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/runs:
+    get:
+      operationId: listBackupRuns
+      summary: List backup runs
+      description: Returns paginated list of backup runs.
+      tags: [Backup]
+      parameters:
+        - name: config_id
+          in: query
+          schema:
+            type: string
+          description: Filter by backup config ID
+        - $ref: "#/components/parameters/limitParam"
+        - $ref: "#/components/parameters/offsetParam"
+      responses:
+        "200":
+          description: List of backup runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BackupRun"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/runs/{runID}:
+    get:
+      operationId: getBackupRun
+      summary: Get backup run details
+      description: Returns details for a specific backup run.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/runID"
+      responses:
+        "200":
+          description: Backup run details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupRun"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/runs/{runID}/download:
+    get:
+      operationId: downloadBackup
+      summary: Download backup file
+      description: Downloads the backup file for a specific run.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/runID"
+      responses:
+        "200":
+          description: Backup file download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/runs/{runID}/verify:
+    post:
+      operationId: verifyBackup
+      summary: Verify backup integrity
+      description: Verifies the integrity of a backup file.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/runID"
+      responses:
+        "200":
+          description: Backup verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  checksum:
+                    type: string
+                  size_bytes:
+                    type: integer
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /backup/runs/{runID}/preview:
+    get:
+      operationId: previewRestore
+      summary: Preview restore contents
+      description: Previews the contents of a backup before restoring.
+      tags: [Backup]
+      parameters:
+        - $ref: "#/components/parameters/runID"
+      responses:
+        "200":
+          description: Restore preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tables:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        record_count:
+                          type: integer
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  # ─── Export ─────────────────────────────────────────────────────────
+  /export/{type}:
+    get:
+      operationId: exportData
+      summary: Export data
+      description: Exports data of the specified type (drives, charging, positions) in CSV or JSON format.
+      tags: [Export]
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [drives, charging, positions]
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        "200":
+          description: Exported data
           content:
             text/csv:
               schema:
@@ -1574,236 +4207,494 @@ paths:
                 type: array
                 items:
                   type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  # ──────────────────────────────────────────────
-  # Events (SSE)
-  # ──────────────────────────────────────────────
-  /events:
-    get:
-      summary: Real-time event stream (Server-Sent Events)
-      tags: [System]
+  /export/jobs:
+    post:
+      operationId: submitExportJob
+      summary: Submit async export job
+      description: Submits an asynchronous export job for large datasets.
+      tags: [Export]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [drives, charging, positions]
+                vehicle_id:
+                  type: integer
+                format:
+                  type: string
+                  enum: [csv, json]
+                  default: csv
       responses:
-        '200':
-          description: SSE event stream
-          content:
-            text/event-stream:
-              schema:
-                type: string
-
-  # ──────────────────────────────────────────────
-  # System
-  # ──────────────────────────────────────────────
-  /system/status:
-    get:
-      summary: Get system component status
-      tags: [System]
-      responses:
-        '200':
-          description: System status
+        "202":
+          description: Export job submitted
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  overall:
+                  job_id:
                     type: string
-                    enum: [healthy, degraded, unhealthy]
-                  database:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      consecutive_failures:
-                        type: integer
-                  tesla_api:
-                    type: object
-                  mqtt:
-                    type: object
-
-  /system/health:
-    get:
-      summary: Extended health check
-      tags: [System]
-      responses:
-        '200':
-          description: Extended health
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
                   status:
                     type: string
-                    enum: [healthy, degraded]
-                  components:
-                    type: object
-                  database:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                      latency_ms:
-                        type: number
-                  database_pool:
-                    type: object
-                    properties:
-                      total_conns:
-                        type: integer
-                      idle_conns:
-                        type: integer
-                      acquired_conns:
-                        type: integer
-                  system:
-                    type: object
-                    properties:
-                      goroutines:
-                        type: integer
-                      go_version:
-                        type: string
-                      uptime_seconds:
-                        type: number
-                  checked_at:
+                    example: pending
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    get:
+      operationId: listExportJobs
+      summary: List export jobs
+      description: Returns a list of export jobs.
+      tags: [Export]
+      responses:
+        "200":
+          description: List of export jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                    status:
+                      type: string
+                      enum: [pending, running, completed, failed]
+                    created_at:
+                      type: string
+                      format: date-time
+                    completed_at:
+                      type: string
+                      format: date-time
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /export/jobs/import:
+    post:
+      operationId: submitImportJob
+      summary: Submit import job
+      description: Submits a data import job.
+      tags: [Export]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "202":
+          description: Import job submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
                     type: string
-                    format: date-time
+                  status:
+                    type: string
+                    example: pending
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /system/api-usage:
+  /export/jobs/{jobID}:
     get:
-      summary: Get Tesla API usage statistics
-      tags: [System]
+      operationId: getExportJob
+      summary: Get export job status
+      description: Returns the status of an export job.
+      tags: [Export]
+      parameters:
+        - name: jobID
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
-        '200':
-          description: API usage stats
+        "200":
+          description: Export job status
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  total_requests:
-                    type: integer
-                  skipped_polls:
-                    type: integer
-                  estimated_cost:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, running, completed, failed]
+                  progress:
                     type: number
-                  cost_per_request:
-                    type: number
-                  monthly_credit:
-                    type: number
-                  estimated_remaining:
-                    type: number
+                  error:
+                    type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
-  /system/compression-stats:
+  /export/jobs/{jobID}/download:
     get:
-      summary: Get position data compression statistics
-      tags: [System]
+      operationId: downloadExportJob
+      summary: Download export job result
+      description: Downloads the result of a completed export job.
+      tags: [Export]
+      parameters:
+        - name: jobID
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
-        '200':
-          description: Compression stats
+        "200":
+          description: Export file download
           content:
-            application/json:
+            application/octet-stream:
               schema:
-                type: object
-                properties:
-                  total_positions:
-                    type: integer
-                  compressed_positions:
-                    type: integer
-                  estimated_saved_rows:
-                    type: integer
-                  estimated_saved_bytes:
-                    type: integer
-
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+# ═══════════════════════════════════════════════════════════════════════
+# Components
+# ═══════════════════════════════════════════════════════════════════════
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
   parameters:
-    vehicleIDPath:
+    vehicleID:
       name: vehicleID
       in: path
       required: true
+      description: Vehicle ID
       schema:
         type: integer
-      description: Vehicle ID
-    limit:
+
+    driveID:
+      name: driveID
+      in: path
+      required: true
+      description: Drive session ID
+      schema:
+        type: integer
+
+    sessionID:
+      name: sessionID
+      in: path
+      required: true
+      description: Charging session ID
+      schema:
+        type: integer
+
+    geofenceID:
+      name: geofenceID
+      in: path
+      required: true
+      description: Geofence ID
+      schema:
+        type: integer
+
+    channelID:
+      name: channelID
+      in: path
+      required: true
+      description: Notification channel ID
+      schema:
+        type: integer
+
+    configID:
+      name: configID
+      in: path
+      required: true
+      description: Backup configuration ID
+      schema:
+        type: string
+
+    runID:
+      name: runID
+      in: path
+      required: true
+      description: Backup run ID
+      schema:
+        type: string
+
+    limitParam:
       name: limit
       in: query
+      description: Maximum number of results to return
       schema:
         type: integer
         default: 50
         minimum: 1
         maximum: 1000
-    offset:
+
+    offsetParam:
       name: offset
       in: query
+      description: Number of results to skip
       schema:
         type: integer
         default: 0
         minimum: 0
 
   responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalidInput:
+              value:
+                error: invalid input parameters
+                code: VALIDATION_INVALID_INPUT
+                category: validation
+            invalidJson:
+              value:
+                error: invalid JSON body
+                code: VALIDATION_INVALID_JSON
+                category: validation
+            missingField:
+              value:
+                error: required field missing
+                code: VALIDATION_MISSING_FIELD
+                category: validation
+
+    Unauthorized:
+      description: Authentication required or failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            tokenMissing:
+              value:
+                error: authentication token is required
+                code: AUTH_TOKEN_MISSING
+                category: auth
+            tokenExpired:
+              value:
+                error: authentication token has expired
+                code: AUTH_TOKEN_EXPIRED
+                category: auth
+            tokenInvalid:
+              value:
+                error: authentication token is invalid
+                code: AUTH_TOKEN_INVALID
+                category: auth
+            apiKeyInvalid:
+              value:
+                error: API key is invalid
+                code: AUTH_API_KEY_INVALID
+                category: auth
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: insufficient permissions
+            code: AUTH_INSUFFICIENT_PERMISSIONS
+            category: auth
+
     NotFound:
       description: Resource not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
-            error: not found
-            code: NOT_FOUND
-    Unauthorized:
-      description: Authentication required
+            error: resource not found
+            code: DB_RECORD_NOT_FOUND
+            category: database
+
+    RateLimited:
+      description: Rate limit exceeded
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
-            error: unauthorized
-            code: UNAUTHORIZED
+            error: rate limit exceeded
+            code: RATE_LIMITED
+            category: rate_limiting
+
+    TeslaAPIError:
+      description: Tesla API error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Tesla API is unavailable
+            code: TESLA_API_UNAVAILABLE
+            category: tesla_api
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: an internal error occurred
+            code: INTERNAL_ERROR
+            category: internal
 
   schemas:
-    Error:
+    ErrorResponse:
       type: object
+      required: [error, code, category]
       properties:
         error:
           type: string
+          description: Human-readable error message
+          example: resource not found
         code:
           type: string
+          description: Machine-readable error code
+          example: DB_RECORD_NOT_FOUND
           enum:
-            - BAD_REQUEST
-            - UNAUTHORIZED
-            - FORBIDDEN
-            - NOT_FOUND
-            - INTERNAL_ERROR
+            - AUTH_INVALID_CREDENTIALS
+            - AUTH_TOKEN_EXPIRED
+            - AUTH_TOKEN_INVALID
+            - AUTH_TOKEN_MISSING
+            - AUTH_API_KEY_INVALID
+            - AUTH_API_KEY_EXPIRED
+            - AUTH_API_KEY_REVOKED
+            - AUTH_INSUFFICIENT_PERMISSIONS
+            - VEHICLE_NOT_FOUND
+            - VEHICLE_OFFLINE
+            - VEHICLE_ASLEEP
+            - VEHICLE_BUSY
+            - DRIVE_NOT_FOUND
+            - CHARGE_NOT_FOUND
+            - TRIP_NOT_FOUND
+            - SESSION_STILL_ACTIVE
+            - SESSION_NOT_FOUND
+            - TESLA_API_UNAVAILABLE
+            - TESLA_API_SUSPENDED
+            - TESLA_API_RATE_LIMITED
+            - TESLA_API_TIMEOUT
+            - TESLA_API_AUTH_FAILED
+            - TESLA_NOT_CONNECTED
+            - DB_CONNECTION_FAILED
+            - DB_QUERY_FAILED
+            - DB_TRANSACTION_FAILED
+            - DB_RECORD_NOT_FOUND
+            - DB_DUPLICATE_RECORD
+            - VALIDATION_INVALID_INPUT
+            - VALIDATION_INVALID_JSON
+            - VALIDATION_MISSING_FIELD
+            - VALIDATION_INVALID_RANGE
+            - VALIDATION_INVALID_ID
+            - VALIDATION_PAYLOAD_TOO_LARGE
+            - GEOFENCE_NOT_FOUND
+            - GEOFENCE_INVALID_COORDINATES
+            - GEOFENCE_INVALID_RADIUS
+            - COMMAND_NOT_SUPPORTED
+            - COMMAND_FAILED
+            - COMMAND_TIMEOUT
+            - BACKUP_CONFIG_NOT_FOUND
+            - BACKUP_RUN_NOT_FOUND
+            - BACKUP_FAILED
+            - BACKUP_STORAGE_ERROR
+            - RESTORE_FAILED
+            - NOTIFICATION_CHANNEL_NOT_FOUND
+            - NOTIFICATION_TEST_FAILED
+            - TELEMETRY_INGEST_FAILED
+            - MQTT_UNAVAILABLE
+            - EXPORT_FAILED
+            - EXPORT_NOT_FOUND
+            - EXPORT_INVALID_FORMAT
             - RATE_LIMITED
+            - INTERNAL_ERROR
             - SERVICE_UNAVAILABLE
+            - NOT_IMPLEMENTED
+        category:
+          type: string
+          description: Error category
+          example: database
+          enum:
+            - auth
+            - vehicle
+            - drives
+            - charging
+            - trips
+            - tesla_api
+            - database
+            - validation
+            - geofence
+            - commands
+            - backup
+            - notifications
+            - telemetry
+            - export
+            - rate_limiting
+            - internal
 
     Vehicle:
       type: object
       properties:
         id:
           type: integer
+          description: Internal database ID
+          example: 1
         vehicle_id:
           type: integer
+          description: Tesla vehicle ID
+          example: 1234567890
         vin:
           type: string
+          description: Vehicle identification number
+          example: 5YJ3E1EA1LF000000
         display_name:
           type: string
+          description: User-assigned display name
+          example: My Tesla
         model:
           type: string
+          description: Vehicle model
+          example: Model 3
         trim_badging:
           type: string
+          description: Trim level
+          example: Long Range
         exterior_color:
           type: string
+          description: Exterior color
+          example: Pearl White
         wheel_type:
           type: string
+          description: Wheel type
+          example: Aero
         state:
           type: string
-          enum: [online, asleep, driving, charging, offline]
+          description: Current vehicle state
+          example: online
         healthy:
           type: boolean
+          description: Whether the vehicle data is healthy
+          example: true
         created_at:
           type: string
           format: date-time
@@ -1811,235 +4702,224 @@ components:
           type: string
           format: date-time
 
-    Position:
-      type: object
-      properties:
-        id:
-          type: integer
-        vehicle_id:
-          type: integer
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        speed:
-          type: number
-        power:
-          type: number
-        heading:
-          type: integer
-        elevation:
-          type: number
-        odometer:
-          type: number
-        ideal_range:
-          type: number
-        rated_range:
-          type: number
-        battery_level:
-          type: integer
-        inside_temp:
-          type: number
-        outside_temp:
-          type: number
-        is_climate_on:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-
-    VehicleState:
-      type: object
-      properties:
-        vehicle_id:
-          type: integer
-        state:
-          type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        speed:
-          type: number
-        power:
-          type: number
-        battery_level:
-          type: integer
-        rated_range:
-          type: number
-        ideal_range:
-          type: number
-        odometer:
-          type: number
-        inside_temp:
-          type: number
-        outside_temp:
-          type: number
-        is_climate_on:
-          type: boolean
-        is_charging:
-          type: boolean
-        charger_power:
-          type: number
-        charge_rate:
-          type: number
-        time_to_full_chg:
-          type: number
-        is_locked:
-          type: boolean
-        sentry_mode:
-          type: boolean
-        software_version:
-          type: string
-
     Drive:
       type: object
       properties:
         id:
           type: integer
+          example: 1
         vehicle_id:
           type: integer
-        start_date:
+          example: 1
+        start_time:
           type: string
           format: date-time
-        end_date:
+        end_time:
           type: string
           format: date-time
-        distance:
+        start_lat:
           type: number
-          description: Distance in km
-        duration_min:
+          example: 37.7749
+        start_lng:
           type: number
-        start_range_km:
+          example: -122.4194
+        end_lat:
           type: number
-          nullable: true
-        end_range_km:
+          example: 37.3382
+        end_lng:
           type: number
-          nullable: true
-        speed_max:
+          example: -121.8863
+        start_address:
+          type: string
+          example: San Francisco, CA
+        end_address:
+          type: string
+          example: San Jose, CA
+        distance_km:
           type: number
-          nullable: true
-        power_max:
+          example: 77.5
+        duration_minutes:
           type: number
-          nullable: true
-        power_min:
+          example: 55.2
+        avg_speed_kmh:
           type: number
-          nullable: true
+          example: 84.2
+        max_speed_kmh:
+          type: number
+          example: 120.5
         start_battery_level:
           type: integer
-          nullable: true
+          example: 85
         end_battery_level:
           type: integer
-          nullable: true
-        inside_temp_avg:
+          example: 62
+        energy_used_kwh:
           type: number
-          nullable: true
+          example: 15.3
         outside_temp_avg:
           type: number
-          nullable: true
+          example: 22.5
 
     ChargingSession:
       type: object
       properties:
         id:
           type: integer
+          example: 1
         vehicle_id:
           type: integer
-        start_date:
+          example: 1
+        start_time:
           type: string
           format: date-time
-        end_date:
+        end_time:
           type: string
           format: date-time
-        charge_energy_added:
+        location:
+          type: string
+          example: Home
+        latitude:
           type: number
-          description: Energy added in kWh
-        charge_energy_used:
+          example: 37.7749
+        longitude:
           type: number
-          nullable: true
+          example: -122.4194
         start_battery_level:
           type: integer
+          example: 20
         end_battery_level:
           type: integer
-        charger_power:
+          example: 90
+        energy_added_kwh:
           type: number
-          nullable: true
-        fast_charger_type:
-          type: string
-          nullable: true
-        fast_charger_brand:
-          type: string
-          nullable: true
+          example: 52.5
         cost:
           type: number
-          nullable: true
-        duration_min:
+          example: 8.40
+        charger_type:
+          type: string
+          example: Level 2
+        max_charger_power:
           type: number
+          example: 11.5
+        duration_minutes:
+          type: number
+          example: 300
+
+    Position:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        vehicle_id:
+          type: integer
+          example: 1
+        latitude:
+          type: number
+          example: 37.7749
+        longitude:
+          type: number
+          example: -122.4194
+        speed:
+          type: number
+          description: Speed in km/h
+          example: 65.3
+        power:
+          type: number
+          description: Power draw in kW
+          example: 15.2
+        heading:
+          type: integer
+          description: Compass heading in degrees
+          example: 180
+        elevation:
+          type: number
+          description: Elevation in meters
+          example: 30.5
+        odometer:
+          type: number
+          description: Odometer reading in km
+          example: 45230.5
+        ideal_range:
+          type: number
+          description: Ideal range in km
+          example: 350.2
+        rated_range:
+          type: number
+          description: Rated range in km
+          example: 320.1
+        battery_level:
+          type: integer
+          description: Battery level percentage
+          example: 72
+        inside_temp:
+          type: number
+          description: Inside temperature in Celsius
+          example: 22.0
+        outside_temp:
+          type: number
+          description: Outside temperature in Celsius
+          example: 18.5
+        fan_status:
+          type: integer
+          description: Fan speed status
+          example: 0
+        is_climate_on:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
 
     Geofence:
       type: object
       properties:
         id:
           type: integer
+          example: 1
         name:
           type: string
+          example: Home
         latitude:
           type: number
-          format: double
+          example: 37.7749
         longitude:
           type: number
-          format: double
+          example: -122.4194
         radius:
           type: number
           description: Radius in meters
+          example: 100
         created_at:
           type: string
           format: date-time
-
-    GeofenceInput:
-      type: object
-      required: [name, latitude, longitude, radius]
-      properties:
-        name:
+        updated_at:
           type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        radius:
-          type: number
-          minimum: 1
-
-    Settings:
-      type: object
-      additionalProperties: true
-      description: Application settings (schema varies by deployment)
+          format: date-time
 
     Alert:
       type: object
       properties:
         id:
           type: integer
+          example: 1
         vehicle_id:
           type: integer
-          nullable: true
+          example: 1
         type:
           type: string
-        title:
-          type: string
+          example: battery_low
         message:
           type: string
+          example: Battery level dropped below 20%
         severity:
           type: string
           enum: [info, warning, critical]
+          example: warning
         read:
           type: boolean
+          example: false
         created_at:
           type: string
           format: date-time
@@ -2049,186 +4929,115 @@ components:
       properties:
         id:
           type: integer
+          example: 1
         name:
           type: string
+          example: Low Battery Alert
         type:
           type: string
-        enabled:
-          type: boolean
-        threshold:
-          type: number
-        severity:
-          type: string
+          enum: [battery_low, speed_limit, geofence_enter, geofence_exit, sentry_mode]
+          example: battery_low
         vehicle_id:
           type: integer
-          nullable: true
+          example: 1
+        threshold:
+          type: number
+          example: 20
+        enabled:
+          type: boolean
+          example: true
         created_at:
           type: string
           format: date-time
-
-    FleetAnalytics:
+        updated_at:
+          type: string
+          format: date-time
+    BackupConfig:
       type: object
       properties:
-        period_days:
+        id:
+          type: string
+          example: bkp_abc123
+        name:
+          type: string
+          example: Daily Backup
+        schedule:
+          type: string
+          description: Cron expression
+          example: "0 2 * * *"
+        retention_days:
           type: integer
-        total_vehicles:
+          example: 30
+        storage_type:
+          type: string
+          enum: [local, s3]
+          example: local
+        enabled:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BackupRun:
+      type: object
+      properties:
+        id:
+          type: string
+          example: run_xyz789
+        config_id:
+          type: string
+          example: bkp_abc123
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+          example: completed
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        size_bytes:
           type: integer
-        total_distance_km:
-          type: number
-        total_drives:
-          type: integer
-        total_charging_sessions:
-          type: integer
-        total_energy_kwh:
-          type: number
-        total_cost:
-          type: number
-        avg_efficiency_wh_km:
-          type: number
-        most_efficient_vehicle:
-          type: object
-          nullable: true
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
-            efficiency:
-              type: number
-        vehicle_comparison:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-              drives:
-                type: integer
-              distance:
-                type: number
-              energy:
-                type: number
-              efficiency:
-                type: number
-        drive_analytics:
-          type: object
-          properties:
-            hourly_pattern:
-              type: array
-              items:
-                type: object
-            day_of_week:
-              type: array
-              items:
-                type: object
-            speed_distribution:
-              type: array
-              items:
-                type: object
-            distance_distribution:
-              type: array
-              items:
-                type: object
-            daily_trend:
-              type: array
-              items:
-                type: object
-            temp_vs_efficiency:
-              type: array
-              items:
-                type: object
-        charging_analytics:
-          type: object
-          properties:
-            hourly_pattern:
-              type: array
-              items:
-                type: object
-            charger_types:
-              type: array
-              items:
-                type: object
-            monthly_trend:
-              type: array
-              items:
-                type: object
-        battery_trend:
-          type: array
-          items:
-            type: object
-            properties:
-              date:
-                type: string
-              health_score:
-                type: number
-              capacity_kwh:
-                type: number
-              degradation_pct:
-                type: number
+          example: 52428800
+        file_path:
+          type: string
+          example: /backups/2024-01-15_020000.db
+        error:
+          type: string
+          description: Error message if failed
 
     NotificationChannel:
       type: object
       properties:
         id:
           type: integer
+          example: 1
         name:
           type: string
+          example: My Webhook
         type:
           type: string
-          enum: [discord, email, slack, telegram, webhook, ntfy, pushover]
+          enum: [email, webhook, telegram, pushover]
+          example: webhook
         config:
           type: object
-          additionalProperties:
-            type: string
+          description: Channel-specific configuration
         enabled:
           type: boolean
+          example: true
         created_at:
           type: string
           format: date-time
-
-    NotificationLog:
-      type: object
-      properties:
-        id:
-          type: integer
-        channel_id:
-          type: integer
-        title:
-          type: string
-        message:
-          type: string
-        status:
-          type: string
-          enum: [sent, failed]
-        error:
-          type: string
-        sent_at:
-          type: string
-          format: date-time
-          nullable: true
-        created_at:
+        updated_at:
           type: string
           format: date-time
 
-    ChatMessage:
-      type: object
-      properties:
-        id:
-          type: integer
-        session_id:
-          type: string
-        role:
-          type: string
-          enum: [user, assistant]
-        content:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-
-    TirePressureSnapshot:
+    TirePressureReading:
       type: object
       properties:
         id:
@@ -2237,216 +5046,227 @@ components:
           type: integer
         front_left:
           type: number
-          nullable: true
+          description: Pressure in bar
+          example: 2.9
         front_right:
           type: number
-          nullable: true
+          example: 2.9
         rear_left:
           type: number
-          nullable: true
+          example: 3.1
         rear_right:
           type: number
-          nullable: true
-        created_at:
+          example: 3.1
+        timestamp:
           type: string
           format: date-time
 
-    SoftwareUpdate:
+    MotorReading:
       type: object
       properties:
         id:
           type: integer
         vehicle_id:
           type: integer
-        version:
-          type: string
-        status:
-          type: string
-          enum: [available, downloading, installing, installed]
-        scheduled_at:
-          type: string
-          format: date-time
-          nullable: true
-        installed_at:
-          type: string
-          format: date-time
-          nullable: true
-        created_at:
+        front_motor_temp:
+          type: number
+          description: Temperature in Celsius
+        rear_motor_temp:
+          type: number
+        front_motor_power:
+          type: number
+          description: Power in kW
+        rear_motor_power:
+          type: number
+        inverter_temp:
+          type: number
+        timestamp:
           type: string
           format: date-time
 
-    VampireDrainEvent:
+    ClimateReading:
       type: object
       properties:
         id:
           type: integer
         vehicle_id:
           type: integer
-        start_date:
+        inside_temp:
+          type: number
+          description: Inside temperature in Celsius
+        outside_temp:
+          type: number
+        driver_temp_setting:
+          type: number
+        passenger_temp_setting:
+          type: number
+        is_climate_on:
+          type: boolean
+        fan_status:
+          type: integer
+        seat_heater_left:
+          type: integer
+        seat_heater_right:
+          type: integer
+        timestamp:
           type: string
           format: date-time
-        end_date:
+
+    SecurityEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        vehicle_id:
+          type: integer
+        event_type:
           type: string
-          format: date-time
-          nullable: true
-        start_battery:
-          type: integer
-        end_battery:
-          type: integer
-          nullable: true
-        battery_lost:
-          type: integer
-        range_lost_km:
-          type: number
-        duration_hours:
-          type: number
-        drain_rate_pct_per_hour:
-          type: number
-        outside_temp_avg:
-          type: number
-          nullable: true
+          example: sentry_mode_triggered
+        locked:
+          type: boolean
         sentry_mode:
           type: boolean
-        created_at:
+        valet_mode:
+          type: boolean
+        details:
+          type: string
+        timestamp:
           type: string
           format: date-time
 
-    VisitedLocation:
+    ChargingTelemetryReading:
       type: object
       properties:
         id:
           type: integer
         vehicle_id:
           type: integer
-        address_id:
+        battery_level:
           type: integer
-          nullable: true
-        address_name:
-          type: string
-        visit_count:
-          type: integer
-        total_duration_min:
+        charge_rate:
           type: number
-        last_visited:
-          type: string
-          format: date-time
-          nullable: true
-        created_at:
+          description: Charge rate in km/h or kW
+        charger_power:
+          type: number
+          description: Charger power in kW
+        charger_voltage:
+          type: number
+        charger_current:
+          type: number
+        charge_energy_added:
+          type: number
+        time_to_full_charge:
+          type: number
+          description: Hours
+        timestamp:
           type: string
           format: date-time
 
-    DailyMileage:
+    MediaReading:
       type: object
       properties:
         id:
           type: integer
         vehicle_id:
           type: integer
-        date:
+        media_playing:
+          type: boolean
+        media_source:
           type: string
-          format: date
-        distance_km:
+        volume:
           type: number
-        odometer_start:
-          type: number
-        odometer_end:
-          type: number
-        drive_count:
-          type: integer
-        energy_used_kwh:
-          type: number
+        timestamp:
+          type: string
+          format: date-time
 
-    Trip:
+    VehicleConfigSnapshot:
       type: object
       properties:
         id:
           type: integer
         vehicle_id:
           type: integer
-        name:
+        car_type:
           type: string
-          nullable: true
-        start_date:
+        exterior_color:
           type: string
-          format: date-time
-        end_date:
+        wheel_type:
           type: string
-          format: date-time
-          nullable: true
-        total_distance_km:
-          type: number
-        total_energy_kwh:
-          type: number
-        total_cost:
-          type: number
-        drive_count:
-          type: integer
-        charge_count:
-          type: integer
-        created_at:
+        spoiler_type:
+          type: string
+        roof_color:
+          type: string
+        charge_port_type:
+          type: string
+        plg:
+          type: boolean
+        timestamp:
           type: string
           format: date-time
 
-    VehicleStateRecord:
+    LocationSnapshot:
       type: object
       properties:
         id:
           type: integer
         vehicle_id:
           type: integer
-        state:
-          type: string
-        start_date:
-          type: string
-          format: date-time
-        end_date:
-          type: string
-          format: date-time
-          nullable: true
-        duration_min:
+        latitude:
           type: number
-        created_at:
+        longitude:
+          type: number
+        heading:
+          type: integer
+        speed:
+          type: number
+        native_location_supported:
+          type: boolean
+        timestamp:
           type: string
           format: date-time
 
-    EnergyStatsRow:
+    SafetyEvent:
       type: object
       properties:
-        date:
-          type: string
-          format: date
-        energy_kwh:
-          type: number
-        cost:
-          type: number
-
-    BatteryReport:
-      type: object
-      properties:
+        id:
+          type: integer
         vehicle_id:
           type: integer
-        health_score:
-          type: number
-        capacity_kwh:
-          type: number
-        degradation_pct:
-          type: number
-        est_range_km:
-          type: number
-        cycle_count:
+        event_type:
+          type: string
+        forward_collision_warning:
+          type: string
+        automatic_emergency_braking:
+          type: boolean
+        blind_spot_warning:
+          type: boolean
+        lane_departure_warning:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+
+    UserPreferenceSnapshot:
+      type: object
+      properties:
+        id:
           type: integer
-        avg_cell_temp_c:
-          type: number
-        monthly_trend:
-          type: array
-          items:
-            type: object
-            properties:
-              month:
-                type: string
-              health_score:
-                type: number
-              capacity_kwh:
-                type: number
-              est_range_km:
-                type: number
+        vehicle_id:
+          type: integer
+        gui_distance_units:
+          type: string
+          example: km/hr
+        gui_temperature_units:
+          type: string
+          example: C
+        gui_charge_rate_units:
+          type: string
+          example: kW
+        gui_24_hour_time:
+          type: boolean
+        gui_range_display:
+          type: string
+          example: Rated
+        timestamp:
+          type: string
+          format: date-time

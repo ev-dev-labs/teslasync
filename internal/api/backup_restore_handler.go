@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -34,7 +36,7 @@ func (h *BackupRestoreHandler) ListConfigs(w http.ResponseWriter, r *http.Reques
 	configs, err := h.cfgRepo.List(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("backup: failed to list configs")
-		writeError(w, http.StatusInternalServerError, "failed to list backup configs")
+		writeAppError(w, r, ErrDBQuery.WithMessage("failed to list backup configs"))
 		return
 	}
 	if configs == nil {
@@ -46,12 +48,12 @@ func (h *BackupRestoreHandler) ListConfigs(w http.ResponseWriter, r *http.Reques
 func (h *BackupRestoreHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "configID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid config ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid config ID"))
 		return
 	}
 	cfg, err := h.cfgRepo.GetByID(r.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "config not found")
+		writeAppError(w, r, ErrBackupConfigNotFound)
 		return
 	}
 	writeJSON(w, http.StatusOK, cfg)
@@ -60,7 +62,7 @@ func (h *BackupRestoreHandler) GetConfig(w http.ResponseWriter, r *http.Request)
 func (h *BackupRestoreHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	var cfg models.BackupConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeAppError(w, r, ErrInvalidJSON)
 		return
 	}
 	// Validate
@@ -88,7 +90,7 @@ func (h *BackupRestoreHandler) CreateConfig(w http.ResponseWriter, r *http.Reque
 
 	if err := h.cfgRepo.Create(r.Context(), &cfg); err != nil {
 		log.Error().Err(err).Msg("backup: failed to create config")
-		writeError(w, http.StatusInternalServerError, "failed to create backup config")
+		writeAppError(w, r, ErrBackupFailed.WithMessage("failed to create backup config"))
 		return
 	}
 	writeJSON(w, http.StatusCreated, cfg)
@@ -97,12 +99,12 @@ func (h *BackupRestoreHandler) CreateConfig(w http.ResponseWriter, r *http.Reque
 func (h *BackupRestoreHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "configID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid config ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid config ID"))
 		return
 	}
 	var cfg models.BackupConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeAppError(w, r, ErrInvalidJSON)
 		return
 	}
 	cfg.ID = id
@@ -122,7 +124,7 @@ func (h *BackupRestoreHandler) UpdateConfig(w http.ResponseWriter, r *http.Reque
 
 	if err := h.cfgRepo.Update(r.Context(), &cfg); err != nil {
 		log.Error().Err(err).Msg("backup: failed to update config")
-		writeError(w, http.StatusInternalServerError, "failed to update backup config")
+		writeAppError(w, r, ErrBackupFailed.WithMessage("failed to update backup config"))
 		return
 	}
 	writeJSON(w, http.StatusOK, cfg)
@@ -131,11 +133,11 @@ func (h *BackupRestoreHandler) UpdateConfig(w http.ResponseWriter, r *http.Reque
 func (h *BackupRestoreHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "configID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid config ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid config ID"))
 		return
 	}
 	if err := h.cfgRepo.Delete(r.Context(), id); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to delete config")
+		writeAppError(w, r, ErrBackupFailed.WithMessage("failed to delete config"))
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
@@ -160,7 +162,7 @@ func (h *BackupRestoreHandler) ListRuns(w http.ResponseWriter, r *http.Request) 
 	runs, err := h.runRepo.List(r.Context(), limit, offset)
 	if err != nil {
 		log.Error().Err(err).Msg("backup: failed to list runs")
-		writeError(w, http.StatusInternalServerError, "failed to list backup runs")
+		writeAppError(w, r, ErrDBQuery.WithMessage("failed to list backup runs"))
 		return
 	}
 	if runs == nil {
@@ -172,12 +174,12 @@ func (h *BackupRestoreHandler) ListRuns(w http.ResponseWriter, r *http.Request) 
 func (h *BackupRestoreHandler) GetRun(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "runID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid run ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid run ID"))
 		return
 	}
 	run, err := h.runRepo.GetByID(r.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "run not found")
+		writeAppError(w, r, ErrBackupRunNotFound)
 		return
 	}
 	writeJSON(w, http.StatusOK, run)
@@ -187,12 +189,12 @@ func (h *BackupRestoreHandler) GetRun(w http.ResponseWriter, r *http.Request) {
 func (h *BackupRestoreHandler) TriggerBackup(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "configID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid config ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid config ID"))
 		return
 	}
 	cfg, err := h.cfgRepo.GetByID(r.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "config not found")
+		writeAppError(w, r, ErrBackupConfigNotFound)
 		return
 	}
 
@@ -205,7 +207,7 @@ func (h *BackupRestoreHandler) TriggerBackup(w http.ResponseWriter, r *http.Requ
 		Metadata:   json.RawMessage(`{"trigger": "manual"}`),
 	}
 	if err := h.runRepo.Create(r.Context(), run); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create backup run")
+		writeAppError(w, r, ErrBackupFailed.WithMessage("failed to create backup run"))
 		return
 	}
 
@@ -233,10 +235,142 @@ func (h *BackupRestoreHandler) TriggerQuickBackup(w http.ResponseWriter, r *http
 		Metadata:   json.RawMessage(`{"trigger": "quick"}`),
 	}
 	if err := h.runRepo.Create(r.Context(), run); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create backup run")
+		writeAppError(w, r, ErrBackupFailed.WithMessage("failed to create backup run"))
 		return
 	}
 
 	go h.processor.RunBackup(context.Background(), cfg, run)
 	writeJSON(w, http.StatusAccepted, run)
+}
+
+// ── Download / Verify / Restore ────────────────────────────
+
+// DownloadBackup streams the backup file to the client.
+func (h *BackupRestoreHandler) DownloadBackup(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "runID"), 10, 64)
+	if err != nil {
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid run ID"))
+		return
+	}
+	run, err := h.runRepo.GetByID(r.Context(), id)
+	if err != nil || run.FilePath == nil {
+		writeAppError(w, r, ErrBackupRunNotFound)
+		return
+	}
+
+	// Find provider config from the associated config or use defaults for local
+	providerConfig := json.RawMessage(`{"path": "/data/backups"}`)
+	if run.ConfigID != nil {
+		if cfg, err := h.cfgRepo.GetByID(r.Context(), *run.ConfigID); err == nil {
+			providerConfig = cfg.ProviderConfig
+		}
+	}
+
+	provider, err := backup.NewProvider(run.Provider, providerConfig)
+	if err != nil {
+		writeAppError(w, r, ErrBackupStorageError.WithMessage("failed to initialize storage provider"))
+		return
+	}
+
+	rc, err := provider.Download(r.Context(), *run.FilePath)
+	if err != nil {
+		writeAppError(w, r, ErrBackupStorageError.WithMessage("failed to download backup file"))
+		return
+	}
+	defer rc.Close()
+
+	fileName := "backup.json"
+	if run.FileName != nil {
+		fileName = *run.FileName
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", fileName))
+	w.WriteHeader(http.StatusOK)
+	io.Copy(w, rc)
+}
+
+// VerifyBackup verifies the integrity of an existing backup by re-downloading and checking checksum.
+func (h *BackupRestoreHandler) VerifyBackup(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "runID"), 10, 64)
+	if err != nil {
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid run ID"))
+		return
+	}
+	run, err := h.runRepo.GetByID(r.Context(), id)
+	if err != nil {
+		writeAppError(w, r, ErrBackupRunNotFound)
+		return
+	}
+
+	providerConfig := json.RawMessage(`{"path": "/data/backups"}`)
+	if run.ConfigID != nil {
+		if cfg, err := h.cfgRepo.GetByID(r.Context(), *run.ConfigID); err == nil {
+			providerConfig = cfg.ProviderConfig
+		}
+	}
+
+	if err := h.processor.VerifyBackup(r.Context(), run, run.Provider, providerConfig); err != nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"verified": false,
+			"error":    err.Error(),
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"verified": true,
+		"checksum": run.Checksum,
+	})
+}
+
+// PreviewRestore downloads and parses a backup, returning table names and row counts without importing.
+func (h *BackupRestoreHandler) PreviewRestore(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "runID"), 10, 64)
+	if err != nil {
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid run ID"))
+		return
+	}
+	run, err := h.runRepo.GetByID(r.Context(), id)
+	if err != nil {
+		writeAppError(w, r, ErrBackupRunNotFound)
+		return
+	}
+
+	providerConfig := json.RawMessage(`{"path": "/data/backups"}`)
+	if run.ConfigID != nil {
+		if cfg, err := h.cfgRepo.GetByID(r.Context(), *run.ConfigID); err == nil {
+			providerConfig = cfg.ProviderConfig
+		}
+	}
+
+	data, err := h.processor.RestoreBackup(r.Context(), run, run.Provider, providerConfig)
+	if err != nil {
+		writeAppError(w, r, ErrRestoreFailed.WithMessage(fmt.Sprintf("failed to parse backup: %v", err)))
+		return
+	}
+
+	type tableInfo struct {
+		Name  string `json:"name"`
+		Rows  int    `json:"rows"`
+	}
+	var tables []tableInfo
+	for name, raw := range data {
+		if name == "_metadata" {
+			continue
+		}
+		var arr []json.RawMessage
+		json.Unmarshal(raw, &arr)
+		tables = append(tables, tableInfo{Name: name, Rows: len(arr)})
+	}
+
+	// Extract metadata
+	var meta map[string]interface{}
+	if m, ok := data["_metadata"]; ok {
+		json.Unmarshal(m, &meta)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"tables":   tables,
+		"metadata": meta,
+		"checksum_verified": run.Checksum != nil,
+	})
 }

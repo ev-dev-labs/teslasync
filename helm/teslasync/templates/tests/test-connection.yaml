@@ -10,21 +10,71 @@ metadata:
 spec:
   restartPolicy: Never
   containers:
-    - name: test-backend
+    - name: test-backend-health
       image: busybox:1.36
       command: ['sh', '-c']
       args:
         - |
-          echo "Testing backend health endpoint..."
-          wget --spider --timeout=5 http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/healthz
-          echo "Backend: OK"
+          echo "=== Testing backend /healthz ==="
+          wget -qO- --timeout=10 http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/healthz
+          echo ""
+          echo "Backend health: OK"
+    - name: test-backend-ready
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing backend /readyz ==="
+          wget -qO- --timeout=10 http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/readyz
+          echo ""
+          echo "Backend readiness: OK"
+    - name: test-backend-metrics
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing Prometheus /metrics ==="
+          OUTPUT=$(wget -qO- --timeout=10 http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/metrics)
+          echo "$OUTPUT" | head -5
+          echo "$OUTPUT" | grep -q "teslasync_http_requests_total" && echo "Custom metrics: OK" || (echo "Custom metrics: MISSING" && exit 1)
+    - name: test-backend-api
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing API /api/v1/vehicles ==="
+          CODE=$(wget --server-response -qO/dev/null --timeout=10 http://{{ include "teslasync.fullname" . }}-api:{{ .Values.service.port }}/api/v1/vehicles 2>&1 | awk '/HTTP/{print $2}')
+          echo "Status: $CODE"
+          [ "$CODE" = "200" ] && echo "API response: OK" || (echo "API response: FAIL ($CODE)" && exit 1)
     {{- if .Values.web.enabled }}
     - name: test-web
       image: busybox:1.36
       command: ['sh', '-c']
       args:
         - |
-          echo "Testing web frontend..."
-          wget --spider --timeout=5 http://{{ include "teslasync.fullname" . }}-web:{{ .Values.web.service.port }}/
-          echo "Web: OK"
+          echo "=== Testing web frontend ==="
+          wget --spider --timeout=10 http://{{ include "teslasync.fullname" . }}-web:{{ .Values.web.service.port }}/
+          echo "Web frontend: OK"
+    {{- end }}
+    {{- if .Values.notificationWorker.enabled }}
+    - name: test-notification-worker
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing notification worker /healthz ==="
+          wget -qO- --timeout=10 http://{{ include "teslasync.fullname" . }}-notification-worker:{{ .Values.notificationWorker.service.port | default 8081 }}/healthz
+          echo ""
+          echo "Notification worker: OK"
+    {{- end }}
+    {{- if .Values.exportWorker.enabled }}
+    - name: test-export-worker
+      image: busybox:1.36
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing export worker /healthz ==="
+          wget -qO- --timeout=10 http://{{ include "teslasync.fullname" . }}-export-worker:{{ .Values.exportWorker.service.port | default 8082 }}/healthz
+          echo ""
+          echo "Export worker: OK"
     {{- end }}

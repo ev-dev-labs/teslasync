@@ -320,6 +320,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		}
 
 		t.activeDrives[vehicleID] = sd
+		DriveSessionsActive.Inc()
 
 		// Record first telemetry reading
 		t.recordDriveTelemetry(ctx, sd, signals)
@@ -682,6 +683,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	delete(t.activeDrives, vehicleID)
+	DriveSessionsActive.Dec()
+	DriveSessionsCompleted.Inc()
 }
 
 func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lon float64, isStart bool) {
@@ -762,6 +765,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		if startRange > 0 { sc.StartRangeKm = floatPtr(startRange) }
 
 		t.activeCharges[vehicleID] = sc
+		ChargeSessionsActive.Inc()
 
 		// Record first reading
 		t.recordChargeTelemetry(ctx, sc, signals)
@@ -939,4 +943,6 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 
 	delete(t.activeCharges, vehicleID)
+	ChargeSessionsActive.Dec()
+	ChargeSessionsCompleted.Inc()
 }

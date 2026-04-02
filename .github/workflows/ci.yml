@@ -121,8 +121,11 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
       - run: npm run lint
-      - name: Run frontend tests
-        run: npm test
+      - name: Run frontend tests with coverage
+        run: npx vitest run --coverage --reporter=verbose
+      - name: Check coverage threshold
+        run: |
+          npx vitest run --coverage --coverage.thresholds.statements=15 --coverage.thresholds.branches=10 --coverage.thresholds.functions=10 --coverage.thresholds.lines=15
 
   build-frontend:
     name: Build Frontend

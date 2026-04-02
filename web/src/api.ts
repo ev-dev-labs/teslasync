@@ -1554,3 +1554,6 @@ export const triggerBackup = (configId: number) => request<BackupRun>(`/backup/c
 export const triggerQuickBackup = () => request<BackupRun>('/backup/quick', { method: 'POST' })
 export const getBackupRuns = (limit = 50, offset = 0) => request<BackupRun[]>(`/backup/runs?limit=${limit}&offset=${offset}`)
 export const getBackupRun = (id: number) => request<BackupRun>(`/backup/runs/${id}`)
+export const downloadBackup = (runId: number) => window.open(`${getApiBase()}/api/v1/backup/runs/${runId}/download`, '_blank')
+export const verifyBackup = (runId: number) => request<{ verified: boolean; error?: string; checksum?: string }>(`/backup/runs/${runId}/verify`, { method: 'POST' })
+export const previewRestore = (runId: number) => request<{ tables: { name: string; rows: number }[]; metadata: Record<string, unknown>; checksum_verified: boolean }>(`/backup/runs/${runId}/preview`)

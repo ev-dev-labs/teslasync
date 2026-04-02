@@ -8,9 +8,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -26,6 +30,26 @@ var backupTables = []string{
 	"charging_telemetry", "notification_channels", "notification_logs",
 	"efficiency_factors", "api_keys",
 }
+
+var (
+	backupRunsMetric = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "backup_runs_total",
+		Help:      "Total backup runs by status and provider",
+	}, []string{"status", "provider"})
+	backupDurationMetric = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "backup_duration_seconds",
+		Help:      "Backup operation duration",
+		Buckets:   []float64{1, 5, 10, 30, 60, 120, 300},
+	})
+	backupSizeMetric = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "backup_size_bytes",
+		Help:      "Backup file size",
+		Buckets:   []float64{1e5, 1e6, 1e7, 1e8, 5e8, 1e9},
+	})
+)
 
 // Processor handles backup creation and restoration.
 type Processor struct {
@@ -138,6 +162,15 @@ func (p *Processor) RunBackup(ctx context.Context, cfg *models.BackupConfig, run
 	if err := p.runRepo.Complete(ctx, run.ID, fileName, filePath, int64(len(finalData)), totalRecords, len(tables), checksum, duration); err != nil {
 		log.Error().Err(err).Msg("backup: failed to mark completed")
 	}
+	backupRunsMetric.WithLabelValues("completed", cfg.Provider).Inc()
+	backupDurationMetric.Observe(float64(duration) / 1000.0)
+	backupSizeMetric.Observe(float64(len(finalData)))
+
+	// Post-upload integrity verification: re-download and verify checksum
+	if err := p.verifyUpload(ctx, provider, filePath, checksum); err != nil {
+		log.Warn().Err(err).Str("file", fileName).Msg("backup: integrity verification failed")
+		_ = p.runRepo.UpdateStatus(ctx, run.ID, "verify_failed")
+	}
 
 	// Update config last/next run
 	if run.ConfigID != nil {
@@ -160,4 +193,90 @@ func (p *Processor) exportTable(ctx context.Context, table string) (json.RawMess
 	var result json.RawMessage
 	err := p.pool.QueryRow(ctx, query).Scan(&result)
 	return result, err
+}
+
+// verifyUpload re-downloads the backup file and verifies its SHA-256 checksum matches.
+func (p *Processor) verifyUpload(ctx context.Context, provider StorageProvider, filePath, expectedChecksum string) error {
+	rc, err := provider.Download(ctx, filePath)
+	if err != nil {
+		return fmt.Errorf("download for verify: %w", err)
+	}
+	defer rc.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, rc); err != nil {
+		return fmt.Errorf("read for verify: %w", err)
+	}
+	actual := hex.EncodeToString(hash.Sum(nil))
+	if actual != expectedChecksum {
+		return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedChecksum, actual)
+	}
+	return nil
+}
+
+// VerifyBackup checks integrity of an existing backup by re-downloading and verifying checksum.
+func (p *Processor) VerifyBackup(ctx context.Context, run *models.BackupRun, providerType string, providerConfig json.RawMessage) error {
+	if run.FilePath == nil || run.Checksum == nil {
+		return fmt.Errorf("backup has no file path or checksum")
+	}
+	provider, err := NewProvider(providerType, providerConfig)
+	if err != nil {
+		return fmt.Errorf("provider init: %w", err)
+	}
+	return p.verifyUpload(ctx, provider, *run.FilePath, *run.Checksum)
+}
+
+// RestoreBackup downloads and decompresses a backup, returning the parsed table data.
+func (p *Processor) RestoreBackup(ctx context.Context, run *models.BackupRun, providerType string, providerConfig json.RawMessage) (map[string]json.RawMessage, error) {
+	if run.FilePath == nil {
+		return nil, fmt.Errorf("backup has no file path")
+	}
+
+	provider, err := NewProvider(providerType, providerConfig)
+	if err != nil {
+		return nil, fmt.Errorf("provider init: %w", err)
+	}
+
+	rc, err := provider.Download(ctx, *run.FilePath)
+	if err != nil {
+		return nil, fmt.Errorf("download: %w", err)
+	}
+	defer rc.Close()
+
+	rawData, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, fmt.Errorf("read: %w", err)
+	}
+
+	// Verify checksum if available
+	if run.Checksum != nil {
+		hash := sha256.Sum256(rawData)
+		actual := hex.EncodeToString(hash[:])
+		if actual != *run.Checksum {
+			return nil, fmt.Errorf("checksum mismatch: expected %s, got %s", *run.Checksum, actual)
+		}
+	}
+
+	// Decompress if gzipped
+	var jsonData []byte
+	if run.FileName != nil && strings.HasSuffix(*run.FileName, ".gz") {
+		gz, err := gzip.NewReader(bytes.NewReader(rawData))
+		if err != nil {
+			return nil, fmt.Errorf("gzip open: %w", err)
+		}
+		defer gz.Close()
+		jsonData, err = io.ReadAll(gz)
+		if err != nil {
+			return nil, fmt.Errorf("gzip read: %w", err)
+		}
+	} else {
+		jsonData = rawData
+	}
+
+	var data map[string]json.RawMessage
+	if err := json.Unmarshal(jsonData, &data); err != nil {
+		return nil, fmt.Errorf("parse backup JSON: %w", err)
+	}
+
+	return data, nil
 }
