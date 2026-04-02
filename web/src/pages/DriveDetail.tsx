@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getDrive, getDrivePositions, getDriveTelemetry, getVehicle } from '../api'
 import { useState } from 'react'
 import { MapContainer, Polyline, CircleMarker, Popup } from 'react-leaflet'
-import { MapTileLayer } from '../components/MapTileLayer'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression } from 'leaflet'
@@ -469,6 +469,7 @@ export default function DriveDetail() {
             <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
             <MapContainer center={centerPos as [number, number]} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
               <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
               {speedSegments.map((seg, i) => (
                 <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
               ))}
@@ -835,3 +836,4 @@ export default function DriveDetail() {
     </div>
   )
 }
+

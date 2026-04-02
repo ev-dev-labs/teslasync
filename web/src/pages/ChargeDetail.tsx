@@ -12,7 +12,7 @@ import {
 } from 'recharts'
 import { useState } from 'react'
 import { MapContainer, CircleMarker, Popup } from 'react-leaflet'
-import { MapTileLayer } from '../components/MapTileLayer'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
@@ -322,6 +322,7 @@ export default function ChargeDetail() {
                   style={{ background: '#0a0a0f' }}
                 >
                   <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
                   <CircleMarker
                     center={[session.latitude!, session.longitude!]}
                     radius={10}
@@ -554,3 +555,4 @@ export default function ChargeDetail() {
     </div>
   )
 }
+

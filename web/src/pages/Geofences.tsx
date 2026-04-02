@@ -8,7 +8,7 @@ import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapContainer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
-import { MapTileLayer } from '../components/MapTileLayer'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import L from 'leaflet'
@@ -392,6 +392,7 @@ export default function Geofences() {
             <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
             <MapContainer center={center} zoom={12} className="h-full w-full" style={{ background: '#0a0a0f' }}>
               <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
               <ClickHandler onClick={handleMapClick} />
 
               {geofences?.map((g, i) => {
@@ -466,3 +467,4 @@ export default function Geofences() {
     </div>
   )
 }
+

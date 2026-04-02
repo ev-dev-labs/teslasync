@@ -4,7 +4,7 @@ import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrive
 import { cleanNil } from '../lib/cleanNil'
 import { useState } from 'react'
 import { MapContainer, Polyline, Marker } from 'react-leaflet'
-import { MapTileLayer } from '../components/MapTileLayer'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression } from 'leaflet'
@@ -822,6 +822,7 @@ export default function VehicleDetail() {
                     <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
                     <MapContainer center={[state.latitude, state.longitude]} zoom={14} scrollWheelZoom className="h-full w-full">
                       <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
                       <Marker position={[state.latitude, state.longitude]} />
                       {trail.length > 1 && (
                         <Polyline positions={trail} pathOptions={{ color: '#00f0ff', weight: 3, opacity: 0.6 }} />
@@ -964,3 +965,4 @@ export default function VehicleDetail() {
     </div>
   )
 }
+

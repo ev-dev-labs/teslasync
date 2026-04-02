@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getVehiclePositions, getGeofences, getDrives, Vehicle, VehicleState, Position, getVehicleStatus } from '../api'
 import { MapContainer, Marker, Polyline, Popup, Circle, CircleMarker } from 'react-leaflet'
-import { MapTileLayer } from '../components/MapTileLayer'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression, divIcon } from 'leaflet'
@@ -278,6 +278,7 @@ export default function LiveMap() {
           <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
           <MapContainer center={center} zoom={12} scrollWheelZoom className="h-full w-full">
             <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
 
             {/* Geofence circles */}
             {geofences?.map(g => (

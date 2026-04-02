@@ -1,5 +1,6 @@
-import { TileLayer } from 'react-leaflet'
+import { TileLayer, useMap } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { getMapConfig } from '../api'
 
 export type MapStyle = 'dark' | 'satellite' | 'streets' | 'terrain'
@@ -64,4 +65,14 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
 
   const t = tiles[style] || tiles.dark
   return <TileLayer url={t.url} attribution={t.attribution} />
+}
+
+/** Forces Leaflet to recalculate tile positions after the container mounts or resizes. */
+export function MapInvalidator() {
+  const map = useMap()
+  useEffect(() => {
+    const timer = setTimeout(() => map.invalidateSize(), 100)
+    return () => clearTimeout(timer)
+  }, [map])
+  return null
 }
