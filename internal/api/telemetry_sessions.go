@@ -691,13 +691,22 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-	if err != nil {
-		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
-		return
+	// Check if coordinates fall inside a user-defined geofence first
+	name := ""
+	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
+		name = geofences[0].Name
 	}
 
-	name := result.ShortName()
+	// Fall back to Nominatim reverse geocoding
+	if name == "" {
+		result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
+		if err != nil {
+			log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
+			return
+		}
+		name = result.ShortName()
+	}
+
 	field := "end_address"
 	if isStart {
 		field = "start_address"
@@ -923,6 +932,15 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		go func(sessionID int64, lat, lon float64, fields map[string]interface{}) {
 			gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
+
+			// Check geofences first for user-defined name (e.g., "Home", "Office")
+			if geofences, err := t.geofenceRepo.FindByCoordinates(gctx, lat, lon); err == nil && len(geofences) > 0 {
+				fields["location_name"] = geofences[0].Name
+				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
+				return
+			}
+
+			// Fall back to Nominatim reverse geocoding
 			result, err := t.geocoder.ReverseGeocode(gctx, lat, lon)
 			if err != nil {
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
