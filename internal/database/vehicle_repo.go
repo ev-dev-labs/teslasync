@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
 // VehicleRepo provides vehicle data access operations.
@@ -18,18 +19,24 @@ func NewVehicleRepo(db *DB) *VehicleRepo {
 }
 
 func (r *VehicleRepo) Create(ctx context.Context, v *models.Vehicle) error {
+	ctx, span := tracing.DBSpan(ctx, "insert", "vehicles", tracing.VehicleVIN(v.VIN))
+	defer span.End()
 	query := `
 		INSERT INTO vehicles (vehicle_id, vin, display_name, model, trim_badging, exterior_color, wheel_type, state, healthy, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
 		RETURNING id`
 	now := time.Now().UTC()
-	return r.db.Pool.QueryRow(ctx, query,
+	err := r.db.Pool.QueryRow(ctx, query,
 		v.VehicleID, v.VIN, v.DisplayName, v.Model, v.TrimBadging,
 		v.ExteriorColor, v.WheelType, v.State, v.Healthy, now,
 	).Scan(&v.ID)
+	tracing.EndSpan(span, err)
+	return err
 }
 
 func (r *VehicleRepo) GetByID(ctx context.Context, id int64) (*models.Vehicle, error) {
+	ctx, span := tracing.DBSpan(ctx, "select", "vehicles", tracing.VehicleID(id))
+	defer span.End()
 	query := `SELECT id, vehicle_id, vin, display_name, model, trim_badging, exterior_color, wheel_type, state, healthy, created_at, updated_at
 		FROM vehicles WHERE id = $1`
 	v := &models.Vehicle{}
@@ -40,10 +47,13 @@ func (r *VehicleRepo) GetByID(ctx context.Context, id int64) (*models.Vehicle, e
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
+	tracing.EndSpan(span, err)
 	return v, err
 }
 
 func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*models.Vehicle, error) {
+	ctx, span := tracing.DBSpan(ctx, "select", "vehicles", tracing.VehicleVIN(vin))
+	defer span.End()
 	query := `SELECT id, vehicle_id, vin, display_name, model, trim_badging, exterior_color, wheel_type, state, healthy, created_at, updated_at
 		FROM vehicles WHERE vin = $1`
 	v := &models.Vehicle{}
@@ -54,10 +64,13 @@ func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*models.Vehicle
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
+	tracing.EndSpan(span, err)
 	return v, err
 }
 
 func (r *VehicleRepo) GetAll(ctx context.Context) ([]*models.Vehicle, error) {
+	ctx, span := tracing.DBSpan(ctx, "select_all", "vehicles")
+	defer span.End()
 	query := `SELECT id, vehicle_id, vin, display_name, model, trim_badging, exterior_color, wheel_type, state, healthy, created_at, updated_at
 		FROM vehicles ORDER BY id`
 	rows, err := r.db.Pool.Query(ctx, query)

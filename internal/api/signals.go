@@ -2,7 +2,7 @@ package api
 
 // SubscribedSignals is the complete list of Tesla Fleet Telemetry signals
 // that we subscribe to. This must match the fleet_telemetry_config subscription.
-// Total: 196 signals across all categories.
+// Covers all 259 proto fields (excluding deprecated, experimental, and semi-truck-only).
 var SubscribedSignals = []string{
 	// Charging (40)
 	"ACChargingEnergyIn", "ACChargingPower", "BatteryLevel", "BMSState", "BatteryHeaterOn",
@@ -16,7 +16,7 @@ var SubscribedSignals = []string{
 	"IdealBatteryRange", "LifetimeEnergyUsed", "ModuleTempMax", "ModuleTempMin",
 	"NotEnoughPowerToHeat", "NumBrickVoltageMax", "NumBrickVoltageMin", "NumModuleTempMax", "NumModuleTempMin",
 	"PackCurrent", "PackVoltage", "PreconditioningEnabled", "RatedRange",
-	"ScheduledChargingMode", "ScheduledChargingPending", "ScheduledChargingStartTime",
+	"ScheduledChargingMode", "ScheduledChargingPending", "ScheduledChargingStartTime", "ScheduledDepartureTime",
 	"Soc", "SuperchargerSessionTripPlanner", "TimeToFullCharge",
 
 	// Powershare (5)
@@ -36,7 +36,7 @@ var SubscribedSignals = []string{
 
 	// Driving (10)
 	"BrakePedal", "BrakePedalPos", "CruiseSetSpeed", "DriveRail",
-	"Gear", "LateralAcceleration", "LifetimeEnergyUsedDrive", "LongitudinalAcceleration",
+	"Gear", "LateralAcceleration", "LifetimeEnergyGainedRegen", "LifetimeEnergyUsedDrive", "LongitudinalAcceleration",
 	"PedalPosition", "RouteTrafficMinutesDelay", "VehicleSpeed",
 
 	// Powertrain (29)

@@ -306,7 +306,7 @@ export default function DriveScore() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
-  const { convertDistance, convertSpeed, distanceUnit, speedUnit } = useSettings()
+  const { convertDistance, convertSpeed, convertEfficiency, distanceUnit, speedUnit, efficiencyUnit } = useSettings()
 
   // Date range state
   const [startDate, setStartDate] = useState(() => {
@@ -712,7 +712,7 @@ export default function DriveScore() {
                           <div>
                             <span style={{ color: 'var(--text-muted)' }}>Efficiency</span>
                             <p className="font-semibold mt-0.5" style={{ color: '#4ade80' }}>
-                              {sd.efficiency}/40 · {sd.whPerKm} Wh/km
+                              {sd.efficiency}/40 · {convertEfficiency(sd.whPerKm).toFixed(0)} {efficiencyUnit}
                             </p>
                           </div>
                           <div>
@@ -771,7 +771,7 @@ export default function DriveScore() {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span style={{ color: 'var(--text-muted)' }}>Consumption</span>
-                        <span style={{ color: 'var(--text-primary)' }}>{bestDrive.whPerKm} Wh/km</span>
+                        <span style={{ color: 'var(--text-primary)' }}>{convertEfficiency(bestDrive.whPerKm).toFixed(0)} {efficiencyUnit}</span>
                       </div>
                     </div>
                   </div>
@@ -818,7 +818,7 @@ export default function DriveScore() {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span style={{ color: 'var(--text-muted)' }}>Consumption</span>
-                        <span style={{ color: 'var(--text-primary)' }}>{worstDrive.whPerKm} Wh/km</span>
+                        <span style={{ color: 'var(--text-primary)' }}>{convertEfficiency(worstDrive.whPerKm).toFixed(0)} {efficiencyUnit}</span>
                       </div>
                     </div>
                   </div>

@@ -88,13 +88,16 @@ internal/
 ├── cache/          # Redis + in-memory cache abstraction
 ├── config/         # Environment-based configuration
 ├── crypto/         # AES-256-GCM encryption for data at rest
-├── database/       # PostgreSQL repositories (data access layer)
+├── database/       # PostgreSQL repositories, places cache, DBTX transactions
 ├── events/         # Domain event bus (MQTT-backed)
 ├── export/         # Export worker — async data export & backup processing
+├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
 ├── models/         # Domain models and types
 ├── mqtt/           # MQTT telemetry publisher
 ├── notification/   # Notification worker & channel senders
 ├── resilience/     # Circuit breaker, health checks
+├── backup/         # Backup processor and storage provider abstraction
+├── tracing/        # OpenTelemetry tracer initialization and span helpers
 ├── tesla/          # Tesla Fleet API client
 └── worker/         # Background polling and maintenance jobs
 ```
@@ -288,7 +291,7 @@ erDiagram
 
 ## Database Tables
 
-The schema spans 5 migrations and 30+ tables. Column names, types, and constraints are taken directly from the migration SQL files.
+The schema spans 23 migrations and 47+ tables (778 columns). The data access layer uses a `DBTX` interface for transaction support, allowing repositories to operate within explicit transactions or directly on the pool. Column names, types, and constraints are taken directly from the migration SQL files.
 
 ### Core Tables
 

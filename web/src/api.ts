@@ -79,6 +79,49 @@ export interface Drive {
   end_battery_level: number | null
   inside_temp_avg: number | null
   outside_temp_avg: number | null
+  // Enhanced tracking (migration 21)
+  start_odometer: number | null
+  end_odometer: number | null
+  speed_avg: number | null
+  speed_min: number | null
+  start_rated_range_km: number | null
+  end_rated_range_km: number | null
+  rated_range_avg: number | null
+  rated_range_max: number | null
+  rated_range_min: number | null
+  start_ideal_range_km: number | null
+  end_ideal_range_km: number | null
+  ideal_range_avg: number | null
+  ideal_range_max: number | null
+  ideal_range_min: number | null
+  start_est_range_km: number | null
+  end_est_range_km: number | null
+  est_range_avg: number | null
+  est_range_max: number | null
+  est_range_min: number | null
+  soc_start: number | null
+  soc_end: number | null
+  soc_avg: number | null
+  soc_max: number | null
+  soc_min: number | null
+  usable_soc_start: number | null
+  usable_soc_end: number | null
+  usable_soc_avg: number | null
+  usable_soc_max: number | null
+  usable_soc_min: number | null
+  elevation_start: number | null
+  elevation_end: number | null
+  elevation_gain: number | null
+  elevation_loss: number | null
+  driver_temp_avg: number | null
+  passenger_temp_avg: number | null
+  battery_heater_on: boolean | null
+  start_address: string | null
+  end_address: string | null
+  start_latitude: number | null
+  start_longitude: number | null
+  end_latitude: number | null
+  end_longitude: number | null
 }
 
 export interface ChargingSession {
@@ -102,6 +145,81 @@ export interface ChargingSession {
   conn_charge_cable: string | null
   cost: number | null
   duration_min: number
+  // Enhanced tracking (migration 21)
+  latitude: number | null
+  longitude: number | null
+  location_name: string | null
+  inside_temp_avg: number | null
+  outside_temp_avg: number | null
+  // Joined address details (detail view only)
+  address?: {
+    id: number
+    display_name: string
+    latitude: number
+    longitude: number
+    name: string | null
+    house_number: string | null
+    road: string | null
+    city: string | null
+    county: string | null
+    state: string | null
+    country: string | null
+    postcode: string | null
+  }
+}
+
+export interface DriveTelemetryReading {
+  id: number
+  drive_id: number
+  vehicle_id: number
+  latitude: number | null
+  longitude: number | null
+  elevation: number | null
+  heading: number | null
+  odometer: number | null
+  speed: number | null
+  power: number | null
+  battery_level: number | null
+  soc: number | null
+  usable_soc: number | null
+  rated_range: number | null
+  ideal_range: number | null
+  est_range: number | null
+  inside_temp: number | null
+  outside_temp: number | null
+  driver_temp: number | null
+  passenger_temp: number | null
+  fan_status: number | null
+  is_climate_on: boolean | null
+  tire_pressure_fl: number | null
+  tire_pressure_fr: number | null
+  tire_pressure_rl: number | null
+  tire_pressure_rr: number | null
+  battery_heater_on: boolean | null
+  created_at: string
+}
+
+export interface ChargeTelemetryReading {
+  id: number
+  session_id: number
+  vehicle_id: number
+  battery_level: number | null
+  soc: number | null
+  power_kw: number | null
+  voltage: number | null
+  current_amps: number | null
+  phases: number | null
+  energy_added: number | null
+  rated_range: number | null
+  ideal_range: number | null
+  est_range: number | null
+  inside_temp: number | null
+  outside_temp: number | null
+  battery_temp: number | null
+  latitude: number | null
+  longitude: number | null
+  charge_rate: number | null
+  created_at: string
 }
 
 export interface Geofence {
@@ -129,6 +247,7 @@ export interface AppSettings {
   gas_price_per_unit: number
   gas_unit: string
   gas_efficiency_mpg: number
+  google_maps_api_key?: string
 }
 
 export interface VehicleState {
@@ -232,8 +351,9 @@ export interface FleetAnalytics {
     duration_stats: StatsSummary
     distance_stats: StatsSummary
     efficiency_stats: StatsSummary
-    daily_trend: { date: string; drives: number; distance: number }[]
+    daily_trend: { date: string; drives: number; distance: number; efficiency?: number }[]
     temp_vs_efficiency: { temp: number; efficiency: number; distance: number }[]
+    duration_distribution?: { range: string; count: number }[]
     temperature: { inside: StatsSummary; outside: StatsSummary }
   }
 
@@ -614,6 +734,9 @@ export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: str
 export const getDrive = (id: number) => request<Drive>(`/drives/${id}`)
 /** Fetches positions within a drive's time window. */
 export const getDrivePositions = (driveId: number) => request<Position[]>(`/drives/${driveId}/positions`)
+/** Fetches detailed telemetry readings for a drive session. */
+export const getDriveTelemetry = (driveId: number) =>
+  request<DriveTelemetryReading[]>(`/drives/${driveId}/telemetry`)
 
 // === Charging ===
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
@@ -625,6 +748,9 @@ export const getChargingSessions = (vehicleId: number, limit = 50, offset = 0, s
 }
 /** Fetches a single charging session by ID. */
 export const getChargingSession = (id: number) => request<ChargingSession>(`/charging/${id}`)
+/** Fetches detailed telemetry readings for a charging session. */
+export const getChargeTelemetry = (sessionId: number) =>
+  request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`)
 
 // === Geofences ===
 /** Fetches all geofences. */
@@ -678,7 +804,146 @@ export const deleteAlertRule = (id: number) => request<void>(`/alerts/rules/${id
 /** Fetches aggregated fleet-wide analytics (drives, charging, efficiency, trends). */
 export const getFleetAnalytics = (days = 30, start?: string) => request<FleetAnalytics>(`/analytics/fleet?${start ? `start=${start}` : `days=${days}`}`)
 
-// === Notifications ===
+// === Charging Heatmap ===
+
+export interface ChargingHeatmapCell {
+  day_of_week: number
+  hour_of_day: number
+  session_count: number
+  avg_energy: number
+  avg_cost: number
+}
+
+export interface ChargingLocationBreakdown {
+  location: string
+  count: number
+  total_kwh: number
+  total_cost: number
+  avg_power: number
+}
+
+export interface ChargingHeatmapSummary {
+  total_sessions: number
+  total_kwh: number
+  total_cost: number
+  avg_duration: number
+}
+
+export interface ChargingHeatmapData {
+  heatmap: ChargingHeatmapCell[]
+  locations: ChargingLocationBreakdown[]
+  summary: ChargingHeatmapSummary
+}
+
+export const getChargingHeatmap = (vehicleId: number) =>
+  request<ChargingHeatmapData>(`/analytics/charging-heatmap?vehicle_id=${vehicleId}`)
+
+// === Speed Profile ===
+
+export interface SpeedBucket {
+  speed_bucket: string
+  readings: number
+  avg_power_kw: number
+}
+
+export interface EfficiencyCategory {
+  category: string
+  drive_count: number
+  avg_speed: number
+  battery_pct_per_100km: number
+}
+
+export interface EfficiencyPoint {
+  speed_avg: number
+  distance: number
+  efficiency: number
+}
+
+export interface SpeedProfileData {
+  distribution: SpeedBucket[]
+  categories: EfficiencyCategory[]
+  points: EfficiencyPoint[]
+}
+
+export const getSpeedProfile = (vehicleId: number) =>
+  request<SpeedProfileData>(`/analytics/speed-profile?vehicle_id=${vehicleId}`)
+
+// === Temperature Impact ===
+
+export interface TempEfficiencyBucket {
+  temp_bucket: string
+  drive_count: number
+  avg_distance_km: number
+  avg_duration_min: number
+  avg_battery_pct_per_100km: number
+  avg_temp: number
+}
+
+export interface VampireDrainBucket {
+  temp_bucket: string
+  avg_drain_rate: number
+  event_count: number
+}
+
+export interface MonthlyTempTrend {
+  month: string
+  avg_temp: number
+  avg_efficiency: number
+  drive_count: number
+  total_distance: number
+}
+
+export interface TemperatureImpactData {
+  efficiency: TempEfficiencyBucket[]
+  vampire_drain: VampireDrainBucket[]
+  monthly_trend: MonthlyTempTrend[]
+}
+
+export const getTemperatureImpact = (vehicleId: number) =>
+  request<TemperatureImpactData>(`/analytics/temperature-impact?vehicle_id=${vehicleId}`)
+
+// === Route Efficiency ===
+
+export interface RouteSummary {
+  start_location: string
+  end_location: string
+  trip_count: number
+  avg_distance_km: number
+  avg_duration_min: number
+  avg_efficiency: number
+  best_efficiency: number
+  worst_efficiency: number
+  avg_speed: number
+  avg_temp: number
+}
+
+export interface RouteDriveDetail {
+  id: number
+  start_date: string
+  distance: number
+  duration_min: number
+  speed_avg: number
+  start_battery_level: number
+  end_battery_level: number
+  outside_temp_avg: number
+  efficiency: number
+}
+
+export interface RouteEfficiencyData {
+  routes: RouteSummary[]
+}
+
+export interface RouteDetailData {
+  drives: RouteDriveDetail[]
+}
+
+export const getRouteEfficiency = (vehicleId: number) =>
+  request<RouteEfficiencyData>(`/analytics/route-efficiency?vehicle_id=${vehicleId}`)
+
+export const getRouteEfficiencyDetail = (vehicleId: number, start: string, end: string) => {
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), start, end })
+  return request<RouteDetailData>(`/analytics/route-efficiency/detail?${params}`)
+}
 /** Fetches all notification channels (discord, email, slack, etc.). */
 export const getNotificationChannels = () => request<NotificationChannel[]>('/notifications')
 /** Fetches a single notification channel by ID. */
@@ -1095,6 +1360,17 @@ export async function getBackupStats(): Promise<BackupStats> {
   return res.json()
 }
 
+export interface MapConfig {
+  provider: 'free' | 'azure' | 'google'
+  api_key: string
+}
+
+export async function getMapConfig(): Promise<MapConfig> {
+  const res = await fetch(`${getApiBase()}/api/v1/system/map-config`)
+  if (!res.ok) return { provider: 'free', api_key: '' }
+  return res.json()
+}
+
 // --- API Call Logs ---
 export interface APICallLog {
   id: number
@@ -1378,3 +1654,212 @@ export const deleteChargingSession = (id: number) =>
   request<void>(`/data-repair/charging/${id}`, { method: 'DELETE' })
 export const deleteDrive = (id: number) =>
   request<void>(`/data-repair/drive/${id}`, { method: 'DELETE' })
+
+// ── Backup & Restore ────────────────────────────────────
+
+export interface BackupConfig {
+  id: number
+  name: string
+  enabled: boolean
+  backup_type: string
+  frequency_days: number
+  max_retention: number
+  provider: string
+  provider_config: Record<string, string>
+  include_tables: string[] | null
+  compress: boolean
+  encrypt: boolean
+  last_run_at: string | null
+  next_run_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BackupRun {
+  id: number
+  config_id: number | null
+  run_type: string
+  backup_type: string
+  status: string
+  provider: string
+  file_name: string | null
+  file_path: string | null
+  file_size: number
+  record_count: number
+  table_count: number
+  checksum: string | null
+  duration_ms: number
+  error_message: string | null
+  metadata: Record<string, any>
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+// === True Cost of Ownership (TCO) ===
+export interface TCOAnalytics {
+  vehicle_id: number
+  total_charging_cost: number
+  total_kwh: number
+  total_sessions: number
+  total_km: number
+  first_date: string
+  last_date: string
+  months_of_ownership: number
+  cost_per_km_ev: number
+  cost_per_km_ice: number
+  equivalent_gas_cost: number
+  total_savings: number
+  monthly_savings: number
+  maintenance_savings_estimate: number
+  gas_price: number
+  gas_efficiency_mpg: number
+  base_cost_per_kwh: number
+  monthly_breakdown: {
+    month: string
+    ev_cost: number
+    equiv_gas_cost: number
+    savings: number
+    cumulative_savings: number
+    energy_kwh: number
+  }[]
+}
+
+export const getTCOAnalytics = (vehicleId: number) =>
+  request<TCOAnalytics>(`/analytics/tco?vehicle_id=${vehicleId}`)
+
+// === Sleep Efficiency ===
+export interface SleepAnalytics {
+  vehicle_id: number
+  period_days: number
+  state_distribution: { state: string; count: number; total_minutes: number }[]
+  sleep_efficiency_pct: number
+  time_to_sleep_avg_min: number
+  sentry_comparison: {
+    sentry_mode: boolean
+    count: number
+    avg_drain_rate: number
+    avg_duration_hours: number
+    avg_battery_lost: number
+    avg_temp: number
+  }[]
+  sentry_on_drain_rate: number
+  sentry_off_drain_rate: number
+  sentry_monthly_kwh: number
+  sentry_monthly_cost: number
+  sentry_extra_drain_rate: number
+  sentry_extra_monthly_kwh: number
+  sentry_extra_monthly_cost: number
+  battery_capacity_kwh: number
+  base_cost_per_kwh: number
+  recent_events: {
+    id: number
+    start_date: string
+    end_date: string
+    duration_hours: number
+    battery_lost: number
+    drain_rate: number
+    sentry_mode: boolean
+    outside_temp: number | null
+    start_battery: number
+    end_battery: number
+  }[]
+  total_events: number
+  avg_sentry_duration_hours: number
+}
+
+export const getSleepAnalytics = (vehicleId: number, days = 30) =>
+  request<SleepAnalytics>(`/analytics/sleep?vehicle_id=${vehicleId}&days=${days}`)
+
+export const getBackupConfigs = () => request<BackupConfig[]>('/backup/configs')
+export const getBackupConfig = (id: number) => request<BackupConfig>(`/backup/configs/${id}`)
+export const createBackupConfig = (cfg: Partial<BackupConfig>) => request<BackupConfig>('/backup/configs', { method: 'POST', body: JSON.stringify(cfg), headers: { 'Content-Type': 'application/json' } })
+export const updateBackupConfig = (id: number, cfg: Partial<BackupConfig>) => request<BackupConfig>(`/backup/configs/${id}`, { method: 'PUT', body: JSON.stringify(cfg), headers: { 'Content-Type': 'application/json' } })
+export const deleteBackupConfig = (id: number) => request<void>(`/backup/configs/${id}`, { method: 'DELETE' })
+export const triggerBackup = (configId: number) => request<BackupRun>(`/backup/configs/${configId}/trigger`, { method: 'POST' })
+export const triggerQuickBackup = () => request<BackupRun>('/backup/quick', { method: 'POST' })
+export const getBackupRuns = (limit = 50, offset = 0) => request<BackupRun[]>(`/backup/runs?limit=${limit}&offset=${offset}`)
+export const getBackupRun = (id: number) => request<BackupRun>(`/backup/runs/${id}`)
+export const downloadBackup = (runId: number) => window.open(`${getApiBase()}/api/v1/backup/runs/${runId}/download`, '_blank')
+export const verifyBackup = (runId: number) => request<{ verified: boolean; error?: string; checksum?: string }>(`/backup/runs/${runId}/verify`, { method: 'POST' })
+export const previewRestore = (runId: number) => request<{ tables: { name: string; rows: number }[]; metadata: Record<string, unknown>; checksum_verified: boolean }>(`/backup/runs/${runId}/preview`)
+
+// === Regen Braking ===
+export interface RegenData {
+  vehicle_id: number
+  total_regen_kwh: number
+  total_drive_kwh: number
+  regen_ratio: number
+  monthly_avg_regen: number
+  free_charges: number
+  monthly_summary: {
+    month: string
+    drive_count: number
+    avg_regen_power_kw: number
+    avg_speed: number
+    avg_efficiency: number
+  }[]
+  drives: {
+    id: number
+    start_date: string
+    distance: number
+    duration_min: number
+    speed_avg: number | null
+    power_max: number | null
+    power_min: number | null
+    start_battery_level: number | null
+    end_battery_level: number | null
+    efficiency: number
+    regen_score: number
+  }[]
+}
+export const getRegenStats = (vehicleId: number) =>
+  request<RegenData>(`/analytics/regen?vehicle_id=${vehicleId}`)
+
+// === Battery Degradation ===
+export interface BatteryDegradationData {
+  vehicle_id: number
+  current_health: number
+  current_capacity: number
+  current_degradation: number
+  current_range: number
+  current_cycles: number
+  current_temp: number
+  monthly_trend: {
+    month: string
+    avg_health: number
+    avg_capacity: number
+    avg_degradation: number
+    avg_range: number
+    max_cycles: number
+    avg_cell_temp: number
+  }[]
+  snapshots: {
+    id: number
+    health_score: number
+    capacity_kwh: number
+    degradation_pct: number
+    est_range_km: number
+    cycle_count: number
+    avg_cell_temp_c: number
+    created_at: string
+  }[]
+  charging_habits: {
+    fast_charge_count: number
+    slow_charge_count: number
+    deep_discharge_count: number
+    charge_to_full_count: number
+    avg_energy_per_session: number
+  }
+  prediction: {
+    slope_per_year: number
+    years_to_80_pct: number
+    predicted_date: string
+    has_enough_data: boolean
+    projection_points: { month: string; health: number }[]
+  }
+  stress_level: string
+  fast_charge_ratio: number
+}
+export const getBatteryDegradation = (vehicleId: number) =>
+  request<BatteryDegradationData>(`/analytics/battery-degradation?vehicle_id=${vehicleId}`)

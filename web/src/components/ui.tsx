@@ -234,7 +234,46 @@ export function Sparkline({ data, color = '#00f0ff', height = 30, width = 100 }:
 
 /** Shimmering placeholder block used as a loading skeleton. */
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={clsx('shimmer rounded-xl bg-white/[0.03]', className)} />
+  return (
+    <div className={clsx('rounded-xl bg-white/[0.03] animate-skeleton-wave relative overflow-hidden', className)}>
+      <div className="absolute inset-0 animate-shimmer" style={{
+        background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)',
+        backgroundSize: '200% 100%',
+      }} />
+    </div>
+  )
+}
+
+/** Skeleton shaped like a chart area — shows animated bars growing. */
+export function ChartSkeleton({ className = '', bars = 7 }: { className?: string; bars?: number }) {
+  return (
+    <div className={clsx('rounded-xl bg-white/[0.02] p-4 flex items-end gap-2', className)}>
+      {Array.from({ length: bars }).map((_, i) => (
+        <div
+          key={i}
+          className="flex-1 rounded-t bg-white/[0.04] animate-skeleton-wave"
+          style={{
+            height: `${25 + Math.sin(i * 0.9) * 20 + Math.random() * 30}%`,
+            animationDelay: `${i * 0.1}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Skeleton shaped like a stat card with a number and label. */
+export function StatSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className={`grid grid-cols-2 sm:grid-cols-${count} gap-3`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <GlassPanel key={i} className="p-4 space-y-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-7 w-24" />
+        </GlassPanel>
+      ))}
+    </div>
+  )
 }
 
 // === Page loader (for Suspense fallback) ===

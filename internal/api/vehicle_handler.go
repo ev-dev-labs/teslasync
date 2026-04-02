@@ -8,31 +8,35 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // VehicleHandler handles vehicle-related HTTP requests.
 type VehicleHandler struct {
-	vehicleRepo    *database.VehicleRepo
-	positionRepo   *database.PositionRepo
-	settingsRepo   *database.SettingsRepo
-	climateRepo    *database.ClimateRepo
-	securityRepo   *database.SecurityRepo
-	chargingTelRepo *database.ChargingTelemetryRepo
-	stateRepo      *database.VehicleStateRepo
-	teslaClient    *tesla.Client
+	vehicleRepo      *database.VehicleRepo
+	positionRepo     *database.PositionRepo
+	settingsRepo     *database.SettingsRepo
+	climateRepo      *database.ClimateRepo
+	securityRepo     *database.SecurityRepo
+	chargingTelRepo  *database.ChargingTelemetryRepo
+	stateRepo        *database.VehicleStateRepo
+	vehicleConfigRepo *database.VehicleConfigRepo
+	teslaClient      *tesla.Client
 	telemetryHandler *TelemetryHandler
 }
 
 func NewVehicleHandler(db *database.DB, tc *tesla.Client) *VehicleHandler {
 	return &VehicleHandler{
-		vehicleRepo:    database.NewVehicleRepo(db),
-		positionRepo:   database.NewPositionRepo(db),
-		settingsRepo:   database.NewSettingsRepo(db),
-		climateRepo:    database.NewClimateRepo(db),
-		securityRepo:   database.NewSecurityRepo(db),
-		chargingTelRepo: database.NewChargingTelemetryRepo(db),
-		stateRepo:      database.NewVehicleStateRepo(db),
-		teslaClient:    tc,
+		vehicleRepo:      database.NewVehicleRepo(db),
+		positionRepo:     database.NewPositionRepo(db),
+		settingsRepo:     database.NewSettingsRepo(db),
+		climateRepo:      database.NewClimateRepo(db),
+		securityRepo:     database.NewSecurityRepo(db),
+		chargingTelRepo:  database.NewChargingTelemetryRepo(db),
+		stateRepo:        database.NewVehicleStateRepo(db),
+		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
+		teslaClient:      tc,
 	}
 }
 
@@ -45,7 +49,7 @@ func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicles, err := h.vehicleRepo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list vehicles")
-		writeError(w, http.StatusInternalServerError, "failed to list vehicles")
+		writeAppError(w, r, ErrDBQuery.WithMessage("failed to list vehicles"))
 		return
 	}
 	writeJSON(w, http.StatusOK, vehicles)
@@ -54,18 +58,18 @@ func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get vehicle")
-		writeError(w, http.StatusInternalServerError, "failed to get vehicle")
+		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get vehicle"))
 		return
 	}
 	if vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		writeAppError(w, r, ErrVehicleNotFound)
 		return
 	}
 	writeJSON(w, http.StatusOK, vehicle)
@@ -74,34 +78,39 @@ func (h *VehicleHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
 	if err := h.vehicleRepo.Delete(r.Context(), id); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to delete vehicle")
-		writeError(w, http.StatusInternalServerError, "failed to delete vehicle")
+		writeAppError(w, r, ErrDBQuery.WithMessage("failed to delete vehicle"))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
-	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
-		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+	ctx, span := tracing.HandlerSpan(r.Context(), "vehicle.sync_from_tesla")
+	defer span.End()
+
+	if suspended, _ := h.settingsRepo.IsAPISuspended(ctx); suspended {
+		writeAppError(w, r, ErrTeslaAPISuspended)
 		return
 	}
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		writeAppError(w, r, ErrTeslaNotConnected)
 		return
 	}
 
-	vehicles, err := h.teslaClient.ListVehicles(r.Context())
+	vehicles, err := h.teslaClient.ListVehicles(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list Tesla vehicles")
-		writeError(w, http.StatusBadGateway, "failed to list vehicles from Tesla API")
+		tracing.EndSpan(span, err)
+		writeAppError(w, r, ErrTeslaAPIUnavailable.WithMessage("failed to list vehicles from Tesla API"))
 		return
 	}
+	span.SetAttributes(attribute.Int("tesla.vehicles_found", len(vehicles)))
 
 	var synced []*models.Vehicle
 	for _, tv := range vehicles {
@@ -134,7 +143,7 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	id, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
@@ -142,24 +151,29 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 	positions, err := h.positionRepo.GetByVehicle(r.Context(), id, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions")
-		writeError(w, http.StatusInternalServerError, "failed to get positions")
+		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get positions"))
 		return
 	}
 	writeJSON(w, http.StatusOK, positions)
 }
 
 func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.HandlerSpan(r.Context(), "vehicle.current_state")
+	defer span.End()
+
 	id, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
+	span.SetAttributes(attribute.Int64("vehicle.id", id))
 
-	vehicle, err := h.vehicleRepo.GetByID(r.Context(), id)
+	vehicle, err := h.vehicleRepo.GetByID(ctx, id)
 	if err != nil || vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		writeAppError(w, r, ErrVehicleNotFound)
 		return
 	}
+	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
 	// PRIMARY: If fleet telemetry is streaming for this vehicle, try to build state from DB
 	// but fall through to API if core data (position) is stale
@@ -387,33 +401,39 @@ func (h *VehicleHandler) buildStateFromDB(r *http.Request, vehicle *models.Vehic
 		}
 	}
 
-	// Software version not available from telemetry — leave empty
-	state.SoftwareVersion = ""
+	// Enrich with firmware version from vehicle config snapshots
+	if cfg, err := h.vehicleConfigRepo.GetLatest(ctx, vehicle.ID); err == nil && cfg != nil {
+		if cfg.SoftwareUpdateVersion != nil && *cfg.SoftwareUpdateVersion != "" {
+			state.SoftwareVersion = *cfg.SoftwareUpdateVersion
+		} else if cfg.Version != nil && *cfg.Version != "" {
+			state.SoftwareVersion = *cfg.Version
+		}
+	}
 
 	return state
 }
 
 func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
 	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
-		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+		writeAppError(w, r, ErrTeslaAPISuspended)
 		return
 	}
 
 	id, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), id)
 	if err != nil || vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		writeAppError(w, r, ErrVehicleNotFound)
 		return
 	}
 
 	if err := h.teslaClient.WakeUp(r.Context(), vehicle.VIN); err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to wake vehicle")
-		writeError(w, http.StatusBadGateway, "failed to wake vehicle")
+		writeAppError(w, r, ErrTeslaAPIUnavailable.WithMessage("failed to wake vehicle"))
 		return
 	}
 

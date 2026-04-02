@@ -1,4 +1,4 @@
-.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage
+.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -36,6 +36,22 @@ check: lint test
 	go vet ./...
 	@echo "All checks passed ✓"
 
+## quality: Full quality pipeline (Go + frontend lint + tests)
+quality: lint test web-lint web-test
+	go vet ./...
+	@echo "Full quality pipeline passed ✓"
+
+## web-test: Run frontend tests
+web-test:
+	cd web && npx vitest run --reporter=dot
+
+## pre-commit: Install pre-commit hooks
+pre-commit:
+	pip install pre-commit
+	pre-commit install
+	pre-commit install --hook-type pre-push
+	@echo "Pre-commit hooks installed ✓"
+
 ## coverage: Generate HTML coverage report
 coverage:
 	go test -race -coverprofile=coverage.out ./...
@@ -69,6 +85,10 @@ docker:
 ## docker-up: Start all services with Docker Compose
 docker-up:
 	docker compose up -d
+
+## docker-dev: Start full dev stack (all services + Jaeger tracing)
+docker-dev:
+	docker compose -f docker-compose.dev.yml up --build -d
 
 ## docker-down: Stop all services
 docker-down:

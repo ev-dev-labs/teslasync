@@ -47,21 +47,21 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 
 		switch rule.Type {
 		case "battery_low":
-			bl := toFloat(signals["BatteryLevel"])
-			if bl == 0 {
-				bl = toFloat(signals["Soc"])
+			bl, blOk := toFloatOk(signals["BatteryLevel"])
+			if !blOk {
+				bl, blOk = toFloatOk(signals["Soc"])
 			}
-			if bl > 0 && bl <= rule.Threshold {
+			if blOk && bl <= rule.Threshold {
 				triggered = true
 				message = fmt.Sprintf("Battery at %.0f%% (threshold: %.0f%%)", bl, rule.Threshold)
 			}
 
 		case "battery_high":
-			bl := toFloat(signals["BatteryLevel"])
-			if bl == 0 {
-				bl = toFloat(signals["Soc"])
+			bl, blOk := toFloatOk(signals["BatteryLevel"])
+			if !blOk {
+				bl, blOk = toFloatOk(signals["Soc"])
 			}
-			if bl > 0 && bl >= rule.Threshold {
+			if blOk && bl >= rule.Threshold {
 				triggered = true
 				message = fmt.Sprintf("Battery at %.0f%% (threshold: %.0f%%)", bl, rule.Threshold)
 			}

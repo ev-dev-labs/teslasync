@@ -410,6 +410,20 @@ export default function Settings() {
                   placeholder="Average MPG of equivalent gas car"
                 />
               </SettingField>
+
+              <SettingField label="Google Maps API Key">
+                <input
+                  type="password"
+                  value={form.google_maps_api_key || ''}
+                  onChange={e => setForm({ ...form, google_maps_api_key: e.target.value })}
+                  className="glass-input w-full px-3 py-2.5 text-sm"
+                  placeholder="Enter your Google Maps API key"
+                />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  Optional — enables satellite views, Places autocomplete, and enhanced geocoding.
+                  Get a key at <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-neon-cyan hover:underline">console.cloud.google.com</a>
+                </p>
+              </SettingField>
             </div>
           )}
 

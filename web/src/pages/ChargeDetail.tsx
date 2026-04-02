@@ -1,15 +1,20 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getChargingSession, getVehicle } from '../api'
+import { getChargingSession, getChargeTelemetry, getVehicle } from '../api'
 import {
   ArrowLeft, Zap, Clock, Battery, DollarSign, Gauge,
   BatteryCharging, Timer, TrendingUp, Cable, Activity,
-  Plug, MapPin, ArrowUpRight,
+  Plug, MapPin, ArrowUpRight, Thermometer, Navigation,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   ComposedChart, Line,
 } from 'recharts'
+import { useState } from 'react'
+import { MapContainer, CircleMarker, Popup } from 'react-leaflet'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { AnimatedNumber, RadialGauge, MetricBar } from '../components/Widgets'
@@ -39,9 +44,10 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color
 }
 
 export default function ChargeDetail() {
-  const { convertDistance, distanceUnit } = useSettings()
+  const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { id } = useParams<{ id: string }>()
   const sessionId = Number(id)
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
   const { data: session } = useQuery({
     queryKey: ['charging-session', sessionId],
@@ -51,6 +57,12 @@ export default function ChargeDetail() {
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', session?.vehicle_id],
     queryFn: () => getVehicle(session!.vehicle_id),
+    enabled: !!session,
+  })
+
+  const { data: chargeTelemetry } = useQuery({
+    queryKey: ['charge-telemetry', sessionId],
+    queryFn: () => getChargeTelemetry(sessionId),
     enabled: !!session,
   })
 
@@ -97,27 +109,42 @@ export default function ChargeDetail() {
   // Is DC fast charging?
   const isDC = !!(session.fast_charger_type || (session.charger_power && session.charger_power > 22))
 
-  // Generate charge curve
-  const curvePoints = 30
-  const chargeData = Array.from({ length: curvePoints }, (_, i) => {
-    const progress = i / (curvePoints - 1)
-    const batteryAtPoint = session.start_battery_level + batteryGain * progress
-    const maxPower = session.charger_power ?? 50
-    const powerAtPoint = batteryAtPoint < 50
-      ? maxPower
-      : maxPower * Math.max(0.15, 1 - (batteryAtPoint - 50) / 80)
-    const timeMin = progress * session.duration_min
-    const rangeAtPoint = session.start_range_km != null && rangeGained != null
-      ? session.start_range_km + rangeGained * progress
-      : null
-    return {
-      time: `${Math.floor(timeMin)}m`,
-      battery: Math.round(batteryAtPoint),
-      power: Math.round(powerAtPoint * 10) / 10,
-      energy: Math.round(session.charge_energy_added * progress * 10) / 10,
-      range: rangeAtPoint != null ? Math.round(convertDistance(rangeAtPoint)) : null,
-    }
-  })
+  // Generate charge curve — use real telemetry if available, otherwise synthesize
+  const chargeData = chargeTelemetry && chargeTelemetry.length > 0
+    ? chargeTelemetry.map((t, i) => {
+        const timeMin = chargeTelemetry.length > 1
+          ? ((new Date(t.created_at).getTime() - new Date(chargeTelemetry[0].created_at).getTime()) / 60000)
+          : i * (session.duration_min / Math.max(chargeTelemetry.length - 1, 1))
+        return {
+          time: `${Math.floor(timeMin)}m`,
+          battery: t.battery_level ?? t.soc ?? 0,
+          power: t.power_kw ?? 0,
+          energy: t.energy_added ?? 0,
+          range: t.rated_range != null ? Math.round(convertDistance(t.rated_range)) : null,
+        }
+      })
+    : (() => {
+        const curvePoints = 30
+        return Array.from({ length: curvePoints }, (_, i) => {
+          const progress = i / (curvePoints - 1)
+          const batteryAtPoint = session.start_battery_level + batteryGain * progress
+          const maxPower = session.charger_power ?? 50
+          const powerAtPoint = batteryAtPoint < 50
+            ? maxPower
+            : maxPower * Math.max(0.15, 1 - (batteryAtPoint - 50) / 80)
+          const timeMin = progress * session.duration_min
+          const rangeAtPoint = session.start_range_km != null && rangeGained != null
+            ? session.start_range_km + rangeGained * progress
+            : null
+          return {
+            time: `${Math.floor(timeMin)}m`,
+            battery: Math.round(batteryAtPoint),
+            power: Math.round(powerAtPoint * 10) / 10,
+            energy: Math.round(session.charge_energy_added * progress * 10) / 10,
+            range: rangeAtPoint != null ? Math.round(convertDistance(rangeAtPoint)) : null,
+          }
+        })
+      })()
 
   return (
     <div className="space-y-6">
@@ -136,6 +163,7 @@ export default function ChargeDetail() {
               {vehicle?.display_name || 'Vehicle'} &middot; {new Date(session.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               {' '}&middot; {new Date(session.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               {session.end_date && ` → ${new Date(session.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              {session.location_name && <> &middot; <MapPin className="h-3 w-3 inline" /> {session.location_name}</>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -275,6 +303,96 @@ export default function ChargeDetail() {
         </GlassPanel>
       </FadeIn>
 
+      {/* Charge Location */}
+      {(session.latitude != null && session.longitude != null) && (
+        <FadeIn delay={0.11}>
+          <GlassPanel className="p-5">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Navigation className="h-4 w-4 text-neon-cyan" /> Charge Location
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Map */}
+              <div className="lg:col-span-2 h-56 sm:h-72 rounded-lg overflow-hidden border border-white/5 relative">
+                <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+                <MapContainer
+                  center={[session.latitude!, session.longitude!]}
+                  zoom={15}
+                  scrollWheelZoom
+                  className="h-full w-full"
+                  style={{ background: '#0a0a0f' }}
+                >
+                  <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
+                  <CircleMarker
+                    center={[session.latitude!, session.longitude!]}
+                    radius={10}
+                    pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.8, weight: 3 }}
+                  >
+                    <Popup>
+                      <div className="text-xs">
+                        <strong>{session.location_name || 'Charge Location'}</strong>
+                        <br />
+                        {session.latitude!.toFixed(5)}, {session.longitude!.toFixed(5)}
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                </MapContainer>
+              </div>
+
+              {/* Address details */}
+              <div className="flex flex-col gap-3">
+                {/* Location name */}
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Location</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-neon-green flex-shrink-0" />
+                    {session.location_name || session.address?.display_name || 'Unknown'}
+                  </p>
+                </div>
+
+                {/* Address breakdown */}
+                {session.address && (
+                  <>
+                    {(session.address.road || session.address.house_number) && (
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Street</p>
+                        <p className="text-sm text-[var(--text-primary)]">
+                          {[session.address.house_number, session.address.road].filter(Boolean).join(' ')}
+                        </p>
+                      </div>
+                    )}
+                    {(session.address.city || session.address.state) && (
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">City / State</p>
+                        <p className="text-sm text-[var(--text-primary)]">
+                          {[session.address.city, session.address.state].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                    )}
+                    {(session.address.country || session.address.postcode) && (
+                      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Country / Postal</p>
+                        <p className="text-sm text-[var(--text-primary)]">
+                          {[session.address.country, session.address.postcode].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Coordinates */}
+                <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Coordinates</p>
+                  <p className="text-xs font-mono text-[var(--text-secondary)]">
+                    {session.latitude!.toFixed(6)}, {session.longitude!.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
       {/* Charge Curve Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Power vs SoC charging curve */}
@@ -324,6 +442,107 @@ export default function ChargeDetail() {
         </FadeIn>
       </div>
 
+      {/* Temperature during charge — telemetry-based chart */}
+      {chargeTelemetry && chargeTelemetry.length > 1 && chargeTelemetry.some(t => t.battery_temp != null || t.inside_temp != null || t.outside_temp != null) && (
+        <FadeIn delay={0.16}>
+          <GlassPanel className="p-6">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Thermometer className="h-4 w-4 text-orange-400" /> Temperature During Charge
+            </h3>
+            <div className="h-48 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chargeTelemetry.map((t, i) => {
+                  const timeMin = chargeTelemetry!.length > 1
+                    ? ((new Date(t.created_at).getTime() - new Date(chargeTelemetry![0].created_at).getTime()) / 60000)
+                    : i * (session.duration_min / Math.max(chargeTelemetry!.length - 1, 1))
+                  return {
+                    time: `${Math.floor(timeMin)}m`,
+                    batteryTemp: t.battery_temp != null ? convertTemp(t.battery_temp) : null,
+                    insideTemp: t.inside_temp != null ? convertTemp(t.inside_temp) : null,
+                    outsideTemp: t.outside_temp != null ? convertTemp(t.outside_temp) : null,
+                  }
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                  {chargeTelemetry.some(t => t.battery_temp != null) && (
+                    <Line type="monotone" dataKey="batteryTemp" stroke="#ef4444" strokeWidth={2} dot={false} name={`Battery ${tempUnit}`} connectNulls />
+                  )}
+                  {chargeTelemetry.some(t => t.inside_temp != null) && (
+                    <Line type="monotone" dataKey="insideTemp" stroke="#f97316" strokeWidth={1.5} dot={false} name={`Inside ${tempUnit}`} connectNulls />
+                  )}
+                  {chargeTelemetry.some(t => t.outside_temp != null) && (
+                    <Line type="monotone" dataKey="outsideTemp" stroke="#3b82f6" strokeWidth={1.5} dot={false} name={`Outside ${tempUnit}`} connectNulls />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Voltage & Current over time */}
+      {chargeTelemetry && chargeTelemetry.length > 1 && chargeTelemetry.some(t => t.voltage != null || t.current_amps != null) && (
+        <FadeIn delay={0.18}>
+          <GlassPanel className="p-6">
+            <h3 className="section-title flex items-center gap-2 mb-4">
+              <Activity className="h-4 w-4 text-neon-purple" /> Voltage & Current
+            </h3>
+            <div className="h-48 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chargeTelemetry.map((t, i) => {
+                  const timeMin = chargeTelemetry!.length > 1
+                    ? ((new Date(t.created_at).getTime() - new Date(chargeTelemetry![0].created_at).getTime()) / 60000)
+                    : i * (session.duration_min / Math.max(chargeTelemetry!.length - 1, 1))
+                  return {
+                    time: `${Math.floor(timeMin)}m`,
+                    voltage: t.voltage,
+                    current: t.current_amps,
+                  }
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis yAxisId="voltage" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis yAxisId="current" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                  {chargeTelemetry.some(t => t.voltage != null) && (
+                    <Line yAxisId="voltage" type="monotone" dataKey="voltage" stroke="#00f0ff" strokeWidth={2} dot={false} name="Voltage (V)" connectNulls />
+                  )}
+                  {chargeTelemetry.some(t => t.current_amps != null) && (
+                    <Line yAxisId="current" type="monotone" dataKey="current" stroke="#f59e0b" strokeWidth={2} dot={false} name="Current (A)" connectNulls />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Temperature summary (fallback when no telemetry) */}
+      {(!chargeTelemetry || chargeTelemetry.length < 2 || !chargeTelemetry.some(t => t.battery_temp != null || t.inside_temp != null)) &&
+        (session.inside_temp_avg != null || session.outside_temp_avg != null) && (
+        <FadeIn delay={0.16}>
+          <GlassPanel className="p-4">
+            <div className="flex items-center justify-center gap-6 text-sm">
+              <Thermometer className="h-4 w-4 text-neon-cyan" />
+              {session.inside_temp_avg != null && (
+                <span className="text-[var(--text-secondary)]">
+                  Inside: <strong className="text-orange-400">{convertTemp(session.inside_temp_avg).toFixed(1)} {tempUnit}</strong>
+                </span>
+              )}
+              {session.outside_temp_avg != null && (
+                <span className="text-[var(--text-secondary)]">
+                  Outside: <strong className="text-blue-400">{convertTemp(session.outside_temp_avg).toFixed(1)} {tempUnit}</strong>
+                </span>
+              )}
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
       {/* Timestamps */}
       <FadeIn delay={0.18}>
         <GlassPanel className="p-4">
@@ -336,3 +555,4 @@ export default function ChargeDetail() {
     </div>
   )
 }
+

@@ -8,6 +8,7 @@ import (
 
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // LoggerMiddleware logs HTTP requests using zerolog.
@@ -64,4 +65,14 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
+}
+
+// TracingMiddleware adds OpenTelemetry spans to HTTP requests.
+// When tracing is not initialized, otelhttp uses the noop provider with zero overhead.
+func TracingMiddleware(next http.Handler) http.Handler {
+	return otelhttp.NewHandler(next, "http.request",
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+		}),
+	)
 }

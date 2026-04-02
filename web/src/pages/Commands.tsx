@@ -323,6 +323,7 @@ export default function Commands() {
   })
 
   const states = vehicleStates.data ?? {}
+  const statesError = vehicleStates.error
   const onlineCount = vehicles?.filter(v => {
     const s = states[v.id]
     return s && getVehicleStatus(v, s) !== 'offline' && getVehicleStatus(v, s) !== 'asleep'
@@ -356,6 +357,15 @@ export default function Commands() {
             </div>
           ))}
         </div>
+      )}
+
+      {statesError && (
+        <GlassPanel className="p-4">
+          <div className="flex items-center gap-2 text-neon-red text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Failed to load vehicle states: {(statesError as Error).message}</span>
+          </div>
+        </GlassPanel>
       )}
 
       {isLoading ? (

@@ -5,8 +5,12 @@ import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, L
 import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
+import { useSettings } from '../hooks/useSettings'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapContainer, TileLayer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import L from 'leaflet'
 import clsx from 'clsx'
 
@@ -25,6 +29,7 @@ const GEOFENCE_COLORS = ['#a855f7', '#00f0ff', '#10b981', '#f59e0b', '#ef4444', 
 function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect }: {
   geofence: Geofence; onEdit: () => void; onDelete: () => void; color: string; isSelected: boolean; onSelect: () => void
 }) {
+  const { convertDistance, distanceUnit } = useSettings()
   return (
     <GlassPanel hover glow="purple" className={clsx('p-5 transition-all duration-200 group cursor-pointer', isSelected && 'border-neon-purple/30 bg-neon-purple/5')}>
       <div className="flex items-start gap-4" onClick={onSelect}>
@@ -46,7 +51,7 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
               <Globe className="h-3 w-3" /> {geofence.latitude.toFixed(6)}, {geofence.longitude.toFixed(6)}
             </span>
             <span className="flex items-center gap-1">
-              <Ruler className="h-3 w-3" /> {(geofence.radius / 1000).toFixed(geofence.radius >= 1000 ? 1 : 2)} km
+              <Ruler className="h-3 w-3" /> {convertDistance(geofence.radius / 1000).toFixed(geofence.radius >= 1000 ? 1 : 2)} {distanceUnit}
             </span>
             {geofence.cost_per_kwh != null && (
               <span className="flex items-center gap-1 text-neon-green">
@@ -84,6 +89,19 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
   isSaving: boolean
 }) {
   const [locStatus, setLocStatus] = useState<string | null>(null)
+
+  const reverseGeocode = async (lat: number, lon: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`
+      )
+      const data = await res.json()
+      return data.display_name?.split(',').slice(0, 3).join(',').trim() || ''
+    } catch {
+      return ''
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -127,6 +145,10 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
                       setForm(f => ({ ...f, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
                       setLocStatus('success')
                       setTimeout(() => setLocStatus(null), 2000)
+                      // Auto-fill name via reverse geocoding
+                      reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(name => {
+                        if (name) setForm(f => f.name ? f : { ...f, name })
+                      })
                     },
                     () => { setLocStatus('denied') },
                     { enableHighAccuracy: true, timeout: 10000 }
@@ -224,9 +246,11 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 export default function Geofences() {
   const queryClient = useQueryClient()
   const toast = useToast()
+  const { convertDistance, distanceUnit } = useSettings()
   const { data: geofences, isLoading } = useQuery({ queryKey: ['geofences'], queryFn: getGeofences })
 
   const [editing, setEditing] = useState<number | 'new' | null>(null)
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
   const [form, setForm] = useState<FormData>(emptyForm)
   const [view, setView] = useState<'map' | 'list'>('map')
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -335,7 +359,7 @@ export default function Geofences() {
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Avg Radius</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-[var(--text-primary)]">{totalArea.toFixed(2)} km²</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{(totalArea * convertDistance(1) ** 2).toFixed(2)} {distanceUnit}²</p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Area</p>
               </div>
               <div className="text-center">
@@ -364,12 +388,11 @@ export default function Geofences() {
         <Skeleton className="h-64 sm:h-96" />
       ) : view === 'map' ? (
         <FadeIn>
-          <GlassPanel className="p-0 overflow-hidden" style={{ height: 'min(500px, 60vh)' }}>
+          <GlassPanel className="p-0 overflow-hidden relative" style={{ height: 'min(500px, 60vh)' }}>
+            <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
             <MapContainer center={center} zoom={12} className="h-full w-full" style={{ background: '#0a0a0f' }}>
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              />
+              <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
               <ClickHandler onClick={handleMapClick} />
 
               {geofences?.map((g, i) => {
@@ -444,3 +467,4 @@ export default function Geofences() {
     </div>
   )
 }
+

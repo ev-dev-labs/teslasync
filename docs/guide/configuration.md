@@ -299,6 +299,18 @@ The `/api/v1/system/api-usage` endpoint returns real-time usage statistics:
 
 The Settings page includes an interactive billing calculator where you can adjust driving and charging hours to see estimated monthly costs.
 
+### Backup & Restore
+
+Backup is configured through the UI (**System → Backup & Restore**) or API. No environment variables required — all configuration is stored in the database.
+
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Frequency | 1-30 days | 1 (daily) | How often to run backups |
+| Retention | 1-100 | 30 | Maximum backups to keep |
+| Provider | local/s3/azure/gcs | local | Storage backend |
+| Compression | on/off | on | Gzip compression |
+| Encryption | on/off | off | AES-256 encryption (planned) |
+
 ## Fleet Telemetry Configuration
 
 | Variable | Default | Description |
@@ -306,6 +318,135 @@ The Settings page includes an interactive billing calculator where you can adjus
 | `FLEET_TELEMETRY_ENABLED` | `false` | Enable Fleet Telemetry status monitoring |
 | `FLEET_TELEMETRY_HOST` | `` | Hostname of your Fleet Telemetry server |
 | `FLEET_TELEMETRY_PORT` | `4443` | Port for Fleet Telemetry server |
+
+## OpenTelemetry Tracing (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OTEL_ENABLED` | `false` | Enable distributed tracing |
+| `OTEL_ENDPOINT` | `jaeger:4317` | OTLP gRPC collector endpoint |
+| `OTEL_SERVICE_NAME` | `teslasync` | Service name in traces |
+| `OTEL_INSECURE` | `true` | Use insecure gRPC connection |
+
+TeslaSync supports any OTLP-compatible tracing backend — Jaeger, Grafana Tempo, Datadog, New Relic, or any OpenTelemetry Collector.
+
+### Option A: Bundled Jaeger (Docker Compose)
+
+```bash
+# Start with built-in Jaeger
+OTEL_ENABLED=true docker compose --profile tracing up -d
+
+# Jaeger UI: http://localhost:16686
+```
+
+Jaeger uses a Docker Compose profile, so it only starts when explicitly requested with `--profile tracing`.
+
+### Option B: External Jaeger / Collector (Docker Compose)
+
+If you already have Jaeger, Tempo, or any OTLP collector running, just point to it:
+
+```bash
+# .env
+OTEL_ENABLED=true
+OTEL_ENDPOINT=your-jaeger-host:4317    # External Jaeger
+# OTEL_ENDPOINT=tempo:4317             # Grafana Tempo
+# OTEL_ENDPOINT=otel-collector:4317    # OpenTelemetry Collector
+OTEL_SERVICE_NAME=teslasync
+OTEL_INSECURE=true                     # Set to false for TLS
+
+# Start WITHOUT --profile tracing (no bundled Jaeger needed)
+docker compose up -d
+```
+
+### Helm — Bundled Jaeger
+
+```yaml
+config:
+  openTelemetry:
+    enabled: true
+    endpoint: "jaeger:4317"
+
+jaeger:
+  enabled: true
+```
+
+### Helm — External Jaeger / Collector
+
+```yaml
+config:
+  openTelemetry:
+    enabled: true
+    endpoint: "jaeger.monitoring.svc:4317"   # Your existing Jaeger
+    # endpoint: "tempo.observability:4317"   # Grafana Tempo
+    insecure: true
+
+# Don't deploy built-in Jaeger
+jaeger:
+  enabled: false
+```
+
+## Google Maps (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GOOGLE_MAPS_API_KEY` | _(empty)_ | Google Maps API key. Enables enhanced geocoding, satellite/terrain tiles, and Places autocomplete |
+
+When no API key is set, TeslaSync uses **CARTO Dark tiles** and **Nominatim** reverse geocoding — both free and require no configuration.
+
+When a Google Maps API key is provided:
+- **Geocoding**: Google Geocoding API replaces Nominatim (faster, more accurate)
+- **Map tiles**: Satellite, terrain, and street views become available via the layer switcher
+- **Places cache**: All geocoding results are cached locally to minimize API calls (~90% cache hit rate)
+
+### Free tier limits (Essentials)
+
+| API | Free/month | Typical usage (1 vehicle) |
+|-----|-----------|--------------------------|
+| Map Tiles | 100,000 | ~10,000 |
+| Geocoding | 10,000 | ~270 |
+| Dynamic Maps | 10,000 | ~900 |
+
+Get a free API key at [console.cloud.google.com](https://console.cloud.google.com/google/maps-apis).
+
+### Docker Compose
+
+```bash
+GOOGLE_MAPS_API_KEY=AIza... docker compose up -d
+```
+
+### Helm
+
+```yaml
+config:
+  googleMaps:
+    apiKey: "AIza..."
+```
+
+## Azure Maps (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AZURE_MAPS_API_KEY` | _(empty)_ | Azure Maps subscription key. Alternative to Google Maps |
+
+Azure Maps provides 250,000 free transactions/month — significantly more than Google's free tier. Useful for organizations already on Azure.
+
+**Geocoding priority:** Google Maps → Azure Maps → Nominatim. If both keys are set, Google takes precedence.
+
+Get a key at [portal.azure.com](https://portal.azure.com) → Create an Azure Maps Account.
+
+### Docker Compose
+
+```bash
+AZURE_MAPS_API_KEY=your-key... docker compose up -d
+```
+
+### Helm
+
+```yaml
+config:
+  azureMaps:
+    apiKey: "your-key..."
+```
 
 ## Tesla Fleet API Region
 

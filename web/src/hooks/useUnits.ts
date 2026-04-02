@@ -36,6 +36,13 @@ export function useUnits() {
     efficiencyVal: (whPerKm: number) => isMetric ? whPerKm : whPerKm * 1.60934,
     efficiencyUnit: isMetric ? 'Wh/km' : 'Wh/mi',
 
+    pressure: (bar: number | undefined | null) => {
+      if (bar == null) return '—'
+      return isMetric ? `${bar.toFixed(2)} bar` : `${(bar * 14.5038).toFixed(1)} psi`
+    },
+    pressureVal: (bar: number) => isMetric ? bar : bar * 14.5038,
+    pressureUnit: isMetric ? 'bar' : 'psi',
+
     isMetric,
     isCelsius,
   }), [isMetric, isCelsius])
