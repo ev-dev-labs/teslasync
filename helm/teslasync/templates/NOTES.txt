@@ -43,6 +43,12 @@ Components deployed:
 {{- else if .Values.fleetTelemetry.external.host }}
   • Fleet Telemetry    — external ({{ .Values.fleetTelemetry.external.host }}:{{ .Values.fleetTelemetry.external.port }})
 {{- end }}
+{{- if .Values.jaeger.enabled }}
+  ✓ Jaeger (Tracing)  — bundled (jaegertracing/all-in-one)
+{{- end }}
+{{- if .Values.commandProxy.enabled }}
+  ✓ Command Proxy     — bundled (tesla/vehicle-command)
+{{- end }}
 
 ──────────────────────────────────────────────────────
   Accessing the services
@@ -78,13 +84,29 @@ Components deployed:
 
   Then open:
     Backend API : http://localhost:{{ .Values.service.port }}/healthz
+    Metrics     : http://localhost:{{ .Values.service.port }}/metrics
     {{- if .Values.web.enabled }}
     Web UI      : http://localhost:{{ .Values.web.service.port }}
     {{- end }}
     {{- if .Values.grafana.enabled }}
     Grafana     : http://localhost:{{ .Values.grafana.service.port }}  ({{ .Values.grafana.adminUser }} / <secret>)
     {{- end }}
+    {{- if .Values.jaeger.enabled }}
+    Jaeger UI   : http://localhost:16686
+    {{- end }}
 {{- end }}
+
+──────────────────────────────────────────────────────
+  Features
+──────────────────────────────────────────────────────
+
+  • 231 Tesla Fleet Telemetry signals (100% coverage)
+  • 52+ page React SPA with real-time dashboard
+  • Automated backup & restore (Local, S3, Azure, GCS)
+  • OpenTelemetry distributed tracing (optional)
+  • 21 custom Prometheus business metrics at /metrics
+  • OpenAPI 3.0 spec (163 operations documented)
+  • Cosign-signed distroless images
 
 ──────────────────────────────────────────────────────
   Next steps
@@ -97,6 +119,20 @@ Components deployed:
      --set postgresql.auth.password=<STRONG_PASSWORD>
      --set grafana.adminPassword=<STRONG_PASSWORD>
 
+  3. (Optional) Enable distributed tracing:
+     --set config.openTelemetry.enabled=true --set jaeger.enabled=true
+
+  4. (Optional) Enable automated backups:
+     Configure via Web UI → Backup & Restore
+
+  5. Run helm tests to verify the deployment:
+     helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+  6. Verify image signatures:
+     cosign verify ghcr.io/<your-org>/teslasync-api:<tag> \
+       --certificate-identity-regexp="github.com/<your-org>" \
+       --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+
 ──────────────────────────────────────────────────────
   Troubleshooting
 ──────────────────────────────────────────────────────
@@ -106,3 +142,6 @@ Components deployed:
 
   Check pod status:
     kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+  Run diagnostics:
+    kubectl exec -it deploy/{{ include "teslasync.fullname" . }}-api -- teslasync healthcheck
