@@ -4,12 +4,14 @@
 *.dll
 *.so
 *.dylib
+bin/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-*
 
 # OS
 .DS_Store
@@ -18,26 +20,40 @@ Thumbs.db
 # Go
 vendor/
 coverage/
+coverage.out
+coverage.html
 
 # Node
 node_modules/
 dist/
-.env.local
-.env.*.local
+web/dist/
 
-# TeslaSync
-certs/
+# Environment / Secrets (CRITICAL — never commit)
+.env
+.env.*
+!.env.example
 *.pem
 *.key
-.env
+*.p12
+*.pfx
+certs/
+
+# TeslaSync data
+/data/
+/backups/
+
+# Docker
+docker-compose.override.yml
 
 # Python
 __pycache__/
+*.pyc
+venv/
 
-# Test files
-test_*.py
-test_*.js
-publish_test.sh
-package-lock.json
+# VitePress
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 
-package.json
+# Test artifacts
+coverage.out
+coverage.html
