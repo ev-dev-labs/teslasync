@@ -15,7 +15,7 @@ const layers: { id: MapStyle; icon: string; label: string }[] = [
 
 export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
   return (
-    <div className="absolute top-2 right-2 z-[1000] flex gap-1 rounded-lg border border-white/10 bg-black/60 backdrop-blur-md p-1 shadow-lg">
+    <div className="absolute bottom-6 left-2 z-[1000] flex gap-1 rounded-lg border border-white/10 bg-black/70 backdrop-blur-md p-1 shadow-lg">
       {layers.map(l => (
         <button
           key={l.id}
