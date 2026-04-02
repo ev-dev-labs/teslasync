@@ -385,6 +385,43 @@ jaeger:
   enabled: false
 ```
 
+## Google Maps (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GOOGLE_MAPS_API_KEY` | _(empty)_ | Google Maps API key. Enables enhanced geocoding, satellite/terrain tiles, and Places autocomplete |
+
+When no API key is set, TeslaSync uses **CARTO Dark tiles** and **Nominatim** reverse geocoding — both free and require no configuration.
+
+When a Google Maps API key is provided:
+- **Geocoding**: Google Geocoding API replaces Nominatim (faster, more accurate)
+- **Map tiles**: Satellite, terrain, and street views become available via the layer switcher
+- **Places cache**: All geocoding results are cached locally to minimize API calls (~90% cache hit rate)
+
+### Free tier limits (Essentials)
+
+| API | Free/month | Typical usage (1 vehicle) |
+|-----|-----------|--------------------------|
+| Map Tiles | 100,000 | ~10,000 |
+| Geocoding | 10,000 | ~270 |
+| Dynamic Maps | 10,000 | ~900 |
+
+Get a free API key at [console.cloud.google.com](https://console.cloud.google.com/google/maps-apis).
+
+### Docker Compose
+
+```bash
+GOOGLE_MAPS_API_KEY=AIza... docker compose up -d
+```
+
+### Helm
+
+```yaml
+config:
+  googleMaps:
+    apiKey: "AIza..."
+```
+
 ## Tesla Fleet API Region
 
 | Variable | Default | Description |
