@@ -65,7 +65,7 @@ jobs:
           CGO_ENABLED=0 go build -ldflags="-s -w" -o export-worker ./cmd/export-worker
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.out
