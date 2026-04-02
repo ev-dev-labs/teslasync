@@ -10,7 +10,11 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   ComposedChart, Line,
 } from 'recharts'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { useState } from 'react'
+import { MapContainer, CircleMarker, Popup } from 'react-leaflet'
+import { MapTileLayer } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { AnimatedNumber, RadialGauge, MetricBar } from '../components/Widgets'
@@ -43,6 +47,7 @@ export default function ChargeDetail() {
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { id } = useParams<{ id: string }>()
   const sessionId = Number(id)
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
   const { data: session } = useQuery({
     queryKey: ['charging-session', sessionId],
@@ -307,7 +312,8 @@ export default function ChargeDetail() {
             </h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* Map */}
-              <div className="lg:col-span-2 h-56 sm:h-72 rounded-lg overflow-hidden border border-white/5">
+              <div className="lg:col-span-2 h-56 sm:h-72 rounded-lg overflow-hidden border border-white/5 relative">
+                <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
                 <MapContainer
                   center={[session.latitude!, session.longitude!]}
                   zoom={15}
@@ -315,10 +321,7 @@ export default function ChargeDetail() {
                   className="h-full w-full"
                   style={{ background: '#0a0a0f' }}
                 >
-                  <TileLayer
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  />
+                  <MapTileLayer style={mapStyle} />
                   <CircleMarker
                     center={[session.latitude!, session.longitude!]}
                     radius={10}

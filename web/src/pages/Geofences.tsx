@@ -7,7 +7,10 @@ import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapContainer, TileLayer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapContainer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { MapTileLayer } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import L from 'leaflet'
 import clsx from 'clsx'
 
@@ -247,6 +250,7 @@ export default function Geofences() {
   const { data: geofences, isLoading } = useQuery({ queryKey: ['geofences'], queryFn: getGeofences })
 
   const [editing, setEditing] = useState<number | 'new' | null>(null)
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
   const [form, setForm] = useState<FormData>(emptyForm)
   const [view, setView] = useState<'map' | 'list'>('map')
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -384,12 +388,10 @@ export default function Geofences() {
         <Skeleton className="h-64 sm:h-96" />
       ) : view === 'map' ? (
         <FadeIn>
-          <GlassPanel className="p-0 overflow-hidden" style={{ height: 'min(500px, 60vh)' }}>
+          <GlassPanel className="p-0 overflow-hidden relative" style={{ height: 'min(500px, 60vh)' }}>
+            <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
             <MapContainer center={center} zoom={12} className="h-full w-full" style={{ background: '#0a0a0f' }}>
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              />
+              <MapTileLayer style={mapStyle} />
               <ClickHandler onClick={handleMapClick} />
 
               {geofences?.map((g, i) => {

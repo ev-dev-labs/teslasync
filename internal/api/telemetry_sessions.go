@@ -25,8 +25,9 @@ type TelemetrySessionTracker struct {
 	chargeTelRepo     *database.ChargeTelemetryReadingRepo
 	posRepo           *database.PositionRepo
 	geofenceRepo      *database.GeofenceRepo
+	placesCache       *database.PlacesCacheRepo
 	eventBus          *events.Bus
-	geocoder          *geocoding.Client
+	geocoder          geocoding.Geocoder
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
@@ -123,7 +124,7 @@ type streamingCharge struct {
 }
 
 // NewTelemetrySessionTracker creates a session tracker with comprehensive data tracking.
-func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus) *TelemetrySessionTracker {
+func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder geocoding.Geocoder) *TelemetrySessionTracker {
 	return &TelemetrySessionTracker{
 		db:            db,
 		driveRepo:     database.NewDriveRepo(db),
@@ -132,8 +133,9 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus) *Telemetr
 		chargeTelRepo: database.NewChargeTelemetryReadingRepo(db),
 		posRepo:       database.NewPositionRepo(db),
 		geofenceRepo:  database.NewGeofenceRepo(db),
+		placesCache:   database.NewPlacesCacheRepo(db),
 		eventBus:      eventBus,
-		geocoder:      geocoding.NewClient("TeslaSync/1.0"),
+		geocoder:      geocoder,
 		activeDrives:  make(map[int64]*streamingDrive),
 		activeCharges: make(map[int64]*streamingCharge),
 	}
@@ -691,30 +693,55 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// Check if coordinates fall inside a user-defined geofence first
-	name := ""
-	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
-		name = geofences[0].Name
-	}
-
-	// Fall back to Nominatim reverse geocoding
-	if name == "" {
-		result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-		if err != nil {
-			log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
-			return
-		}
-		name = result.ShortName()
-	}
-
 	field := "end_address"
 	if isStart {
 		field = "start_address"
 	}
 
+	// 1. Check geofences first (user-defined names like "Home", "Office")
+	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
+		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: geofences[0].Name})
+		return
+	}
+
+	// 2. Check places cache (previously resolved locations within 50m)
+	if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
+		_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
+		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
+		return
+	}
+
+	// 3. Reverse geocode via Nominatim (or Google when configured)
+	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
+	if err != nil {
+		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
+		return
+	}
+
+	name := result.ShortName()
+
+	// Save to cache for future lookups
+	_ = t.placesCache.Upsert(ctx, &database.PlaceCacheEntry{
+		Latitude:    lat,
+		Longitude:   lon,
+		DisplayName: name,
+		Source:      "geocoding",
+		City:        ptrStrOrNil(result.City),
+		State:       ptrStrOrNil(result.State),
+		Country:     ptrStrOrNil(result.Country),
+		Postcode:    ptrStrOrNil(result.PostCode),
+	})
+
 	if err := t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: name}); err != nil {
 		log.Error().Err(err).Int64("drive_id", driveID).Str("field", field).Msg("telemetry: failed to update address")
 	}
+}
+
+func ptrStrOrNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
@@ -933,21 +960,37 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
 
-			// Check geofences first for user-defined name (e.g., "Home", "Office")
+			// 1. Check geofences first (user-defined name)
 			if geofences, err := t.geofenceRepo.FindByCoordinates(gctx, lat, lon); err == nil && len(geofences) > 0 {
 				fields["location_name"] = geofences[0].Name
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
 
-			// Fall back to Nominatim reverse geocoding
+			// 2. Check places cache (previously resolved, within 50m)
+			if cached, err := t.placesCache.FindNearby(gctx, lat, lon, 50); err == nil && cached != nil {
+				_ = t.placesCache.IncrementHitCount(gctx, cached.ID)
+				fields["location_name"] = cached.DisplayName
+				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
+				return
+			}
+
+			// 3. Reverse geocode and cache the result
 			result, err := t.geocoder.ReverseGeocode(gctx, lat, lon)
 			if err != nil {
 				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 				return
 			}
-			fields["location_name"] = result.ShortName()
+			name := result.ShortName()
+			fields["location_name"] = name
 			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
+
+			// Save to cache
+			_ = t.placesCache.Upsert(gctx, &database.PlaceCacheEntry{
+				Latitude: lat, Longitude: lon, DisplayName: name, Source: "geocoding",
+				City: ptrStrOrNil(result.City), State: ptrStrOrNil(result.State),
+				Country: ptrStrOrNil(result.Country), Postcode: ptrStrOrNil(result.PostCode),
+			})
 		}(active.SessionID, *active.Latitude, *active.Longitude, fieldsCopy)
 	}
 

@@ -2,7 +2,11 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest } from '../api'
 import { cleanNil } from '../lib/cleanNil'
-import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
+import { useState } from 'react'
+import { MapContainer, Polyline, Marker } from 'react-leaflet'
+import { MapTileLayer } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression } from 'leaflet'
 import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
@@ -53,6 +57,7 @@ export default function VehicleDetail() {
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
   const { convertDistance, convertSpeed, convertTemp, convertPressure, distanceUnit, speedUnit, tempUnit, pressureUnit } = useSettings()
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -813,12 +818,10 @@ export default function VehicleDetail() {
                       <Navigation className="h-4 w-4 text-neon-cyan" /> Location
                     </h3>
                   </div>
-                  <div className="h-72">
+                  <div className="h-72 relative">
+                    <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
                     <MapContainer center={[state.latitude, state.longitude]} zoom={14} scrollWheelZoom className="h-full w-full">
-                      <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                      />
+                      <MapTileLayer style={mapStyle} />
                       <Marker position={[state.latitude, state.longitude]} />
                       {trail.length > 1 && (
                         <Polyline positions={trail} pathOptions={{ color: '#00f0ff', weight: 3, opacity: 0.6 }} />

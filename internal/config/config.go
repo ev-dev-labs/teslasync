@@ -22,6 +22,12 @@ type Config struct {
 	FleetTelemetry FleetTelemetryConfig
 	GasPrice       GasPriceConfig
 	OpenTelemetry  OpenTelemetryConfig
+	GoogleMaps     GoogleMapsConfig
+}
+
+// GoogleMapsConfig holds settings for the Google Maps geocoding API.
+type GoogleMapsConfig struct {
+	APIKey string
 }
 
 // OpenTelemetryConfig controls optional distributed tracing via OpenTelemetry.
@@ -213,6 +219,10 @@ func Load() (*Config, error) {
 			Endpoint:    envStr("OTEL_ENDPOINT", "localhost:4317"),
 			ServiceName: envStr("OTEL_SERVICE_NAME", "teslasync"),
 			Insecure:    envBool("OTEL_INSECURE", true),
+		},
+
+		GoogleMaps: GoogleMapsConfig{
+			APIKey: envStr("GOOGLE_MAPS_API_KEY", ""),
 		},
 	}
 

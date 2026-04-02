@@ -247,6 +247,7 @@ export interface AppSettings {
   gas_price_per_unit: number
   gas_unit: string
   gas_efficiency_mpg: number
+  google_maps_api_key?: string
 }
 
 export interface VehicleState {

@@ -1,7 +1,11 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDrive, getDrivePositions, getDriveTelemetry, getVehicle } from '../api'
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup } from 'react-leaflet'
+import { useState } from 'react'
+import { MapContainer, Polyline, CircleMarker, Popup } from 'react-leaflet'
+import { MapTileLayer } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
@@ -44,6 +48,7 @@ export default function DriveDetail() {
   const { id } = useParams<{ id: string }>()
   const driveId = Number(id)
   const u = useUnits()
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
 
   const { data: drive } = useQuery({
     queryKey: ['drive', driveId],
@@ -460,12 +465,10 @@ export default function DriveDetail() {
               <MapPin className="h-4 w-4 text-neon-cyan" /> Route
             </h3>
           </div>
-          <div className="h-64 sm:h-80 lg:h-96">
+          <div className="h-64 sm:h-80 lg:h-96 relative">
+            <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
             <MapContainer center={centerPos as [number, number]} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-              />
+              <MapTileLayer style={mapStyle} />
               {speedSegments.map((seg, i) => (
                 <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
               ))}

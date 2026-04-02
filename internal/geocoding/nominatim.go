@@ -43,8 +43,8 @@ func NewClient(userAgent string) *Client {
 	}
 }
 
-// ReverseGeocode returns a display name for the given coordinates.
-func (c *Client) ReverseGeocode(ctx context.Context, lat, lon float64) (*NominatimResult, error) {
+// ReverseGeocode returns a GeoResult for the given coordinates (implements Geocoder).
+func (c *Client) ReverseGeocode(ctx context.Context, lat, lon float64) (*GeoResult, error) {
 	// Rate limit: max 1 request per second per Nominatim usage policy
 	c.mu.Lock()
 	elapsed := time.Since(c.lastCall)
@@ -75,12 +75,39 @@ func (c *Client) ReverseGeocode(ctx context.Context, lat, lon float64) (*Nominat
 		return nil, fmt.Errorf("nominatim: unexpected status %d", resp.StatusCode)
 	}
 
-	var result NominatimResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var raw NominatimResult
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("nominatim: failed to decode response: %w", err)
 	}
 
-	return &result, nil
+	return raw.toGeoResult(), nil
+}
+
+// toGeoResult converts a NominatimResult to the common GeoResult type.
+func (r *NominatimResult) toGeoResult() *GeoResult {
+	a := r.Address
+	city := a.City
+	if city == "" {
+		city = a.Town
+	}
+	if city == "" {
+		city = a.Village
+	}
+
+	result := &GeoResult{
+		DisplayName: r.DisplayName,
+		Road:        a.Road,
+		City:        city,
+		State:       a.State,
+		Country:     a.Country,
+		PostCode:    a.PostCode,
+	}
+
+	// Preserve the richer ShortName logic from NominatimResult.
+	if a.Road != "" && city != "" && a.HouseNumber != "" {
+		result.DisplayName = fmt.Sprintf("%s %s, %s", a.HouseNumber, a.Road, city)
+	}
+	return result
 }
 
 // ShortName returns a short, human-readable location name from the result.

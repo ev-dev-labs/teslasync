@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
@@ -74,7 +75,7 @@ type VehicleStreamState struct {
 }
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
-func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleTimeout time.Duration) *TelemetryHandler {
+func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *TelemetryHandler {
 	var eventBus *events.Bus
 	if mc != nil {
 		eventBus = events.NewBus(mc.Underlying())
@@ -104,7 +105,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
-		sessionTracker: NewTelemetrySessionTracker(db, eventBus),
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
 		staleTimeout:   staleTimeout,
 		bgCtx:          bgCtx,
