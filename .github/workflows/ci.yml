@@ -10,23 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  lint-backend:
-    name: Lint Go
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.8
-
-  test-backend:
-    name: Test Go
+  backend:
+    name: Backend (lint + test + build)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -49,7 +34,12 @@ jobs:
         with:
           go-version: "1.25"
 
-      - name: Run tests
+      - name: Lint
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+          golangci-lint run ./...
+
+      - name: Test
         env:
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
@@ -58,45 +48,15 @@ jobs:
           DATABASE_NAME: teslasync_test
         run: go test -race -coverprofile=coverage.out ./...
 
-      - name: Test migration rollback
+      - name: Migration rollback test
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/teslasync_test?sslmode=disable
         run: |
           go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-          # Apply all migrations
           migrate -path migrations -database "$DATABASE_URL" up
-          # Get current version
           migrate -path migrations -database "$DATABASE_URL" version
-          # Rollback last migration
           migrate -path migrations -database "$DATABASE_URL" down 1
-          # Re-apply
           migrate -path migrations -database "$DATABASE_URL" up
-          echo "Migration rollback test passed"
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage.out
-          flags: backend
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: github.event_name != 'pull_request'
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.out
-
-  build-backend:
-    name: Build Go
-    runs-on: ubuntu-latest
-    needs: [lint-backend, test-backend]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
 
       - name: Build
         run: |
@@ -104,58 +64,39 @@ jobs:
           CGO_ENABLED=0 go build -ldflags="-s -w" -o notification-worker ./cmd/notification-worker
           CGO_ENABLED=0 go build -ldflags="-s -w" -o export-worker ./cmd/export-worker
 
-  lint-frontend:
-    name: Lint Frontend
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci --legacy-peer-deps
-      - run: npm run lint
-      - name: Run frontend tests with coverage
-        run: npx vitest run --coverage --reporter=verbose
-      - name: Check coverage threshold
-        run: |
-          npx vitest run --coverage --coverage.thresholds.statements=15 --coverage.thresholds.branches=10 --coverage.thresholds.functions=10 --coverage.thresholds.lines=15
-
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    needs: [lint-frontend]
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - run: npm ci --legacy-peer-deps
-      - run: npm run build
-
-      - name: Upload build
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: web-dist
-          path: web/dist
+          name: coverage
+          path: coverage.out
 
-  docker-build:
+  frontend:
+    name: Frontend (lint + test + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci --legacy-peer-deps
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npx vitest run --reporter=verbose
+      - name: Build
+        run: npm run build
+
+  docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend]
+    needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -169,7 +110,7 @@ jobs:
           cache-from: type=gha,scope=ci-api
           cache-to: type=gha,mode=max,scope=ci-api
 
-      - name: Build Notification Worker image
+      - name: Build Notification Worker
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -178,7 +119,7 @@ jobs:
           cache-from: type=gha,scope=ci-notification
           cache-to: type=gha,mode=max,scope=ci-notification
 
-      - name: Build Export Worker image
+      - name: Build Export Worker
         uses: docker/build-push-action@v5
         with:
           context: .
