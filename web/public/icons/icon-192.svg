@@ -1,22 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="192" height="192">
   <defs>
-    <linearGradient id="bolt-grad" x1="0.3" y1="0" x2="0.7" y2="1">
-      <stop offset="0%" stop-color="#00f0ff"/>
-      <stop offset="50%" stop-color="#40e8c0"/>
-      <stop offset="100%" stop-color="#10b981"/>
+    <linearGradient id="g" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00f0ff"/>
+      <stop offset="1" stop-color="#10b981"/>
     </linearGradient>
-    <linearGradient id="car-glow" x1="0" y1="0.3" x2="1" y2="0.7">
-      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.8"/>
-      <stop offset="50%" stop-color="#00f0ff" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#10b981" stop-opacity="0.6"/>
-    </linearGradient>
-    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="glow-lg"><feGaussianBlur stdDeviation="14" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="glow-sm"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <rect width="512" height="512" fill="#060a14"/>
-  <path d="M110 310 Q100 305 95 295 L90 280 Q85 265 100 255 L130 230 Q150 215 170 205 L200 192 Q230 182 256 178 Q282 182 312 192 L342 205 Q362 215 382 230 L412 255 Q427 265 422 280 L417 295 Q412 305 402 310 L395 320 Q370 330 340 332 L172 332 Q142 330 117 320 Z" fill="none" stroke="url(#car-glow)" stroke-width="4" filter="url(#glow)"/>
-  <ellipse cx="128" cy="278" rx="22" ry="8" fill="#00f0ff" opacity="0.8" filter="url(#glow-sm)" transform="rotate(-5 128 278)"/>
-  <ellipse cx="384" cy="278" rx="22" ry="8" fill="#00f0ff" opacity="0.8" filter="url(#glow-sm)" transform="rotate(5 384 278)"/>
-  <path d="M310 100 L220 260 L280 260 L200 420 L370 230 L300 230 Z" fill="url(#bolt-grad)" filter="url(#glow-lg)" opacity="0.95"/>
+  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#g)"/>
+  <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="white"/>
 </svg>

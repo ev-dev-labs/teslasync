@@ -74,39 +74,28 @@
         50% { transform: translateX(200%); }
         100% { transform: translateX(-100%); }
       }
-      @keyframes orbit-spin {
-        100% { transform: rotate(360deg); }
-      }
       @keyframes bolt-pulse {
-        0% { opacity: 0.85; filter: url(#sgl); }
-        100% { opacity: 1; filter: url(#sgl) brightness(1.2); }
+        0% { opacity: 0.75; }
+        100% { opacity: 1; }
+      }
+      @keyframes carGlow {
+        0% { stroke-opacity: 0.65; }
+        100% { stroke-opacity: 1; }
       }
     </style>
   </head>
   <body class="bg-tesla-dark text-white antialiased">
     <div id="splash">
       <div class="brand-logo">
-        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
           <defs>
-            <linearGradient id="sb" x1="0.3" y1="0" x2="0.7" y2="1">
+            <linearGradient id="sg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
               <stop stop-color="#00f0ff"/>
-              <stop offset="0.5" stop-color="#40e8c0"/>
               <stop offset="1" stop-color="#10b981"/>
             </linearGradient>
-            <linearGradient id="sc" x1="0" y1="0.3" x2="1" y2="0.7">
-              <stop stop-color="#00f0ff" stop-opacity="0.7"/>
-              <stop offset="1" stop-color="#10b981" stop-opacity="0.5"/>
-            </linearGradient>
-            <filter id="sg"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="sgl"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           </defs>
-          <!-- Car silhouette -->
-          <path d="M35 128 Q32 124 37 120 L52 110 Q65 102 80 97 L100 92 Q115 89 130 92 L150 97 Q165 102 178 110 L193 120 Q198 124 195 128 L188 132 Q165 138 130 140 L100 140 Q65 138 42 132 Z" fill="none" stroke="url(#sc)" stroke-width="2.5" filter="url(#sg)"/>
-          <!-- Headlights -->
-          <ellipse cx="48" cy="122" rx="9" ry="4" fill="#00f0ff" opacity="0.9" filter="url(#sg)"/>
-          <ellipse cx="182" cy="122" rx="9" ry="4" fill="#00f0ff" opacity="0.9" filter="url(#sg)"/>
-          <!-- Lightning bolt -->
-          <path d="M128 22 L92 95 h25 L84 178 l55-80 h-26 Z" fill="url(#sb)" filter="url(#sgl)" opacity="0.95" style="animation: bolt-pulse 2s ease-in-out infinite alternate"/>
+          <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#sg)"/>
+          <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="white" style="animation: bolt-pulse 2s ease-in-out infinite alternate"/>
         </svg>
       </div>
       <div class="logo-text">TeslaSync</div>

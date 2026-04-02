@@ -239,19 +239,60 @@ export function TeslaCarViz({
         {/* Model-specific car body */}
         <ModelBody model={model} driving={driving} palette={palette} />
 
+        {/* Body detail lines — door seams, side skirt, roof highlight */}
+        {model !== 'cybertruck' && (
+          <g>
+            {/* Roof highlight (shine line) */}
+            <path
+              d={model === 'models'
+                ? 'M200 90 Q280 82 380 85'
+                : model === 'modelx' || model === 'modely'
+                ? 'M210 82 Q280 74 370 78'
+                : 'M210 92 Q280 84 370 86'}
+              fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" strokeLinecap="round"
+            />
+            {/* Front door seam */}
+            <line
+              x1={model === 'models' ? 270 : 265} y1={model === 'modelx' ? 82 : model === 'modely' ? 85 : 90}
+              x2={model === 'models' ? 268 : 260} y2="205"
+              stroke={palette.detail.lineFaint} strokeWidth="0.8"
+            />
+            {/* Rear door seam */}
+            <line
+              x1={model === 'models' ? 355 : 345} y1={model === 'modelx' ? 85 : model === 'modely' ? 88 : 92}
+              x2={model === 'models' ? 358 : 348} y2="205"
+              stroke={palette.detail.lineFaint} strokeWidth="0.8"
+            />
+            {/* Side skirt line */}
+            <path
+              d={model === 'models'
+                ? 'M115 200 Q200 208 330 208 Q440 208 510 200'
+                : model === 'modelx' || model === 'modely'
+                ? 'M115 205 Q200 213 330 213 Q440 213 505 205'
+                : 'M110 200 Q200 208 330 208 Q430 208 505 200'}
+              fill="none" stroke={palette.detail.lineFaint} strokeWidth="0.8"
+            />
+          </g>
+        )}
+
 
         {/* Front wheel */}
         <g transform={`translate(${WHEEL_POS[model].fx}, ${WHEEL_POS[model].wy})`}>
-          <circle r="32" fill={palette.wheel.outer} stroke={palette.wheel.outerStroke} strokeWidth="1" />
-          <motion.circle
-            r={model === 'cybertruck' ? 24 : 22}
-            fill={palette.wheel.inner}
-            stroke={palette.wheel.innerStroke}
-            strokeWidth="2"
+          <circle r="32" fill={palette.wheel.outer} stroke={palette.wheel.outerStroke} strokeWidth="1.5" />
+          <motion.g
             animate={driving ? { rotate: 360 } : {}}
             transition={driving ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}
-          />
-          <circle r="8" fill={palette.wheel.hub} stroke={palette.wheel.hubStroke} strokeWidth="1" />
+          >
+            <circle r={model === 'cybertruck' ? 24 : 22} fill={palette.wheel.inner} stroke={palette.wheel.innerStroke} strokeWidth="2" />
+            {/* 5-spoke design */}
+            {[0, 72, 144, 216, 288].map(angle => (
+              <line key={angle} x1="0" y1="0" x2="0" y2={model === 'cybertruck' ? -22 : -20}
+                stroke={palette.wheel.hubStroke} strokeWidth="2.5" strokeLinecap="round"
+                transform={`rotate(${angle})`} />
+            ))}
+          </motion.g>
+          <circle r="8" fill={palette.wheel.hub} stroke={palette.wheel.hubStroke} strokeWidth="1.5" />
+          <circle r="3" fill={palette.wheel.hubStroke} opacity="0.5" />
           {model === 'cybertruck' && <>{/* Beefy tire tread lines */}
             {[-18,-12,-6,0,6,12,18].map(a => <line key={a} x1={a} y1="-24" x2={a} y2="-20" stroke={palette.tread} strokeWidth="2" />)}
           </>}
@@ -259,47 +300,105 @@ export function TeslaCarViz({
 
         {/* Rear wheel */}
         <g transform={`translate(${WHEEL_POS[model].rx}, ${WHEEL_POS[model].wy})`}>
-          <circle r="32" fill={palette.wheel.outer} stroke={palette.wheel.outerStroke} strokeWidth="1" />
-          <motion.circle
-            r={model === 'cybertruck' ? 24 : 22}
-            fill={palette.wheel.inner}
-            stroke={palette.wheel.innerStroke}
-            strokeWidth="2"
+          <circle r="32" fill={palette.wheel.outer} stroke={palette.wheel.outerStroke} strokeWidth="1.5" />
+          <motion.g
             animate={driving ? { rotate: 360 } : {}}
             transition={driving ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}
-          />
-          <circle r="8" fill={palette.wheel.hub} stroke={palette.wheel.hubStroke} strokeWidth="1" />
+          >
+            <circle r={model === 'cybertruck' ? 24 : 22} fill={palette.wheel.inner} stroke={palette.wheel.innerStroke} strokeWidth="2" />
+            {[0, 72, 144, 216, 288].map(angle => (
+              <line key={angle} x1="0" y1="0" x2="0" y2={model === 'cybertruck' ? -22 : -20}
+                stroke={palette.wheel.hubStroke} strokeWidth="2.5" strokeLinecap="round"
+                transform={`rotate(${angle})`} />
+            ))}
+          </motion.g>
+          <circle r="8" fill={palette.wheel.hub} stroke={palette.wheel.hubStroke} strokeWidth="1.5" />
+          <circle r="3" fill={palette.wheel.hubStroke} opacity="0.5" />
         </g>
 
-        {/* Headlight */}
-        <motion.ellipse
-          cx={WHEEL_POS[model].headX} cy={WHEEL_POS[model].headY}
-          rx={model === 'cybertruck' ? 4 : 8} ry={model === 'cybertruck' ? 3 : 12}
-          fill={driving ? '#fffbe6' : palette.headlightOff}
-          animate={driving ? { opacity: [0.8, 1, 0.8] } : {}}
-          transition={driving ? { duration: 2, repeat: Infinity } : {}}
-          style={driving ? { filter: 'drop-shadow(0 0 8px rgba(255,251,230,0.6))' } : {}}
-        />
+        {/* Headlight — Tesla-style slim DRL strip + projector */}
+        <g>
+          {/* DRL strip (always on when awake) */}
+          <motion.path
+            d={model === 'cybertruck'
+              ? `M${WHEEL_POS[model].headX} ${WHEEL_POS[model].headY - 3} L${WHEEL_POS[model].headX + 20} ${WHEEL_POS[model].headY - 5}`
+              : `M${WHEEL_POS[model].headX - 2} ${WHEEL_POS[model].headY - 14} Q${WHEEL_POS[model].headX - 6} ${WHEEL_POS[model].headY} ${WHEEL_POS[model].headX - 2} ${WHEEL_POS[model].headY + 14}`}
+            fill="none"
+            stroke={driving ? '#ffffff' : palette.headlightOff}
+            strokeWidth={model === 'cybertruck' ? 3 : 2.5}
+            strokeLinecap="round"
+            animate={driving ? { opacity: [0.85, 1, 0.85] } : {}}
+            transition={driving ? { duration: 2.5, repeat: Infinity } : {}}
+            style={driving ? { filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.7))' } : {}}
+          />
+          {/* Main projector lens */}
+          <ellipse
+            cx={WHEEL_POS[model].headX + (model === 'cybertruck' ? 5 : 2)}
+            cy={WHEEL_POS[model].headY}
+            rx={model === 'cybertruck' ? 3 : 4}
+            ry={model === 'cybertruck' ? 2.5 : 6}
+            fill={driving ? '#fffbe6' : palette.headlightOff}
+            opacity={driving ? 0.9 : 0.5}
+            style={driving ? { filter: 'drop-shadow(0 0 10px rgba(255,251,230,0.8))' } : {}}
+          />
+          {/* Amber turn signal accent */}
+          <ellipse
+            cx={WHEEL_POS[model].headX + (model === 'cybertruck' ? 10 : 6)}
+            cy={WHEEL_POS[model].headY + (model === 'cybertruck' ? 0 : 12)}
+            rx={model === 'cybertruck' ? 2 : 3}
+            ry={model === 'cybertruck' ? 1.5 : 2}
+            fill={driving ? '#fbbf24' : palette.headlightOff}
+            opacity={driving ? 0.5 : 0.2}
+          />
+        </g>
 
-        {/* Headlight beam (when driving) */}
+        {/* Headlight beam cone (when driving) */}
         {driving && (
           <motion.path
-            d={`M${WHEEL_POS[model].headX - 7} ${WHEEL_POS[model].headY - 10} L${WHEEL_POS[model].headX - 55} ${WHEEL_POS[model].headY - 45} L${WHEEL_POS[model].headX - 55} ${WHEEL_POS[model].headY + 25} L${WHEEL_POS[model].headX - 7} ${WHEEL_POS[model].headY + 10} Z`}
-            fill="rgba(255,251,230,0.04)"
+            d={`M${WHEEL_POS[model].headX - 5} ${WHEEL_POS[model].headY - 8} L${WHEEL_POS[model].headX - 60} ${WHEEL_POS[model].headY - 40} L${WHEEL_POS[model].headX - 60} ${WHEEL_POS[model].headY + 20} L${WHEEL_POS[model].headX - 5} ${WHEEL_POS[model].headY + 8} Z`}
+            fill="rgba(255,251,230,0.03)"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={{ opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 3, repeat: Infinity }}
           />
         )}
 
-        {/* Tail light */}
-        <motion.rect
-          x={WHEEL_POS[model].tailX} y={WHEEL_POS[model].tailY} width={model === 'cybertruck' ? 8 : 6} height={model === 'cybertruck' ? 12 : 18} rx="3"
-          fill="#ef4444"
-          animate={{ opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))' }}
-        />
+        {/* Tail light — Tesla-style continuous LED strip */}
+        <g>
+          {/* Main tail light strip */}
+          <motion.path
+            d={model === 'cybertruck'
+              ? `M${WHEEL_POS[model].tailX} ${WHEEL_POS[model].tailY - 8} L${WHEEL_POS[model].tailX} ${WHEEL_POS[model].tailY + 12}`
+              : `M${WHEEL_POS[model].tailX + 3} ${WHEEL_POS[model].tailY - 2} Q${WHEEL_POS[model].tailX + 5} ${WHEEL_POS[model].tailY + 9} ${WHEEL_POS[model].tailX + 3} ${WHEEL_POS[model].tailY + 20}`}
+            fill="none"
+            stroke="#ef4444"
+            strokeWidth={model === 'cybertruck' ? 4 : 3}
+            strokeLinecap="round"
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.6))' }}
+          />
+          {/* Inner brighter core */}
+          <motion.path
+            d={model === 'cybertruck'
+              ? `M${WHEEL_POS[model].tailX} ${WHEEL_POS[model].tailY - 4} L${WHEEL_POS[model].tailX} ${WHEEL_POS[model].tailY + 8}`
+              : `M${WHEEL_POS[model].tailX + 3} ${WHEEL_POS[model].tailY + 2} Q${WHEEL_POS[model].tailX + 4} ${WHEEL_POS[model].tailY + 9} ${WHEEL_POS[model].tailX + 3} ${WHEEL_POS[model].tailY + 16}`}
+            fill="none"
+            stroke="#ff6b6b"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            opacity="0.8"
+          />
+          {/* Tail light glow halo */}
+          <ellipse
+            cx={WHEEL_POS[model].tailX + 3}
+            cy={WHEEL_POS[model].tailY + 9}
+            rx="8"
+            ry="14"
+            fill="rgba(239,68,68,0.08)"
+            style={{ filter: 'blur(4px)' }}
+          />
+        </g>
 
         {/* Door handle / feature line */}
         {model === 'cybertruck' ? (

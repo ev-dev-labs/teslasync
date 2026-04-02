@@ -1,21 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="32" height="32">
   <defs>
-    <linearGradient id="g" x1="0.3" y1="0" x2="0.7" y2="1">
+    <linearGradient id="g" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
       <stop stop-color="#00f0ff"/>
-      <stop offset="0.5" stop-color="#40e8c0"/>
       <stop offset="1" stop-color="#10b981"/>
     </linearGradient>
-    <linearGradient id="cg" x1="0" y1="0.3" x2="1" y2="0.7">
-      <stop stop-color="#00f0ff" stop-opacity="0.7"/>
-      <stop offset="1" stop-color="#10b981" stop-opacity="0.5"/>
-    </linearGradient>
   </defs>
-  <rect width="48" height="48" rx="10" fill="#060a14"/>
-  <!-- Simplified car outline -->
-  <path d="M8 30 Q7 28 9 26 L13 23 Q17 20 24 19 Q31 20 35 23 L39 26 Q41 28 40 30 L38 31 Q32 33 24 33 Q16 33 10 31 Z" fill="none" stroke="url(#cg)" stroke-width="1.5"/>
-  <!-- Headlights -->
-  <circle cx="12" cy="27" r="2" fill="#00f0ff" opacity="0.9"/>
-  <circle cx="36" cy="27" r="2" fill="#00f0ff" opacity="0.9"/>
-  <!-- Bold bolt -->
-  <path d="M29 5L21 23h6L19 43l14-18h-6z" fill="url(#g)"/>
+  <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#g)"/>
+  <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="white"/>
 </svg>

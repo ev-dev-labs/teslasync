@@ -102,6 +102,14 @@ export default {
           '60%': { transform: 'scale(1.1)' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        boltPulse: {
+          '0%': { opacity: '0.8' },
+          '100%': { opacity: '1' },
+        },
+        carGlow: {
+          '0%': { strokeOpacity: '0.7' },
+          '100%': { strokeOpacity: '1' },
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
