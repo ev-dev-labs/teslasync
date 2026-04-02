@@ -54,7 +54,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 
 	chargerTypeMap := make(map[string]int)
 	var chargePowers, chargeDurations, chargeEnergies, chargeCosts, chargeEfficiencies []float64
-	var chargeStartBat []int
 	hourChargeCounts := make([]int, 24)
 	hourChargeEnergy := make([]float64, 24)
 	monthlyChargeAgg := make(map[string]map[string]interface{})
@@ -185,7 +184,6 @@ func (p *Processor) processAnalytics(ctx context.Context, req *models.ExportJobR
 			if s.Cost != nil {
 				chargeCosts = append(chargeCosts, *s.Cost)
 			}
-			chargeStartBat = append(chargeStartBat, s.StartBatteryLevel)
 
 			if s.ChargeEnergyUsed != nil && *s.ChargeEnergyUsed > 0 {
 				chargeEfficiencies = append(chargeEfficiencies, (s.ChargeEnergyAdded / *s.ChargeEnergyUsed) * 100)

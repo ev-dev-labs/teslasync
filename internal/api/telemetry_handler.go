@@ -1984,6 +1984,7 @@ func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID i
 }
 
 // formatSignalName converts camelCase signal names to snake_case for MQTT topic consistency.
+var _ = formatSignalName // kept for potential future use
 func formatSignalName(name string) string {
 	return strings.ToLower(name)
 }

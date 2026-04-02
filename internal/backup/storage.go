@@ -340,7 +340,7 @@ func NewGCSStorage(cfg GCSConfig) (*GCSStorage, error) {
 	ctx := context.Background()
 	var opts []option.ClientOption
 	if cfg.CredentialsJSON != "" {
-		opts = append(opts, option.WithCredentialsJSON([]byte(cfg.CredentialsJSON)))
+		opts = append(opts, option.WithCredentialsJSON([]byte(cfg.CredentialsJSON))) //nolint:staticcheck // WithCredentialsJSON works fine for service account JSON
 	}
 	client, err := gcStorage.NewClient(ctx, opts...)
 	if err != nil {
