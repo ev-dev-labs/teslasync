@@ -1,6 +1,7 @@
 package export
 
 import (
+	"context"
 	"testing"
 )
 
@@ -125,6 +126,6 @@ func TestNewWorker_NilDB(t *testing.T) {
 func TestWorker_Start_NilClient(t *testing.T) {
 	// Start with nil MQTT client should return immediately
 	w := &Worker{}
-	w.Start(nil, nil)
+	w.Start(context.TODO(), nil)
 	// No panic = success
 }
