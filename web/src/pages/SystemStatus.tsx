@@ -207,16 +207,17 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
 
       {/* Signals Modal */}
       {showSignalsModal && info.details?.supported_signals && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowSignalsModal(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="glass-panel p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto"
+            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl border border-white/10 p-6 overflow-y-auto"
+            style={{ background: 'var(--surface-1, #0a0b1a)' }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between mb-4 pb-3 border-b border-white/10" style={{ background: 'var(--surface-1, #0a0b1a)' }}>
               <h3 className="text-lg font-bold text-[var(--text-primary)]">Subscribed Signals ({info.details.supported_signals.length})</h3>
-              <button onClick={() => setShowSignalsModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+              <button onClick={() => setShowSignalsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-lg">✕</button>
             </div>
             {SIGNAL_GROUPS.map(group => {
               const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
