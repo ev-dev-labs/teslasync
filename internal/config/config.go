@@ -23,10 +23,16 @@ type Config struct {
 	GasPrice       GasPriceConfig
 	OpenTelemetry  OpenTelemetryConfig
 	GoogleMaps     GoogleMapsConfig
+	AzureMaps      AzureMapsConfig
 }
 
 // GoogleMapsConfig holds settings for the Google Maps geocoding API.
 type GoogleMapsConfig struct {
+	APIKey string
+}
+
+// AzureMapsConfig holds settings for the Azure Maps geocoding API.
+type AzureMapsConfig struct {
 	APIKey string
 }
 
@@ -223,6 +229,10 @@ func Load() (*Config, error) {
 
 		GoogleMaps: GoogleMapsConfig{
 			APIKey: envStr("GOOGLE_MAPS_API_KEY", ""),
+		},
+
+		AzureMaps: AzureMapsConfig{
+			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
 		},
 	}
 

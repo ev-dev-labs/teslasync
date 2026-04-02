@@ -422,6 +422,32 @@ config:
     apiKey: "AIza..."
 ```
 
+## Azure Maps (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AZURE_MAPS_API_KEY` | _(empty)_ | Azure Maps subscription key. Alternative to Google Maps |
+
+Azure Maps provides 250,000 free transactions/month — significantly more than Google's free tier. Useful for organizations already on Azure.
+
+**Geocoding priority:** Google Maps → Azure Maps → Nominatim. If both keys are set, Google takes precedence.
+
+Get a key at [portal.azure.com](https://portal.azure.com) → Create an Azure Maps Account.
+
+### Docker Compose
+
+```bash
+AZURE_MAPS_API_KEY=your-key... docker compose up -d
+```
+
+### Helm
+
+```yaml
+config:
+  azureMaps:
+    apiKey: "your-key..."
+```
+
 ## Tesla Fleet API Region
 
 | Variable | Default | Description |

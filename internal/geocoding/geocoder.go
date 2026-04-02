@@ -33,11 +33,14 @@ func (r *GeoResult) ShortName() string {
 	return r.DisplayName
 }
 
-// NewGeocoder returns a Google Maps geocoder when an API key is provided,
-// otherwise falls back to the free Nominatim (OpenStreetMap) geocoder.
-func NewGeocoder(googleAPIKey string) Geocoder {
+// NewGeocoder returns the best available geocoder based on configured API keys.
+// Priority: Google Maps → Azure Maps → Nominatim (free, always available).
+func NewGeocoder(googleAPIKey, azureAPIKey string) Geocoder {
 	if googleAPIKey != "" {
 		return NewGoogleClient(googleAPIKey)
+	}
+	if azureAPIKey != "" {
+		return NewAzureClient(azureAPIKey)
 	}
 	return NewClient("TeslaSync/1.0")
 }

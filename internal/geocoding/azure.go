@@ -1,0 +1,80 @@
+package geocoding
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+// AzureClient implements Geocoder using Azure Maps Search API.
+type AzureClient struct {
+	apiKey string
+	client *http.Client
+}
+
+func NewAzureClient(apiKey string) *AzureClient {
+	return &AzureClient{
+		apiKey: apiKey,
+		client: &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+type azureReverseResponse struct {
+	Addresses []azureReverseAddress `json:"addresses"`
+}
+
+type azureReverseAddress struct {
+	Address azureAddress `json:"address"`
+}
+
+type azureAddress struct {
+	FreeformAddress    string `json:"freeformAddress"`
+	StreetName         string `json:"streetName"`
+	Municipality       string `json:"municipality"`
+	CountrySubdivision string `json:"countrySubdivision"`
+	Country            string `json:"country"`
+	PostalCode         string `json:"postalCode"`
+}
+
+func (c *AzureClient) ReverseGeocode(ctx context.Context, lat, lon float64) (*GeoResult, error) {
+	url := fmt.Sprintf(
+		"https://atlas.microsoft.com/search/address/reverse/json?api-version=1.0&query=%f,%f&subscription-key=%s",
+		lat, lon, c.apiKey,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("azure geocode request: %w", err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("azure geocode: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("azure geocode: status %d", resp.StatusCode)
+	}
+
+	var result azureReverseResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("azure geocode decode: %w", err)
+	}
+
+	if len(result.Addresses) == 0 {
+		return &GeoResult{DisplayName: fmt.Sprintf("%.4f, %.4f", lat, lon)}, nil
+	}
+
+	addr := result.Addresses[0].Address
+	return &GeoResult{
+		DisplayName: addr.FreeformAddress,
+		Road:        addr.StreetName,
+		City:        addr.Municipality,
+		State:       addr.CountrySubdivision,
+		Country:     addr.Country,
+		PostCode:    addr.PostalCode,
+	}, nil
+}

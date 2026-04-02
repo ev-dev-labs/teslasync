@@ -422,6 +422,13 @@ config:
   googleMaps:
     apiKey: ""
 
+  # ── Azure Maps (optional) ──────────────────────────────────────────────
+  # Alternative to Google Maps. Free tier: 250,000 transactions/month.
+  # Get a key at https://portal.azure.com → Create Azure Maps Account
+  # Priority: Google Maps → Azure Maps → Nominatim (free).
+  azureMaps:
+    apiKey: ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
 #

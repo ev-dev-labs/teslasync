@@ -45,6 +45,7 @@ services:
       - OTEL_SERVICE_NAME=teslasync-api
       - OTEL_INSECURE=true
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
+      - AZURE_MAPS_API_KEY=${AZURE_MAPS_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

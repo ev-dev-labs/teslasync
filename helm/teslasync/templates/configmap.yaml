@@ -57,3 +57,6 @@ data:
   {{- if .Values.config.googleMaps.apiKey }}
   GOOGLE_MAPS_API_KEY: {{ .Values.config.googleMaps.apiKey | quote }}
   {{- end }}
+  {{- if .Values.config.azureMaps.apiKey }}
+  AZURE_MAPS_API_KEY: {{ .Values.config.azureMaps.apiKey | quote }}
+  {{- end }}
