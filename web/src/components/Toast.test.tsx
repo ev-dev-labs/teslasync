@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { ToastProvider, useToast } from './Toast'
 
 // Mock framer-motion to render children immediately without animations
@@ -11,12 +11,12 @@ vi.mock('framer-motion', () => ({
 
 // Filter out non-DOM props from framer-motion
 function filterDomProps(props: Record<string, any>) {
-  const { layout, initial, animate, exit, transition, ...rest } = props
+  const { layout: _l, initial: _i, animate: _a, exit: _e, transition: _t, ...rest } = props
   return rest
 }
 
 // Helper component that triggers toasts via the hook
-function ToastTrigger({ type, title, message, duration }: {
+function ToastTrigger({ type, title, message, duration: _duration }: {
   type: 'success' | 'error' | 'info' | 'warning'
   title: string
   message?: string
@@ -30,7 +30,7 @@ function ToastTrigger({ type, title, message, duration }: {
   )
 }
 
-function ToastTriggerWithDuration({ duration }: { duration: number }) {
+function _ToastTriggerWithDuration({ duration }: { duration: number }) {
   const toast = useToast()
   return (
     <button onClick={() => toast.toast({ type: 'info', title: 'timed', duration })}>
@@ -101,7 +101,7 @@ describe('Toast', () => {
     expect(screen.getByText('Dismiss me')).toBeInTheDocument()
 
     // The X close button
-    const closeBtn = container.querySelector('button:not(:first-child)')
+    const _closeBtn = container.querySelector('button:not(:first-child)')
     // Find the close button inside the toast (not the trigger button)
     const allButtons = container.querySelectorAll('button')
     const dismissBtn = Array.from(allButtons).find(b => b !== screen.getByText('fire'))
