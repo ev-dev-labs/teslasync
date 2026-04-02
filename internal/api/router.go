@@ -116,6 +116,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	safetyHandler := NewSafetyHandler(db)
 	userPreferenceHandler := NewUserPreferenceHandler(db)
 	softwareUpdateHandler := NewSoftwareUpdateHandler(db)
+	tcoHandler := NewTCOHandler(db)
+	sleepHandler := NewSleepHandler(db)
 	vampireDrainHandler := NewVampireDrainHandler(db)
 	visitedLocationHandler := NewVisitedLocationHandler(db)
 	mileageHandler := NewMileageHandler(db)
@@ -123,10 +125,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleStateHandler := NewVehicleStateHandler(db)
 	backupHandler := NewBackupHandler(db)
 	backupRestoreHandler := NewBackupRestoreHandler(db)
+	regenHandler := NewRegenHandler(db)
+	batteryDegradationHandler := NewBatteryDegradationHandler(db)
 	auditHandler := NewAuditHandler(db)
 	apiCallLogHandler := NewAPICallLogHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db)
+	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
+	speedProfileHandler := NewSpeedProfileHandler(db)
 	dataRepairHandler := NewDataRepairHandler(db)
+	tempImpactHandler := NewTempImpactHandler(db)
+	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -233,6 +241,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Analytics
 		r.Get("/analytics/fleet", analyticsHandler.Fleet)
+		r.Get("/analytics/tco", tcoHandler.GetTCO)
+		r.Get("/analytics/sleep", sleepHandler.GetSleepAnalytics)
+		r.Get("/analytics/regen", regenHandler.Stats)
+		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
+		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
+		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
+		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
+		r.Get("/analytics/route-efficiency", routeEfficiencyHandler.List)
+		r.Get("/analytics/route-efficiency/detail", routeEfficiencyHandler.Detail)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {

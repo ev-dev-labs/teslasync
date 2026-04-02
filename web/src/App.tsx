@@ -58,6 +58,14 @@ const SafetySettings = lazy(() => import('./pages/SafetySettings'))
 const NavigationRoute = lazy(() => import('./pages/NavigationRoute'))
 const DataRepair = lazy(() => import('./pages/DataRepair'))
 const BackupRestore = lazy(() => import('./pages/BackupRestore'))
+const TemperatureImpact = lazy(() => import('./pages/TemperatureImpact'))
+const RouteEfficiency = lazy(() => import('./pages/RouteEfficiency'))
+const RegenEfficiency = lazy(() => import('./pages/RegenEfficiency'))
+const BatteryDegradation = lazy(() => import('./pages/BatteryDegradation'))
+const TrueCostOwnership = lazy(() => import('./pages/TrueCostOwnership'))
+const SleepEfficiency = lazy(() => import('./pages/SleepEfficiency'))
+const ChargingHeatmap = lazy(() => import('./pages/ChargingHeatmap'))
+const SpeedProfile = lazy(() => import('./pages/SpeedProfile'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -125,6 +133,14 @@ export default function App() {
         <Route path="navigation" element={<SafeRoute name="NavigationRoute"><NavigationRoute /></SafeRoute>} />
         <Route path="data-repair" element={<SafeRoute name="DataRepair"><DataRepair /></SafeRoute>} />
         <Route path="backup" element={<SafeRoute name="BackupRestore"><BackupRestore /></SafeRoute>} />
+        <Route path="temperature-impact" element={<SafeRoute name="TemperatureImpact"><TemperatureImpact /></SafeRoute>} />
+        <Route path="route-efficiency" element={<SafeRoute name="RouteEfficiency"><RouteEfficiency /></SafeRoute>} />
+        <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
+        <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
+        <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
+        <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
+        <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
+        <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
       </Route>
     </Routes>
   )

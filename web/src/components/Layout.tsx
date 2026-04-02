@@ -28,6 +28,8 @@ import {
   Navigation,
   Activity,
   GitCompare,
+  Wallet,
+  BedDouble,
   Shield,
   FileText,
   Wrench,
@@ -35,6 +37,7 @@ import {
   Lock,
   Cog,
   TrendingUp,
+  TrendingDown,
   DollarSign,
   Battery,
   Trophy,
@@ -43,6 +46,7 @@ import {
   HardDriveDownload,
   Headphones,
   DatabaseBackup,
+  Recycle,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -84,6 +88,8 @@ const navI18nKeys: Record<string, string> = {
   'Driving Dynamics': 'nav.drivingDynamics',
   'Climate Control': 'nav.climateControl',
   'Security & Access': 'nav.securityAccess',
+  'Temperature Impact': 'nav.temperatureImpact',
+  'Route Efficiency': 'nav.routeEfficiency',
 }
 
 function SSEStatusDot({ connected }: { connected: boolean }) {
@@ -113,13 +119,18 @@ const navSections = [
     items: [
       { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
       { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
+      { to: '/tco', icon: Wallet, label: 'Cost of Ownership', color: 'text-green-400' },
       { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
       { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
+      { to: '/battery-degradation', icon: TrendingDown, label: 'Degradation', color: 'text-orange-400' },
       { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
       { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
+      { to: '/charging-heatmap', icon: BarChart3, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
+      { to: '/regen-efficiency', icon: Recycle, label: 'Regen Braking', color: 'text-green-400' },
+      { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
       { to: '/efficiency', icon: Zap, label: 'Efficiency', color: 'text-amber-400' },
       { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
       { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },
@@ -129,6 +140,8 @@ const navSections = [
       { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
       { to: '/energy-flow', icon: Zap, label: 'Energy Flow', color: 'text-yellow-400' },
       { to: '/drivetrain-health', icon: Cog, label: 'Drivetrain Health', color: 'text-red-400' },
+      { to: '/temperature-impact', icon: Thermometer, label: 'Temperature Impact', color: 'text-blue-400' },
+      { to: '/route-efficiency', icon: Route, label: 'Route Efficiency', color: 'text-emerald-400' },
     ],
   },
   {
@@ -149,6 +162,7 @@ const navSections = [
       { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
       { to: '/trips', icon: Navigation, label: 'Trips', color: 'text-violet-400' },
       { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
+      { to: '/sleep-efficiency', icon: BedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
       { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
       { to: '/maintenance', icon: WrenchIcon, label: 'Maintenance', color: 'text-amber-400' },
     ],
