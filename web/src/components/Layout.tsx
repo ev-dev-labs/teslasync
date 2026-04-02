@@ -235,7 +235,7 @@ export default function Layout() {
   const mainRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+    <div className="relative h-dvh" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -394,7 +394,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-col lg:ml-64 h-dvh overflow-hidden">
         {/* Mobile top bar */}
         <header className="flex items-center border-b backdrop-blur-xl px-3 py-2.5 sm:px-5 sm:py-3 lg:hidden safe-top" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}>
           <button

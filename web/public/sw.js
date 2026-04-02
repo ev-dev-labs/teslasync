@@ -34,6 +34,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
+  // Only handle http/https — skip chrome-extension, data, etc.
+  if (!url.protocol.startsWith('http')) return
+
+  // Skip cross-origin auth/OAuth redirects
+  if (url.origin !== self.location.origin && !url.hostname.includes('basemaps.cartocdn.com') &&
+      !url.hostname.includes('tile.openstreetmap.org') && !url.hostname.includes('arcgisonline.com') &&
+      !url.hostname.includes('opentopomap.org') && !url.hostname.includes('atlas.microsoft.com') &&
+      !url.hostname.includes('google.com')) return
+
   // API calls: network-first (always fresh vehicle data)
   if (url.pathname.startsWith('/api/') || url.pathname === '/healthz' || url.pathname === '/readyz') {
     event.respondWith(networkFirst(event.request))
