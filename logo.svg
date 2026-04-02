@@ -1,30 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bolt-grad" x1="0.3" y1="0" x2="0.7" y2="1">
       <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="50%" stop-color="#40e8c0"/>
       <stop offset="100%" stop-color="#10b981"/>
     </linearGradient>
-    <filter id="g"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="s"><feGaussianBlur stdDeviation="15"/></filter>
+    <linearGradient id="car-glow" x1="0" y1="0.3" x2="1" y2="0.7">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#00f0ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-lg"><feGaussianBlur stdDeviation="14" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-sm"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <circle cx="100" cy="100" r="100" fill="#020208"/>
-  <!-- Deep space glow -->
-  <circle cx="100" cy="90" r="80" fill="#00f0ff" opacity="0.025" filter="url(#s)"/>
-  <circle cx="80" cy="110" r="50" fill="#a855f7" opacity="0.02" filter="url(#s)"/>
-  <!-- Orbital rings -->
-  <ellipse cx="100" cy="100" rx="75" ry="20" fill="none" stroke="#00f0ff" stroke-width="1" opacity="0.2" transform="rotate(-15 100 100)"/>
-  <ellipse cx="100" cy="100" rx="75" ry="20" fill="none" stroke="#10b981" stroke-width="1" opacity="0.2" transform="rotate(20 100 100)"/>
-  <ellipse cx="100" cy="100" rx="75" ry="20" fill="none" stroke="#a855f7" stroke-width="0.7" opacity="0.15" transform="rotate(55 100 100)"/>
-  <!-- Particles -->
-  <circle cx="173" cy="95" r="3.5" fill="#00f0ff" opacity="0.8" filter="url(#g)"/>
-  <circle cx="38" cy="115" r="3" fill="#10b981" opacity="0.7" filter="url(#g)"/>
-  <circle cx="125" cy="68" r="2.5" fill="#a855f7" opacity="0.6" filter="url(#g)"/>
-  <circle cx="70" cy="125" r="2" fill="#00f0ff" opacity="0.5"/>
-  <circle cx="145" cy="118" r="1.8" fill="#10b981" opacity="0.4"/>
-  <!-- Central sphere -->
-  <circle cx="100" cy="100" r="24" fill="#060610" stroke="url(#lg)" stroke-width="2.5"/>
-  <circle cx="100" cy="100" r="30" fill="none" stroke="url(#lg)" stroke-width="0.5" opacity="0.3"/>
-  <circle cx="100" cy="100" r="16" fill="#00f0ff" opacity="0.06" filter="url(#g)"/>
-  <!-- Bolt -->
-  <path d="M104 88l-8 14h6l-5 11 12-14h-6z" fill="url(#lg)" filter="url(#g)"/>
+  <rect width="512" height="512" fill="#060a14"/>
+  <!-- Car silhouette -->
+  <path d="M110 310 Q100 305 95 295 L90 280 Q85 265 100 255 L130 230 Q150 215 170 205 L200 192 Q230 182 256 178 Q282 182 312 192 L342 205 Q362 215 382 230 L412 255 Q427 265 422 280 L417 295 Q412 305 402 310 L395 320 Q370 330 340 332 L172 332 Q142 330 117 320 Z" fill="none" stroke="url(#car-glow)" stroke-width="3" filter="url(#glow)"/>
+  <path d="M175 210 Q215 195 256 192 Q297 195 337 210 L355 225 Q340 218 256 218 Q172 218 157 225 Z" fill="url(#car-glow)" opacity="0.12"/>
+  <path d="M140 260 Q200 248 256 245 Q312 248 372 260" fill="none" stroke="url(#car-glow)" stroke-width="1.5" opacity="0.4"/>
+  <ellipse cx="128" cy="278" rx="22" ry="8" fill="#00f0ff" opacity="0.7" filter="url(#glow-sm)" transform="rotate(-5 128 278)"/>
+  <ellipse cx="128" cy="278" rx="14" ry="5" fill="#00f0ff" opacity="0.9" transform="rotate(-5 128 278)"/>
+  <ellipse cx="384" cy="278" rx="22" ry="8" fill="#00f0ff" opacity="0.7" filter="url(#glow-sm)" transform="rotate(5 384 278)"/>
+  <ellipse cx="384" cy="278" rx="14" ry="5" fill="#00f0ff" opacity="0.9" transform="rotate(5 384 278)"/>
+  <path d="M95 248 L80 242 Q75 240 78 236 L88 232 Q92 235 95 240 Z" fill="url(#car-glow)" opacity="0.6"/>
+  <path d="M417 248 L432 242 Q437 240 434 236 L424 232 Q420 235 417 240 Z" fill="url(#car-glow)" opacity="0.6"/>
+  <ellipse cx="256" cy="345" rx="160" ry="12" fill="url(#bolt-grad)" opacity="0.06" filter="url(#glow)"/>
+  <!-- Lightning bolt -->
+  <path d="M310 100 L220 260 L280 260 L200 420 L370 230 L300 230 Z" fill="url(#bolt-grad)" filter="url(#glow-lg)" opacity="0.95"/>
+  <path d="M300 130 L230 255 L275 255 L215 390 L350 240 L298 240 Z" fill="url(#bolt-grad)" opacity="0.3"/>
+  <path d="M120 315 Q190 325 256 327 Q322 325 392 315" fill="none" stroke="url(#car-glow)" stroke-width="1.5" opacity="0.3"/>
 </svg>
