@@ -34,7 +34,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **52+ interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, backup & restore, and more
+- **61 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, backup & restore, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
@@ -77,6 +77,16 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - 🎵 **Media Player** — Now playing, volume, playback history, source distribution
 - 🛡️ **Safety Settings** — ADAS configuration, collision warnings, FSD statistics
 - 🗺️ **Navigation** — Active route, destination, home/work/favorite indicators
+
+### 🧠 Cross-Table Intelligence (NEW)
+- 💰 **True Cost of Ownership** — EV vs gas cumulative savings calculator with monthly breakdown
+- 🛏️ **Sleep Efficiency** — Vehicle state distribution, time-to-sleep, sentry mode cost analysis
+- 🔥 **Charging Heatmap** — 7×24 grid of charging patterns (when × where × how much)
+- 🏎️ **Speed Profile** — Speed distribution histogram, efficiency vs speed scatter, optimization insights
+- 🌡️ **Temperature Impact** — Efficiency vs temperature curve, winter/summer penalty quantification
+- 🛣️ **Route Efficiency** — Same-route comparison across trips with weather/speed correlation
+- ♻️ **Regen Braking** — Regenerative energy capture ratio, per-drive scoring, monthly trends
+- 📉 **Battery Degradation** — Health trend with linear regression projection, risk factor analysis
 
 ### 🎮 Remote Vehicle Control
 - Wake / Lock / Unlock
@@ -123,7 +133,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
 - **5 Color Themes** — Dynamic theme switching with CSS variables
 - **Map Layer Switcher** — Dark, Satellite, Streets, Terrain on all map pages
-- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 52+ pages
+- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 61 pages
 - **Animated Car SVG** — Subtle automobile animations on loading states and docs
 - **Code-Split Routes** — Lightning-fast page loads with React lazy loading
 - **PWA-Ready** — Installable as a native app with custom splash screen

@@ -41,6 +41,9 @@ features:
   - icon: 🔭
     title: Distributed Tracing
     details: Optional OpenTelemetry with per-repo DB spans, handler tracing, and Jaeger integration. Zero overhead when disabled.
+  - icon: 🧠
+    title: Cross-Table Intelligence
+    details: 8 advanced analytics — TCO calculator, charging heatmap, temperature impact, route efficiency, regen scoring, battery degradation predictor, sleep analysis, speed profiling.
 ---
 
 ## Why TeslaSync?

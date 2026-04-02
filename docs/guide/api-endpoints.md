@@ -534,6 +534,70 @@ Fleet-wide analytics aggregating all vehicles.
 }
 ```
 
+### GET `/api/v1/analytics/tco`
+
+True Cost of Ownership — EV vs gas savings.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/tco?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/sleep`
+
+Sleep efficiency — vehicle state distribution and sentry mode cost.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/sleep?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/charging-heatmap`
+
+Charging patterns — 7×24 heatmap grid and top locations.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/charging-heatmap?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/speed-profile`
+
+Speed distribution and efficiency by speed bucket.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/speed-profile?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/temperature-impact`
+
+Efficiency vs temperature analysis with seasonal trends.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/temperature-impact?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/route-efficiency`
+
+Per-route efficiency comparison for repeated trips.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/route-efficiency?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/regen`
+
+Regenerative braking efficiency and energy recovery stats.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/regen?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/battery-degradation`
+
+Battery health trend with linear regression projection.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/battery-degradation?vehicle_id=1"
+```
+
 ---
 
 ## Alerts
