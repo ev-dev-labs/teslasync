@@ -235,7 +235,7 @@ export default function Layout() {
   const mainRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="relative h-dvh" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+    <div className="flex h-dvh" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -259,7 +259,7 @@ export default function Layout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[40] bg-black/60 backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -270,7 +270,7 @@ export default function Layout() {
         role="navigation"
         aria-label="Main navigation"
         className={clsx(
-          'fixed inset-y-0 left-0 z-30 w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:static lg:w-64 lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-[50] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:relative lg:z-auto lg:w-64 lg:translate-x-0 lg:shrink-0',
           'border-r backdrop-blur-xl flex flex-col',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -394,7 +394,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-col lg:ml-64 h-dvh overflow-hidden">
+      <div className="relative z-0 flex flex-1 flex-col overflow-hidden">
         {/* Mobile top bar */}
         <header className="flex items-center border-b backdrop-blur-xl px-3 py-2.5 sm:px-5 sm:py-3 lg:hidden safe-top" style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}>
           <button
