@@ -1,0 +1,20 @@
+# TeslaSync Code Owners
+# These users are automatically requested for review on PRs.
+# Requires at least one approval from a code owner before merge.
+
+# Global owner — all files
+* @iamatulgupta
+
+# Backend (Go)
+/internal/ @iamatulgupta
+/cmd/ @iamatulgupta
+/migrations/ @iamatulgupta
+
+# Frontend (React)
+/web/ @iamatulgupta
+
+# Infrastructure
+/helm/ @iamatulgupta
+/Dockerfile* @iamatulgupta
+/docker-compose* @iamatulgupta
+/.github/ @iamatulgupta
