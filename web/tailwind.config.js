@@ -62,6 +62,10 @@ export default {
         'fade-in': 'fadeIn 0.3s ease-out',
         'spin-slow': 'spin 3s linear infinite',
         'border-flow': 'borderFlow 3s linear infinite',
+        'shimmer': 'shimmer 2s infinite linear',
+        'skeleton-wave': 'skeletonWave 1.8s ease-in-out infinite',
+        'chart-grow': 'chartGrow 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'number-pop': 'numberPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       },
       keyframes: {
         glowPulse: {
@@ -79,6 +83,24 @@ export default {
         borderFlow: {
           '0%': { backgroundPosition: '0% 50%' },
           '100%': { backgroundPosition: '200% 50%' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        skeletonWave: {
+          '0%': { opacity: '0.03' },
+          '50%': { opacity: '0.08' },
+          '100%': { opacity: '0.03' },
+        },
+        chartGrow: {
+          '0%': { transform: 'scaleY(0)', opacity: '0' },
+          '100%': { transform: 'scaleY(1)', opacity: '1' },
+        },
+        numberPop: {
+          '0%': { transform: 'scale(0.5)', opacity: '0' },
+          '60%': { transform: 'scale(1.1)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
       fontFamily: {

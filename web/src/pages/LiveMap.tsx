@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getVehiclePositions, getGeofences, getDrives, Vehicle, VehicleState, Position, getVehicleStatus } from '../api'
-import { MapContainer, TileLayer, Marker, Polyline, Popup, Circle, CircleMarker } from 'react-leaflet'
+import { MapContainer, Marker, Polyline, Popup, Circle, CircleMarker } from 'react-leaflet'
+import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
+import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
+import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression, divIcon } from 'leaflet'
 import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
@@ -84,6 +87,7 @@ export default function LiveMap() {
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { convertSpeed, convertDistance, convertTemp, speedUnit, distanceUnit, tempUnit } = useSettings()
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
   const [replayMode, setReplayMode] = useState(false)
   const [replayIdx, setReplayIdx] = useState(0)
   const [replayPlaying, setReplayPlaying] = useState(false)
@@ -271,11 +275,10 @@ export default function LiveMap() {
 
         {/* Map */}
         <FadeIn delay={0.1} className="flex-1 min-h-[60vh] relative rounded-2xl overflow-hidden border border-white/[0.06] shadow-[0_0_40px_rgba(0,240,255,0.03)]">
+          <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
           <MapContainer center={center} zoom={12} scrollWheelZoom className="h-full w-full">
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-            />
+            <MapTileLayer style={mapStyle} />
+            <MapInvalidator />
 
             {/* Geofence circles */}
             {geofences?.map(g => (

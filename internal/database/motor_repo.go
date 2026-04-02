@@ -15,8 +15,8 @@ func NewMotorRepo(db *DB) *MotorRepo {
 }
 
 func (r *MotorRepo) Insert(ctx context.Context, snap *models.MotorSnapshot) error {
-	query := `INSERT INTO motor_snapshots (vehicle_id, di_state, di_torque, di_axle_speed, di_stator_temp, pedal_position, brake_pedal, lateral_accel, longitudinal_accel, vehicle_speed, gear, di_torque_actual_f, di_torque_actual_r, di_torque_actual_rel, di_torque_actual_rer, di_axle_speed_f, di_axle_speed_rel, di_axle_speed_rer, di_state_f, di_state_rel, di_state_rer, di_stator_temp_f, di_stator_temp_rel, di_stator_temp_rer, di_heatsink_t_f, di_heatsink_t_r, di_heatsink_t_rel, di_heatsink_t_rer, di_inverter_t_f, di_inverter_t_r, di_inverter_t_rel, di_inverter_t_rer, di_motor_current_f, di_motor_current_r, di_motor_current_rel, di_motor_current_rer, di_v_bat_f, di_v_bat_r, di_v_bat_rel, di_v_bat_rer, di_slave_torque_cmd, hvil, brake_pedal_pos, cruise_set_speed, drive_rail)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45) RETURNING id`
+	query := `INSERT INTO motor_snapshots (vehicle_id, di_state, di_torque, di_axle_speed, di_stator_temp, pedal_position, brake_pedal, lateral_accel, longitudinal_accel, vehicle_speed, gear, di_torque_actual_f, di_torque_actual_r, di_torque_actual_rel, di_torque_actual_rer, di_axle_speed_f, di_axle_speed_rel, di_axle_speed_rer, di_state_f, di_state_rel, di_state_rer, di_stator_temp_f, di_stator_temp_rel, di_stator_temp_rer, di_heatsink_t_f, di_heatsink_t_r, di_heatsink_t_rel, di_heatsink_t_rer, di_inverter_t_f, di_inverter_t_r, di_inverter_t_rel, di_inverter_t_rer, di_motor_current_f, di_motor_current_r, di_motor_current_rel, di_motor_current_rer, di_v_bat_f, di_v_bat_r, di_v_bat_rel, di_v_bat_rer, di_slave_torque_cmd, hvil, brake_pedal_pos, cruise_set_speed, drive_rail, lifetime_energy_gained_regen, lifetime_energy_used_drive)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.DiState, snap.DiTorque, snap.DiAxleSpeed, snap.DiStatorTemp,
 		snap.PedalPosition, snap.BrakePedal, snap.LateralAccel, snap.LongitudinalAccel,
@@ -30,6 +30,7 @@ func (r *MotorRepo) Insert(ctx context.Context, snap *models.MotorSnapshot) erro
 		snap.DiMotorCurrentF, snap.DiMotorCurrentR, snap.DiMotorCurrentREL, snap.DiMotorCurrentRER,
 		snap.DiVBatF, snap.DiVBatR, snap.DiVBatREL, snap.DiVBatRER,
 		snap.DiSlaveTorqueCmd, snap.Hvil, snap.BrakePedalPos, snap.CruiseSetSpeed, snap.DriveRail,
+		snap.LifetimeEnergyGainedRegen, snap.LifetimeEnergyUsedDrive,
 	).Scan(&snap.ID)
 }
 

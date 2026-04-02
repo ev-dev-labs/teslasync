@@ -593,6 +593,7 @@ var commands = map[string]commandDef{
 	// Security & Access
 	"lock":             {endpoint: "door_lock"},
 	"unlock":           {endpoint: "door_unlock"},
+	"set_sentry_mode":  {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
 	"sentry_on":        {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": true}},
 	"sentry_off":       {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": false}},
 	"speed_limit_on":   {endpoint: "speed_limit_activate"},
@@ -604,6 +605,8 @@ var commands = map[string]commandDef{
 	"set_temps":   {endpoint: "set_temps"},
 
 	// Charging
+	"open_charge_port":  {endpoint: "charge_port_door_open"},
+	"close_charge_port": {endpoint: "charge_port_door_close"},
 	"charge_port_open":  {endpoint: "charge_port_door_open"},
 	"charge_port_close": {endpoint: "charge_port_door_close"},
 	"charge_start":      {endpoint: "charge_start"},
@@ -612,12 +615,17 @@ var commands = map[string]commandDef{
 	"set_charging_amps": {endpoint: "set_charging_amps"},
 
 	// Doors & Trunk
-	"frunk_open": {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "front"}},
-	"trunk_open": {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "rear"}},
+	"actuate_frunk": {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "front"}},
+	"actuate_trunk": {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "rear"}},
+	"frunk":         {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "front"}},
+	"frunk_open":    {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "front"}},
+	"trunk_open":    {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "rear"}},
 
 	// Alerts
 	"honk_horn":    {endpoint: "honk_horn"},
+	"honk":         {endpoint: "honk_horn"},
 	"flash_lights": {endpoint: "flash_lights"},
+	"flash":        {endpoint: "flash_lights"},
 
 	// Windows
 	"vent_windows":  {endpoint: "window_control", params: map[string]interface{}{"command": "vent"}},

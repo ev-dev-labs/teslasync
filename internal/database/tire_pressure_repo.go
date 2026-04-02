@@ -16,10 +16,12 @@ func NewTirePressureRepo(db *DB) *TirePressureRepo {
 
 // Insert stores a new tire pressure snapshot.
 func (r *TirePressureRepo) Insert(ctx context.Context, snap *models.TirePressureSnapshot) error {
-	query := `INSERT INTO tire_pressure_snapshots (vehicle_id, front_left, front_right, rear_left, rear_right)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	query := `INSERT INTO tire_pressure_snapshots (vehicle_id, front_left, front_right, rear_left, rear_right, tpms_hard_warnings, tpms_soft_warnings, last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.FrontLeft, snap.FrontRight, snap.RearLeft, snap.RearRight,
+		snap.TpmsHardWarn, snap.TpmsSoftWarn,
+		snap.LastSeenTimeFl, snap.LastSeenTimeFr, snap.LastSeenTimeRl, snap.LastSeenTimeRr,
 	).Scan(&snap.ID)
 }
 

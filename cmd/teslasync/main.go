@@ -19,13 +19,28 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
 func main() {
+	// Built-in healthcheck for distroless containers (no wget/curl available)
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		port := os.Getenv("TESLASYNC_PORT")
+		if port == "" {
+			port = "8080"
+		}
+		resp, err := http.Get("http://localhost:" + port + "/healthz")
+		if err != nil || resp.StatusCode != 200 {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
@@ -37,6 +52,23 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Initialize OpenTelemetry tracing (optional)
+	if cfg.OpenTelemetry.Enabled {
+		shutdownTracer, err := tracing.Init(ctx, cfg.OpenTelemetry.ServiceName, cfg.OpenTelemetry.Endpoint, cfg.OpenTelemetry.Insecure)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to initialize tracing, continuing without it")
+		} else {
+			log.Info().Str("endpoint", cfg.OpenTelemetry.Endpoint).Str("service", cfg.OpenTelemetry.ServiceName).Msg("OpenTelemetry tracing enabled")
+			defer func() {
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if err := shutdownTracer(shutdownCtx); err != nil {
+					log.Warn().Err(err).Msg("failed to shutdown tracer")
+				}
+			}()
+		}
+	}
 
 	// Component health monitor
 	health := resilience.NewHealthMonitor()
@@ -140,7 +172,10 @@ func main() {
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
 	if cfg.FleetTelemetry.Enabled {
-		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout) // eventHub wired later via router
+		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
+
+		// Start periodic cleanup of stale streaming/session state
+		telemetryHandler.StartCleanup(ctx)
 
 		// Start MQTT subscriber for fleet-telemetry data
 		if mqttClient != nil && cfg.FleetTelemetry.TopicBase != "" {
@@ -340,7 +375,12 @@ func main() {
 	// Phase 1: Stop accepting new work
 	cancel()
 
-	// Phase 2: Drain HTTP connections
+	// Phase 2: Shutdown telemetry handler goroutines
+	if telemetryHandler != nil {
+		telemetryHandler.Shutdown()
+	}
+
+	// Phase 3: Drain HTTP connections
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 

@@ -1,0 +1,55 @@
+DROP INDEX IF EXISTS idx_geofences_coords;
+DROP TABLE IF EXISTS fleet_telemetry_subscriptions;
+DROP TABLE IF EXISTS charge_telemetry_readings;
+DROP TABLE IF EXISTS drive_telemetry_readings;
+
+-- Remove charging_sessions enhancements
+ALTER TABLE charging_sessions DROP COLUMN IF EXISTS latitude;
+ALTER TABLE charging_sessions DROP COLUMN IF EXISTS longitude;
+ALTER TABLE charging_sessions DROP COLUMN IF EXISTS location_name;
+ALTER TABLE charging_sessions DROP COLUMN IF EXISTS inside_temp_avg;
+ALTER TABLE charging_sessions DROP COLUMN IF EXISTS outside_temp_avg;
+
+-- Remove drives enhancements (in reverse order)
+ALTER TABLE drives DROP COLUMN IF EXISTS end_longitude;
+ALTER TABLE drives DROP COLUMN IF EXISTS end_latitude;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_longitude;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_latitude;
+ALTER TABLE drives DROP COLUMN IF EXISTS end_address;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_address;
+ALTER TABLE drives DROP COLUMN IF EXISTS battery_heater_on;
+ALTER TABLE drives DROP COLUMN IF EXISTS passenger_temp_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS driver_temp_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS elevation_loss;
+ALTER TABLE drives DROP COLUMN IF EXISTS elevation_gain;
+ALTER TABLE drives DROP COLUMN IF EXISTS elevation_end;
+ALTER TABLE drives DROP COLUMN IF EXISTS elevation_start;
+ALTER TABLE drives DROP COLUMN IF EXISTS usable_soc_min;
+ALTER TABLE drives DROP COLUMN IF EXISTS usable_soc_max;
+ALTER TABLE drives DROP COLUMN IF EXISTS usable_soc_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS usable_soc_end;
+ALTER TABLE drives DROP COLUMN IF EXISTS usable_soc_start;
+ALTER TABLE drives DROP COLUMN IF EXISTS soc_min;
+ALTER TABLE drives DROP COLUMN IF EXISTS soc_max;
+ALTER TABLE drives DROP COLUMN IF EXISTS soc_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS soc_end;
+ALTER TABLE drives DROP COLUMN IF EXISTS soc_start;
+ALTER TABLE drives DROP COLUMN IF EXISTS est_range_min;
+ALTER TABLE drives DROP COLUMN IF EXISTS est_range_max;
+ALTER TABLE drives DROP COLUMN IF EXISTS est_range_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS end_est_range_km;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_est_range_km;
+ALTER TABLE drives DROP COLUMN IF EXISTS ideal_range_min;
+ALTER TABLE drives DROP COLUMN IF EXISTS ideal_range_max;
+ALTER TABLE drives DROP COLUMN IF EXISTS ideal_range_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS end_ideal_range_km;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_ideal_range_km;
+ALTER TABLE drives DROP COLUMN IF EXISTS rated_range_min;
+ALTER TABLE drives DROP COLUMN IF EXISTS rated_range_max;
+ALTER TABLE drives DROP COLUMN IF EXISTS rated_range_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS end_rated_range_km;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_rated_range_km;
+ALTER TABLE drives DROP COLUMN IF EXISTS speed_min;
+ALTER TABLE drives DROP COLUMN IF EXISTS speed_avg;
+ALTER TABLE drives DROP COLUMN IF EXISTS end_odometer;
+ALTER TABLE drives DROP COLUMN IF EXISTS start_odometer;

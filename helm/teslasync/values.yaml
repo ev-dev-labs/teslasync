@@ -404,6 +404,31 @@ config:
   #   Internal: http://teslasync-web.teslasync.svc.cluster.local
   webEndpoint: ""
 
+  # OpenTelemetry distributed tracing (optional)
+  # Supports any OTLP-compatible backend: Jaeger, Tempo, Datadog, New Relic, etc.
+  openTelemetry:
+    enabled: false
+    # For built-in Jaeger (jaeger.enabled=true): use "{{ .Release.Name }}-jaeger:4317"
+    # For external Jaeger/collector: use your endpoint, e.g. "jaeger.monitoring:4317"
+    endpoint: "jaeger:4317"
+    serviceName: "teslasync"
+    insecure: true
+
+  # ── Google Maps (optional) ──────────────────────────────────────────────
+  # Enables enhanced geocoding, Places autocomplete, satellite/terrain tiles.
+  # Free tier: 10,000 geocoding + 100,000 map tiles/month (covers 1-10 vehicles).
+  # Get a key at https://console.cloud.google.com/google/maps-apis
+  # When empty, TeslaSync uses CARTO tiles + Nominatim geocoding (free, no key).
+  googleMaps:
+    apiKey: ""
+
+  # ── Azure Maps (optional) ──────────────────────────────────────────────
+  # Alternative to Google Maps. Free tier: 250,000 transactions/month.
+  # Get a key at https://portal.azure.com → Create Azure Maps Account
+  # Priority: Google Maps → Azure Maps → Nominatim (free).
+  azureMaps:
+    apiKey: ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
 #
@@ -590,3 +615,24 @@ grafana:
   external:
     host: ""
     port: 3000
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Jaeger (optional, for distributed tracing)
+#
+# Deploys Jaeger all-in-one for collecting OpenTelemetry traces.
+# Enable alongside config.openTelemetry.enabled to get end-to-end tracing.
+#
+# If you already have Jaeger/Tempo/OTLP collector running externally,
+# skip this section and just set config.openTelemetry.endpoint to your
+# existing collector address (e.g. "jaeger.monitoring.svc:4317").
+# ─────────────────────────────────────────────────────────────────────────────
+jaeger:
+  enabled: false
+  image: jaegertracing/all-in-one:1.57
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi

@@ -21,6 +21,27 @@ type Config struct {
 	Retention      RetentionConfig
 	FleetTelemetry FleetTelemetryConfig
 	GasPrice       GasPriceConfig
+	OpenTelemetry  OpenTelemetryConfig
+	GoogleMaps     GoogleMapsConfig
+	AzureMaps      AzureMapsConfig
+}
+
+// GoogleMapsConfig holds settings for the Google Maps geocoding API.
+type GoogleMapsConfig struct {
+	APIKey string
+}
+
+// AzureMapsConfig holds settings for the Azure Maps geocoding API.
+type AzureMapsConfig struct {
+	APIKey string
+}
+
+// OpenTelemetryConfig controls optional distributed tracing via OpenTelemetry.
+type OpenTelemetryConfig struct {
+	Enabled     bool   `json:"enabled"`
+	Endpoint    string `json:"endpoint"`
+	ServiceName string `json:"service_name"`
+	Insecure    bool   `json:"insecure"`
 }
 
 // GasPriceConfig controls automated gas price polling from the EIA API.
@@ -136,7 +157,7 @@ func Load() (*Config, error) {
 			MinConns:        envInt("DATABASE_MIN_CONNS", 5),
 			ConnMaxLifetime: envDuration("DATABASE_CONN_MAX_LIFETIME", 5*time.Minute),
 			ConnMaxIdleTime: envDuration("DATABASE_CONN_MAX_IDLE_TIME", 1*time.Minute),
-			MigrationsPath:  envStr("DATABASE_MIGRATIONS", "file://migrations"),
+			MigrationsPath:  envStr("DATABASE_MIGRATIONS", "file:///migrations"),
 		},
 
 		Tesla: TeslaConfig{
@@ -197,6 +218,21 @@ func Load() (*Config, error) {
 			Enabled:      envBool("GAS_PRICE_ENABLED", false),
 			PollInterval: envStr("GAS_PRICE_POLL_INTERVAL", "7d"),
 			APIKey:       envStr("GAS_PRICE_API_KEY", ""),
+		},
+
+		OpenTelemetry: OpenTelemetryConfig{
+			Enabled:     envBool("OTEL_ENABLED", false),
+			Endpoint:    envStr("OTEL_ENDPOINT", "localhost:4317"),
+			ServiceName: envStr("OTEL_SERVICE_NAME", "teslasync"),
+			Insecure:    envBool("OTEL_INSECURE", true),
+		},
+
+		GoogleMaps: GoogleMapsConfig{
+			APIKey: envStr("GOOGLE_MAPS_API_KEY", ""),
+		},
+
+		AzureMaps: AzureMapsConfig{
+			APIKey: envStr("AZURE_MAPS_API_KEY", ""),
 		},
 	}
 

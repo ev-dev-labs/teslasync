@@ -155,7 +155,7 @@ export default function DrivetrainHealth() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
-  const { convertTemp, tempUnit } = useSettings()
+  const { convertTemp, convertSpeed, tempUnit, speedUnit } = useSettings()
 
   /* ── Latest motor snapshot ── */
   const { data: latest } = useQuery({
@@ -344,7 +344,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Vehicle Speed</p>
               <p className="text-sm font-semibold text-neon-cyan">
-                {latest.vehicle_speed != null ? `${latest.vehicle_speed.toFixed(1)} km/h` : '--'}
+                {latest.vehicle_speed != null ? `${convertSpeed(latest.vehicle_speed).toFixed(1)} ${speedUnit}` : '--'}
               </p>
             </div>
           </div>
@@ -588,7 +588,7 @@ export default function DrivetrainHealth() {
             <StatCard label="Avg Torque" value={stats.avgTorque} unit="Nm" color="text-blue-400" />
             <StatCard label="Peak Stator" value={stats.peakStatorTemp != null ? convertTemp(stats.peakStatorTemp) : null} unit={tempUnit} color="text-red-400" />
             <StatCard label="Avg Stator" value={stats.avgStatorTemp != null ? convertTemp(stats.avgStatorTemp) : null} unit={tempUnit} color="text-orange-400" />
-            <StatCard label="Peak Speed" value={stats.peakSpeed} unit="km/h" color="text-emerald-400" />
+            <StatCard label="Peak Speed" value={stats.peakSpeed != null ? convertSpeed(stats.peakSpeed) : null} unit={speedUnit} color="text-emerald-400" />
             <StatCard label="Peak Lat-G" value={stats.peakLatAccel} unit="g" color="text-purple-400" />
           </div>
 
@@ -641,7 +641,7 @@ export default function DrivetrainHealth() {
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Data Points</p>
                 <p className="text-sm font-semibold text-neon-cyan">{stats.totalSnapshots.toLocaleString()} snapshots</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  {stats.avgSpeed != null ? `Avg speed: ${stats.avgSpeed.toFixed(1)} km/h` : 'Collecting data...'}
+                  {stats.avgSpeed != null ? `Avg speed: ${convertSpeed(stats.avgSpeed).toFixed(1)} ${speedUnit}` : 'Collecting data...'}
                 </p>
               </div>
             </div>

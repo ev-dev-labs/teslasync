@@ -9,39 +9,40 @@ export default function Logo({ size = 32, showWordmark = false, className = '' }
     <div className={`flex items-center gap-2.5 ${className}`}>
       <div className="relative">
         <div
-          className="absolute inset-0 rounded-lg blur-md opacity-40 animate-logo-pulse"
+          className="absolute inset-0 rounded-full blur-md opacity-30 animate-logo-pulse"
           style={{ background: 'var(--theme-primary)' }}
         />
         <svg
           width={size}
           height={size}
-          viewBox="0 0 32 32"
+          viewBox="0 0 200 200"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="relative"
         >
           <defs>
             <linearGradient id="logo-lg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="var(--theme-primary)" />
-              <stop offset="100%" stopColor="var(--theme-accent)" />
+              <stop offset="0%" stopColor="#00f0ff" />
+              <stop offset="100%" stopColor="#10b981" />
             </linearGradient>
+            <filter id="logo-glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           </defs>
-          {/* Car outline (top-down) */}
-          <path
-            d="M12,4 C10,4 9,5 9,6 L8,12 L7,16 L7,26 C7,27.5 8.5,28 10,28 L22,28 C23.5,28 25,27.5 25,26 L25,16 L24,12 L23,6 C23,5 22,4 20,4 Z"
-            fill="none" stroke="url(#logo-lg)" strokeWidth="1.5" strokeLinejoin="round"
-          />
-          {/* Windshield */}
-          <path d="M10,11 L12,8 L20,8 L22,11 Z" fill="var(--theme-primary)" opacity={0.2} />
-          {/* Headlights */}
-          <rect x="9.5" y="4.5" width="3" height="1" rx="0.5" fill="var(--theme-primary)" opacity={0.9} />
-          <rect x="19.5" y="4.5" width="3" height="1" rx="0.5" fill="var(--theme-primary)" opacity={0.9} />
-          {/* Signal arcs */}
-          <path d="M4,8 A6,6 0 0 1 4,2" fill="none" stroke="var(--theme-primary)" strokeWidth="0.8" opacity={0.5} />
-          <path d="M28,8 A6,6 0 0 0 28,2" fill="none" stroke="var(--theme-accent)" strokeWidth="0.8" opacity={0.5} />
-          {/* GPS dot */}
-          <circle cx="16" cy="16" r="2" fill="var(--theme-accent)" opacity={0.8} />
-          <circle cx="16" cy="16" r="1" fill="#fff" opacity={0.9} />
+          {/* Background */}
+          <circle cx="100" cy="100" r="96" fill="#060610" />
+          {/* Orbital rings */}
+          <ellipse cx="100" cy="100" rx="75" ry="20" fill="none" stroke="#00f0ff" strokeWidth="1.2" opacity={0.22} transform="rotate(-15 100 100)"/>
+          <ellipse cx="100" cy="100" rx="75" ry="20" fill="none" stroke="#10b981" strokeWidth="1.2" opacity={0.22} transform="rotate(20 100 100)"/>
+          <ellipse cx="100" cy="100" rx="75" ry="20" fill="none" stroke="#a855f7" strokeWidth="0.8" opacity={0.15} transform="rotate(55 100 100)"/>
+          {/* Particles */}
+          <circle cx="173" cy="95" r="4" fill="#00f0ff" opacity={0.8} filter="url(#logo-glow)"/>
+          <circle cx="38" cy="115" r="3.5" fill="#10b981" opacity={0.7} filter="url(#logo-glow)"/>
+          <circle cx="125" cy="68" r="3" fill="#a855f7" opacity={0.6} filter="url(#logo-glow)"/>
+          {/* Central sphere */}
+          <circle cx="100" cy="100" r="28" fill="#080814" stroke="url(#logo-lg)" strokeWidth="2.5"/>
+          <circle cx="100" cy="100" r="34" fill="none" stroke="url(#logo-lg)" strokeWidth="0.6" opacity={0.3}/>
+          <circle cx="100" cy="100" r="18" fill="#00f0ff" opacity={0.06} filter="url(#logo-glow)"/>
+          {/* Bolt */}
+          <path d="M105 86l-10 16h8l-6 14 15-18h-8z" fill="url(#logo-lg)" filter="url(#logo-glow)"/>
         </svg>
       </div>
       {showWordmark && (

@@ -454,23 +454,67 @@ export default function Analytics() {
                 )}
               </div>
 
-              {/* Row: Daily driving trend */}
+              {/* Row: Daily driving trend + Drive duration distribution */}
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+                {da.daily_trend?.length > 0 && (
+                  <FadeIn delay={0.3}>
+                    <GlassPanel className="p-4 sm:p-6">
+                      <h3 className="section-title mb-4 sm:mb-6 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-neon-green" /> Daily Driving Trend
+                      </h3>
+                      <div className="h-40 sm:h-48 lg:h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={da.daily_trend}>
+                            {grid}
+                            <XAxis dataKey="date" tick={tickSm} tickFormatter={(d: string) => d.slice(5)} />
+                            <YAxis yAxisId="left" tick={tickSm} />
+                            <YAxis yAxisId="right" orientation="right" tick={tickSm} />
+                            <Tooltip content={<ChartTooltip />} />
+                            <Area yAxisId="left" type="monotone" dataKey="distance" name={`Distance (${distanceUnit})`} stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
+                            <Line yAxisId="right" type="monotone" dataKey="drives" name="Drives" stroke="#a855f7" strokeWidth={2} dot={false} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </GlassPanel>
+                  </FadeIn>
+                )}
+
+                {/* Drive Duration Distribution */}
+                {da.duration_distribution && da.duration_distribution.length > 0 && (
+                  <FadeIn delay={0.32}>
+                    <GlassPanel className="p-4 sm:p-6">
+                      <h3 className="section-title mb-4 sm:mb-6 flex items-center gap-2">
+                        <Timer className="h-4 w-4 text-neon-amber" /> Drive Duration Distribution
+                      </h3>
+                      <div className="h-40 sm:h-48 lg:h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={da.duration_distribution}>
+                            {grid}<XAxis dataKey="range" tick={tick} /><YAxis tick={tick} />
+                            <Tooltip content={<ChartTooltip />} />
+                            <Bar dataKey="count" name="Drives" fill="#f59e0b" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </GlassPanel>
+                  </FadeIn>
+                )}
+              </div>
+
+              {/* Efficiency trend over time */}
               {da.daily_trend?.length > 0 && (
-                <FadeIn delay={0.3}>
+                <FadeIn delay={0.35}>
                   <GlassPanel className="p-4 sm:p-6">
                     <h3 className="section-title mb-4 sm:mb-6 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-neon-green" /> Daily Driving Trend
+                      <Activity className="h-4 w-4 text-neon-green" /> Efficiency Trend ({efficiencyUnit})
                     </h3>
-                      <div className="h-40 sm:h-48 lg:h-56">
+                    <div className="h-40 sm:h-48 lg:h-56">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={da.daily_trend}>
+                        <AreaChart data={da.daily_trend.filter((d: Record<string, unknown>) => d.efficiency != null && (d.efficiency as number) > 0)}>
                           {grid}
                           <XAxis dataKey="date" tick={tickSm} tickFormatter={(d: string) => d.slice(5)} />
-                          <YAxis yAxisId="left" tick={tickSm} />
-                          <YAxis yAxisId="right" orientation="right" tick={tickSm} />
+                          <YAxis tick={tickSm} />
                           <Tooltip content={<ChartTooltip />} />
-                          <Area yAxisId="left" type="monotone" dataKey="distance" name={`Distance (${distanceUnit})`} stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
-                          <Line yAxisId="right" type="monotone" dataKey="drives" name="Drives" stroke="#a855f7" strokeWidth={2} dot={false} />
+                          <Area type="monotone" dataKey="efficiency" name={`Efficiency (${efficiencyUnit})`} stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -662,6 +706,59 @@ export default function Analytics() {
                       <StatCard label="Max" value={`$${fmt(ca.cost_stats.max, 2)}`} color="#ef4444" />
                       <StatCard label="$/kWh avg" value={`$${ca.energy_stats?.avg > 0 ? fmt(ca.cost_stats.avg / ca.energy_stats.avg, 3) : '0.0'}`} color="#00f0ff" />
                     </div>
+                  </GlassPanel>
+                </FadeIn>
+              )}
+
+              {/* Charging cost breakdown by type */}
+              {ca.charger_types?.length > 0 && ca.cost_stats?.count > 0 && (
+                <FadeIn delay={0.4}>
+                  <GlassPanel className="p-4 sm:p-6">
+                    <h3 className="section-title mb-4 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-neon-green" /> Cost by Charger Type
+                    </h3>
+                    <div className="space-y-3">
+                      {ca.charger_types.map((t, i) => {
+                        const totalSessions = ca.charger_types.reduce((s, x) => s + x.count, 0)
+                        const pct = totalSessions > 0 ? Math.round((t.count / totalSessions) * 100) : 0
+                        return (
+                          <div key={i} className="flex items-center gap-3">
+                            <span className="w-28 text-xs text-right font-medium" style={{ color: 'var(--text-secondary)' }}>{t.type}</span>
+                            <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{
+                                width: `${pct}%`,
+                                backgroundColor: NEON_COLORS[i % NEON_COLORS.length],
+                                boxShadow: `0 0 8px ${NEON_COLORS[i % NEON_COLORS.length]}40`,
+                              }} />
+                            </div>
+                            <span className="w-20 text-xs font-mono text-right" style={{ color: 'var(--text-primary)' }}>{t.count} ({pct}%)</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </GlassPanel>
+                </FadeIn>
+              )}
+
+              {/* SOC at charge start distribution */}
+              {ca.start_battery_dist?.length > 0 && (
+                <FadeIn delay={0.42}>
+                  <GlassPanel className="p-4 sm:p-6">
+                    <h3 className="section-title mb-4 sm:mb-6 flex items-center gap-2">
+                      <Battery className="h-4 w-4 text-neon-cyan" /> SOC Distribution at Charge Start
+                    </h3>
+                    <div className="h-40 sm:h-48 lg:h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={ca.start_battery_dist}>
+                          {grid}<XAxis dataKey="range" tick={tickSm} label={{ value: 'Battery %', fill: 'var(--text-muted)', fontSize: 10, position: 'insideBottom', offset: -5 }} /><YAxis tick={tickSm} />
+                          <Tooltip content={<ChartTooltip />} />
+                          <Bar dataKey="count" name="Sessions" fill="#06b6d4" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <p className="text-center text-[10px] mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                      What battery level do you typically start charging at?
+                    </p>
                   </GlassPanel>
                 </FadeIn>
               )}

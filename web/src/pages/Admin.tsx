@@ -13,6 +13,7 @@ import {
   Key,
   Server,
   HardDrive,
+  AlertTriangle,
 } from 'lucide-react'
 import { FadeIn, GlassPanel, PageHeader, Skeleton } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -48,28 +49,28 @@ export default function Admin() {
   const toast = useToast()
   const queryClient = useQueryClient()
 
-  const { data: health, isLoading: healthLoading } = useQuery<ExtendedHealthResponse>({
+  const { data: health, isLoading: healthLoading, error: healthError } = useQuery<ExtendedHealthResponse>({
     queryKey: ['admin-health'],
     queryFn: getExtendedHealth,
     refetchInterval: 30_000,
   })
 
-  const { data: apiUsage, isLoading: usageLoading } = useQuery<APIUsage>({
+  const { data: apiUsage, isLoading: usageLoading, error: usageError } = useQuery<APIUsage>({
     queryKey: ['admin-api-usage'],
     queryFn: getAPIUsage,
   })
 
-  const { data: backupStats, isLoading: backupLoading } = useQuery<BackupStats>({
+  const { data: backupStats, isLoading: backupLoading, error: backupError } = useQuery<BackupStats>({
     queryKey: ['admin-backup-stats'],
     queryFn: getBackupStats,
   })
 
-  const { data: auditLogs, isLoading: auditLoading } = useQuery({
+  const { data: auditLogs, isLoading: auditLoading, error: auditError } = useQuery({
     queryKey: ['admin-audit'],
     queryFn: () => getAuditLogs(20),
   })
 
-  const { data: apiKeys, isLoading: keysLoading } = useQuery({
+  const { data: apiKeys, isLoading: keysLoading, error: keysError } = useQuery({
     queryKey: ['admin-api-keys'],
     queryFn: getAPIKeys,
   })
@@ -84,6 +85,20 @@ export default function Admin() {
         subtitle="System configuration and monitoring"
         icon={<Shield className="w-6 h-6 text-red-400" />}
       />
+
+      {/* Error states */}
+      {(healthError || usageError || backupError) && (
+        <GlassPanel className="p-4 mb-6">
+          <div className="flex items-center gap-2 text-red-400 text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>
+              {healthError && `Health check failed: ${(healthError as Error).message}. `}
+              {usageError && `API usage load failed: ${(usageError as Error).message}. `}
+              {backupError && `Backup stats failed: ${(backupError as Error).message}.`}
+            </span>
+          </div>
+        </GlassPanel>
+      )}
 
       {/* System Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -232,6 +247,8 @@ export default function Admin() {
               <Skeleton key={i} className="h-8" />
             ))}
           </div>
+        ) : auditError ? (
+          <p className="text-sm text-red-400 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Failed to load audit logs: {(auditError as Error).message}</p>
         ) : auditLogs?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -276,6 +293,8 @@ export default function Admin() {
               <Skeleton key={i} className="h-8" />
             ))}
           </div>
+        ) : keysError ? (
+          <p className="text-sm text-red-400 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Failed to load API keys: {(keysError as Error).message}</p>
         ) : apiKeys?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

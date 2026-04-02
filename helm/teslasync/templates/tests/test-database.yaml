@@ -1,0 +1,39 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "teslasync.fullname" . }}-test-database"
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "-5"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-postgres
+      image: postgres:17-alpine
+      env:
+        - name: PGPASSWORD
+          value: {{ include "teslasync.postgresql.password" . | quote }}
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "=== Testing PostgreSQL connectivity ==="
+          pg_isready -h {{ include "teslasync.postgresql.host" . }} -p {{ include "teslasync.postgresql.port" . }} -U {{ include "teslasync.postgresql.username" . }}
+          echo "PostgreSQL: READY"
+
+          echo "=== Checking database exists ==="
+          psql -h {{ include "teslasync.postgresql.host" . }} -p {{ include "teslasync.postgresql.port" . }} -U {{ include "teslasync.postgresql.username" . }} -d {{ include "teslasync.postgresql.database" . }} -c "SELECT 1;" > /dev/null
+          echo "Database: OK"
+
+          echo "=== Checking migrations applied ==="
+          TABLE_COUNT=$(psql -h {{ include "teslasync.postgresql.host" . }} -p {{ include "teslasync.postgresql.port" . }} -U {{ include "teslasync.postgresql.username" . }} -d {{ include "teslasync.postgresql.database" . }} -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
+          echo "Tables found: $TABLE_COUNT"
+          [ "$TABLE_COUNT" -gt 30 ] && echo "Migrations: OK ($TABLE_COUNT tables)" || (echo "Migrations: FAIL (expected >30, got $TABLE_COUNT)" && exit 1)
+
+          echo "=== Checking vehicles table ==="
+          psql -h {{ include "teslasync.postgresql.host" . }} -p {{ include "teslasync.postgresql.port" . }} -U {{ include "teslasync.postgresql.username" . }} -d {{ include "teslasync.postgresql.database" . }} -c "\d vehicles" > /dev/null
+          echo "Vehicles table: OK"
+{{- end }}

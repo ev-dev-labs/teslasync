@@ -1,5 +1,9 @@
 # API Reference
 
+::: tip OpenAPI Specification
+A complete, machine-readable OpenAPI 3.0 specification is available at [`openapi.yaml`](/teslasync/openapi.yaml). You can import it into tools like [Swagger Editor](https://editor.swagger.io), Postman, or Insomnia for interactive exploration.
+:::
+
 TeslaSync exposes a RESTful JSON API on port **8080**. All endpoints are prefixed with `/api/v1/` unless noted otherwise. Responses use standard HTTP status codes and return JSON bodies.
 
 > **Base URL:** `http://localhost:8080`
@@ -12,6 +16,11 @@ TeslaSync exposes a RESTful JSON API on port **8080**. All endpoints are prefixe
 
 Liveness probe — returns `200 OK` when the server is running.
 
+**curl:**
+```bash
+curl http://localhost:8080/healthz
+```
+
 **Response:**
 ```json
 { "status": "ok" }
@@ -20,6 +29,11 @@ Liveness probe — returns `200 OK` when the server is running.
 ### GET `/readyz`
 
 Readiness probe — checks database connectivity and Tesla auth status.
+
+**curl:**
+```bash
+curl http://localhost:8080/readyz
+```
 
 **Response:**
 ```json
@@ -32,6 +46,11 @@ Readiness probe — checks database connectivity and Tesla auth status.
 ### GET `/api/v1/system/status`
 
 Comprehensive system health with per-component details.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/system/status
+```
 
 **Response:**
 ```json
@@ -48,6 +67,13 @@ Comprehensive system health with per-component details.
 
 Prometheus-format metrics for scraping (request counts, latencies, pool stats).
 
+**curl:**
+```bash
+curl http://localhost:8080/metrics
+```
+
+**Response:** Prometheus text format (`text/plain`).
+
 ---
 
 ## Authentication
@@ -55,6 +81,11 @@ Prometheus-format metrics for scraping (request counts, latencies, pool stats).
 ### GET `/api/v1/auth/login`
 
 Returns the Tesla OAuth2 authorization URL the client should redirect to.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/auth/login
+```
 
 **Response:**
 ```json
@@ -68,6 +99,11 @@ Returns the Tesla OAuth2 authorization URL the client should redirect to.
 
 OAuth2 callback — Tesla redirects here after user consent. Exchanges the authorization code for tokens and stores them.
 
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/auth/callback?code=AUTHORIZATION_CODE"
+```
+
 | Query Param | Description |
 |-------------|-------------|
 | `code` | Authorization code from Tesla |
@@ -78,6 +114,11 @@ OAuth2 callback — Tesla redirects here after user consent. Exchanges the autho
 
 Force-refresh the Tesla access token using the stored refresh token.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/refresh
+```
+
 **Response:**
 ```json
 { "status": "refreshed" }
@@ -86,6 +127,11 @@ Force-refresh the Tesla access token using the stored refresh token.
 ### GET `/api/v1/auth/status`
 
 Check whether valid Tesla credentials are stored.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/auth/status
+```
 
 **Response:**
 ```json
@@ -102,6 +148,11 @@ Check whether valid Tesla credentials are stored.
 
 Disconnect the Tesla account — clears the stored OAuth tokens from the database and resets the in-memory client state.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/disconnect
+```
+
 **Response:**
 ```json
 { "status": "disconnected" }
@@ -112,6 +163,11 @@ Disconnect the Tesla account — clears the stored OAuth tokens from the databas
 ### GET `/api/v1/vehicles/`
 
 List all tracked vehicles.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/vehicles/
+```
 
 **Response:**
 ```json
@@ -137,6 +193,11 @@ List all tracked vehicles.
 
 Fetch vehicles from the Tesla Fleet API and sync to the local database.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/vehicles/sync
+```
+
 **Response:**
 ```json
 {
@@ -149,15 +210,30 @@ Fetch vehicles from the Tesla Fleet API and sync to the local database.
 
 Get a single vehicle by internal ID.
 
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/vehicles/1
+```
+
 **Response:** Single `Vehicle` object (same shape as list items).
 
 ### DELETE `/api/v1/vehicles/{vehicleID}`
 
 Remove a vehicle and all associated data. Returns **204 No Content**.
 
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/vehicles/1
+```
+
 ### GET `/api/v1/vehicles/{vehicleID}/positions`
 
 Retrieve GPS position history for a vehicle.
+
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/vehicles/1/positions?limit=50&offset=0"
+```
 
 | Query Param | Default | Description |
 |-------------|---------|-------------|
@@ -193,6 +269,11 @@ Retrieve GPS position history for a vehicle.
 
 Get the current live state of a vehicle (combines latest position with online status).
 
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/vehicles/1/state
+```
+
 **Response:**
 ```json
 {
@@ -206,6 +287,11 @@ Get the current live state of a vehicle (combines latest position with online st
 
 Send a wake-up command to a sleeping vehicle.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/vehicles/1/wake
+```
+
 **Response:**
 ```json
 { "status": "waking" }
@@ -214,6 +300,13 @@ Send a wake-up command to a sleeping vehicle.
 ### POST `/api/v1/vehicles/{vehicleID}/command`
 
 Send a command to the vehicle via the Tesla Fleet API.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/vehicles/1/command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "flash_lights", "params": {}}'
+```
 
 **Request Body:**
 ```json
@@ -238,6 +331,11 @@ Send a command to the vehicle via the Tesla Fleet API.
 ### GET `/api/v1/drives/`
 
 List drives for a vehicle with optional date filtering.
+
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/drives/?vehicle_id=1&limit=10"
+```
 
 | Query Param | Required | Description |
 |-------------|----------|-------------|
@@ -276,6 +374,13 @@ List drives for a vehicle with optional date filtering.
 
 Get a single drive by ID.
 
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/drives/42
+```
+
+**Response:** Single `Drive` object (same shape as list items).
+
 ---
 
 ## Charging
@@ -283,6 +388,11 @@ Get a single drive by ID.
 ### GET `/api/v1/charging/`
 
 List charging sessions for a vehicle.
+
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/charging/?vehicle_id=1&limit=10"
+```
 
 | Query Param | Required | Description |
 |-------------|----------|-------------|
@@ -323,6 +433,13 @@ List charging sessions for a vehicle.
 ### GET `/api/v1/charging/{sessionID}`
 
 Get a single charging session by ID.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/charging/15
+```
+
+**Response:** Single `ChargingSession` object (same shape as list items).
 
 ---
 
@@ -417,6 +534,70 @@ Fleet-wide analytics aggregating all vehicles.
 }
 ```
 
+### GET `/api/v1/analytics/tco`
+
+True Cost of Ownership — EV vs gas savings.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/tco?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/sleep`
+
+Sleep efficiency — vehicle state distribution and sentry mode cost.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/sleep?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/charging-heatmap`
+
+Charging patterns — 7×24 heatmap grid and top locations.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/charging-heatmap?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/speed-profile`
+
+Speed distribution and efficiency by speed bucket.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/speed-profile?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/temperature-impact`
+
+Efficiency vs temperature analysis with seasonal trends.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/temperature-impact?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/route-efficiency`
+
+Per-route efficiency comparison for repeated trips.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/route-efficiency?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/regen`
+
+Regenerative braking efficiency and energy recovery stats.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/regen?vehicle_id=1"
+```
+
+### GET `/api/v1/analytics/battery-degradation`
+
+Battery health trend with linear regression projection.
+
+```bash
+curl "http://localhost:8080/api/v1/analytics/battery-degradation?vehicle_id=1"
+```
+
 ---
 
 ## Alerts
@@ -424,6 +605,11 @@ Fleet-wide analytics aggregating all vehicles.
 ### GET `/api/v1/alerts/`
 
 List triggered alerts (newest first).
+
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/alerts/?limit=10&offset=0"
+```
 
 | Query Param | Default | Description |
 |-------------|---------|-------------|
@@ -450,6 +636,11 @@ List triggered alerts (newest first).
 
 Mark an alert as read.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/alerts/7/read
+```
+
 **Response:**
 ```json
 { "status": "ok" }
@@ -458,6 +649,11 @@ Mark an alert as read.
 ### GET `/api/v1/alerts/rules`
 
 List all alert rules and their configurations.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/alerts/rules
+```
 
 **Response:**
 ```json
@@ -478,6 +674,13 @@ List all alert rules and their configurations.
 
 Update an alert rule's enabled status or threshold.
 
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/alerts/rules/1 \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true, "threshold": 15.0}'
+```
+
 **Request Body:**
 ```json
 {
@@ -495,6 +698,11 @@ Update an alert rule's enabled status or threshold.
 ### GET `/api/v1/geofences/`
 
 List all geofences.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/geofences/
+```
 
 **Response:**
 ```json
@@ -515,6 +723,13 @@ List all geofences.
 
 Create a new geofence.
 
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/geofences/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Office", "latitude": 37.3861, "longitude": -122.0839, "radius": 200, "cost_per_kwh": 0.0}'
+```
+
 **Request Body:**
 ```json
 {
@@ -532,9 +747,23 @@ Create a new geofence.
 
 Get a single geofence by ID.
 
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/geofences/1
+```
+
+**Response:** Single `Geofence` object (same shape as list items).
+
 ### PUT `/api/v1/geofences/{geofenceID}`
 
 Update an existing geofence.
+
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/geofences/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Home", "latitude": 37.7749, "longitude": -122.4194, "radius": 150, "cost_per_kwh": 0.12}'
+```
 
 **Request Body:** Full `Geofence` object (same shape as create).
 
@@ -543,6 +772,11 @@ Update an existing geofence.
 ### DELETE `/api/v1/geofences/{geofenceID}`
 
 Delete a geofence. Returns **204 No Content**.
+
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/geofences/1
+```
 
 ---
 
@@ -968,6 +1202,11 @@ Returns the most recent security event for a vehicle.
 
 Returns charging telemetry snapshots with detailed pack, cell, and BMS data.
 
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/charging-telemetry?vehicle_id=1&limit=10"
+```
+
 | Query Param | Required | Description |
 |-------------|----------|-------------|
 | `vehicle_id` | ✅ | Vehicle database ID |
@@ -978,6 +1217,11 @@ Returns charging telemetry snapshots with detailed pack, cell, and BMS data.
 ### GET `/api/v1/charging-telemetry/latest?vehicle_id={id}`
 
 Returns the most recent charging telemetry snapshot for a vehicle.
+
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/charging-telemetry/latest?vehicle_id=1"
+```
 
 | Query Param | Required | Description |
 |-------------|----------|-------------|
@@ -1117,6 +1361,11 @@ Returns the most recent user preferences for a vehicle.
 ### GET `/api/v1/drives/{driveID}/positions`
 
 Returns GPS positions within a drive's time window. Server-side filtered by the drive's start and end timestamps.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/drives/42/positions
+```
 
 **Response:** Array of position objects with latitude, longitude, speed, heading, battery_level, temperatures, etc.
 
@@ -1286,6 +1535,11 @@ List all chat session IDs.
 
 Get global application settings.
 
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/settings
+```
+
 **Response:**
 ```json
 {
@@ -1301,6 +1555,13 @@ Get global application settings.
 ### PUT `/api/v1/settings`
 
 Update global settings.
+
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/settings \
+  -H "Content-Type: application/json" \
+  -d '{"unit_of_length": "mi", "unit_of_temp": "F", "preferred_range": "ideal", "language": "en", "base_cost_per_kwh": 0.15}'
+```
 
 **Request Body:**
 ```json
@@ -1323,6 +1584,11 @@ Update global settings.
 
 Export data as CSV or JSON (synchronous — direct download).
 
+**curl:**
+```bash
+curl -O "http://localhost:8080/api/v1/export/drives?format=csv&start_date=2025-01-01"
+```
+
 | URL Param | Description |
 |-----------|-------------|
 | `type` | `drives` or `charging` |
@@ -1340,6 +1606,13 @@ Returns a downloadable file with `Content-Disposition: attachment` header.
 ### POST `/api/v1/export/jobs`
 
 Submit an async export job. Processing is handled by the export worker via MQTT.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/export/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"type": "drives", "format": "csv", "start": "2025-01-01", "end": "2025-01-31"}'
+```
 
 **Request Body:**
 ```json
@@ -1367,9 +1640,19 @@ Submit an async export job. Processing is handled by the export worker via MQTT.
 
 List all export jobs (most recent first). Supports `limit` and `offset` query params.
 
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/export/jobs
+```
+
 ### GET `/api/v1/export/jobs/{jobID}`
 
 Get the status of a specific export job. Status progresses: `queued` → `processing` → `ready` / `failed`.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/export/jobs/exp-1234567890
+```
 
 **Response:**
 ```json
@@ -1390,9 +1673,21 @@ Get the status of a specific export job. Status progresses: `queued` → `proces
 
 Download the completed export file. Returns 404 if the job is not in `ready` status.
 
+**curl:**
+```bash
+curl -O http://localhost:8080/api/v1/export/jobs/exp-1234567890/download
+```
+
 ### POST `/api/v1/export/jobs/import`
 
 Submit an async CSV import job. Accepts multipart form with a CSV file.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/export/jobs/import \
+  -F "type=import_drives" \
+  -F "file=@drives.csv"
+```
 
 **Form Fields:**
 - `type` — `import_drives` or `import_charging`
@@ -1406,6 +1701,354 @@ Submit an async CSV import job. Accepts multipart form with a CSV file.
   "status": "queued",
   "message": "Import job submitted."
 }
+```
+
+---
+
+## Backup & Restore
+
+### GET `/api/v1/backup/configs`
+
+List all backup configurations.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/backup/configs
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Daily Full Backup",
+    "schedule": "0 2 * * *",
+    "type": "full",
+    "destination": "local",
+    "retention_days": 30,
+    "enabled": true,
+    "created_at": "2025-01-15T00:00:00Z",
+    "updated_at": "2025-06-01T00:00:00Z"
+  }
+]
+```
+
+### POST `/api/v1/backup/configs`
+
+Create a new backup configuration.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/backup/configs \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Weekly S3 Backup", "schedule": "0 3 * * 0", "type": "full", "destination": "s3", "retention_days": 90, "enabled": true}'
+```
+
+**Request Body:**
+```json
+{
+  "name": "Weekly S3 Backup",
+  "schedule": "0 3 * * 0",
+  "type": "full",
+  "destination": "s3",
+  "retention_days": 90,
+  "enabled": true
+}
+```
+
+**Response:** `201 Created` with the new `BackupConfig` object.
+
+### GET `/api/v1/backup/configs/{configID}`
+
+Get a single backup configuration.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/backup/configs/1
+```
+
+**Response:** Single `BackupConfig` object (same shape as list items).
+
+### PUT `/api/v1/backup/configs/{configID}`
+
+Update an existing backup configuration.
+
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/backup/configs/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Daily Full Backup", "schedule": "0 3 * * *", "type": "full", "destination": "local", "retention_days": 60, "enabled": true}'
+```
+
+**Request Body:** Full `BackupConfig` object (same shape as create).
+
+**Response:** Updated `BackupConfig` object.
+
+### DELETE `/api/v1/backup/configs/{configID}`
+
+Delete a backup configuration. Returns **204 No Content**.
+
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/backup/configs/1
+```
+
+### POST `/api/v1/backup/trigger`
+
+Trigger a backup run for an existing configuration.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/backup/trigger \
+  -H "Content-Type: application/json" \
+  -d '{"config_id": 1}'
+```
+
+**Request Body:**
+```json
+{
+  "config_id": 1
+}
+```
+
+**Response:**
+```json
+{
+  "run_id": "bkp-20250601-030000",
+  "config_id": 1,
+  "status": "running",
+  "message": "Backup triggered successfully"
+}
+```
+
+### POST `/api/v1/backup/quick`
+
+Run a quick one-off backup without a saved configuration.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/backup/quick \
+  -H "Content-Type: application/json" \
+  -d '{"type": "full", "destination": "local"}'
+```
+
+**Request Body:**
+```json
+{
+  "type": "full",
+  "destination": "local"
+}
+```
+
+**Response:**
+```json
+{
+  "run_id": "bkp-quick-20250601-143000",
+  "status": "running",
+  "message": "Quick backup started"
+}
+```
+
+### GET `/api/v1/backup/runs`
+
+List backup run history.
+
+**curl:**
+```bash
+curl "http://localhost:8080/api/v1/backup/runs?limit=10&offset=0"
+```
+
+| Query Param | Default | Description |
+|-------------|---------|-------------|
+| `limit` | `50` | Max rows |
+| `offset` | `0` | Pagination offset |
+| `config_id` | | Filter by config ID |
+
+**Response:**
+```json
+[
+  {
+    "id": "bkp-20250601-030000",
+    "config_id": 1,
+    "type": "full",
+    "destination": "local",
+    "status": "completed",
+    "file_name": "teslasync-backup-20250601.tar.gz",
+    "file_size": 15728640,
+    "duration_sec": 12,
+    "tables_backed_up": 18,
+    "total_rows": 125430,
+    "started_at": "2025-06-01T03:00:00Z",
+    "completed_at": "2025-06-01T03:00:12Z"
+  }
+]
+```
+
+### GET `/api/v1/backup/runs/{runID}/download`
+
+Download a completed backup file.
+
+**curl:**
+```bash
+curl -O http://localhost:8080/api/v1/backup/runs/bkp-20250601-030000/download
+```
+
+**Response:** Binary file download with `Content-Disposition: attachment` header. Returns `404` if the run is not in `completed` status.
+
+### POST `/api/v1/backup/runs/{runID}/verify`
+
+Verify the integrity of a completed backup.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/backup/runs/bkp-20250601-030000/verify
+```
+
+**Response:**
+```json
+{
+  "run_id": "bkp-20250601-030000",
+  "valid": true,
+  "checksum": "sha256:a1b2c3d4e5f6...",
+  "file_size": 15728640,
+  "tables_verified": 18,
+  "rows_verified": 125430
+}
+```
+
+### POST `/api/v1/backup/restore/preview`
+
+Preview what a restore operation would do without applying changes.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/backup/restore/preview \
+  -H "Content-Type: application/json" \
+  -d '{"run_id": "bkp-20250601-030000"}'
+```
+
+**Request Body:**
+```json
+{
+  "run_id": "bkp-20250601-030000"
+}
+```
+
+**Response:**
+```json
+{
+  "run_id": "bkp-20250601-030000",
+  "tables": [
+    { "name": "vehicles", "backup_rows": 2, "current_rows": 2 },
+    { "name": "drives", "backup_rows": 1850, "current_rows": 1900 },
+    { "name": "charging_sessions", "backup_rows": 420, "current_rows": 435 }
+  ],
+  "warnings": [
+    "Current database has 65 rows not present in backup (drives, charging_sessions)"
+  ]
+}
+```
+
+### POST `/api/v1/backup/restore`
+
+Restore data from a completed backup run.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/backup/restore \
+  -H "Content-Type: application/json" \
+  -d '{"run_id": "bkp-20250601-030000", "confirm": true}'
+```
+
+**Request Body:**
+```json
+{
+  "run_id": "bkp-20250601-030000",
+  "confirm": true
+}
+```
+
+**Response:**
+```json
+{
+  "run_id": "bkp-20250601-030000",
+  "status": "restored",
+  "tables_restored": 18,
+  "rows_restored": 125430,
+  "duration_sec": 8
+}
+```
+
+---
+
+## API Keys
+
+### GET `/api/v1/api-keys`
+
+List all API keys (secrets are masked).
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/api-keys
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Grafana Dashboard",
+    "key_prefix": "tsk_a1b2c3",
+    "permissions": ["read:vehicles", "read:drives", "read:charging"],
+    "last_used_at": "2025-06-01T12:00:00Z",
+    "expires_at": "2026-01-15T00:00:00Z",
+    "created_at": "2025-01-15T10:00:00Z"
+  }
+]
+```
+
+### POST `/api/v1/api-keys`
+
+Create a new API key. The full key is only returned once at creation time.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/api-keys \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Home Assistant", "permissions": ["read:vehicles", "read:drives"], "expires_in_days": 365}'
+```
+
+**Request Body:**
+```json
+{
+  "name": "Home Assistant",
+  "permissions": ["read:vehicles", "read:drives"],
+  "expires_in_days": 365
+}
+```
+
+**Response:**
+```json
+{
+  "id": 2,
+  "name": "Home Assistant",
+  "key": "tsk_d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9",
+  "key_prefix": "tsk_d4e5f6",
+  "permissions": ["read:vehicles", "read:drives"],
+  "expires_at": "2026-06-01T00:00:00Z",
+  "created_at": "2025-06-01T00:00:00Z"
+}
+```
+
+> ⚠️ **Important:** The `key` field is only returned on creation. Store it securely — it cannot be retrieved again.
+
+### DELETE `/api/v1/api-keys/{keyID}`
+
+Revoke an API key. Returns **204 No Content**.
+
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/api-keys/2
 ```
 
 ---
@@ -1450,20 +2093,104 @@ es.addEventListener('charging_update', (e) => {
 
 ## Error Responses
 
-All endpoints return errors in a consistent format:
+All API errors return a consistent JSON structure:
 
 ```json
 {
-  "error": "vehicle not found"
+  "error": "human-readable error message",
+  "code": "MACHINE_READABLE_CODE",
+  "category": "error_category"
 }
 ```
 
 | Status | Meaning |
 |--------|---------|
 | `400` | Bad request / invalid parameters |
+| `401` | Authentication required or invalid |
+| `403` | Insufficient permissions |
 | `404` | Resource not found |
+| `409` | Conflict (duplicate resource) |
+| `422` | Validation failed |
 | `429` | Rate limit exceeded (100 req/min/IP) |
 | `500` | Internal server error |
+| `502` | Tesla API unavailable |
+| `503` | Service temporarily unavailable |
+
+### Error Categories
+
+| Category | Description |
+|----------|-------------|
+| `authentication` | Auth failures, expired tokens, invalid API keys |
+| `vehicle` | Vehicle not found, offline, busy |
+| `validation` | Invalid input, missing fields, out of range |
+| `database` | DB connection, query, transaction failures |
+| `tesla_api` | Tesla API unavailable, rate limited, timeout |
+| `backup` | Backup/restore operation failures |
+| `rate_limit` | Too many requests |
+| `internal` | Internal server errors |
+
+### Common Error Codes
+
+| Code | Category | Status | Description |
+|------|----------|--------|-------------|
+| `AUTH_TOKEN_EXPIRED` | `authentication` | 401 | Tesla OAuth token has expired, re-authenticate |
+| `AUTH_NOT_CONFIGURED` | `authentication` | 401 | No Tesla credentials stored |
+| `API_KEY_INVALID` | `authentication` | 401 | API key not found or revoked |
+| `API_KEY_EXPIRED` | `authentication` | 401 | API key has passed its expiration date |
+| `PERMISSION_DENIED` | `authentication` | 403 | API key lacks required permission |
+| `VEHICLE_NOT_FOUND` | `vehicle` | 404 | Vehicle ID does not exist |
+| `VEHICLE_OFFLINE` | `vehicle` | 409 | Vehicle is asleep or unreachable |
+| `VEHICLE_BUSY` | `vehicle` | 409 | Another command is in progress |
+| `VALIDATION_FAILED` | `validation` | 422 | Request body failed validation |
+| `MISSING_FIELD` | `validation` | 400 | Required field is missing |
+| `INVALID_DATE_RANGE` | `validation` | 400 | Start date is after end date |
+| `DB_CONNECTION_FAILED` | `database` | 500 | Could not connect to database |
+| `TESLA_API_UNAVAILABLE` | `tesla_api` | 502 | Tesla Fleet API is unreachable |
+| `TESLA_API_RATE_LIMITED` | `tesla_api` | 429 | Tesla API rate limit hit |
+| `TESLA_API_TIMEOUT` | `tesla_api` | 502 | Tesla API request timed out |
+| `BACKUP_NOT_FOUND` | `backup` | 404 | Backup run ID does not exist |
+| `BACKUP_IN_PROGRESS` | `backup` | 409 | Another backup is already running |
+| `RESTORE_FAILED` | `backup` | 500 | Restore operation encountered an error |
+| `RATE_LIMIT_EXCEEDED` | `rate_limit` | 429 | Too many requests from this IP |
+| `INTERNAL_ERROR` | `internal` | 500 | Unexpected server error |
+
+### Example Error Responses
+
+**Authentication error:**
+```json
+{
+  "error": "Tesla OAuth token has expired, please re-authenticate",
+  "code": "AUTH_TOKEN_EXPIRED",
+  "category": "authentication"
+}
+```
+
+**Validation error:**
+```json
+{
+  "error": "field 'name' is required",
+  "code": "MISSING_FIELD",
+  "category": "validation"
+}
+```
+
+**Vehicle error:**
+```json
+{
+  "error": "vehicle is currently asleep, send a wake command first",
+  "code": "VEHICLE_OFFLINE",
+  "category": "vehicle"
+}
+```
+
+**Rate limit error:**
+```json
+{
+  "error": "rate limit exceeded, retry after 45 seconds",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "category": "rate_limit"
+}
+```
 
 ---
 

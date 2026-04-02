@@ -36,6 +36,15 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 - ✅ Audit trail logging
 - ✅ Circuit breaker & adaptive backoff for Tesla API calls
 - ✅ 25+ developer tools (VIN decoder, JWT decoder, API diagnostics, etc.)
+- ✅ Database transaction support (DBTX interface)
+- ✅ Migration safety (DO blocks, rollback testing)
+
+### Backup & Observability
+- ✅ Backup & Restore system with multi-provider storage
+- ✅ OpenTelemetry distributed tracing (optional)
+- ✅ 100% Tesla Fleet Telemetry protocol coverage (231 signals)
+- ✅ Frontend test suite (vitest, 41 tests, CI integrated)
+- ✅ Interactive database schema diagram
 
 ### Fleet Telemetry (Code-Ready)
 - ✅ Full signal ingestion (50+ signals — driving, charging, climate, TPMS, sentry, doors)

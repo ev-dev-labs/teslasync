@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getDailyMileage, getMonthlyMileage, getMileageStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
-import { Milestone, TrendingUp, Calendar, MapPin } from 'lucide-react'
+import { AnimatedNumber } from '../components/Widgets'
+import { Milestone, TrendingUp, Calendar, MapPin, ArrowUp, ArrowDown } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
+import { useSettings } from '../hooks/useSettings'
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
@@ -26,6 +28,7 @@ export default function Mileage() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { convertDistance, distanceUnit } = useSettings()
 
   const { data: daily, isLoading } = useQuery({
     queryKey: ['daily-mileage', vehicleId],
@@ -47,21 +50,45 @@ export default function Mileage() {
 
   const dailyChart = (daily ?? []).map(d => ({
     date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    miles: d.distance_km * 0.621371,
-    km: d.distance_km,
+    distance: convertDistance(d.distance_km),
   })).reverse()
+
+  // Cumulative odometer chart from daily data
+  const cumulativeChart = useMemo(() => {
+    if (!daily || daily.length === 0) return []
+    const sorted = [...daily].reverse()
+    let cumulative = 0
+    return sorted.map(d => {
+      cumulative += d.distance_km
+      return {
+        date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        odometer: convertDistance(d.odometer_end || cumulative),
+        cumulative: convertDistance(cumulative),
+      }
+    })
+  }, [daily, convertDistance])
 
   const monthlyChart = (monthly ?? []).map(m => ({
     month: m.month,
-    miles: m.distance * 0.621371,
-    km: m.distance,
+    distance: convertDistance(m.distance),
+    drives: m.drives,
   }))
 
+  // Find most and least active months
+  const mostActiveMonth = useMemo(() => {
+    if (!monthly || monthly.length === 0) return null
+    return [...monthly].sort((a, b) => b.distance - a.distance)[0]
+  }, [monthly])
+  const leastActiveMonth = useMemo(() => {
+    if (!monthly || monthly.length < 2) return null
+    return [...monthly].filter(m => m.distance > 0).sort((a, b) => a.distance - b.distance)[0]
+  }, [monthly])
+
   const statCards = stats ? [
-    { label: 'Total Distance', value: `${(stats.total_distance * 0.621371).toFixed(0)} mi`, sub: `${stats.total_distance.toFixed(0)} km`, icon: MapPin, color: '#00f0ff' },
-    { label: 'Daily Average', value: `${(stats.avg_daily * 0.621371).toFixed(1)} mi/day`, sub: `${stats.avg_daily.toFixed(1)} km/day`, icon: TrendingUp, color: '#10b981' },
-    { label: 'Best Day', value: `${(stats.max_daily * 0.621371).toFixed(0)} mi`, sub: `${stats.max_daily.toFixed(0)} km`, icon: Milestone, color: '#f59e0b' },
-    { label: 'Tracked Days', value: `${stats.days_tracked}`, sub: 'days', icon: Calendar, color: '#8b5cf6' },
+    { label: 'Total Distance', value: convertDistance(stats.total_distance).toFixed(0), unit: distanceUnit, icon: MapPin, color: '#00f0ff' },
+    { label: 'Daily Average', value: convertDistance(stats.avg_daily).toFixed(1), unit: `${distanceUnit}/day`, icon: TrendingUp, color: '#10b981' },
+    { label: 'Best Day', value: convertDistance(stats.max_daily).toFixed(0), unit: distanceUnit, icon: Milestone, color: '#f59e0b' },
+    { label: 'Tracked Days', value: `${stats.days_tracked}`, unit: 'days', icon: Calendar, color: '#8b5cf6' },
   ] : []
 
   return (
@@ -93,16 +120,66 @@ export default function Mileage() {
                 <card.icon className="h-4 w-4" style={{ color: card.color }} />
                 <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
               </div>
-              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{card.value}</p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">{card.sub}</p>
+              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                <AnimatedNumber value={Number(card.value)} decimals={card.label === 'Daily Average' ? 1 : 0} />
+              </p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">{card.unit}</p>
             </GlassPanel>
           ))}
         </div>
       )}
 
+      {/* Most/Least Active Month */}
+      {(mostActiveMonth || leastActiveMonth) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          {mostActiveMonth && (
+            <GlassPanel className="p-4 flex items-center gap-3">
+              <div className="rounded-lg p-2 bg-neon-green/10"><ArrowUp className="h-4 w-4 text-neon-green" /></div>
+              <div>
+                <p className="text-xs text-[var(--text-secondary)]">Most Active Month</p>
+                <p className="text-sm font-bold text-[var(--text-primary)]">{mostActiveMonth.month}</p>
+                <p className="text-[10px] text-neon-green">{convertDistance(mostActiveMonth.distance).toFixed(0)} {distanceUnit} · {mostActiveMonth.drives} drives</p>
+              </div>
+            </GlassPanel>
+          )}
+          {leastActiveMonth && (
+            <GlassPanel className="p-4 flex items-center gap-3">
+              <div className="rounded-lg p-2 bg-neon-amber/10"><ArrowDown className="h-4 w-4 text-neon-amber" /></div>
+              <div>
+                <p className="text-xs text-[var(--text-secondary)]">Least Active Month</p>
+                <p className="text-sm font-bold text-[var(--text-primary)]">{leastActiveMonth.month}</p>
+                <p className="text-[10px] text-neon-amber">{convertDistance(leastActiveMonth.distance).toFixed(0)} {distanceUnit} · {leastActiveMonth.drives} drives</p>
+              </div>
+            </GlassPanel>
+          )}
+        </div>
+      )}
+
+      {/* Cumulative Mileage Area Chart */}
+      {cumulativeChart.length > 0 && (
+        <GlassPanel className="p-4 sm:p-6 mb-6">
+          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Cumulative Mileage ({distanceUnit})</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={cumulativeChart}>
+              <defs>
+                <linearGradient id="cumulGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+              <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Area type="monotone" dataKey="cumulative" stroke="#a855f7" fill="url(#cumulGrad)" name={`Cumulative (${distanceUnit})`} strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </GlassPanel>
+      )}
+
       {/* Daily Mileage Area Chart */}
       <GlassPanel className="p-4 sm:p-6 mb-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Mileage</h3>
+        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Distance</h3>
         {dailyChart.length === 0 ? (
           <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No daily data</div>
         ) : (
@@ -118,7 +195,7 @@ export default function Mileage() {
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="km" stroke="#00f0ff" fill="url(#mileageGrad)" name="Distance (km)" />
+              <Area type="monotone" dataKey="distance" stroke="#00f0ff" fill="url(#mileageGrad)" name={`Distance (${distanceUnit})`} />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -136,7 +213,7 @@ export default function Mileage() {
               <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="km" fill="#00f0ff" name="Total (km)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="distance" fill="#00f0ff" name={`Distance (${distanceUnit})`} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

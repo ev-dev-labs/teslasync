@@ -7,7 +7,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
 )
+
+// globalErrorTracker is set during router initialization.
+var globalErrorTracker *ErrorTracker
 
 // JSON helper to write JSON responses.
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -15,8 +19,6 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	if data != nil {
 		_ = json.NewEncoder(w).Encode(data)
-	} else {
-		_, _ = w.Write([]byte("null"))
 	}
 }
 
@@ -64,6 +66,21 @@ func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
 		"error": msg,
 		"code":  code,
 	})
+}
+
+// writeAppError writes a structured error response using the centralized error catalog
+// and automatically records the error in the global error tracker and Prometheus.
+func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {
+	writeJSON(w, appErr.Status, map[string]string{
+		"error":    appErr.Message,
+		"code":     appErr.Code,
+		"category": appErr.Category,
+	})
+	APIErrors.WithLabelValues(appErr.Code, appErr.Category).Inc()
+	if globalErrorTracker != nil {
+		reqID := chimw.GetReqID(r.Context())
+		globalErrorTracker.Track(appErr.Code, appErr.Category, appErr.Message, r.URL.Path, r.Method, reqID, appErr.Status)
+	}
 }
 
 // Pagination helper extracts limit/offset from query params.

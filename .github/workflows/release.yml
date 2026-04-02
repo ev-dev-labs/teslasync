@@ -12,6 +12,7 @@ concurrency:
 permissions:
   contents: write
   packages: write
+  id-token: write  # Required for cosign keyless signing
 
 env:
   REGISTRY: ghcr.io
@@ -135,6 +136,7 @@ jobs:
 
       - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@v5
+        id: docker-build
         with:
           context: .
           file: ${{ matrix.file }}
@@ -143,6 +145,18 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-args: ${{ matrix.build-args }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image with cosign (keyless)
+        env:
+          DIGEST: ${{ steps.docker-build.outputs.digest }}
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          IMAGE=$(echo "$TAGS" | cut -d',' -f1)
+          cosign sign --yes "${IMAGE}@${DIGEST}"
+          echo "✅ Signed ${IMAGE}@${DIGEST}"
 
   helm:
     name: Publish Helm Chart
@@ -218,6 +232,16 @@ jobs:
 
           \`\`\`bash
           helm install teslasync oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync --version ${VERSION}
+          \`\`\`
+
+          ### 🔐 Image Verification
+
+          All images are signed with [cosign](https://github.com/sigstore/cosign) (keyless, via GitHub OIDC):
+
+          \`\`\`bash
+          cosign verify ghcr.io/${{ github.repository }}-api:${VERSION} \\
+            --certificate-identity-regexp="github.com/${{ github.repository }}" \\
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
           \`\`\`
 
           ### 📝 Changes

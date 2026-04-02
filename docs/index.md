@@ -32,6 +32,18 @@ features:
   - icon: 🎮
     title: Remote Vehicle Commands
     details: Lock/unlock, climate control, charge management, sentry mode, frunk/trunk, horn, and flash — all from the web UI.
+  - icon: 💾
+    title: Backup & Restore
+    details: Scheduled automated backups with multi-provider storage (S3, Azure, GCS, Local). Download, verify, and restore from the UI.
+  - icon: 🗺️
+    title: Multi-Provider Maps
+    details: Azure Maps, Google Maps, or free CARTO/OSM tiles — auto-selects based on your API key. Layer switcher on all map pages.
+  - icon: 🔭
+    title: Distributed Tracing
+    details: Optional OpenTelemetry with per-repo DB spans, handler tracing, and Jaeger integration. Zero overhead when disabled.
+  - icon: 🧠
+    title: Cross-Table Intelligence
+    details: 8 advanced analytics — TCO calculator, charging heatmap, temperature impact, route efficiency, regen scoring, battery degradation predictor, sleep analysis, speed profiling.
 ---
 
 ## Why TeslaSync?

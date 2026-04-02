@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -18,20 +18,15 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.Version=${VERSION}" \
     -o /bin/export-worker ./cmd/export-worker
 
-# Runtime stage
-FROM alpine:3.23
+# Runtime stage — distroless
+FROM gcr.io/distroless/static:nonroot
 
-RUN apk add --no-cache ca-certificates tzdata
-
-RUN addgroup -S teslasync && adduser -S teslasync -G teslasync
-
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/export-worker /usr/local/bin/export-worker
 
-USER teslasync
+USER nonroot:nonroot
 
 EXPOSE 8082
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:8082/healthz || exit 1
 
 ENTRYPOINT ["export-worker"]

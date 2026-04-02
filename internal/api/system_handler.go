@@ -262,3 +262,25 @@ func WorkersHealthHandler() http.HandlerFunc {
 		})
 	}
 }
+
+// MapConfigHandler returns the active map tile provider configuration.
+// The frontend uses this to load the correct tile URLs.
+func MapConfigHandler(cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		provider := "free" // CARTO/OSM/Esri (no key needed)
+		apiKey := ""
+
+		if cfg.GoogleMaps.APIKey != "" {
+			provider = "google"
+			apiKey = cfg.GoogleMaps.APIKey
+		} else if cfg.AzureMaps.APIKey != "" {
+			provider = "azure"
+			apiKey = cfg.AzureMaps.APIKey
+		}
+
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"provider": provider,
+			"api_key":  apiKey,
+		})
+	}
+}

@@ -207,16 +207,17 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
 
       {/* Signals Modal */}
       {showSignalsModal && info.details?.supported_signals && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowSignalsModal(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="glass-panel p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto"
+            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl border border-white/10 p-6 overflow-y-auto"
+            style={{ background: 'var(--surface-1, #0a0b1a)' }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between mb-4 pb-3 border-b border-white/10" style={{ background: 'var(--surface-1, #0a0b1a)' }}>
               <h3 className="text-lg font-bold text-[var(--text-primary)]">Subscribed Signals ({info.details.supported_signals.length})</h3>
-              <button onClick={() => setShowSignalsModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+              <button onClick={() => setShowSignalsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-lg">✕</button>
             </div>
             {SIGNAL_GROUPS.map(group => {
               const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
@@ -1220,8 +1221,12 @@ export default function SystemStatus() {
   const { data: healthz } = useQuery({
     queryKey: ['healthz'],
     queryFn: async () => {
-      const res = await fetch(`${getApiBase()}/healthz`)
-      return { ok: res.ok, status: res.status }
+      try {
+        const res = await fetch(`${getApiBase()}/healthz`)
+        return { ok: res.ok, status: res.status }
+      } catch {
+        return { ok: false, status: 0 }
+      }
     },
     refetchInterval: 30_000,
   })
@@ -1229,9 +1234,13 @@ export default function SystemStatus() {
   const { data: readyz } = useQuery({
     queryKey: ['readyz'],
     queryFn: async () => {
-      const res = await fetch(`${getApiBase()}/readyz`)
-      const body = await res.json().catch(() => ({}))
-      return { ok: res.ok, status: res.status, body }
+      try {
+        const res = await fetch(`${getApiBase()}/readyz`)
+        const body = await res.json().catch(() => ({}))
+        return { ok: res.ok, status: res.status, body }
+      } catch {
+        return { ok: false, status: 0, body: {} }
+      }
     },
     refetchInterval: 30_000,
   })
@@ -1271,7 +1280,7 @@ export default function SystemStatus() {
 
   const overallStatus = status?.overall ?? 'unknown'
   const overallColor = getStatusColor(overallStatus)
-  const healthyCount = components.filter(([, c]) => ['ok', 'healthy', 'authenticated', 'connected'].includes(c.status.toLowerCase())).length
+  const healthyCount = components.filter(([, c]) => ['ok', 'healthy', 'authenticated', 'connected', 'enabled', 'no_token'].includes(c.status.toLowerCase())).length
   const totalCount = components.length
 
   return (
@@ -1341,23 +1350,23 @@ export default function SystemStatus() {
       <FadeIn delay={0.05}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <GlassPanel className="p-4 flex items-center gap-3">
-            <div className={clsx('w-3 h-3 rounded-full', healthz?.ok ? 'bg-neon-green animate-pulse' : 'bg-neon-red')} />
+            <div className={clsx('w-3 h-3 rounded-full', healthz === undefined ? 'bg-yellow-500 animate-pulse' : healthz?.ok ? 'bg-neon-green animate-pulse' : 'bg-neon-red')} />
             <div className="flex-1">
               <p className="text-sm font-medium text-[var(--text-primary)]">/healthz</p>
               <p className="text-[10px] text-[var(--text-muted)]">Liveness probe</p>
             </div>
-            <span className={clsx('text-xs font-mono px-2 py-1 rounded', healthz?.ok ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red')}>
-              {healthz?.status ?? '—'}
+            <span className={clsx('text-xs font-mono px-2 py-1 rounded', healthz === undefined ? 'bg-yellow-500/10 text-yellow-400' : healthz?.ok ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red')}>
+              {healthz === undefined ? '...' : healthz?.ok ? '200' : healthz?.status ?? '—'}
             </span>
           </GlassPanel>
           <GlassPanel className="p-4 flex items-center gap-3">
-            <div className={clsx('w-3 h-3 rounded-full', readyz?.ok ? 'bg-neon-green animate-pulse' : 'bg-neon-red')} />
+            <div className={clsx('w-3 h-3 rounded-full', readyz === undefined ? 'bg-yellow-500 animate-pulse' : readyz?.ok ? 'bg-neon-green animate-pulse' : 'bg-neon-red')} />
             <div className="flex-1">
               <p className="text-sm font-medium text-[var(--text-primary)]">/readyz</p>
               <p className="text-[10px] text-[var(--text-muted)]">Readiness probe</p>
             </div>
-            <span className={clsx('text-xs font-mono px-2 py-1 rounded', readyz?.ok ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red')}>
-              {readyz?.status ?? '—'}
+            <span className={clsx('text-xs font-mono px-2 py-1 rounded', readyz === undefined ? 'bg-yellow-500/10 text-yellow-400' : readyz?.ok ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red')}>
+              {readyz === undefined ? '...' : readyz?.ok ? '200' : readyz?.status ?? '—'}
             </span>
           </GlassPanel>
         </div>

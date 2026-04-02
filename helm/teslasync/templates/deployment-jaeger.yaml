@@ -1,0 +1,54 @@
+{{- if .Values.jaeger.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-jaeger
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: jaeger
+  template:
+    metadata:
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: jaeger
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: jaeger
+          image: {{ .Values.jaeger.image | default "jaegertracing/all-in-one:1.57" }}
+          ports:
+            - containerPort: 16686
+              name: ui
+            - containerPort: 4317
+              name: otlp-grpc
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+          resources:
+            {{- toYaml .Values.jaeger.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslasync.fullname" . }}-jaeger
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jaeger
+spec:
+  selector:
+    {{- include "teslasync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: jaeger
+  ports:
+    - port: 16686
+      targetPort: 16686
+      name: ui
+    - port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+{{- end }}

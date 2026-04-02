@@ -15,12 +15,13 @@ func NewMediaRepo(db *DB) *MediaRepo {
 }
 
 func (r *MediaRepo) Insert(ctx context.Context, snap *models.MediaSnapshot) error {
-	query := `INSERT INTO media_snapshots (vehicle_id, now_playing_title, now_playing_artist, now_playing_album, now_playing_station, now_playing_duration, now_playing_elapsed, playback_status, playback_source, audio_volume, audio_volume_max)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
+	query := `INSERT INTO media_snapshots (vehicle_id, now_playing_title, now_playing_artist, now_playing_album, now_playing_station, now_playing_duration, now_playing_elapsed, playback_status, playback_source, audio_volume, audio_volume_max, audio_volume_increment)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		snap.VehicleID, snap.NowPlayingTitle, snap.NowPlayingArtist, snap.NowPlayingAlbum,
 		snap.NowPlayingStation, snap.NowPlayingDuration, snap.NowPlayingElapsed,
 		snap.PlaybackStatus, snap.PlaybackSource, snap.AudioVolume, snap.AudioVolumeMax,
+		snap.AudioVolumeIncrement,
 	).Scan(&snap.ID)
 }
 

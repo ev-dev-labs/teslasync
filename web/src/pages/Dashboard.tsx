@@ -122,12 +122,12 @@ export default function Dashboard() {
 
   // Get recent drives and charges for the primary vehicle
   const { data: recentDrives } = useQuery({
-    queryKey: ['drives', primaryVehicle?.id],
+    queryKey: ['drives', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getDrives(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
   })
   const { data: recentCharges } = useQuery({
-    queryKey: ['charging', primaryVehicle?.id],
+    queryKey: ['charging', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getChargingSessions(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
   })
@@ -154,36 +154,42 @@ export default function Dashboard() {
     queryFn: () => getMotorLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: climateData } = useQuery({
     queryKey: ['climate-latest', primaryVehicle?.id],
     queryFn: () => getClimateLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: securityData } = useQuery({
     queryKey: ['security-latest', primaryVehicle?.id],
     queryFn: () => getSecurityLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: tireData } = useQuery({
     queryKey: ['tire-latest', primaryVehicle?.id],
     queryFn: () => getLatestTirePressure(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: mediaData } = useQuery({
     queryKey: ['media-latest', primaryVehicle?.id],
     queryFn: () => getMediaLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
   const { data: locationData } = useQuery({
     queryKey: ['location-latest', primaryVehicle?.id],
     queryFn: () => getLocationSnapshotLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
+    staleTime: 30_000,
   })
 
   const onlineCount= vehicles?.filter(v => v.state === 'online').length ?? 0
@@ -427,28 +433,28 @@ export default function Dashboard() {
           {/* ============ FLEET STATS BAR ============ */}
           <StaggerContainer className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Fleet Size</p>
                 <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={totalCount} /></p>
                 <p className="text-[10px] text-gray-600 mt-1">{onlineCount} online</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Distance (30d)</p>
                 <p className="text-xl sm:text-2xl font-bold text-neon-cyan"><AnimatedNumber value={convertDistance(totalDistance)} suffix={` ${distanceUnit}`} /></p>
                 <MiniChart data={recentDrives?.map(d => d.distance).reverse() ?? [0]} color="#00f0ff" height={24} width={60} />
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Energy (30d)</p>
                 <p className="text-xl sm:text-2xl font-bold text-neon-green"><AnimatedNumber value={totalEnergy} decimals={1} suffix=" kWh" /></p>
                 <MiniChart data={recentCharges?.map(s => s.charge_energy_added).reverse() ?? [0]} color="#10b981" height={24} width={60} />
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Efficiency</p>
                 <p className="text-xl sm:text-2xl font-bold text-neon-amber">
                   <AnimatedNumber value={convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0)} suffix={` ${efficiencyUnit}`} />
@@ -457,7 +463,7 @@ export default function Dashboard() {
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-3 sm:p-4 text-center">
+              <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Alerts</p>
                 <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? '#ef4444' : '#10b981' }}>
                   <AnimatedNumber value={unreadAlerts} />
@@ -808,15 +814,13 @@ export default function Dashboard() {
                   ]
                   const getPressureColor = (bar: number | null) => {
                     if (bar == null) return 'text-[var(--text-muted)]'
-                    const psi = bar * 14.5038
-                    if (psi < 30 || psi > 45) return 'text-neon-red'
-                    if (psi < 33 || psi > 42) return 'text-neon-amber'
+                    if (bar < 2.068 || bar > 3.103) return 'text-neon-red'
+                    if (bar < 2.275 || bar > 2.896) return 'text-neon-amber'
                     return 'text-neon-green'
                   }
                   const allNormal = tires.every(t => {
                     if (t.value == null) return true
-                    const psi = t.value * 14.5038
-                    return psi >= 33 && psi <= 42
+                    return t.value >= 2.275 && t.value <= 2.896
                   })
                   return (
                     <div className="space-y-3">

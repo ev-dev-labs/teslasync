@@ -1,5 +1,5 @@
 # Build stage — Go binary
-FROM golang:1.24-alpine AS go-builder
+FROM golang:1.25-alpine AS go-builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -31,22 +31,17 @@ RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm instal
 COPY web/ .
 RUN npm run build
 
-# Runtime stage
-FROM alpine:3.23
+# Runtime stage — distroless (no shell, no package manager, minimal attack surface)
+FROM gcr.io/distroless/static:nonroot
 
-RUN apk add --no-cache ca-certificates tzdata
-
-RUN addgroup -S teslasync && adduser -S teslasync -G teslasync
-
+COPY --from=go-builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=go-builder /bin/teslasync /usr/local/bin/teslasync
 COPY migrations /migrations
 COPY --from=web-builder /app/dist /web/dist
 
-USER teslasync
+USER nonroot:nonroot
 
 EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:8080/healthz || exit 1
 
 ENTRYPOINT ["teslasync"]
