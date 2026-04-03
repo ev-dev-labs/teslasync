@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, AppSettings, Vehicle } from '../api'
-import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link, Fuel, Zap } from 'lucide-react'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getPollingConfig, updatePollingConfig, AppSettings, PollingConfig, Vehicle } from '../api'
+import { useState, useEffect, useCallback } from 'react'
+import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link, Fuel, Zap, ToggleLeft, ToggleRight } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
@@ -123,6 +123,30 @@ export default function Settings() {
       toast.error('Failed', 'Could not toggle API suspension')
     },
   })
+
+  // Polling config
+  const { data: pollingConfig } = useQuery({
+    queryKey: ['polling-config'],
+    queryFn: getPollingConfig,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const pollingConfigMut = useMutation({
+    mutationFn: (pc: PollingConfig) => updatePollingConfig(pc),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['polling-config'] })
+      toast.success('Polling config updated', 'Endpoint toggles have been saved')
+    },
+    onError: () => {
+      toast.error('Failed', 'Could not update polling config')
+    },
+  })
+
+  const toggleEndpoint = useCallback((key: keyof PollingConfig) => {
+    if (!pollingConfig) return
+    const updated = { ...pollingConfig, [key]: !pollingConfig[key] }
+    pollingConfigMut.mutate(updated)
+  }, [pollingConfig, pollingConfigMut])
 
   function handleLogin() {
     authUrlMut.mutate(undefined, {
@@ -293,6 +317,129 @@ export default function Settings() {
               <p className="text-xs text-neon-red/80">
                 Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service.
               </p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Granular API Endpoint Controls */}
+      <FadeIn delay={0.075}>
+        <GlassPanel className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">API Endpoint Controls</h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                Toggle individual Tesla Fleet API endpoints on or off
+                {pollingConfig && (() => {
+                  const keys = Object.keys(pollingConfig) as (keyof PollingConfig)[]
+                  const enabled = keys.filter(k => pollingConfig[k]).length
+                  return <span className="ml-1 text-neon-cyan">({enabled}/{keys.length} enabled)</span>
+                })()}
+              </p>
+            </div>
+          </div>
+
+          {pollingConfig && (
+            <div className="space-y-4">
+              {/* Polling Endpoints */}
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Polling Endpoints</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {([
+                    { key: 'vehicle_discovery' as const, label: 'Vehicle Discovery', desc: 'List vehicles from Tesla' },
+                    { key: 'charge_state' as const, label: 'Charge State', desc: 'Battery & charging data' },
+                    { key: 'climate_state' as const, label: 'Climate State', desc: 'Climate & temperature data' },
+                    { key: 'drive_state' as const, label: 'Drive State', desc: 'Location & speed data' },
+                    { key: 'location_data' as const, label: 'Location Data', desc: 'GPS coordinates' },
+                    { key: 'vehicle_state' as const, label: 'Vehicle State', desc: 'Locks, doors, odometer' },
+                    { key: 'vehicle_config' as const, label: 'Vehicle Config', desc: 'Model, trim, options' },
+                  ]).map(ep => (
+                    <div key={ep.key} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[var(--text-primary)] truncate">{ep.label}</p>
+                        <p className="text-[10px] text-[var(--text-muted)] truncate">{ep.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleEndpoint(ep.key)}
+                        className="transition-colors shrink-0 ml-2"
+                        aria-label={pollingConfig[ep.key] ? `Disable ${ep.label}` : `Enable ${ep.label}`}
+                        disabled={pollingConfigMut.isPending}
+                      >
+                        {pollingConfig[ep.key] ? (
+                          <ToggleRight className="h-6 w-6 text-neon-green" />
+                        ) : (
+                          <ToggleLeft className="h-6 w-6 text-[var(--text-muted)]" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* On-Demand Endpoints */}
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">On-Demand Endpoints</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {([
+                    { key: 'nearby_charging_sites' as const, label: 'Nearby Charging', desc: 'Supercharger locations' },
+                    { key: 'release_notes' as const, label: 'Release Notes', desc: 'Firmware release notes' },
+                    { key: 'recent_alerts' as const, label: 'Recent Alerts', desc: 'Vehicle alert history' },
+                    { key: 'service_data' as const, label: 'Service Data', desc: 'Service history & status' },
+                  ]).map(ep => (
+                    <div key={ep.key} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[var(--text-primary)] truncate">{ep.label}</p>
+                        <p className="text-[10px] text-[var(--text-muted)] truncate">{ep.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleEndpoint(ep.key)}
+                        className="transition-colors shrink-0 ml-2"
+                        aria-label={pollingConfig[ep.key] ? `Disable ${ep.label}` : `Enable ${ep.label}`}
+                        disabled={pollingConfigMut.isPending}
+                      >
+                        {pollingConfig[ep.key] ? (
+                          <ToggleRight className="h-6 w-6 text-neon-green" />
+                        ) : (
+                          <ToggleLeft className="h-6 w-6 text-[var(--text-muted)]" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Commands */}
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Commands</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {([
+                    { key: 'wake_up' as const, label: 'Wake Up', desc: 'Wake vehicle from sleep' },
+                    { key: 'commands' as const, label: 'Vehicle Commands', desc: 'Lock, unlock, climate, etc.' },
+                  ]).map(ep => (
+                    <div key={ep.key} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-[var(--text-primary)] truncate">{ep.label}</p>
+                        <p className="text-[10px] text-[var(--text-muted)] truncate">{ep.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleEndpoint(ep.key)}
+                        className="transition-colors shrink-0 ml-2"
+                        aria-label={pollingConfig[ep.key] ? `Disable ${ep.label}` : `Enable ${ep.label}`}
+                        disabled={pollingConfigMut.isPending}
+                      >
+                        {pollingConfig[ep.key] ? (
+                          <ToggleRight className="h-6 w-6 text-neon-green" />
+                        ) : (
+                          <ToggleLeft className="h-6 w-6 text-[var(--text-muted)]" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </GlassPanel>

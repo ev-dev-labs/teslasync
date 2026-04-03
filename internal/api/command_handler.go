@@ -58,6 +58,11 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
 		return
 	}
+	// Check if commands endpoint is enabled in polling config
+	if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.Commands {
+		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle commands endpoint is disabled in polling config"))
+		return
+	}
 
 	vehicleID, err := urlParamInt64(r, "vehicleID")
 	if err != nil {

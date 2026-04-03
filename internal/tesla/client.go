@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -536,10 +537,14 @@ func (c *Client) ListVehicles(ctx context.Context) ([]VehicleData, error) {
 
 // GetVehicleData returns the full snapshot of a vehicle's charge, climate,
 // drive, and config state. Returns ErrVehicleAsleep if the vehicle cannot
-// be reached (408/504).
-func (c *Client) GetVehicleData(ctx context.Context, vin string) (*VehicleDataResponse, error) {
-	path := fmt.Sprintf("/api/1/vehicles/%s/vehicle_data?endpoints=%s", vin,
-		"charge_state;climate_state;drive_state;location_data;vehicle_state;vehicle_config")
+// be reached (408/504). The optional endpoints parameter specifies which
+// vehicle_data sub-endpoints to request; if empty, all endpoints are requested.
+func (c *Client) GetVehicleData(ctx context.Context, vin string, endpoints ...string) (*VehicleDataResponse, error) {
+	epStr := "charge_state;climate_state;drive_state;location_data;vehicle_state;vehicle_config"
+	if len(endpoints) > 0 {
+		epStr = strings.Join(endpoints, ";")
+	}
+	path := fmt.Sprintf("/api/1/vehicles/%s/vehicle_data?endpoints=%s", vin, epStr)
 	data, status, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
