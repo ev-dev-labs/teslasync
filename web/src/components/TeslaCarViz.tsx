@@ -48,16 +48,16 @@ function useSvgPalette() {
   return {
     isLight,
     body: {
-      fill: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)',
-      stroke: isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.15)',
+      fill: isLight ? '#d4d8e0' : '#2d3748',
+      stroke: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.08)',
     },
     glass: {
-      fill: isLight ? 'rgba(0,120,200,0.08)' : 'rgba(0,240,255,0.03)',
-      stroke: isLight ? 'rgba(0,120,200,0.25)' : 'rgba(0,240,255,0.12)',
+      fill: isLight ? 'rgba(0,120,200,0.15)' : 'rgba(15,23,42,0.9)',
+      stroke: isLight ? 'rgba(0,120,200,0.25)' : 'rgba(255,255,255,0.12)',
     },
     wind: {
-      fill: isLight ? 'rgba(0,120,200,0.1)' : 'rgba(0,240,255,0.05)',
-      stroke: isLight ? 'rgba(0,120,200,0.3)' : 'rgba(0,240,255,0.15)',
+      fill: isLight ? 'rgba(0,120,200,0.12)' : 'rgba(15,23,42,0.85)',
+      stroke: isLight ? 'rgba(0,120,200,0.2)' : 'rgba(255,255,255,0.1)',
     },
     wheel: {
       outer: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.6)',
