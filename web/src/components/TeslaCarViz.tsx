@@ -33,11 +33,11 @@ const WHEEL_POS: Record<TeslaModel, {
   headX: number; headY: number; tailX: number; tailY: number
   batX: number; batY: number; lockX: number; lockY: number
 }> = {
-  model3:     { fx: 160, rx: 430, wy: 210, headX: 92,  headY: 185, tailX: 515, tailY: 180, batX: 150, batY: 170, lockX: 295, lockY: 110 },
-  models:     { fx: 150, rx: 440, wy: 210, headX: 82,  headY: 185, tailX: 525, tailY: 180, batX: 150, batY: 170, lockX: 290, lockY: 108 },
-  modely:     { fx: 160, rx: 430, wy: 215, headX: 90,  headY: 182, tailX: 518, tailY: 175, batX: 150, batY: 175, lockX: 295, lockY: 105 },
-  modelx:     { fx: 155, rx: 435, wy: 218, headX: 85,  headY: 180, tailX: 520, tailY: 172, batX: 150, batY: 178, lockX: 290, lockY: 100 },
-  cybertruck: { fx: 150, rx: 445, wy: 215, headX: 78,  headY: 170, tailX: 528, tailY: 155, batX: 150, batY: 175, lockX: 300, lockY: 115 },
+  model3:     { fx: 160, rx: 430, wy: 210, headX: 88,  headY: 180, tailX: 490, tailY: 175, batX: 150, batY: 170, lockX: 295, lockY: 106 },
+  models:     { fx: 150, rx: 440, wy: 210, headX: 78,  headY: 180, tailX: 500, tailY: 175, batX: 150, batY: 170, lockX: 290, lockY: 104 },
+  modely:     { fx: 160, rx: 430, wy: 215, headX: 88,  headY: 182, tailX: 490, tailY: 178, batX: 150, batY: 175, lockX: 295, lockY: 104 },
+  modelx:     { fx: 155, rx: 435, wy: 218, headX: 84,  headY: 184, tailX: 492, tailY: 180, batX: 150, batY: 178, lockX: 290, lockY: 100 },
+  cybertruck: { fx: 150, rx: 445, wy: 210, headX: 78,  headY: 170, tailX: 528, tailY: 155, batX: 150, batY: 175, lockX: 300, lockY: 115 },
 }
 
 /** Theme-aware color palette for SVG rendering */
@@ -130,34 +130,34 @@ function ModelBody({ model, driving: _driving, palette }: { model: TeslaModel; d
   const windStroke = palette.wind.stroke
 
   const bodies: Record<TeslaModel, { body: string; roof: string; wind: string }> = {
-    /* Model 3 — compact sport sedan, low roofline, smooth curves */
+    /* Model 3 — compact sport sedan, smooth curves, short nose */
     model3: {
-      body: 'M80 200 C80 200 85 170 110 155 L170 120 C185 112 210 95 240 88 C270 81 320 78 360 80 C400 82 430 92 450 105 L490 130 C505 140 515 155 518 170 L520 200 L520 210 L80 210 Z',
-      roof: 'M175 118 C190 108 215 95 245 88 C280 81 330 80 365 83 C395 86 420 95 440 108 L430 115 C415 108 390 100 360 98 C330 96 290 96 260 100 C230 104 205 112 190 118 Z',
-      wind: 'M190 118 L230 96 C250 90 280 87 310 87 L365 90 L420 110 L410 114 C390 106 360 100 330 98 C300 96 270 97 245 102 L195 118 Z',
+      body: 'M84 210 Q64 178 94 166 L170 164 Q192 146 220 130 Q258 116 302 114 L386 114 Q418 116 446 130 Q468 146 484 166 Q494 178 498 194 Q500 204 500 210 L84 210 Z',
+      roof: 'M196 140 Q216 128 248 120 Q282 114 325 114 L380 114 Q410 116 435 128 L445 134 L436 138 C418 130 390 122 360 120 C330 118 290 118 260 122 C230 126 210 134 200 140 Z',
+      wind: 'M202 140 L238 120 Q260 114 292 114 L375 116 L432 132 L424 136 C408 128 380 120 350 118 C320 116 290 117 265 122 L208 140 Z',
     },
-    /* Model S — longer, sleeker fastback sedan with extended rear */
+    /* Model S — longer, sleeker fastback */
     models: {
-      body: 'M70 200 C70 200 75 168 100 152 L155 118 C170 110 195 93 230 86 C265 79 320 76 370 78 C415 80 445 90 465 102 L505 128 C518 138 528 152 530 168 L532 200 L532 210 L70 210 Z',
-      roof: 'M160 116 C175 106 200 93 235 86 C270 79 325 78 375 81 C410 84 440 94 458 106 L448 112 C432 104 405 96 375 94 C340 92 295 92 265 96 C235 100 210 110 195 116 Z',
-      wind: 'M200 116 L240 93 C260 87 285 84 315 84 L375 88 L445 108 L435 112 C415 104 385 96 355 94 C325 92 295 93 270 98 L205 116 Z',
+      body: 'M72 210 Q52 178 82 166 L168 164 Q188 146 216 130 Q254 116 300 114 L395 114 Q428 116 456 130 Q478 146 494 166 Q504 178 508 194 Q510 204 510 210 L72 210 Z',
+      roof: 'M190 140 Q212 126 246 118 Q282 112 330 112 L390 112 Q418 114 442 126 L452 132 L444 136 C426 128 398 120 368 118 C335 116 295 116 265 120 C235 124 215 132 202 140 Z',
+      wind: 'M198 140 L236 118 Q258 112 292 112 L385 114 L440 130 L432 134 C414 126 385 118 355 116 C325 114 295 115 270 120 L204 140 Z',
     },
-    /* Model Y — raised crossover, taller greenhouse, slight curvature */
+    /* Model Y — crossover, taller greenhouse, slight curvature */
     modely: {
-      body: 'M82 205 C82 205 87 172 112 155 L168 115 C183 106 208 88 238 80 C268 73 318 70 358 72 C398 74 428 84 448 98 L488 125 C503 135 513 150 516 165 L518 205 L518 215 L82 215 Z',
-      roof: 'M172 113 C188 102 213 88 243 80 C278 73 328 72 363 75 C393 78 418 88 438 100 L428 107 C413 100 388 92 358 90 C328 88 288 88 258 92 C228 96 203 106 190 113 Z',
-      wind: 'M192 113 L232 88 C252 82 278 78 308 78 L363 82 L425 103 L415 108 C396 100 368 92 340 90 C310 88 282 89 258 94 L198 113 Z',
+      body: 'M84 215 Q62 182 94 168 L170 166 Q192 148 220 132 Q258 118 302 116 L380 116 Q414 118 444 132 Q468 148 484 168 Q494 182 498 198 Q500 208 500 215 L84 215 Z',
+      roof: 'M194 142 Q216 128 248 118 Q282 112 325 112 L375 112 Q408 114 434 128 L444 134 L436 138 C418 130 390 122 358 120 C328 118 288 118 258 122 C228 126 210 134 198 142 Z',
+      wind: 'M200 142 L238 118 Q260 112 292 112 L370 114 L432 130 L424 136 C406 128 378 120 348 118 C318 116 288 117 264 122 L206 142 Z',
     },
-    /* Model X — tall SUV, falcon-wing doors, commanding height */
+    /* Model X — tall SUV, falcon-wing doors */
     modelx: {
-      body: 'M78 210 C78 210 82 175 106 155 L160 110 C175 100 200 80 232 72 C264 65 315 62 358 64 C400 66 432 78 452 92 L492 118 C508 128 518 145 520 160 L522 210 L522 220 L78 220 Z',
-      roof: 'M165 108 C182 96 208 80 240 72 C275 65 325 64 365 67 C400 70 428 82 448 96 L438 103 C422 94 396 84 365 82 C330 80 288 80 258 84 C228 88 206 98 194 108 Z',
-      wind: 'M196 108 L236 82 C256 75 282 72 312 72 L368 76 L436 98 L426 104 C408 96 380 88 350 86 C320 84 290 85 265 90 L202 108 Z',
+      body: 'M80 218 Q58 184 90 170 L165 168 Q186 148 216 132 Q256 116 300 112 L380 112 Q416 114 446 132 Q470 148 486 170 Q496 184 500 200 Q502 210 502 218 L80 218 Z',
+      roof: 'M190 140 Q214 124 248 114 Q284 108 328 108 L376 108 Q410 110 436 124 L446 130 L438 134 C420 126 392 118 362 116 C330 114 290 114 260 118 C230 122 212 130 198 140 Z',
+      wind: 'M196 140 L236 114 Q258 108 290 108 L372 110 L434 128 L426 132 C408 124 380 116 350 114 C320 112 290 113 265 118 L202 140 Z',
     },
-    /* Cybertruck — angular, geometric, sharp edges, truck bed */
+    /* Cybertruck — angular, geometric, sharp edges */
     cybertruck: {
-      body: 'M68 200 L68 175 L90 165 L140 125 L220 100 L280 95 L420 95 L460 95 L520 120 L535 155 L538 175 L538 200 L538 210 L68 210 Z',
-      roof: 'M145 123 L225 100 L282 95 L420 95 L415 100 L290 100 L230 104 L155 123 Z',
+      body: 'M68 210 L68 185 L90 175 L140 140 L220 118 L280 114 L420 114 L460 114 L520 138 L535 168 L538 185 L538 210 L68 210 Z',
+      roof: 'M145 138 L225 118 L282 114 L420 114 L415 118 L290 118 L230 122 L155 138 Z',
       wind: 'M155 123 L230 102 L290 98 L420 98 L418 95 L282 95 L225 100 L145 123 Z',
     },
   }
