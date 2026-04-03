@@ -384,13 +384,13 @@ export default function Settings() {
                 <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">On-Demand Endpoints</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {([
-                    { key: 'vehicle_discovery' as const, label: 'Vehicle Discovery', desc: 'Sync vehicles from Tesla' },
-                    { key: 'charge_state' as const, label: 'Charge State', desc: 'Battery & charging data' },
-                    { key: 'climate_state' as const, label: 'Climate State', desc: 'Climate & temperature data' },
-                    { key: 'drive_state' as const, label: 'Drive State', desc: 'Location & speed data' },
-                    { key: 'location_data' as const, label: 'Location Data', desc: 'GPS coordinates' },
-                    { key: 'vehicle_state' as const, label: 'Vehicle State', desc: 'Locks, doors, odometer' },
-                    { key: 'vehicle_config' as const, label: 'Vehicle Config', desc: 'Model, trim, options' },
+                    { key: 'on_demand_vehicle_discovery' as const, label: 'Vehicle Discovery', desc: 'Sync vehicles from Tesla' },
+                    { key: 'on_demand_charge_state' as const, label: 'Charge State', desc: 'Battery & charging data' },
+                    { key: 'on_demand_climate_state' as const, label: 'Climate State', desc: 'Climate & temperature data' },
+                    { key: 'on_demand_drive_state' as const, label: 'Drive State', desc: 'Location & speed data' },
+                    { key: 'on_demand_location_data' as const, label: 'Location Data', desc: 'GPS coordinates' },
+                    { key: 'on_demand_vehicle_state' as const, label: 'Vehicle State', desc: 'Locks, doors, odometer' },
+                    { key: 'on_demand_vehicle_config' as const, label: 'Vehicle Config', desc: 'Model, trim, options' },
                     { key: 'nearby_charging_sites' as const, label: 'Nearby Charging', desc: 'Supercharger locations' },
                     { key: 'release_notes' as const, label: 'Release Notes', desc: 'Firmware release notes' },
                     { key: 'recent_alerts' as const, label: 'Recent Alerts', desc: 'Vehicle alert history' },

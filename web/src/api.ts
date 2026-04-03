@@ -253,7 +253,7 @@ export interface AppSettings {
 
 /** Per-endpoint toggle config for Tesla Fleet API calls. */
 export interface PollingConfig {
-  // Polling endpoints
+  // Polling endpoints (automatic)
   vehicle_discovery: boolean
   charge_state: boolean
   climate_state: boolean
@@ -261,7 +261,15 @@ export interface PollingConfig {
   location_data: boolean
   vehicle_state: boolean
   vehicle_config: boolean
-  // On-demand endpoints
+  // On-demand counterparts for polling endpoints (user-triggered)
+  on_demand_vehicle_discovery: boolean
+  on_demand_charge_state: boolean
+  on_demand_climate_state: boolean
+  on_demand_drive_state: boolean
+  on_demand_location_data: boolean
+  on_demand_vehicle_state: boolean
+  on_demand_vehicle_config: boolean
+  // On-demand only endpoints
   nearby_charging_sites: boolean
   release_notes: boolean
   recent_alerts: boolean

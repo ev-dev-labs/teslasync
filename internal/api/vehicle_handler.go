@@ -98,8 +98,8 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrTeslaAPISuspended)
 		return
 	}
-	// Check if vehicle_discovery endpoint is enabled in polling config
-	if pc, err := h.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.VehicleDiscovery {
+	// Check if vehicle_discovery endpoint is enabled in polling config (on-demand)
+	if pc, err := h.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.OnDemandVehicleDiscovery {
 		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle discovery endpoint is disabled in polling config"))
 		return
 	}
