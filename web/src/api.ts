@@ -742,8 +742,45 @@ export const getVehicles = () => request<Vehicle[]>('/vehicles')
 export const getVehicle = (id: number) => request<Vehicle>(`/vehicles/${id}`)
 /** Syncs the vehicle list from Tesla's API into the local database. */
 export const syncVehicles = () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' })
-/** Fetches the live state (location, battery, climate, etc.) for a vehicle. */
-export const getVehicleState = (id: number) => request<{ state?: VehicleState; live: boolean }>(`/vehicles/${id}/state`)
+/** Fetches the live state (location, battery, climate, etc.) for a vehicle.
+ *  The backend returns two formats:
+ *  - Live/telemetry: { state: VehicleState, live: true }
+ *  - Cached (no token): { vehicle: Vehicle, position: Position, live: false }
+ *  This function normalises both into { state?: VehicleState; live: boolean }.
+ */
+export const getVehicleState = async (id: number): Promise<{ state?: VehicleState; live: boolean }> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const res = await request<any>(`/vehicles/${id}/state`)
+  if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
+    return { state: res.state as VehicleState, live: res.live ?? false }
+  }
+  const v = res.vehicle
+  const p = res.position
+  if (!v && !p) return { state: res.state, live: res.live ?? false }
+  const state: VehicleState = {
+    vehicle_id: v?.id ?? id,
+    state: v?.state ?? 'offline',
+    latitude: p?.latitude ?? 0,
+    longitude: p?.longitude ?? 0,
+    speed: p?.speed ?? 0,
+    power: p?.power ?? 0,
+    battery_level: p?.battery_level ?? 0,
+    rated_range: p?.rated_range ?? p?.ideal_range ?? 0,
+    ideal_range: p?.ideal_range ?? 0,
+    odometer: p?.odometer ?? 0,
+    inside_temp: p?.inside_temp ?? 0,
+    outside_temp: p?.outside_temp ?? 0,
+    is_climate_on: p?.is_climate_on ?? false,
+    is_charging: res.is_charging ?? false,
+    charger_power: res.charger_power ?? 0,
+    charge_rate: res.charge_rate ?? 0,
+    time_to_full_charge: res.time_to_full_charge ?? 0,
+    is_locked: res.is_locked ?? v?.is_locked ?? true,
+    sentry_mode: res.sentry_mode ?? false,
+    software_version: res.software_version ?? v?.software_version ?? '',
+  }
+  return { state, live: res.live ?? false }
+}
 /** Fetches recent GPS positions for a vehicle. */
 export const getVehiclePositions = (id: number, limit = 100) => request<Position[]>(`/vehicles/${id}/positions?limit=${limit}`)
 /** Sends a wake-up command to a sleeping vehicle. */
