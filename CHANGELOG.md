@@ -2,6 +2,22 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [Unreleased]
+
+### 🚀 New Features
+
+#### Granular API Endpoint Polling Controls
+- Per-endpoint toggles for 20 Tesla Fleet API endpoints across three categories:
+  - **Polling** (7): Vehicle Discovery, Charge State, Climate State, Drive State, Location Data, Vehicle State, Vehicle Config
+  - **On-Demand** (11): Separate toggles for the same 7 endpoints when triggered manually, plus Nearby Charging Sites, Release Notes, Recent Alerts, Service Data
+  - **Commands** (2): Wake Up, Vehicle Commands
+- Polling and on-demand toggles are independent — disable auto-polling for an endpoint while keeping manual use via the UI
+- New Settings UI section: "API Endpoint Controls" with grouped toggle grid
+- New API endpoints: `GET/PUT /api/v1/settings/polling-config`
+- Database migration: `polling_config` JSONB column on settings table
+- All toggles default to enabled — existing behavior preserved
+- Global `api_suspended` master switch continues to override all toggles
+
 ## [0.7.0] — 2026-03-29
 
 ### 🚀 New Features

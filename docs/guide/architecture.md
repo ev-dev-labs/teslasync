@@ -812,6 +812,15 @@ Single-row table for global application preferences.
 | `preferred_range` | `VARCHAR(10)` | `rated` or `ideal` |
 | `language` | `VARCHAR(10)` | Language code (e.g. `en`) |
 | `base_cost_per_kwh` | `DOUBLE PRECISION` | Default electricity cost |
+| `api_suspended` | `BOOLEAN` | Suspend all Tesla API calls |
+| `theme` | `VARCHAR(20)` | UI theme (e.g. `neon-cyan`) |
+| `mode` | `VARCHAR(20)` | UI mode (`dark`, `light`, `oled`, `midnight`) |
+| `custom_primary` | `VARCHAR(10)` | Custom theme primary color (hex) |
+| `custom_accent` | `VARCHAR(10)` | Custom theme accent color (hex) |
+| `gas_price_per_unit` | `DOUBLE PRECISION` | Gas price for ICE comparison |
+| `gas_unit` | `VARCHAR(10)` | `gallon` or `liter` |
+| `gas_efficiency_mpg` | `DOUBLE PRECISION` | Comparison ICE vehicle MPG |
+| `polling_config` | `JSONB` | Per-endpoint polling toggles (20 booleans for polling, on-demand, and commands) |
 
 ### Data Retention
 

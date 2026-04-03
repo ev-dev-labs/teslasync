@@ -162,6 +162,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **7-Channel Notifications** — Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
 - **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
 - **API Suspend Toggle** — Suspend all Tesla Fleet API calls from Settings UI or API when vehicle is in service
+- **Granular Endpoint Controls** — Enable/disable individual Tesla Fleet API endpoints for both automatic polling and on-demand calls (20 independent toggles across polling, on-demand, and commands)
 
 ### 🛠 Developer Tools
 - **Tesla Fleet API** — Region detection, partner registration, API connectivity test, token inspector
@@ -461,6 +462,8 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/v1/settings/suspend-api` | Suspend or resume all Tesla API calls (`{"suspended": true/false}`) |
+| GET | `/api/v1/settings/polling-config` | Get granular endpoint polling configuration (per-endpoint on/off toggles) |
+| PUT | `/api/v1/settings/polling-config` | Update endpoint polling configuration |
 
 ### Developer Tools
 
