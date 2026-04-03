@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -326,6 +327,128 @@ type Settings struct {
 	GasPricePerUnit float64 `json:"gas_price_per_unit" db:"gas_price_per_unit"` // price per gallon/liter
 	GasUnit         string  `json:"gas_unit" db:"gas_unit"`                   // gallon, liter
 	GasEfficiencyMPG float64 `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
+	PollingConfig   PollingConfig `json:"polling_config" db:"polling_config"`
+}
+
+// PollingConfig controls which Tesla Fleet API endpoints are enabled.
+// All fields default to true (enabled) to preserve existing behavior.
+// Endpoints that appear in both Polling and On-Demand have separate toggles
+// (e.g., VehicleDiscovery controls auto-polling, OnDemandVehicleDiscovery
+// controls manual sync).
+type PollingConfig struct {
+	// Polling endpoints (automatic, worker-driven)
+	VehicleDiscovery bool `json:"vehicle_discovery"` // GET /api/1/vehicles (auto-discovery)
+	ChargeState      bool `json:"charge_state"`      // vehicle_data sub-endpoint
+	ClimateState     bool `json:"climate_state"`     // vehicle_data sub-endpoint
+	DriveState       bool `json:"drive_state"`       // vehicle_data sub-endpoint
+	LocationData     bool `json:"location_data"`     // vehicle_data sub-endpoint
+	VehicleState     bool `json:"vehicle_state"`     // vehicle_data sub-endpoint
+	VehicleConfig    bool `json:"vehicle_config"`    // vehicle_data sub-endpoint
+
+	// On-demand counterparts for polling endpoints (user-triggered)
+	OnDemandVehicleDiscovery bool `json:"on_demand_vehicle_discovery"` // Sync from Tesla button
+	OnDemandChargeState      bool `json:"on_demand_charge_state"`      // live vehicle view
+	OnDemandClimateState     bool `json:"on_demand_climate_state"`     // live vehicle view
+	OnDemandDriveState       bool `json:"on_demand_drive_state"`       // live vehicle view
+	OnDemandLocationData     bool `json:"on_demand_location_data"`     // live vehicle view
+	OnDemandVehicleState     bool `json:"on_demand_vehicle_state"`     // live vehicle view
+	OnDemandVehicleConfig    bool `json:"on_demand_vehicle_config"`    // live vehicle view
+
+	// On-demand only endpoints
+	NearbyChargingSites bool `json:"nearby_charging_sites"` // GET /vehicles/{vin}/nearby_charging_sites
+	ReleaseNotes        bool `json:"release_notes"`         // GET /vehicles/{vin}/release_notes
+	RecentAlerts        bool `json:"recent_alerts"`         // GET /vehicles/{vin}/recent_alerts
+	ServiceData         bool `json:"service_data"`          // GET /vehicles/{vin}/service_data
+
+	// Commands
+	WakeUp   bool `json:"wake_up"`   // POST /vehicles/{vin}/wake_up
+	Commands bool `json:"commands"`  // POST /vehicles/{vin}/command/*
+}
+
+// DefaultPollingConfig returns a PollingConfig with all endpoints enabled.
+func DefaultPollingConfig() PollingConfig {
+	return PollingConfig{
+		VehicleDiscovery:         true,
+		ChargeState:              true,
+		ClimateState:             true,
+		DriveState:               true,
+		LocationData:             true,
+		VehicleState:             true,
+		VehicleConfig:            true,
+		OnDemandVehicleDiscovery: true,
+		OnDemandChargeState:      true,
+		OnDemandClimateState:     true,
+		OnDemandDriveState:       true,
+		OnDemandLocationData:     true,
+		OnDemandVehicleState:     true,
+		OnDemandVehicleConfig:    true,
+		NearbyChargingSites:      true,
+		ReleaseNotes:             true,
+		RecentAlerts:             true,
+		ServiceData:              true,
+		WakeUp:                   true,
+		Commands:                 true,
+	}
+}
+
+// EnabledVehicleDataEndpoints returns the list of enabled vehicle_data sub-endpoints
+// for use in the Tesla API query string (e.g., "charge_state;drive_state").
+func (pc *PollingConfig) EnabledVehicleDataEndpoints() []string {
+	var endpoints []string
+	if pc.ChargeState {
+		endpoints = append(endpoints, "charge_state")
+	}
+	if pc.ClimateState {
+		endpoints = append(endpoints, "climate_state")
+	}
+	if pc.DriveState {
+		endpoints = append(endpoints, "drive_state")
+	}
+	if pc.LocationData {
+		endpoints = append(endpoints, "location_data")
+	}
+	if pc.VehicleState {
+		endpoints = append(endpoints, "vehicle_state")
+	}
+	if pc.VehicleConfig {
+		endpoints = append(endpoints, "vehicle_config")
+	}
+	return endpoints
+}
+
+// VehicleDataEndpointsString returns enabled sub-endpoints as a semicolon-separated string.
+func (pc *PollingConfig) VehicleDataEndpointsString() string {
+	return strings.Join(pc.EnabledVehicleDataEndpoints(), ";")
+}
+
+// HasAnyVehicleDataEndpoint returns true if at least one vehicle_data sub-endpoint is enabled.
+func (pc *PollingConfig) HasAnyVehicleDataEndpoint() bool {
+	return pc.ChargeState || pc.ClimateState || pc.DriveState ||
+		pc.LocationData || pc.VehicleState || pc.VehicleConfig
+}
+
+// EnabledOnDemandVehicleDataEndpoints returns the list of enabled on-demand vehicle_data sub-endpoints.
+func (pc *PollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
+	var endpoints []string
+	if pc.OnDemandChargeState {
+		endpoints = append(endpoints, "charge_state")
+	}
+	if pc.OnDemandClimateState {
+		endpoints = append(endpoints, "climate_state")
+	}
+	if pc.OnDemandDriveState {
+		endpoints = append(endpoints, "drive_state")
+	}
+	if pc.OnDemandLocationData {
+		endpoints = append(endpoints, "location_data")
+	}
+	if pc.OnDemandVehicleState {
+		endpoints = append(endpoints, "vehicle_state")
+	}
+	if pc.OnDemandVehicleConfig {
+		endpoints = append(endpoints, "vehicle_config")
+	}
+	return endpoints
 }
 
 // VehicleState represents a snapshot of vehicle state at a point in time.

@@ -112,3 +112,32 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 	log.Info().Bool("api_suspended", body.Suspended).Msg("Tesla API suspension toggled")
 	writeJSON(w, http.StatusOK, map[string]bool{"api_suspended": body.Suspended})
 }
+
+// GetPollingConfig returns the current polling endpoint configuration.
+func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Request) {
+	pc, err := h.settingsRepo.GetPollingConfig(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get polling config")
+		writeError(w, http.StatusInternalServerError, "failed to get polling config")
+		return
+	}
+	writeJSON(w, http.StatusOK, pc)
+}
+
+// UpdatePollingConfig updates the polling endpoint configuration.
+func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Request) {
+	var pc models.PollingConfig
+	if err := json.NewDecoder(r.Body).Decode(&pc); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.settingsRepo.UpdatePollingConfig(r.Context(), &pc); err != nil {
+		log.Error().Err(err).Msg("failed to update polling config")
+		writeError(w, http.StatusInternalServerError, "failed to update polling config")
+		return
+	}
+
+	log.Info().Interface("polling_config", pc).Msg("polling config updated")
+	writeJSON(w, http.StatusOK, pc)
+}

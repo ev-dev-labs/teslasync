@@ -222,6 +222,18 @@ erDiagram
         string charger_type
         float duration_min
     }
+    settings {
+        int id PK
+        string unit_of_length
+        string unit_of_temp
+        string preferred_range
+        string language
+        float base_cost_per_kwh
+        boolean api_suspended
+        string theme
+        string mode
+        jsonb polling_config
+    }
 ```
 
 ## Graceful Shutdown Sequence

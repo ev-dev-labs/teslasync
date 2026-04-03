@@ -215,6 +215,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/settings", settingsHandler.Get)
 			r.Put("/settings", settingsHandler.Update)
 			r.Post("/settings/suspend-api", settingsHandler.ToggleAPISuspend)
+			r.Get("/settings/polling-config", settingsHandler.GetPollingConfig)
+			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 		})
 
 		// Gas Price Auto-Poll

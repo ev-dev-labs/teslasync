@@ -1576,6 +1576,54 @@ curl -X PUT http://localhost:8080/api/v1/settings \
 
 **Response:** Updated `Settings` object.
 
+### GET `/api/v1/settings/polling-config`
+
+Get granular endpoint polling configuration. Returns per-endpoint on/off toggles for automatic polling, on-demand calls, and commands.
+
+**curl:**
+```bash
+curl http://localhost:8080/api/v1/settings/polling-config
+```
+
+**Response:**
+```json
+{
+  "vehicle_discovery": true,
+  "charge_state": true,
+  "climate_state": true,
+  "drive_state": true,
+  "location_data": true,
+  "vehicle_state": true,
+  "vehicle_config": true,
+  "on_demand_vehicle_discovery": true,
+  "on_demand_charge_state": true,
+  "on_demand_climate_state": true,
+  "on_demand_drive_state": true,
+  "on_demand_location_data": true,
+  "on_demand_vehicle_state": true,
+  "on_demand_vehicle_config": true,
+  "nearby_charging_sites": true,
+  "release_notes": true,
+  "recent_alerts": true,
+  "service_data": true,
+  "wake_up": true,
+  "commands": true
+}
+```
+
+### PUT `/api/v1/settings/polling-config`
+
+Update endpoint polling configuration. Disabled endpoints won't be called during automatic polling or on-demand requests. The global `api_suspended` flag overrides all toggles.
+
+**curl:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/settings/polling-config \
+  -H "Content-Type: application/json" \
+  -d '{"vehicle_discovery": false, "charge_state": true, "climate_state": true, "drive_state": true, "location_data": true, "vehicle_state": true, "vehicle_config": true, "on_demand_vehicle_discovery": true, "on_demand_charge_state": true, "on_demand_climate_state": true, "on_demand_drive_state": true, "on_demand_location_data": true, "on_demand_vehicle_state": true, "on_demand_vehicle_config": true, "nearby_charging_sites": true, "release_notes": true, "recent_alerts": true, "service_data": true, "wake_up": true, "commands": true}'
+```
+
+**Response:** Updated `PollingConfig` object.
+
 ---
 
 ## Export

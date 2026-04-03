@@ -248,6 +248,35 @@ export interface AppSettings {
   gas_unit: string
   gas_efficiency_mpg: number
   google_maps_api_key?: string
+  polling_config?: PollingConfig
+}
+
+/** Per-endpoint toggle config for Tesla Fleet API calls. */
+export interface PollingConfig {
+  // Polling endpoints (automatic)
+  vehicle_discovery: boolean
+  charge_state: boolean
+  climate_state: boolean
+  drive_state: boolean
+  location_data: boolean
+  vehicle_state: boolean
+  vehicle_config: boolean
+  // On-demand counterparts for polling endpoints (user-triggered)
+  on_demand_vehicle_discovery: boolean
+  on_demand_charge_state: boolean
+  on_demand_climate_state: boolean
+  on_demand_drive_state: boolean
+  on_demand_location_data: boolean
+  on_demand_vehicle_state: boolean
+  on_demand_vehicle_config: boolean
+  // On-demand only endpoints
+  nearby_charging_sites: boolean
+  release_notes: boolean
+  recent_alerts: boolean
+  service_data: boolean
+  // Commands
+  wake_up: boolean
+  commands: boolean
 }
 
 export interface VehicleState {
@@ -770,6 +799,11 @@ export const updateSettings = (s: AppSettings) => request<AppSettings>('/setting
 /** Toggles the Tesla API suspension flag (blocks all Tesla Fleet API calls). */
 export const toggleAPISuspend = (suspended: boolean) =>
   request<{ api_suspended: boolean }>('/settings/suspend-api', { method: 'POST', body: JSON.stringify({ suspended }) })
+/** Fetches the current polling endpoint configuration. */
+export const getPollingConfig = () => request<PollingConfig>('/settings/polling-config')
+/** Updates the polling endpoint configuration. */
+export const updatePollingConfig = (pc: PollingConfig) =>
+  request<PollingConfig>('/settings/polling-config', { method: 'PUT', body: JSON.stringify(pc) })
 
 // === Vehicle Commands ===
 /** Sends a command (lock, unlock, climate_on, etc.) to a vehicle. */

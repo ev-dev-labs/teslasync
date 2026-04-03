@@ -91,6 +91,12 @@ TeslaSync uses a two-tier polling strategy to minimize API costs and stay within
 This approach eliminates the expensive per-vehicle `GetVehicleStatus` call and avoids waking sleeping cars entirely.
 
 **API Suspend:** You can also suspend all Tesla Fleet API calls entirely from the Settings UI or via `POST /api/v1/settings/suspend-api` with body `{"suspended": true}`. Useful when a vehicle is in service. Token refresh continues during suspension so re-auth isn't needed.
+
+**Granular Endpoint Controls:** Beyond the global suspend toggle, you can enable/disable individual Tesla Fleet API endpoints via `GET/PUT /api/v1/settings/polling-config` or the Settings UI. Each endpoint has separate toggles for automatic polling and on-demand calls (20 toggles total), stored as JSONB in the `polling_config` column. All default to enabled. Categories:
+
+- **Polling** (7): `vehicle_discovery`, `charge_state`, `climate_state`, `drive_state`, `location_data`, `vehicle_state`, `vehicle_config`
+- **On-Demand** (11): `on_demand_vehicle_discovery`, `on_demand_charge_state`, `on_demand_climate_state`, `on_demand_drive_state`, `on_demand_location_data`, `on_demand_vehicle_state`, `on_demand_vehicle_config`, `nearby_charging_sites`, `release_notes`, `recent_alerts`, `service_data`
+- **Commands** (2): `wake_up`, `commands`
 :::
 
 ### Redis (Cache)

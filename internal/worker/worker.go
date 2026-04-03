@@ -65,6 +65,9 @@ type Worker struct {
 	discoveryInterval    time.Duration
 	lastDiscovery        time.Time
 	fallbackPollInterval time.Duration // overrides cfg.PollInterval when fleet telemetry is primary
+
+	// Cached polling config — refreshed each poll cycle from the database.
+	pollingConfig *models.PollingConfig
 }
 
 // New creates a new Worker that polls the Tesla API at the configured interval,
@@ -219,11 +222,27 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		return
 	}
 
+	// Load polling config for this cycle
+	pc, err := w.settingsRepo.GetPollingConfig(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to load polling config, using defaults")
+		defaultPC := models.DefaultPollingConfig()
+		pc = &defaultPC
+	}
+	w.pollingConfig = pc
+
 	// When fleet telemetry is primary, periodically discover new vehicles
 	// via a lightweight ListVehicles call (no per-vehicle data fetching).
-	if w.FleetTelemetryEnabled && time.Since(w.lastDiscovery) >= w.discoveryInterval {
+	// Skipped if vehicle_discovery is disabled in polling config.
+	if pc.VehicleDiscovery && w.FleetTelemetryEnabled && time.Since(w.lastDiscovery) >= w.discoveryInterval {
 		w.discoverVehicles(ctx)
 		w.lastDiscovery = time.Now()
+	}
+
+	// Skip vehicle data polling if all sub-endpoints are disabled
+	if !pc.HasAnyVehicleDataEndpoint() {
+		log.Debug().Msg("all vehicle_data sub-endpoints disabled — skipping poll cycle")
+		return
 	}
 
 	vehicles, err := w.vehicleRepo.GetAll(ctx)
@@ -393,7 +412,13 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN)
+	// Build dynamic endpoint list from polling config
+	var endpoints []string
+	if w.pollingConfig != nil {
+		endpoints = w.pollingConfig.EnabledVehicleDataEndpoints()
+	}
+
+	data, err := w.teslaClient.GetVehicleData(pollCtx, vehicle.VIN, endpoints...)
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, "asleep", true); err != nil {
 			logger.Error().Err(err).Msg("failed to update vehicle state")
@@ -418,7 +443,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 			// Retry once after successful refresh
 			retryCtx, retryCancel := context.WithTimeout(ctx, 30*time.Second)
 			defer retryCancel()
-			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VIN)
+			data, err = w.teslaClient.GetVehicleData(retryCtx, vehicle.VIN, endpoints...)
 			if err != nil {
 				logger.Warn().Err(err).Msg("retry after token refresh still failed")
 				w.recordVehicleFailure(vehicle.ID)

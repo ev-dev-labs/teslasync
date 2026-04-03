@@ -71,12 +71,13 @@ var (
 // --- Tesla API ---
 
 var (
-	ErrTeslaAPIUnavailable = &AppError{"TESLA_API_UNAVAILABLE", "Tesla API is unavailable", http.StatusBadGateway, ErrCatTeslaAPI}
-	ErrTeslaAPISuspended   = &AppError{"TESLA_API_SUSPENDED", "Tesla API calls are suspended", http.StatusConflict, ErrCatTeslaAPI}
-	ErrTeslaAPIRateLimit   = &AppError{"TESLA_API_RATE_LIMITED", "Tesla API rate limit exceeded", http.StatusTooManyRequests, ErrCatTeslaAPI}
-	ErrTeslaAPITimeout     = &AppError{"TESLA_API_TIMEOUT", "Tesla API request timed out", http.StatusGatewayTimeout, ErrCatTeslaAPI}
-	ErrTeslaAPIAuth        = &AppError{"TESLA_API_AUTH_FAILED", "Tesla API authentication failed", http.StatusUnauthorized, ErrCatTeslaAPI}
-	ErrTeslaNotConnected   = &AppError{"TESLA_NOT_CONNECTED", "Tesla account not connected", http.StatusPreconditionFailed, ErrCatTeslaAPI}
+	ErrTeslaAPIUnavailable   = &AppError{"TESLA_API_UNAVAILABLE", "Tesla API is unavailable", http.StatusBadGateway, ErrCatTeslaAPI}
+	ErrTeslaAPISuspended     = &AppError{"TESLA_API_SUSPENDED", "Tesla API calls are suspended", http.StatusConflict, ErrCatTeslaAPI}
+	ErrTeslaAPIRateLimit     = &AppError{"TESLA_API_RATE_LIMITED", "Tesla API rate limit exceeded", http.StatusTooManyRequests, ErrCatTeslaAPI}
+	ErrTeslaAPITimeout       = &AppError{"TESLA_API_TIMEOUT", "Tesla API request timed out", http.StatusGatewayTimeout, ErrCatTeslaAPI}
+	ErrTeslaAPIAuth          = &AppError{"TESLA_API_AUTH_FAILED", "Tesla API authentication failed", http.StatusUnauthorized, ErrCatTeslaAPI}
+	ErrTeslaNotConnected     = &AppError{"TESLA_NOT_CONNECTED", "Tesla account not connected", http.StatusPreconditionFailed, ErrCatTeslaAPI}
+	ErrTeslaEndpointDisabled = &AppError{"TESLA_ENDPOINT_DISABLED", "This Tesla API endpoint is disabled in polling config", http.StatusConflict, ErrCatTeslaAPI}
 )
 
 // --- Database ---
@@ -174,7 +175,7 @@ func ErrorCatalog() []*AppError {
 		ErrDriveNotFound, ErrChargeNotFound, ErrTripNotFound, ErrSessionActive, ErrSessionNotFound,
 		// Tesla API
 		ErrTeslaAPIUnavailable, ErrTeslaAPISuspended, ErrTeslaAPIRateLimit,
-		ErrTeslaAPITimeout, ErrTeslaAPIAuth, ErrTeslaNotConnected,
+		ErrTeslaAPITimeout, ErrTeslaAPIAuth, ErrTeslaNotConnected, ErrTeslaEndpointDisabled,
 		// Database
 		ErrDBConnection, ErrDBQuery, ErrDBTransaction, ErrDBNotFound, ErrDBDuplicate,
 		// Validation

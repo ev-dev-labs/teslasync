@@ -98,6 +98,11 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, ErrTeslaAPISuspended)
 		return
 	}
+	// Check if vehicle_discovery endpoint is enabled in polling config (on-demand)
+	if pc, err := h.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.OnDemandVehicleDiscovery {
+		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("vehicle discovery endpoint is disabled in polling config"))
+		return
+	}
 	if !h.teslaClient.HasValidToken() {
 		writeAppError(w, r, ErrTeslaNotConnected)
 		return
@@ -416,6 +421,11 @@ func (h *VehicleHandler) buildStateFromDB(r *http.Request, vehicle *models.Vehic
 func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
 	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
 		writeAppError(w, r, ErrTeslaAPISuspended)
+		return
+	}
+	// Check if wake_up endpoint is enabled in polling config
+	if pc, err := h.settingsRepo.GetPollingConfig(r.Context()); err == nil && !pc.WakeUp {
+		writeAppError(w, r, ErrTeslaEndpointDisabled.WithMessage("wake_up endpoint is disabled in polling config"))
 		return
 	}
 
