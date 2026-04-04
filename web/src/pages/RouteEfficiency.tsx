@@ -5,6 +5,7 @@ import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton
 import { MapPin, ArrowRight, TrendingUp, Clock, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { formatDate } from '../lib/dateFormat'
 
 function EfficiencyBar({ best, avg, worst }: { best: number; avg: number; worst: number }) {
   const max = Math.max(worst, 1)
@@ -109,11 +110,11 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
 
   // Best trip
   const bestTrip = drives.reduce((best, d) => d.efficiency < best.efficiency && d.efficiency > 0 ? d : best, drives[0])
-  const bestDate = new Date(bestTrip.start_date).toLocaleDateString()
+  const bestDate = formatDate(bestTrip.start_date)
 
   // Sparkline data for efficiency trend (reverse for chronological order)
   const sparkData = [...drives].reverse().map(d => ({
-    date: new Date(d.start_date).toLocaleDateString(),
+    date: formatDate(d.start_date),
     efficiency: d.efficiency,
     temp: d.outside_temp_avg,
     speed: d.speed_avg,
@@ -171,7 +172,7 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
               return (
                 <tr key={d.id} className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
                   <td className="py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>
-                    {new Date(d.start_date).toLocaleDateString()}
+                    {formatDate(d.start_date)}
                   </td>
                   <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{d.distance.toFixed(1)} km</td>
                   <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{d.duration_min.toFixed(0)} min</td>

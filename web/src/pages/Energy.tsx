@@ -11,6 +11,7 @@ import {
 import { Link } from 'react-router-dom'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort } from '../lib/dateFormat'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
   const savings = (gasCost ?? 0) - (evCost ?? 0)
@@ -357,7 +358,7 @@ export default function Energy() {
                         <tr key={s.id} className="text-gray-300 hover:bg-white/[0.02] transition-colors cursor-pointer">
                           <td className="py-3 pr-4">
                             <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">
-                              {new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              {formatDateShort(s.start_date)}
                             </Link>
                           </td>
                           <td className="py-3 pr-4 text-neon-cyan font-medium">{(s.charge_energy_added ?? 0).toFixed(1)} kWh</td>

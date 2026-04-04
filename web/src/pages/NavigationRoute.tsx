@@ -6,6 +6,7 @@ import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, Trendin
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ------------------------------------------------------------------ */
 /*  Chart tooltip                                                      */
@@ -160,12 +161,7 @@ export default function NavigationRoute() {
   const presenceChartData = useMemo(() => {
     if (!history || history.length === 0) return []
     return history.slice().reverse().map(s => ({
-      time: new Date(s.created_at).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      time: formatDateTime(s.created_at),
       home: s.located_at_home ? 1 : 0,
       work: s.located_at_work ? 1 : 0,
       favorite: s.located_at_favorite ? 1 : 0,
@@ -179,12 +175,7 @@ export default function NavigationRoute() {
       .filter(s => s.destination_name)
       .slice(0, 50)
       .map(s => ({
-        time: new Date(s.created_at).toLocaleString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        time: formatDateTime(s.created_at),
         destination: s.destination_name ?? '—',
         miles: s.miles_to_arrival,
         minutes: s.minutes_to_arrival,

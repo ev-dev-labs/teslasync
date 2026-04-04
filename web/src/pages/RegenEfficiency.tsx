@@ -8,6 +8,7 @@ import {
   ComposedChart, Line, Bar
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { formatDateShort } from '../lib/dateFormat'
 
 function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
   const clamped = Math.min(Math.max(value, 0), 100)
@@ -214,7 +215,7 @@ export default function RegenEfficiency() {
                         return (
                           <tr key={d.id} className="border-b hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
                             <td className="py-2.5 px-3" style={{ color: 'var(--text-secondary)' }}>
-                              {new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              {formatDateShort(d.start_date)}
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono" style={{ color: 'var(--text-primary)' }}>
                               {d.distance.toFixed(1)} km

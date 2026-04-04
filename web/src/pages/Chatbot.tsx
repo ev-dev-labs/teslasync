@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Send, User, Sparkles, MessageSquare, Clock, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
 import { sendChatMessage, getChatHistory, getChatSessions, ChatMessage } from '../api'
+import { formatTime } from '../lib/dateFormat'
 
 const SUGGESTED_QUERIES = [
   'How many vehicles do I have?',
@@ -220,7 +221,7 @@ export default function Chatbot() {
                   ) : (
                     msg.content
                   )}
-                  <p className="text-[10px] mt-2 opacity-40">{new Date(msg.created_at).toLocaleTimeString()}</p>
+                  <p className="text-[10px] mt-2 opacity-40">{formatTime(msg.created_at)}</p>
                 </div>
                 {msg.role === 'user' && (
                   <div className="shrink-0 rounded-lg bg-neon-cyan/10 p-1.5 h-fit mt-1">

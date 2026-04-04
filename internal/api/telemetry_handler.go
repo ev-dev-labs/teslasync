@@ -158,7 +158,7 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 }
 
 func (h *TelemetryHandler) cleanupStaleEntries() {
-	now := time.Now()
+	now := time.Now().UTC()
 	cutoff := 3 * h.staleTimeout // remove entries 3x past stale timeout
 
 	h.mu.Lock()
@@ -212,7 +212,7 @@ type telemetryPayload struct {
 func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	now := time.Now()
+	now := time.Now().UTC()
 	result := make(map[string]*VehicleStreamState, len(h.streamingState))
 	for k, v := range h.streamingState {
 		cp := *v
@@ -331,10 +331,10 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	h.mu.Lock()
 	state, ok := h.streamingState[vin]
 	if !ok {
-		state = &VehicleStreamState{VIN: vin, FirstReceived: time.Now()}
+		state = &VehicleStreamState{VIN: vin, FirstReceived: time.Now().UTC()}
 		h.streamingState[vin] = state
 	}
-	state.LastReceived = time.Now()
+	state.LastReceived = time.Now().UTC()
 	state.SignalCount += int64(len(signals))
 	state.BatchCount++
 	state.IsStreaming = true
@@ -377,9 +377,9 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		if isFirstSignal {
 			// First signal for this vehicle — start the throttle timer but don't write yet.
 			// Let the accumulator collect signals for the full interval first.
-			h.lastWriteAt[vin] = time.Now()
+			h.lastWriteAt[vin] = time.Now().UTC()
 		} else if shouldWrite {
-			h.lastWriteAt[vin] = time.Now()
+			h.lastWriteAt[vin] = time.Now().UTC()
 		}
 		h.lastWriteMu.Unlock()
 
@@ -634,7 +634,7 @@ func (h *TelemetryHandler) GetStaleVINs() []string {
 // This endpoint is used when fleet-telemetry dispatches via the HTTP dispatcher.
 // It delegates to ProcessSignals with publishToMQTT=true.
 func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
+	start := time.Now().UTC()
 	var payload telemetryPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {

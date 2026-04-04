@@ -6,6 +6,7 @@ import { Trophy, TrendingUp, Zap, Gauge, ShieldCheck, Star, AlertTriangle, Light
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDate, formatDateShort } from '../lib/dateFormat'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -367,7 +368,7 @@ export default function DriveScore() {
       const weekStart = new Date(d)
       weekStart.setDate(d.getDate() - d.getDay())
       const key = weekStart.toISOString().split('T')[0]
-      const label = weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      const label = formatDateShort(weekStart)
       if (!weekMap.has(key)) weekMap.set(key, { scores: [], week: label })
       weekMap.get(key)!.scores.push(sd.total)
     }
@@ -479,9 +480,6 @@ export default function DriveScore() {
 
   // Improvement tips
   const tips = useMemo(() => getImprovementTips(avgScore), [avgScore])
-
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 
   const formatDuration = (min: number) => {
     const h = Math.floor(min / 60)

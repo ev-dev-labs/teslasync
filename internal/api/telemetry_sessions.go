@@ -152,7 +152,7 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	now := time.Now()
+	now := time.Now().UTC()
 	for vehicleID, drive := range t.activeDrives {
 		if now.Sub(drive.LastSeen) > staleTimeout {
 			log.Warn().Int64("vehicle_id", vehicleID).Int64("drive_id", drive.DriveID).
@@ -212,7 +212,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		t.mu.Lock()
 		if active, ok := t.activeDrives[vehicleID]; ok {
 			t.recordDriveTelemetry(ctx, active, signals)
-			active.LastSeen = time.Now()
+			active.LastSeen = time.Now().UTC()
 		}
 		t.mu.Unlock()
 		return
@@ -257,9 +257,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		sd := &streamingDrive{
 			DriveID:   drive.ID,
 			VehicleID: vehicleID,
-			StartTime: time.Now(),
+			StartTime: time.Now().UTC(),
 			LastSpeed: speed,
-			LastSeen:  time.Now(),
+			LastSeen:  time.Now().UTC(),
 			MaxSpeed:  speed,
 			MinSpeed:  speed,
 			SpeedSum:  speed,
@@ -341,7 +341,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 	} else if speed > 0 && hasDrive {
 		// === UPDATE ACTIVE DRIVE ===
 		active.LastSpeed = speed
-		active.LastSeen = time.Now()
+		active.LastSeen = time.Now().UTC()
 		active.LastSpeedZeroTime = time.Time{}
 
 		// Speed stats
@@ -399,11 +399,11 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 	} else if speed == 0 && hasDrive {
 		// === SPEED IS ZERO — check for drive end ===
-		active.LastSeen = time.Now()
+		active.LastSeen = time.Now().UTC()
 		active.LastSpeed = 0
 
 		if active.LastSpeedZeroTime.IsZero() {
-			active.LastSpeedZeroTime = time.Now()
+			active.LastSpeedZeroTime = time.Now().UTC()
 		}
 
 		if !active.LastSpeedZeroTime.IsZero() && time.Since(active.LastSpeedZeroTime) > 2*time.Minute {
@@ -751,7 +751,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		t.mu.Lock()
 		if active, ok := t.activeCharges[vehicleID]; ok {
 			t.recordChargeTelemetry(ctx, active, signals)
-			active.LastSeen = time.Now()
+			active.LastSeen = time.Now().UTC()
 		}
 		t.mu.Unlock()
 		return
@@ -792,8 +792,8 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		sc := &streamingCharge{
 			SessionID:         session.ID,
 			VehicleID:         vehicleID,
-			StartTime:         time.Now(),
-			LastSeen:          time.Now(),
+			StartTime:         time.Now().UTC(),
+			LastSeen:          time.Now().UTC(),
 			StartBatteryLevel: batteryLevel,
 		}
 		if hasLat { sc.Latitude = floatPtr(lat) }
@@ -814,7 +814,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	} else if isCharging && hasCharge {
 		// === UPDATE ACTIVE CHARGE ===
-		active.LastSeen = time.Now()
+		active.LastSeen = time.Now().UTC()
 
 		// Track energy
 		if ea, ok := signalFloat(signals, "DCChargingEnergyIn"); ok {

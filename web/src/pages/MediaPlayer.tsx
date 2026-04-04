@@ -5,6 +5,7 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Music, Volume2, Play, Pause, Square, Radio, Headphones, BarChart3, Clock } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
@@ -187,7 +188,7 @@ export default function MediaPlayer() {
   const volumeChartData = useMemo(() => {
     if (!history || history.length === 0) return []
     return history.slice().reverse().map(s => ({
-      time: new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      time: formatDateTime(s.created_at),
       volume: s.audio_volume ?? null,
     }))
   }, [history])
@@ -366,7 +367,7 @@ export default function MediaPlayer() {
                 {history.map(row => (
                   <tr key={row.id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
                     <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                      {new Date(row.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {formatDateTime(row.created_at)}
                     </td>
                     <td className="py-2 px-3 max-w-[180px] truncate" style={{ color: 'var(--text-primary)' }}>
                       {cleanNil(row.now_playing_title) || '—'}

@@ -44,6 +44,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort, formatDate, formatDateWithDay } from '../lib/dateFormat'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,19 +60,11 @@ function getWeekRange(offset: number): [Date, Date] {
   return [monday, sunday]
 }
 
-function fmtDateShort(d: Date): string {
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function fmtDateFull(d: Date): string {
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
 function weekLabel(offset: number): string {
   if (offset === 0) return 'This Week'
   if (offset === -1) return 'Last Week'
   const [start, end] = getWeekRange(offset)
-  return `${fmtDateShort(start)} – ${fmtDateShort(end)}`
+  return `${formatDateShort(start)} – ${formatDateShort(end)}`
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
@@ -492,7 +485,7 @@ export default function WeeklyDigest() {
 
         {/* Date range subtitle */}
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {fmtDateFull(weekStart)} – {fmtDateFull(weekEnd)}
+          {formatDate(weekStart)} – {formatDate(weekEnd)}
         </p>
 
         {/* ── 2. Week Navigation ─────────────────────────────────────── */}
@@ -649,7 +642,7 @@ export default function WeeklyDigest() {
                     icon={<Route className="h-5 w-5 text-neon-purple" />}
                     title="Longest Drive"
                     value={fmtDistance(highlights.longest.distance, 1)}
-                    detail={`${highlights.longest.duration_min.toFixed(0)} min · ${new Date(highlights.longest.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`}
+                    detail={`${highlights.longest.duration_min.toFixed(0)} min · ${formatDateWithDay(highlights.longest.start_date)}`}
                   />
                   {highlights.mostEfficient && (
                     <HighlightCard
@@ -663,7 +656,7 @@ export default function WeeklyDigest() {
                     icon={<Gauge className="h-5 w-5 text-neon-red" />}
                     title="Fastest Drive"
                     value={`${convertSpeed(highlights.fastest.speed_max ?? 0).toFixed(0)} ${speedUnit}`}
-                    detail={new Date(highlights.fastest.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    detail={formatDateWithDay(highlights.fastest.start_date)}
                   />
                 </div>
               ) : (
@@ -1001,7 +994,7 @@ function BatteryPill({
         <span className={clsx('text-2xl font-bold tabular-nums', color)}>{level}%</span>
       </div>
       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-        {new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        {formatDateWithDay(date)}
       </p>
     </div>
   )

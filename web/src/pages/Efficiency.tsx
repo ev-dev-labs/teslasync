@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort } from '../lib/dateFormat'
 import { Zap, TrendingUp, Thermometer, Gauge, Fuel, BarChart3 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
@@ -53,7 +54,7 @@ export default function Efficiency() {
 
   // Daily efficiency chart
   const dailyEfficiency = (energy?.daily_breakdown ?? []).map(d => ({
-    date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    date: formatDateShort(d.date),
     efficiency: convertEfficiency(d.efficiency),
     energy: d.energy_kwh,
     distance: convertDistance(d.distance_km),

@@ -12,6 +12,7 @@ import {
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
+import { formatDate, formatDateTime } from '../lib/dateFormat'
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
@@ -373,7 +374,7 @@ function PublicKeySetupTool() {
             {status.created_at && (
               <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                 <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Created</p>
-                <p className="text-xs font-mono text-[var(--text-primary)] mt-0.5">{new Date(status.created_at).toLocaleDateString()}</p>
+                <p className="text-xs font-mono text-[var(--text-primary)] mt-0.5">{formatDate(status.created_at)}</p>
               </div>
             )}
           </div>
@@ -839,7 +840,7 @@ function FleetTelemetryConfigTool() {
                   {errorsList.map((err, i) => (
                     <tr key={i} className="border-b border-[var(--glass-border)] last:border-0">
                       <td className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap font-mono">
-                        {err.created_at ? new Date(err.created_at as string).toLocaleString() : err.timestamp ? new Date(err.timestamp as string).toLocaleString() : '—'}
+                        {err.created_at ? formatDateTime(err.created_at as string) : err.timestamp ? formatDateTime(err.timestamp as string) : '—'}
                       </td>
                       <td className="px-3 py-2 text-neon-red font-medium">{(err.name || err.error || err.code || '—') as string}</td>
                       <td className="px-3 py-2 text-[var(--text-muted)] max-w-xs truncate">{(err.body || err.message || err.description || JSON.stringify(err)) as string}</td>

@@ -6,6 +6,7 @@ import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from 'luc
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 
 interface TooltipPayload { name: string; value: number; color?: string }
 function ChartTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
@@ -88,7 +89,7 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
     if (diffMin < 60) return `${diffMin}m ago`
     const diffH = Math.floor(diffMin / 60)
     if (diffH < 24) return `${diffH}h ago`
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    return formatDateShort(d)
   }
 
   const tires = [
@@ -306,7 +307,7 @@ export default function TirePressure() {
   const convRR = compositeLatest?.rear_right != null ? convertPressure(compositeLatest.rear_right) : null
 
   const chartData = (history ?? []).slice().reverse().map(s => ({
-    time: new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    time: formatDateTime(s.created_at),
     fl: s.front_left != null ? convertPressure(s.front_left) : null,
     fr: s.front_right != null ? convertPressure(s.front_right) : null,
     rl: s.rear_left != null ? convertPressure(s.rear_left) : null,

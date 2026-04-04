@@ -26,6 +26,7 @@ import {
   Bar,
 } from 'recharts'
 import clsx from 'clsx'
+import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { useSettings } from '../hooks/useSettings'
 
 // ---------------------------------------------------------------------------
@@ -126,10 +127,7 @@ function chargerColor(session: ChargingSession): string {
 }
 
 function sessionLabel(session: ChargingSession): string {
-  const date = new Date(session.start_date).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
+  const date = formatDateShort(session.start_date)
   return `${date} · ${chargerLabel(session)} · ${session.charge_energy_added.toFixed(1)} kWh`
 }
 
@@ -563,7 +561,7 @@ export default function ChargingCurve() {
               </h3>
               <SessionDetailRow
                 label="Date"
-                value={new Date(selectedSession.start_date).toLocaleString()}
+                value={formatDateTime(selectedSession.start_date)}
               />
               <SessionDetailRow
                 label="Duration"

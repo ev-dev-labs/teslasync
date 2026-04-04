@@ -8,6 +8,7 @@ import {
   getMediaLatest, getLocationSnapshotLatest,
 } from '../api'
 import { cleanNil } from '../lib/cleanNil'
+import { formatDateShort } from '../lib/dateFormat'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
@@ -86,7 +87,7 @@ function formatTimeAgo(date: Date): string {
   if (hrs < 24) return `${hrs}h ago`
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return formatDateShort(date)
 }
 
 /* ---------- Main Dashboard ---------- */

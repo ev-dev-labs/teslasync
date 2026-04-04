@@ -11,6 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import clsx from 'clsx'
+import { formatDateShort } from '../lib/dateFormat'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -432,7 +433,7 @@ export default function SecurityAccess() {
     const reversed = [...history].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     const buckets: Record<string, { on: number; off: number }> = {}
     for (const e of reversed) {
-      const key = new Date(e.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      const key = formatDateShort(e.created_at)
       if (!buckets[key]) buckets[key] = { on: 0, off: 0 }
       if (e.sentry_mode) buckets[key].on++
       else buckets[key].off++

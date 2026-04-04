@@ -11,6 +11,7 @@ import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForwa
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
+import { formatDateShort } from '../lib/dateFormat'
 
 function createVehicleIcon(status: string, heading: number = 0) {
   const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
@@ -263,7 +264,7 @@ export default function LiveMap() {
               <div className="space-y-1.5">
                 {recentDrives.slice(0, 3).map(d => (
                   <div key={d.id} className="flex items-center justify-between text-[11px]">
-                    <span className="text-[var(--text-secondary)]">{new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    <span className="text-[var(--text-secondary)]">{formatDateShort(d.start_date)}</span>
                     <span className="text-neon-cyan font-medium">{convertDistance(d.distance).toFixed(1)} {distanceUnit}</span>
                     <span className="text-gray-600">{d.duration_min}m</span>
                   </div>

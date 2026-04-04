@@ -8,6 +8,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort } from '../lib/dateFormat'
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
@@ -49,7 +50,7 @@ export default function Mileage() {
   })
 
   const dailyChart = (daily ?? []).map(d => ({
-    date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    date: formatDateShort(d.date),
     distance: convertDistance(d.distance_km),
   })).reverse()
 
@@ -61,7 +62,7 @@ export default function Mileage() {
     return sorted.map(d => {
       cumulative += d.distance_km
       return {
-        date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        date: formatDateShort(d.date),
         odometer: convertDistance(d.odometer_end || cumulative),
         cumulative: convertDistance(cumulative),
       }

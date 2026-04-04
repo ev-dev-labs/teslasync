@@ -19,6 +19,7 @@ import {
 import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
 import { useUnits } from '../hooks/useUnits'
+import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null
@@ -283,9 +284,9 @@ export default function DriveDetail() {
                 : 'Drive Details'}
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">
-              {vehicle?.display_name || 'Vehicle'} &middot; {new Date(drive.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-              {' '}&middot; {new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {drive.end_date && ` → ${new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              {vehicle?.display_name || 'Vehicle'} &middot; {formatDate(drive.start_date)}
+              {' '}&middot; {formatTime(drive.start_date)}
+              {drive.end_date && ` → ${formatTime(drive.end_date)}`}
             </p>
           </div>
           <button
@@ -316,9 +317,9 @@ export default function DriveDetail() {
       <FadeIn delay={0.06}>
         <GlassPanel className="p-4">
           <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-2">
-            <span className="flex items-center gap-1 text-neon-green"><Flag className="h-3 w-3" />{new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="flex items-center gap-1 text-neon-green"><Flag className="h-3 w-3" />{formatTime(drive.start_date)}</span>
             <span className="text-[var(--text-muted)]">{Math.floor(drive.duration_min / 60)}h {Math.round(drive.duration_min % 60)}m</span>
-            <span className="flex items-center gap-1 text-neon-red"><Flag className="h-3 w-3" />{drive.end_date ? new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In progress'}</span>
+            <span className="flex items-center gap-1 text-neon-red"><Flag className="h-3 w-3" />{drive.end_date ? formatTime(drive.end_date) : 'In progress'}</span>
           </div>
           <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
             <div className="h-full rounded-full" style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #00f0ff)' }} />
@@ -475,18 +476,18 @@ export default function DriveDetail() {
               ))}
               {startPos && (
                 <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
-                  <Popup><span className="text-xs font-bold">Start</span><br /><span className="text-xs">{new Date(drive.start_date).toLocaleString()}</span></Popup>
+                  <Popup><span className="text-xs font-bold">Start</span><br /><span className="text-xs">{formatDateTime(drive.start_date)}</span></Popup>
                 </CircleMarker>
               )}
               {endPos && (
                 <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
-                  <Popup><span className="text-xs font-bold">End</span><br /><span className="text-xs">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</span></Popup>
+                  <Popup><span className="text-xs font-bold">End</span><br /><span className="text-xs">{drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</span></Popup>
                 </CircleMarker>
               )}
             </MapContainer>
           </div>
           <div className="flex items-center justify-between px-4 py-3 text-xs">
-            <span className="flex items-center gap-1.5 text-neon-green"><Flag className="h-3 w-3" /> Start: {new Date(drive.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="flex items-center gap-1.5 text-neon-green"><Flag className="h-3 w-3" /> Start: {formatTime(drive.start_date)}</span>
             {trail.length > 1 && (
               <div className="flex items-center gap-3 text-[var(--text-muted)]">
                 <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#10b981' }} /> &lt;{Math.round(u.speedVal(30))}</span>
@@ -496,7 +497,7 @@ export default function DriveDetail() {
                 <span>{u.speedUnit}</span>
               </div>
             )}
-            {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {new Date(drive.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+            {drive.end_date && <span className="flex items-center gap-1.5 text-neon-red"><Flag className="h-3 w-3" /> End: {formatTime(drive.end_date)}</span>}
           </div>
         </GlassPanel>
       </FadeIn>
@@ -516,7 +517,7 @@ export default function DriveDetail() {
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.start_address}</p>
                 : <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{startPos[0].toFixed(4)}°N, {Math.abs(startPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
               }
-              <p className="text-xs text-[var(--text-muted)]">{new Date(drive.start_date).toLocaleString()}</p>
+              <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.start_date)}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>
             <div>
@@ -527,7 +528,7 @@ export default function DriveDetail() {
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.end_address}</p>
                 : <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{endPos[0].toFixed(4)}°N, {Math.abs(endPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
               }
-              <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</p>
+              <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../compone
 import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import clsx from 'clsx'
+import { formatDate } from '../lib/dateFormat'
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
@@ -177,7 +178,7 @@ export default function Locations() {
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{loc.address_name}</p>
                   <p className="text-[11px] text-[var(--text-muted)]">
                     {loc.visit_count} visits · {Math.round(loc.total_duration_min / 60)}h total · ~{loc.visit_count > 0 ? Math.round(loc.total_duration_min / loc.visit_count) : 0}m avg
-                    {loc.last_visited && ` · Last: ${new Date(loc.last_visited).toLocaleDateString()}`}
+                    {loc.last_visited && ` · Last: ${formatDate(loc.last_visited)}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-neon-green text-xs font-medium">

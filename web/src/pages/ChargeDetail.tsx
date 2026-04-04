@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getChargingSession, getChargeTelemetry, getVehicle } from '../api'
+import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
 import {
   ArrowLeft, Zap, Clock, Battery, DollarSign, Gauge,
   BatteryCharging, Timer, TrendingUp, Cable, Activity,
@@ -160,9 +161,9 @@ export default function ChargeDetail() {
               Charge Session
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">
-              {vehicle?.display_name || 'Vehicle'} &middot; {new Date(session.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-              {' '}&middot; {new Date(session.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {session.end_date && ` → ${new Date(session.end_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              {vehicle?.display_name || 'Vehicle'} &middot; {formatDate(session.start_date)}
+              {' '}&middot; {formatTime(session.start_date)}
+              {session.end_date && ` → ${formatTime(session.end_date)}`}
               {session.location_name && <> &middot; <MapPin className="h-3 w-3 inline" /> {session.location_name}</>}
             </p>
           </div>
@@ -547,8 +548,8 @@ export default function ChargeDetail() {
       <FadeIn delay={0.18}>
         <GlassPanel className="p-4">
           <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-            <span>Started: {new Date(session.start_date).toLocaleString()}</span>
-            {session.end_date && <span>Ended: {new Date(session.end_date).toLocaleString()}</span>}
+            <span>Started: {formatDateTime(session.start_date)}</span>
+            {session.end_date && <span>Ended: {formatDateTime(session.end_date)}</span>}
           </div>
         </GlassPanel>
       </FadeIn>

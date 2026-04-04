@@ -6,6 +6,7 @@ import { Zap, Battery, Activity, Gauge, AlertTriangle, CheckCircle, Thermometer,
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface TooltipPayload { name: string; value: number; color?: string }
@@ -150,8 +151,7 @@ export default function EnergyFlow() {
   })
 
   /* ── Formatted timestamp helper ── */
-  const fmtTime = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const fmtTime = (iso: string) => formatDateTime(iso)
 
   /* ── Cell voltage chart data ── */
   const cellVoltageData = useMemo(() => {

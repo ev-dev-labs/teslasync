@@ -12,6 +12,7 @@ import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton
 import { AnimatedNumber } from '../components/Widgets'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
+import { formatDateTime, formatTime } from '../lib/dateFormat'
 
 interface ComponentInfo {
   status: string
@@ -675,7 +676,7 @@ function AuditLogTable() {
               <tbody>
                 {logs.map((l: AuditLog) => (
                   <tr key={l.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{new Date(l.created_at).toLocaleString()}</td>
+                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</td>
                     <td className="py-2">
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
                         style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>
@@ -1097,7 +1098,7 @@ function NotificationDeliveryPanel() {
                     log.status === 'sent' ? 'text-neon-green' : log.status === 'failed' ? 'text-red-400' : 'text-neon-amber'
                   )}>{log.status}</span>
                   <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                    {new Date(log.created_at).toLocaleTimeString()}
+                    {formatTime(log.created_at)}
                   </span>
                 </div>
               ))}
@@ -1186,7 +1187,7 @@ function ExportJobQueuePanel() {
                   {job.status}
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                  {new Date(job.created_at).toLocaleTimeString()}
+                  {formatTime(job.created_at)}
                 </span>
               </div>
             ))}

@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts'
+import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 
 
 const stateColors: Record<string, string> = {
@@ -91,7 +92,7 @@ export default function Timeline() {
     entry[d.state] = (entry[d.state] ?? 0) + d.total_min
   })
   const stackedData = Array.from(dailyMap.entries())
-    .map(([day, data]) => ({ day: new Date(day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), ...data }))
+    .map(([day, data]) => ({ day: formatDateShort(day), ...data }))
     .reverse()
 
   const allStates = Array.from(new Set((dailyBreakdown ?? []).map(d => d.state)))
@@ -105,7 +106,7 @@ export default function Timeline() {
   const parkedPct = totalMinutes > 0 ? (parkedMin / totalMinutes * 100) : 0
   const drivingPct = totalMinutes > 0 ? (drivingMin / totalMinutes * 100) : 0
   const chargingPct = totalMinutes > 0 ? (chargingMin / totalMinutes * 100) : 0
-  const lastStateChange = timeline?.[0] ? new Date(timeline[0].start_date).toLocaleString() : '—'
+  const lastStateChange = timeline?.[0] ? formatDateTime(timeline[0].start_date) : '—'
   const lastState = timeline?.[0]?.state ?? '—'
 
   return (
@@ -256,7 +257,7 @@ export default function Timeline() {
                         <span className="text-sm font-medium capitalize" style={{ color }}>{s.state}</span>
                         <span className="text-xs text-[var(--text-muted)] ml-2">{formatDuration(s.duration_min)}</span>
                       </div>
-                      <span className="text-[11px] text-[var(--text-muted)]">{new Date(s.start_date).toLocaleString()}</span>
+                      <span className="text-[11px] text-[var(--text-muted)]">{formatDateTime(s.start_date)}</span>
                     </div>
                   </div>
                 )

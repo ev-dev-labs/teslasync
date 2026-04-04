@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
 import { useToast } from '../components/Toast'
 import clsx from 'clsx'
+import { formatDateTime } from '../lib/dateFormat'
 
 const modeIcons: Record<string, React.ReactNode> = {
   dark: <Moon className="h-4 w-4" />,
@@ -203,7 +204,7 @@ export default function Settings() {
                   <p className="text-sm font-medium text-neon-green">Connected</p>
                   {auth.expires_at && (
                     <p className="text-[11px] text-[var(--text-muted)]">
-                      Token expires {new Date(auth.expires_at).toLocaleString()}
+                      Token expires {formatDateTime(auth.expires_at)}
                     </p>
                   )}
                 </div>
@@ -746,7 +747,7 @@ export default function Settings() {
               <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Last Polled</p>
               <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
                 {gasPriceStatus?.last_poll_time && gasPriceStatus.last_poll_time !== '0001-01-01T00:00:00Z'
-                  ? new Date(gasPriceStatus.last_poll_time).toLocaleString()
+                  ? formatDateTime(gasPriceStatus.last_poll_time)
                   : 'Never'}
               </p>
             </div>

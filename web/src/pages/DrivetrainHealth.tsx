@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { cleanNil } from '../lib/cleanNil'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface TooltipPayload { name: string; value: number; color?: string }
@@ -174,8 +175,7 @@ export default function DrivetrainHealth() {
   })
 
   /* ── Formatted timestamp helper ── */
-  const fmtTime = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const fmtTime = (iso: string) => formatDateTime(iso)
 
   /* ── Torque chart data ── */
   const torqueData = useMemo(() => {

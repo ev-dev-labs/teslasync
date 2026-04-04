@@ -8,6 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Legend,
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid, NEON_COLORS } from '../components/Charts'
+import { formatDateShort, formatTime } from '../lib/dateFormat'
 
 const STATE_COLORS: Record<string, string> = {
   asleep: '#a855f7',
@@ -255,9 +256,9 @@ export default function SleepEfficiency() {
                     {sleep.recent_events.map(event => (
                       <tr key={event.id} className="text-gray-300 hover:bg-white/[0.02] transition-colors">
                         <td className="py-3 pr-4 text-xs">
-                          {new Date(event.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          {formatDateShort(event.start_date)}
                           <span className="text-[var(--text-muted)] ml-1">
-                            {new Date(event.start_date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            {formatTime(event.start_date)}
                           </span>
                         </td>
                         <td className="py-3 pr-4">{fmt(event.duration_hours, 1)}h</td>

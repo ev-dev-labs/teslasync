@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime, formatDateShort } from '../lib/dateFormat'
 
 interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
@@ -31,10 +32,6 @@ function formatDuration(min: number): string {
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function getEfficiency(drive: Drive): number | null {
@@ -74,7 +71,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDate(drive.start_date)}</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateTime(drive.start_date)}</p>
               <span className="text-xs px-2 py-0.5 rounded-full bg-neon-cyan/10 text-neon-cyan font-medium">
                 {convertDistance(actualDistance).toFixed(1)} {distanceUnit}
               </span>
@@ -192,7 +189,7 @@ export default function Drives() {
   const distanceTrend = useMemo(() => {
     if (!drives) return []
     return drives.slice(0, 20).reverse().map(d => ({
-      date: new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      date: formatDateShort(d.start_date),
       distance: parseFloat(d.distance.toFixed(1)),
       efficiency: getEfficiency(d) ? Math.round(getEfficiency(d)!) : 0,
     }))

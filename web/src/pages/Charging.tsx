@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime, formatDateShort } from '../lib/dateFormat'
 
 type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power'
 type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home'
@@ -34,10 +35,6 @@ function formatDuration(min: number): string {
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function getChargerCategory(type: string | null): 'supercharger' | 'dc' | 'home' {
@@ -78,7 +75,7 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDate(session.start_date)}</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateTime(session.start_date)}</p>
               <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1',
                 cat === 'supercharger' ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' :
                 cat === 'dc' ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' :
@@ -172,7 +169,7 @@ export default function Charging() {
   const energyTrend = useMemo(() => {
     if (!sessions) return []
     return sessions.slice(0, 20).reverse().map(s => ({
-      date: new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      date: formatDateShort(s.start_date),
       energy: parseFloat((s.charge_energy_added ?? 0).toFixed(1)),
       cost: s.cost ?? 0,
     }))
@@ -624,12 +621,12 @@ export default function Charging() {
               <div className="glass-card text-center">
                 <p className="text-2xl font-bold text-neon-green">{efficiencyStats.best.efficiency.toFixed(1)}%</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Best Session</p>
-                <p className="text-[9px] text-[var(--text-muted)]">{formatDate(efficiencyStats.best.date)}</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(efficiencyStats.best.date)}</p>
               </div>
               <div className="glass-card text-center">
                 <p className="text-2xl font-bold text-neon-red">{efficiencyStats.worst.efficiency.toFixed(1)}%</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Worst Session</p>
-                <p className="text-[9px] text-[var(--text-muted)]">{formatDate(efficiencyStats.worst.date)}</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(efficiencyStats.worst.date)}</p>
               </div>
               <div className="glass-card text-center">
                 <p className="text-2xl font-bold text-neon-amber">{efficiencyStats.wallLoss.toFixed(1)} kWh</p>

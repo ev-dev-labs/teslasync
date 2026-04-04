@@ -22,6 +22,7 @@ import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
+import { formatTime, formatDateTime } from '../lib/dateFormat'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -136,7 +137,7 @@ export default function VehicleDetail() {
     .map(p => [p.latitude, p.longitude] as LatLngExpression) ?? []
 
   const batteryData = positions?.map(p => ({
-    time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: formatTime(p.created_at),
     battery: p.battery_level,
     speed: convertSpeed(p.speed ?? 0),
   })).reverse() ?? []
@@ -891,7 +892,7 @@ export default function VehicleDetail() {
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
                             <AnimatedNumber value={convertDistance(d.distance)} decimals={1} suffix={` ${distanceUnit}`} />
                           </p>
-                          <p className="text-xs text-[var(--text-muted)]">{new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{formatDateTime(d.start_date)}</p>
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
@@ -932,7 +933,7 @@ export default function VehicleDetail() {
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-green transition-colors">
                             <AnimatedNumber value={s.charge_energy_added} decimals={1} suffix=" kWh" />
                           </p>
-                          <p className="text-xs text-[var(--text-muted)]">{new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{formatDateTime(s.start_date)}</p>
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-[var(--text-muted)]">{s.start_battery_level}% → {s.end_battery_level ?? '—'}%</span>

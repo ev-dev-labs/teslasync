@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
 
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
@@ -162,12 +163,6 @@ function comfortLabel(score: number | null): { text: string; cls: string; bg: st
   return { text: 'Uncomfortable', cls: 'text-neon-red', bg: 'bg-neon-red/20' }
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
-}
-
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
@@ -197,7 +192,7 @@ export default function ClimateControl() {
   const sorted = [...history].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
   const tempChartData = sorted.map(s => ({
-    time: formatTime(s.created_at),
+    time: formatDateTime(s.created_at),
     inside: s.inside_temp != null ? +convertTemp(s.inside_temp).toFixed(1) : null,
     outside: s.outside_temp != null ? +convertTemp(s.outside_temp).toFixed(1) : null,
     leftTarget: s.hvac_left_temp_request != null ? +convertTemp(s.hvac_left_temp_request).toFixed(1) : null,
@@ -205,7 +200,7 @@ export default function ClimateControl() {
   }))
 
   const hvacChartData = sorted.map(s => ({
-    time: formatTime(s.created_at),
+    time: formatDateTime(s.created_at),
     power: s.hvac_power ?? null,
     fanSpeed: s.hvac_fan_speed ?? null,
   }))

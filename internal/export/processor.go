@@ -286,7 +286,7 @@ func (p *Processor) processBackup(ctx context.Context, req *models.ExportJobRequ
 	}
 
 	backup["_meta"] = map[string]interface{}{
-		"exported_at": time.Now(),
+		"exported_at": time.Now().UTC(),
 		"version":     "1.0.0",
 		"tables":      len(allowedBackupTables),
 	}
@@ -297,7 +297,7 @@ func (p *Processor) processBackup(ctx context.Context, req *models.ExportJobRequ
 	}
 
 	return &ProcessResult{
-		FileName:    fmt.Sprintf("teslasync-backup-%s.json", time.Now().Format("2006-01-02")),
+		FileName:    fmt.Sprintf("teslasync-backup-%s.json", time.Now().UTC().Format("2006-01-02")),
 		Data:        buf.Bytes(),
 		RecordCount: totalRecords,
 	}, nil

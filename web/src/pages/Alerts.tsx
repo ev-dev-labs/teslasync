@@ -5,6 +5,7 @@ import {
   Alert, AlertRule, NotificationChannel, Vehicle,
 } from '../api'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
@@ -870,7 +871,7 @@ function NotificationHistory() {
                   {logs.map(log => (
                     <tr key={log.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
                       <td className="py-2 px-3 text-[var(--text-muted)] whitespace-nowrap">
-                        {new Date(log.created_at).toLocaleString()}
+                        {formatDateTime(log.created_at)}
                       </td>
                       <td className="py-2 px-3 text-[var(--text-primary)] max-w-[200px] truncate">{log.title}</td>
                       <td className="py-2 px-3 text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</td>

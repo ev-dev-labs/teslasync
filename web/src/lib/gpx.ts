@@ -1,3 +1,5 @@
+import { formatDate } from './dateFormat'
+
 export function exportDriveAsGPX(drive: any, positions: any[], vehicleName: string) {
   const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="TeslaSync"
@@ -5,7 +7,7 @@ export function exportDriveAsGPX(drive: any, positions: any[], vehicleName: stri
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
-    <name>${vehicleName} - ${new Date(drive.start_date).toLocaleDateString()}</name>
+    <name>${vehicleName} - ${formatDate(drive.start_date)}</name>
     <desc>Drive exported from TeslaSync. Distance: ${drive.distance?.toFixed(1)} km, Duration: ${Math.round(drive.duration_min)} min</desc>
     <time>${new Date(drive.start_date).toISOString()}</time>
   </metadata>
