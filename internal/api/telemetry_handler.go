@@ -739,9 +739,17 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 			pos.Speed = &f
 		}
 	}
+	// Power — Tesla Fleet Telemetry has no "PackPower" signal; compute from
+	// PackVoltage (V) × PackCurrent (A) → kW.  Fall back to PackPower for
+	// non-fleet-telemetry sources (e.g. REST API polling).
 	if v, ok := signals["PackPower"]; ok {
 		if f, fok := toFloatOk(v); fok {
 			pos.Power = &f
+		}
+	} else if voltage, vOk := toFloatOk(signals["PackVoltage"]); vOk {
+		if current, cOk := toFloatOk(signals["PackCurrent"]); cOk {
+			pwr := voltage * current / 1000.0 // kW
+			pos.Power = &pwr
 		}
 	}
 	if v, ok := signals["GpsHeading"]; ok {
@@ -1190,8 +1198,16 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 		snap.OutsideTemp = &f
 	}
 	if v, ok := signals["HvacPower"]; ok {
-		f := toFloat(v)
-		snap.HvacPower = &f
+		// HvacPower is an enum (HvacPowerState) — map to float for DB compatibility:
+		// "On"/"Precondition" → 1.0, "Off" → 0.0
+		s := toString(v)
+		if strings.Contains(s, "On") || strings.Contains(s, "Precondition") {
+			one := 1.0
+			snap.HvacPower = &one
+		} else {
+			zero := 0.0
+			snap.HvacPower = &zero
+		}
 	}
 	if v, ok := signals["HvacFanSpeed"]; ok {
 		i := int(toFloat(v))
@@ -1210,7 +1226,9 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 		snap.CabinOverheatMode = &s
 	}
 	if v, ok := signals["DefrostMode"]; ok {
-		b := toBool(v)
+		// DefrostMode is an enum (DefrostModeState) — any non-Off state is true
+		s := toString(v)
+		b := !strings.Contains(s, "Off") && s != "" && s != "0" && s != "false"
 		snap.DefrostMode = &b
 	}
 	if v, ok := signals["BatteryHeaterOn"]; ok {
@@ -1241,7 +1259,10 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 		s := toString(v)
 		snap.ClimateKeeperMode = &s
 	}
-	if v, ok := signals["CabinOverheatProtectionTempLimit"]; ok {
+	if v, ok := signals["CabinOverheatProtectionTemperatureLimit"]; ok {
+		s := toString(v)
+		snap.CabinOverheatProtectionTempLimit = &s
+	} else if v, ok := signals["CabinOverheatProtectionTempLimit"]; ok {
 		s := toString(v)
 		snap.CabinOverheatProtectionTempLimit = &s
 	}
@@ -1324,7 +1345,9 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		ev.Locked = &b
 	}
 	if v, ok := signals["SentryMode"]; ok {
-		b := toBool(v)
+		// SentryMode is an enum (SentryModeState) — any non-Off state is true
+		s := toString(v)
+		b := !strings.Contains(s, "Off") && s != "" && s != "0" && s != "false"
 		ev.SentryMode = &b
 	}
 	if v, ok := signals["DoorState"]; ok {
@@ -1627,7 +1650,10 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		b := toBool(v)
 		snap.NotEnoughPowerToHeat = &b
 	}
-	if v, ok := signals["BmsState"]; ok {
+	if v, ok := signals["BMSState"]; ok {
+		s := toString(v)
+		snap.BmsState = &s
+	} else if v, ok := signals["BmsState"]; ok {
 		s := toString(v)
 		snap.BmsState = &s
 	}
@@ -1635,7 +1661,10 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		b := toBool(v)
 		snap.BmsFullchargeComplete = &b
 	}
-	if v, ok := signals["DcdcEnable"]; ok {
+	if v, ok := signals["DCDCEnable"]; ok {
+		b := toBool(v)
+		snap.DcdcEnable = &b
+	} else if v, ok := signals["DcdcEnable"]; ok {
 		b := toBool(v)
 		snap.DcdcEnable = &b
 	}
@@ -1667,7 +1696,10 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 		i := int(toFloat(v))
 		snap.PowershareHoursLeft = &i
 	}
-	if v, ok := signals["PowersharePowerKw"]; ok {
+	if v, ok := signals["PowershareInstantaneousPowerKW"]; ok {
+		f := toFloat(v)
+		snap.PowersharePowerKw = &f
+	} else if v, ok := signals["PowersharePowerKw"]; ok {
 		f := toFloat(v)
 		snap.PowersharePowerKw = &f
 	}
