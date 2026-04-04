@@ -45,6 +45,7 @@ import {
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDate, formatDateWithDay } from '../lib/dateFormat'
+import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -141,10 +142,10 @@ function filterAlertsByWeek(alerts: Alert[], start: Date, end: Date): Alert[] {
 
 function pctChange(current: number, previous: number): { value: string; positive: boolean } | undefined {
   if (previous === 0 && current === 0) return undefined
-  if (previous === 0) return { value: `+${current.toFixed(0)}`, positive: true }
+  if (previous === 0) return { value: `+${fmtInt(current)}`, positive: true }
   const pct = ((current - previous) / previous) * 100
   const sign = pct >= 0 ? '+' : ''
-  return { value: `${sign}${pct.toFixed(0)}%`, positive: pct >= 0 }
+  return { value: `${sign}${fmtPercent(pct)}`, positive: pct >= 0 }
 }
 
 function dayIndex(dateStr: string): number {
@@ -191,7 +192,7 @@ function DigestTooltip({ active, payload, label, unit }: any) {
       </p>
       {payload.map((entry: any, i: number) => (
         <p key={i} style={{ color: entry.color }} className="tabular-nums">
-          {entry.value.toFixed(1)} {unit}
+          {fmtNumber(entry.value, 1)} {unit}
         </p>
       ))}
     </div>
@@ -376,7 +377,7 @@ export default function WeeklyDigest() {
       )
     } else if (distKm > 0) {
       facts.push(
-        `You covered ${convertDistance(distKm).toFixed(0)} ${distanceUnit} this week — keep rolling!`,
+        `You covered ${fmtInt(convertDistance(distKm))} ${distanceUnit} this week — keep rolling!`,
       )
     }
 
@@ -390,12 +391,12 @@ export default function WeeklyDigest() {
     const totalWeekMinutes = 7 * 24 * 60
     const drivingMinutes = stats.totalDuration
     const parkedPct = totalWeekMinutes > 0
-      ? (((totalWeekMinutes - drivingMinutes) / totalWeekMinutes) * 100).toFixed(0)
+      ? fmtInt(((totalWeekMinutes - drivingMinutes) / totalWeekMinutes) * 100)
       : '100'
     facts.push(`Your car was parked ${parkedPct}% of the time this week`)
 
     if (stats.totalEnergy > 0) {
-      const treeDays = (stats.totalEnergy * 0.4 / 22).toFixed(1)
+      const treeDays = fmtNumber(stats.totalEnergy * 0.4 / 22, 1)
       facts.push(
         `Your EV charging offset ~${treeDays} tree-days worth of CO₂ absorption 🌳`,
       )
@@ -550,7 +551,7 @@ export default function WeeklyDigest() {
               <StaggerItem>
                 <StatCard
                   label="Energy Used"
-                  value={`${stats.totalEnergy.toFixed(1)} kWh`}
+                  value={fmtWithUnit(stats.totalEnergy, 'kWh', 1)}
                   icon={<Zap className="h-5 w-5" />}
                   change={pctChange(stats.totalEnergy, stats.prevEnergy)}
                   color="amber"
@@ -559,7 +560,7 @@ export default function WeeklyDigest() {
               <StaggerItem>
                 <StatCard
                   label="Charging Cost"
-                  value={`$${stats.totalCost.toFixed(2)}`}
+                  value={`$${fmtNumber(stats.totalCost, 2)}`}
                   icon={<DollarSign className="h-5 w-5" />}
                   change={pctChange(stats.totalCost, stats.prevCost)}
                   color="green"
@@ -568,7 +569,7 @@ export default function WeeklyDigest() {
               <StaggerItem>
                 <StatCard
                   label="Gas Savings"
-                  value={`$${stats.gasSavings.toFixed(2)}`}
+                  value={`$${fmtNumber(stats.gasSavings, 2)}`}
                   icon={<Leaf className="h-5 w-5" />}
                   change={pctChange(stats.gasSavings, stats.prevGasSavings)}
                   color="green"
@@ -642,20 +643,20 @@ export default function WeeklyDigest() {
                     icon={<Route className="h-5 w-5 text-neon-purple" />}
                     title="Longest Drive"
                     value={fmtDistance(highlights.longest.distance, 1)}
-                    detail={`${highlights.longest.duration_min.toFixed(0)} min · ${formatDateWithDay(highlights.longest.start_date)}`}
+                    detail={`${fmtInt(highlights.longest.duration_min)} min · ${formatDateWithDay(highlights.longest.start_date)}`}
                   />
                   {highlights.mostEfficient && (
                     <HighlightCard
                       icon={<Leaf className="h-5 w-5 text-neon-green" />}
                       title="Most Efficient"
                       value={fmtDistance(highlights.mostEfficient.distance, 1)}
-                      detail={`${((highlights.mostEfficient.start_battery_level! - highlights.mostEfficient.end_battery_level!) ).toFixed(0)}% battery used`}
+                      detail={`${fmtPercent(highlights.mostEfficient.start_battery_level! - highlights.mostEfficient.end_battery_level!)} battery used`}
                     />
                   )}
                   <HighlightCard
                     icon={<Gauge className="h-5 w-5 text-neon-red" />}
                     title="Fastest Drive"
-                    value={`${convertSpeed(highlights.fastest.speed_max ?? 0).toFixed(0)} ${speedUnit}`}
+                    value={`${fmtInt(convertSpeed(highlights.fastest.speed_max ?? 0))} ${speedUnit}`}
                     detail={formatDateWithDay(highlights.fastest.start_date)}
                   />
                 </div>
@@ -676,11 +677,11 @@ export default function WeeklyDigest() {
                 <div className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-4">
                     <MiniStat label="Sessions" value={String(weekCharging.length)} />
-                    <MiniStat label="Total Energy" value={`${stats.totalEnergy.toFixed(1)} kWh`} />
-                    <MiniStat label="Total Cost" value={`$${stats.totalCost.toFixed(2)}`} />
+                    <MiniStat label="Total Energy" value={fmtWithUnit(stats.totalEnergy, 'kWh', 1)} />
+                    <MiniStat label="Total Cost" value={`$${fmtNumber(stats.totalCost, 2)}`} />
                     <MiniStat
                       label="Avg per Session"
-                      value={`${(stats.totalEnergy / weekCharging.length).toFixed(1)} kWh`}
+                      value={fmtWithUnit(stats.totalEnergy / weekCharging.length, 'kWh', 1)}
                     />
                   </div>
 
@@ -909,7 +910,7 @@ export default function WeeklyDigest() {
                                 ) : (
                                   <TrendingDown className="h-3 w-3" />
                                 )}
-                                {Math.abs(diff).toFixed(row.metric.includes('Cost') ? 2 : 1)}
+                                {fmtNumber(Math.abs(diff), row.metric.includes('Cost') ? 2 : 1)}
                               </span>
                             )}
                           </td>
