@@ -284,3 +284,14 @@ imagePullSecrets:
 {{- .Values.commandProxy.external.url }}
 {{- end }}
 {{- end }}
+
+{{/*
+MongoDB host — bundled service name (only used when mongodb.enabled=true).
+*/}}
+{{- define "teslasync.mongodb.host" -}}
+{{- printf "%s-mongodb" (include "teslasync.fullname" .) }}
+{{- end }}
+
+{{- define "teslasync.mongodb.port" -}}
+{{- toString (.Values.mongodb.service.port | default 27017) }}
+{{- end }}

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getPollingConfig, updatePollingConfig, AppSettings, PollingConfig, Vehicle } from '../api'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getPollingConfig, updatePollingConfig, getCaptureStats, AppSettings, PollingConfig, Vehicle } from '../api'
 import { useState, useEffect, useCallback } from 'react'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link, Fuel, Zap, ToggleLeft, ToggleRight } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
@@ -131,10 +131,18 @@ export default function Settings() {
     staleTime: 5 * 60 * 1000,
   })
 
+  // Telemetry capture status (MongoDB)
+  const { data: captureStats } = useQuery({
+    queryKey: ['capture-stats'],
+    queryFn: getCaptureStats,
+    staleTime: 30 * 1000,
+  })
+
   const pollingConfigMut = useMutation({
     mutationFn: (pc: PollingConfig) => updatePollingConfig(pc),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polling-config'] })
+      queryClient.invalidateQueries({ queryKey: ['capture-stats'] })
       toast.success('Polling config updated', 'Endpoint toggles have been saved')
     },
     onError: () => {
@@ -445,6 +453,75 @@ export default function Settings() {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Telemetry Capture */}
+              <div className={captureStats && !captureStats.mongodb_enabled ? 'opacity-50' : ''}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Telemetry Capture</h3>
+                  {captureStats && (
+                    <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${captureStats.mongodb_enabled ? 'bg-neon-green/10 text-neon-green' : 'bg-white/5 text-[var(--text-muted)]'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${captureStats.mongodb_enabled ? 'bg-neon-green' : 'bg-gray-500'}`} />
+                      {captureStats.mongodb_enabled ? 'MongoDB Connected' : 'MongoDB Not Configured'}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-[var(--text-primary)]">Raw Signal Recording</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">
+                        {captureStats && !captureStats.mongodb_enabled
+                          ? 'Set MONGODB_ENABLED=true and configure MONGODB_URI to enable'
+                          : 'Capture every fleet telemetry signal to MongoDB for debugging'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => toggleEndpoint('telemetry_capture')}
+                      className="transition-colors shrink-0 ml-2"
+                      aria-label={pollingConfig.telemetry_capture ? 'Disable capture' : 'Enable capture'}
+                      disabled={pollingConfigMut.isPending || (captureStats != null && !captureStats.mongodb_enabled)}
+                    >
+                      {pollingConfig.telemetry_capture ? (
+                        <ToggleRight className={`h-6 w-6 ${captureStats?.mongodb_enabled ? 'text-neon-green' : 'text-gray-500'}`} />
+                      ) : (
+                        <ToggleLeft className="h-6 w-6 text-[var(--text-muted)]" />
+                      )}
+                    </button>
+                  </div>
+                  {pollingConfig.telemetry_capture && captureStats?.mongodb_enabled && (
+                    <>
+                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-[var(--text-primary)]">Retention Period</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">Auto-delete captured signals after this many days</p>
+                        </div>
+                        <select
+                          value={pollingConfig.telemetry_capture_retention_days || 7}
+                          onChange={(e) => {
+                            const updated = { ...pollingConfig, telemetry_capture_retention_days: parseInt(e.target.value) }
+                            pollingConfigMut.mutate(updated)
+                          }}
+                          disabled={pollingConfigMut.isPending}
+                          className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/50"
+                        >
+                          <option value={1}>1 day</option>
+                          <option value={3}>3 days</option>
+                          <option value={7}>7 days</option>
+                          <option value={14}>14 days</option>
+                          <option value={30}>30 days</option>
+                        </select>
+                      </div>
+                      {captureStats.total_documents > 0 && (
+                        <div className="flex items-center gap-3 p-2.5 rounded-lg bg-neon-cyan/5 border border-neon-cyan/10">
+                          <p className="text-[10px] text-neon-cyan">
+                            {captureStats.total_documents.toLocaleString()} signals captured from {captureStats.distinct_vins.length} vehicle{captureStats.distinct_vins.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

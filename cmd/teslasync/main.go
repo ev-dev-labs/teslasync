@@ -174,6 +174,28 @@ func main() {
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
 
+		// MongoDB raw telemetry capture (optional)
+		if cfg.MongoDB.Enabled {
+			mongoClient, err := database.NewMongoClient(cfg.MongoDB)
+			if err != nil {
+				log.Warn().Err(err).Msg("MongoDB connection failed — raw telemetry capture disabled")
+			} else {
+				defer mongoClient.Close()
+				rawRepo := database.NewRawTelemetryRepo(mongoClient)
+				telemetryHandler.SetRawTelemetryRepo(rawRepo)
+				log.Info().Str("database", cfg.MongoDB.Database).Int("ttl_days", cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture available")
+
+				// Read initial capture toggle from settings
+				settingsRepo := database.NewSettingsRepo(db)
+				if pc, err := settingsRepo.GetPollingConfig(ctx); err == nil {
+					telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
+					if pc.TelemetryCapture {
+						log.Info().Msg("raw telemetry capture is ENABLED (from settings)")
+					}
+				}
+			}
+		}
+
 		// Start periodic cleanup of stale streaming/session state
 		telemetryHandler.StartCleanup(ctx)
 

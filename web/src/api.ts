@@ -277,6 +277,9 @@ export interface PollingConfig {
   // Commands
   wake_up: boolean
   commands: boolean
+  // Telemetry capture (raw signal recording to MongoDB)
+  telemetry_capture: boolean
+  telemetry_capture_retention_days: number
 }
 
 export interface VehicleState {
@@ -841,6 +844,15 @@ export const getPollingConfig = () => request<PollingConfig>('/settings/polling-
 /** Updates the polling endpoint configuration. */
 export const updatePollingConfig = (pc: PollingConfig) =>
   request<PollingConfig>('/settings/polling-config', { method: 'PUT', body: JSON.stringify(pc) })
+
+// === Telemetry Capture ===
+export interface CaptureStats {
+  mongodb_enabled: boolean
+  capture_enabled: boolean
+  total_documents: number
+  distinct_vins: string[]
+}
+export const getCaptureStats = () => request<CaptureStats>('/dev-tools/telemetry-capture/stats')
 
 // === Vehicle Commands ===
 /** Sends a command (lock, unlock, climate_on, etc.) to a vehicle. */
