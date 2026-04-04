@@ -928,6 +928,14 @@ func toFloatOk(v interface{}) (float64, bool) {
 	if v == nil {
 		return 0, false
 	}
+	// Tesla sends {"invalid": true} for signals that can't be measured
+	if m, ok := v.(map[string]interface{}); ok {
+		if inv, ok := m["invalid"]; ok {
+			if b, ok := inv.(bool); ok && b {
+				return 0, false
+			}
+		}
+	}
 	switch val := v.(type) {
 	case float64:
 		return val, true
@@ -967,6 +975,9 @@ func toString(v interface{}) string {
 	}
 	switch val := v.(type) {
 	case string:
+		if val == "<nil>" || val == "nil" || val == "null" {
+			return ""
+		}
 		return val
 	case float64:
 		return fmt.Sprintf("%v", val)
@@ -977,7 +988,7 @@ func toString(v interface{}) string {
 		return "false"
 	default:
 		s := fmt.Sprintf("%v", val)
-		if s == "<nil>" {
+		if s == "<nil>" || s == "nil" || s == "null" {
 			return ""
 		}
 		return s
@@ -1503,6 +1514,8 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 }
 
 // trackCharging stores charging telemetry when relevant signals arrive.
+// Gate: only writes when a charging-specific signal is present (not just
+// PackVoltage/PackCurrent which are always sent regardless of charge state).
 func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	_, hasChargeState := signals["ChargeState"]
 	_, hasDetailedCharge := signals["DetailedChargeState"]
@@ -1516,13 +1529,14 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 	_, hasEstRange := signals["EstBatteryRange"]
 	_, hasIdealRange := signals["IdealBatteryRange"]
 	_, hasEnergyRemaining := signals["EnergyRemaining"]
-	_, hasPackVoltage := signals["PackVoltage"]
-	_, hasPackCurrent := signals["PackCurrent"]
 	_, hasChargeLimitSoc := signals["ChargeLimitSoc"]
+	// Note: PackVoltage/PackCurrent excluded from gate — they're always sent
+	// (even when not charging) and would create 35K+ mostly-empty rows.
+	// They're still stored in the row when other charging signals trigger it.
 	if !hasChargeState && !hasDetailedCharge && !hasDCPower && !hasACPower &&
 		!hasBatteryLevel && !hasSoc && !hasChargeRate && !hasChargeAmps &&
 		!hasChargerVoltage && !hasEstRange && !hasIdealRange && !hasEnergyRemaining &&
-		!hasPackVoltage && !hasPackCurrent && !hasChargeLimitSoc {
+		!hasChargeLimitSoc {
 		return
 	}
 
