@@ -464,16 +464,17 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 		}
 	}
 
-	// Check for charging state
+	// Check for charging state — Tesla Fleet Telemetry sends enum values with
+	// varying prefixes (e.g. "DetailedChargeStateCharging", "Enable", "Charging")
 	if cs, ok := signals["ChargeState"]; ok {
 		csStr := fmt.Sprintf("%v", cs)
-		if csStr == "Charging" || csStr == "Starting" {
+		if strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") || csStr == "Enable" {
 			return "charging"
 		}
 	}
 	if dcs, ok := signals["DetailedChargeState"]; ok {
 		dcsStr := fmt.Sprintf("%v", dcs)
-		if dcsStr == "Charging" || dcsStr == "Starting" {
+		if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
 			return "charging"
 		}
 	}

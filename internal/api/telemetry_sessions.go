@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -849,7 +850,9 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		return
 	}
 
-	isCharging := chargeState == "Charging" || chargeState == "Starting"
+	// Tesla Fleet Telemetry sends enum values with prefixes like
+	// "DetailedChargeStateCharging", "DetailedChargeStateStarting", or just "Enable".
+	isCharging := strings.Contains(chargeState, "Charging") || strings.Contains(chargeState, "Starting") || chargeState == "Enable"
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
