@@ -49,6 +49,11 @@ Components deployed:
 {{- if .Values.commandProxy.enabled }}
   ✓ Command Proxy     — bundled (tesla/vehicle-command)
 {{- end }}
+{{- if .Values.mongodb.enabled }}
+  ✓ MongoDB           — bundled ({{ .Values.mongodb.image }})
+{{- else if .Values.mongodb.external.host }}
+  • MongoDB            — external ({{ .Values.mongodb.external.host }}:{{ .Values.mongodb.external.port }})
+{{- end }}
 
 ──────────────────────────────────────────────────────
   Accessing the services

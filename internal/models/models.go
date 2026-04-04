@@ -363,6 +363,10 @@ type PollingConfig struct {
 	// Commands
 	WakeUp   bool `json:"wake_up"`   // POST /vehicles/{vin}/wake_up
 	Commands bool `json:"commands"`  // POST /vehicles/{vin}/command/*
+
+	// Telemetry capture (raw signal recording to MongoDB)
+	TelemetryCapture              bool `json:"telemetry_capture"`                // enable raw signal recording
+	TelemetryCaptureRetentionDays int  `json:"telemetry_capture_retention_days"` // TTL in days (default: 7)
 }
 
 // DefaultPollingConfig returns a PollingConfig with all endpoints enabled.
@@ -388,6 +392,8 @@ func DefaultPollingConfig() PollingConfig {
 		ServiceData:              true,
 		WakeUp:                   true,
 		Commands:                 true,
+		TelemetryCapture:              false,
+		TelemetryCaptureRetentionDays: 7,
 	}
 }
 
@@ -1065,4 +1071,13 @@ type BackupRun struct {
 	StartedAt     *time.Time      `json:"started_at,omitempty" db:"started_at"`
 	CompletedAt   *time.Time      `json:"completed_at,omitempty" db:"completed_at"`
 	CreatedAt     time.Time       `json:"created_at" db:"created_at"`
+}
+
+// RawTelemetrySignal stores a raw signal batch from Tesla fleet telemetry for debugging.
+type RawTelemetrySignal struct {
+	VIN         string                 `json:"vin" bson:"vin"`
+	Source      string                 `json:"source" bson:"source"`
+	Signals     map[string]interface{} `json:"signals" bson:"signals"`
+	SignalCount int                    `json:"signal_count" bson:"signal_count"`
+	CreatedAt   time.Time              `json:"created_at" bson:"created_at"`
 }

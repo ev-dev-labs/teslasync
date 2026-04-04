@@ -284,3 +284,22 @@ imagePullSecrets:
 {{- .Values.commandProxy.external.url }}
 {{- end }}
 {{- end }}
+
+{{/*
+MongoDB host — bundled or external.
+*/}}
+{{- define "teslasync.mongodb.host" -}}
+{{- if .Values.mongodb.enabled }}
+{{- printf "%s-mongodb" (include "teslasync.fullname" .) }}
+{{- else }}
+{{- .Values.mongodb.external.host }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.mongodb.port" -}}
+{{- if .Values.mongodb.enabled }}
+{{- toString .Values.mongodb.service.port }}
+{{- else }}
+{{- toString (.Values.mongodb.external.port | default 27017) }}
+{{- end }}
+{{- end }}
