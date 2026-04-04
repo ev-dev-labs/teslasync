@@ -19,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
@@ -90,8 +91,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	})
 
+	// Services
+	vehicleSvc := service.NewVehicleService(db)
+	energySvc := service.NewEnergyService(db)
+
 	// Handlers
-	vehicleHandler := NewVehicleHandler(db, teslaClient)
+	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient)
 	driveHandler := NewDriveHandler(db)
 	chargingHandler := NewChargingHandler(db)
 	geofenceHandler := NewGeofenceHandler(db)
@@ -99,7 +104,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	settingsHandler := NewSettingsHandler(db)
 	alertHandler := NewAlertHandler(db)
 	commandHandler := NewCommandHandler(db, teslaClient)
-	energyHandler := NewEnergyHandler(db)
+	energyHandler := NewEnergyHandler(energySvc)
 	batteryHandler := NewBatteryHandler(db)
 	analyticsHandler := NewAnalyticsHandler(db)
 	notificationHandler := NewNotificationHandler(db)

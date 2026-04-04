@@ -6,17 +6,16 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/service"
 )
 
 // EnergyHandler handles energy statistics HTTP requests.
 type EnergyHandler struct {
-	energyRepo *database.EnergyStatsRepo
+	energySvc *service.EnergyService
 }
 
-func NewEnergyHandler(db *database.DB) *EnergyHandler {
-	return &EnergyHandler{energyRepo: database.NewEnergyStatsRepo(db)}
+func NewEnergyHandler(energySvc *service.EnergyService) *EnergyHandler {
+	return &EnergyHandler{energySvc: energySvc}
 }
 
 func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
@@ -40,41 +39,23 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	breakdown, err := h.energyRepo.GetDailyBreakdown(r.Context(), vehicleID, days)
+	stats, err := h.energySvc.CalculateStats(r.Context(), vehicleID, days)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get energy breakdown")
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get energy stats")
 		writeError(w, http.StatusInternalServerError, "failed to get energy stats")
 		return
 	}
-
-	totalEnergy, totalCost, totalDistance, err := h.energyRepo.GetTotalEnergy(r.Context(), vehicleID, days)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get total energy")
-		writeError(w, http.StatusInternalServerError, "failed to get energy stats")
-		return
-	}
-
-	if breakdown == nil {
-		breakdown = make([]*models.EnergyStatsRow, 0)
-	}
-
-	var avgEfficiency float64
-	if totalDistance > 0 {
-		avgEfficiency = totalEnergy / totalDistance * 1000 // Wh/km
-	}
-
-	co2Saved := totalEnergy * 0.4 // ~400g CO2 saved per kWh vs gasoline
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":               vehicleID,
-		"period_days":              days,
-		"total_energy_used_kwh":    totalEnergy,
-		"total_energy_charged_kwh": totalEnergy,
-		"total_kwh":                totalEnergy,
-		"total_cost":               totalCost,
-		"total_distance_km":        totalDistance,
-		"avg_efficiency_wh_km":     avgEfficiency,
-		"co2_saved_kg":             co2Saved,
-		"daily_breakdown":          breakdown,
+		"vehicle_id":               stats.VehicleID,
+		"period_days":              stats.PeriodDays,
+		"total_energy_used_kwh":    stats.TotalEnergy,
+		"total_energy_charged_kwh": stats.TotalEnergy,
+		"total_kwh":                stats.TotalEnergy,
+		"total_cost":               stats.TotalCost,
+		"total_distance_km":        stats.TotalDistance,
+		"avg_efficiency_wh_km":     stats.AvgEfficiency,
+		"co2_saved_kg":             stats.CO2Saved,
+		"daily_breakdown":          stats.DailyBreakdown,
 	})
 }

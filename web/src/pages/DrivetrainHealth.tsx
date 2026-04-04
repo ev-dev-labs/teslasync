@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { cleanNil } from '../lib/cleanNil'
-import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
@@ -19,7 +19,7 @@ function DrivetrainTooltip({ active, payload, label, unit = '' }: { active?: boo
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(2)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 2)} {unit}
         </p>
       ))}
     </div>

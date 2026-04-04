@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { formatDateShort } from '../lib/dateFormat'
+import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
 
 function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
   const clamped = Math.min(Math.max(value, 0), 100)
@@ -46,7 +47,7 @@ function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
         />
       </svg>
       <div className="absolute bottom-6 text-center">
-        <p className="text-3xl font-bold" style={{ color }}>{clamped.toFixed(1)}%</p>
+        <p className="text-3xl font-bold" style={{ color }}>{fmtPercent(clamped, 1)}</p>
         <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Regen Ratio</p>
       </div>
     </div>
@@ -116,10 +117,10 @@ export default function RegenEfficiency() {
           {/* Hero stats */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Lifetime Regen', value: `${(data?.total_regen_kwh ?? 0).toFixed(1)} kWh`, color: 'text-neon-green' },
-              { label: 'Regen Ratio', value: `${(data?.regen_ratio ?? 0).toFixed(1)}%`, color: 'text-neon-cyan' },
-              { label: 'Monthly Avg', value: `${(data?.monthly_avg_regen ?? 0).toFixed(1)} kW`, color: 'text-neon-purple' },
-              { label: 'Free Charges', value: `${(data?.free_charges ?? 0).toFixed(1)}`, color: 'text-neon-amber' },
+              { label: 'Lifetime Regen', value: fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh', 1), color: 'text-neon-green' },
+              { label: 'Regen Ratio', value: fmtPercent(data?.regen_ratio ?? 0, 1), color: 'text-neon-cyan' },
+              { label: 'Monthly Avg', value: fmtWithUnit(data?.monthly_avg_regen ?? 0, 'kW', 1), color: 'text-neon-purple' },
+              { label: 'Free Charges', value: fmtNumber(data?.free_charges ?? 0, 1), color: 'text-neon-amber' },
             ].map(m => (
               <StaggerItem key={m.label}>
                 <GlassPanel className="p-4 text-center">
@@ -148,18 +149,18 @@ export default function RegenEfficiency() {
                 <div className="space-y-4">
                   <div className="rounded-xl p-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      You've recovered <span className="font-bold text-neon-green">{(data?.total_regen_kwh ?? 0).toFixed(1)} kWh</span> through
-                      regenerative braking — equivalent to <span className="font-bold text-neon-green">~{(data?.free_charges ?? 0).toFixed(1)} free charges</span>.
+                      You've recovered <span className="font-bold text-neon-green">{fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh', 1)}</span> through
+                      regenerative braking — equivalent to <span className="font-bold text-neon-green">~{fmtNumber(data?.free_charges ?? 0, 1)} free charges</span>.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg p-3" style={{ background: 'var(--surface-2)' }}>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Drive Energy</p>
-                      <p className="text-lg font-bold text-neon-cyan">{(data?.total_drive_kwh ?? 0).toFixed(1)} kWh</p>
+                      <p className="text-lg font-bold text-neon-cyan">{fmtWithUnit(data?.total_drive_kwh ?? 0, 'kWh', 1)}</p>
                     </div>
                     <div className="rounded-lg p-3" style={{ background: 'var(--surface-2)' }}>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Recovery Rate</p>
-                      <p className="text-lg font-bold text-neon-green">{(data?.regen_ratio ?? 0).toFixed(1)}%</p>
+                      <p className="text-lg font-bold text-neon-green">{fmtPercent(data?.regen_ratio ?? 0, 1)}</p>
                     </div>
                   </div>
                 </div>
@@ -218,16 +219,16 @@ export default function RegenEfficiency() {
                               {formatDateShort(d.start_date)}
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono" style={{ color: 'var(--text-primary)' }}>
-                              {d.distance.toFixed(1)} km
+                              {fmtWithUnit(d.distance, 'km', 1)}
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono text-neon-cyan">
-                              {d.power_min != null ? `${Math.abs(d.power_min).toFixed(0)} kW` : '—'}
+                              {d.power_min != null ? fmtWithUnit(Math.abs(d.power_min), 'kW', 0) : '—'}
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono" style={{ color: 'var(--text-secondary)' }}>
-                              {d.efficiency.toFixed(1)}%
+                              {fmtPercent(d.efficiency, 1)}
                             </td>
                             <td className={`py-2.5 px-3 text-right font-bold ${scoreColor}`}>
-                              {d.regen_score.toFixed(1)}
+                              {fmtNumber(d.regen_score, 1)}
                             </td>
                           </tr>
                         )

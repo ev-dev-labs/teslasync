@@ -20,6 +20,7 @@ import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../
 import { useSettings } from '../hooks/useSettings'
 import { AnimatedNumber, RadialGauge, MetricBar } from '../components/Widgets'
 import { ChartTooltip } from '../components/Charts'
+import { fmtNumber } from '../lib/numberFormat'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color: string; value: React.ReactNode; label: string }) {
   return (
@@ -76,12 +77,12 @@ export default function ChargeDetail() {
 
   const batteryGain = (session.end_battery_level ?? session.start_battery_level) - session.start_battery_level
   const costPerKwh = session.cost && session.charge_energy_added > 0
-    ? (session.cost / session.charge_energy_added).toFixed(2)
+    ? fmtNumber(session.cost / session.charge_energy_added, 2)
     : null
 
   // Charging efficiency
   const chargingEfficiency = session.charge_energy_used && session.charge_energy_added > 0
-    ? ((session.charge_energy_added / session.charge_energy_used) * 100).toFixed(1)
+    ? fmtNumber((session.charge_energy_added / session.charge_energy_used) * 100)
     : null
 
   // Range gained
@@ -91,7 +92,7 @@ export default function ChargeDetail() {
 
   // Charge speed (kWh/h)
   const chargeSpeedKwhH = session.duration_min > 0
-    ? (session.charge_energy_added / (session.duration_min / 60)).toFixed(1)
+    ? fmtNumber(session.charge_energy_added / (session.duration_min / 60))
     : null
 
   // Is DC fast charging?
@@ -200,9 +201,9 @@ export default function ChargeDetail() {
           <MetricBar value={session.end_battery_level ?? session.start_battery_level} max={100} color="#10b981" label="End" sublabel={`${session.end_battery_level ?? '?'}%`} />
           <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
             <span>+{batteryGain}% gained</span>
-            <span>{session.charge_energy_added.toFixed(1)} kWh added</span>
+            <span>{fmtNumber(session.charge_energy_added)} kWh added</span>
             {rangeGained != null && <span className="text-neon-green">+{Math.round(convertDistance(rangeGained))} {distanceUnit} range</span>}
-            {session.cost != null && <span className="text-neon-amber">${session.cost.toFixed(2)} cost</span>}
+            {session.cost != null && <span className="text-neon-amber">${fmtNumber(session.cost, 2)} cost</span>}
           </div>
         </GlassPanel>
       </FadeIn>
@@ -213,7 +214,7 @@ export default function ChargeDetail() {
         <StaggerItem><StatCard icon={Clock} color="#f59e0b" value={`${Math.floor(session.duration_min / 60)}h ${Math.round(session.duration_min % 60)}m`} label="Duration" /></StaggerItem>
         <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={`${session.charger_power ?? '—'} kW`} label="Peak Power" /></StaggerItem>
         <StaggerItem><StatCard icon={TrendingUp} color="#00f0ff" value={`${session.start_battery_level}% → ${session.end_battery_level ?? '?'}%`} label="SoC Range" /></StaggerItem>
-        <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={session.cost != null ? `$${session.cost.toFixed(2)}` : '—'} label="Total Cost" /></StaggerItem>
+        <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={session.cost != null ? `$${fmtNumber(session.cost, 2)}` : '—'} label="Total Cost" /></StaggerItem>
         <StaggerItem><StatCard icon={Timer} color="#6b7280" value={costPerKwh ? `$${costPerKwh}` : '—'} label="Per kWh" /></StaggerItem>
         <StaggerItem><StatCard icon={ArrowUpRight} color="#10b981" value={rangeGained != null ? `+${Math.round(convertDistance(rangeGained))} ${distanceUnit}` : '—'} label="Range Gained" /></StaggerItem>
         <StaggerItem><StatCard icon={Activity} color="#06b6d4" value={chargeSpeedKwhH ? `${chargeSpeedKwhH}` : '—'} label="kWh/h Avg" /></StaggerItem>
@@ -260,7 +261,7 @@ export default function ChargeDetail() {
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Used (grid)</p>
               <p className="text-lg font-bold text-orange-400">
-                {session.charge_energy_used != null ? `${session.charge_energy_used.toFixed(1)}` : '—'} <span className="text-xs text-[var(--text-muted)]">kWh</span>
+                {session.charge_energy_used != null ? `${fmtNumber(session.charge_energy_used)}` : '—'} <span className="text-xs text-[var(--text-muted)]">kWh</span>
               </p>
             </div>
           </div>
@@ -320,7 +321,7 @@ export default function ChargeDetail() {
                       <div className="text-xs">
                         <strong>{session.location_name || 'Charge Location'}</strong>
                         <br />
-                        {session.latitude!.toFixed(5)}, {session.longitude!.toFixed(5)}
+                        {fmtNumber(session.latitude!, 5)}, {fmtNumber(session.longitude!, 5)}
                       </div>
                     </Popup>
                   </CircleMarker>
@@ -372,7 +373,7 @@ export default function ChargeDetail() {
                 <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
                   <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Coordinates</p>
                   <p className="text-xs font-mono text-[var(--text-secondary)]">
-                    {session.latitude!.toFixed(6)}, {session.longitude!.toFixed(6)}
+                    {fmtNumber(session.latitude!, 6)}, {fmtNumber(session.longitude!, 6)}
                   </p>
                 </div>
               </div>
@@ -518,12 +519,12 @@ export default function ChargeDetail() {
               <Thermometer className="h-4 w-4 text-neon-cyan" />
               {session.inside_temp_avg != null && (
                 <span className="text-[var(--text-secondary)]">
-                  Inside: <strong className="text-orange-400">{convertTemp(session.inside_temp_avg).toFixed(1)} {tempUnit}</strong>
+                  Inside: <strong className="text-orange-400">{fmtNumber(convertTemp(session.inside_temp_avg))} {tempUnit}</strong>
                 </span>
               )}
               {session.outside_temp_avg != null && (
                 <span className="text-[var(--text-secondary)]">
-                  Outside: <strong className="text-blue-400">{convertTemp(session.outside_temp_avg).toFixed(1)} {tempUnit}</strong>
+                  Outside: <strong className="text-blue-400">{fmtNumber(convertTemp(session.outside_temp_avg))} {tempUnit}</strong>
                 </span>
               )}
             </div>

@@ -21,6 +21,7 @@ import { AnimatedNumber, RadialGauge } from '../components/Widgets'
 import { useUnits } from '../hooks/useUnits'
 import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
+import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; color: string; value: React.ReactNode; label: string }) {
   return (
@@ -225,7 +226,7 @@ export default function DriveDetail() {
   }))
 
   const efficiency = drive && drive.distance > 0 && drive.start_battery_level != null && drive.end_battery_level != null
-    ? ((drive.start_battery_level - drive.end_battery_level) / u.distanceVal(drive.distance) * 10).toFixed(1)
+    ? fmtNumber((drive.start_battery_level - drive.end_battery_level) / u.distanceVal(drive.distance) * 10)
     : null
 
   if (!drive) {
@@ -251,7 +252,7 @@ export default function DriveDetail() {
   const handleShare = () => {
     const batteryFrom = drive.start_battery_level ?? '?'
     const batteryTo = drive.end_battery_level ?? '?'
-    const summary = `🚗 Drove ${u.distance(drive.distance)} in ${Math.round(drive.duration_min)} min at ${consumptionWhKm > 0 ? u.efficiency(consumptionWhKm) : '?'} efficiency. Battery: ${batteryFrom}%→${batteryTo}%. Max speed: ${maxSpeed.toFixed(0)} ${u.speedUnit}`
+    const summary = `🚗 Drove ${u.distance(drive.distance)} in ${Math.round(drive.duration_min)} min at ${consumptionWhKm > 0 ? u.efficiency(consumptionWhKm) : '?'} efficiency. Battery: ${batteryFrom}%→${batteryTo}%. Max speed: ${fmtInt(maxSpeed)} ${u.speedUnit}`
     navigator.clipboard.writeText(summary)
   }
 
@@ -321,7 +322,7 @@ export default function DriveDetail() {
         <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={maxSpeed} suffix={' ' + u.speedUnit} />} label="Max Speed" /></StaggerItem>
         <StaggerItem><StatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={drive.speed_avg != null ? u.speedVal(drive.speed_avg) : avgSpeed} decimals={0} suffix={' ' + u.speedUnit} />} label="Avg Speed" /></StaggerItem>
         <StaggerItem><StatCard icon={Battery} color="#10b981" value={`${drive.soc_start ?? drive.start_battery_level ?? '?'}% → ${drive.soc_end ?? drive.end_battery_level ?? '?'}%`} label="SOC" /></StaggerItem>
-        <StaggerItem><StatCard icon={Zap} color="#f59e0b" value={`${powerMax.toFixed(0)} kW`} label="Max Power" /></StaggerItem>
+        <StaggerItem><StatCard icon={Zap} color="#f59e0b" value={`${fmtWithUnit(powerMax, 'kW', 0)}`} label="Max Power" /></StaggerItem>
         <StaggerItem><StatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={drive.elevation_gain ?? elevGain} decimals={0} suffix=" m ↑" />} label="Elev. Gain" /></StaggerItem>
         <StaggerItem><StatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={drive.elevation_loss ?? elevLoss} decimals={0} suffix=" m ↓" />} label="Elev. Loss" /></StaggerItem>
       </StaggerContainer>
@@ -369,11 +370,11 @@ export default function DriveDetail() {
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Consumed (net)</p>
-              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${(energyConsumedWh / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${fmtWithUnit((energyConsumedWh / 1000), 'kWh', 2)}` : `${Math.round(energyConsumedWh)} Wh`}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Recovered</p>
-              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${(energyRecoveredWh / 1000).toFixed(2)} kWh` : `${Math.round(energyRecoveredWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${fmtWithUnit((energyRecoveredWh / 1000), 'kWh', 2)}` : `${Math.round(energyRecoveredWh)} Wh`}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Consumption</p>
@@ -396,11 +397,11 @@ export default function DriveDetail() {
               )}
               <div className="text-center">
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Power</p>
-                <p className="text-lg font-bold text-neon-amber">{avgPower.toFixed(1)} <span className="text-xs text-[var(--text-muted)]">kW</span></p>
+                <p className="text-lg font-bold text-neon-amber">{fmtNumber(avgPower)} <span className="text-xs text-[var(--text-muted)]">kW</span></p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">Min Speed</p>
-                <p className="text-lg font-bold text-gray-300">{minSpeed > 0 ? `${minSpeed.toFixed(0)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
+                <p className="text-lg font-bold text-gray-300">{minSpeed > 0 ? `${fmtInt(minSpeed)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
               </div>
             </div>
           )}
@@ -416,15 +417,15 @@ export default function DriveDetail() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Consumed</p>
-              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${(energyConsumedWh / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${fmtWithUnit((energyConsumedWh / 1000), 'kWh', 2)}` : `${Math.round(energyConsumedWh)} Wh`}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Recovered</p>
-              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${(energyRecoveredWh / 1000).toFixed(2)} kWh` : `${Math.round(energyRecoveredWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${fmtWithUnit((energyRecoveredWh / 1000), 'kWh', 2)}` : `${Math.round(energyRecoveredWh)} Wh`}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Net Consumption</p>
-              <p className="text-lg font-bold text-neon-cyan">{(energyConsumedWh - energyRecoveredWh) > 1000 ? `${((energyConsumedWh - energyRecoveredWh) / 1000).toFixed(2)} kWh` : `${Math.round(energyConsumedWh - energyRecoveredWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-cyan">{(energyConsumedWh - energyRecoveredWh) > 1000 ? `${fmtWithUnit(((energyConsumedWh - energyRecoveredWh) / 1000), 'kWh', 2)}` : `${Math.round(energyConsumedWh - energyRecoveredWh)} Wh`}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Efficiency</p>
@@ -502,7 +503,7 @@ export default function DriveDetail() {
               </div>
               {drive.start_address
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.start_address}</p>
-                : <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{startPos[0].toFixed(4)}°N, {Math.abs(startPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
+                : <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{fmtNumber(startPos[0], 4)}°N, {fmtNumber(Math.abs(startPos[1]), 4)}°W</span> : 'No position data'}</p>
               }
               <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.start_date)}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km))} ${u.distanceUnit}` : '—'}</p>
@@ -513,7 +514,7 @@ export default function DriveDetail() {
               </div>
               {drive.end_address
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.end_address}</p>
-                : <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{endPos[0].toFixed(4)}°N, {Math.abs(endPos[1]).toFixed(4)}°W</span> : 'No position data'}</p>
+                : <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{fmtNumber(endPos[0], 4)}°N, {fmtNumber(Math.abs(endPos[1]), 4)}°W</span> : 'No position data'}</p>
               }
               <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
@@ -540,13 +541,13 @@ export default function DriveDetail() {
 
         type LegendItem = { color: string; dash?: boolean; label: string; mean: string; max: string; min: string }
         const legendItems: LegendItem[] = []
-        if (speedStats) legendItems.push({ color: '#3b82f6', label: `Speed`, mean: `${speedStats.mean.toFixed(1)} ${u.speedUnit}`, max: `${speedStats.max.toFixed(1)} ${u.speedUnit}`, min: `${speedStats.min.toFixed(0)} ${u.speedUnit}` })
-        if (idealRangeStats) legendItems.push({ color: '#c084fc', dash: true, label: `Range (ideal)`, mean: `${idealRangeStats.mean.toFixed(0)} ${u.distanceUnit}`, max: `${idealRangeStats.max.toFixed(0)} ${u.distanceUnit}`, min: `${idealRangeStats.min.toFixed(0)} ${u.distanceUnit}` })
-        if (estRangeStats) legendItems.push({ color: '#a855f7', dash: true, label: `Range (est.)`, mean: `${estRangeStats.mean.toFixed(0)} ${u.distanceUnit}`, max: `${estRangeStats.max.toFixed(0)} ${u.distanceUnit}`, min: `${estRangeStats.min.toFixed(0)} ${u.distanceUnit}` })
-        if (socStats) legendItems.push({ color: '#84cc16', label: `SOC`, mean: `${socStats.mean.toFixed(0)}%`, max: `${socStats.max.toFixed(0)}%`, min: `${socStats.min.toFixed(0)}%` })
-        if (usableSocStats) legendItems.push({ color: '#22d3ee', label: `Usable SOC`, mean: `${usableSocStats.mean.toFixed(0)}%`, max: `${usableSocStats.max.toFixed(0)}%`, min: `${usableSocStats.min.toFixed(0)}%` })
+        if (speedStats) legendItems.push({ color: '#3b82f6', label: `Speed`, mean: `${fmtNumber(speedStats.mean)} ${u.speedUnit}`, max: `${fmtNumber(speedStats.max)} ${u.speedUnit}`, min: `${fmtInt(speedStats.min)} ${u.speedUnit}` })
+        if (idealRangeStats) legendItems.push({ color: '#c084fc', dash: true, label: `Range (ideal)`, mean: `${fmtInt(idealRangeStats.mean)} ${u.distanceUnit}`, max: `${fmtInt(idealRangeStats.max)} ${u.distanceUnit}`, min: `${fmtInt(idealRangeStats.min)} ${u.distanceUnit}` })
+        if (estRangeStats) legendItems.push({ color: '#a855f7', dash: true, label: `Range (est.)`, mean: `${fmtInt(estRangeStats.mean)} ${u.distanceUnit}`, max: `${fmtInt(estRangeStats.max)} ${u.distanceUnit}`, min: `${fmtInt(estRangeStats.min)} ${u.distanceUnit}` })
+        if (socStats) legendItems.push({ color: '#84cc16', label: `SOC`, mean: `${fmtPercent(socStats.mean)}`, max: `${fmtPercent(socStats.max)}`, min: `${fmtPercent(socStats.min)}` })
+        if (usableSocStats) legendItems.push({ color: '#22d3ee', label: `Usable SOC`, mean: `${fmtPercent(usableSocStats.mean)}`, max: `${fmtPercent(usableSocStats.max)}`, min: `${fmtPercent(usableSocStats.min)}` })
         legendItems.push({ color: '#ef4444', dash: true, label: `Battery Heater`, mean: batteryHeaterOn ? 'On' : 'Off', max: batteryHeaterOn ? 'On' : 'Off', min: batteryHeaterOn ? 'On' : 'Off' })
-        if (powerStats) legendItems.push({ color: '#f59e0b', label: `Power`, mean: `${powerStats.mean.toFixed(2)} kW`, max: `${powerStats.max.toFixed(0)} kW`, min: `${powerStats.min.toFixed(0)} kW` })
+        if (powerStats) legendItems.push({ color: '#f59e0b', label: `Power`, mean: `${fmtWithUnit(powerStats.mean, 'kW', 2)}`, max: `${fmtWithUnit(powerStats.max, 'kW', 0)}`, min: `${fmtWithUnit(powerStats.min, 'kW', 0)}` })
 
         return (
         <>
@@ -657,25 +658,25 @@ export default function DriveDetail() {
                     {avgOutsideTemp != null && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Outside Temperature</p>
-                        <p className="text-sm font-bold text-blue-400">{avgOutsideTemp.toFixed(1)}{u.tempUnit}</p>
+                        <p className="text-sm font-bold text-blue-400">{fmtNumber(avgOutsideTemp)}{u.tempUnit}</p>
                       </div>
                     )}
                     {avgInsideTemp != null && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Inside Temperature</p>
-                        <p className="text-sm font-bold text-orange-400">{avgInsideTemp.toFixed(1)}{u.tempUnit}</p>
+                        <p className="text-sm font-bold text-orange-400">{fmtNumber(avgInsideTemp)}{u.tempUnit}</p>
                       </div>
                     )}
                     {driverTemps.length > 0 && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Driver Temperature</p>
-                        <p className="text-sm font-bold text-rose-400">{(driverTemps.reduce((a, b) => a + b, 0) / driverTemps.length).toFixed(1)}{u.tempUnit}</p>
+                        <p className="text-sm font-bold text-rose-400">{fmtNumber(driverTemps.reduce((a, b) => a + b, 0) / driverTemps.length)}{u.tempUnit}</p>
                       </div>
                     )}
                     {passengerTemps.length > 0 && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Passenger Temperature</p>
-                        <p className="text-sm font-bold text-purple-400">{(passengerTemps.reduce((a, b) => a + b, 0) / passengerTemps.length).toFixed(1)}{u.tempUnit}</p>
+                        <p className="text-sm font-bold text-purple-400">{fmtNumber(passengerTemps.reduce((a, b) => a + b, 0) / passengerTemps.length)}{u.tempUnit}</p>
                       </div>
                     )}
                     {climateStatus != null && (
@@ -687,7 +688,7 @@ export default function DriveDetail() {
                     {maxFanSpeed != null && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Fan Status</p>
-                        <p className="text-sm font-bold text-cyan-400">Avg {avgFanSpeed?.toFixed(0)} · Max {maxFanSpeed}</p>
+                        <p className="text-sm font-bold text-cyan-400">Avg {fmtInt(avgFanSpeed)} · Max {maxFanSpeed}</p>
                       </div>
                     )}
                   </div>
@@ -758,9 +759,9 @@ export default function DriveDetail() {
                 </ResponsiveContainer>
               </div>
               <div className="mt-3 flex items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
-                <span>Max Power: <strong className="text-neon-amber">{powerMax.toFixed(0)} kW</strong></span>
-                <span>Max Regen: <strong className="text-neon-cyan">{powerMin.toFixed(0)} kW</strong></span>
-                <span>Avg: <strong className="text-[var(--text-primary)]">{avgPower.toFixed(1)} kW</strong></span>
+                <span>Max Power: <strong className="text-neon-amber">{fmtInt(powerMax)} kW</strong></span>
+                <span>Max Regen: <strong className="text-neon-cyan">{fmtInt(powerMin)} kW</strong></span>
+                <span>Avg: <strong className="text-[var(--text-primary)]">{fmtNumber(avgPower)} kW</strong></span>
               </div>
             </GlassPanel>
           </FadeIn>
@@ -790,10 +791,10 @@ export default function DriveDetail() {
                       <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
                         <p className="text-[10px] font-semibold mb-2" style={{ color: tp.color }}>{tp.label}</p>
                         <p className="text-xs text-[var(--text-muted)]">
-                          Min (above zero): <strong className="text-[var(--text-primary)]">{tp.min != null ? `${tp.min.toFixed(1)}${u.pressureUnit}` : '—'}</strong>
+                          Min (above zero): <strong className="text-[var(--text-primary)]">{tp.min != null ? `${fmtNumber(tp.min)}${u.pressureUnit}` : '—'}</strong>
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
-                          Max: <strong className="text-[var(--text-primary)]">{tp.max != null ? `${tp.max.toFixed(1)}${u.pressureUnit}` : '—'}</strong>
+                          Max: <strong className="text-[var(--text-primary)]">{tp.max != null ? `${fmtNumber(tp.max)}${u.pressureUnit}` : '—'}</strong>
                         </p>
                       </div>
                     ))}

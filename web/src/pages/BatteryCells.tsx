@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
-import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { BATTERY_COLORS } from '../lib/colors'
 import {
   Battery, Thermometer, AlertTriangle, CheckCircle, Activity, Zap,
@@ -61,7 +61,7 @@ function CellChartTooltip({ active, payload, label, unit = '' }: { active?: bool
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(3)}{unit && ` ${unit}`}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 3)}{unit && ` ${unit}`}
         </p>
       ))}
     </div>
@@ -443,7 +443,7 @@ export default function BatteryCells() {
         tips.push({
           icon: <Zap className="h-4 w-4" />,
           title: 'High DC Fast Charging Usage',
-          description: `${fmtPercent(dcPct)}  of sessions use DC fast charging. Reducing supercharger use can slow cell imbalance growth.`,
+          description: `${fmtPercent(dcPct)} of sessions use DC fast charging. Reducing supercharger use can slow cell imbalance growth.`,
           status: 'warning',
         })
       }

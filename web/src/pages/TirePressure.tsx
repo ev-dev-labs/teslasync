@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { STATUS_COLORS } from '../lib/colors'
+import { fmtNumber } from '../lib/numberFormat'
 
 interface PressureTooltipPayload { name: string; value: number; color?: string }
 function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: PressureTooltipPayload[]; label?: string; unit?: string }) {
@@ -17,7 +18,7 @@ function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: bo
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -41,7 +42,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/5" />
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" strokeDasharray={`${pct * 2.64} 264`} strokeLinecap="round" className={color} />
         </svg>
-        <span className={clsx('text-2xl font-bold', color)}>{psi > 0 ? psi.toFixed(1) : '--'}</span>
+        <span className={clsx('text-2xl font-bold', color)}>{psi > 0 ? fmtNumber(psi) : '--'}</span>
       </div>
       <div className="flex items-center gap-1.5">
         {psi === 0 ? (
@@ -54,7 +55,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
           <><TrendingUp className="h-3.5 w-3.5 text-neon-amber" /><span className="text-xs text-neon-amber">High</span></>
         )}
       </div>
-      <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${psi.toFixed(1)} ${unit}` : 'N/A'}</span>
+      <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${fmtNumber(psi)} ${unit}` : 'N/A'}</span>
     </div>
   )
 }
@@ -74,7 +75,7 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
   const statusLabels = { green: 'OK', amber: 'WARN', red: 'CRIT' } as const
   const getColor = (v: number | null) => statusColors[getStatus(v)]
   const allNormal = [fl, fr, rl, rr].every(v => v !== null && v >= 35 && v <= 45)
-  const fmt = (v: number | null) => (v !== null && v > 0 ? v.toFixed(1) : '--')
+  const fmt = (v: number | null) => (v !== null && v > 0 ? fmtNumber(v) : '--')
   // Pressure ring: percentage fill for the pressure ring (0-100)
   const pressurePct = (v: number | null) => {
     if (v === null || v === 0) return 0

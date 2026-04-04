@@ -13,6 +13,7 @@ import { AnimatedNumber } from '../components/Widgets'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { formatDateTime, formatTime } from '../lib/dateFormat'
+import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 
 interface ComponentInfo {
   status: string
@@ -242,9 +243,9 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
 }
 
 function CostColor({ cost }: { cost: number }) {
-  if (cost < 5) return <span className="text-neon-green">${cost.toFixed(2)}</span>
-  if (cost < 8) return <span className="text-neon-amber">${cost.toFixed(2)}</span>
-  return <span className="text-neon-red">${cost.toFixed(2)}</span>
+  if (cost < 5) return <span className="text-neon-green">${fmtNumber(cost, 2)}</span>
+  if (cost < 8) return <span className="text-neon-amber">${fmtNumber(cost, 2)}</span>
+  return <span className="text-neon-red">${fmtNumber(cost, 2)}</span>
 }
 
 function ComponentHealthPanel() {
@@ -449,7 +450,7 @@ function APIUsageDashboard() {
             <p className="text-2xl font-bold">
               <CostColor cost={usage.estimated_cost} />
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">${usage.cost_per_request.toFixed(4)}/req</p>
+            <p className="text-[10px] text-[var(--text-muted)]">${fmtNumber(usage.cost_per_request, 4)}/req</p>
           </div>
 
           {/* Remaining credit */}
@@ -461,7 +462,7 @@ function APIUsageDashboard() {
             <p className="text-2xl font-bold text-neon-green">
               $<AnimatedNumber value={remaining} decimals={2} />
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">of ${usage.monthly_credit.toFixed(0)} credit</p>
+            <p className="text-[10px] text-[var(--text-muted)]">of ${fmtInt(usage.monthly_credit)} credit</p>
           </div>
 
           {/* Skipped polls */}
@@ -510,7 +511,7 @@ function APIUsageDashboard() {
             <span className="flex items-center gap-1.5">
               <DollarSign className="h-3.5 w-3.5 text-neon-amber" /> Cost Forecast
             </span>
-            <span className="font-semibold text-[var(--text-primary)]">${usage.monthly_credit.toFixed(0)} limit</span>
+            <span className="font-semibold text-[var(--text-primary)]">${fmtInt(usage.monthly_credit)} limit</span>
           </div>
           <div className="h-4 rounded-full bg-white/[0.04] overflow-hidden relative">
             {/* $10 limit marker */}
@@ -527,7 +528,7 @@ function APIUsageDashboard() {
           <div className="flex items-center justify-between mt-1.5 text-[10px] text-[var(--text-muted)]">
             <span>Current: <CostColor cost={usage.estimated_cost} /></span>
             <span className={clsx(remaining < 2 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
-              {remaining < 2 ? '⚠ Approaching limit' : `${((1 - costPct / 100) * 100).toFixed(0)}% budget remaining`}
+              {remaining < 2 ? '⚠ Approaching limit' : `${fmtPercent((1 - costPct / 100) * 100)} budget remaining`}
             </span>
           </div>
         </div>
@@ -553,12 +554,12 @@ function CompressionStatsPanel() {
 
   const formatBytes = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024, 1)} KB`
+    return `${fmtNumber(bytes / (1024 * 1024), 1)} MB`
   }
 
   const savingsPct = stats.total_positions > 0
-    ? ((stats.estimated_saved_rows / (stats.total_positions + stats.estimated_saved_rows)) * 100).toFixed(0)
+    ? fmtInt((stats.estimated_saved_rows / (stats.total_positions + stats.estimated_saved_rows)) * 100)
     : '0'
 
   return (
@@ -713,7 +714,7 @@ const SIGNAL_GROUPS: { label: string; color: string; signals: string[] }[] = [
 function formatSignalValue(value: unknown): string {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'boolean') return value ? '✓' : '✗'
-  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2)
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : fmtNumber(value, 2)
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
@@ -849,7 +850,7 @@ function TelemetryLivePanel() {
           {[
             { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? '#10b981' : '#f59e0b' },
             { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? '#10b981' : '#6b7280' },
-            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? totalSignalsPerSec.toFixed(1) : '0', color: '#00f0ff' },
+            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec, 1) : '0', color: '#00f0ff' },
             { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? '#10b981' : avgLatency < 5000 ? '#f59e0b' : '#ef4444' },
             { label: 'Total Signals', value: totalSignals.toLocaleString(), color: '#8b5cf6' },
           ].map(item => (
@@ -921,7 +922,7 @@ function TelemetryLivePanel() {
                               </span>
                             </span>
                             <span className="px-4 py-3 text-right font-mono text-xs text-neon-cyan">
-                              {v.signals_per_second > 0 ? v.signals_per_second.toFixed(1) : '—'}
+                              {v.signals_per_second > 0 ? fmtNumber(v.signals_per_second, 1) : '—'}
                             </span>
                             <span className={clsx(
                               'px-4 py-3 text-right font-mono text-xs',
@@ -948,7 +949,7 @@ function TelemetryLivePanel() {
                               <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)] mb-2">
                                 <span>Batch: {signalCount} signal{signalCount !== 1 ? 's' : ''}</span>
                                 {v.batch_count > 0 && <span>Batches: {v.batch_count.toLocaleString()}</span>}
-                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${(v.uptime_seconds / 3600).toFixed(1)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
+                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${fmtNumber(v.uptime_seconds / 3600, 1)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
                               </div>
                               {v.last_signals ? (
                                 <SignalGrid signals={v.last_signals as Record<string, unknown>} />
@@ -1052,7 +1053,8 @@ function NotificationDeliveryPanel() {
 
   if (!stats) return null
 
-  const successRate = stats.total_sent > 0 ? ((stats.sent / stats.total_sent) * 100).toFixed(1) : '—'
+  const successRateNum = stats.total_sent > 0 ? (stats.sent / stats.total_sent) * 100 : null
+  const successRate = successRateNum !== null ? fmtPercent(successRateNum, 1) : '—'
 
   return (
     <FadeIn delay={0.14}>
@@ -1072,7 +1074,7 @@ function NotificationDeliveryPanel() {
             { label: 'Total Sent', value: stats.total_sent, color: 'text-neon-cyan' },
             { label: 'Delivered', value: stats.sent, color: 'text-neon-green' },
             { label: 'Failed', value: stats.failed, color: 'text-red-400' },
-            { label: 'Success Rate', value: successRate + '%', color: Number(successRate) >= 95 ? 'text-neon-green' : Number(successRate) >= 80 ? 'text-neon-amber' : 'text-red-400' },
+            { label: 'Success Rate', value: successRate, color: (successRateNum ?? 0) >= 95 ? 'text-neon-green' : (successRateNum ?? 0) >= 80 ? 'text-neon-amber' : 'text-red-400' },
           ].map(s => (
             <div key={s.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{s.label}</p>
@@ -1139,8 +1141,8 @@ function ExportJobQueuePanel() {
   const formatSize = (bytes: number) => {
     if (!bytes) return '—'
     if (bytes < 1024) return `${bytes}B`
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`
-    return `${(bytes / 1048576).toFixed(1)}MB`
+    if (bytes < 1048576) return `${fmtNumber(bytes / 1024, 1)}KB`
+    return `${fmtNumber(bytes / 1048576, 1)}MB`
   }
 
   return (
