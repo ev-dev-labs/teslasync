@@ -7,9 +7,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
+import { STATUS_COLORS } from '../lib/colors'
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface PressureTooltipPayload { name: string; value: number; color?: string }
+function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: PressureTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -69,7 +70,7 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
     if (v < 35 || v > 45) return 'amber'
     return 'green'
   }
-  const statusColors = { green: '#10b981', amber: '#f59e0b', red: '#ef4444' } as const
+  const statusColors = { green: STATUS_COLORS.good, amber: STATUS_COLORS.warning, red: STATUS_COLORS.critical } as const
   const statusLabels = { green: 'OK', amber: 'WARN', red: 'CRIT' } as const
   const getColor = (v: number | null) => statusColors[getStatus(v)]
   const allNormal = [fl, fr, rl, rr].every(v => v !== null && v >= 35 && v <= 45)
@@ -384,7 +385,7 @@ export default function TirePressure() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis domain={[convertPressure(2.0), convertPressure(3.6)]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickFormatter={v => `${v.toFixed(0)}`} />
-              <Tooltip content={<ChartTooltip unit={pressureUnit} />} />
+              <Tooltip content={<PressureTooltip unit={pressureUnit} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="fl" name="Front Left" stroke="#00f0ff" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="fr" name="Front Right" stroke="#a855f7" strokeWidth={2} dot={false} />

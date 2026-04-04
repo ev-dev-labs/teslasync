@@ -6,21 +6,7 @@ import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import clsx from 'clsx'
 import { formatDate } from '../lib/dateFormat'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(0) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { ChartTooltip } from '../components/Charts'
 
 export default function Locations() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })

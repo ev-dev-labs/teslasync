@@ -10,8 +10,8 @@ import { cleanNil } from '../lib/cleanNil'
 import { formatDateTime } from '../lib/dateFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface DrivetrainTooltipPayload { name: string; value: number; color?: string }
+function DrivetrainTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: DrivetrainTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -376,7 +376,7 @@ export default function DrivetrainHealth() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="Nm" />} />
+              <Tooltip content={<DrivetrainTooltip unit="Nm" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="torque" name="Torque" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
@@ -409,7 +409,7 @@ export default function DrivetrainHealth() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} domain={['auto', 'auto']} />
-              <Tooltip content={<ChartTooltip unit={tempUnit} />} />
+              <Tooltip content={<DrivetrainTooltip unit={tempUnit} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="stator" name="Stator Temp" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
@@ -479,7 +479,7 @@ export default function DrivetrainHealth() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="speed" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="rpm" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<DrivetrainTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line yAxisId="speed" type="monotone" dataKey="speed" name="Vehicle Speed (km/h)" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="rpm" type="monotone" dataKey="axle" name="Axle Speed (RPM)" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
@@ -499,7 +499,7 @@ export default function DrivetrainHealth() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="g" />} />
+              <Tooltip content={<DrivetrainTooltip unit="g" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="lateral" name="Lateral" stroke="#a855f7" strokeWidth={2} dot={false} connectNulls />
               <Line type="monotone" dataKey="longitudinal" name="Longitudinal" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
@@ -519,7 +519,7 @@ export default function DrivetrainHealth() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="%" />} />
+              <Tooltip content={<DrivetrainTooltip unit="%" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="pedal" name="Pedal %" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
               <Line type="stepAfter" dataKey="brake" name="Brake" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />

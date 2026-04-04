@@ -48,6 +48,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { CHARGER_COLORS } from '../lib/colors'
 
 /* ── constants ───────────────────────────────────────────────── */
 
@@ -57,18 +58,10 @@ const KM_PER_MILE = 1.60934
 const CO2_PER_GAL_KG = 8.887         // kg CO₂ per gallon of gasoline
 const KG_CO2_PER_TREE_YEAR = 22      // kg CO₂ absorbed per tree per year
 
-const CHARGER_COLORS: Record<string, string> = {
-  Home:         '#10b981',
-  Supercharger: '#ef4444',
-  'Public DC':  '#a855f7',
-  'Work / L2':  '#f59e0b',
-  Other:        '#6366f1',
-}
 
+/* ── tooltip─────────────────────────────────────────────────── */
 
-/* ── tooltip ─────────────────────────────────────────────────── */
-
-interface TooltipPayload {
+interface CostTooltipPayload {
   name: string
   value: number
   color?: string
@@ -76,7 +69,7 @@ interface TooltipPayload {
   stroke?: string
 }
 
-function ChartTooltip({
+function CostTooltip({
   active,
   payload,
   label,
@@ -84,7 +77,7 @@ function ChartTooltip({
   suffix = '',
 }: {
   active?: boolean
-  payload?: TooltipPayload[]
+  payload?: CostTooltipPayload[]
   label?: string
   prefix?: string
   suffix?: string
@@ -613,7 +606,7 @@ export default function CostAnalysis() {
                       tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                       tickFormatter={v => `$${v}`}
                     />
-                    <Tooltip content={<ChartTooltip prefix="$" />} />
+                    <Tooltip content={<CostTooltip prefix="$" />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Area
                       type="monotone"
@@ -658,7 +651,7 @@ export default function CostAnalysis() {
                       tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                       tickFormatter={v => `$${v.toFixed(2)}`}
                     />
-                    <Tooltip content={<ChartTooltip prefix="$" suffix={`/${distanceUnit}`} />} />
+                    <Tooltip content={<CostTooltip prefix="$" suffix={`/${distanceUnit}`} />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line
                       type="monotone"
@@ -715,7 +708,7 @@ export default function CostAnalysis() {
                           <Cell key={d.type} fill={d.fill} />
                         ))}
                       </Pie>
-                      <Tooltip content={<ChartTooltip prefix="$" />} />
+                      <Tooltip content={<CostTooltip prefix="$" />} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -983,7 +976,7 @@ export default function CostAnalysis() {
                           tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                           tickFormatter={v => `$${v.toFixed(2)}`}
                         />
-                        <Tooltip content={<ChartTooltip prefix="$" suffix="/kWh" />} />
+                        <Tooltip content={<CostTooltip prefix="$" suffix="/kWh" />} />
                         <Bar dataKey="avgRate" name="Avg $/kWh" radius={[3, 3, 0, 0]}>
                           {hourlyRates.map((entry, i) => (
                             <Cell

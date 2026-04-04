@@ -7,6 +7,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDate, formatDateShort } from '../lib/dateFormat'
+import { ChartTooltip } from '../components/Charts'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -22,8 +23,6 @@ interface ScoredDrive extends ScoreBreakdown {
   drive: Drive
   whPerKm: number
 }
-
-interface TooltipPayload { name: string; value: number; color?: string }
 
 /* ─── Grade colors ──────────────────────────────────────────────────── */
 
@@ -194,20 +193,6 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
 }
 
 /* ─── Chart Tooltip ─────────────────────────────────────────────────── */
-
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
 
 /* ─── Grade Badge ───────────────────────────────────────────────────── */
 

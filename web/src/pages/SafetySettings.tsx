@@ -14,8 +14,8 @@ import { formatDateTime } from '../lib/dateFormat'
 /*  Chart Tooltip                                                      */
 /* ------------------------------------------------------------------ */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+interface SafetyTooltipPayload { name: string; value: number; color?: string }
+function SafetyTooltip({ active, payload, label }: { active?: boolean; payload?: SafetyTooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -447,7 +447,7 @@ export default function SafetySettings() {
                 tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                 tickFormatter={v => (v === 1 ? 'On' : 'Off')}
               />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<SafetyTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="stepAfter" dataKey="aeb" name="AEB Enabled" stroke="#10b981" strokeWidth={2} dot={false} />
               <Line type="stepAfter" dataKey="bscw" name="Blind Spot Warning" stroke="#00f0ff" strokeWidth={2} dot={false} />

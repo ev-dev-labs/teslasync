@@ -14,10 +14,10 @@ import { formatDateTime } from '../lib/dateFormat'
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
 // ---------------------------------------------------------------------------
-interface TooltipPayload { name: string; value: number; color?: string }
+interface ClimateTooltipPayload { name: string; value: number; color?: string }
 
-function ChartTooltip({ active, payload, label, unit }: {
-  active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string
+function ClimateTooltip({ active, payload, label, unit }: {
+  active?: boolean; payload?: ClimateTooltipPayload[]; label?: string; unit?: string
 }) {
   if (!active || !payload?.length) return null
   return (
@@ -439,7 +439,7 @@ export default function ClimateControl() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit={tempUnit} />} />
+              <Tooltip content={<ClimateTooltip unit={tempUnit} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="inside" name="Cabin Temp" stroke="#f97316" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="outside" name="Outside Temp" stroke="#22d3ee" strokeWidth={2} dot={false} />
@@ -464,7 +464,7 @@ export default function ClimateControl() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="power" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} label={{ value: 'kW', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'var(--text-muted)' } }} />
               <YAxis yAxisId="fan" orientation="right" domain={[0, 6]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} label={{ value: 'Fan Level', angle: 90, position: 'insideRight', style: { fontSize: 10, fill: 'var(--text-muted)' } }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<ClimateTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Area yAxisId="power" type="monotone" dataKey="power" name="HVAC Power (kW)" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.15} strokeWidth={2} dot={false} />
               <Line yAxisId="fan" type="stepAfter" dataKey="fanSpeed" name="Fan Speed" stroke="#a855f7" strokeWidth={2} dot={false} />

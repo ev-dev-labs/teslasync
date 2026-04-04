@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
+import { BATTERY_COLORS } from '../lib/colors'
 import {
   Battery, Thermometer, AlertTriangle, CheckCircle, Activity, Zap,
   Shield, Info,
@@ -38,10 +39,10 @@ function spreadStatus(spread: number, thresholds: [number, number]): 'healthy' |
 }
 
 const statusColors = {
-  healthy: { text: 'text-neon-green', bg: 'bg-neon-green/10', border: 'border-neon-green/20', hex: '#10b981' },
-  watch:   { text: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', hex: '#f59e0b' },
-  warning: { text: 'text-neon-red',   bg: 'bg-neon-red/10',   border: 'border-neon-red/20',   hex: '#ef4444' },
-} as const
+  healthy: { text: 'text-neon-green', bg: 'bg-neon-green/10', border: 'border-neon-green/20', hex: BATTERY_COLORS.good },
+  watch:   { text: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', hex: BATTERY_COLORS.warning },
+  warning: { text: 'text-neon-red',   bg: 'bg-neon-red/10',   border: 'border-neon-red/20',   hex: BATTERY_COLORS.critical },
+}
 
 /* Deterministic pseudo-random for cell simulation */
 function seededRandom(seed: number): number {
@@ -51,8 +52,8 @@ function seededRandom(seed: number): number {
 
 /* ─────────────────────── Tooltip (matches TirePressure) ─────────────────────── */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function CellChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface CellTooltipPayload { name: string; value: number; color?: string }
+function CellChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: CellTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>

@@ -23,6 +23,7 @@ import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
 import { formatTime, formatDateTime } from '../lib/dateFormat'
+import { ChartTooltip } from '../components/Charts'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -37,20 +38,6 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
       <p className={clsx('text-lg font-semibold', color)}>{display}</p>
       {sub && <p className="text-[10px] text-gray-600 mt-0.5">{sub}</p>}
     </GlassPanel>
-  )
-}
-
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
   )
 }
 

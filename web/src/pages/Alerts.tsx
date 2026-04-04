@@ -18,6 +18,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useToast } from '../components/Toast'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
+import { ChartTooltip } from '../components/Charts'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -232,21 +233,6 @@ function getRuleDescription(type: string, units?: { speedUnit: string; tempUnit:
 }
 
 // ─── Tooltip for recharts ────────────────────────────────────────────────────
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
 
 // ─── Time helper ─────────────────────────────────────────────────────────────
 

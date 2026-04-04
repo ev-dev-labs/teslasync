@@ -32,20 +32,20 @@ import { useSettings } from '../hooks/useSettings'
 // ---------------------------------------------------------------------------
 // Tooltip
 // ---------------------------------------------------------------------------
-interface TooltipPayload {
+interface CurveTooltipPayload {
   name: string
   value: number
   color?: string
 }
 
-function ChartTooltip({
+function CurveTooltip({
   active,
   payload,
   label,
   unit = 'kW',
 }: {
   active?: boolean
-  payload?: TooltipPayload[]
+  payload?: CurveTooltipPayload[]
   label?: string
   unit?: string
 }) {
@@ -536,7 +536,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit="kW" />} />
+                    <Tooltip content={<CurveTooltip unit="kW" />} />
                     <Area
                       type="monotone"
                       dataKey="kw"
@@ -681,7 +681,7 @@ export default function ChargingCurve() {
                       fill: 'var(--text-muted)',
                     }}
                   />
-                  <Tooltip content={<ChartTooltip unit="kW" />} />
+                  <Tooltip content={<CurveTooltip unit="kW" />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {comparisonSessions.map((s, i) => (
                     <Line
@@ -750,7 +750,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<CurveTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Bar
                       yAxisId="kw"
@@ -808,7 +808,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit="kW" />} />
+                    <Tooltip content={<CurveTooltip unit="kW" />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line
                       type="monotone"
@@ -918,7 +918,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit="min" />} />
+                    <Tooltip content={<CurveTooltip unit="min" />} />
                     <Bar
                       dataKey="avgMin"
                       name="Avg Duration"

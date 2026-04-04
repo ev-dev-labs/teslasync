@@ -179,7 +179,7 @@ function severityBg(severity: Alert['severity']): string {
 
 // ── chart tooltip ────────────────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label, unit }: any) {
+function DigestTooltip({ active, payload, label, unit }: any) {
   if (!active || !payload?.length) return null
   return (
     <div
@@ -612,7 +612,7 @@ export default function WeeklyDigest() {
                         fontSize: 12,
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit={distanceUnit} />} />
+                    <Tooltip content={<DigestTooltip unit={distanceUnit} />} />
                     <Bar dataKey="distance" radius={[4, 4, 0, 0]}>
                       {dailyData.map((_, i) => (
                         <Cell key={i} fill={DAY_COLORS[i]} fillOpacity={0.8} />

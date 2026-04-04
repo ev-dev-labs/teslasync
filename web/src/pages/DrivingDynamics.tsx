@@ -11,8 +11,8 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 
 /* ---------- Tooltip ---------- */
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
-function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface DynamicsTooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
+function DynamicsTooltip({ active, payload, label, unit }: { active?: boolean; payload?: DynamicsTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -488,7 +488,7 @@ export default function DrivingDynamics() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit={speedUnit} />} />
+              <Tooltip content={<DynamicsTooltip unit={speedUnit} />} />
               <Area type="monotone" dataKey="speed" name="Speed" stroke="#00f0ff" strokeWidth={2} fill="url(#speedGradient)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -506,7 +506,7 @@ export default function DrivingDynamics() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="Nm" />} />
+              <Tooltip content={<DynamicsTooltip unit="Nm" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="torque" name="Torque" stroke="#00f0ff" strokeWidth={2} dot={false} />
             </LineChart>
@@ -525,7 +525,7 @@ export default function DrivingDynamics() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="g" />} />
+              <Tooltip content={<DynamicsTooltip unit="g" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="lateral" name="Lateral G" stroke="#f59e0b" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="longitudinal" name="Longitudinal G" stroke="#00f0ff" strokeWidth={2} dot={false} />

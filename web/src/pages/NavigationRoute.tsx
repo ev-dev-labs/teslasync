@@ -12,8 +12,8 @@ import { formatDateTime } from '../lib/dateFormat'
 /*  Chart tooltip                                                      */
 /* ------------------------------------------------------------------ */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+interface NavTooltipPayload { name: string; value: number; color?: string }
+function NavTooltip({ active, payload, label }: { active?: boolean; payload?: NavTooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -474,7 +474,7 @@ export default function NavigationRoute() {
                 tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                 tickFormatter={v => (v === 1 ? 'Yes' : 'No')}
               />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<NavTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="stepAfter" dataKey="home" name="At Home" stroke="#10b981" strokeWidth={2} dot={false} />
               <Line type="stepAfter" dataKey="work" name="At Work" stroke="#a855f7" strokeWidth={2} dot={false} />

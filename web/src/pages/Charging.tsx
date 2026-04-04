@@ -12,24 +12,11 @@ import {
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime, formatDateShort } from '../lib/dateFormat'
+import { CHARGER_COLORS as chargerColors } from '../lib/colors'
+import { ChartTooltip } from '../components/Charts'
 
 type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power'
 type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
 
 function formatDuration(min: number): string {
   const h = Math.floor(min / 60)
@@ -43,7 +30,6 @@ function getChargerCategory(type: string | null): 'supercharger' | 'dc' | 'home'
   return 'home'
 }
 
-const chargerColors = { supercharger: '#ef4444', dc: '#f59e0b', home: '#10b981' }
 const chargerLabels = { supercharger: 'Supercharger', dc: 'DC Fast', home: 'Home / AC' }
 
 function SessionCard({ session, convertDistance, distanceUnit }: { session: ChargingSession; convertDistance: (km: number) => number; distanceUnit: string }) {

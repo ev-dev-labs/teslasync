@@ -24,21 +24,7 @@ import { AnimatedNumber, TimelineItem, RadialGauge, StatusPill, MiniChart } from
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useSettings } from '../hooks/useSettings'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { ChartTooltip } from '../components/Charts'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {

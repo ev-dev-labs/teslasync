@@ -9,8 +9,8 @@ import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface EnergyTooltipPayload { name: string; value: number; color?: string }
+function EnergyTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: EnergyTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -327,7 +327,7 @@ export default function EnergyFlow() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                   <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <Tooltip content={<ChartTooltip unit="kW" />} />
+                  <Tooltip content={<EnergyTooltip unit="kW" />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Area type="monotone" dataKey="dc" name="DC Power" stroke="#00f0ff" fill="#00f0ff" fillOpacity={0.15} strokeWidth={2} dot={false} connectNulls />
                   <Area type="monotone" dataKey="ac" name="AC Power" stroke="#a855f7" fill="#a855f7" fillOpacity={0.15} strokeWidth={2} dot={false} connectNulls />
@@ -386,7 +386,7 @@ export default function EnergyFlow() {
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis yAxisId="v" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} domain={['auto', 'auto']} />
                 <YAxis yAxisId="mv" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<EnergyTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line yAxisId="v" type="monotone" dataKey="max" name="Max (V)" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
                 <Line yAxisId="v" type="monotone" dataKey="min" name="Min (V)" stroke="#a855f7" strokeWidth={2} dot={false} connectNulls />
@@ -429,7 +429,7 @@ export default function EnergyFlow() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <Tooltip content={<ChartTooltip unit={tempUnit} />} />
+                <Tooltip content={<EnergyTooltip unit={tempUnit} />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="max" name="Max Temp" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />
                 <Line type="monotone" dataKey="min" name="Min Temp" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
@@ -524,7 +524,7 @@ export default function EnergyFlow() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="v" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} domain={['auto', 'auto']} />
               <YAxis yAxisId="a" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<EnergyTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line yAxisId="v" type="monotone" dataKey="voltage" name="Voltage (V)" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="a" type="monotone" dataKey="current" name="Current (A)" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
@@ -545,7 +545,7 @@ export default function EnergyFlow() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="rate" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="hours" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<EnergyTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line yAxisId="rate" type="monotone" dataKey="rate" name="Charge Rate (mi/h)" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="hours" type="monotone" dataKey="ttf" name="Time to Full (h)" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />

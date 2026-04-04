@@ -9,21 +9,7 @@ import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { ChartTooltip } from '../components/Charts'
 
 export default function Efficiency() {
   const { convertDistance, convertSpeed, convertTemp, convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit } = useSettings()

@@ -9,8 +9,8 @@ import { formatDateTime } from '../lib/dateFormat'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface MediaTooltipPayload { name: string; value: number; color?: string }
+function MediaTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: MediaTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -405,7 +405,7 @@ export default function MediaPlayer() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis domain={[0, volumeMax]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickFormatter={v => `${v}`} />
-              <Tooltip content={<ChartTooltip unit="" />} />
+              <Tooltip content={<MediaTooltip unit="" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="volume" name="Volume" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
@@ -439,7 +439,7 @@ export default function MediaPlayer() {
                     <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={<ChartTooltip unit="plays" />} />
+                <Tooltip content={<MediaTooltip unit="plays" />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>

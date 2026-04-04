@@ -28,8 +28,8 @@ const stateIcons: Record<string, typeof Car> = {
   updating: Download,
 }
 
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+interface TimelineTooltipPayload { name: string; value: number; color?: string; fill?: string }
+function TimelineTooltip({ active, payload, label }: { active?: boolean; payload?: TimelineTooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -224,7 +224,7 @@ export default function Timeline() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<TimelineTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 {allStates.map(state => (
                   <Bar key={state} dataKey={state} stackId="a" fill={stateColors[state] ?? '#4b5563'} name={state.charAt(0).toUpperCase() + state.slice(1)} />
