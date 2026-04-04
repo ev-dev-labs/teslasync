@@ -16,7 +16,8 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
-import { ChartTooltip, NEON_COLORS, axisTick, axisTickSm, chartGrid, safe, fmt } from '../components/Charts'
+import { ChartTooltip, axisTick, axisTickSm, chartGrid, safe, fmt } from '../components/Charts'
+import { CHART_COLORS } from '../lib/colors'
 
 function StatCard({ label, value, unit, sub, color = 'var(--text-primary)' }: {
   label: string; value: string | number; unit?: string; sub?: string; color?: string
@@ -100,7 +101,7 @@ export default function Analytics() {
   const gasSavings = totalDistance > 0 ? totalDistance * 0.085 * 1.5 - totalCost : 0
 
   const pieData = comparison.map((v, i) => ({
-    name: v.name, value: convertDistance(safe(v.distance)), fill: NEON_COLORS[i % NEON_COLORS.length],
+    name: v.name, value: convertDistance(safe(v.distance)), fill: CHART_COLORS[i % CHART_COLORS.length],
   }))
   const sortedByEfficiency = [...comparison].sort((a, b) => convertEfficiency(safe(a.efficiency)) - convertEfficiency(safe(b.efficiency)))
 
@@ -242,8 +243,8 @@ export default function Analytics() {
                             <PolarGrid stroke="rgba(255,255,255,0.06)" />
                             <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 11 }} />
                             {comparison.map((v, i) => (
-                              <Radar key={v.id} name={v.name} dataKey={v.name} stroke={NEON_COLORS[i % NEON_COLORS.length]}
-                                fill={NEON_COLORS[i % NEON_COLORS.length]} fillOpacity={0.15} strokeWidth={2} />
+                              <Radar key={v.id} name={v.name} dataKey={v.name} stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                                fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.15} strokeWidth={2} />
                             ))}
                             <Tooltip content={<ChartTooltip />} />
                           </RadarChart>
@@ -261,7 +262,7 @@ export default function Analytics() {
                     <div className="max-w-2xl space-y-1">
                       {sortedByEfficiency.map((v, i) => (
                         <LeaderboardRow key={v.id} rank={i + 1} name={v.name} value={convertEfficiency(safe(v.efficiency))} unit={efficiencyUnit}
-                          maxValue={Math.max(...sortedByEfficiency.map(x => convertEfficiency(safe(x.efficiency))), 1)} color={NEON_COLORS[i % NEON_COLORS.length]} />
+                          maxValue={Math.max(...sortedByEfficiency.map(x => convertEfficiency(safe(x.efficiency))), 1)} color={CHART_COLORS[i % CHART_COLORS.length]} />
                       ))}
                     </div>
                   </GlassPanel>
@@ -588,9 +589,9 @@ export default function Analytics() {
                       <div className="h-40 sm:h-48 lg:h-56 flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie data={ca.charger_types.map((t, i) => ({ ...t, name: t.type, value: t.count, fill: NEON_COLORS[i % NEON_COLORS.length] }))}
+                            <Pie data={ca.charger_types.map((t, i) => ({ ...t, name: t.type, value: t.count, fill: CHART_COLORS[i % CHART_COLORS.length] }))}
                               cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2} dataKey="value">
-                              {ca.charger_types.map((_, i) => <Cell key={i} fill={NEON_COLORS[i % NEON_COLORS.length]} stroke="transparent" />)}
+                              {ca.charger_types.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="transparent" />)}
                             </Pie>
                             <Tooltip content={<ChartTooltip />} />
                           </PieChart>
@@ -599,7 +600,7 @@ export default function Analytics() {
                       <div className="flex flex-wrap gap-3 mt-2 justify-center">
                         {ca.charger_types.map((t, i) => (
                           <div key={i} className="flex items-center gap-1.5 text-xs">
-                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: NEON_COLORS[i % NEON_COLORS.length] }} />
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                             <span style={{ color: 'var(--text-secondary)' }}>{t.type}: {t.count}</span>
                           </div>
                         ))}
@@ -663,7 +664,7 @@ export default function Analytics() {
                         {ca.charger_brands.map((b, i) => (
                           <MiniBar key={i} label={b.brand} value={b.count}
                             maxValue={Math.max(...ca.charger_brands.map(x => x.count))}
-                            color={NEON_COLORS[i % NEON_COLORS.length]} />
+                            color={CHART_COLORS[i % CHART_COLORS.length]} />
                         ))}
                       </div>
                     </GlassPanel>
@@ -727,8 +728,8 @@ export default function Analytics() {
                             <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
                               <div className="h-full rounded-full transition-all duration-700" style={{
                                 width: `${pct}%`,
-                                backgroundColor: NEON_COLORS[i % NEON_COLORS.length],
-                                boxShadow: `0 0 8px ${NEON_COLORS[i % NEON_COLORS.length]}40`,
+                                backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+                                boxShadow: `0 0 8px ${CHART_COLORS[i % CHART_COLORS.length]}40`,
                               }} />
                             </div>
                             <span className="w-20 text-xs font-mono text-right" style={{ color: 'var(--text-primary)' }}>{t.count} ({pct}%)</span>

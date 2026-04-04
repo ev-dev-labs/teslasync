@@ -40,12 +40,15 @@ vi.mock('../components/Widgets', () => ({
 
 vi.mock('../components/Charts', () => ({
   ChartTooltip: () => null,
-  NEON_COLORS: ['#00f0ff', '#10b981', '#a855f7'],
   axisTick: {},
   axisTickSm: {},
   chartGrid: null,
   safe: (v: number | null | undefined) => v ?? 0,
   fmt: (v: number) => String(Math.round(v)),
+}))
+
+vi.mock('../lib/colors', () => ({
+  CHART_COLORS: ['#00f0ff', '#10b981', '#a855f7'],
 }))
 
 // Mock Recharts

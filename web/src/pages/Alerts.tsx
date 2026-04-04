@@ -6,6 +6,7 @@ import {
 } from '../api'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
+import { CHART_COLORS } from '../lib/colors'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
@@ -1151,13 +1152,12 @@ export default function Alerts() {
     if (!alerts?.length) return []
     const counts: Record<string, number> = {}
     alerts.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1 })
-    const colors = ['#00f0ff', '#10b981', '#a855f7', '#f59e0b', '#ef4444', '#4f46e5']
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .map(([type, count], i) => ({
         name: type.replace(/_/g, ' '),
         value: count,
-        fill: colors[i % colors.length],
+        fill: CHART_COLORS[i % CHART_COLORS.length],
       }))
   }, [alerts])
 

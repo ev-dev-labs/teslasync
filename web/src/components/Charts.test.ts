@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { safe, fmt, NEON_COLORS } from './Charts'
+import { safe, fmt } from './Charts'
+import { CHART_COLORS } from '../lib/colors'
 
 describe('safe', () => {
   it('converts number to number', () => expect(safe(42)).toBe(42))
@@ -22,9 +23,9 @@ describe('fmt', () => {
   it('formats with 0 decimals', () => expect(fmt(3.7, 0)).toBe('4'))
 })
 
-describe('NEON_COLORS', () => {
-  it('has at least 6 colors', () => expect(NEON_COLORS.length).toBeGreaterThanOrEqual(6))
+describe('CHART_COLORS', () => {
+  it('has at least 6 colors', () => expect(CHART_COLORS.length).toBeGreaterThanOrEqual(6))
   it('all colors are hex strings', () => {
-    NEON_COLORS.forEach((c) => expect(c).toMatch(/^#[0-9a-f]{6}$/i))
+    CHART_COLORS.forEach((c) => expect(c).toMatch(/^#[0-9a-f]{6}$/i))
   })
 })

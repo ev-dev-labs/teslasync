@@ -7,7 +7,8 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Legend,
 } from 'recharts'
-import { ChartTooltip, axisTickSm, chartGrid, NEON_COLORS } from '../components/Charts'
+import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { CHART_COLORS } from '../lib/colors'
 import { formatDateShort, formatTime } from '../lib/dateFormat'
 
 const STATE_COLORS: Record<string, string> = {
@@ -45,7 +46,7 @@ export default function SleepEfficiency() {
   const pieData = sleep?.state_distribution.map(s => ({
     name: STATE_LABELS[s.state] || s.state,
     value: Math.round(s.total_minutes),
-    color: STATE_COLORS[s.state] || NEON_COLORS[0],
+    color: STATE_COLORS[s.state] || CHART_COLORS[0],
     hours: (s.total_minutes / 60).toFixed(1),
   })) ?? []
 

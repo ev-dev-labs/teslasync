@@ -4,6 +4,7 @@ import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../ap
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { Zap, TrendingUp, Thermometer, Gauge, Fuel, BarChart3 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,

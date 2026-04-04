@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { cleanNil } from '../lib/cleanNil'
+import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
@@ -60,7 +61,7 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, conv
   const inverterColor = tempColor(inverterTemp)
 
   const fmtTemp = (c: number | null | undefined) =>
-    c != null ? `${convertTemp(c).toFixed(1)} ${tempUnit}` : '--'
+    c != null ? `${fmtNumber(convertTemp(c), 1)} ${tempUnit}` : '--'
 
   const worstTemp = [statorTemp, heatsinkTemp, inverterTemp].filter((t): t is number => t != null)
   const peakCelsius = worstTemp.length ? Math.max(...worstTemp) : null
@@ -100,7 +101,7 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, conv
         {/* Current */}
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Current</span>
-          <span className="text-sm font-semibold text-neon-cyan">{current != null ? `${current.toFixed(1)} A` : '--'}</span>
+          <span className="text-sm font-semibold text-neon-cyan">{current != null ? `${fmtNumber(current, 1)} A` : '--'}</span>
         </div>
       </div>
 
@@ -114,7 +115,7 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, conv
                 strokeDasharray={`${Math.min(100, (peakCelsius / 120) * 100) * 2.64} 264`}
                 strokeLinecap="round" className={overallColor} />
             </svg>
-            <span className={clsx('text-xs font-bold', overallColor)}>{convertTemp(peakCelsius).toFixed(0)}°</span>
+            <span className={clsx('text-xs font-bold', overallColor)}>{fmtInt(convertTemp(peakCelsius))}°</span>
           </div>
         </div>
       )}
@@ -143,7 +144,7 @@ function StatCard({ label, value, unit, color = 'text-neon-cyan' }: { label: str
   return (
     <div className="glass-card p-4 sm:p-5">
       <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>{label}</p>
-      <p className={clsx('text-2xl font-bold', color)}>{value != null ? value.toFixed(1) : '--'}</p>
+      <p className={clsx('text-2xl font-bold', color)}>{value != null ? fmtNumber(value, 1) : '--'}</p>
       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{unit}</p>
     </div>
   )
@@ -344,7 +345,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Vehicle Speed</p>
               <p className="text-sm font-semibold text-neon-cyan">
-                {latest.vehicle_speed != null ? `${convertSpeed(latest.vehicle_speed).toFixed(1)} ${speedUnit}` : '--'}
+                {latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(latest.vehicle_speed), 1)} ${speedUnit}` : '--'}
               </p>
             </div>
           </div>
@@ -355,7 +356,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Axle Speed</p>
               <p className="text-sm font-semibold text-yellow-400">
-                {latest.di_axle_speed != null ? `${latest.di_axle_speed.toFixed(0)} RPM` : '--'}
+                {latest.di_axle_speed != null ? `${fmtInt(latest.di_axle_speed)} RPM` : '--'}
               </p>
             </div>
           </div>
@@ -395,7 +396,7 @@ export default function DrivetrainHealth() {
               <div className="flex items-center gap-2">
                 <div className={clsx('w-3 h-3 rounded-full', tempBg(latest.di_stator_temp))} />
                 <span className={clsx('text-sm font-semibold', tempColor(latest.di_stator_temp))}>
-                  Current: {convertTemp(latest.di_stator_temp).toFixed(1)} {tempUnit}
+                  Current: {fmtNumber(convertTemp(latest.di_stator_temp), 1)} {tempUnit}
                 </span>
                 <span className={clsx('text-xs px-2 py-0.5 rounded-full', tempBg(latest.di_stator_temp), tempColor(latest.di_stator_temp))}>
                   {tempLabel(latest.di_stator_temp)}
@@ -415,9 +416,9 @@ export default function DrivetrainHealth() {
             </LineChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <span><span className="inline-block w-2 h-2 rounded-full bg-neon-green mr-1" /> &lt; {convertTemp(60).toFixed(0)}{tempUnit} Normal</span>
-            <span><span className="inline-block w-2 h-2 rounded-full bg-neon-amber mr-1" /> {convertTemp(60).toFixed(0)}–{convertTemp(80).toFixed(0)}{tempUnit} Warm</span>
-            <span><span className="inline-block w-2 h-2 rounded-full bg-neon-red mr-1" /> &gt; {convertTemp(80).toFixed(0)}{tempUnit} Hot</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-neon-green mr-1" /> &lt; {fmtInt(convertTemp(60))}{tempUnit} Normal</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-neon-amber mr-1" /> {fmtInt(convertTemp(60))}–{fmtInt(convertTemp(80))}{tempUnit} Warm</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-neon-red mr-1" /> &gt; {fmtInt(convertTemp(80))}{tempUnit} Hot</span>
           </div>
         </GlassPanel>
       )}
@@ -546,12 +547,12 @@ export default function DrivetrainHealth() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Stator Temp</p>
               <p className={clsx('text-lg font-bold', tempColor(latest.di_stator_temp))}>
-                {latest.di_stator_temp != null ? `${convertTemp(latest.di_stator_temp).toFixed(1)} ${tempUnit}` : '--'}
+                {latest.di_stator_temp != null ? `${fmtNumber(convertTemp(latest.di_stator_temp), 1)} ${tempUnit}` : '--'}
               </p>
             </div>
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Torque</p>
-              <p className="text-lg font-bold text-neon-cyan">{latest.di_torque != null ? `${latest.di_torque.toFixed(1)} Nm` : '--'}</p>
+              <p className="text-lg font-bold text-neon-cyan">{latest.di_torque != null ? `${fmtNumber(latest.di_torque, 1)} Nm` : '--'}</p>
             </div>
           </div>
           {/* Brake pedal status */}
@@ -570,7 +571,7 @@ export default function DrivetrainHealth() {
             {latest.pedal_position != null && (
               <div className="flex items-center gap-2 rounded-lg border border-neon-cyan/20 bg-neon-cyan/5 px-3 py-2">
                 <Gauge className="h-4 w-4 text-neon-cyan" />
-                <span className="text-xs text-neon-cyan font-medium">Pedal: {latest.pedal_position.toFixed(0)}%</span>
+                <span className="text-xs text-neon-cyan font-medium">Pedal: {fmtPercent(latest.pedal_position)}</span>
               </div>
             )}
           </div>
@@ -604,10 +605,10 @@ export default function DrivetrainHealth() {
                 {stats.peakStatorTemp != null && stats.minStatorTemp != null ? (
                   <>
                     <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {convertTemp(stats.minStatorTemp).toFixed(1)} – {convertTemp(stats.peakStatorTemp).toFixed(1)} {tempUnit}
+                      {fmtNumber(convertTemp(stats.minStatorTemp), 1)} – {fmtNumber(convertTemp(stats.peakStatorTemp), 1)} {tempUnit}
                     </p>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      Δ {convertTemp(stats.peakStatorTemp - stats.minStatorTemp + (stats.minStatorTemp > 0 ? 0 : stats.minStatorTemp)).toFixed(1)} {tempUnit} spread
+                      Δ {fmtNumber(convertTemp(stats.peakStatorTemp - stats.minStatorTemp + (stats.minStatorTemp > 0 ? 0 : stats.minStatorTemp)), 1)} {tempUnit} spread
                     </p>
                   </>
                 ) : (
@@ -629,7 +630,7 @@ export default function DrivetrainHealth() {
                       )}
                     </div>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      Peak stator reached {convertTemp(stats.peakStatorTemp).toFixed(0)} {tempUnit}
+                      Peak stator reached {fmtInt(convertTemp(stats.peakStatorTemp))} {tempUnit}
                     </p>
                   </>
                 ) : (
@@ -641,7 +642,7 @@ export default function DrivetrainHealth() {
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Data Points</p>
                 <p className="text-sm font-semibold text-neon-cyan">{stats.totalSnapshots.toLocaleString()} snapshots</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  {stats.avgSpeed != null ? `Avg speed: ${convertSpeed(stats.avgSpeed).toFixed(1)} ${speedUnit}` : 'Collecting data...'}
+                  {stats.avgSpeed != null ? `Avg speed: ${fmtNumber(convertSpeed(stats.avgSpeed), 1)} ${speedUnit}` : 'Collecting data...'}
                 </p>
               </div>
             </div>

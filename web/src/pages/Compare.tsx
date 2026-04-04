@@ -7,7 +7,8 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip, Legend,
 } from 'recharts'
-import { ChartTooltip, NEON_COLORS } from '../components/Charts'
+import { ChartTooltip } from '../components/Charts'
+import { CHART_COLORS } from '../lib/colors'
 import { useSettings } from '../hooks/useSettings'
 
 type ComparisonRow = {
@@ -310,8 +311,8 @@ export default function Compare() {
                           key={v.id}
                           name={v.display_name || `Vehicle ${v.id}`}
                           dataKey={v.display_name || `Vehicle ${v.id}`}
-                          stroke={NEON_COLORS[i % NEON_COLORS.length]}
-                          fill={NEON_COLORS[i % NEON_COLORS.length]}
+                          stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                          fill={CHART_COLORS[i % CHART_COLORS.length]}
                           fillOpacity={0.15}
                           strokeWidth={2}
                         />
