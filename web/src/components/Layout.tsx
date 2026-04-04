@@ -260,6 +260,7 @@ export default function Layout() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm lg:hidden"
+            style={{ top: '56px' }}
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -271,17 +272,21 @@ export default function Layout() {
         aria-label="Main navigation"
         data-sidebar-open={sidebarOpen}
         className={clsx(
-          'fixed inset-y-0 left-0 z-[56] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-64 lg:translate-x-0',
+          'fixed left-0 bottom-0 top-14 z-[56] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'border-r backdrop-blur-xl flex flex-col',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
-        style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)', maxHeight: '100dvh' }}
+        style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}
       >
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-3 px-5 py-5 border-b shrink-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }} onClick={() => setSidebarOpen(false)}>
           <Logo size={32} showWordmark />
           <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
-            {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown' ? `v${versionInfo.chart_version}` : ''}
+            {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
+              ? `v${versionInfo.chart_version}`
+              : versionInfo?.app_version && versionInfo.app_version !== 'unknown'
+                ? versionInfo.app_version
+                : ''}
           </span>
         </NavLink>
 
