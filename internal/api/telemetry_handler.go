@@ -1904,7 +1904,7 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 		i := int(toFloat(v))
 		snap.SoftwareUpdateDownloadPct = &i
 	}
-	if v, ok := signals["SoftwareUpdateInstallPercentComplete"]; ok {
+	if v, ok := signals["SoftwareUpdateInstallationPercentComplete"]; ok {
 		i := int(toFloat(v))
 		snap.SoftwareUpdateInstallPct = &i
 	}
