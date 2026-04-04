@@ -43,6 +43,12 @@ type streamingDrive struct {
 	LastSeen  time.Time
 	LastSpeedZeroTime time.Time
 
+	// Signal accumulator — merges signals across MQTT batches for rich telemetry writes.
+	// Fleet telemetry sends each field as a separate MQTT message, so individual batches
+	// only contain 1-3 fields. The accumulator collects them over a write interval.
+	accumulatedSignals map[string]interface{}
+	lastTelemetryWrite time.Time
+
 	// Start values
 	StartOdometer   *float64
 	StartLatitude   *float64
@@ -101,6 +107,10 @@ type streamingCharge struct {
 	LastSeen    time.Time
 	EnergyAdded float64
 
+	// Signal accumulator (same pattern as streamingDrive)
+	accumulatedSignals map[string]interface{}
+	lastTelemetryWrite time.Time
+
 	// Location
 	Latitude  *float64
 	Longitude *float64
@@ -139,6 +149,22 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		activeDrives:  make(map[int64]*streamingDrive),
 		activeCharges: make(map[int64]*streamingCharge),
 	}
+}
+
+// telemetryWriteInterval controls how often drive/charge telemetry readings are
+// flushed to the database. Signals are accumulated across MQTT batches within
+// this window so each row has complete data instead of mostly NULLs.
+const telemetryWriteInterval = 5 * time.Second
+
+// accumulateSignals merges incoming signals into the accumulator map.
+func accumulateSignals(acc map[string]interface{}, signals map[string]interface{}) map[string]interface{} {
+	if acc == nil {
+		acc = make(map[string]interface{}, len(signals))
+	}
+	for k, v := range signals {
+		acc[k] = v
+	}
+	return acc
 }
 
 // ProcessSignals evaluates incoming telemetry signals for drive/charge transitions.
@@ -243,11 +269,12 @@ func strPtr(v string) *string     { return &v }
 func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
 	if !hasSpeed {
-		// Even without speed, update active drive with other signals if present
+		// Even without speed, accumulate signals for active drive
 		t.mu.Lock()
 		if active, ok := t.activeDrives[vehicleID]; ok {
-			t.recordDriveTelemetry(ctx, active, signals)
+			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
 			active.LastSeen = time.Now().UTC()
+			t.maybeFlushDriveTelemetry(ctx, active)
 		}
 		t.mu.Unlock()
 		return
@@ -289,21 +316,23 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		}
 
 		sd := &streamingDrive{
-			DriveID:   drive.ID,
-			VehicleID: vehicleID,
-			StartTime: time.Now().UTC(),
-			LastSpeed: speed,
-			LastSeen:  time.Now().UTC(),
-			MaxSpeed:  speed,
-			MinSpeed:  speed,
-			SpeedSum:  speed,
-			SpeedCount: 1,
-			PowerMin:  math.MaxFloat64,
-			RatedRangeMin: math.MaxFloat64,
-			IdealRangeMin: math.MaxFloat64,
-			EstRangeMin:   math.MaxFloat64,
-			SocMin:        math.MaxFloat64,
-			UsableSocMin:  math.MaxFloat64,
+			DriveID:            drive.ID,
+			VehicleID:          vehicleID,
+			StartTime:          time.Now().UTC(),
+			LastSpeed:          speed,
+			LastSeen:           time.Now().UTC(),
+			MaxSpeed:           speed,
+			MinSpeed:           speed,
+			SpeedSum:           speed,
+			SpeedCount:         1,
+			PowerMin:           math.MaxFloat64,
+			RatedRangeMin:      math.MaxFloat64,
+			IdealRangeMin:      math.MaxFloat64,
+			EstRangeMin:        math.MaxFloat64,
+			SocMin:             math.MaxFloat64,
+			UsableSocMin:       math.MaxFloat64,
+			accumulatedSignals: make(map[string]interface{}),
+			lastTelemetryWrite: time.Now().UTC(),
 		}
 
 		if hasOdo {
@@ -356,8 +385,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		t.activeDrives[vehicleID] = sd
 		DriveSessionsActive.Inc()
 
-		// Record first telemetry reading
-		t.recordDriveTelemetry(ctx, sd, signals)
+		// Accumulate first batch and write immediately
+		sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
+		t.flushDriveTelemetry(ctx, sd)
 
 		// Reverse geocode start address (async to not block)
 		if hasLoc {
@@ -424,8 +454,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			}
 		}
 
-		// Record telemetry reading
-		t.recordDriveTelemetry(ctx, active, signals)
+		// Accumulate signals and flush periodically
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+		t.maybeFlushDriveTelemetry(ctx, active)
 
 	} else if speed == 0 && hasDrive {
 		// === SPEED IS ZERO — check for drive end ===
@@ -516,6 +547,24 @@ func (t *TelemetrySessionTracker) updateDriveElevation(active *streamingDrive, s
 	active.LastElevation = floatPtr(elev)
 }
 
+// maybeFlushDriveTelemetry writes accumulated signals if the write interval has elapsed.
+func (t *TelemetrySessionTracker) maybeFlushDriveTelemetry(ctx context.Context, drive *streamingDrive) {
+	if time.Since(drive.lastTelemetryWrite) < telemetryWriteInterval {
+		return
+	}
+	t.flushDriveTelemetry(ctx, drive)
+}
+
+// flushDriveTelemetry writes a telemetry reading from accumulated signals and resets the accumulator.
+func (t *TelemetrySessionTracker) flushDriveTelemetry(ctx context.Context, drive *streamingDrive) {
+	if len(drive.accumulatedSignals) == 0 {
+		return
+	}
+	t.recordDriveTelemetry(ctx, drive, drive.accumulatedSignals)
+	drive.accumulatedSignals = make(map[string]interface{})
+	drive.lastTelemetryWrite = time.Now().UTC()
+}
+
 func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, drive *streamingDrive, signals map[string]interface{}) {
 	reading := &models.DriveTelemetryReading{
 		DriveID:   drive.DriveID,
@@ -561,11 +610,21 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 }
 
 func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
-	endBattery := 0
+	// Flush any remaining accumulated signals before closing
 	if signals != nil {
-		if bl, ok := signalInt(signals, "BatteryLevel", "Soc"); ok {
-			endBattery = bl
-		}
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+	}
+	t.flushDriveTelemetry(ctx, active)
+
+	// Use accumulated state for end values, falling back to final signals
+	finalSignals := signals
+	if finalSignals == nil {
+		finalSignals = map[string]interface{}{}
+	}
+
+	endBattery := 0
+	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
+		endBattery = bl
 	}
 
 	duration := time.Since(active.StartTime).Minutes()
@@ -610,13 +669,11 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// Get end ranges/SOC
 	var endRatedRange, endIdealRange, endEstRange *float64
 	var endSoc, endUsableSoc *float64
-	if signals != nil {
-		if v, ok := signalFloat(signals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
-		if v, ok := signalFloat(signals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
-		if v, ok := signalFloat(signals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
-		if v, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
-		if v, ok := signalFloat(signals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
-	}
+	if v, ok := signalFloat(finalSignals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
 
 	var powerMax, powerMin *float64
 	if active.PowerMax != 0 {
@@ -781,11 +838,12 @@ func ptrStrOrNil(s string) *string {
 func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
 	chargeState, hasChargeState := signalStr(signals, "DetailedChargeState", "ChargeState")
 	if !hasChargeState {
-		// Even without charge state, update active charge with readings
+		// Even without charge state, accumulate signals for active charge
 		t.mu.Lock()
 		if active, ok := t.activeCharges[vehicleID]; ok {
-			t.recordChargeTelemetry(ctx, active, signals)
+			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
 			active.LastSeen = time.Now().UTC()
+			t.maybeFlushChargeTelemetry(ctx, active)
 		}
 		t.mu.Unlock()
 		return
@@ -823,11 +881,13 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 
 		sc := &streamingCharge{
-			SessionID:         session.ID,
-			VehicleID:         vehicleID,
-			StartTime:         time.Now().UTC(),
-			LastSeen:          time.Now().UTC(),
-			StartBatteryLevel: batteryLevel,
+			SessionID:          session.ID,
+			VehicleID:          vehicleID,
+			StartTime:          time.Now().UTC(),
+			LastSeen:           time.Now().UTC(),
+			StartBatteryLevel:  batteryLevel,
+			accumulatedSignals: make(map[string]interface{}),
+			lastTelemetryWrite: time.Now().UTC(),
 		}
 		if hasLoc {
 			sc.Latitude = floatPtr(lat)
@@ -838,8 +898,9 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		t.activeCharges[vehicleID] = sc
 		ChargeSessionsActive.Inc()
 
-		// Record first reading
-		t.recordChargeTelemetry(ctx, sc, signals)
+		// Accumulate and flush first reading immediately
+		sc.accumulatedSignals = accumulateSignals(sc.accumulatedSignals, signals)
+		t.flushChargeTelemetry(ctx, sc)
 
 		log.Info().Int64("vehicle_id", vehicleID).Int64("session_id", session.ID).Msg("telemetry: charging started")
 		if t.eventBus != nil {
@@ -876,13 +937,32 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			active.OutsideTempSum += ot
 		}
 
-		// Record telemetry reading
-		t.recordChargeTelemetry(ctx, active, signals)
+		// Accumulate signals and flush periodically
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+		t.maybeFlushChargeTelemetry(ctx, active)
 
 	} else if !isCharging && hasCharge {
 		// === CHARGE ENDED ===
 		t.completeChargeLocked(ctx, vehicleID, active, signals)
 	}
+}
+
+// maybeFlushChargeTelemetry writes accumulated signals if the write interval has elapsed.
+func (t *TelemetrySessionTracker) maybeFlushChargeTelemetry(ctx context.Context, charge *streamingCharge) {
+	if time.Since(charge.lastTelemetryWrite) < telemetryWriteInterval {
+		return
+	}
+	t.flushChargeTelemetry(ctx, charge)
+}
+
+// flushChargeTelemetry writes a telemetry reading from accumulated signals and resets the accumulator.
+func (t *TelemetrySessionTracker) flushChargeTelemetry(ctx context.Context, charge *streamingCharge) {
+	if len(charge.accumulatedSignals) == 0 {
+		return
+	}
+	t.recordChargeTelemetry(ctx, charge, charge.accumulatedSignals)
+	charge.accumulatedSignals = make(map[string]interface{})
+	charge.lastTelemetryWrite = time.Now().UTC()
 }
 
 func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, charge *streamingCharge, signals map[string]interface{}) {
@@ -916,26 +996,32 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 }
 
 func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}) {
-	endBattery := 0
+	// Flush remaining accumulated signals
 	if signals != nil {
-		if bl, ok := signalInt(signals, "BatteryLevel", "Soc"); ok {
-			endBattery = bl
-		}
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+	}
+	t.flushChargeTelemetry(ctx, active)
+
+	finalSignals := signals
+	if finalSignals == nil {
+		finalSignals = map[string]interface{}{}
+	}
+
+	endBattery := 0
+	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
+		endBattery = bl
 	}
 	duration := time.Since(active.StartTime).Minutes()
 
 	// Estimate energy from battery% diff if direct energy signal unavailable
 	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
-		// Estimate: typical Model Y pack is ~75 kWh, so 1% ≈ 0.75 kWh
 		estimatedKWh := float64(endBattery-active.StartBatteryLevel) * 0.75
 		active.EnergyAdded = estimatedKWh
 	}
 
 	// Get end range
 	var endRange *float64
-	if signals != nil {
-		if v, ok := signalFloat(signals, "RatedRange"); ok { endRange = floatPtr(v) }
-	}
+	if v, ok := signalFloat(finalSignals, "RatedRange"); ok { endRange = floatPtr(v) }
 
 	// Temperature averages
 	var insideAvg, outsideAvg *float64

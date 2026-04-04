@@ -253,7 +253,7 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 // published to MQTT topics (used by the HTTP endpoint). When called from the
 // MQTT subscriber, publishToMQTT should be false to avoid a publish loop.
 func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signals map[string]interface{}, publishToMQTT bool) {
-	// Raw telemetry capture — async insert to MongoDB when enabled
+	// Raw telemetry capture — async insert to MongoDB when enabled (before normalization)
 	if h.captureEnabled.Load() && h.rawTelemetryRepo != nil {
 		source := "mqtt_subscriber"
 		if publishToMQTT {
@@ -273,6 +273,11 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			}
 		}()
 	}
+
+	// Normalize fleet telemetry units to metric. Tesla Fleet Telemetry sends
+	// speed in mph, distances/ranges in miles, but the system stores in km/km·h
+	// so the frontend conversion layer works consistently.
+	normalizeFleetUnits(signals)
 
 	// Extract position data from all supported signals
 	pos := h.extractPosition(signals)
@@ -851,6 +856,49 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 		"mqtt_publishing":    h.mqttClient != nil,
 		"streaming_vehicles": streamingVehicles,
 	})
+}
+
+const (
+	milesToKm = 1.60934
+	mphToKmh  = 1.60934
+)
+
+// normalizeFleetUnits converts Tesla Fleet Telemetry signals from their native
+// units (miles, mph) to the metric units the system stores (km, km/h).
+// Temperatures (Celsius) and pressure (bar) are already metric.
+func normalizeFleetUnits(signals map[string]interface{}) {
+	// Speed: mph → km/h
+	if v, ok := toFloatOk(signals["VehicleSpeed"]); ok {
+		signals["VehicleSpeed"] = v * mphToKmh
+	}
+	if v, ok := toFloatOk(signals["CruiseSetSpeed"]); ok {
+		signals["CruiseSetSpeed"] = v * mphToKmh
+	}
+	if v, ok := toFloatOk(signals["CurrentLimitMph"]); ok {
+		signals["CurrentLimitMph"] = v * mphToKmh
+	}
+
+	// Distance: miles → km
+	if v, ok := toFloatOk(signals["Odometer"]); ok {
+		signals["Odometer"] = v * milesToKm
+	}
+	if v, ok := toFloatOk(signals["EstBatteryRange"]); ok {
+		signals["EstBatteryRange"] = v * milesToKm
+	}
+	if v, ok := toFloatOk(signals["IdealBatteryRange"]); ok {
+		signals["IdealBatteryRange"] = v * milesToKm
+	}
+	if v, ok := toFloatOk(signals["RatedRange"]); ok {
+		signals["RatedRange"] = v * milesToKm
+	}
+	if v, ok := toFloatOk(signals["MilesToArrival"]); ok {
+		signals["MilesToArrival"] = v * milesToKm
+	}
+
+	// Charge rate: mph → km/h
+	if v, ok := toFloatOk(signals["ChargeRateMilePerHour"]); ok {
+		signals["ChargeRateMilePerHour"] = v * mphToKmh
+	}
 }
 
 func toFloat(v interface{}) float64 {
