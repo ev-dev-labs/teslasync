@@ -79,6 +79,7 @@ data:
       "host": "0.0.0.0",
       "port": 4443,
       "log_level": "info",
+      "transmit_decoded_records": true,
       "tls": {
         "server_cert": "/certs/tls.crt",
         "server_key": "/certs/tls.key"
