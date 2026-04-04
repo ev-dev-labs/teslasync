@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -57,6 +58,10 @@ type TelemetryHandler struct {
 	// Per-vehicle signal accumulator — merges signals across batches within throttle window
 	accumulatedSignalsMu sync.Mutex
 	accumulatedSignals   map[string]map[string]interface{} // keyed by VIN
+
+	// Raw telemetry capture (optional, backed by MongoDB)
+	rawTelemetryRepo *database.RawTelemetryRepo
+	captureEnabled   atomic.Bool
 }
 
 // VehicleStreamState tracks streaming health per vehicle.
@@ -114,6 +119,21 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		lastWriteAt:        make(map[string]time.Time),
 		accumulatedSignals: make(map[string]map[string]interface{}),
 	}
+}
+
+// SetRawTelemetryRepo enables raw telemetry signal capture to MongoDB.
+func (h *TelemetryHandler) SetRawTelemetryRepo(repo *database.RawTelemetryRepo) {
+	h.rawTelemetryRepo = repo
+}
+
+// SetCaptureEnabled toggles raw telemetry capture on or off.
+func (h *TelemetryHandler) SetCaptureEnabled(enabled bool) {
+	h.captureEnabled.Store(enabled)
+}
+
+// IsCaptureEnabled returns whether raw telemetry capture is currently active.
+func (h *TelemetryHandler) IsCaptureEnabled() bool {
+	return h.captureEnabled.Load()
 }
 
 // StartCleanup runs periodic cleanup of stale streaming state entries
@@ -233,6 +253,27 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 // published to MQTT topics (used by the HTTP endpoint). When called from the
 // MQTT subscriber, publishToMQTT should be false to avoid a publish loop.
 func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signals map[string]interface{}, publishToMQTT bool) {
+	// Raw telemetry capture — async insert to MongoDB when enabled
+	if h.captureEnabled.Load() && h.rawTelemetryRepo != nil {
+		source := "mqtt_subscriber"
+		if publishToMQTT {
+			source = "http_ingest"
+		}
+		rec := &models.RawTelemetrySignal{
+			VIN:         vin,
+			Source:      source,
+			Signals:     signals,
+			SignalCount: len(signals),
+		}
+		go func() {
+			captureCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := h.rawTelemetryRepo.Insert(captureCtx, rec); err != nil {
+				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to capture raw signals")
+			}
+		}()
+	}
+
 	// Extract position data from all supported signals
 	pos := h.extractPosition(signals)
 
@@ -1987,4 +2028,104 @@ func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID i
 var _ = formatSignalName // kept for potential future use
 func formatSignalName(name string) string {
 	return strings.ToLower(name)
+}
+
+// ─── Raw Telemetry Capture API ──────────────────────────────────────────────
+
+// CaptureList returns captured raw telemetry signals, paginated.
+// Query params: ?vin=, ?limit=, ?offset=
+func (h *TelemetryHandler) CaptureList(w http.ResponseWriter, r *http.Request) {
+	if h.rawTelemetryRepo == nil {
+		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured — telemetry capture unavailable")
+		return
+	}
+
+	vin := r.URL.Query().Get("vin")
+	limit := int64(50)
+	offset := int64(0)
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	var (
+		results []*models.RawTelemetrySignal
+		err     error
+	)
+	if vin != "" {
+		results, err = h.rawTelemetryRepo.GetByVIN(r.Context(), vin, limit, offset)
+	} else {
+		results, err = h.rawTelemetryRepo.GetAll(r.Context(), limit, offset)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to query captured signals")
+		return
+	}
+	writeJSON(w, http.StatusOK, results)
+}
+
+// CaptureStats returns aggregate statistics about captured signals.
+func (h *TelemetryHandler) CaptureStats(w http.ResponseWriter, r *http.Request) {
+	if h.rawTelemetryRepo == nil {
+		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured — telemetry capture unavailable")
+		return
+	}
+
+	stats, err := h.rawTelemetryRepo.Stats(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get capture stats")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"total_documents": stats.TotalDocuments,
+		"distinct_vins":   stats.DistinctVINs,
+		"capture_enabled": h.captureEnabled.Load(),
+	})
+}
+
+// CaptureDrop deletes all captured telemetry data.
+func (h *TelemetryHandler) CaptureDrop(w http.ResponseWriter, r *http.Request) {
+	if h.rawTelemetryRepo == nil {
+		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured — telemetry capture unavailable")
+		return
+	}
+
+	if err := h.rawTelemetryRepo.Drop(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to drop captured signals")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "dropped"})
+}
+
+// CaptureExport streams all captured signals as a JSONL download.
+func (h *TelemetryHandler) CaptureExport(w http.ResponseWriter, r *http.Request) {
+	if h.rawTelemetryRepo == nil {
+		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured — telemetry capture unavailable")
+		return
+	}
+
+	cursor, err := h.rawTelemetryRepo.StreamAll(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to export captured signals")
+		return
+	}
+	defer cursor.Close(r.Context())
+
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("Content-Disposition", "attachment; filename=telemetry-capture.jsonl")
+
+	enc := json.NewEncoder(w)
+	for cursor.Next(r.Context()) {
+		var doc models.RawTelemetrySignal
+		if err := cursor.Decode(&doc); err != nil {
+			continue
+		}
+		enc.Encode(doc)
+	}
 }

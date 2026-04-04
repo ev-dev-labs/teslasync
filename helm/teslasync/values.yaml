@@ -579,6 +579,48 @@ mqtt:
     port: 1883
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MongoDB (raw telemetry signal capture)
+#
+# Stores raw fleet telemetry signals exactly as received from Tesla for
+# debugging and testing. Uses a TTL index for automatic cleanup.
+#
+# Set enabled: true  → an embedded MongoDB pod is deployed.
+# Set enabled: false → supply connection details via mongodb.external.
+# ─────────────────────────────────────────────────────────────────────────────
+mongodb:
+  enabled: false
+
+  image: mongo:7
+
+  database: "teslasync"
+  ttlDays: 7
+
+  service:
+    type: ClusterIP
+    port: 27017
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # External MongoDB — used when mongodb.enabled is false.
+  external:
+    # Full connection URI (supports auth, replica sets, options).
+    # Example: mongodb://user:pass@mongo.svc:27017/teslasync
+    uri: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Grafana
 #
 # Set enabled: true  → an embedded Grafana pod is deployed.

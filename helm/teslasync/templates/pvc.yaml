@@ -81,3 +81,22 @@ spec:
   storageClassName: {{ .Values.grafana.persistence.storageClass | quote }}
   {{- end }}
 {{- end }}
+---
+{{- if and .Values.mongodb.enabled .Values.mongodb.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teslasync.fullname" . }}-mongodb-data
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mongodb
+spec:
+  accessModes:
+    {{- toYaml .Values.mongodb.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.mongodb.persistence.size | quote }}
+  {{- if .Values.mongodb.persistence.storageClass }}
+  storageClassName: {{ .Values.mongodb.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

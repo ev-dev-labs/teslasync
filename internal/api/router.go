@@ -144,6 +144,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Wire telemetry handler into vehicle handler for streaming-aware state
 	vehicleHandler.SetTelemetryHandler(telemetryHandler)
 
+	// Wire telemetry handler into settings handler for capture toggle sync
+	settingsHandler.SetTelemetryHandler(telemetryHandler)
+
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
@@ -451,6 +454,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/release-notes", devToolsHandler.ReleaseNotes)
 			r.Get("/recent-alerts", devToolsHandler.RecentAlerts)
 			r.Get("/service-data", devToolsHandler.ServiceData)
+
+			// Raw telemetry signal capture
+			r.Route("/telemetry-capture", func(r chi.Router) {
+				r.Get("/", telemetryHandler.CaptureList)
+				r.Get("/stats", telemetryHandler.CaptureStats)
+				r.Delete("/", telemetryHandler.CaptureDrop)
+				r.Get("/export", telemetryHandler.CaptureExport)
+			})
 		})
 
 		// Data Repair
