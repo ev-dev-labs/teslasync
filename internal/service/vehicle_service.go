@@ -214,6 +214,55 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
+	// DB fallbacks for all remaining fields — query latest from snapshot tables
+	// when SignalStore doesn't have the value (pod restart, car sleeping)
+	ctx := context.Background()
+
+	if state.BatteryLevel == 0 || state.RatedRange == 0 || state.InsideTemp == 0 {
+		if ct, err := s.chargingTelRepo.GetLatestMerged(ctx, vehicle.ID, 10); err == nil && ct != nil {
+			if state.BatteryLevel == 0 && ct.BatteryLevel != nil {
+				state.BatteryLevel = int(*ct.BatteryLevel)
+			}
+			if state.BatteryLevel == 0 && ct.Soc != nil {
+				state.BatteryLevel = int(*ct.Soc)
+			}
+			if state.RatedRange == 0 && ct.RatedRange != nil {
+				state.RatedRange = *ct.RatedRange
+			}
+			if state.RatedRange == 0 && ct.EstBatteryRange != nil {
+				state.RatedRange = *ct.EstBatteryRange
+			}
+			if state.IdealRange == 0 && ct.IdealBatteryRange != nil {
+				state.IdealRange = *ct.IdealBatteryRange
+			}
+		}
+	}
+
+	if state.InsideTemp == 0 || state.OutsideTemp == 0 {
+		if climate, err := s.climateRepo.GetLatest(ctx, vehicle.ID); err == nil && climate != nil {
+			if state.InsideTemp == 0 && climate.InsideTemp != nil {
+				state.InsideTemp = *climate.InsideTemp
+			}
+			if state.OutsideTemp == 0 && climate.OutsideTemp != nil {
+				state.OutsideTemp = *climate.OutsideTemp
+			}
+		}
+	}
+
+	if state.Latitude == 0 && state.Longitude == 0 {
+		if pos, err := s.positionRepo.GetLatest(ctx, vehicle.ID); err == nil && pos != nil {
+			if pos.Latitude != 0 { state.Latitude = pos.Latitude }
+			if pos.Longitude != 0 { state.Longitude = pos.Longitude }
+		}
+	}
+
+	if !state.IsLocked && !state.SentryMode {
+		if sec, err := s.securityRepo.GetLatest(ctx, vehicle.ID); err == nil && sec != nil {
+			if sec.Locked != nil { state.IsLocked = *sec.Locked }
+			if sec.SentryMode != nil { state.SentryMode = *sec.SentryMode }
+		}
+	}
+
 	return state
 }
 
