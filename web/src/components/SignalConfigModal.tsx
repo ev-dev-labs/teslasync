@@ -11,16 +11,19 @@ const INTERVAL_OPTIONS = [
   { value: 30, label: '30s', color: 'text-[var(--text-muted)]', desc: 'Slow' },
   { value: 60, label: '60s', color: 'text-[var(--text-muted)]', desc: '1 min' },
   { value: 300, label: '5m', color: 'text-gray-500', desc: 'Rare' },
+  { value: 900, label: '15m', color: 'text-gray-600', desc: '15 min' },
+  { value: 3600, label: '1h', color: 'text-gray-600', desc: '1 hour' },
+  { value: 86400, label: '24h', color: 'text-gray-700', desc: 'Daily' },
 ]
 
 const PRESETS = [
-  { name: '⚡ Real-time Driving', desc: 'Driving signals at 500ms, battery at 10s, config at 5m',
+  { name: '⚡ Real-time Driving', desc: 'Driving signals at 500ms, battery at 10s, config at 24h',
     apply: (fields: SignalConfig[]) => fields.map(f => ({
       ...f,
       selected: true,
       interval: ['Driving','Powertrain','Location'].includes(f.category) ? 0 :
                 ['Charging','Climate','Tires & Service'].includes(f.category) ? 10 :
-                ['Vehicle Config','User Preference'].includes(f.category) ? 300 : 10,
+                ['Vehicle Config','User Preference'].includes(f.category) ? 86400 : 10,
     })),
   },
   { name: '⚖️ Balanced', desc: 'All signals at 10s — good balance of data and battery',
@@ -34,7 +37,8 @@ const PRESETS = [
       ...f,
       selected: true,
       interval: ['Driving','Powertrain'].includes(f.category) ? 0 :
-                f.category === 'Location' ? 0 : 30,
+                f.category === 'Location' ? 0 :
+                ['Vehicle Config','User Preference'].includes(f.category) ? 3600 : 30,
     })),
   },
 ]

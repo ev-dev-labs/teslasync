@@ -184,6 +184,17 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
+	// Firmware: DB fallback from vehicle_config_snapshots
+	if state.SoftwareVersion == "" {
+		var dbVersion *string
+		_ = s.db.Pool.QueryRow(context.Background(),
+			`SELECT version FROM vehicle_config_snapshots WHERE vehicle_id = $1 AND version IS NOT NULL AND version != '' ORDER BY created_at DESC LIMIT 1`,
+			vehicle.ID).Scan(&dbVersion)
+		if dbVersion != nil {
+			state.SoftwareVersion = *dbVersion
+		}
+	}
+
 	if v := all["HvacPower"]; v != nil {
 		switch hv := v.Raw.(type) {
 		case bool: state.IsClimateOn = hv
