@@ -197,7 +197,12 @@ func main() {
 				defer mongoClient.Close()
 				rawRepo := database.NewRawTelemetryRepo(mongoClient)
 				telemetryHandler.SetRawTelemetryRepo(rawRepo)
-				log.Info().Str("database", cfg.MongoDB.Database).Int("ttl_days", cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture available")
+
+				// Initialize per-signal log for full history
+				signalLogRepo := database.NewSignalLogRepo(mongoClient)
+				telemetryHandler.SetSignalLogRepo(signalLogRepo)
+
+				log.Info().Str("database", cfg.MongoDB.Database).Int("ttl_days", cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture + signal log available")
 
 				// Read initial capture toggle from settings
 				settingsRepo := database.NewSettingsRepo(db)

@@ -68,6 +68,9 @@ type TelemetryHandler struct {
 	// Raw telemetry capture (optional, backed by MongoDB)
 	rawTelemetryRepo *database.RawTelemetryRepo
 	captureEnabled   atomic.Bool
+
+	// Per-signal logging to MongoDB (optional)
+	signalLogRepo *database.SignalLogRepo
 }
 
 // vehicleStateMachine implements debounced state detection to prevent flapping.
@@ -158,6 +161,11 @@ func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 // GetSignalStore returns the signal store (for use by other handlers).
 func (h *TelemetryHandler) GetSignalStore() *signal.Store {
 	return h.signalStore
+}
+
+// SetSignalLogRepo enables per-signal logging to MongoDB.
+func (h *TelemetryHandler) SetSignalLogRepo(repo *database.SignalLogRepo) {
+	h.signalLogRepo = repo
 }
 
 // SetCaptureEnabled toggles raw telemetry capture on or off.
@@ -344,6 +352,17 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// This is the primary source of truth for dashboard, state machine, and sessions.
 	if vehicleID > 0 && h.signalStore != nil {
 		h.signalStore.Update(vehicleID, signals)
+	}
+
+	// Log every signal to MongoDB for full history (async, non-blocking)
+	if vehicleID > 0 && h.signalLogRepo != nil {
+		go func() {
+			logCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := h.signalLogRepo.WriteBatch(logCtx, vehicleID, signals); err != nil {
+				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to log signals to MongoDB")
+			}
+		}()
 	}
 
 	// Extract position data from all supported signals
