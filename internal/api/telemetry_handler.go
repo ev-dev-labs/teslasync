@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
@@ -42,6 +43,7 @@ type TelemetryHandler struct {
 	sessionTracker *TelemetrySessionTracker
 	alertEvaluator *TelemetryAlertEvaluator
 	staleTimeout   time.Duration
+	signalStore    *signal.Store
 
 	// Cancellable context for background goroutines — cancelled on Shutdown()
 	bgCtx    context.Context
@@ -146,6 +148,16 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 // SetRawTelemetryRepo enables raw telemetry signal capture to MongoDB.
 func (h *TelemetryHandler) SetRawTelemetryRepo(repo *database.RawTelemetryRepo) {
 	h.rawTelemetryRepo = repo
+}
+
+// SetSignalStore sets the in-memory signal store for real-time state tracking.
+func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
+	h.signalStore = store
+}
+
+// GetSignalStore returns the signal store (for use by other handlers).
+func (h *TelemetryHandler) GetSignalStore() *signal.Store {
+	return h.signalStore
 }
 
 // SetCaptureEnabled toggles raw telemetry capture on or off.
@@ -321,15 +333,23 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// so the frontend conversion layer works consistently.
 	normalizeFleetUnits(signals)
 
-	// Extract position data from all supported signals
-	pos := h.extractPosition(signals)
-
-	// Find vehicle by VIN and store position
+	// Find vehicle by VIN (needed for SignalStore keying and all downstream)
 	var vehicleID int64
 	err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID)
 	if err != nil {
 		log.Warn().Err(err).Str("vin", vin).Msg("telemetry: vehicle not found or DB error")
 	}
+
+	// Update in-memory SignalStore — always complete, never has null fields.
+	// This is the primary source of truth for dashboard, state machine, and sessions.
+	if vehicleID > 0 && h.signalStore != nil {
+		h.signalStore.Update(vehicleID, signals)
+	}
+
+	// Extract position data from all supported signals
+	pos := h.extractPosition(signals)
+
+	// Store position
 	if err == nil && pos != nil {
 		pos.VehicleID = vehicleID
 		if err := h.posRepo.Insert(ctx, pos); err != nil {

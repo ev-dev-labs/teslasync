@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -52,6 +54,128 @@ func (s *VehicleService) VehicleRepo() *database.VehicleRepo {
 // SettingsRepo returns the underlying settings repository for simple lookups.
 func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
 	return s.settingsRepo
+}
+
+// BuildStateFromSignalStore constructs a VehicleState from the in-memory SignalStore.
+// Returns always-complete data — never has null fields for known signals.
+// Returns nil only if no signals exist for this vehicle.
+func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *models.Vehicle) *models.VehicleState {
+	if store == nil {
+		return nil
+	}
+	all := store.GetAll(vehicle.ID)
+	if len(all) == 0 {
+		return nil
+	}
+
+	state := &models.VehicleState{
+		VehicleID: vehicle.ID,
+		State:     vehicle.State,
+	}
+
+	if v := all["VehicleSpeed"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.Speed = f }
+	}
+	if v := all["Odometer"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.Odometer = f }
+	}
+	if v := all["BatteryLevel"]; v != nil {
+		switch bv := v.Raw.(type) {
+		case float64: state.BatteryLevel = int(bv)
+		case int: state.BatteryLevel = bv
+		}
+	}
+	if v := all["Soc"]; v != nil && state.BatteryLevel == 0 {
+		if f, ok := v.Raw.(float64); ok { state.BatteryLevel = int(f) }
+	}
+	if v := all["IdealBatteryRange"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.IdealRange = f }
+	}
+	if v := all["RatedRange"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.RatedRange = f }
+	}
+	if v := all["EstBatteryRange"]; v != nil && state.RatedRange == 0 {
+		if f, ok := v.Raw.(float64); ok { state.RatedRange = f }
+	}
+	if v := all["InsideTemp"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.InsideTemp = f }
+	}
+	if v := all["OutsideTemp"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.OutsideTemp = f }
+	}
+
+	// Location from Location map
+	if v := all["Location"]; v != nil {
+		if loc, ok := v.Raw.(map[string]interface{}); ok {
+			if lat, ok := loc["latitude"].(float64); ok { state.Latitude = lat }
+			if lon, ok := loc["longitude"].(float64); ok { state.Longitude = lon }
+		}
+	}
+	// Override with direct lat/lon if present
+	if v := all["Latitude"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.Latitude = f }
+	}
+	if v := all["Longitude"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.Longitude = f }
+	}
+
+	// Power (computed or direct)
+	if v := all["Power"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.Power = f }
+	} else if pv, pcv := all["PackVoltage"], all["PackCurrent"]; pv != nil && pcv != nil {
+		if voltage, ok := pv.Raw.(float64); ok {
+			if current, ok := pcv.Raw.(float64); ok {
+				state.Power = voltage * current / 1000.0
+			}
+		}
+	}
+
+	// Charging state
+	if v := all["DetailedChargeState"]; v != nil {
+		if s, ok := v.Raw.(string); ok {
+			state.IsCharging = strings.Contains(s, "Charging") || strings.Contains(s, "Starting")
+		}
+	}
+	if v := all["ChargeAmps"]; v != nil && !state.IsCharging {
+		if f, ok := v.Raw.(float64); ok { state.IsCharging = f > 1.0 }
+	}
+	if v := all["ACChargingPower"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.ChargerPower = f }
+	}
+	if v := all["DCChargingPower"]; v != nil {
+		if f, ok := v.Raw.(float64); ok && f > 0 { state.ChargerPower = f }
+	}
+	if v := all["ChargeRateMilePerHour"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.ChargeRate = f }
+	}
+	if v := all["TimeToFullCharge"]; v != nil {
+		if f, ok := v.Raw.(float64); ok { state.TimeToFullChg = f }
+	}
+
+	// Security
+	if v := all["Locked"]; v != nil {
+		if b, ok := v.Raw.(bool); ok { state.IsLocked = b }
+	}
+	if v := all["SentryMode"]; v != nil {
+		switch sv := v.Raw.(type) {
+		case bool: state.SentryMode = sv
+		case string: state.SentryMode = !strings.Contains(sv, "Off") && sv != "false"
+		}
+	}
+	if v := all["HvacPower"]; v != nil {
+		switch hv := v.Raw.(type) {
+		case bool: state.IsClimateOn = hv
+		case string: state.IsClimateOn = strings.Contains(hv, "On") || strings.Contains(hv, "Precondition")
+		case float64: state.IsClimateOn = hv > 0
+		}
+	}
+
+	// Software version
+	if v := all["Version"]; v != nil {
+		if sv, ok := v.Raw.(string); ok { state.SoftwareVersion = sv }
+	}
+
+	return state
 }
 
 // BuildStateFromDB constructs a VehicleState from the latest DB records

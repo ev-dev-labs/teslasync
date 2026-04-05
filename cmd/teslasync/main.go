@@ -22,6 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
@@ -173,6 +174,19 @@ func main() {
 	var telemetryHandler *api.TelemetryHandler
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
+
+		// Initialize SignalStore with Postgres flusher for pod restart recovery
+		liveStateRepo := database.NewLiveStateRepo(db)
+		signalStore := sigsvc.New(liveStateRepo, 5*time.Second)
+		telemetryHandler.SetSignalStore(signalStore)
+
+		// Load existing live state from DB (pod restart recovery)
+		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
+			for _, v := range vehicles {
+				signalStore.LoadFromDB(ctx, v.ID)
+			}
+		}
+		log.Info().Msg("signal store initialized")
 
 		// MongoDB raw telemetry capture (optional)
 		if cfg.MongoDB.Enabled {

@@ -145,8 +145,23 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
-	// PRIMARY: If fleet telemetry is streaming for this vehicle, try to build state from DB
-	// but fall through to API if core data (position) is stale
+	// PRIMARY: Build state from in-memory SignalStore (always complete, <1ms)
+	if h.telemetryHandler != nil {
+		store := h.telemetryHandler.GetSignalStore()
+		if store != nil {
+			state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
+			if state != nil {
+				writeJSON(w, http.StatusOK, map[string]interface{}{
+					"state":       state,
+					"live":        true,
+					"data_source": "signal_store",
+				})
+				return
+			}
+		}
+	}
+
+	// SECONDARY: Build state from DB records (fleet telemetry snapshot tables)
 	telemetryStreaming := h.telemetryHandler != nil && h.telemetryHandler.IsVehicleStreaming(vehicle.VIN)
 	if telemetryStreaming {
 		state := h.vehicleSvc.BuildStateFromDB(r.Context(), vehicle)
@@ -158,10 +173,9 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		// If DB state build failed (stale/missing data), fall through to API
 	}
 
-	// FALLBACK: Use Tesla Fleet API (also used when telemetry data is stale)
+	// TERTIARY: Use Tesla Fleet API
 	suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(r.Context())
 	if suspended || !h.teslaClient.HasValidToken() {
 		pos, _ := h.vehicleSvc.PositionRepo().GetLatest(r.Context(), id)
