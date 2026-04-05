@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getLocationSnapshots, getLocationSnapshotLatest } from '../api'
+import { request } from '../api/client'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -148,6 +149,19 @@ export default function NavigationRoute() {
     enabled: vehicleId !== null,
     refetchInterval: 10000,
   })
+
+  // Live signals for real-time at-home/work/favorite status
+  const { data: liveSignals } = useQuery<{ signals: Record<string, { value: unknown }> }>({
+    queryKey: ['live-location-signals', vehicleId],
+    queryFn: () => request(`/signals/${vehicleId}/live`),
+    enabled: vehicleId !== null,
+    refetchInterval: 5000,
+  })
+
+  // Extract live location booleans (prefer live over stale DB snapshot)
+  const isAtHome = liveSignals?.signals?.LocatedAtHome?.value === true || latest?.located_at_home === true
+  const isAtWork = liveSignals?.signals?.LocatedAtWork?.value === true || latest?.located_at_work === true
+  const isAtFavorite = liveSignals?.signals?.LocatedAtFavorite?.value === true || latest?.located_at_favorite === true
 
   /* History for charts and recent destinations table */
   const { data: history, isLoading: loadingHistory } = useQuery({
@@ -344,19 +358,19 @@ export default function NavigationRoute() {
         <LocationStatusCard
           label="At Home"
           icon={Home}
-          active={latest?.located_at_home ?? false}
+          active={isAtHome}
           loading={loadingLatest}
         />
         <LocationStatusCard
           label="At Work"
           icon={Building}
-          active={latest?.located_at_work ?? false}
+          active={isAtWork}
           loading={loadingLatest}
         />
         <LocationStatusCard
           label="At Favorite"
           icon={Star}
-          active={latest?.located_at_favorite ?? false}
+          active={isAtFavorite}
           loading={loadingLatest}
         />
       </div>
