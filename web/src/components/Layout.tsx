@@ -314,7 +314,9 @@ export default function Layout() {
               </p>
               <div className="space-y-0.5">
                 {section.items.map(({ to, icon: Icon, label, color }) => {
-                  const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+                  const isActive = to === '/'
+                    ? location.pathname === '/'
+                    : location.pathname === to || location.pathname.startsWith(to + '/')
                   return (
                     <NavLink
                       key={to}
