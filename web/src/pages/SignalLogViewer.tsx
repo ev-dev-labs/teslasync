@@ -99,9 +99,12 @@ export default function SignalLogViewer() {
     null: 'text-gray-600',
   }
 
-  const currentLiveValue = selectedSignal && liveData?.signals
+  const currentLiveRaw = selectedSignal && liveData?.signals
     ? liveData.signals[selectedSignal]
     : null
+  const currentLiveValue = currentLiveRaw != null && typeof currentLiveRaw === 'object' && 'value' in (currentLiveRaw as Record<string, unknown>)
+    ? (currentLiveRaw as Record<string, unknown>).value
+    : currentLiveRaw
 
   const totalRecords = history?.count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
@@ -140,8 +143,11 @@ export default function SignalLogViewer() {
             <div className="space-y-0.5">
               {filteredSignals.map(sig => {
                 const live = liveData?.signals?.[sig]
-                const liveStr = live != null
-                  ? typeof live === 'number' ? fmtNumber(live as number, 2) : String(live).slice(0, 20)
+                const raw = live != null && typeof live === 'object' && 'value' in (live as Record<string, unknown>)
+                  ? (live as Record<string, unknown>).value
+                  : live
+                const liveStr = raw != null
+                  ? typeof raw === 'number' ? fmtNumber(raw as number, 2) : String(raw).slice(0, 20)
                   : null
                 return (
                   <button
