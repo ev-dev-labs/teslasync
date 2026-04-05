@@ -10,6 +10,7 @@ import {
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { parseGear, GEAR_COLORS } from '../lib/gear'
 
 /* ---------- Tooltip ---------- */
 interface DynamicsTooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
@@ -208,13 +209,9 @@ export default function DrivingDynamics() {
 
   /* --- Gear badge --- */
   const gearBadge = (gear?: string) => {
-    if (!gear) return { text: '--', color: 'text-[var(--text-muted)]' }
-    const g = gear.toUpperCase()
-    if (g === 'D' || g === 'DRIVE') return { text: 'D', color: 'text-neon-green' }
-    if (g === 'R' || g === 'REVERSE') return { text: 'R', color: 'text-neon-red' }
-    if (g === 'P' || g === 'PARK') return { text: 'P', color: 'text-neon-cyan' }
-    if (g === 'N' || g === 'NEUTRAL') return { text: 'N', color: 'text-neon-amber' }
-    return { text: g, color: 'text-[var(--text-primary)]' }
+    const parsed = parseGear(gear)
+    if (!parsed) return { text: '--', color: 'text-[var(--text-muted)]' }
+    return { text: parsed, color: GEAR_COLORS[parsed] ?? 'text-[var(--text-primary)]' }
   }
 
   const badge = motorStateBadge(latest?.di_state)
