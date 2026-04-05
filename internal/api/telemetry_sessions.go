@@ -174,7 +174,7 @@ func accumulateSignals(acc map[string]interface{}, signals map[string]interface{
 // location) that may not be in the current batch.
 func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	t.trackDriving(ctx, vehicleID, vin, signals, accumulatedSignals)
-	t.trackCharging(ctx, vehicleID, vin, signals)
+	t.trackCharging(ctx, vehicleID, vin, signals, accumulatedSignals)
 }
 
 // CleanupStaleSessions closes sessions that have been open too long without updates.
@@ -887,7 +887,7 @@ func ptrStrOrNil(s string) *string {
 	return &s
 }
 
-func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	chargeState, hasChargeState := signalStr(signals, "DetailedChargeState", "ChargeState")
 	if !hasChargeState {
 		// Even without charge state, accumulate signals for active charge
@@ -912,9 +912,19 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	if isCharging && !hasCharge {
 		// === START CHARGE ===
-		batteryLevel, _ := signalInt(signals, "BatteryLevel", "Soc")
+		// Use accumulated signals from handler as fallback for start values
+		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
+		if !hasBat {
+			batteryLevel, _ = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
+		}
 		lat, lon, hasLoc := signalLatLon(signals)
-		startRange, _ := signalFloat(signals, "RatedRange")
+		if !hasLoc {
+			lat, lon, hasLoc = signalLatLon(accumulatedSignals)
+		}
+		startRange, hasRange := signalFloat(signals, "RatedRange")
+		if !hasRange {
+			startRange, _ = signalFloat(accumulatedSignals, "RatedRange")
+		}
 
 		session := &models.ChargingSession{
 			VehicleID:         vehicleID,
