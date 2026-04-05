@@ -2,11 +2,11 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDrive, getDrivePositions, getDriveTelemetry, getVehicle } from '../api'
 import { useState } from 'react'
-import { MapContainer, Polyline, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
-import { LatLngExpression } from 'leaflet'
+import { LatLngExpression, latLngBounds } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
@@ -31,6 +31,24 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; col
       <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
     </GlassPanel>
   )
+}
+
+// Auto-fit map to show the entire drive route
+function FitBounds({ trail }: { trail: LatLngExpression[] }) {
+  const map = useMap()
+  if (trail.length > 1) {
+    const bounds = latLngBounds(trail.map(p => {
+      if (Array.isArray(p)) return [p[0] as number, p[1] as number] as [number, number]
+      return [0, 0] as [number, number]
+    }))
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [30, 30] })
+    }
+  } else if (trail.length === 1) {
+    const p = trail[0] as [number, number]
+    map.setView(p, 15)
+  }
+  return null
 }
 
 export default function DriveDetail() {
@@ -74,7 +92,7 @@ export default function DriveDetail() {
 
   const startPos = trail[0] as [number, number] | undefined
   const endPos = trail[trail.length - 1] as [number, number] | undefined
-  const centerPos = startPos ?? [0, 0]
+  const centerPos = startPos ?? (drive?.start_latitude && drive?.start_longitude ? [drive.start_latitude, drive.start_longitude] as [number, number] : [47.6, -122.3])
 
   // Speed-colored trail segments
   const speedSegments: { positions: LatLngExpression[]; color: string }[] = []
@@ -458,7 +476,8 @@ export default function DriveDetail() {
             <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
             <MapContainer center={centerPos as [number, number]} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
               <MapTileLayer style={mapStyle} />
-            <MapInvalidator />
+              <MapInvalidator />
+              <FitBounds trail={trail} />
               {speedSegments.map((seg, i) => (
                 <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
               ))}
