@@ -79,6 +79,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	if v := all["Odometer"]; v != nil {
 		if f, ok := v.Raw.(float64); ok { state.Odometer = f }
 	}
+	// Fallback: get odometer from latest position or daily mileage if not in SignalStore
+	if state.Odometer == 0 {
+		if pos, err := s.positionRepo.GetLatest(context.Background(), vehicle.ID); err == nil && pos != nil && pos.Odometer > 0 {
+			state.Odometer = pos.Odometer
+		}
+	}
 	if v := all["BatteryLevel"]; v != nil {
 		switch bv := v.Raw.(type) {
 		case float64: state.BatteryLevel = int(bv)
