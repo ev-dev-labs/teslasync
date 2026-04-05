@@ -116,8 +116,11 @@ export default function SignalExplorer() {
           <div className="space-y-0.5">
             {filteredSignals.map(sig => {
               const live = liveState?.signals?.[sig]
-              const liveStr = live != null
-                ? typeof live === 'number' ? fmtNumber(live as number) : String(live)
+              const raw = live != null && typeof live === 'object' && 'value' in (live as Record<string, unknown>)
+                ? (live as Record<string, unknown>).value
+                : live
+              const liveStr = raw != null
+                ? typeof raw === 'number' ? fmtNumber(raw as number) : String(raw).slice(0, 20)
                 : null
               return (
                 <button
@@ -156,11 +159,17 @@ export default function SignalExplorer() {
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold">
-                    {currentValue != null ? (
-                      typeof currentValue === 'number' ? fmtNumber(currentValue as number) :
-                      typeof currentValue === 'boolean' ? (currentValue ? '✅ true' : '❌ false') :
-                      String(currentValue)
-                    ) : '—'}
+                    {currentValue != null ? (() => {
+                      // Live endpoint returns {value, timestamp} objects
+                      const val = typeof currentValue === 'object' && currentValue !== null && 'value' in (currentValue as Record<string, unknown>)
+                        ? (currentValue as Record<string, unknown>).value
+                        : currentValue
+                      if (typeof val === 'number') return fmtNumber(val)
+                      if (typeof val === 'boolean') return val ? '✅ true' : '❌ false'
+                      if (val == null) return '—'
+                      if (typeof val === 'object') return JSON.stringify(val)
+                      return String(val)
+                    })() : '—'}
                   </div>
                 </div>
               </div>

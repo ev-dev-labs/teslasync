@@ -359,7 +359,16 @@ export default function Dashboard() {
                             </div>
                             <div>
                               <p className="text-[var(--text-muted)]">Time to Full</p>
-                              <p className="text-sm font-bold text-[var(--text-primary)]">{primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h` : '—'}</p>
+                              <p className="text-sm font-bold text-[var(--text-primary)]">
+                                {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0
+                                  ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h`
+                                  : '—'}
+                              </p>
+                              {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 && (
+                                <p className="text-[10px] text-[var(--text-muted)]">
+                                  Done ~{new Date(Date.now() + primaryState.time_to_full_charge * 3600000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
