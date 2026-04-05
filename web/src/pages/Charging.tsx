@@ -80,7 +80,7 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
               <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> {fmtWithUnit(session.charge_energy_added ?? 0, 'kWh', 1)}</span>
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDuration(session.duration_min)}</span>
-              {session.charger_power !== null && <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {session.charger_power} kW peak</span>}
+              {session.charger_power != null && <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {fmtNumber(session.charger_power, 1)} kW peak</span>}
               {avgRate && <span className="flex items-center gap-1"><Plug className="h-3 w-3" /> ~{avgRate} kW avg</span>}
               {typeof session.cost === 'number' && <span className="flex items-center gap-1 text-neon-green"><DollarSign className="h-3 w-3" /> ${fmtNumber(session.cost, 2)}</span>}
               {typeof costPerKwh === 'number' && <span className="text-gray-600">(${fmtNumber(costPerKwh, 3)}/kWh)</span>}

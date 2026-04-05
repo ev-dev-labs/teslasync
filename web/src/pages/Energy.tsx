@@ -368,7 +368,7 @@ export default function Energy() {
                             <span className="text-gray-700 mx-1">→</span>
                             <span className="text-neon-green">{s.end_battery_level ?? '—'}%</span>
                           </td>
-                          <td className="py-3 pr-4">{s.charger_power !== null ? `${s.charger_power} kW` : '—'}</td>
+                          <td className="py-3 pr-4">{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</td>
                           <td className="py-3 pr-4">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
                               s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' :
