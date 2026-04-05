@@ -488,11 +488,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						writeError(w, http.StatusBadRequest, "invalid vehicle ID")
 						return
 					}
-					raw := store.GetRawMap(vid)
+					raw := store.GetAll(vid)
+					// Convert to JSON-friendly format with timestamps
+					signals := make(map[string]interface{}, len(raw))
+					for k, v := range raw {
+						if v != nil {
+							signals[k] = map[string]interface{}{
+								"value":     v.Raw,
+								"timestamp": v.Timestamp,
+							}
+						}
+					}
 					writeJSON(w, http.StatusOK, map[string]interface{}{
 						"vehicle_id": vid,
-						"count":      len(raw),
-						"signals":    raw,
+						"count":      len(signals),
+						"signals":    signals,
 					})
 				})
 				r.Get("/{signalName}/history", signalHandler.History)
