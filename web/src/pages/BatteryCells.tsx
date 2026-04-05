@@ -117,13 +117,13 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
   const maxV = Math.max(...cellVoltages)
   const rangeV = maxV - minV || 0.001
 
-  const cellW = 12
-  const cellH = 18
-  const gapX = 2
-  const gapY = 2
-  const moduleGap = 16
-  const padX = 24
-  const padY = 48
+  const cellW = 8
+  const cellH = 12
+  const gapX = 1.5
+  const gapY = 1.5
+  const moduleGap = 10
+  const padX = 20
+  const padY = 36
 
   const totalW = padX * 2 + BRICKS_PER_MODULE * (cellW + gapX) - gapX
   const totalH = padY * 2 + MODULES * (cellH + gapY) - gapY + (MODULES - 1) * moduleGap
@@ -139,7 +139,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
     <svg
       viewBox={`0 0 ${totalW} ${totalH}`}
       xmlns="http://www.w3.org/2000/svg"
-      style={{ width: '100%', maxWidth: '100%' }}
+      style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}
       role="img"
       aria-label="Battery pack cell visualization"
     >
@@ -157,7 +157,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
       <rect x="4" y="4" width={totalW - 8} height={totalH - 8} rx="12" fill="#0f172a" stroke="url(#packBorder)" strokeWidth="2" opacity="0.9" />
 
       {/* Pack title */}
-      <text x={totalW / 2} y="30" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">
+      <text x={totalW / 2} y="22" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">
         BATTERY PACK
       </text>
 
