@@ -16,6 +16,7 @@ import (
 // and Tesla API synchronisation. Handlers delegate here instead of
 // interacting with repositories directly for complex operations.
 type VehicleService struct {
+	db                *database.DB
 	vehicleRepo       *database.VehicleRepo
 	positionRepo      *database.PositionRepo
 	climateRepo       *database.ClimateRepo
@@ -29,6 +30,7 @@ type VehicleService struct {
 // NewVehicleService creates a VehicleService with all required repos.
 func NewVehicleService(db *database.DB) *VehicleService {
 	return &VehicleService{
+		db:                db,
 		vehicleRepo:       database.NewVehicleRepo(db),
 		positionRepo:      database.NewPositionRepo(db),
 		climateRepo:       database.NewClimateRepo(db),
@@ -160,14 +162,28 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 
 	// Security
 	if v := all["Locked"]; v != nil {
-		if b, ok := v.Raw.(bool); ok { state.IsLocked = b }
+		switch lv := v.Raw.(type) {
+		case bool: state.IsLocked = lv
+		case string: state.IsLocked = lv == "true" || lv == "1"
+		}
 	}
 	if v := all["SentryMode"]; v != nil {
 		switch sv := v.Raw.(type) {
 		case bool: state.SentryMode = sv
-		case string: state.SentryMode = !strings.Contains(sv, "Off") && sv != "false"
+		case string: state.SentryMode = !strings.Contains(sv, "Off") && sv != "false" && sv != ""
 		}
 	}
+
+	// Software version — try Version first, then SoftwareUpdateVersion
+	if v := all["Version"]; v != nil {
+		if sv, ok := v.Raw.(string); ok && sv != "" { state.SoftwareVersion = sv }
+	}
+	if state.SoftwareVersion == "" {
+		if v := all["SoftwareUpdateVersion"]; v != nil {
+			if sv, ok := v.Raw.(string); ok && sv != "" { state.SoftwareVersion = sv }
+		}
+	}
+
 	if v := all["HvacPower"]; v != nil {
 		switch hv := v.Raw.(type) {
 		case bool: state.IsClimateOn = hv
@@ -176,9 +192,15 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// Software version
-	if v := all["Version"]; v != nil {
-		if sv, ok := v.Raw.(string); ok { state.SoftwareVersion = sv }
+	// Odometer: if still 0 after SignalStore, try MAX from positions
+	if state.Odometer == 0 {
+		var latestOdo *float64
+		_ = s.db.Pool.QueryRow(context.Background(),
+			`SELECT MAX(odometer) FROM positions WHERE vehicle_id = $1 AND odometer > 0`,
+			vehicle.ID).Scan(&latestOdo)
+		if latestOdo != nil && *latestOdo > 0 {
+			state.Odometer = *latestOdo
+		}
 	}
 
 	return state
