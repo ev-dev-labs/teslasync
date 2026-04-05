@@ -139,6 +139,11 @@ func (h *TelemetryHandler) IsCaptureEnabled() bool {
 // StartCleanup runs periodic cleanup of stale streaming state entries
 // and stale drive/charge sessions. Call this once at startup; it stops when ctx is cancelled.
 func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
+	// Run cleanup immediately on startup to close orphaned DB sessions
+	if h.sessionTracker != nil {
+		h.sessionTracker.CleanupStaleSessions(ctx, 30*time.Minute)
+	}
+
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
@@ -351,9 +356,19 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	state.LastSignals = last
 	h.mu.Unlock()
 
-	// Drive/charge session detection from streaming signals
+	// Drive/charge session detection from streaming signals.
+	// Pass the handler's accumulated signals so the session tracker can use
+	// last-known values (battery, odometer, location) when starting new sessions —
+	// the current batch may only contain VehicleSpeed.
 	if vehicleID > 0 {
-		h.sessionTracker.ProcessSignals(ctx, vehicleID, vin, signals)
+		h.accumulatedSignalsMu.Lock()
+		accum := make(map[string]interface{})
+		for k, v := range h.accumulatedSignals[vin] {
+			accum[k] = v
+		}
+		h.accumulatedSignalsMu.Unlock()
+
+		h.sessionTracker.ProcessSignals(ctx, vehicleID, vin, signals, accum)
 		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
 	}
 

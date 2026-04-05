@@ -169,12 +169,17 @@ func accumulateSignals(acc map[string]interface{}, signals map[string]interface{
 }
 
 // ProcessSignals evaluates incoming telemetry signals for drive/charge transitions.
-func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
-	t.trackDriving(ctx, vehicleID, vin, signals)
+// accumulatedSignals contains the merged set of all signals seen in the handler's
+// current accumulation window — used to fill in start values (battery, odometer,
+// location) that may not be in the current batch.
+func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
+	t.trackDriving(ctx, vehicleID, vin, signals, accumulatedSignals)
 	t.trackCharging(ctx, vehicleID, vin, signals)
 }
 
 // CleanupStaleSessions closes sessions that have been open too long without updates.
+// Also cleans up orphaned DB sessions (open sessions with no in-memory tracker,
+// e.g. from before a restart).
 func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, staleTimeout time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -193,6 +198,22 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 				Dur("idle", now.Sub(charge.LastSeen)).Msg("telemetry: closing stale charge session")
 			t.completeChargeLocked(ctx, vehicleID, charge, nil)
 		}
+	}
+
+	// Close orphaned DB sessions — drives/charges with NULL end_date that started
+	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart)
+	cutoff := now.Add(-staleTimeout)
+	_, err := t.db.Pool.Exec(ctx,
+		`UPDATE drives SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
+		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+	if err != nil {
+		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
+	}
+	_, err = t.db.Pool.Exec(ctx,
+		`UPDATE charging_sessions SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
+		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+	if err != nil {
+		log.Warn().Err(err).Msg("telemetry: failed to close orphaned charges")
 	}
 }
 
@@ -267,7 +288,7 @@ func intPtr(v int) *int           { return &v }
 func boolPtr(v bool) *bool        { return &v }
 func strPtr(v string) *string     { return &v }
 
-func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
 	if !hasSpeed {
 		// Even without speed, accumulate signals for active drive
@@ -288,15 +309,44 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 	if speed > 0 && !hasDrive {
 		// === START DRIVE ===
-		batteryLevel, _ := signalInt(signals, "BatteryLevel", "Soc")
+		// Use accumulated signals from the handler as fallback — the first batch
+		// with VehicleSpeed often lacks BatteryLevel, Odometer, Location etc.
+		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
+		if !hasBat {
+			batteryLevel, _ = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
+		}
 		odometer, hasOdo := signalFloat(signals, "Odometer")
+		if !hasOdo {
+			odometer, hasOdo = signalFloat(accumulatedSignals, "Odometer")
+		}
 		lat, lon, hasLoc := signalLatLon(signals)
-		elevation, _ := signalFloat(signals, "Elevation")
-		ratedRange, _ := signalFloat(signals, "RatedRange")
-		idealRange, _ := signalFloat(signals, "IdealBatteryRange")
-		estRange, _ := signalFloat(signals, "EstBatteryRange")
-		soc, _ := signalFloat(signals, "Soc", "BatteryLevel")
-		usableSoc, _ := signalFloat(signals, "UsableSoc")
+		if !hasLoc {
+			lat, lon, hasLoc = signalLatLon(accumulatedSignals)
+		}
+		elevation, hasElev := signalFloat(signals, "Elevation")
+		if !hasElev {
+			elevation, _ = signalFloat(accumulatedSignals, "Elevation")
+		}
+		ratedRange, hasRR := signalFloat(signals, "RatedRange")
+		if !hasRR {
+			ratedRange, _ = signalFloat(accumulatedSignals, "RatedRange")
+		}
+		idealRange, hasIR := signalFloat(signals, "IdealBatteryRange")
+		if !hasIR {
+			idealRange, _ = signalFloat(accumulatedSignals, "IdealBatteryRange")
+		}
+		estRange, hasER := signalFloat(signals, "EstBatteryRange")
+		if !hasER {
+			estRange, _ = signalFloat(accumulatedSignals, "EstBatteryRange")
+		}
+		soc, hasSoc := signalFloat(signals, "Soc", "BatteryLevel")
+		if !hasSoc {
+			soc, _ = signalFloat(accumulatedSignals, "Soc", "BatteryLevel")
+		}
+		usableSoc, hasUS := signalFloat(signals, "UsableSoc")
+		if !hasUS {
+			usableSoc, _ = signalFloat(accumulatedSignals, "UsableSoc")
+		}
 
 		drive := &models.Drive{
 			VehicleID:       vehicleID,
@@ -677,11 +727,12 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if v, ok := signalFloat(finalSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
 
 	var powerMax, powerMin *float64
-	if active.PowerMax != 0 {
+	if active.SpeedCount > 0 {
+		// Always store power stats if we had any speed readings (drive was active)
 		powerMax = &active.PowerMax
-	}
-	if active.PowerMin < math.MaxFloat64 {
-		powerMin = &active.PowerMin
+		if active.PowerMin < math.MaxFloat64 {
+			powerMin = &active.PowerMin
+		}
 	}
 
 	// Build enhanced fields map
