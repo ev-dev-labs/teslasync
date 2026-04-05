@@ -769,18 +769,18 @@ function FleetTelemetryConfigTool() {
         </button>
         <button
           onClick={() => getErrors.mutate()}
-          disabled={getErrors.isPending || !selectedVin || !configExists}
-          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-amber' : 'text-gray-600')}
-          title={!configExists ? 'Click "Get Config" first' : 'Fetch recent fleet telemetry errors for this vehicle'}
+          disabled={getErrors.isPending || !selectedVin}
+          className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-amber"
+          title="Fetch recent fleet telemetry errors for this vehicle"
         >
           {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
           View Errors
         </button>
         <button
           onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle? The vehicle will stop streaming telemetry data.')) deleteConfig.mutate() }}
-          disabled={deleteConfig.isPending || !selectedVin || !configExists}
-          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-red' : 'text-gray-600')}
-          title={!configExists ? 'Click "Get Config" first to check if a configuration exists' : 'Remove fleet telemetry config from this vehicle'}
+          disabled={deleteConfig.isPending || !selectedVin}
+          className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-red"
+          title="Remove fleet telemetry config from this vehicle"
         >
           {deleteConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
           Delete Config
