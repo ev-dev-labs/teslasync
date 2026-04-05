@@ -2285,7 +2285,10 @@ func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, sig
 func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	_, hasDist := signals["SettingDistanceUnit"]
 	_, hasTemp := signals["SettingTemperatureUnit"]
-	if !hasDist && !hasTemp {
+	_, hasCharge := signals["SettingChargeUnit"]
+	_, hasPressure := signals["SettingTirePressureUnit"]
+	_, has24h := signals["Setting24HourTime"]
+	if !hasDist && !hasTemp && !hasCharge && !hasPressure && !has24h {
 		return
 	}
 
