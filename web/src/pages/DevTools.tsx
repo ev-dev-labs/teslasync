@@ -13,6 +13,7 @@ import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
+import SignalConfigModal from '../components/SignalConfigModal'
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
@@ -564,21 +565,13 @@ function FleetTelemetrySubscribeTool() {
     'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Location', 'GpsHeading',
     'ChargeState', 'ChargeLimitSoc', 'InsideTemp', 'OutsideTemp', 'Locked', 'SentryMode',
   ])
-  const [showFields, setShowFields] = useState(false)
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [showSignalModal, setShowSignalModal] = useState(false)
+  // Per-signal intervals (set via modal)
+  const [signalIntervals, setSignalIntervals] = useState<Map<string, number>>(new Map())
 
   const toggleVin = (vin: string) => {
     setSelectedVins(prev => prev.includes(vin) ? prev.filter(v => v !== vin) : [...prev, vin])
-  }
-  const toggleField = (field: string) => {
-    setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])
-  }
-  const selectCategory = (fields: string[]) => {
-    setSelectedFields(prev => {
-      const allSelected = fields.every(f => prev.includes(f))
-      if (allSelected) return prev.filter(f => !fields.includes(f))
-      return [...new Set([...prev, ...fields])]
-    })
   }
 
   const mut = useMutation({
@@ -589,6 +582,8 @@ function FleetTelemetrySubscribeTool() {
       ca: ca || undefined,
       fields: selectedFields,
       interval_seconds: parseInt(interval) || 10,
+      // Per-signal intervals from the modal (overrides interval_seconds)
+      field_intervals: Object.fromEntries(signalIntervals),
     }),
     onSuccess: (data: Record<string, unknown>) => setResult(data),
     onError: (err) => setResult({ error: (err as Error).message }),
@@ -644,44 +639,28 @@ function FleetTelemetrySubscribeTool() {
         <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(inputClasses, 'h-16 resize-y font-mono text-[10px]')} />
       </div>
 
-      {/* Field Selection */}
+      {/* Signal Configuration */}
       <div className="mb-3">
-        <button onClick={() => setShowFields(!showFields)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors w-full">
-          {showFields ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          <span className="font-medium">Telemetry Fields</span>
+        <button onClick={() => setShowSignalModal(true)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-neon-cyan transition-colors w-full px-3 py-2 rounded-lg border border-white/[0.06] hover:border-neon-cyan/30 bg-white/[0.02]">
+          <Settings className="h-3.5 w-3.5" />
+          <span className="font-medium">Configure Signals</span>
           <span className="text-[10px] text-[var(--text-muted)] ml-auto">{selectedFields.length} selected</span>
         </button>
-        {showFields && (
-          <div className="mt-2 space-y-2 max-h-72 overflow-y-auto pr-1">
-            {TELEMETRY_FIELDS.map(cat => {
-              const allSelected = cat.fields.every(f => selectedFields.includes(f))
-              return (
-                <div key={cat.category}>
-                  <button onClick={() => selectCategory(cat.fields)} className={clsx(
-                    'text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5 cursor-pointer',
-                    allSelected ? 'text-neon-cyan' : 'text-[var(--text-muted)]'
-                  )}>
-                    <div className={clsx('h-2.5 w-2.5 rounded-sm border', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20')} />
-                    {cat.category}
-                  </button>
-                  <div className="flex flex-wrap gap-1">
-                    {cat.fields.map(f => (
-                      <button key={f} onClick={() => toggleField(f)} className={clsx(
-                        'px-2 py-0.5 rounded text-[10px] border transition-colors',
-                        selectedFields.includes(f)
-                          ? 'bg-neon-cyan/15 border-neon-cyan/30 text-neon-cyan'
-                          : 'bg-white/[0.02] border-white/[0.06] text-[var(--text-muted)] hover:border-white/[0.12]'
-                      )}>
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
+
+      <SignalConfigModal
+        open={showSignalModal}
+        onClose={() => setShowSignalModal(false)}
+        categories={TELEMETRY_FIELDS}
+        initialSelected={selectedFields}
+        initialInterval={parseInt(interval) || 10}
+        onSubmit={(signals) => {
+          setSelectedFields(signals.map(s => s.name))
+          const intervals = new Map<string, number>()
+          signals.forEach(s => intervals.set(s.name, s.interval))
+          setSignalIntervals(intervals)
+        }}
+      />
 
       <button onClick={() => mut.mutate()} disabled={mut.isPending || selectedVins.length === 0 || !hostname} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
         {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Satellite className="h-3.5 w-3.5" />}

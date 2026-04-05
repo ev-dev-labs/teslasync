@@ -688,12 +688,13 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	}
 
 	var req struct {
-		VINs     []string `json:"vins"`
-		Hostname string   `json:"hostname"`
-		Port     int      `json:"port"`
-		CA       string   `json:"ca"`
-		Fields   []string `json:"fields"`
-		Interval int      `json:"interval_seconds"`
+		VINs           []string       `json:"vins"`
+		Hostname       string         `json:"hostname"`
+		Port           int            `json:"port"`
+		CA             string         `json:"ca"`
+		Fields         []string       `json:"fields"`
+		Interval       int            `json:"interval_seconds"`
+		FieldIntervals map[string]int `json:"field_intervals"` // per-signal interval overrides
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -759,11 +760,14 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	}
 
 	for _, f := range req.Fields {
+		// Priority: per-signal interval from UI > tiered defaults > global interval
 		interval := req.Interval
-		if fastDrivingSignals[f] && req.Interval >= 10 {
-			interval = 0 // 500ms (Tesla default when interval_seconds = 0)
+		if perSignal, ok := req.FieldIntervals[f]; ok {
+			interval = perSignal
+		} else if fastDrivingSignals[f] && req.Interval >= 10 {
+			interval = 0
 		} else if slowConfigSignals[f] {
-			interval = 300 // 5 minutes for config that rarely changes
+			interval = 300
 		}
 		field := tesla.FleetTelemetryField{IntervalSeconds: interval}
 		if delta, ok := minDeltaFields[f]; ok {
