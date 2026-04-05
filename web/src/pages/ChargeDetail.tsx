@@ -76,8 +76,13 @@ export default function ChargeDetail() {
   }
 
   const batteryGain = (session.end_battery_level ?? session.start_battery_level) - session.start_battery_level
-  const costPerKwh = session.cost && session.charge_energy_added > 0
-    ? fmtNumber(session.cost / session.charge_energy_added, 2)
+  
+  // Compute cost from electricity rate if not set by backend
+  const electricityRate = 0.12 // $/kWh default — TODO: read from geofence settings
+  const estimatedCost = session.cost ?? (session.charge_energy_added > 0 ? session.charge_energy_added * electricityRate : null)
+  
+  const costPerKwh = estimatedCost && session.charge_energy_added > 0
+    ? fmtNumber(estimatedCost / session.charge_energy_added, 3)
     : null
 
   // Charging efficiency
@@ -181,7 +186,7 @@ export default function ChargeDetail() {
           <div className="relative flex flex-wrap items-center gap-6 lg:gap-10 justify-center">
             <RadialGauge value={session.charge_energy_added} max={Math.max(session.charge_energy_added * 1.5, 50)} label="Energy Added" unit="kWh" color="#10b981" size={120} />
             <RadialGauge value={session.end_battery_level ?? session.start_battery_level} max={100} label="End SoC" unit="%" color="#00f0ff" size={120} />
-            <RadialGauge value={session.charger_power ?? 0} max={250} label="Peak Power" unit="kW" color="#a855f7" size={120} />
+            <RadialGauge value={Math.round((session.charger_power ?? 0) * 100) / 100} max={250} label="Peak Power" unit="kW" color="#a855f7" size={120} />
             <RadialGauge value={session.duration_min} max={Math.max(session.duration_min * 1.5, 30)} label="Duration" unit="min" color="#f59e0b" size={120} />
             {chargingEfficiency && (
               <RadialGauge value={Number(chargingEfficiency)} max={100} label="Efficiency" unit="%" color="#06b6d4" size={120} />
@@ -196,14 +201,14 @@ export default function ChargeDetail() {
           <h3 className="section-title flex items-center gap-2 mb-4">
             <Battery className="h-4 w-4 text-neon-green" /> Battery Fill
           </h3>
-          <MetricBar value={session.start_battery_level} max={100} color="#f59e0b" label="Start" sublabel={`${session.start_battery_level}%`} />
+          <MetricBar value={Math.round(session.start_battery_level)} max={100} color="#f59e0b" label="Start" sublabel={`${Math.round(session.start_battery_level)}%`} />
           <div className="mt-3" />
-          <MetricBar value={session.end_battery_level ?? session.start_battery_level} max={100} color="#10b981" label="End" sublabel={`${session.end_battery_level ?? '?'}%`} />
+          <MetricBar value={Math.round(session.end_battery_level ?? session.start_battery_level)} max={100} color="#10b981" label="End" sublabel={`${session.end_battery_level != null ? Math.round(session.end_battery_level) : '?'}%`} />
           <div className="mt-3 flex flex-wrap items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
-            <span>+{batteryGain}% gained</span>
+            <span>+{Math.round(batteryGain)}% gained</span>
             <span>{fmtNumber(session.charge_energy_added)} kWh added</span>
             {rangeGained != null && <span className="text-neon-green">+{Math.round(convertDistance(rangeGained))} {distanceUnit} range</span>}
-            {session.cost != null && <span className="text-neon-amber">${fmtNumber(session.cost, 2)} cost</span>}
+            {estimatedCost != null && <span className="text-neon-amber">${fmtNumber(estimatedCost, 2)} cost</span>}
           </div>
         </GlassPanel>
       </FadeIn>
@@ -212,9 +217,9 @@ export default function ChargeDetail() {
       <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         <StaggerItem><StatCard icon={Zap} color="#10b981" value={<AnimatedNumber value={session.charge_energy_added} decimals={1} suffix=" kWh" />} label="Energy Added" /></StaggerItem>
         <StaggerItem><StatCard icon={Clock} color="#f59e0b" value={`${Math.floor(session.duration_min / 60)}h ${Math.round(session.duration_min % 60)}m`} label="Duration" /></StaggerItem>
-        <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={`${session.charger_power ?? '—'} kW`} label="Peak Power" /></StaggerItem>
+        <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={session.charger_power != null ? `${fmtNumber(session.charger_power, 2)} kW` : '—'} label="Peak Power" /></StaggerItem>
         <StaggerItem><StatCard icon={TrendingUp} color="#00f0ff" value={`${session.start_battery_level}% → ${session.end_battery_level ?? '?'}%`} label="SoC Range" /></StaggerItem>
-        <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={session.cost != null ? `$${fmtNumber(session.cost, 2)}` : '—'} label="Total Cost" /></StaggerItem>
+        <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={estimatedCost != null ? `$${fmtNumber(estimatedCost, 2)}` : '—'} label="Total Cost" /></StaggerItem>
         <StaggerItem><StatCard icon={Timer} color="#6b7280" value={costPerKwh ? `$${costPerKwh}` : '—'} label="Per kWh" /></StaggerItem>
         <StaggerItem><StatCard icon={ArrowUpRight} color="#10b981" value={rangeGained != null ? `+${Math.round(convertDistance(rangeGained))} ${distanceUnit}` : '—'} label="Range Gained" /></StaggerItem>
         <StaggerItem><StatCard icon={Activity} color="#06b6d4" value={chargeSpeedKwhH ? `${chargeSpeedKwhH}` : '—'} label="kWh/h Avg" /></StaggerItem>
