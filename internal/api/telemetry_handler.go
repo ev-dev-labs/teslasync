@@ -2127,7 +2127,12 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 	_, hasRoute := signals["RouteLine"]
 	_, hasLocation := signals["Location"]
 	_, hasRouteUpdated := signals["RouteLastUpdated"]
-	if !hasDest && !hasMiles && !hasRoute && !hasLocation && !hasRouteUpdated {
+	_, hasAtHome := signals["LocatedAtHome"]
+	_, hasAtWork := signals["LocatedAtWork"]
+	_, hasAtFav := signals["LocatedAtFavorite"]
+	_, hasGpsState := signals["GpsState"]
+	if !hasDest && !hasMiles && !hasRoute && !hasLocation && !hasRouteUpdated &&
+		!hasAtHome && !hasAtWork && !hasAtFav && !hasGpsState {
 		return
 	}
 
