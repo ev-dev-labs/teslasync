@@ -193,14 +193,28 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	// --- Phase 2: DB fallbacks for every field still at zero/empty ---
 	ctx := context.Background()
 
-	// Odometer: fallback from positions
+	// Odometer: use MAX across ALL positions (not just latest — latest may lack odometer)
 	if state.Odometer == 0 {
-		if pos, err := s.positionRepo.GetLatest(ctx, vehicle.ID); err == nil && pos != nil && pos.Odometer > 0 {
-			state.Odometer = pos.Odometer
+		var maxOdo *float64
+		_ = s.db.Pool.QueryRow(ctx,
+			`SELECT MAX(odometer) FROM positions WHERE vehicle_id = $1 AND odometer > 0`,
+			vehicle.ID).Scan(&maxOdo)
+		if maxOdo != nil && *maxOdo > 0 {
+			state.Odometer = *maxOdo
+		}
+	}
+	// Still zero? Try drives table end_odometer
+	if state.Odometer == 0 {
+		var maxOdo *float64
+		_ = s.db.Pool.QueryRow(ctx,
+			`SELECT MAX(end_odometer) FROM drives WHERE vehicle_id = $1 AND end_odometer > 0`,
+			vehicle.ID).Scan(&maxOdo)
+		if maxOdo != nil && *maxOdo > 0 {
+			state.Odometer = *maxOdo
 		}
 	}
 
-	// Firmware: fallback from vehicle_config_snapshots
+	// Firmware: try vehicle_config_snapshots, then drives table firmware field
 	if state.SoftwareVersion == "" {
 		if cfg, err := s.vehicleConfigRepo.GetLatest(ctx, vehicle.ID); err == nil && cfg != nil {
 			if cfg.Version != nil && *cfg.Version != "" {
@@ -208,6 +222,19 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 			} else if cfg.SoftwareUpdateVersion != nil && *cfg.SoftwareUpdateVersion != "" {
 				state.SoftwareVersion = *cfg.SoftwareUpdateVersion
 			}
+		}
+	}
+	// Last resort: check VehicleConfigSnapshot raw SQL
+	if state.SoftwareVersion == "" {
+		var ver *string
+		_ = s.db.Pool.QueryRow(ctx,
+			`SELECT COALESCE(version, software_update_version)
+			 FROM vehicle_config_snapshots
+			 WHERE vehicle_id = $1 AND (version IS NOT NULL AND version != '' OR software_update_version IS NOT NULL AND software_update_version != '')
+			 ORDER BY created_at DESC LIMIT 1`,
+			vehicle.ID).Scan(&ver)
+		if ver != nil && *ver != "" {
+			state.SoftwareVersion = *ver
 		}
 	}
 
