@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest } from '../api'
+import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest, getVehicleConfigLatest, getUserPreferenceLatest } from '../api'
 import { cleanNil } from '../lib/cleanNil'
 import { useState } from 'react'
 import { MapContainer, Polyline, Marker } from 'react-leaflet'
@@ -12,7 +12,7 @@ import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
   Cpu, BatteryCharging, ChevronRight, Cog, ShieldAlert, DoorClosed,
-  Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin,
+  Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin, Settings,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -116,6 +116,16 @@ export default function VehicleDetail() {
     queryKey: ['location-latest', vehicleId],
     queryFn: () => getLocationSnapshotLatest(vehicleId),
     refetchInterval: 5000,
+  })
+  const { data: vehicleConfigData } = useQuery({
+    queryKey: ['vehicle-config-latest', vehicleId],
+    queryFn: () => getVehicleConfigLatest(vehicleId),
+    refetchInterval: 30000,
+  })
+  const { data: userPrefData } = useQuery({
+    queryKey: ['user-pref-latest', vehicleId],
+    queryFn: () => getUserPreferenceLatest(vehicleId),
+    refetchInterval: 30000,
   })
 
   const state = stateData?.state
@@ -822,6 +832,65 @@ export default function VehicleDetail() {
                     <p className="text-[10px] text-[var(--text-muted)] font-mono">
                       {fmtNumber(state.latitude, 5)}, {fmtNumber(state.longitude, 5)}
                     </p>
+                  </div>
+                </GlassPanel>
+              </FadeIn>
+            )}
+
+            {/* Vehicle Configuration */}
+            {vehicleConfigData && (
+              <FadeIn delay={0.18}>
+                <GlassPanel className="p-5">
+                  <h3 className="section-title mb-4 flex items-center gap-2">
+                    <Car className="h-4 w-4 text-neon-purple" />
+                    Vehicle Configuration
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Model', value: cleanNil(vehicleConfigData.car_type) },
+                      { label: 'Trim', value: cleanNil(vehicleConfigData.trim) },
+                      { label: 'Color', value: cleanNil(vehicleConfigData.exterior_color) },
+                      { label: 'Roof', value: cleanNil(vehicleConfigData.roof_color) },
+                      { label: 'Wheels', value: cleanNil(vehicleConfigData.wheel_type) },
+                      { label: 'Firmware', value: cleanNil(vehicleConfigData.version) },
+                      { label: 'Name', value: cleanNil(vehicleConfigData.vehicle_name) },
+                      { label: 'Charge Port', value: cleanNil(vehicleConfigData.charge_port) },
+                      { label: 'Rear Heaters', value: cleanNil(vehicleConfigData.rear_seat_heaters) },
+                      { label: 'Efficiency', value: cleanNil(vehicleConfigData.efficiency_package) },
+                      { label: 'SW Update', value: cleanNil(vehicleConfigData.software_update_version) || 'None' },
+                      { label: 'SW Download', value: vehicleConfigData.software_update_download_pct != null ? `${vehicleConfigData.software_update_download_pct}%` : '—' },
+                    ].filter(item => item.value).map(item => (
+                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </GlassPanel>
+              </FadeIn>
+            )}
+
+            {/* User Preferences */}
+            {userPrefData && (
+              <FadeIn delay={0.19}>
+                <GlassPanel className="p-5">
+                  <h3 className="section-title mb-4 flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-neon-amber" />
+                    User Preferences
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {[
+                      { label: 'Distance', value: cleanNil(userPrefData.setting_distance_unit) },
+                      { label: 'Temperature', value: cleanNil(userPrefData.setting_temperature_unit) },
+                      { label: 'Charge Unit', value: cleanNil(userPrefData.setting_charge_unit) },
+                      { label: 'Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
+                      { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
+                    ].filter(item => item.value).map(item => (
+                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value}</p>
+                      </div>
+                    ))}
                   </div>
                 </GlassPanel>
               </FadeIn>
