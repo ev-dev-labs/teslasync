@@ -36,7 +36,8 @@ const stateColors: Record<string, { bg: string; text: string; dot: string; hex: 
   asleep: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400', hex: '#a78bfa' },
 }
 
-function getStateStyle(state: string) {
+function getStateStyle(state?: string | null) {
+  if (!state || typeof state !== 'string') return stateColors.offline
   return stateColors[state.toLowerCase()] ?? stateColors.offline
 }
 
@@ -51,11 +52,13 @@ function formatDuration(seconds: number): string {
 export default function StateMachineDebugger() {
   const vehicleId = 1
 
-  const { data: currentState, isLoading: stateLoading } = useQuery<VehicleState>({
+  const { data: stateResponse, isLoading: stateLoading } = useQuery<{ state?: VehicleState; live?: boolean }>({
     queryKey: ['vehicle-state', vehicleId],
     queryFn: () => request(`/vehicles/${vehicleId}/state`),
     refetchInterval: 3_000,
   })
+
+  const currentState = stateResponse?.state
 
   const { data: timeline, isLoading: timelineLoading } = useQuery<TimelineResponse>({
     queryKey: ['state-timeline', vehicleId],
@@ -69,7 +72,7 @@ export default function StateMachineDebugger() {
   const durationByState: Record<string, number> = {}
   const countByState: Record<string, number> = {}
   for (const t of transitions) {
-    const s = t.state.toLowerCase()
+    const s = (t.state ?? 'unknown').toLowerCase()
     durationByState[s] = (durationByState[s] ?? 0) + t.duration_seconds
     countByState[s] = (countByState[s] ?? 0) + 1
   }
