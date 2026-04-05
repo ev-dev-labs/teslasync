@@ -280,9 +280,17 @@ export default function TirePressure() {
   // Thresholds in the display unit
   const lowThreshold = convertPressure(2.4)   // ~35 PSI
 
+  const [timeRange, setTimeRange] = useState(200)
+  const TIME_OPTIONS = [
+    { label: '7 days', value: 50 },
+    { label: '30 days', value: 200 },
+    { label: '90 days', value: 500 },
+    { label: 'All', value: 2000 },
+  ]
+
   const { data: history, isLoading: loadingHistory } = useQuery({
-    queryKey: ['tire-pressure-history', vehicleId],
-    queryFn: () => getTirePressure(vehicleId!, 200),
+    queryKey: ['tire-pressure-history', vehicleId, timeRange],
+    queryFn: () => getTirePressure(vehicleId!, timeRange),
     enabled: vehicleId !== null,
     refetchInterval: 10000,
   })
@@ -322,16 +330,30 @@ export default function TirePressure() {
     <FadeIn>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
         <PageHeader title="Tire Pressure" subtitle="Monitor tire pressure across all four tires" icon={<Gauge className="h-7 w-7 text-neon-cyan" />} />
-        {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
-            onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {TIME_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => setTimeRange(opt.value)}
+                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+                  timeRange === opt.value
+                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                    : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                )}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {vehicles && vehicles.length > 1 && (
+            <select
+              value={vehicleId ?? ''}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+            >
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
+            </select>
+          )}
+        </div>
       </div>
 
       {anyLow && (
