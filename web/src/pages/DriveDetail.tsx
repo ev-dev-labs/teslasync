@@ -404,13 +404,13 @@ export default function DriveDetail() {
               {(drive.outside_temp_avg ?? avgOutsideTemp) !== null && (
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Outside Temp</p>
-                  <p className="text-lg font-bold text-blue-400">{u.temp((drive.outside_temp_avg ?? avgOutsideTemp) as number)}</p>
+                  <p className="text-lg font-bold text-blue-400">{drive.outside_temp_avg != null ? u.temp(drive.outside_temp_avg) : `${fmtNumber(avgOutsideTemp!, 1)}${u.tempUnit}`}</p>
                 </div>
               )}
               {(drive.inside_temp_avg ?? avgInsideTemp) !== null && (
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Inside Temp</p>
-                  <p className="text-lg font-bold text-orange-400">{u.temp((drive.inside_temp_avg ?? avgInsideTemp) as number)}</p>
+                  <p className="text-lg font-bold text-orange-400">{drive.inside_temp_avg != null ? u.temp(drive.inside_temp_avg) : `${fmtNumber(avgInsideTemp!, 1)}${u.tempUnit}`}</p>
                 </div>
               )}
               <div className="text-center">
