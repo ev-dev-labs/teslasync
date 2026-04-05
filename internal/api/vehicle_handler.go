@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -145,92 +144,31 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
-	// PRIMARY: Build state from in-memory SignalStore (always complete, <1ms)
+	// PRIMARY: Build state from in-memory SignalStore + DB fallbacks (never nil, <5ms)
 	if h.telemetryHandler != nil {
 		store := h.telemetryHandler.GetSignalStore()
-		if store != nil {
-			state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
-			if state != nil {
-				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"state":       state,
-					"live":        true,
-					"data_source": "signal_store",
-				})
-				return
-			}
+		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
+		// Determine if we have live telemetry data vs pure DB fallback
+		hasLiveSignals := store != nil && len(store.GetAll(vehicle.ID)) > 0
+		dataSource := "signal_store"
+		if !hasLiveSignals {
+			dataSource = "db_fallback"
 		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"state":       state,
+			"live":        hasLiveSignals,
+			"data_source": dataSource,
+		})
+		return
 	}
 
 	// SECONDARY: Build state from DB records (fleet telemetry snapshot tables)
-	telemetryStreaming := h.telemetryHandler != nil && h.telemetryHandler.IsVehicleStreaming(vehicle.VIN)
-	if telemetryStreaming {
-		state := h.vehicleSvc.BuildStateFromDB(r.Context(), vehicle)
-		if state != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"state":       state,
-				"live":        true,
-				"data_source": "fleet_telemetry",
-			})
-			return
-		}
-	}
-
-	// TERTIARY: Use Tesla Fleet API
-	suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(r.Context())
-	if suspended || !h.teslaClient.HasValidToken() {
-		pos, _ := h.vehicleSvc.PositionRepo().GetLatest(r.Context(), id)
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"vehicle":     vehicle,
-			"position":    pos,
-			"live":        false,
-			"suspended":   suspended,
-			"data_source": "cached",
-		})
-		return
-	}
-
-	data, err := h.teslaClient.GetVehicleData(r.Context(), vehicle.VIN)
-	if err != nil {
-		pos, _ := h.vehicleSvc.PositionRepo().GetLatest(r.Context(), id)
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"vehicle":     vehicle,
-			"position":    pos,
-			"live":        false,
-			"error":       err.Error(),
-			"data_source": "cached",
-		})
-		return
-	}
-
-	state := &models.VehicleState{
-		VehicleID:       vehicle.ID,
-		State:           data.State,
-		Latitude:        data.DriveState.Latitude,
-		Longitude:       data.DriveState.Longitude,
-		BatteryLevel:    data.ChargeState.BatteryLevel,
-		RatedRange:      data.ChargeState.BatteryRange,
-		IdealRange:      data.ChargeState.IdealBatteryRange,
-		Odometer:        data.VehicleState.Odometer,
-		InsideTemp:      data.ClimateState.InsideTemp,
-		OutsideTemp:     data.ClimateState.OutsideTemp,
-		IsClimateOn:     data.ClimateState.IsClimateOn,
-		IsCharging:      data.ChargeState.ChargingState == "Charging",
-		ChargerPower:    data.ChargeState.ChargerPower,
-		ChargeRate:      data.ChargeState.ChargeRate,
-		TimeToFullChg:   data.ChargeState.TimeToFullCharge,
-		IsLocked:        data.VehicleState.Locked,
-		SentryMode:      data.VehicleState.SentryMode,
-		SoftwareVersion: data.VehicleState.SoftwareUpdate.Version,
-	}
-	if data.DriveState.Speed != nil {
-		state.Speed = float64(*data.DriveState.Speed)
-	}
-	state.Power = float64(data.DriveState.Power)
-
+	// Only reached when telemetryHandler is nil (no MQTT configured)
+	state := h.vehicleSvc.BuildStateFromSignalStore(nil, vehicle)
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"state":       state,
-		"live":        true,
-		"data_source": "fleet_api",
+		"live":        false,
+		"data_source": "db_fallback",
 	})
 }
 

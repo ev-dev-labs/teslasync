@@ -58,34 +58,32 @@ func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
 	return s.settingsRepo
 }
 
-// BuildStateFromSignalStore constructs a VehicleState from the in-memory SignalStore.
-// Returns always-complete data — never has null fields for known signals.
-// Returns nil only if no signals exist for this vehicle.
+// BuildStateFromSignalStore constructs a VehicleState from the in-memory
+// SignalStore, with comprehensive DB fallbacks for every field.
+// NEVER returns nil — always builds a complete state from whatever data
+// is available (SignalStore → snapshot tables → zero defaults).
 func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *models.Vehicle) *models.VehicleState {
-	if store == nil {
-		return nil
-	}
-	all := store.GetAll(vehicle.ID)
-	if len(all) == 0 {
-		return nil
-	}
-
 	state := &models.VehicleState{
 		VehicleID: vehicle.ID,
 		State:     vehicle.State,
 	}
+
+	// Collect signals from store (may be empty after pod restart)
+	var all map[string]*signal.Value
+	if store != nil {
+		all = store.GetAll(vehicle.ID)
+	}
+	if all == nil {
+		all = make(map[string]*signal.Value)
+	}
+
+	// --- Phase 1: Read every field from SignalStore ---
 
 	if v := all["VehicleSpeed"]; v != nil {
 		if f, ok := v.Raw.(float64); ok { state.Speed = f }
 	}
 	if v := all["Odometer"]; v != nil {
 		if f, ok := v.Raw.(float64); ok { state.Odometer = f }
-	}
-	// Fallback: get odometer from latest position or daily mileage if not in SignalStore
-	if state.Odometer == 0 {
-		if pos, err := s.positionRepo.GetLatest(context.Background(), vehicle.ID); err == nil && pos != nil && pos.Odometer > 0 {
-			state.Odometer = pos.Odometer
-		}
 	}
 	if v := all["BatteryLevel"]; v != nil {
 		switch bv := v.Raw.(type) {
@@ -119,7 +117,6 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 			if lon, ok := loc["longitude"].(float64); ok { state.Longitude = lon }
 		}
 	}
-	// Override with direct lat/lon if present
 	if v := all["Latitude"]; v != nil {
 		if f, ok := v.Raw.(float64); ok { state.Latitude = f }
 	}
@@ -140,8 +137,8 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 
 	// Charging state
 	if v := all["DetailedChargeState"]; v != nil {
-		if s, ok := v.Raw.(string); ok {
-			state.IsCharging = strings.Contains(s, "Charging") || strings.Contains(s, "Starting")
+		if cs, ok := v.Raw.(string); ok {
+			state.IsCharging = strings.Contains(cs, "Charging") || strings.Contains(cs, "Starting")
 		}
 	}
 	if v := all["ChargeAmps"]; v != nil && !state.IsCharging {
@@ -174,7 +171,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// Software version — try Version first, then SoftwareUpdateVersion
+	// Software version
 	if v := all["Version"]; v != nil {
 		if sv, ok := v.Raw.(string); ok && sv != "" { state.SoftwareVersion = sv }
 	}
@@ -184,17 +181,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// Firmware: DB fallback from vehicle_config_snapshots
-	if state.SoftwareVersion == "" {
-		var dbVersion *string
-		_ = s.db.Pool.QueryRow(context.Background(),
-			`SELECT version FROM vehicle_config_snapshots WHERE vehicle_id = $1 AND version IS NOT NULL AND version != '' ORDER BY created_at DESC LIMIT 1`,
-			vehicle.ID).Scan(&dbVersion)
-		if dbVersion != nil {
-			state.SoftwareVersion = *dbVersion
-		}
-	}
-
+	// Climate
 	if v := all["HvacPower"]; v != nil {
 		switch hv := v.Raw.(type) {
 		case bool: state.IsClimateOn = hv
@@ -203,22 +190,29 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// Odometer: if still 0 after SignalStore, try MAX from positions
+	// --- Phase 2: DB fallbacks for every field still at zero/empty ---
+	ctx := context.Background()
+
+	// Odometer: fallback from positions
 	if state.Odometer == 0 {
-		var latestOdo *float64
-		_ = s.db.Pool.QueryRow(context.Background(),
-			`SELECT MAX(odometer) FROM positions WHERE vehicle_id = $1 AND odometer > 0`,
-			vehicle.ID).Scan(&latestOdo)
-		if latestOdo != nil && *latestOdo > 0 {
-			state.Odometer = *latestOdo
+		if pos, err := s.positionRepo.GetLatest(ctx, vehicle.ID); err == nil && pos != nil && pos.Odometer > 0 {
+			state.Odometer = pos.Odometer
 		}
 	}
 
-	// DB fallbacks for all remaining fields — query latest from snapshot tables
-	// when SignalStore doesn't have the value (pod restart, car sleeping)
-	ctx := context.Background()
+	// Firmware: fallback from vehicle_config_snapshots
+	if state.SoftwareVersion == "" {
+		if cfg, err := s.vehicleConfigRepo.GetLatest(ctx, vehicle.ID); err == nil && cfg != nil {
+			if cfg.Version != nil && *cfg.Version != "" {
+				state.SoftwareVersion = *cfg.Version
+			} else if cfg.SoftwareUpdateVersion != nil && *cfg.SoftwareUpdateVersion != "" {
+				state.SoftwareVersion = *cfg.SoftwareUpdateVersion
+			}
+		}
+	}
 
-	if state.BatteryLevel == 0 || state.RatedRange == 0 || state.InsideTemp == 0 {
+	// Battery, SOC, range: fallback from charging_telemetry
+	if state.BatteryLevel == 0 || state.RatedRange == 0 || state.IdealRange == 0 {
 		if ct, err := s.chargingTelRepo.GetLatestMerged(ctx, vehicle.ID, 10); err == nil && ct != nil {
 			if state.BatteryLevel == 0 && ct.BatteryLevel != nil {
 				state.BatteryLevel = int(*ct.BatteryLevel)
@@ -238,6 +232,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
+	// Temperatures: fallback from climate_snapshots
 	if state.InsideTemp == 0 || state.OutsideTemp == 0 {
 		if climate, err := s.climateRepo.GetLatest(ctx, vehicle.ID); err == nil && climate != nil {
 			if state.InsideTemp == 0 && climate.InsideTemp != nil {
@@ -249,6 +244,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
+	// Location: fallback from positions
 	if state.Latitude == 0 && state.Longitude == 0 {
 		if pos, err := s.positionRepo.GetLatest(ctx, vehicle.ID); err == nil && pos != nil {
 			if pos.Latitude != 0 { state.Latitude = pos.Latitude }
@@ -256,11 +252,22 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
+	// Security: fallback from security_events
 	if !state.IsLocked && !state.SentryMode {
 		if sec, err := s.securityRepo.GetLatest(ctx, vehicle.ID); err == nil && sec != nil {
 			if sec.Locked != nil { state.IsLocked = *sec.Locked }
 			if sec.SentryMode != nil { state.SentryMode = *sec.SentryMode }
 		}
+	}
+
+	// Vehicle state: fallback from state history
+	if state.State == "" {
+		if currentState, err := s.stateRepo.GetCurrentState(ctx, vehicle.ID); err == nil && currentState != "" {
+			state.State = currentState
+		}
+	}
+	if state.State == "" {
+		state.State = "online"
 	}
 
 	return state
