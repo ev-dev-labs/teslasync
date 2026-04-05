@@ -85,10 +85,10 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
                 </span>
               )}
             </div>
-            {drive.start_address && drive.end_address && (
+            {(drive.start_address || drive.end_address) && (
               <div className="mt-1 text-[10px] text-[var(--text-secondary)] flex items-center gap-1 truncate">
                 <MapPin className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{drive.start_address} → {drive.end_address}</span>
+                <span className="truncate">{drive.start_address || '?'} → {drive.end_address || '?'}</span>
               </div>
             )}
           </div>

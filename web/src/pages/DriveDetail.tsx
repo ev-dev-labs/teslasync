@@ -503,7 +503,11 @@ export default function DriveDetail() {
               </div>
               {drive.start_address
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.start_address}</p>
-                : <p className="font-bold text-[var(--text-primary)]">{startPos ? <span className="font-mono text-sm">{fmtNumber(startPos[0], 4)}°N, {fmtNumber(Math.abs(startPos[1]), 4)}°W</span> : 'No position data'}</p>
+                : startPos
+                  ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(startPos[0], 4)}°{startPos[0] >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(startPos[1]), 4)}°{startPos[1] >= 0 ? 'E' : 'W'}</p>
+                  : drive.start_latitude && drive.start_longitude
+                    ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(drive.start_latitude, 4)}°{drive.start_latitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.start_longitude), 4)}°{drive.start_longitude >= 0 ? 'E' : 'W'}</p>
+                    : <p className="text-sm text-[var(--text-muted)]">No position data</p>
               }
               <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.start_date)}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.start_battery_level ?? '?'}% · Range: {drive.start_range_km != null ? `${Math.round(u.distanceVal(drive.start_range_km))} ${u.distanceUnit}` : '—'}</p>
@@ -514,7 +518,11 @@ export default function DriveDetail() {
               </div>
               {drive.end_address
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.end_address}</p>
-                : <p className="font-bold text-[var(--text-primary)]">{endPos ? <span className="font-mono text-sm">{fmtNumber(endPos[0], 4)}°N, {fmtNumber(Math.abs(endPos[1]), 4)}°W</span> : 'No position data'}</p>
+                : endPos
+                  ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(endPos[0], 4)}°{endPos[0] >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(endPos[1]), 4)}°{endPos[1] >= 0 ? 'E' : 'W'}</p>
+                  : drive.end_latitude && drive.end_longitude
+                    ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(drive.end_latitude, 4)}°{drive.end_latitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.end_longitude), 4)}°{drive.end_longitude >= 0 ? 'E' : 'W'}</p>
+                    : <p className="text-sm text-[var(--text-muted)]">{drive.end_date ? 'No position data' : 'In progress'}</p>
               }
               <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</p>
               <p className="text-xs text-[var(--text-secondary)]">Battery: {drive.end_battery_level ?? '?'}% · Range: {drive.end_range_km != null ? `${Math.round(u.distanceVal(drive.end_range_km))} ${u.distanceUnit}` : '—'}</p>
