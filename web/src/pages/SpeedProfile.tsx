@@ -8,6 +8,7 @@ import {
   ScatterChart, Scatter, ZAxis, Cell,
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { useUnits } from '../hooks/useUnits'
 
 function bucketColor(bucket: string): string {
   if (bucket.startsWith('0') || bucket.startsWith('15')) return '#10b981'
@@ -38,6 +39,7 @@ function scatterColor(efficiency: number): string {
 }
 
 export default function SpeedProfile() {
+  const u = useUnits()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -68,7 +70,7 @@ export default function SpeedProfile() {
     const sorted = [...points].filter(p => p.efficiency > 0).sort((a, b) => a.efficiency - b.efficiency)
     const best = sorted.slice(0, Math.ceil(sorted.length * 0.2))
     const avgBest = best.reduce((s, p) => s + p.speed_avg, 0) / best.length
-    return `Drives around ${Math.round(avgBest)} km/h show the best efficiency. Reducing highway speed from 120 to 100 km/h could improve efficiency by ~15%.`
+    return `Drives around ${Math.round(u.speedVal(avgBest))} ${u.speedUnit} show the best efficiency. Reducing highway speed could improve efficiency by ~15%.`
   }, [points])
 
   return (
@@ -123,7 +125,7 @@ export default function SpeedProfile() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={distData} margin={{ bottom: 5 }}>
                     {chartGrid}
-                    <XAxis dataKey="speed_bucket" tick={axisTickSm} tickLine={false} axisLine={false} label={{ value: 'Speed (km/h)', position: 'insideBottom', offset: -2, style: { fill: 'var(--text-muted)', fontSize: 10 } }} />
+                    <XAxis dataKey="speed_bucket" tick={axisTickSm} tickLine={false} axisLine={false} label={{ value: `Speed (${u.speedUnit})`, position: 'insideBottom', offset: -2, style: { fill: 'var(--text-muted)', fontSize: 10 } }} />
                     <YAxis tick={axisTickSm} tickLine={false} axisLine={false} label={{ value: 'Time %', angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 10 } }} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar dataKey="pct" radius={[4, 4, 0, 0]} animationDuration={800} name="Time %">
@@ -149,7 +151,7 @@ export default function SpeedProfile() {
                 <ResponsiveContainer width="100%" height={300}>
                   <ScatterChart margin={{ bottom: 5 }}>
                     {chartGrid}
-                    <XAxis type="number" dataKey="speed_avg" name="Avg Speed" unit=" km/h" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <XAxis type="number" dataKey="speed_avg" name="Avg Speed" unit={` ${u.speedUnit}`} tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis type="number" dataKey="efficiency" name="Battery %/100km" tick={axisTickSm} tickLine={false} axisLine={false} />
                     <ZAxis type="number" dataKey="distance" range={[30, 200]} name="Distance" />
                     <Tooltip content={<ChartTooltip />} />
@@ -194,7 +196,7 @@ export default function SpeedProfile() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Avg Speed</span>
-                        <span className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>{c.avg_speed.toFixed(1)} km/h</span>
+                        <span className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>{u.speed(c.avg_speed)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Battery %/100km</span>
