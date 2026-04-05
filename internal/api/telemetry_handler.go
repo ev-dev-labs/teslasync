@@ -2030,7 +2030,14 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 	_, hasVersion := signals["Version"]
 	_, hasName := signals["VehicleName"]
 	_, hasCarType := signals["CarType"]
-	if !hasVersion && !hasName && !hasCarType {
+	_, hasSWVersion := signals["SoftwareUpdateVersion"]
+	_, hasSWDownload := signals["SoftwareUpdateDownloadPercentComplete"]
+	_, hasTrim := signals["Trim"]
+	_, hasWheel := signals["WheelType"]
+	_, hasColor := signals["ExteriorColor"]
+	_, hasChargePort := signals["ChargePort"]
+	if !hasVersion && !hasName && !hasCarType && !hasSWVersion && !hasSWDownload &&
+		!hasTrim && !hasWheel && !hasColor && !hasChargePort {
 		return
 	}
 
