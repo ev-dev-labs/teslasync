@@ -325,16 +325,23 @@ export default function Dashboard() {
 
                   {primaryState ? (
                     <div className="mt-4 sm:mt-6">
-                      {/* Radial gauges row */}
+                      {/* Context-aware radial gauges — show what's relevant to current state */}
                       <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
                         <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={primaryState.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70} />
                         <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={70} />
-                        <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color={primaryState.speed > 0 ? '#a855f7' : '#374151'} size={70} />
+                        {/* Show Speed gauge only when driving */}
+                        {(primaryVehicle?.state === 'driving' || primaryState.speed > 0) && (
+                          <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color="#a855f7" size={70} />
+                        )}
+                        {/* Show Charge Power gauge when charging */}
+                        {primaryState.is_charging && (
+                          <RadialGauge value={Math.round(primaryState.charger_power ?? 0)} max={250} label="Power" unit="kW" color="#10b981" size={70} />
+                        )}
                         <RadialGauge value={Math.round(convertTemp(primaryState.inside_temp))} max={isFahrenheit ? 122 : 50} label="Inside" unit={tempUnit} color="#f97316" size={70} />
                         <RadialGauge value={Math.round(convertTemp(primaryState.outside_temp))} max={isFahrenheit ? 122 : 50} label="Outside" unit={tempUnit} color="#3b82f6" size={70} />
                       </div>
 
-                      {/* Charging details when currently charging */}
+                      {/* Charging details — only when charging */}
                       {primaryState.is_charging && (
                         <div className="mb-4 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                           <div className="flex items-center gap-2 mb-2">
@@ -358,26 +365,59 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Quick telemetry grid */}
+                      {/* Context-aware telemetry grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {[
-                          { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp), 1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
-                          { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp), 1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
-                          { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
-                          { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
-                          { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
-                          { icon: Gauge, label: 'Firmware', value: primaryState.software_version || '—', color: '#6366f1' },
-                          { icon: Zap, label: 'Power', value: `${primaryState.power} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
-                          { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
-                        ].map(item => (
-                          <div key={item.label} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                            <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
-                            <div className="min-w-0">
-                              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.value}</p>
+                        {(() => {
+                          const isDriving = primaryVehicle?.state === 'driving' || primaryState.speed > 0
+                          const isCharging = primaryState.is_charging
+
+                          // Build cards based on current state
+                          const cards: { icon: typeof Thermometer; label: string; value: string; color: string }[] = []
+
+                          if (isDriving) {
+                            // Driving: speed, power, odometer, heading
+                            cards.push(
+                              { icon: Gauge, label: 'Speed', value: `${Math.round(convertSpeed(primaryState.speed))} ${speedUnit}`, color: '#a855f7' },
+                              { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
+                            )
+                          } else if (isCharging) {
+                            // Charging: charge rate, energy, charge limit, cable
+                            cards.push(
+                              { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: '#10b981' },
+                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
+                              { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
+                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                            )
+                          } else {
+                            // Parked/Online: temps, odometer, range
+                            cards.push(
+                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp), 1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
+                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp), 1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
+                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
+                            )
+                          }
+
+                          // Always show lock and sentry
+                          cards.push(
+                            { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
+                            { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
+                            { icon: Gauge, label: 'Firmware', value: primaryState.software_version || '—', color: '#6366f1' },
+                            { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                          )
+
+                          return cards.map(item => (
+                            <div key={item.label} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                              <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
+                              <div className="min-w-0">
+                                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.value}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        })()}
                       </div>
 
                       {/* Quick actions */}
