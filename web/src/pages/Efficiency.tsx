@@ -49,10 +49,10 @@ export default function Efficiency() {
 
   // Speed vs efficiency from drives
   const speedEffData = (drives ?? [])
-    .filter(d => d.distance > 0 && d.speed_max && d.start_range_km && d.end_range_km && d.start_battery_level && d.end_battery_level)
+    .filter(d => d.distance > 0 && d.speed_max && d.start_battery_level && d.end_battery_level && d.start_battery_level > d.end_battery_level)
     .map(d => {
       const battUsed = (d.start_battery_level! - d.end_battery_level!)
-      const efficiency = d.distance > 0 && battUsed > 0 ? (battUsed / d.distance * 1000) : 0
+      const efficiency = battUsed > 0 ? (battUsed * 0.75 * 1000) / d.distance : 0 // Wh/km estimate (0.75 kWh per %)
       return { speed: d.speed_max!, efficiency: Math.round(efficiency), distance: d.distance }
     })
     .filter(d => d.efficiency > 0 && d.efficiency < 500)
