@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, getTelemetryStatus, getWorkersHealth, getNotificationStats, getNotificationLogs, getExportJobs, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse, TelemetryStatus, WorkersHealth, NotificationStats, NotificationLog, ExportJobSummary } from '../api'
 import { getApiBase } from '../lib/resilience'
 import {
@@ -207,13 +208,13 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
         )}
       </div>
 
-      {/* Signals Modal */}
-      {showSignalsModal && info.details?.supported_signals && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
+      {/* Signals Modal — full screen via portal */}
+      {showSignalsModal && info.details?.supported_signals && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl border border-white/10 p-6 overflow-y-auto"
+            className="relative w-full max-w-5xl max-h-[90vh] rounded-2xl border border-white/10 p-6 overflow-y-auto shadow-2xl"
             style={{ background: 'var(--surface-1, #0a0b1a)' }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
@@ -236,7 +237,8 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
               )
             })}
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
     </GlassPanel>
   )
