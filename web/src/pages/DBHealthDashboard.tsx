@@ -55,13 +55,13 @@ export default function DBHealthDashboard() {
 
   const { data: dbStats, isLoading: statsLoading } = useQuery<DBStats>({
     queryKey: ['db-stats'],
-    queryFn: () => request('dev-tools/db-stats'),
+    queryFn: () => request('/dev-tools/db-stats'),
     refetchInterval: 30_000,
   })
 
   const { data: migrationStatus, isLoading: migrationLoading } = useQuery<MigrationStatus>({
     queryKey: ['migration-status'],
-    queryFn: () => request('dev-tools/migration-status'),
+    queryFn: () => request('/dev-tools/migration-status'),
     refetchInterval: 60_000,
   })
 

@@ -45,19 +45,19 @@ export default function SignalExplorer() {
 
   const { data: availableSignals } = useQuery<{ signals: string[] }>({
     queryKey: ['signal-available', vehicleId],
-    queryFn: () => request(`signals/${vehicleId}/available`),
+    queryFn: () => request(`/signals/${vehicleId}/available`),
     refetchInterval: 60_000,
   })
 
   const { data: stats } = useQuery<SignalStatsResponse>({
     queryKey: ['signal-stats', vehicleId],
-    queryFn: () => request(`signals/${vehicleId}/stats`),
+    queryFn: () => request(`/signals/${vehicleId}/stats`),
     refetchInterval: 60_000,
   })
 
   const { data: liveState } = useQuery<{ signals: Record<string, unknown> }>({
     queryKey: ['signal-live', vehicleId],
-    queryFn: () => request(`signals/${vehicleId}/live`),
+    queryFn: () => request(`/signals/${vehicleId}/live`),
     refetchInterval: 5_000,
   })
 
@@ -66,7 +66,7 @@ export default function SignalExplorer() {
 
   const { data: history, isLoading: historyLoading } = useQuery<SignalHistoryResponse>({
     queryKey: ['signal-history', vehicleId, selectedSignal, timeRange],
-    queryFn: () => request(`signals/${vehicleId}/${selectedSignal}/history?from=${from}&to=${to}&limit=2000`),
+    queryFn: () => request(`/signals/${vehicleId}/${selectedSignal}/history?from=${from}&to=${to}&limit=2000`),
     enabled: !!selectedSignal,
     refetchInterval: 30_000,
   })
@@ -222,4 +222,5 @@ export default function SignalExplorer() {
     </div>
   )
 }
+
 

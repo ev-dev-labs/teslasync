@@ -53,13 +53,13 @@ export default function StateMachineDebugger() {
 
   const { data: currentState, isLoading: stateLoading } = useQuery<VehicleState>({
     queryKey: ['vehicle-state', vehicleId],
-    queryFn: () => request(`vehicles/${vehicleId}/state`),
+    queryFn: () => request(`/vehicles/${vehicleId}/state`),
     refetchInterval: 3_000,
   })
 
   const { data: timeline, isLoading: timelineLoading } = useQuery<TimelineResponse>({
     queryKey: ['state-timeline', vehicleId],
-    queryFn: () => request(`vehicle-states/timeline?vehicle_id=${vehicleId}&days=1`),
+    queryFn: () => request(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=1`),
     refetchInterval: 10_000,
   })
 

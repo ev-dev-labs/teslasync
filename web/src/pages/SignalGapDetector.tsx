@@ -44,7 +44,7 @@ export default function SignalGapDetector() {
 
   const { data: liveData, isLoading, dataUpdatedAt } = useQuery<LiveSignalState>({
     queryKey: ['signal-live-gaps', vehicleId],
-    queryFn: () => request(`signals/${vehicleId}/live`),
+    queryFn: () => request(`/signals/${vehicleId}/live`),
     refetchInterval: 5_000,
   })
 
@@ -225,3 +225,4 @@ export default function SignalGapDetector() {
     </div>
   )
 }
+

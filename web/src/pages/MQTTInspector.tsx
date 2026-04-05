@@ -40,7 +40,7 @@ export default function MQTTInspector() {
 
   const { data: status, isLoading } = useQuery<TelemetryStatus>({
     queryKey: ['telemetry-status'],
-    queryFn: () => request('telemetry/status'),
+    queryFn: () => request('/telemetry/status'),
     refetchInterval: 5_000,
   })
 

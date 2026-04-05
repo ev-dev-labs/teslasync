@@ -74,7 +74,7 @@ export default function SignalDiff() {
 
   const { data: availableSignals } = useQuery<{ signals: string[] }>({
     queryKey: ['signal-available', vehicleId],
-    queryFn: () => request(`signals/${vehicleId}/available`),
+    queryFn: () => request(`/signals/${vehicleId}/available`),
   })
 
   const rangeAEnabled = !!selectedSignal && !!rangeAFrom && !!rangeATo
@@ -82,13 +82,13 @@ export default function SignalDiff() {
 
   const { data: historyA, isLoading: loadingA } = useQuery<SignalHistoryResponse>({
     queryKey: ['signal-diff-a', vehicleId, selectedSignal, rangeAFrom, rangeATo],
-    queryFn: () => request(`signals/${vehicleId}/${selectedSignal}/history?from=${new Date(rangeAFrom).toISOString()}&to=${new Date(rangeATo).toISOString()}&limit=2000`),
+    queryFn: () => request(`/signals/${vehicleId}/${selectedSignal}/history?from=${new Date(rangeAFrom).toISOString()}&to=${new Date(rangeATo).toISOString()}&limit=2000`),
     enabled: rangeAEnabled,
   })
 
   const { data: historyB, isLoading: loadingB } = useQuery<SignalHistoryResponse>({
     queryKey: ['signal-diff-b', vehicleId, selectedSignal, rangeBFrom, rangeBTo],
-    queryFn: () => request(`signals/${vehicleId}/${selectedSignal}/history?from=${new Date(rangeBFrom).toISOString()}&to=${new Date(rangeBTo).toISOString()}&limit=2000`),
+    queryFn: () => request(`/signals/${vehicleId}/${selectedSignal}/history?from=${new Date(rangeBFrom).toISOString()}&to=${new Date(rangeBTo).toISOString()}&limit=2000`),
     enabled: rangeBEnabled,
   })
 
@@ -301,3 +301,4 @@ export default function SignalDiff() {
     </div>
   )
 }
+
