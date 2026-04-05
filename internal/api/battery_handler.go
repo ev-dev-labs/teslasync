@@ -93,6 +93,8 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	// Build monthly trend from snapshots
 	type trendPoint struct {
 		Month       string  `json:"month"`
+		CapacityPct float64 `json:"capacity_pct"`
+		RangeKm     float64 `json:"range_km"`
 		HealthScore float64 `json:"health_score"`
 		CapacityKWh float64 `json:"capacity_kwh"`
 		EstRangeKm  float64 `json:"est_range_km"`
@@ -101,22 +103,29 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	for _, s := range snapshots {
 		trend = append(trend, trendPoint{
 			Month:       s.CreatedAt.Format("2006-01"),
+			CapacityPct: s.HealthScore,
+			RangeKm:     s.EstRangeKm,
 			HealthScore: s.HealthScore,
 			CapacityKWh: s.CapacityKWh,
 			EstRangeKm:  s.EstRangeKm,
 		})
 	}
 
+	// Model Y Long Range nominal range ~531 km (330 mi)
+	const nominalRangeKm = 531.0
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":           vehicleID,
-		"health_score":         healthScore,
-		"capacity_kwh":         capacityKWh,
-		"current_capacity_pct": healthScore,
-		"degradation_pct":      degradation,
-		"est_range_km":         estRange,
-		"total_cycles":         cycleCount,
-		"cycle_count":          cycleCount,
-		"avg_cell_temp_c":      avgTemp,
-		"monthly_trend":        trend,
+		"vehicle_id":                  vehicleID,
+		"health_score":                healthScore,
+		"capacity_kwh":                capacityKWh,
+		"current_capacity_pct":        healthScore,
+		"degradation_pct":             degradation,
+		"est_range_km":                estRange,
+		"estimated_range_current_km":  estRange,
+		"estimated_range_new_km":      nominalRangeKm,
+		"total_cycles":                cycleCount,
+		"cycle_count":                 cycleCount,
+		"avg_cell_temp_c":             avgTemp,
+		"monthly_trend":               trend,
 	})
 }
