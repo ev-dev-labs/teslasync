@@ -59,10 +59,31 @@ type TelemetryHandler struct {
 	accumulatedSignalsMu sync.Mutex
 	accumulatedSignals   map[string]map[string]interface{} // keyed by VIN
 
+	// Per-vehicle state machine — debounced vehicle state detection
+	vehicleStateMu sync.Mutex
+	vehicleStates  map[int64]*vehicleStateMachine // keyed by vehicleID
+
 	// Raw telemetry capture (optional, backed by MongoDB)
 	rawTelemetryRepo *database.RawTelemetryRepo
 	captureEnabled   atomic.Bool
 }
+
+// vehicleStateMachine implements debounced state detection to prevent flapping.
+// A state change must be confirmed for `confirmDuration` before being committed.
+type vehicleStateMachine struct {
+	currentState   string    // committed state in DB
+	pendingState   string    // candidate state (not yet confirmed)
+	pendingSince   time.Time // when the candidate was first seen
+	lastDriveSpeed float64   // last non-zero speed (for hysteresis)
+	lastSpeedTime  time.Time // when last non-zero speed was seen
+}
+
+const (
+	// States must be observed for this duration before transition is committed.
+	stateConfirmDuration = 30 * time.Second
+	// After driving, stay in "driving" for this long even if speed=0 (e.g. at a red light).
+	driveHoldDuration = 2 * time.Minute
+)
 
 // VehicleStreamState tracks streaming health per vehicle.
 type VehicleStreamState struct {
@@ -118,6 +139,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		streamingState:     make(map[string]*VehicleStreamState),
 		lastWriteAt:        make(map[string]time.Time),
 		accumulatedSignals: make(map[string]map[string]interface{}),
+		vehicleStates:      make(map[int64]*vehicleStateMachine),
 	}
 }
 
@@ -166,13 +188,28 @@ func (h *TelemetryHandler) cleanupStaleEntries() {
 	now := time.Now().UTC()
 	cutoff := 3 * h.staleTimeout // remove entries 3x past stale timeout
 
+	// Find stale VINs and mark their vehicles offline
 	h.mu.Lock()
+	staleVINs := map[string]bool{}
 	for vin, state := range h.streamingState {
 		if now.Sub(state.LastReceived) > cutoff {
+			staleVINs[vin] = true
 			delete(h.streamingState, vin)
 		}
 	}
 	h.mu.Unlock()
+
+	// Mark stale vehicles as offline
+	if len(staleVINs) > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		for vin := range staleVINs {
+			var vehicleID int64
+			if err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID); err == nil {
+				h.MarkVehicleOffline(ctx, vehicleID)
+			}
+		}
+	}
 
 	h.lastWriteMu.Lock()
 	for vin, lastWrite := range h.lastWriteAt {
@@ -416,12 +453,8 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				h.accumulatedSignalsMu.Unlock()
 			}
 
-			// Always update vehicle state (lightweight, single UPDATE)
+			// State machine handles state transitions with debouncing
 			if shouldWrite && writeSignals != nil {
-				detectedState := h.detectVehicleState(writeSignals)
-				if err := h.vehicleRepo.UpdateState(bgCtx, vehicleID, detectedState, true); err != nil {
-					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
-				}
 				h.trackStateTransition(bgCtx, vehicleID, writeSignals)
 			}
 
@@ -467,61 +500,151 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 }
 
 // detectVehicleState determines the vehicle state from telemetry signals.
+// Uses signal priority: driving > charging > online.
 func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) string {
-	// Check for driving state
-	if speed, ok := signals["VehicleSpeed"]; ok && toFloat(speed) > 0 {
+	// Priority 1: Driving — speed > 1 km/h or Gear in D/R (ShiftStateDrive/ShiftStateReverse)
+	if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 1.0 {
 		return "driving"
 	}
 	if gear, ok := signals["Gear"]; ok {
-		gs := fmt.Sprintf("%v", gear)
-		if gs == "D" || gs == "R" {
+		gs := toString(gear)
+		if strings.Contains(gs, "Drive") || strings.Contains(gs, "Reverse") || gs == "D" || gs == "R" {
 			return "driving"
 		}
 	}
 
-	// Check for charging state — Tesla Fleet Telemetry sends enum values with
-	// varying prefixes (e.g. "DetailedChargeStateCharging", "Enable", "Charging")
-	if cs, ok := signals["ChargeState"]; ok {
-		csStr := fmt.Sprintf("%v", cs)
-		if strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") || csStr == "Enable" {
-			return "charging"
-		}
-	}
+	// Priority 2: Charging — explicit charge state or active charge current (> 1A)
 	if dcs, ok := signals["DetailedChargeState"]; ok {
-		dcsStr := fmt.Sprintf("%v", dcs)
+		dcsStr := toString(dcs)
 		if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
 			return "charging"
 		}
 	}
-	// Infer charging from rate/amps when ChargeState isn't sent
-	if rate, ok := signals["ChargeRateMilePerHour"]; ok && toFloat(rate) > 0 {
+	if cs, ok := signals["ChargeState"]; ok {
+		csStr := toString(cs)
+		if csStr == "Enable" || strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") {
+			return "charging"
+		}
+	}
+	if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
 		return "charging"
 	}
-	if amps, ok := signals["ChargeAmps"]; ok && toFloat(amps) > 0 {
-		return "charging"
+
+	// Priority 3: Parked — Gear in P (ShiftStatePark)
+	if gear, ok := signals["Gear"]; ok {
+		gs := toString(gear)
+		if strings.Contains(gs, "Park") || gs == "P" {
+			return "parked"
+		}
 	}
 
 	return "online"
 }
 
-// trackStateTransition detects the vehicle state from signals and records transitions.
+// trackStateTransition uses a debounced state machine to prevent state flapping.
+//
+// Design principles:
+//   - Driving entry is IMMEDIATE (no delay) — we never want to miss a drive start
+//   - Driving exit requires 2 min of no speed (driveHoldDuration) — red lights, brief stops
+//   - All other transitions require 30s of consistent observation (stateConfirmDuration)
+//   - "offline" is set externally by MarkVehicleOffline when telemetry stops arriving
 func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	newState := h.detectVehicleState(signals)
+	candidateState := h.detectVehicleState(signals)
+	now := time.Now().UTC()
 
-	currentState, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
-	if currentState == newState {
-		return // no transition
+	h.vehicleStateMu.Lock()
+	sm, exists := h.vehicleStates[vehicleID]
+	if !exists {
+		currentDB, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
+		if currentDB == "" {
+			currentDB = "online"
+		}
+		sm = &vehicleStateMachine{currentState: currentDB}
+		h.vehicleStates[vehicleID] = sm
 	}
 
-	// Close previous state and open new one
-	if currentState != "" {
-		if err := h.stateRepo.EndCurrent(ctx, vehicleID); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to end current state")
+	// Track last speed for drive hold hysteresis
+	if candidateState == "driving" {
+		if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 0 {
+			sm.lastDriveSpeed = speed
+			sm.lastSpeedTime = now
 		}
+	}
+
+	// Drive hold: if currently driving and speed was seen within driveHoldDuration,
+	// suppress transitions to online/parked (handles red lights, brief stops)
+	if sm.currentState == "driving" && (candidateState == "online" || candidateState == "parked") {
+		if !sm.lastSpeedTime.IsZero() && now.Sub(sm.lastSpeedTime) < driveHoldDuration {
+			candidateState = "driving"
+		}
+	}
+
+	// If candidate matches current, reset pending — no transition needed
+	if candidateState == sm.currentState {
+		sm.pendingState = ""
+		sm.pendingSince = time.Time{}
+		h.vehicleStateMu.Unlock()
+		return
+	}
+
+	// Fast path: entering "driving" is immediate (no confirmation delay)
+	if candidateState == "driving" && sm.currentState != "driving" {
+		sm.currentState = candidateState
+		sm.pendingState = ""
+		sm.pendingSince = time.Time{}
+		sm.lastSpeedTime = now
+		h.vehicleStateMu.Unlock()
+		h.commitStateTransition(ctx, vehicleID, candidateState)
+		return
+	}
+
+	// All other transitions require confirmation period
+	if candidateState != sm.pendingState {
+		sm.pendingState = candidateState
+		sm.pendingSince = now
+		h.vehicleStateMu.Unlock()
+		return
+	}
+	if now.Sub(sm.pendingSince) < stateConfirmDuration {
+		h.vehicleStateMu.Unlock()
+		return
+	}
+
+	// Confirmed — commit
+	sm.currentState = candidateState
+	sm.pendingState = ""
+	sm.pendingSince = time.Time{}
+	h.vehicleStateMu.Unlock()
+	h.commitStateTransition(ctx, vehicleID, candidateState)
+}
+
+func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID int64, newState string) {
+	if err := h.stateRepo.EndCurrent(ctx, vehicleID); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to end current state")
 	}
 	if _, err := h.stateRepo.Insert(ctx, vehicleID, newState); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("state", newState).Msg("telemetry: failed to insert state")
 	}
+	if err := h.vehicleRepo.UpdateState(ctx, vehicleID, newState, true); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update vehicle state")
+	}
+	log.Info().Int64("vehicle_id", vehicleID).Str("state", newState).Msg("telemetry: state transition confirmed")
+}
+
+// MarkVehicleOffline transitions a vehicle to "offline" when telemetry stops arriving.
+func (h *TelemetryHandler) MarkVehicleOffline(ctx context.Context, vehicleID int64) {
+	h.vehicleStateMu.Lock()
+	sm, exists := h.vehicleStates[vehicleID]
+	if exists && sm.currentState == "offline" {
+		h.vehicleStateMu.Unlock()
+		return
+	}
+	if exists {
+		sm.currentState = "offline"
+		sm.pendingState = ""
+	}
+	h.vehicleStateMu.Unlock()
+	h.commitStateTransition(ctx, vehicleID, "offline")
 }
 
 // trackMileage updates daily mileage when odometer readings are present.
