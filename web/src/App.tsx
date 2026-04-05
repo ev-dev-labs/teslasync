@@ -67,6 +67,7 @@ const SleepEfficiency = lazy(() => import('./pages/SleepEfficiency'))
 const ChargingHeatmap = lazy(() => import('./pages/ChargingHeatmap'))
 const SpeedProfile = lazy(() => import('./pages/SpeedProfile'))
 const SignalExplorer = lazy(() => import('./pages/SignalExplorer'))
+const SignalLogViewer = lazy(() => import('./pages/SignalLogViewer'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -118,6 +119,7 @@ export default function App() {
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
+        <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />
