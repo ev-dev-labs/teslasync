@@ -163,6 +163,42 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		currentTemp = latest.AvgCellTempC
 	}
 
+	// Fallback: derive from charging_telemetry when no snapshots exist
+	if currentHealth == 0 {
+		const nominalCapacity = 75.0
+		var energy, rng *float64
+		_ = h.db.Pool.QueryRow(ctx,
+			`SELECT energy_remaining, est_battery_range FROM charging_telemetry 
+			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL 
+			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&energy, &rng)
+		if energy != nil && *energy > 0 {
+			currentCapacity = *energy
+			currentHealth = (currentCapacity / nominalCapacity) * 100
+			if currentHealth > 100 { currentHealth = 100 }
+			currentDegradation = 100 - currentHealth
+		}
+		if rng != nil { currentRange = *rng }
+		// Cycle count from charge sessions
+		var delta *float64
+		_ = h.db.Pool.QueryRow(ctx,
+			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0)) 
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			vehicleID).Scan(&delta)
+		if delta != nil { currentCycles = int(*delta / 100) }
+
+		// Synthesize a snapshot so the page has something to show
+		if currentHealth > 0 {
+			snapshots = []batterySnapshotData{{
+				HealthScore:  currentHealth,
+				CapacityKWh:  currentCapacity,
+				DegradationPct: currentDegradation,
+				EstRangeKm:   currentRange,
+				CycleCount:   currentCycles,
+				CreatedAt:    time.Now().UTC(),
+			}}
+		}
+	}
+
 	// Linear regression to predict when health reaches 80%
 	prediction := h.predictDegradation(snapshots)
 
