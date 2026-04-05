@@ -181,6 +181,7 @@ const navSections = [
       { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/signal-explorer', icon: Activity, label: 'Signal Explorer', color: 'text-cyan-400' },
       { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
       { to: '/backup', icon: DatabaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
       { to: '/data-repair', icon: Wrench, label: 'Data Repair', color: 'text-amber-400' },

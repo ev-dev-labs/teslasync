@@ -402,15 +402,22 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		}
 	}
 
-	// Broadcast to SSE clients for real-time frontend updates
+	// Broadcast to SSE clients for real-time frontend updates.
+	// Send the complete SignalStore state (not just the partial batch) so the
+	// frontend always has a full picture without polling.
 	if h.eventHub != nil {
-		h.eventHub.Broadcast("vehicle_update", map[string]interface{}{
+		sseData := map[string]interface{}{
 			"vin":        vin,
 			"vehicle_id": vehicleID,
 			"source":     "fleet_telemetry",
 			"signals":    signals,
 			"timestamp":  time.Now().UTC(),
-		})
+		}
+		// Include complete state from SignalStore if available
+		if vehicleID > 0 && h.signalStore != nil {
+			sseData["state"] = h.signalStore.GetRawMap(vehicleID)
+		}
+		h.eventHub.Broadcast("vehicle_update", sseData)
 	}
 
 	// Update streaming health state
