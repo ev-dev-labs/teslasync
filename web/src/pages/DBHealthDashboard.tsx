@@ -11,17 +11,20 @@ import clsx from 'clsx'
 
 interface TableInfo {
   name: string
+  schema?: string
   row_count: number
-  size_bytes: number
-  size_human: string
+  size_bytes?: number
+  size_human?: string
   last_vacuum?: string
   index_count?: number
 }
 
 interface DBStats {
-  total_size_bytes: number
-  total_size_human: string
   tables: TableInfo[]
+  table_count: number
+  database_size: number
+  total_size_bytes?: number
+  total_size_human?: string
   connection_pool?: {
     max_open: number
     open: number
@@ -70,7 +73,7 @@ export default function DBHealthDashboard() {
   const sortedTables = useMemo(() => {
     const sorted = [...tables]
     sorted.sort((a, b) => {
-      if (sortKey === 'size') return b.size_bytes - a.size_bytes
+      if (sortKey === 'size') return (b.size_bytes ?? b.row_count) - (a.size_bytes ?? a.row_count)
       if (sortKey === 'rows') return b.row_count - a.row_count
       return a.name.localeCompare(b.name)
     })
@@ -79,11 +82,10 @@ export default function DBHealthDashboard() {
 
   const chartData = useMemo(() =>
     [...tables]
-      .sort((a, b) => b.size_bytes - a.size_bytes)
+      .sort((a, b) => b.row_count - a.row_count)
       .slice(0, 15)
       .map(t => ({
         name: t.name.length > 20 ? t.name.slice(0, 18) + '…' : t.name,
-        size_mb: t.size_bytes / (1024 * 1024),
         rows: t.row_count,
       })),
   [tables])
@@ -109,7 +111,7 @@ export default function DBHealthDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             label="Total DB Size"
-            value={dbStats ? dbStats.total_size_human || formatBytes(dbStats.total_size_bytes) : '—'}
+            value={dbStats ? formatBytes(dbStats.database_size ?? dbStats.total_size_bytes ?? 0) : '—'}
             icon={<Database className="h-4 w-4" />}
             color="cyan"
           />
@@ -121,9 +123,9 @@ export default function DBHealthDashboard() {
           />
           <StatCard
             label="Large Tables (>100MB)"
-            value={tables.filter(t => t.size_bytes > LARGE_TABLE_THRESHOLD).length}
+            value={tables.filter(t => (t.size_bytes ?? 0) > LARGE_TABLE_THRESHOLD).length}
             icon={<AlertTriangle className="h-4 w-4" />}
-            color={tables.some(t => t.size_bytes > LARGE_TABLE_THRESHOLD) ? 'amber' : 'green'}
+            color={tables.some(t => (t.size_bytes ?? 0) > LARGE_TABLE_THRESHOLD) ? 'amber' : 'green'}
           />
           <StatCard
             label="Migration Version"
@@ -148,7 +150,7 @@ export default function DBHealthDashboard() {
                 <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickFormatter={v => `${fmtNumber(v, 1)} MB`} />
                 <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} width={140} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="size_mb" name="Size (MB)" fill="#00f0ff" radius={[0, 4, 4, 0]} barSize={16} />
+                <Bar dataKey="rows" name="Rows" fill="#00f0ff" radius={[0, 4, 4, 0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -200,7 +202,7 @@ export default function DBHealthDashboard() {
                   </thead>
                   <tbody>
                     {sortedTables.map(table => {
-                      const isLarge = table.size_bytes > LARGE_TABLE_THRESHOLD
+                      const isLarge = (table.size_bytes ?? 0) > LARGE_TABLE_THRESHOLD
                       return (
                         <tr key={table.name} className={clsx(
                           'border-b border-[var(--border)] hover:bg-white/[0.02]',
@@ -215,7 +217,7 @@ export default function DBHealthDashboard() {
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{fmtInt(table.row_count)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{table.size_human || formatBytes(table.size_bytes)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{table.size_human || (table.size_bytes ? formatBytes(table.size_bytes) : '—')}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-[var(--text-muted)]">{table.index_count ?? '—'}</td>
                           <td className="px-3 py-2.5 text-right text-[var(--text-muted)] whitespace-nowrap">{table.last_vacuum ? formatDateTime(table.last_vacuum) : '—'}</td>
                         </tr>
