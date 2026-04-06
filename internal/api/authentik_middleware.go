@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"crypto"
+	"crypto/hmac"
 	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -140,14 +142,14 @@ func parseRSAPublicKey(nStr, eStr string) (*rsa.PublicKey, error) {
 }
 
 // verifyJWT validates an authentik JWT without external dependencies.
-// It checks the signature against the JWKS keys and validates expiry.
-func verifyJWT(tokenStr string, cache *jwksCache) (*AuthentikClaims, error) {
+// Supports RS256 (via JWKS) and HS256 (via shared secret).
+func verifyJWT(tokenStr string, cache *jwksCache, hmacKey string) (*AuthentikClaims, error) {
 	parts := strings.Split(tokenStr, ".")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid token format")
 	}
 
-	// Decode header to get kid
+	// Decode header to get algorithm
 	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid header encoding: %w", err)
@@ -159,26 +161,41 @@ func verifyJWT(tokenStr string, cache *jwksCache) (*AuthentikClaims, error) {
 	if err := json.Unmarshal(headerBytes, &header); err != nil {
 		return nil, fmt.Errorf("invalid header: %w", err)
 	}
-	if header.Alg != "RS256" {
-		return nil, fmt.Errorf("unsupported algorithm: %s", header.Alg)
-	}
 
-	// Get public key from JWKS
-	pubKey, err := cache.getKey(header.Kid)
-	if err != nil {
-		return nil, err
-	}
-
-	// Verify signature
+	signedContent := []byte(parts[0] + "." + parts[1])
 	sigBytes, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
 		return nil, fmt.Errorf("invalid signature encoding: %w", err)
 	}
-	signedContent := []byte(parts[0] + "." + parts[1])
-	h := crypto.SHA256.New()
-	h.Write(signedContent)
-	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, h.Sum(nil), sigBytes); err != nil {
-		return nil, fmt.Errorf("invalid signature: %w", err)
+
+	switch header.Alg {
+	case "HS256":
+		if hmacKey == "" {
+			return nil, fmt.Errorf("HS256 token received but AUTHENTIK_HMAC_KEY not configured")
+		}
+		mac := hmac.New(sha256.New, []byte(hmacKey))
+		mac.Write(signedContent)
+		expected := mac.Sum(nil)
+		if !hmac.Equal(sigBytes, expected) {
+			return nil, fmt.Errorf("invalid HS256 signature")
+		}
+
+	case "RS256":
+		if cache == nil {
+			return nil, fmt.Errorf("RS256 token received but JWKS not configured")
+		}
+		pubKey, err := cache.getKey(header.Kid)
+		if err != nil {
+			return nil, err
+		}
+		h := crypto.SHA256.New()
+		h.Write(signedContent)
+		if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, h.Sum(nil), sigBytes); err != nil {
+			return nil, fmt.Errorf("invalid RS256 signature: %w", err)
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported algorithm: %s", header.Alg)
 	}
 
 	// Decode claims
@@ -200,12 +217,16 @@ func verifyJWT(tokenStr string, cache *jwksCache) (*AuthentikClaims, error) {
 }
 
 // AuthentikSSEAuth creates middleware that validates authentik JWT tokens
-// for the SSE endpoint. It checks (in order):
+// for the SSE endpoint. Supports both RS256 (JWKS) and HS256 (shared secret).
+// It checks (in order):
 //  1. X-authentik-jwt header (when behind ForwardAuth)
 //  2. Authorization: Bearer <token> header
 //  3. ?token= query parameter (for EventSource which can't set headers)
-func AuthentikSSEAuth(jwksURL string) func(http.Handler) http.Handler {
-	cache := newJWKSCache(jwksURL)
+func AuthentikSSEAuth(jwksURL, hmacKey string) func(http.Handler) http.Handler {
+	var cache *jwksCache
+	if jwksURL != "" {
+		cache = newJWKSCache(jwksURL)
+	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +254,7 @@ func AuthentikSSEAuth(jwksURL string) func(http.Handler) http.Handler {
 				return
 			}
 
-			claims, err := verifyJWT(token, cache)
+			claims, err := verifyJWT(token, cache, hmacKey)
 			if err != nil {
 				log.Warn().Err(err).Msg("SSE auth: invalid token")
 				http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)

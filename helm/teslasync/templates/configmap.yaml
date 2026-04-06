@@ -73,3 +73,6 @@ data:
   {{- if .Values.config.authentikURL }}
   AUTHENTIK_URL: {{ .Values.config.authentikURL | quote }}
   {{- end }}
+  {{- if .Values.config.authentikHMACKey }}
+  AUTHENTIK_HMAC_KEY: {{ .Values.config.authentikHMACKey | quote }}
+  {{- end }}

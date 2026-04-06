@@ -453,6 +453,12 @@ config:
   # When empty, SSE has no app-level auth (relies on Traefik ForwardAuth).
   authentikURL: ""
 
+  # -- Authentik client secret for HS256 JWT validation (proxy providers).
+  # Authentik proxy providers sign JWTs with HS256 using the client secret.
+  # Find it in authentik admin → Providers → your proxy provider → Client Secret.
+  # For RS256 providers, use authentikURL (JWKS) instead.
+  authentikHMACKey: ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
 #
