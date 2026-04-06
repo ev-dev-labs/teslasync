@@ -158,6 +158,11 @@ func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 	h.signalStore = store
 }
 
+// SetEventHub sets the SSE event hub for real-time browser updates.
+func (h *TelemetryHandler) SetEventHub(hub *EventHub) {
+	h.eventHub = hub
+}
+
 // GetSignalStore returns the signal store (for use by other handlers).
 func (h *TelemetryHandler) GetSignalStore() *signal.Store {
 	return h.signalStore
