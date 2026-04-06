@@ -14,6 +14,27 @@ spec:
   entryPoints:
 {{ toYaml .Values.ingressRoute.entryPoints | indent 4 }}
   routes:
+  {{- /* SSE bypass route — when authentik is configured, the SSE endpoint
+         skips ForwardAuth and validates JWT in the Go backend instead.
+         This fixes CORS issues with EventSource cross-origin redirects.
+         Must appear BEFORE the catch-all route. */ -}}
+  {{- if and .Values.config.authentikURL .Values.ingressRoute.sseBypass }}
+    - match: {{ .Values.ingressRoute.sseBypass.match }}
+      kind: Rule
+      {{- if .Values.ingressRoute.sseBypass.middlewares }}
+      middlewares:
+      {{- range .Values.ingressRoute.sseBypass.middlewares }}
+        - name: {{ .name }}
+          namespace: {{ .namespace | default $.Values.ingressRoute.namespace }}
+      {{- end }}
+      {{- end }}
+      services:
+      {{- range .Values.ingressRoute.sseBypass.services }}
+        - name: {{ .name | default (printf "%s-web" (include "teslasync.fullname" $)) }}
+          namespace: {{ .namespace | default $.Values.ingressRoute.namespace | default $.Release.Namespace }}
+          port: {{ .port | default 80 }}
+      {{- end }}
+  {{- end }}
   {{- range .Values.ingressRoute.routes }}
     - match: {{ .match }}
       kind: {{ .kind | default "Rule" }}

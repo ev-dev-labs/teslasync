@@ -70,3 +70,6 @@ data:
   {{- if .Values.config.azureMaps.apiKey }}
   AZURE_MAPS_API_KEY: {{ .Values.config.azureMaps.apiKey | quote }}
   {{- end }}
+  {{- if .Values.config.authentikURL }}
+  AUTHENTIK_URL: {{ .Values.config.authentikURL | quote }}
+  {{- end }}
