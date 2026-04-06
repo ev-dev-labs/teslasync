@@ -39,6 +39,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
   const sourceRef = useRef<EventSource | null>(null)
   const reconnectTimer = useRef<number>(undefined)
   const backoffRef = useRef(1000) // start at 1s, max 30s
+  const failCountRef = useRef(0)
   // Store callbacks in refs to avoid re-creating the connect function on every render
   const callbacksRef = useRef(options)
   callbacksRef.current = options
@@ -58,6 +59,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     source.addEventListener('connected', (e) => {
       setConnected(true)
       backoffRef.current = 1000 // reset backoff on successful connection
+      failCountRef.current = 0  // reset failure count
       const data = JSON.parse(e.data)
       callbacksRef.current.onConnected?.(data.client_id)
     })
@@ -86,6 +88,12 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
       callbacksRef.current.onDisconnected?.()
       source.close()
       sourceRef.current = null
+      failCountRef.current++
+      // Give up after 3 consecutive failures — let polling handle updates
+      if (failCountRef.current >= 3) {
+        console.debug('[SSE] Disabled after repeated failures — using polling fallback')
+        return
+      }
       // Exponential backoff with jitter, capped at 30s
       const jitter = Math.random() * 500
       const delay = Math.min(backoffRef.current + jitter, 30_000)
