@@ -16,9 +16,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type contextKey string
+type authentikContextKey string
 
-const authentikUserCtxKey contextKey = "authentik_user"
+const authentikUserCtxKey authentikContextKey = "authentik_user"
 
 // AuthentikClaims represents the JWT claims from authentik.
 type AuthentikClaims struct {
