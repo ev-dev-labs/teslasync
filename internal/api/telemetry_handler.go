@@ -1010,41 +1010,41 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 	streamingVehicles := h.GetStreamingState()
 
-	// Compute aggregate metrics
-	totalSignals := int64(0)
-	totalBatches := int64(0)
-	streamingCount := 0
-	avgSignalsPerSec := 0.0
-	for _, v := range streamingVehicles {
-		totalSignals += v.SignalCount
-		totalBatches += v.BatchCount
-		if v.IsStreaming {
-			streamingCount++
-			avgSignalsPerSec += v.SignalsPerSecond
-		}
+	// Build vehicle list in the format the frontend expects
+	type vehicleTelemetry struct {
+		VIN           string  `json:"vin"`
+		VehicleID     int64   `json:"vehicle_id,omitempty"`
+		State         string  `json:"state,omitempty"`
+		SignalCount   int64   `json:"signal_count"`
+		BatchCount    int64   `json:"batch_count"`
+		SignalsPerSec float64 `json:"signals_per_sec"`
+		LastReceived  string  `json:"last_received,omitempty"`
 	}
 
+	vehicles := make([]vehicleTelemetry, 0, len(streamingVehicles))
+	for _, v := range streamingVehicles {
+		vt := vehicleTelemetry{
+			VIN:           v.VIN,
+			SignalCount:   v.SignalCount,
+			BatchCount:    v.BatchCount,
+			SignalsPerSec: v.SignalsPerSecond,
+		}
+		if !v.LastReceived.IsZero() {
+			vt.LastReceived = v.LastReceived.Format(time.RFC3339)
+		}
+		if v.IsStreaming {
+			vt.State = "streaming"
+		} else {
+			vt.State = "stale"
+		}
+		vehicles = append(vehicles, vt)
+	}
+
+	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":  true,
-		"mode":     "primary",
-		"endpoint": "/api/v1/telemetry",
-		"protocol": "HTTP POST (JSON) + MQTT",
-		"speed_comparison": map[string]interface{}{
-			"fleet_telemetry_latency": "<100ms (real-time via MQTT)",
-			"fleet_api_polling":       "15,000ms (15s intervals)",
-			"speedup":                 "~150x faster with Fleet Telemetry",
-		},
-		"aggregate_stats": map[string]interface{}{
-			"streaming_vehicles":       streamingCount,
-			"total_vehicles_seen":      len(streamingVehicles),
-			"total_signals_received":   totalSignals,
-			"total_batches_processed":  totalBatches,
-			"avg_signals_per_second":   fmt.Sprintf("%.1f", avgSignalsPerSec),
-			"stale_timeout":            h.staleTimeout.String(),
-		},
-		"supported_signals": SubscribedSignals,
-		"mqtt_publishing":    h.mqttClient != nil,
-		"streaming_vehicles": streamingVehicles,
+		"connected": connected,
+		"vehicles":  vehicles,
 	})
 }
 
