@@ -12,6 +12,8 @@ import {
 import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
+import { formatDate, formatDateTime } from '../lib/dateFormat'
+import SignalConfigModal from '../components/SignalConfigModal'
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
@@ -373,7 +375,7 @@ function PublicKeySetupTool() {
             {status.created_at && (
               <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                 <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Created</p>
-                <p className="text-xs font-mono text-[var(--text-primary)] mt-0.5">{new Date(status.created_at).toLocaleDateString()}</p>
+                <p className="text-xs font-mono text-[var(--text-primary)] mt-0.5">{formatDate(status.created_at)}</p>
               </div>
             )}
           </div>
@@ -535,17 +537,18 @@ function VehicleKeyPairingTool() {
 // ─── Fleet Telemetry Tools ──────────────────────────────────────
 
 const TELEMETRY_FIELDS = [
-  { category: 'Location', fields: ['Location', 'GpsHeading', 'GpsState', 'DestinationLocation', 'DestinationName', 'MilesToArrival', 'MinutesToArrival', 'RouteLine', 'RouteLastUpdated', 'OriginLocation', 'LocatedAtHome', 'LocatedAtWork', 'LocatedAtFavorite', 'RouteTrafficMinutesDelay'] },
-  { category: 'Driving', fields: ['VehicleSpeed', 'Odometer', 'Gear', 'CruiseSetSpeed', 'BrakePedal', 'BrakePedalPos', 'PedalPosition', 'DriveRail', 'LateralAcceleration', 'LongitudinalAcceleration', 'RouteTrafficMinutesDelay', 'LifetimeEnergyUsedDrive'] },
-  { category: 'Charging', fields: ['BatteryLevel', 'Soc', 'ChargeState', 'DetailedChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargeCurrentRequest', 'ChargeCurrentRequestMax', 'ChargeEnableRequest', 'ChargerVoltage', 'ChargerPhases', 'ChargeRateMilePerHour', 'DCChargingPower', 'DCChargingEnergyIn', 'ACChargingPower', 'ACChargingEnergyIn', 'EnergyRemaining', 'EstBatteryRange', 'IdealBatteryRange', 'RatedRange', 'PackVoltage', 'PackCurrent', 'ChargePortDoorOpen', 'ChargePortLatch', 'ChargePortColdWeatherMode', 'ChargingCableType', 'FastChargerPresent', 'FastChargerType', 'TimeToFullCharge', 'EstimatedHoursToChargeTermination', 'ExpectedEnergyPercentAtTripArrival', 'SuperchargerSessionTripPlanner', 'ScheduledChargingMode', 'ScheduledChargingPending', 'ScheduledChargingStartTime', 'PreconditioningEnabled', 'BrickVoltageMax', 'BrickVoltageMin', 'NumBrickVoltageMax', 'NumBrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'NumModuleTempMax', 'NumModuleTempMin', 'BatteryHeaterOn', 'NotEnoughPowerToHeat', 'BMSState', 'BmsFullchargecomplete', 'DCDCEnable', 'IsolationResistance', 'LifetimeEnergyUsed', 'PowershareStatus', 'PowershareType', 'PowershareStopReason', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW'] },
+  { category: 'Location', fields: ['Location', 'GpsHeading', 'GpsState', 'DestinationLocation', 'DestinationName', 'MilesToArrival', 'MinutesToArrival', 'RouteLine', 'RouteLastUpdated', 'OriginLocation', 'LocatedAtHome', 'LocatedAtWork', 'LocatedAtFavorite'] },
+  { category: 'Driving', fields: ['VehicleSpeed', 'Gear', 'CruiseSetSpeed', 'BrakePedal', 'BrakePedalPos', 'PedalPosition', 'DriveRail', 'LateralAcceleration', 'LongitudinalAcceleration', 'RouteTrafficMinutesDelay', 'LifetimeEnergyGainedRegen', 'LifetimeEnergyUsedDrive'] },
+  { category: 'Charging', fields: ['BatteryLevel', 'Soc', 'ChargeState', 'DetailedChargeState', 'ChargeLimitSoc', 'ChargeAmps', 'ChargeCurrentRequest', 'ChargeCurrentRequestMax', 'ChargeEnableRequest', 'ChargerVoltage', 'ChargerPhases', 'ChargeRateMilePerHour', 'DCChargingPower', 'DCChargingEnergyIn', 'ACChargingPower', 'ACChargingEnergyIn', 'EnergyRemaining', 'EstBatteryRange', 'IdealBatteryRange', 'RatedRange', 'PackVoltage', 'PackCurrent', 'ChargePortDoorOpen', 'ChargePortLatch', 'ChargePortColdWeatherMode', 'ChargingCableType', 'FastChargerPresent', 'FastChargerType', 'TimeToFullCharge', 'EstimatedHoursToChargeTermination', 'ExpectedEnergyPercentAtTripArrival', 'SuperchargerSessionTripPlanner', 'ScheduledChargingMode', 'ScheduledChargingPending', 'ScheduledChargingStartTime', 'ScheduledDepartureTime', 'PreconditioningEnabled', 'BrickVoltageMax', 'BrickVoltageMin', 'NumBrickVoltageMax', 'NumBrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'NumModuleTempMax', 'NumModuleTempMin', 'BatteryHeaterOn', 'NotEnoughPowerToHeat', 'BMSState', 'BmsFullchargecomplete', 'DCDCEnable', 'IsolationResistance', 'LifetimeEnergyUsed'] },
+  { category: 'Powershare', fields: ['PowershareStatus', 'PowershareType', 'PowershareStopReason', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW'] },
   { category: 'Climate', fields: ['InsideTemp', 'OutsideTemp', 'HvacFanSpeed', 'HvacFanStatus', 'HvacPower', 'HvacACEnabled', 'HvacAutoMode', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest', 'HvacSteeringWheelHeatAuto', 'HvacSteeringWheelHeatLevel', 'ClimateKeeperMode', 'DefrostMode', 'DefrostForPreconditioning', 'CabinOverheatProtectionMode', 'CabinOverheatProtectionTemperatureLimit', 'SeatHeaterLeft', 'SeatHeaterRight', 'SeatHeaterRearLeft', 'SeatHeaterRearCenter', 'SeatHeaterRearRight', 'SeatVentEnabled', 'ClimateSeatCoolingFrontLeft', 'ClimateSeatCoolingFrontRight', 'AutoSeatClimateLeft', 'AutoSeatClimateRight', 'RearDefrostEnabled', 'RearDisplayHvacEnabled', 'WiperHeatEnabled'] },
-  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow', 'RdWindow', 'RpWindow', 'HomelinkNearby', 'HomelinkDeviceCount', 'GuestModeEnabled', 'GuestModeMobileAccessState', 'DriverSeatOccupied', 'CenterDisplay', 'CurrentLimitMph', 'SpeedLimitMode', 'ValetModeEnabled', 'ServiceMode', 'Version', 'VehicleName', 'SoftwareUpdateVersion', 'SoftwareUpdateDownloadPercentComplete', 'SoftwareUpdateInstallationPercentComplete', 'SoftwareUpdateExpectedDurationMinutes', 'SoftwareUpdateScheduledStartTime', 'PairedPhoneKeyAndKeyFobQty', 'LightsHazardsActive', 'LightsHighBeams', 'LightsTurnSignal', 'TonneauPosition', 'TonneauOpenPercent', 'TonneauTentMode'] },
+  { category: 'Vehicle State', fields: ['Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow', 'RdWindow', 'RpWindow', 'Odometer', 'HomelinkNearby', 'HomelinkDeviceCount', 'GuestModeEnabled', 'GuestModeMobileAccessState', 'DriverSeatOccupied', 'CenterDisplay', 'CurrentLimitMph', 'SpeedLimitMode', 'ValetModeEnabled', 'ServiceMode', 'PairedPhoneKeyAndKeyFobQty', 'LightsHazardsActive', 'LightsHighBeams', 'LightsTurnSignal', 'TonneauPosition', 'TonneauOpenPercent', 'TonneauTentMode'] },
   { category: 'Safety', fields: ['DriverSeatBelt', 'PassengerSeatBelt', 'AutomaticEmergencyBrakingOff', 'AutomaticBlindSpotCamera', 'BlindSpotCollisionWarningChime', 'CruiseFollowDistance', 'EmergencyLaneDepartureAvoidance', 'ForwardCollisionWarning', 'LaneDepartureAvoidance', 'SpeedLimitWarning', 'PinToDriveEnabled', 'MilesSinceReset', 'SelfDrivingMilesSinceReset'] },
   { category: 'Powertrain', fields: ['DiTorquemotor', 'DiTorqueActualR', 'DiTorqueActualF', 'DiTorqueActualREL', 'DiTorqueActualRER', 'DiSlaveTorqueCmd', 'DiAxleSpeedF', 'DiAxleSpeedR', 'DiAxleSpeedREL', 'DiAxleSpeedRER', 'DiStateR', 'DiStateF', 'DiStateREL', 'DiStateRER', 'DiStatorTempR', 'DiStatorTempF', 'DiStatorTempREL', 'DiStatorTempRER', 'DiHeatsinkTR', 'DiHeatsinkTF', 'DiHeatsinkTREL', 'DiHeatsinkTRER', 'DiInverterTR', 'DiInverterTF', 'DiInverterTREL', 'DiInverterTRER', 'DiMotorCurrentR', 'DiMotorCurrentF', 'DiMotorCurrentREL', 'DiMotorCurrentRER', 'DiVBatR', 'DiVBatF', 'DiVBatREL', 'DiVBatRER', 'Hvil'] },
   { category: 'Tires & Service', fields: ['TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr', 'TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr'] },
   { category: 'Media', fields: ['MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaNowPlayingStation', 'MediaNowPlayingDuration', 'MediaNowPlayingElapsed', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume', 'MediaAudioVolumeIncrement', 'MediaAudioVolumeMax'] },
   { category: 'User Preference', fields: ['Setting24HourTime', 'SettingChargeUnit', 'SettingDistanceUnit', 'SettingTemperatureUnit', 'SettingTirePressureUnit'] },
-  { category: 'Vehicle Config', fields: ['CarType', 'Trim', 'ExteriorColor', 'RoofColor', 'WheelType', 'RearSeatHeaters', 'SunroofInstalled', 'EfficiencyPackage', 'EuropeVehicle', 'RightHandDrive', 'RemoteStartEnabled', 'ChargePort', 'OffroadLightbarPresent'] },
+  { category: 'Vehicle Config', fields: ['CarType', 'Trim', 'ExteriorColor', 'RoofColor', 'WheelType', 'VehicleName', 'Version', 'RearSeatHeaters', 'SunroofInstalled', 'EfficiencyPackage', 'EuropeVehicle', 'RightHandDrive', 'RemoteStartEnabled', 'ChargePort', 'OffroadLightbarPresent', 'SoftwareUpdateVersion', 'SoftwareUpdateDownloadPercentComplete', 'SoftwareUpdateInstallationPercentComplete', 'SoftwareUpdateExpectedDurationMinutes', 'SoftwareUpdateScheduledStartTime'] },
 ]
 
 function FleetTelemetrySubscribeTool() {
@@ -563,21 +566,13 @@ function FleetTelemetrySubscribeTool() {
     'VehicleSpeed', 'Odometer', 'BatteryLevel', 'Location', 'GpsHeading',
     'ChargeState', 'ChargeLimitSoc', 'InsideTemp', 'OutsideTemp', 'Locked', 'SentryMode',
   ])
-  const [showFields, setShowFields] = useState(false)
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [showSignalModal, setShowSignalModal] = useState(false)
+  // Per-signal intervals (set via modal)
+  const [signalIntervals, setSignalIntervals] = useState<Map<string, number>>(new Map())
 
   const toggleVin = (vin: string) => {
     setSelectedVins(prev => prev.includes(vin) ? prev.filter(v => v !== vin) : [...prev, vin])
-  }
-  const toggleField = (field: string) => {
-    setSelectedFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])
-  }
-  const selectCategory = (fields: string[]) => {
-    setSelectedFields(prev => {
-      const allSelected = fields.every(f => prev.includes(f))
-      if (allSelected) return prev.filter(f => !fields.includes(f))
-      return [...new Set([...prev, ...fields])]
-    })
   }
 
   const mut = useMutation({
@@ -588,6 +583,8 @@ function FleetTelemetrySubscribeTool() {
       ca: ca || undefined,
       fields: selectedFields,
       interval_seconds: parseInt(interval) || 10,
+      // Per-signal intervals from the modal (overrides interval_seconds)
+      field_intervals: Object.fromEntries(signalIntervals),
     }),
     onSuccess: (data: Record<string, unknown>) => setResult(data),
     onError: (err) => setResult({ error: (err as Error).message }),
@@ -643,44 +640,28 @@ function FleetTelemetrySubscribeTool() {
         <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(inputClasses, 'h-16 resize-y font-mono text-[10px]')} />
       </div>
 
-      {/* Field Selection */}
+      {/* Signal Configuration */}
       <div className="mb-3">
-        <button onClick={() => setShowFields(!showFields)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors w-full">
-          {showFields ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          <span className="font-medium">Telemetry Fields</span>
+        <button onClick={() => setShowSignalModal(true)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-neon-cyan transition-colors w-full px-3 py-2 rounded-lg border border-white/[0.06] hover:border-neon-cyan/30 bg-white/[0.02]">
+          <Settings className="h-3.5 w-3.5" />
+          <span className="font-medium">Configure Signals</span>
           <span className="text-[10px] text-[var(--text-muted)] ml-auto">{selectedFields.length} selected</span>
         </button>
-        {showFields && (
-          <div className="mt-2 space-y-2 max-h-72 overflow-y-auto pr-1">
-            {TELEMETRY_FIELDS.map(cat => {
-              const allSelected = cat.fields.every(f => selectedFields.includes(f))
-              return (
-                <div key={cat.category}>
-                  <button onClick={() => selectCategory(cat.fields)} className={clsx(
-                    'text-[10px] font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5 cursor-pointer',
-                    allSelected ? 'text-neon-cyan' : 'text-[var(--text-muted)]'
-                  )}>
-                    <div className={clsx('h-2.5 w-2.5 rounded-sm border', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-white/20')} />
-                    {cat.category}
-                  </button>
-                  <div className="flex flex-wrap gap-1">
-                    {cat.fields.map(f => (
-                      <button key={f} onClick={() => toggleField(f)} className={clsx(
-                        'px-2 py-0.5 rounded text-[10px] border transition-colors',
-                        selectedFields.includes(f)
-                          ? 'bg-neon-cyan/15 border-neon-cyan/30 text-neon-cyan'
-                          : 'bg-white/[0.02] border-white/[0.06] text-[var(--text-muted)] hover:border-white/[0.12]'
-                      )}>
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
+
+      <SignalConfigModal
+        open={showSignalModal}
+        onClose={() => setShowSignalModal(false)}
+        categories={TELEMETRY_FIELDS}
+        initialSelected={selectedFields}
+        initialInterval={parseInt(interval) || 10}
+        onSubmit={(signals) => {
+          setSelectedFields(signals.map(s => s.name))
+          const intervals = new Map<string, number>()
+          signals.forEach(s => intervals.set(s.name, s.interval))
+          setSignalIntervals(intervals)
+        }}
+      />
 
       <button onClick={() => mut.mutate()} disabled={mut.isPending || selectedVins.length === 0 || !hostname} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
         {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Satellite className="h-3.5 w-3.5" />}
@@ -789,18 +770,18 @@ function FleetTelemetryConfigTool() {
         </button>
         <button
           onClick={() => getErrors.mutate()}
-          disabled={getErrors.isPending || !selectedVin || !configExists}
-          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-amber' : 'text-gray-600')}
-          title={!configExists ? 'Click "Get Config" first' : 'Fetch recent fleet telemetry errors for this vehicle'}
+          disabled={getErrors.isPending || !selectedVin}
+          className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-amber"
+          title="Fetch recent fleet telemetry errors for this vehicle"
         >
           {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
           View Errors
         </button>
         <button
           onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle? The vehicle will stop streaming telemetry data.')) deleteConfig.mutate() }}
-          disabled={deleteConfig.isPending || !selectedVin || !configExists}
-          className={clsx('glass-button text-xs flex items-center gap-1.5 disabled:opacity-30', configExists ? 'text-neon-red' : 'text-gray-600')}
-          title={!configExists ? 'Click "Get Config" first to check if a configuration exists' : 'Remove fleet telemetry config from this vehicle'}
+          disabled={deleteConfig.isPending || !selectedVin}
+          className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-red"
+          title="Remove fleet telemetry config from this vehicle"
         >
           {deleteConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
           Delete Config
@@ -839,7 +820,7 @@ function FleetTelemetryConfigTool() {
                   {errorsList.map((err, i) => (
                     <tr key={i} className="border-b border-[var(--glass-border)] last:border-0">
                       <td className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap font-mono">
-                        {err.created_at ? new Date(err.created_at as string).toLocaleString() : err.timestamp ? new Date(err.timestamp as string).toLocaleString() : '—'}
+                        {err.created_at ? formatDateTime(err.created_at as string) : err.timestamp ? formatDateTime(err.timestamp as string) : '—'}
                       </td>
                       <td className="px-3 py-2 text-neon-red font-medium">{(err.name || err.error || err.code || '—') as string}</td>
                       <td className="px-3 py-2 text-[var(--text-muted)] max-w-xs truncate">{(err.body || err.message || err.description || JSON.stringify(err)) as string}</td>

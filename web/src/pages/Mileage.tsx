@@ -8,21 +8,8 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { formatDateShort } from '../lib/dateFormat'
+import { ChartTooltip } from '../components/Charts'
 
 export default function Mileage() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
@@ -49,7 +36,7 @@ export default function Mileage() {
   })
 
   const dailyChart = (daily ?? []).map(d => ({
-    date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    date: formatDateShort(d.date),
     distance: convertDistance(d.distance_km),
   })).reverse()
 
@@ -61,7 +48,7 @@ export default function Mileage() {
     return sorted.map(d => {
       cumulative += d.distance_km
       return {
-        date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        date: formatDateShort(d.date),
         odometer: convertDistance(d.odometer_end || cumulative),
         cumulative: convertDistance(cumulative),
       }

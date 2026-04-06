@@ -11,6 +11,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import clsx from 'clsx'
+import { formatDateShort } from '../lib/dateFormat'
+import { ChartTooltip } from '../components/Charts'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -62,21 +64,6 @@ function timeSince(iso: string): string {
 }
 
 // ─── Tooltip ────────────────────────────────────────────────────────────────────
-
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
 
 // ─── Security Car SVG Visualization ─────────────────────────────────────────────
 
@@ -432,7 +419,7 @@ export default function SecurityAccess() {
     const reversed = [...history].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     const buckets: Record<string, { on: number; off: number }> = {}
     for (const e of reversed) {
-      const key = new Date(e.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      const key = formatDateShort(e.created_at)
       if (!buckets[key]) buckets[key] = { on: 0, off: 0 }
       if (e.sentry_mode) buckets[key].on++
       else buckets[key].off++

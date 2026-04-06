@@ -32,6 +32,10 @@ func NewBatterySnapshotRepo(db *DB) *BatterySnapshotRepo {
 	return &BatterySnapshotRepo{db: db}
 }
 
+func (r *BatterySnapshotRepo) DB() *DB {
+	return r.db
+}
+
 func (r *BatterySnapshotRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.BatterySnapshot, error) {
 	query := `SELECT id, vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at
 		FROM battery_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`

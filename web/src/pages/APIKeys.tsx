@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAPIKeys, createAPIKey, deleteAPIKey, revokeAPIKey, APIKey } from '../api'
 import { Key, Plus, Trash2, Copy, Check, Shield, ShieldAlert, Crown, Clock, XCircle } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, ConfirmModal } from '../components/ui'
+import { formatDate } from '../lib/dateFormat'
 import clsx from 'clsx'
 
 function PermissionBadge({ perm }: { perm: string }) {
@@ -163,10 +164,10 @@ export default function APIKeys() {
                       <span className="font-mono">{k.key_prefix}</span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Created {new Date(k.created_at).toLocaleDateString()}
+                        Created {formatDate(k.created_at)}
                       </span>
                       {k.last_used_at && (
-                        <span>Last used {new Date(k.last_used_at).toLocaleDateString()}</span>
+                        <span>Last used {formatDate(k.last_used_at)}</span>
                       )}
                     </div>
                   </div>

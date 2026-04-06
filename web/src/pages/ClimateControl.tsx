@@ -9,14 +9,16 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
+import { fmtNumber } from '../lib/numberFormat'
 
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
 // ---------------------------------------------------------------------------
-interface TooltipPayload { name: string; value: number; color?: string }
+interface ClimateTooltipPayload { name: string; value: number; color?: string }
 
-function ChartTooltip({ active, payload, label, unit }: {
-  active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string
+function ClimateTooltip({ active, payload, label, unit }: {
+  active?: boolean; payload?: ClimateTooltipPayload[]; label?: string; unit?: string
 }) {
   if (!active || !payload?.length) return null
   return (
@@ -24,7 +26,7 @@ function ChartTooltip({ active, payload, label, unit }: {
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)}{unit ? ` ${unit}` : ''}
+          <span style={{ color: p.color }}>●</span> {p.name}: {p.value != null ? fmtNumber(p.value, 1) : ''}{unit ? ` ${unit}` : ''}
         </p>
       ))}
     </div>
@@ -62,11 +64,11 @@ function CircularGauge({ label, value, displayValue, unit, min, max, icon, color
             strokeDasharray={`${pct * 2.64} 264`} strokeLinecap="round" className={colorClass} />
         </svg>
         <span className={clsx('text-2xl font-bold', colorClass)}>
-          {hasData ? (displayValue ?? v.toFixed(1)) : '--'}
+          {hasData ? (displayValue ?? fmtNumber(v, 1)) : '--'}
         </span>
       </div>
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bgClass, colorClass)}>
-        {hasData ? `${displayValue ?? v.toFixed(1)} ${unit ?? ''}` : 'N/A'}
+        {hasData ? `${displayValue ?? fmtNumber(v, 1)} ${unit ?? ''}` : 'N/A'}
       </span>
     </div>
   )
@@ -162,12 +164,6 @@ function comfortLabel(score: number | null): { text: string; cls: string; bg: st
   return { text: 'Uncomfortable', cls: 'text-neon-red', bg: 'bg-neon-red/20' }
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
-}
-
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
@@ -197,7 +193,7 @@ export default function ClimateControl() {
   const sorted = [...history].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
   const tempChartData = sorted.map(s => ({
-    time: formatTime(s.created_at),
+    time: formatDateTime(s.created_at),
     inside: s.inside_temp != null ? +convertTemp(s.inside_temp).toFixed(1) : null,
     outside: s.outside_temp != null ? +convertTemp(s.outside_temp).toFixed(1) : null,
     leftTarget: s.hvac_left_temp_request != null ? +convertTemp(s.hvac_left_temp_request).toFixed(1) : null,
@@ -205,7 +201,7 @@ export default function ClimateControl() {
   }))
 
   const hvacChartData = sorted.map(s => ({
-    time: formatTime(s.created_at),
+    time: formatDateTime(s.created_at),
     power: s.hvac_power ?? null,
     fanSpeed: s.hvac_fan_speed ?? null,
   }))
@@ -283,7 +279,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="Cabin Temp"
             value={latest?.inside_temp != null ? convertTemp(latest.inside_temp) : null}
-            displayValue={latest?.inside_temp != null ? convertTemp(latest.inside_temp).toFixed(1) : undefined}
+            displayValue={latest?.inside_temp != null ? fmtNumber(convertTemp(latest.inside_temp), 1) : undefined}
             unit={tempUnit}
             min={convertTemp(0)} max={convertTemp(50)}
             icon={<Thermometer className="h-4 w-4" style={{ color: insideColor.cls.includes('cyan') ? '#22d3ee' : insideColor.cls.includes('green') ? '#10b981' : insideColor.cls.includes('amber') ? '#f59e0b' : insideColor.cls.includes('red') ? '#ef4444' : '#9ca3af' }} />}
@@ -298,7 +294,7 @@ export default function ClimateControl() {
               <CircularGauge
                 label="Outside Temp"
                 value={latest?.outside_temp != null ? convertTemp(latest.outside_temp) : null}
-                displayValue={latest?.outside_temp != null ? convertTemp(latest.outside_temp).toFixed(1) : undefined}
+                displayValue={latest?.outside_temp != null ? fmtNumber(convertTemp(latest.outside_temp), 1) : undefined}
                 unit={tempUnit}
                 min={convertTemp(-10)} max={convertTemp(50)}
                 icon={<Sun className="h-4 w-4 text-neon-amber" />}
@@ -312,7 +308,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="HVAC Power"
             value={latest?.hvac_power ?? null}
-            displayValue={latest?.hvac_power != null ? latest.hvac_power.toFixed(1) : undefined}
+            displayValue={latest?.hvac_power != null ? fmtNumber(latest.hvac_power, 1) : undefined}
             unit="kW"
             min={0} max={6}
             icon={<Zap className="h-4 w-4 text-neon-purple" />}
@@ -327,7 +323,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="Left Zone"
             value={latest?.hvac_left_temp_request != null ? convertTemp(latest.hvac_left_temp_request) : null}
-            displayValue={latest?.hvac_left_temp_request != null ? convertTemp(latest.hvac_left_temp_request).toFixed(1) : undefined}
+            displayValue={latest?.hvac_left_temp_request != null ? fmtNumber(convertTemp(latest.hvac_left_temp_request), 1) : undefined}
             unit={tempUnit}
             min={convertTemp(15)} max={convertTemp(30)}
             icon={<Thermometer className="h-4 w-4 text-neon-cyan" />}
@@ -339,7 +335,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="Right Zone"
             value={latest?.hvac_right_temp_request != null ? convertTemp(latest.hvac_right_temp_request) : null}
-            displayValue={latest?.hvac_right_temp_request != null ? convertTemp(latest.hvac_right_temp_request).toFixed(1) : undefined}
+            displayValue={latest?.hvac_right_temp_request != null ? fmtNumber(convertTemp(latest.hvac_right_temp_request), 1) : undefined}
             unit={tempUnit}
             min={convertTemp(15)} max={convertTemp(30)}
             icon={<Thermometer className="h-4 w-4 text-neon-amber" />}
@@ -374,7 +370,7 @@ export default function ClimateControl() {
                 tempDelta == null ? 'bg-white/5' : tempDelta > 2 ? 'bg-neon-red/20' : tempDelta < -2 ? 'bg-neon-cyan/20' : 'bg-neon-green/20')}>
                 <span className={clsx('text-2xl font-bold',
                   tempDelta == null ? 'text-[var(--text-muted)]' : tempDelta > 2 ? 'text-neon-red' : tempDelta < -2 ? 'text-neon-cyan' : 'text-neon-green')}>
-                  {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${convertTemp(tempDelta + 20 ) - convertTemp(20) > 0 ? '+' : ''}${(convertTemp(tempDelta + 20) - convertTemp(20)).toFixed(1)}` : '--'}
+                  {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${convertTemp(tempDelta + 20 ) - convertTemp(20) > 0 ? '+' : ''}${fmtNumber(convertTemp(tempDelta + 20) - convertTemp(20), 1)}` : '--'}
                 </span>
               </div>
               <span className="text-[10px] px-3 py-1 rounded-full font-medium bg-white/5" style={{ color: 'var(--text-secondary)' }}>
@@ -444,7 +440,7 @@ export default function ClimateControl() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit={tempUnit} />} />
+              <Tooltip content={<ClimateTooltip unit={tempUnit} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="inside" name="Cabin Temp" stroke="#f97316" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="outside" name="Outside Temp" stroke="#22d3ee" strokeWidth={2} dot={false} />
@@ -469,7 +465,7 @@ export default function ClimateControl() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="power" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} label={{ value: 'kW', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: 'var(--text-muted)' } }} />
               <YAxis yAxisId="fan" orientation="right" domain={[0, 6]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} label={{ value: 'Fan Level', angle: 90, position: 'insideRight', style: { fontSize: 10, fill: 'var(--text-muted)' } }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<ClimateTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Area yAxisId="power" type="monotone" dataKey="power" name="HVAC Power (kW)" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.15} strokeWidth={2} dot={false} />
               <Line yAxisId="fan" type="stepAfter" dataKey="fanSpeed" name="Fan Speed" stroke="#a855f7" strokeWidth={2} dot={false} />
@@ -495,19 +491,19 @@ export default function ClimateControl() {
             {/* Average HVAC Power */}
             <div className="glass-card p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Power</p>
-              <span className="text-2xl font-bold text-neon-cyan">{avgPower != null ? avgPower.toFixed(2) : '--'}</span>
+              <span className="text-2xl font-bold text-neon-cyan">{avgPower != null ? fmtNumber(avgPower, 2) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/20 text-neon-cyan">kW</span>
             </div>
             {/* Peak HVAC Power */}
             <div className="glass-card p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Peak Power</p>
-              <span className="text-2xl font-bold text-neon-purple">{peakPower != null ? peakPower.toFixed(2) : '--'}</span>
+              <span className="text-2xl font-bold text-neon-purple">{peakPower != null ? fmtNumber(peakPower, 2) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-purple/20 text-neon-purple">kW</span>
             </div>
             {/* Total Energy */}
             <div className="glass-card p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Est. Energy Used</p>
-              <span className="text-2xl font-bold text-neon-amber">{totalEnergy != null ? totalEnergy.toFixed(2) : '--'}</span>
+              <span className="text-2xl font-bold text-neon-amber">{totalEnergy != null ? fmtNumber(totalEnergy, 2) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-amber/20 text-neon-amber">kWh</span>
             </div>
             {/* Temp Differential Efficiency */}
@@ -527,28 +523,28 @@ export default function ClimateControl() {
         <div className="glass-card p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Cabin</p>
           <span className="text-lg font-bold text-neon-cyan">
-            {avgInside != null ? convertTemp(avgInside).toFixed(1) : '--'}
+            {avgInside != null ? fmtNumber(convertTemp(avgInside), 1) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{tempUnit}</span>
         </div>
         <div className="glass-card p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Outside</p>
           <span className="text-lg font-bold text-neon-green">
-            {avgOutside != null ? convertTemp(avgOutside).toFixed(1) : '--'}
+            {avgOutside != null ? fmtNumber(convertTemp(avgOutside), 1) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{tempUnit}</span>
         </div>
         <div className="glass-card p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg HVAC</p>
           <span className="text-lg font-bold text-neon-purple">
-            {avgPower != null ? avgPower.toFixed(2) : '--'}
+            {avgPower != null ? fmtNumber(avgPower, 2) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>kW</span>
         </div>
         <div className="glass-card p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Max HVAC</p>
           <span className="text-lg font-bold text-neon-amber">
-            {maxPower != null ? maxPower.toFixed(2) : '--'}
+            {maxPower != null ? fmtNumber(maxPower, 2) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>kW</span>
         </div>

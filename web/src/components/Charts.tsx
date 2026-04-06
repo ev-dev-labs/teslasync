@@ -8,7 +8,7 @@ import { CartesianGrid } from 'recharts'
 import { memo } from 'react'
 
 // ── Neon color palette used across all charts ──
-export const NEON_COLORS = ['#00f0ff', '#10b981', '#a855f7', '#f59e0b', '#4f46e5', '#ef4444', '#ec4899', '#14b8a6']
+export { CHART_COLORS, CHART_COLORS as NEON_COLORS } from '../lib/colors'
 
 // ── Theme-aware axis tick styles ──
 export const axisTick = { fill: 'var(--text-muted)', fontSize: 11 }

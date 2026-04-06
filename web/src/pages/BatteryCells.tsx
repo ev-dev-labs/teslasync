@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
+import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
+import { BATTERY_COLORS } from '../lib/colors'
 import {
   Battery, Thermometer, AlertTriangle, CheckCircle, Activity, Zap,
   Shield, Info,
@@ -38,10 +40,10 @@ function spreadStatus(spread: number, thresholds: [number, number]): 'healthy' |
 }
 
 const statusColors = {
-  healthy: { text: 'text-neon-green', bg: 'bg-neon-green/10', border: 'border-neon-green/20', hex: '#10b981' },
-  watch:   { text: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', hex: '#f59e0b' },
-  warning: { text: 'text-neon-red',   bg: 'bg-neon-red/10',   border: 'border-neon-red/20',   hex: '#ef4444' },
-} as const
+  healthy: { text: 'text-neon-green', bg: 'bg-neon-green/10', border: 'border-neon-green/20', hex: BATTERY_COLORS.good },
+  watch:   { text: 'text-neon-amber', bg: 'bg-neon-amber/10', border: 'border-neon-amber/20', hex: BATTERY_COLORS.warning },
+  warning: { text: 'text-neon-red',   bg: 'bg-neon-red/10',   border: 'border-neon-red/20',   hex: BATTERY_COLORS.critical },
+}
 
 /* Deterministic pseudo-random for cell simulation */
 function seededRandom(seed: number): number {
@@ -51,15 +53,15 @@ function seededRandom(seed: number): number {
 
 /* ─────────────────────── Tooltip (matches TirePressure) ─────────────────────── */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function CellChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface CellTooltipPayload { name: string; value: number; color?: string }
+function CellChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: CellTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(3)}{unit && ` ${unit}`}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 3)}{unit && ` ${unit}`}
         </p>
       ))}
     </div>
@@ -88,7 +90,7 @@ function CircularGauge({ value, label, sublabel, unit, status, maxArc = 100 }: {
           />
         </svg>
         <div className="flex flex-col items-center">
-          <span className={clsx('text-2xl font-bold', sc.text)}>{value.toFixed(3)}</span>
+          <span className={clsx('text-2xl font-bold', sc.text)}>{fmtNumber(value, 3)}</span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{unit}</span>
         </div>
       </div>
@@ -115,13 +117,13 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
   const maxV = Math.max(...cellVoltages)
   const rangeV = maxV - minV || 0.001
 
-  const cellW = 12
-  const cellH = 18
-  const gapX = 2
-  const gapY = 2
-  const moduleGap = 16
-  const padX = 24
-  const padY = 48
+  const cellW = 8
+  const cellH = 12
+  const gapX = 1.5
+  const gapY = 1.5
+  const moduleGap = 10
+  const padX = 20
+  const padY = 36
 
   const totalW = padX * 2 + BRICKS_PER_MODULE * (cellW + gapX) - gapX
   const totalH = padY * 2 + MODULES * (cellH + gapY) - gapY + (MODULES - 1) * moduleGap
@@ -137,7 +139,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
     <svg
       viewBox={`0 0 ${totalW} ${totalH}`}
       xmlns="http://www.w3.org/2000/svg"
-      style={{ width: '100%', maxWidth: '100%' }}
+      style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}
       role="img"
       aria-label="Battery pack cell visualization"
     >
@@ -155,7 +157,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
       <rect x="4" y="4" width={totalW - 8} height={totalH - 8} rx="12" fill="#0f172a" stroke="url(#packBorder)" strokeWidth="2" opacity="0.9" />
 
       {/* Pack title */}
-      <text x={totalW / 2} y="30" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">
+      <text x={totalW / 2} y="22" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">
         BATTERY PACK
       </text>
 
@@ -170,7 +172,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
             </text>
             {/* Module temp indicator */}
             <text x={totalW - 10} y={my + cellH / 2 + 4} textAnchor="end" fontSize="7" fill={moduleTemps[m] > 35 ? '#ef4444' : '#10b981'} fontFamily="system-ui,sans-serif">
-              {moduleTemps[m].toFixed(0)}°
+              {fmtInt(moduleTemps[m])}°
             </text>
             {/* Cells */}
             {Array.from({ length: BRICKS_PER_MODULE }, (_, b) => {
@@ -210,7 +212,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
       {/* Health badge */}
       <rect x={totalW - 90} y={totalH - 28} width="76" height="20" rx="6" fill="#0f172a" stroke="#22d3ee" strokeWidth="1" opacity="0.85" />
       <text x={totalW - 52} y={totalH - 14} textAnchor="middle" fontSize="8" fontWeight="bold" fill={healthScore >= 90 ? '#10b981' : healthScore >= 70 ? '#f59e0b' : '#ef4444'} fontFamily="system-ui,sans-serif">
-        HEALTH {healthScore.toFixed(0)}%
+        HEALTH {fmtPercent(healthScore)}
       </text>
     </svg>
   )
@@ -441,7 +443,7 @@ export default function BatteryCells() {
         tips.push({
           icon: <Zap className="h-4 w-4" />,
           title: 'High DC Fast Charging Usage',
-          description: `${dcPct.toFixed(0)}% of sessions use DC fast charging. Reducing supercharger use can slow cell imbalance growth.`,
+          description: `${fmtPercent(dcPct)} of sessions use DC fast charging. Reducing supercharger use can slow cell imbalance growth.`,
           status: 'warning',
         })
       }
@@ -511,8 +513,8 @@ export default function BatteryCells() {
                 maxArc={0.1}
               />
               <div className="mt-3 flex justify-center gap-6 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                <span>Max: <span className="font-mono text-[var(--text-primary)]">{maxCellV.toFixed(3)}V</span></span>
-                <span>Min: <span className="font-mono text-[var(--text-primary)]">{minCellV.toFixed(3)}V</span></span>
+                <span>Max: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(maxCellV, 3)}V</span></span>
+                <span>Min: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(minCellV, 3)}V</span></span>
               </div>
             </GlassPanel>
 
@@ -526,8 +528,8 @@ export default function BatteryCells() {
                 maxArc={convertTemp(10) - convertTemp(0)}
               />
               <div className="mt-3 flex justify-center gap-6 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                <span>Hot: <span className="font-mono text-[var(--text-primary)]">{convertTemp(maxModuleTemp).toFixed(1)}{tempUnit}</span></span>
-                <span>Cold: <span className="font-mono text-[var(--text-primary)]">{convertTemp(minModuleTemp).toFixed(1)}{tempUnit}</span></span>
+                <span>Hot: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(convertTemp(maxModuleTemp), 1)}{tempUnit}</span></span>
+                <span>Cold: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(convertTemp(minModuleTemp), 1)}{tempUnit}</span></span>
               </div>
             </GlassPanel>
 
@@ -645,16 +647,16 @@ export default function BatteryCells() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             <div className="glass-card p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Health Score</p>
-              <p className="text-2xl font-bold text-neon-cyan">{healthScore.toFixed(0)}<span className="text-sm">%</span></p>
+              <p className="text-2xl font-bold text-neon-cyan">{fmtInt(healthScore)}<span className="text-sm">%</span></p>
             </div>
             <div className="glass-card p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cell V Spread</p>
-              <p className={clsx('text-2xl font-bold', statusColors[voltageStatus].text)}>{cellSpread.toFixed(3)}<span className="text-sm">V</span></p>
+              <p className={clsx('text-2xl font-bold', statusColors[voltageStatus].text)}>{fmtNumber(cellSpread, 3)}<span className="text-sm">V</span></p>
             </div>
             <div className="glass-card p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Temp Spread</p>
               <p className={clsx('text-2xl font-bold', statusColors[tempStatus].text)}>
-                {(convertTemp(moduleTempDelta) - convertTemp(0)).toFixed(1)}<span className="text-sm">{tempUnit}</span>
+                {fmtNumber(convertTemp(moduleTempDelta) - convertTemp(0), 1)}<span className="text-sm">{tempUnit}</span>
               </p>
             </div>
             <div className="glass-card p-4 flex flex-col items-center gap-1">
@@ -663,12 +665,12 @@ export default function BatteryCells() {
             </div>
             <div className="glass-card p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Capacity</p>
-              <p className="text-2xl font-bold text-neon-green">{currentCapacityKwh.toFixed(1)}<span className="text-sm">kWh</span></p>
+              <p className="text-2xl font-bold text-neon-green">{fmtNumber(currentCapacityKwh, 1)}<span className="text-sm">kWh</span></p>
             </div>
             <div className="glass-card p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Deg. Rate</p>
               <p className={clsx('text-2xl font-bold', degradationRatePerYear > 3 ? 'text-neon-red' : degradationRatePerYear > 1.5 ? 'text-neon-amber' : 'text-neon-green')}>
-                {degradationRatePerYear.toFixed(1)}<span className="text-sm">%/yr</span>
+                {fmtNumber(degradationRatePerYear, 1)}<span className="text-sm">%/yr</span>
               </p>
             </div>
           </div>

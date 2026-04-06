@@ -7,7 +7,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type VehicleStateHandler struct {
@@ -24,17 +23,44 @@ func (h *VehicleStateHandler) Timeline(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	limit, _ := pagination(r)
-	states, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit)
+	days := 1
+	if d := r.URL.Query().Get("days"); d != "" {
+		if v, err := strconv.Atoi(d); err == nil && v > 0 && v <= 365 {
+			days = v
+		}
+	}
+	states, err := h.repo.GetTimeline(r.Context(), vehicleID, days)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get vehicle states")
 		writeError(w, http.StatusInternalServerError, "failed to get timeline data")
 		return
 	}
-	if states == nil {
-		states = make([]*models.VehicleStateRecord, 0)
+
+	type transition struct {
+		State           string  `json:"state"`
+		StartedAt       string  `json:"started_at"`
+		EndedAt         *string `json:"ended_at"`
+		DurationSeconds float64 `json:"duration_seconds"`
 	}
-	writeJSON(w, http.StatusOK, states)
+	transitions := make([]transition, 0, len(states))
+	for _, s := range states {
+		t := transition{
+			State:           s.State,
+			StartedAt:       s.StartDate.Format(time.RFC3339),
+			DurationSeconds: s.DurationMin * 60,
+		}
+		if s.EndDate != nil {
+			end := s.EndDate.Format(time.RFC3339)
+			t.EndedAt = &end
+		}
+		transitions = append(transitions, t)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id":  vehicleID,
+		"days":        days,
+		"transitions": transitions,
+	})
 }
 
 func (h *VehicleStateHandler) Summary(w http.ResponseWriter, r *http.Request) {

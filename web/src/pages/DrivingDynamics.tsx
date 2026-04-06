@@ -9,17 +9,19 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { parseGear, GEAR_COLORS } from '../lib/gear'
 
 /* ---------- Tooltip ---------- */
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
-function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface DynamicsTooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
+function DynamicsTooltip({ active, payload, label, unit }: { active?: boolean; payload?: DynamicsTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}{unit ? ` ${unit}` : ''}
+          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? fmtNumber(p.value, 2) : p.value}{unit ? ` ${unit}` : ''}
         </p>
       ))}
     </div>
@@ -45,11 +47,11 @@ function CircularGauge({ value, min, max, label, unit, color }: {
             strokeDasharray={`${pct * 2.64} 264`} strokeLinecap="round" className={color} />
         </svg>
         <span className={clsx('text-2xl font-bold', color)}>
-          {hasData ? (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) : '--'}
+          {hasData ? (Math.abs(v) >= 100 ? fmtInt(v) : fmtNumber(v)) : '--'}
         </span>
       </div>
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', `${color.replace('text-', 'bg-')}/20`, color)}>
-        {hasData ? `${v.toFixed(1)} ${unit}` : 'N/A'}
+        {hasData ? `${fmtNumber(v)} ${unit}` : 'N/A'}
       </span>
     </div>
   )
@@ -207,13 +209,9 @@ export default function DrivingDynamics() {
 
   /* --- Gear badge --- */
   const gearBadge = (gear?: string) => {
-    if (!gear) return { text: '--', color: 'text-[var(--text-muted)]' }
-    const g = gear.toUpperCase()
-    if (g === 'D' || g === 'DRIVE') return { text: 'D', color: 'text-neon-green' }
-    if (g === 'R' || g === 'REVERSE') return { text: 'R', color: 'text-neon-red' }
-    if (g === 'P' || g === 'PARK') return { text: 'P', color: 'text-neon-cyan' }
-    if (g === 'N' || g === 'NEUTRAL') return { text: 'N', color: 'text-neon-amber' }
-    return { text: g, color: 'text-[var(--text-primary)]' }
+    const parsed = parseGear(gear)
+    if (!parsed) return { text: '--', color: 'text-[var(--text-muted)]' }
+    return { text: parsed, color: GEAR_COLORS[parsed] ?? 'text-[var(--text-primary)]' }
   }
 
   const badge = motorStateBadge(latest?.di_state)
@@ -303,26 +301,26 @@ export default function DrivingDynamics() {
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Lateral G</p>
             <p className="text-3xl font-bold text-neon-amber">
-              {latest?.lateral_accel !== undefined ? latest.lateral_accel.toFixed(3) : '--'}
+              {latest?.lateral_accel !== undefined ? fmtNumber(latest.lateral_accel, 3) : '--'}
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>g</span>
             </p>
             {stats && (
               <div className="flex gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span>Peak L: {stats.peakLatGNeg.toFixed(3)}g</span>
-                <span>Peak R: {stats.peakLatG.toFixed(3)}g</span>
+                <span>Peak L: {fmtNumber(stats.peakLatGNeg, 3)}g</span>
+                <span>Peak R: {fmtNumber(stats.peakLatG, 3)}g</span>
               </div>
             )}
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Longitudinal G</p>
             <p className="text-3xl font-bold text-neon-cyan">
-              {latest?.longitudinal_accel !== undefined ? latest.longitudinal_accel.toFixed(3) : '--'}
+              {latest?.longitudinal_accel !== undefined ? fmtNumber(latest.longitudinal_accel, 3) : '--'}
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>g</span>
             </p>
             {stats && (
               <div className="flex gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span>Peak Brake: {stats.peakLonGNeg.toFixed(3)}g</span>
-                <span>Peak Accel: {stats.peakLonG.toFixed(3)}g</span>
+                <span>Peak Brake: {fmtNumber(stats.peakLonGNeg, 3)}g</span>
+                <span>Peak Accel: {fmtNumber(stats.peakLonG, 3)}g</span>
               </div>
             )}
           </div>
@@ -342,14 +340,14 @@ export default function DrivingDynamics() {
             <div className="space-y-3 flex-1 flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Lateral</span>
-                <span className="text-sm font-bold text-neon-amber">{stats.maxLatG.toFixed(3)}g</span>
+                <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.maxLatG, 3)}g</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/5">
                 <div className="h-full rounded-full bg-neon-amber/60" style={{ width: `${Math.min(100, stats.maxLatG * 100)}%` }} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Longitudinal</span>
-                <span className="text-sm font-bold text-neon-cyan">{stats.maxLonG.toFixed(3)}g</span>
+                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(stats.maxLonG, 3)}g</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/5">
                 <div className="h-full rounded-full bg-neon-cyan/60" style={{ width: `${Math.min(100, stats.maxLonG * 100)}%` }} />
@@ -357,7 +355,7 @@ export default function DrivingDynamics() {
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Combined Peak</span>
                 <span className="text-sm font-bold text-neon-green">
-                  {Math.sqrt(stats.maxLatG ** 2 + stats.maxLonG ** 2).toFixed(3)}g
+                  {fmtNumber(Math.sqrt(stats.maxLatG ** 2 + stats.maxLonG ** 2), 3)}g
                 </span>
               </div>
             </div>
@@ -416,7 +414,7 @@ export default function DrivingDynamics() {
         <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
           <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Current Speed</p>
           <p className="text-5xl font-bold text-neon-cyan">
-            {latest?.vehicle_speed !== undefined ? convertSpeed(latest.vehicle_speed).toFixed(0) : '--'}
+            {latest?.vehicle_speed !== undefined ? fmtInt(convertSpeed(latest.vehicle_speed)) : '--'}
           </p>
           <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{speedUnit}</span>
         </div>
@@ -449,18 +447,18 @@ export default function DrivingDynamics() {
             <div className="space-y-2 flex-1 flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Average</span>
-                <span className="text-sm font-bold text-neon-cyan">{convertSpeed(stats.avgSpeed).toFixed(1)} {speedUnit}</span>
+                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(convertSpeed(stats.avgSpeed))} {speedUnit}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Maximum</span>
-                <span className="text-sm font-bold text-neon-green">{convertSpeed(stats.maxSpeed).toFixed(1)} {speedUnit}</span>
+                <span className="text-sm font-bold text-neon-green">{fmtNumber(convertSpeed(stats.maxSpeed))} {speedUnit}</span>
               </div>
               <div className="mt-2 pt-2 border-t border-white/5">
                 <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Time in Gear</p>
                 {Object.entries(stats.gearCounts).map(([g, count]) => (
                   <div key={g} className="flex items-center justify-between text-xs">
                     <span style={{ color: 'var(--text-muted)' }}>{g}</span>
-                    <span style={{ color: 'var(--text-primary)' }}>{count} readings ({((count / stats.totalReadings) * 100).toFixed(0)}%)</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{count} readings ({fmtInt(((count / stats.totalReadings) * 100))}%)</span>
                   </div>
                 ))}
               </div>
@@ -488,7 +486,7 @@ export default function DrivingDynamics() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit={speedUnit} />} />
+              <Tooltip content={<DynamicsTooltip unit={speedUnit} />} />
               <Area type="monotone" dataKey="speed" name="Speed" stroke="#00f0ff" strokeWidth={2} fill="url(#speedGradient)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -506,7 +504,7 @@ export default function DrivingDynamics() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="Nm" />} />
+              <Tooltip content={<DynamicsTooltip unit="Nm" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="torque" name="Torque" stroke="#00f0ff" strokeWidth={2} dot={false} />
             </LineChart>
@@ -525,7 +523,7 @@ export default function DrivingDynamics() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip unit="g" />} />
+              <Tooltip content={<DynamicsTooltip unit="g" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="lateral" name="Lateral G" stroke="#f59e0b" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="longitudinal" name="Longitudinal G" stroke="#00f0ff" strokeWidth={2} dot={false} />
@@ -545,15 +543,15 @@ export default function DrivingDynamics() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Average Torque</span>
-                <span className="text-sm font-bold text-neon-cyan">{stats.avgTorque.toFixed(1)} Nm</span>
+                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(stats.avgTorque)} Nm</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Torque</span>
-                <span className="text-sm font-bold text-neon-green">{stats.maxTorque.toFixed(1)} Nm</span>
+                <span className="text-sm font-bold text-neon-green">{fmtNumber(stats.maxTorque)} Nm</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Regen</span>
-                <span className="text-sm font-bold text-neon-amber">{stats.minTorque.toFixed(1)} Nm</span>
+                <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.minTorque)} Nm</span>
               </div>
             </div>
           </div>
@@ -562,7 +560,7 @@ export default function DrivingDynamics() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Avg Pedal Position</span>
-                <span className="text-sm font-bold text-neon-green">{stats.avgPedal.toFixed(1)}%</span>
+                <span className="text-sm font-bold text-neon-green">{fmtNumber(stats.avgPedal)}%</span>
               </div>
               <div className="w-full h-2 rounded-full bg-white/5 mt-1">
                 <div className="h-full rounded-full bg-neon-green/60" style={{ width: `${stats.avgPedal}%` }} />
@@ -578,11 +576,11 @@ export default function DrivingDynamics() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Avg Stator Temp</span>
-                <span className="text-sm font-bold text-neon-amber">{convertTemp(stats.avgTemp).toFixed(1)} {tempUnit}</span>
+                <span className="text-sm font-bold text-neon-amber">{fmtNumber(convertTemp(stats.avgTemp))} {tempUnit}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Stator Temp</span>
-                <span className="text-sm font-bold text-neon-red">{convertTemp(stats.maxTemp).toFixed(1)} {tempUnit}</span>
+                <span className="text-sm font-bold text-neon-red">{fmtNumber(convertTemp(stats.maxTemp))} {tempUnit}</span>
               </div>
               <div className="w-full h-2 rounded-full bg-white/5 mt-1">
                 <div
@@ -620,35 +618,35 @@ export default function DrivingDynamics() {
           />
           <StatCard
             label="Avg Torque"
-            value={stats.avgTorque.toFixed(1)}
+            value={fmtNumber(stats.avgTorque)}
             unit="Nm"
             icon={<Gauge className="h-4 w-4" />}
             color="text-neon-green"
           />
           <StatCard
             label="Max Lateral G"
-            value={stats.maxLatG.toFixed(3)}
+            value={fmtNumber(stats.maxLatG, 3)}
             unit="g"
             icon={<ArrowUp className="h-4 w-4" />}
             color="text-neon-amber"
           />
           <StatCard
             label="Max Longitudinal G"
-            value={stats.maxLonG.toFixed(3)}
+            value={fmtNumber(stats.maxLonG, 3)}
             unit="g"
             icon={<ArrowDown className="h-4 w-4" />}
             color="text-neon-cyan"
           />
           <StatCard
             label="Avg Pedal Position"
-            value={stats.avgPedal.toFixed(1)}
+            value={fmtNumber(stats.avgPedal)}
             unit="%"
             icon={<Activity className="h-4 w-4" />}
             color="text-neon-green"
           />
           <StatCard
             label="Avg Stator Temp"
-            value={convertTemp(stats.avgTemp).toFixed(1)}
+            value={fmtNumber(convertTemp(stats.avgTemp))}
             unit={tempUnit}
             icon={<Thermometer className="h-4 w-4" />}
             color="text-neon-amber"

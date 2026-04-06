@@ -34,6 +34,7 @@ import {
   Activity,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -89,16 +90,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 function daysAgo(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() - days)
@@ -116,7 +107,7 @@ function relativeTime(dateStr: string): string {
   if (hrs < 24) return `${hrs}h ago`
   const days = Math.floor(hrs / 24)
   if (days < 30) return `${days}d ago`
-  return formatDate(dateStr)
+  return formatDateTime(dateStr)
 }
 
 /* ------------------------------------------------------------------ */
@@ -515,7 +506,7 @@ export default function DataExport() {
     const mostExportedType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—'
 
     const lastExport = jobs.length > 0
-      ? formatDate(
+      ? formatDateTime(
           [...jobs].sort(
             (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )[0].created_at

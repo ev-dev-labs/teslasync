@@ -22,6 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
@@ -173,6 +174,46 @@ func main() {
 	var telemetryHandler *api.TelemetryHandler
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
+
+		// Initialize SignalStore with Postgres flusher for pod restart recovery
+		liveStateRepo := database.NewLiveStateRepo(db)
+		signalStore := sigsvc.New(liveStateRepo, 5*time.Second)
+		telemetryHandler.SetSignalStore(signalStore)
+
+		// Load existing live state from DB (pod restart recovery)
+		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
+			for _, v := range vehicles {
+				signalStore.LoadFromDB(ctx, v.ID)
+			}
+		}
+		log.Info().Msg("signal store initialized")
+
+		// MongoDB raw telemetry capture (optional)
+		if cfg.MongoDB.Enabled {
+			mongoClient, err := database.NewMongoClient(cfg.MongoDB)
+			if err != nil {
+				log.Warn().Err(err).Msg("MongoDB connection failed — raw telemetry capture disabled")
+			} else {
+				defer mongoClient.Close()
+				rawRepo := database.NewRawTelemetryRepo(mongoClient)
+				telemetryHandler.SetRawTelemetryRepo(rawRepo)
+
+				// Initialize per-signal log for full history
+				signalLogRepo := database.NewSignalLogRepo(mongoClient)
+				telemetryHandler.SetSignalLogRepo(signalLogRepo)
+
+				log.Info().Str("database", cfg.MongoDB.Database).Int("ttl_days", cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture + signal log available")
+
+				// Read initial capture toggle from settings
+				settingsRepo := database.NewSettingsRepo(db)
+				if pc, err := settingsRepo.GetPollingConfig(ctx); err == nil {
+					telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
+					if pc.TelemetryCapture {
+						log.Info().Msg("raw telemetry capture is ENABLED (from settings)")
+					}
+				}
+			}
+		}
 
 		// Start periodic cleanup of stale streaming/session state
 		telemetryHandler.StartCleanup(ctx)

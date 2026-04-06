@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.22-00ADD8?logo=go&logoColor=white" alt="Go 1.22" />
+  <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white" alt="Go 1.25" />
   <img src="https://img.shields.io/badge/tests-14%20packages-success" alt="Tests" />
   <img src="https://img.shields.io/badge/coverage-race%20enabled-blue" alt="Coverage" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
@@ -34,13 +34,16 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **61 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, backup & restore, and more
+- **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, backup & restore, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
 - **26 Grafana dashboards** — Pre-built dashboards for deep analytics
 - **231 Tesla fleet telemetry fields** — 100% Tesla Fleet Telemetry Protocol coverage (all signals from `vehicle_data.proto` subscribed AND processed)
+- **In-memory SignalStore** — Always-complete vehicle state with nanosecond reads, 30KB RAM per vehicle
+- **MongoDB Signal Log** — Every telemetry signal persisted forever with per-signal queryable history
+- **8 Diagnostics Tools** — Live signal monitor, signal explorer, signal diff, gap detector, state machine debugger, MQTT inspector, DB health dashboard, signal log viewer
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
 - **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
 - **25 Developer Tools** — Built-in Tesla API diagnostics, VIN decoder, JWT decoder, partner registration, and 20+ utilities
@@ -88,6 +91,16 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - ♻️ **Regen Braking** — Regenerative energy capture ratio, per-drive scoring, monthly trends
 - 📉 **Battery Degradation** — Health trend with linear regression projection, risk factor analysis
 
+### 🔍 Diagnostics & Signal Intelligence (NEW)
+- 🟢 **Live Signal Monitor** — Real-time SSE feed of all incoming signals with pause/resume, filter, and signals/sec rate
+- 📊 **Signal Log Viewer** — Browse raw MongoDB signal recordings with pagination, time range, and signal filtering
+- ⚡ **Signal Explorer** — Chart any of 230 telemetry signals over time with configurable time ranges
+- 🔀 **Signal Diff** — Compare a signal's values across two time ranges side-by-side
+- ⚠️ **Signal Gap Detector** — Identify stale or missing signals with color-coded staleness indicators
+- ⚙️ **State Machine Debugger** — Vehicle state visualization with transition timeline and duration distribution
+- 📡 **MQTT Inspector** — MQTT connection status, throughput chart, and per-vehicle signal breakdown
+- 🗄️ **DB Health Dashboard** — PostgreSQL table sizes, row counts, index stats, and migration status
+
 ### 🎮 Remote Vehicle Control
 - Wake / Lock / Unlock
 - Climate On/Off
@@ -133,7 +146,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
 - **5 Color Themes** — Dynamic theme switching with CSS variables
 - **Map Layer Switcher** — Dark, Satellite, Streets, Terrain on all map pages
-- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 61 pages
+- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 69 pages
 - **Animated Car SVG** — Subtle automobile animations on loading states and docs
 - **Code-Split Routes** — Lightning-fast page loads with React lazy loading
 - **PWA-Ready** — Installable as a native app with custom splash screen
@@ -141,7 +154,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Responsive** — Works on desktop, tablet, and mobile
 
 ### 🔒 Enterprise-Grade Backend
-- **Go 1.22** — Fast, concurrent, minimal memory footprint
+- **Go 1.25** — Fast, concurrent, minimal memory footprint
 - **Circuit Breaker** — Automatic Tesla API backoff with gobreaker
 - **Rate Limiting** — Configurable per-IP rate limiting
 - **Prometheus Metrics** — `/metrics` endpoint for monitoring
@@ -156,10 +169,14 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
   - `location_snapshots` — Navigation destination, route, home/work/favorite detection
   - `safety_snapshots` — ADAS settings, collision warnings, FSD miles
   - `user_preference_snapshots` — Unit settings, time format
+  - `vehicle_live_state` — Always-complete vehicle state checkpoint (1 row per vehicle, UPSERT every 5s)
 - **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
 - **MQTT Workers** — Notification worker + export worker for async processing
 - **Redis Caching** — Fast lookups for vehicle state and sessions
-- **7-Channel Notifications** — Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
+- **In-Memory SignalStore** — Per-vehicle signal map with nanosecond reads, periodic DB flush, pod restart recovery
+- **MongoDB Signal Log** — Per-signal time-series storage with compound indexes for history queries
+- **Debounced State Machine** — 5-state vehicle detection (driving/charging/parked/online/offline) with hysteresis to prevent flapping
+- **7-Channel Notifications**— Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
 - **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
 - **API Suspend Toggle** — Suspend all Tesla Fleet API calls from Settings UI or API when vehicle is in service
 - **Granular Endpoint Controls** — Enable/disable individual Tesla Fleet API endpoints for both automatic polling and on-demand calls (20 independent toggles across polling, on-demand, and commands)
@@ -172,6 +189,8 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Fleet Telemetry** — Status monitoring, 231 signals with 100% Tesla protocol coverage across all categories, enable/disable visibility in system status
 - **Vehicle Data Queries** — Fleet telemetry errors table with download, vehicle data queries tool
 - **Tesla Fleet API** — Nearby charging sites, release notes, recent alerts, service data
+- **Signal Configuration Modal** — Full-screen per-signal interval configuration with presets (Real-time Driving, Balanced, Low Power, Track Mode)
+- **Raw Telemetry Capture** — MongoDB-backed raw signal recording with export capability
 
 ## Architecture
 
@@ -229,11 +248,29 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 
 > **Traffic Flow:** In Kubernetes, all external traffic enters through a single ingress route pointing to `teslasync-web` (Nginx). Nginx serves static files directly and proxies API paths (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network. API traffic never traverses the ingress controller — only the initial page load does.
 
+### Signal Processing Pipeline
+
+```
+Tesla Vehicle (500ms capable)
+    ↓
+Fleet Telemetry Server → MQTT (per-signal messages)
+    ↓
+ProcessSignals()
+    ├─ normalizeFleetUnits()      — mph→km/h, miles→km
+    ├─ SignalStore.Update()       — in-memory (nanoseconds, always complete)
+    ├─ signalLogger.Write()       — MongoDB signal_log (every signal, forever)
+    ├─ liveState.Flush()          — Postgres vehicle_live_state (every 5s)
+    ├─ extractPosition()          — Postgres positions (every 10s)
+    ├─ sessionTracker             — drives + charge sessions (event-driven)
+    ├─ trackStateTransition()     — debounced 5-state machine
+    └─ track*() snapshots         — 15 domain tables (every 10s)
+```
+
 ### Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Go 1.22 · Chi router · pgx/v5 · zerolog · gobreaker |
+| **Backend** | Go 1.25 · Chi router · pgx/v5 · zerolog · gobreaker |
 | **Frontend** | React 18 · TypeScript · Vite 5 · Tailwind CSS · Recharts · Leaflet · Framer Motion |
 | **Database** | PostgreSQL 17 with native partitioning |
 | **Cache** | Redis 7 |

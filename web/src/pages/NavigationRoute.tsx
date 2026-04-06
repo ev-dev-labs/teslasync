@@ -1,18 +1,20 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getLocationSnapshots, getLocationSnapshotLatest } from '../api'
+import { request } from '../api/client'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ------------------------------------------------------------------ */
 /*  Chart tooltip                                                      */
 /* ------------------------------------------------------------------ */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+interface NavTooltipPayload { name: string; value: number; color?: string }
+function NavTooltip({ active, payload, label }: { active?: boolean; payload?: NavTooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -148,6 +150,19 @@ export default function NavigationRoute() {
     refetchInterval: 10000,
   })
 
+  // Live signals for real-time at-home/work/favorite status
+  const { data: liveSignals } = useQuery<{ signals: Record<string, { value: unknown }> }>({
+    queryKey: ['live-location-signals', vehicleId],
+    queryFn: () => request(`/signals/${vehicleId}/live`),
+    enabled: vehicleId !== null,
+    refetchInterval: 5000,
+  })
+
+  // Extract live location booleans (prefer live over stale DB snapshot)
+  const isAtHome = liveSignals?.signals?.LocatedAtHome?.value === true || latest?.located_at_home === true
+  const isAtWork = liveSignals?.signals?.LocatedAtWork?.value === true || latest?.located_at_work === true
+  const isAtFavorite = liveSignals?.signals?.LocatedAtFavorite?.value === true || latest?.located_at_favorite === true
+
   /* History for charts and recent destinations table */
   const { data: history, isLoading: loadingHistory } = useQuery({
     queryKey: ['location-snapshots', vehicleId],
@@ -160,12 +175,7 @@ export default function NavigationRoute() {
   const presenceChartData = useMemo(() => {
     if (!history || history.length === 0) return []
     return history.slice().reverse().map(s => ({
-      time: new Date(s.created_at).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      time: formatDateTime(s.created_at),
       home: s.located_at_home ? 1 : 0,
       work: s.located_at_work ? 1 : 0,
       favorite: s.located_at_favorite ? 1 : 0,
@@ -179,12 +189,7 @@ export default function NavigationRoute() {
       .filter(s => s.destination_name)
       .slice(0, 50)
       .map(s => ({
-        time: new Date(s.created_at).toLocaleString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        time: formatDateTime(s.created_at),
         destination: s.destination_name ?? '—',
         miles: s.miles_to_arrival,
         minutes: s.minutes_to_arrival,
@@ -353,19 +358,19 @@ export default function NavigationRoute() {
         <LocationStatusCard
           label="At Home"
           icon={Home}
-          active={latest?.located_at_home ?? false}
+          active={isAtHome}
           loading={loadingLatest}
         />
         <LocationStatusCard
           label="At Work"
           icon={Building}
-          active={latest?.located_at_work ?? false}
+          active={isAtWork}
           loading={loadingLatest}
         />
         <LocationStatusCard
           label="At Favorite"
           icon={Star}
-          active={latest?.located_at_favorite ?? false}
+          active={isAtFavorite}
           loading={loadingLatest}
         />
       </div>
@@ -483,7 +488,7 @@ export default function NavigationRoute() {
                 tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                 tickFormatter={v => (v === 1 ? 'Yes' : 'No')}
               />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<NavTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="stepAfter" dataKey="home" name="At Home" stroke="#10b981" strokeWidth={2} dot={false} />
               <Line type="stepAfter" dataKey="work" name="At Work" stroke="#a855f7" strokeWidth={2} dot={false} />

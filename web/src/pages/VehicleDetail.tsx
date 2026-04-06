@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest } from '../api'
+import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest, getVehicleConfigLatest, getUserPreferenceLatest } from '../api'
 import { cleanNil } from '../lib/cleanNil'
 import { useState } from 'react'
 import { MapContainer, Polyline, Marker } from 'react-leaflet'
@@ -12,7 +12,7 @@ import {
   Battery, Thermometer, Gauge, Navigation, Lock, Unlock, Shield,
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
   Cpu, BatteryCharging, ChevronRight, Cog, ShieldAlert, DoorClosed,
-  Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin,
+  Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin, Settings,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -22,6 +22,9 @@ import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
 import clsx from 'clsx'
+import { formatTime, formatDateTime } from '../lib/dateFormat'
+import { ChartTooltip } from '../components/Charts'
+import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '../lib/numberFormat'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -36,20 +39,6 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
       <p className={clsx('text-lg font-semibold', color)}>{display}</p>
       {sub && <p className="text-[10px] text-gray-600 mt-0.5">{sub}</p>}
     </GlassPanel>
-  )
-}
-
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
   )
 }
 
@@ -128,6 +117,16 @@ export default function VehicleDetail() {
     queryFn: () => getLocationSnapshotLatest(vehicleId),
     refetchInterval: 5000,
   })
+  const { data: vehicleConfigData } = useQuery({
+    queryKey: ['vehicle-config-latest', vehicleId],
+    queryFn: () => getVehicleConfigLatest(vehicleId),
+    refetchInterval: 30000,
+  })
+  const { data: userPrefData } = useQuery({
+    queryKey: ['user-pref-latest', vehicleId],
+    queryFn: () => getUserPreferenceLatest(vehicleId),
+    refetchInterval: 30000,
+  })
 
   const state = stateData?.state
   const status = vehicle ? getVehicleStatus(vehicle, state) : 'offline'
@@ -136,7 +135,7 @@ export default function VehicleDetail() {
     .map(p => [p.latitude, p.longitude] as LatLngExpression) ?? []
 
   const batteryData = positions?.map(p => ({
-    time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: formatTime(p.created_at),
     battery: p.battery_level,
     speed: convertSpeed(p.speed ?? 0),
   })).reverse() ?? []
@@ -261,8 +260,8 @@ export default function VehicleDetail() {
                 sub={state.speed > 0 ? 'Driving' : 'Parked'} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Thermometer} label="Inside" value={`${convertTemp(state.inside_temp).toFixed(1)}${tempUnit}`}
-                sub={`Outside: ${convertTemp(state.outside_temp).toFixed(1)}${tempUnit}`} />
+              <InfoTile icon={Thermometer} label="Inside" value={`${fmtNumber(convertTemp(state.inside_temp))}${tempUnit}`}
+                sub={`Outside: ${fmtNumber(convertTemp(state.outside_temp))}${tempUnit}`} />
             </StaggerItem>
             <StaggerItem>
               <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(convertDistance(state.odometer)).toLocaleString()} ${distanceUnit}`} />
@@ -270,7 +269,7 @@ export default function VehicleDetail() {
             <StaggerItem>
               <InfoTile icon={BatteryCharging} label="Charger" value={state.is_charging ? `${state.charger_power} kW` : 'Not charging'}
                 color={state.is_charging ? 'text-neon-green' : 'text-[var(--text-muted)]'}
-                sub={state.is_charging && state.time_to_full_charge != null ? `Full in ${state.time_to_full_charge.toFixed(1)}h` : undefined} />
+                sub={state.is_charging && state.time_to_full_charge != null ? `Full in ${fmtNumber(state.time_to_full_charge)}h` : undefined} />
             </StaggerItem>
             <StaggerItem>
               <InfoTile icon={Eye} label="Sentry" value={state.sentry_mode ? 'Active' : 'Off'}
@@ -316,7 +315,7 @@ export default function VehicleDetail() {
                     <div>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-[var(--text-muted)]">Torque</span>
-                        <span className="text-[var(--text-primary)] font-mono">{motorData.di_torque?.toFixed(0) ?? '—'} Nm</span>
+                        <span className="text-[var(--text-primary)] font-mono">{motorData.di_torque != null ? fmtInt(motorData.di_torque) : '—'} Nm</span>
                       </div>
                       <div className="relative h-3 rounded-full bg-white/[0.04] overflow-hidden">
                         <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
@@ -338,7 +337,7 @@ export default function VehicleDetail() {
                     {/* Axle Speed */}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)]">Axle Speed</span>
-                      <span className="text-sm font-mono text-[var(--text-primary)]">{motorData.di_axle_speed?.toFixed(0) ?? '—'} RPM</span>
+                      <span className="text-sm font-mono text-[var(--text-primary)]">{motorData.di_axle_speed != null ? fmtInt(motorData.di_axle_speed) : '—'} RPM</span>
                     </div>
 
                     {/* Stator Temperature */}
@@ -346,7 +345,7 @@ export default function VehicleDetail() {
                       <span className="text-xs text-[var(--text-muted)]">Stator Temp</span>
                       <span className={clsx('text-sm font-mono',
                         motorData.di_stator_temp != null && motorData.di_stator_temp > 80 ? 'text-red-400' : 'text-[var(--text-primary)]')}>
-                        {motorData.di_stator_temp != null ? `${convertTemp(motorData.di_stator_temp).toFixed(1)} ${tempUnit}` : '—'}
+                        {motorData.di_stator_temp != null ? `${fmtNumber(convertTemp(motorData.di_stator_temp))} ${tempUnit}` : '—'}
                       </span>
                     </div>
 
@@ -354,7 +353,7 @@ export default function VehicleDetail() {
                     <div>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-[var(--text-muted)]">Throttle Position</span>
-                        <span className="text-[var(--text-primary)] font-mono">{motorData.pedal_position != null ? `${(motorData.pedal_position * 100).toFixed(0)}%` : '—'}</span>
+                        <span className="text-[var(--text-primary)] font-mono">{motorData.pedal_position != null ? `${fmtPercent((motorData.pedal_position * 100))}` : '—'}</span>
                       </div>
                       <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
                         <div className="h-full rounded-full bg-neon-cyan/60 transition-all duration-300"
@@ -377,13 +376,13 @@ export default function VehicleDetail() {
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 text-center">
                         <p className="text-[10px] text-[var(--text-muted)] mb-1">Lateral G</p>
                         <p className="text-base font-mono text-[var(--text-primary)]">
-                          {motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${motorData.lateral_accel.toFixed(2)}g` : '—'}
+                          {motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel, 2)}g` : '—'}
                         </p>
                       </div>
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 text-center">
                         <p className="text-[10px] text-[var(--text-muted)] mb-1">Longitudinal G</p>
                         <p className="text-base font-mono text-[var(--text-primary)]">
-                          {motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${motorData.longitudinal_accel.toFixed(2)}g` : '—'}
+                          {motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel, 2)}g` : '—'}
                         </p>
                       </div>
                     </div>
@@ -407,14 +406,14 @@ export default function VehicleDetail() {
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
                         <p className="text-[10px] text-[var(--text-muted)] mb-1">Cabin</p>
                         <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {climateData.inside_temp != null ? convertTemp(climateData.inside_temp).toFixed(1) : '—'}
+                          {climateData.inside_temp != null ? fmtNumber(convertTemp(climateData.inside_temp)) : '—'}
                         </p>
                         <p className="text-[10px] text-[var(--text-muted)]">{tempUnit}</p>
                       </div>
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
                         <p className="text-[10px] text-[var(--text-muted)] mb-1">Outside</p>
                         <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {climateData.outside_temp != null ? convertTemp(climateData.outside_temp).toFixed(1) : '—'}
+                          {climateData.outside_temp != null ? fmtNumber(convertTemp(climateData.outside_temp)) : '—'}
                         </p>
                         <p className="text-[10px] text-[var(--text-muted)]">{tempUnit}</p>
                       </div>
@@ -425,13 +424,13 @@ export default function VehicleDetail() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--text-muted)]">Left Zone</span>
                         <span className="text-sm font-mono text-[var(--text-primary)]">
-                          {climateData.hvac_left_temp_request != null ? `${convertTemp(climateData.hvac_left_temp_request).toFixed(1)} ${tempUnit}` : '—'}
+                          {climateData.hvac_left_temp_request != null ? `${fmtNumber(convertTemp(climateData.hvac_left_temp_request))} ${tempUnit}` : '—'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--text-muted)]">Right Zone</span>
                         <span className="text-sm font-mono text-[var(--text-primary)]">
-                          {climateData.hvac_right_temp_request != null ? `${convertTemp(climateData.hvac_right_temp_request).toFixed(1)} ${tempUnit}` : '—'}
+                          {climateData.hvac_right_temp_request != null ? `${fmtNumber(convertTemp(climateData.hvac_right_temp_request))} ${tempUnit}` : '—'}
                         </span>
                       </div>
                     </div>
@@ -440,7 +439,7 @@ export default function VehicleDetail() {
                     <div>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-[var(--text-muted)]">HVAC Power</span>
-                        <span className="text-[var(--text-primary)] font-mono">{climateData.hvac_power != null ? `${climateData.hvac_power.toFixed(1)} kW` : '—'}</span>
+                        <span className="text-[var(--text-primary)] font-mono">{climateData.hvac_power != null ? `${fmtWithUnit(climateData.hvac_power, 'kW')}` : '—'}</span>
                       </div>
                       <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
                         <div className="h-full rounded-full bg-neon-cyan/60 transition-all duration-300"
@@ -616,7 +615,7 @@ export default function VehicleDetail() {
                           <div key={t.label} className={clsx('rounded-xl border bg-white/[0.02] p-4 text-center', getBorder(t.pressure))}>
                             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t.label}</p>
                             <p className={clsx('text-xl font-bold font-mono', getColor(t.pressure))}>
-                              {t.pressure != null ? t.pressure.toFixed(1) : '—'}
+                              {t.pressure != null ? fmtNumber(t.pressure) : '—'}
                             </p>
                             <p className="text-[10px] text-[var(--text-muted)]">{pressureUnit}</p>
                           </div>
@@ -651,14 +650,14 @@ export default function VehicleDetail() {
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
                         <p className="text-[10px] text-[var(--text-muted)] mb-1">Pack Voltage</p>
                         <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {chargingTelemetry.pack_voltage != null ? chargingTelemetry.pack_voltage.toFixed(1) : '—'}
+                          {chargingTelemetry.pack_voltage != null ? fmtNumber(chargingTelemetry.pack_voltage) : '—'}
                         </p>
                         <p className="text-[10px] text-[var(--text-muted)]">V</p>
                       </div>
                       <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
                         <p className="text-[10px] text-[var(--text-muted)] mb-1">Pack Current</p>
                         <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {chargingTelemetry.pack_current != null ? chargingTelemetry.pack_current.toFixed(1) : '—'}
+                          {chargingTelemetry.pack_current != null ? fmtNumber(chargingTelemetry.pack_current) : '—'}
                         </p>
                         <p className="text-[10px] text-[var(--text-muted)]">A</p>
                       </div>
@@ -668,7 +667,7 @@ export default function VehicleDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)]">Energy Remaining</span>
                       <span className="text-sm font-mono text-[var(--text-primary)]">
-                        {chargingTelemetry.energy_remaining != null ? `${chargingTelemetry.energy_remaining.toFixed(1)} kWh` : '—'}
+                        {chargingTelemetry.energy_remaining != null ? `${fmtWithUnit(chargingTelemetry.energy_remaining, 'kWh')}` : '—'}
                       </span>
                     </div>
 
@@ -694,7 +693,7 @@ export default function VehicleDetail() {
                           && (chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) > 0.05
                           ? 'text-amber-400' : 'text-[var(--text-primary)]')}>
                         {chargingTelemetry.brick_voltage_max != null && chargingTelemetry.brick_voltage_min != null
-                          ? `${((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000).toFixed(0)} mV`
+                          ? `${fmtWithUnit(((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000), 'mV', 0)}`
                           : '—'}
                       </span>
                     </div>
@@ -770,7 +769,7 @@ export default function VehicleDetail() {
                             </p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                               {locationData.miles_to_arrival != null && (
-                                <span>{convertDistance(locationData.miles_to_arrival * 1.60934).toFixed(1)} {distanceUnit}</span>
+                                <span>{fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934))} {distanceUnit}</span>
                               )}
                               {locationData.minutes_to_arrival != null && (
                                 <span>{Math.round(locationData.minutes_to_arrival)} min</span>
@@ -831,8 +830,67 @@ export default function VehicleDetail() {
                   </div>
                   <div className="p-3 text-center">
                     <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                      {state.latitude.toFixed(5)}, {state.longitude.toFixed(5)}
+                      {fmtNumber(state.latitude, 5)}, {fmtNumber(state.longitude, 5)}
                     </p>
+                  </div>
+                </GlassPanel>
+              </FadeIn>
+            )}
+
+            {/* Vehicle Configuration */}
+            {vehicleConfigData && (
+              <FadeIn delay={0.18}>
+                <GlassPanel className="p-5">
+                  <h3 className="section-title mb-4 flex items-center gap-2">
+                    <Car className="h-4 w-4 text-neon-purple" />
+                    Vehicle Configuration
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Model', value: cleanNil(vehicleConfigData.car_type) },
+                      { label: 'Trim', value: cleanNil(vehicleConfigData.trim) },
+                      { label: 'Color', value: cleanNil(vehicleConfigData.exterior_color) },
+                      { label: 'Roof', value: cleanNil(vehicleConfigData.roof_color) },
+                      { label: 'Wheels', value: cleanNil(vehicleConfigData.wheel_type) },
+                      { label: 'Firmware', value: cleanNil(vehicleConfigData.version) },
+                      { label: 'Name', value: cleanNil(vehicleConfigData.vehicle_name) },
+                      { label: 'Charge Port', value: cleanNil(vehicleConfigData.charge_port) },
+                      { label: 'Rear Heaters', value: cleanNil(vehicleConfigData.rear_seat_heaters) },
+                      { label: 'Efficiency', value: cleanNil(vehicleConfigData.efficiency_package) },
+                      { label: 'SW Update', value: cleanNil(vehicleConfigData.software_update_version) || 'None' },
+                      { label: 'SW Download', value: vehicleConfigData.software_update_download_pct != null ? `${vehicleConfigData.software_update_download_pct}%` : '—' },
+                    ].filter(item => item.value).map(item => (
+                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </GlassPanel>
+              </FadeIn>
+            )}
+
+            {/* User Preferences */}
+            {userPrefData && (
+              <FadeIn delay={0.19}>
+                <GlassPanel className="p-5">
+                  <h3 className="section-title mb-4 flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-neon-amber" />
+                    User Preferences
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {[
+                      { label: 'Distance', value: cleanNil(userPrefData.setting_distance_unit) },
+                      { label: 'Temperature', value: cleanNil(userPrefData.setting_temperature_unit) },
+                      { label: 'Charge Unit', value: cleanNil(userPrefData.setting_charge_unit) },
+                      { label: 'Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
+                      { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
+                    ].filter(item => item.value).map(item => (
+                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value}</p>
+                      </div>
+                    ))}
                   </div>
                 </GlassPanel>
               </FadeIn>
@@ -891,7 +949,7 @@ export default function VehicleDetail() {
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
                             <AnimatedNumber value={convertDistance(d.distance)} decimals={1} suffix={` ${distanceUnit}`} />
                           </p>
-                          <p className="text-xs text-[var(--text-muted)]">{new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{formatDateTime(d.start_date)}</p>
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
@@ -932,12 +990,12 @@ export default function VehicleDetail() {
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-green transition-colors">
                             <AnimatedNumber value={s.charge_energy_added} decimals={1} suffix=" kWh" />
                           </p>
-                          <p className="text-xs text-[var(--text-muted)]">{new Date(s.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{formatDateTime(s.start_date)}</p>
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-[var(--text-muted)]">{s.start_battery_level}% → {s.end_battery_level ?? '—'}%</span>
                           {s.cost != null && s.cost > 0 && (
-                            <p className="text-[10px] text-neon-amber">${s.cost.toFixed(2)}</p>
+                            <p className="text-[10px] text-neon-amber">${fmtNumber(s.cost, 2)}</p>
                           )}
                         </div>
                       </Link>

@@ -5,6 +5,8 @@ import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton
 import { MapPin, ArrowRight, TrendingUp, Clock, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { formatDate } from '../lib/dateFormat'
+import { fmtNumber, fmtPercent, fmtInt, fmtWithUnit } from '../lib/numberFormat'
 
 function EfficiencyBar({ best, avg, worst }: { best: number; avg: number; worst: number }) {
   const max = Math.max(worst, 1)
@@ -18,9 +20,9 @@ function EfficiencyBar({ best, avg, worst }: { best: number; avg: number; worst:
         </div>
       </div>
       <div className="flex gap-3 text-[10px] shrink-0">
-        <span className="text-neon-green font-bold">{best.toFixed(1)}</span>
-        <span className="text-neon-cyan font-bold">{avg.toFixed(1)}</span>
-        <span className="text-red-400 font-bold">{worst.toFixed(1)}</span>
+        <span className="text-neon-green font-bold">{fmtNumber(best, 1)}</span>
+        <span className="text-neon-cyan font-bold">{fmtNumber(avg, 1)}</span>
+        <span className="text-red-400 font-bold">{fmtNumber(worst, 1)}</span>
       </div>
     </div>
   )
@@ -45,7 +47,7 @@ function RouteCard({ route, onExpand, isExpanded }: {
             <span className="truncate">{route.end_location}</span>
           </div>
           <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {route.trip_count} trips · {route.avg_distance_km.toFixed(1)} km avg
+            {route.trip_count} trips · {fmtNumber(route.avg_distance_km, 1)} km avg
           </p>
         </div>
       </div>
@@ -54,18 +56,18 @@ function RouteCard({ route, onExpand, isExpanded }: {
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Efficiency</p>
-          <p className="text-sm font-bold text-neon-cyan">{route.avg_efficiency.toFixed(1)}%/100km</p>
+          <p className="text-sm font-bold text-neon-cyan">{fmtNumber(route.avg_efficiency, 1)}%/100km</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Speed</p>
           <p className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-            {route.avg_speed > 0 ? `${route.avg_speed.toFixed(0)} km/h` : 'N/A'}
+            {route.avg_speed > 0 ? fmtWithUnit(route.avg_speed, 'km/h', 0) : 'N/A'}
           </p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Temp</p>
           <p className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-            {route.avg_temp > 0 ? `${route.avg_temp.toFixed(0)}°C` : 'N/A'}
+            {route.avg_temp > 0 ? `${fmtInt(route.avg_temp)}°C` : 'N/A'}
           </p>
         </div>
       </div>
@@ -109,11 +111,11 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
 
   // Best trip
   const bestTrip = drives.reduce((best, d) => d.efficiency < best.efficiency && d.efficiency > 0 ? d : best, drives[0])
-  const bestDate = new Date(bestTrip.start_date).toLocaleDateString()
+  const bestDate = formatDate(bestTrip.start_date)
 
   // Sparkline data for efficiency trend (reverse for chronological order)
   const sparkData = [...drives].reverse().map(d => ({
-    date: new Date(d.start_date).toLocaleDateString(),
+    date: formatDate(d.start_date),
     efficiency: d.efficiency,
     temp: d.outside_temp_avg,
     speed: d.speed_avg,
@@ -126,8 +128,8 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
           <span className="font-semibold text-neon-green">💡 </span>
           Your {route.start_location} → {route.end_location} commute averages{' '}
-          <span className="font-bold text-neon-cyan">{route.avg_efficiency.toFixed(1)}%/100km</span>.
-          Best trip: <span className="font-bold text-neon-green">{bestTrip.efficiency.toFixed(1)}%/100km</span> on {bestDate}
+          <span className="font-bold text-neon-cyan">{fmtNumber(route.avg_efficiency, 1)}%/100km</span>.
+          Best trip: <span className="font-bold text-neon-green">{fmtNumber(bestTrip.efficiency, 1)}%/100km</span> on {bestDate}
           {bestTrip.outside_temp_avg > 0 ? ` (${bestTrip.outside_temp_avg}°C` : ''}
           {bestTrip.speed_avg > 0 ? `, ${bestTrip.speed_avg} km/h avg)` : bestTrip.outside_temp_avg > 0 ? ')' : ''}.
         </p>
@@ -171,10 +173,10 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
               return (
                 <tr key={d.id} className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
                   <td className="py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>
-                    {new Date(d.start_date).toLocaleDateString()}
+                    {formatDate(d.start_date)}
                   </td>
-                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{d.distance.toFixed(1)} km</td>
-                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{d.duration_min.toFixed(0)} min</td>
+                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{fmtWithUnit(d.distance, 'km', 1)}</td>
+                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{fmtInt(d.duration_min)} min</td>
                   <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>
                     {d.speed_avg > 0 ? `${d.speed_avg} km/h` : '-'}
                   </td>
@@ -182,7 +184,7 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
                     {d.outside_temp_avg > 0 ? `${d.outside_temp_avg}°C` : '-'}
                   </td>
                   <td className={`text-right py-1.5 px-2 font-bold ${isBest ? 'text-neon-green' : 'text-neon-cyan'}`}>
-                    {d.efficiency.toFixed(1)}
+                    {fmtNumber(d.efficiency, 1)}
                   </td>
                 </tr>
               )
@@ -283,7 +285,7 @@ export default function RouteEfficiency() {
                 <Gauge className="mx-auto h-6 w-6 text-neon-purple mb-2" />
                 <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Best Efficiency</p>
                 <p className="text-xl font-bold text-neon-purple">
-                  {Math.min(...routes.map(r => r.best_efficiency)).toFixed(1)}%
+                  {fmtPercent(Math.min(...routes.map(r => r.best_efficiency)), 1)}
                 </p>
               </GlassPanel>
             </StaggerItem>

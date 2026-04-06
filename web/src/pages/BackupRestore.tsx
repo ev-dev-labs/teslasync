@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -100,17 +101,6 @@ function formatDuration(ms: number): string {
   const m = Math.floor(s / 60)
   const rs = s % 60
   return `${m}m ${rs}s`
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function relativeTime(dateStr: string | null): string {
@@ -608,7 +598,7 @@ export default function BackupRestore() {
                           </td>
                           {/* Created */}
                           <td className="px-4 py-3 text-xs text-[var(--text-muted)] whitespace-nowrap">
-                            {formatDate(run.created_at)}
+                            {formatDateTime(run.created_at)}
                           </td>
                           {/* Actions */}
                           <td className="px-4 py-3">

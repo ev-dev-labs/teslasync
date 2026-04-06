@@ -5,11 +5,12 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Music, Volume2, Play, Pause, Square, Radio, Headphones, BarChart3, Clock } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface MediaTooltipPayload { name: string; value: number; color?: string }
+function MediaTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: MediaTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -168,6 +169,15 @@ export default function MediaPlayer() {
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
+  const TIME_RANGES = [
+    { label: '24h', hours: 24, limit: 200 },
+    { label: '7d', hours: 168, limit: 500 },
+    { label: '15d', hours: 360, limit: 1000 },
+    { label: '30d', hours: 720, limit: 2000 },
+    { label: 'All', hours: 0, limit: 5000 },
+  ]
+  const [timeRange, setTimeRange] = useState(TIME_RANGES[0])
+
   const { data: latest, isLoading: loadingLatest } = useQuery({
     queryKey: ['media-latest', vehicleId],
     queryFn: () => getMediaLatest(vehicleId!),
@@ -175,19 +185,27 @@ export default function MediaPlayer() {
     refetchInterval: 10000,
   })
 
-  const { data: history, isLoading: loadingHistory } = useQuery({
-    queryKey: ['media-history', vehicleId],
-    queryFn: () => getMediaData(vehicleId!, 200),
+  const { data: rawHistory, isLoading: loadingHistory } = useQuery({
+    queryKey: ['media-history', vehicleId, timeRange.limit],
+    queryFn: () => getMediaData(vehicleId!, timeRange.limit),
     enabled: vehicleId !== null,
     refetchInterval: 10000,
   })
+
+  // Filter by time range client-side
+  const history = useMemo(() => {
+    if (!rawHistory) return []
+    if (timeRange.hours === 0) return rawHistory
+    const cutoff = Date.now() - timeRange.hours * 3600 * 1000
+    return rawHistory.filter(s => new Date(s.created_at).getTime() >= cutoff)
+  }, [rawHistory, timeRange])
 
   /* ── Derived data ──────────────────────────────────────────────────────── */
 
   const volumeChartData = useMemo(() => {
     if (!history || history.length === 0) return []
     return history.slice().reverse().map(s => ({
-      time: new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      time: formatDateTime(s.created_at),
       volume: s.audio_volume ?? null,
     }))
   }, [history])
@@ -237,7 +255,20 @@ export default function MediaPlayer() {
       {/* Header + vehicle selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
         <PageHeader title="Media Player" subtitle="Now playing, volume, and playback history" icon={<Music className="h-7 w-7 text-neon-cyan" />} />
-        {vehicles && vehicles.length > 1 && (
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {TIME_RANGES.map(tr => (
+              <button key={tr.label} onClick={() => setTimeRange(tr)}
+                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+                  timeRange.label === tr.label
+                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                    : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                )}>
+                {tr.label}
+              </button>
+            ))}
+          </div>
+          {vehicles && vehicles.length > 1 && (
           <select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
@@ -247,6 +278,7 @@ export default function MediaPlayer() {
             {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
           </select>
         )}
+        </div>
       </div>
 
       {/* ── Now Playing Card ────────────────────────────────────────────── */}
@@ -366,7 +398,7 @@ export default function MediaPlayer() {
                 {history.map(row => (
                   <tr key={row.id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
                     <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                      {new Date(row.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {formatDateTime(row.created_at)}
                     </td>
                     <td className="py-2 px-3 max-w-[180px] truncate" style={{ color: 'var(--text-primary)' }}>
                       {cleanNil(row.now_playing_title) || '—'}
@@ -404,7 +436,7 @@ export default function MediaPlayer() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis domain={[0, volumeMax]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickFormatter={v => `${v}`} />
-              <Tooltip content={<ChartTooltip unit="" />} />
+              <Tooltip content={<MediaTooltip unit="" />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="volume" name="Volume" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
@@ -438,7 +470,7 @@ export default function MediaPlayer() {
                     <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={<ChartTooltip unit="plays" />} />
+                <Tooltip content={<MediaTooltip unit="plays" />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>

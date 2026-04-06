@@ -10,9 +10,28 @@ interface SSEOptions {
 }
 
 /**
+ * Fetches an SSE auth token from the backend. The /sse-token endpoint is
+ * behind authentik ForwardAuth, so it returns the JWT that was injected by
+ * Traefik. Returns null if the endpoint isn't available (dev mode).
+ */
+async function fetchSSEToken(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/v1/sse-token')
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.token || null
+  } catch {
+    return null
+  }
+}
+
+/**
  * React hook that establishes an SSE connection to /api/v1/events for
  * real-time vehicle updates and alerts. Automatically reconnects with
  * exponential backoff (up to 30s) on connection failure.
+ *
+ * In production, fetches an authentik JWT first and passes it as a query
+ * parameter, since EventSource can't set custom headers.
  */
 export function useRealtimeEvents(options: SSEOptions = {}) {
   const { enabled = true } = options
@@ -20,21 +39,27 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
   const sourceRef = useRef<EventSource | null>(null)
   const reconnectTimer = useRef<number>(undefined)
   const backoffRef = useRef(1000) // start at 1s, max 30s
+  const failCountRef = useRef(0)
   // Store callbacks in refs to avoid re-creating the connect function on every render
   const callbacksRef = useRef(options)
   callbacksRef.current = options
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (sourceRef.current) {
       sourceRef.current.close()
     }
 
-    const source = new EventSource('/api/v1/events')
+    // Fetch auth token (returns null in dev mode)
+    const token = await fetchSSEToken()
+    const url = token ? `/api/v1/events?token=${encodeURIComponent(token)}` : '/api/v1/events'
+
+    const source = new EventSource(url)
     sourceRef.current = source
 
     source.addEventListener('connected', (e) => {
       setConnected(true)
       backoffRef.current = 1000 // reset backoff on successful connection
+      failCountRef.current = 0  // reset failure count
       const data = JSON.parse(e.data)
       callbacksRef.current.onConnected?.(data.client_id)
     })
@@ -63,6 +88,12 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
       callbacksRef.current.onDisconnected?.()
       source.close()
       sourceRef.current = null
+      failCountRef.current++
+      // Give up after 3 consecutive failures — let polling handle updates
+      if (failCountRef.current >= 3) {
+        console.debug('[SSE] Disabled after repeated failures — using polling fallback')
+        return
+      }
       // Exponential backoff with jitter, capped at 30s
       const jitter = Math.random() * 500
       const delay = Math.min(backoffRef.current + jitter, 30_000)

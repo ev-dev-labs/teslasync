@@ -47,6 +47,7 @@ import {
   Headphones,
   DatabaseBackup,
   Recycle,
+  Database,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -188,6 +189,19 @@ const navSections = [
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
     ],
   },
+  {
+    title: 'Diagnostics',
+    items: [
+      { to: '/live-monitor', icon: Activity, label: 'Live Monitor', color: 'text-neon-green' },
+      { to: '/signal-log', icon: Database, label: 'Signal Log', color: 'text-cyan-400' },
+      { to: '/signal-explorer', icon: Activity, label: 'Signal Explorer', color: 'text-neon-cyan' },
+      { to: '/signal-diff', icon: GitCompare, label: 'Signal Diff', color: 'text-violet-400' },
+      { to: '/signal-gaps', icon: Wifi, label: 'Gap Detector', color: 'text-amber-400' },
+      { to: '/state-debugger', icon: Cog, label: 'State Machine', color: 'text-purple-400' },
+      { to: '/mqtt-inspector', icon: Radar, label: 'MQTT Inspector', color: 'text-blue-400' },
+      { to: '/db-health', icon: Database, label: 'DB Health', color: 'text-emerald-400' },
+    ],
+  },
 ]
 
 export default function Layout() {
@@ -306,7 +320,9 @@ export default function Layout() {
               </p>
               <div className="space-y-0.5">
                 {section.items.map(({ to, icon: Icon, label, color }) => {
-                  const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+                  const isActive = to === '/'
+                    ? location.pathname === '/'
+                    : location.pathname === to || location.pathname.startsWith(to + '/')
                   return (
                     <NavLink
                       key={to}

@@ -1,3 +1,5 @@
+import { formatDate, formatDateTime } from './dateFormat'
+
 export function generateDriveReport(drive: any, vehicle: any) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
@@ -6,7 +8,7 @@ export function generateDriveReport(drive: any, vehicle: any) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Drive Report - ${new Date(drive.start_date).toLocaleDateString()}</title>
+      <title>Drive Report - ${formatDate(drive.start_date)}</title>
       <style>
         body { font-family: system-ui, sans-serif; padding: 40px; color: #1a1a2e; }
         h1 { color: #0077b6; border-bottom: 2px solid #0077b6; padding-bottom: 8px; }
@@ -23,7 +25,7 @@ export function generateDriveReport(drive: any, vehicle: any) {
     </head>
     <body>
       <h1>TeslaSync — Drive Report</h1>
-      <p><strong>Vehicle:</strong> ${vehicle?.display_name || 'N/A'} | <strong>Date:</strong> ${new Date(drive.start_date).toLocaleString()}</p>
+      <p><strong>Vehicle:</strong> ${vehicle?.display_name || 'N/A'} | <strong>Date:</strong> ${formatDateTime(drive.start_date)}</p>
 
       <div>
         <div class="stat"><div class="stat-value">${drive.distance?.toFixed(1) || '—'}</div><div class="stat-label">km Distance</div></div>
@@ -34,8 +36,8 @@ export function generateDriveReport(drive: any, vehicle: any) {
 
       <h2>Details</h2>
       <table>
-        <tr><td>Start Time</td><td>${new Date(drive.start_date).toLocaleString()}</td></tr>
-        <tr><td>End Time</td><td>${drive.end_date ? new Date(drive.end_date).toLocaleString() : 'In progress'}</td></tr>
+        <tr><td>Start Time</td><td>${formatDateTime(drive.start_date)}</td></tr>
+        <tr><td>End Time</td><td>${drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</td></tr>
         <tr><td>Distance</td><td>${drive.distance?.toFixed(1)} km</td></tr>
         <tr><td>Duration</td><td>${Math.floor((drive.duration_min || 0) / 60)}h ${Math.round((drive.duration_min || 0) % 60)}m</td></tr>
         <tr><td>Average Speed</td><td>${((drive.distance || 0) / ((drive.duration_min || 1) / 60)).toFixed(0)} km/h</td></tr>

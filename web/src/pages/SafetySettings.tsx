@@ -8,13 +8,14 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
+import { formatDateTime } from '../lib/dateFormat'
 
 /* ------------------------------------------------------------------ */
 /*  Chart Tooltip                                                      */
 /* ------------------------------------------------------------------ */
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+interface SafetyTooltipPayload { name: string; value: number; color?: string }
+function SafetyTooltip({ active, payload, label }: { active?: boolean; payload?: SafetyTooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -165,13 +166,6 @@ function stringStatus(val: string | undefined): { text: string; enabled: boolean
 /*  History Table Row                                                   */
 /* ------------------------------------------------------------------ */
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
-}
-
 function StatusDot({ enabled }: { enabled: boolean }) {
   return (
     <span className={clsx(
@@ -208,9 +202,7 @@ export default function SafetySettings() {
   const chartData = useMemo(() => {
     if (!history || history.length === 0) return []
     return history.slice().reverse().map(s => ({
-      time: new Date(s.created_at).toLocaleDateString(undefined, {
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-      }),
+      time: formatDateTime(s.created_at),
       aeb: s.automatic_emergency_braking_off === false ? 1 : 0,
       bscw: s.blind_spot_collision_warning ? 1 : 0,
       elda: s.emergency_lane_departure_avoidance ? 1 : 0,
@@ -390,7 +382,7 @@ export default function SafetySettings() {
                 {history.map(s => (
                   <tr key={s.id} className="border-b last:border-b-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
                     <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {formatTime(s.created_at)}
+                      {formatDateTime(s.created_at)}
                     </td>
                     <td className="py-2 px-3 text-center">
                       <StatusDot enabled={s.automatic_emergency_braking_off === false} />
@@ -455,7 +447,7 @@ export default function SafetySettings() {
                 tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                 tickFormatter={v => (v === 1 ? 'On' : 'Off')}
               />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<SafetyTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="stepAfter" dataKey="aeb" name="AEB Enabled" stroke="#10b981" strokeWidth={2} dot={false} />
               <Line type="stepAfter" dataKey="bscw" name="Blind Spot Warning" stroke="#00f0ff" strokeWidth={2} dot={false} />

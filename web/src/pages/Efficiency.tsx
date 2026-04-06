@@ -3,26 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../api'
 import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort } from '../lib/dateFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { Zap, TrendingUp, Thermometer, Gauge, Fuel, BarChart3 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { ChartTooltip } from '../components/Charts'
 
 export default function Efficiency() {
   const { convertDistance, convertSpeed, convertTemp, convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit } = useSettings()
@@ -53,7 +41,7 @@ export default function Efficiency() {
 
   // Daily efficiency chart
   const dailyEfficiency = (energy?.daily_breakdown ?? []).map(d => ({
-    date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    date: formatDateShort(d.date),
     efficiency: convertEfficiency(d.efficiency),
     energy: d.energy_kwh,
     distance: convertDistance(d.distance_km),
@@ -61,10 +49,10 @@ export default function Efficiency() {
 
   // Speed vs efficiency from drives
   const speedEffData = (drives ?? [])
-    .filter(d => d.distance > 0 && d.speed_max && d.start_range_km && d.end_range_km && d.start_battery_level && d.end_battery_level)
+    .filter(d => d.distance > 0 && d.speed_max && d.start_battery_level && d.end_battery_level && d.start_battery_level > d.end_battery_level)
     .map(d => {
       const battUsed = (d.start_battery_level! - d.end_battery_level!)
-      const efficiency = d.distance > 0 && battUsed > 0 ? (battUsed / d.distance * 1000) : 0
+      const efficiency = battUsed > 0 ? (battUsed * 0.75 * 1000) / d.distance : 0 // Wh/km estimate (0.75 kWh per %)
       return { speed: d.speed_max!, efficiency: Math.round(efficiency), distance: d.distance }
     })
     .filter(d => d.efficiency > 0 && d.efficiency < 500)
@@ -172,11 +160,11 @@ export default function Efficiency() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 sm:mb-8">
           {[
-            { label: 'Avg Efficiency', value: `${convertEfficiency(avgEff).toFixed(0)} ${efficiencyUnit}`, sub: '', icon: Gauge, color: '#00f0ff' },
-            { label: 'Energy Used', value: `${totalEnergy.toFixed(1)} kWh`, sub: `selected period`, icon: Zap, color: '#f59e0b' },
-            { label: 'Distance', value: `${convertDistance(totalDist).toFixed(0)} ${distanceUnit}`, sub: 'selected period', icon: TrendingUp, color: '#10b981' },
-            { label: 'Cost', value: `$${energy?.total_cost?.toFixed(2) ?? '0'}`, sub: `$${totalDist > 0 ? ((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100).toFixed(1) : '0'}/100${distanceUnit}`, icon: Fuel, color: '#8b5cf6' },
-            { label: 'CO₂ Saved', value: `${co2Saved.toFixed(0)} kg`, sub: 'vs ICE vehicle', icon: Thermometer, color: '#ec4899' },
+            { label: 'Avg Efficiency', value: `${fmtInt(convertEfficiency(avgEff))} ${efficiencyUnit}`, sub: '', icon: Gauge, color: '#00f0ff' },
+            { label: 'Energy Used', value: `${fmtNumber(totalEnergy, 1)} kWh`, sub: `selected period`, icon: Zap, color: '#f59e0b' },
+            { label: 'Distance', value: `${fmtInt(convertDistance(totalDist))} ${distanceUnit}`, sub: 'selected period', icon: TrendingUp, color: '#10b981' },
+            { label: 'Cost', value: `$${energy?.total_cost != null ? fmtNumber(energy.total_cost, 2) : '0'}`, sub: `$${totalDist > 0 ? fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100, 1) : '0'}/100${distanceUnit}`, icon: Fuel, color: '#8b5cf6' },
+            { label: 'CO₂ Saved', value: `${fmtInt(co2Saved)} kg`, sub: 'vs ICE vehicle', icon: Thermometer, color: '#ec4899' },
           ].map(card => (
             <GlassPanel key={card.label} className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -301,12 +289,12 @@ export default function Efficiency() {
                     <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{b.count}</td>
                     <td className="text-right py-2 px-3">
                       <span style={{ color: b.avgEff < 160 ? '#10b981' : b.avgEff < 200 ? '#f59e0b' : '#ef4444' }}>
-                        {convertEfficiency(b.avgEff).toFixed(0)}
+                        {fmtInt(convertEfficiency(b.avgEff))}
                       </span>
                     </td>
-                    <td className="text-right py-2 px-3 text-neon-cyan">{b.avgEff > 0 ? (1000 / convertEfficiency(b.avgEff)).toFixed(1) : '—'}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{convertDistance(b.totalDist).toFixed(0)}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{convertSpeed(b.avgSpeed).toFixed(0)} {speedUnit}</td>
+                    <td className="text-right py-2 px-3 text-neon-cyan">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff), 1) : '—'}</td>
+                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{fmtInt(convertDistance(b.totalDist))}</td>
+                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{fmtInt(convertSpeed(b.avgSpeed))} {speedUnit}</td>
                   </tr>
                 ))}
               </tbody>
@@ -325,9 +313,9 @@ export default function Efficiency() {
             <div className="space-y-3">
               {[
                 { label: 'Drives Analyzed', value: consumptionStats.count.toString() },
-                { label: 'Total Distance', value: `${convertDistance(consumptionStats.totalDist).toFixed(0)} ${distanceUnit}` },
-                { label: 'Avg Consumption', value: `${convertEfficiency(consumptionStats.avgEff).toFixed(0)} ${efficiencyUnit}` },
-                { label: 'Avg Efficiency', value: `${(1000 / convertEfficiency(consumptionStats.avgEff)).toFixed(1)} ${distanceUnit}/kWh` },
+                { label: 'Total Distance', value: `${fmtInt(convertDistance(consumptionStats.totalDist))} ${distanceUnit}` },
+                { label: 'Avg Consumption', value: `${fmtInt(convertEfficiency(consumptionStats.avgEff))} ${efficiencyUnit}` },
+                { label: 'Avg Efficiency', value: `${fmtNumber(1000 / convertEfficiency(consumptionStats.avgEff), 1)} ${distanceUnit}/kWh` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
@@ -343,10 +331,10 @@ export default function Efficiency() {
             </h3>
             <div className="space-y-3">
               {[
-                { label: 'Total Energy Used', value: `${totalEnergy.toFixed(1)} kWh` },
-                { label: 'Distance Covered', value: `${convertDistance(totalDist).toFixed(0)} ${distanceUnit}` },
-                { label: `Cost per ${distanceUnit}`, value: totalDist > 0 ? `$${((energy?.total_cost ?? 0) / convertDistance(totalDist)).toFixed(3)}` : '$0' },
-                { label: 'CO₂ Saved vs ICE', value: `${co2Saved.toFixed(0)} kg` },
+                { label: 'Total Energy Used', value: `${fmtNumber(totalEnergy, 1)} kWh` },
+                { label: 'Distance Covered', value: `${fmtInt(convertDistance(totalDist))} ${distanceUnit}` },
+                { label: `Cost per ${distanceUnit}`, value: totalDist > 0 ? `$${fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist), 3)}` : '$0' },
+                { label: 'CO₂ Saved vs ICE', value: `${fmtInt(co2Saved)} kg` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>

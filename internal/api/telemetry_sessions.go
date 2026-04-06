@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +43,12 @@ type streamingDrive struct {
 	LastSpeed float64
 	LastSeen  time.Time
 	LastSpeedZeroTime time.Time
+
+	// Signal accumulator — merges signals across MQTT batches for rich telemetry writes.
+	// Fleet telemetry sends each field as a separate MQTT message, so individual batches
+	// only contain 1-3 fields. The accumulator collects them over a write interval.
+	accumulatedSignals map[string]interface{}
+	lastTelemetryWrite time.Time
 
 	// Start values
 	StartOdometer   *float64
@@ -101,6 +108,10 @@ type streamingCharge struct {
 	LastSeen    time.Time
 	EnergyAdded float64
 
+	// Signal accumulator (same pattern as streamingDrive)
+	accumulatedSignals map[string]interface{}
+	lastTelemetryWrite time.Time
+
 	// Location
 	Latitude  *float64
 	Longitude *float64
@@ -141,18 +152,39 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 	}
 }
 
+// telemetryWriteInterval controls how often drive/charge telemetry readings are
+// flushed to the database. Signals are accumulated across MQTT batches within
+// this window so each row has complete data instead of mostly NULLs.
+const telemetryWriteInterval = 5 * time.Second
+
+// accumulateSignals merges incoming signals into the accumulator map.
+func accumulateSignals(acc map[string]interface{}, signals map[string]interface{}) map[string]interface{} {
+	if acc == nil {
+		acc = make(map[string]interface{}, len(signals))
+	}
+	for k, v := range signals {
+		acc[k] = v
+	}
+	return acc
+}
+
 // ProcessSignals evaluates incoming telemetry signals for drive/charge transitions.
-func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
-	t.trackDriving(ctx, vehicleID, vin, signals)
-	t.trackCharging(ctx, vehicleID, vin, signals)
+// accumulatedSignals contains the merged set of all signals seen in the handler's
+// current accumulation window — used to fill in start values (battery, odometer,
+// location) that may not be in the current batch.
+func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
+	t.trackDriving(ctx, vehicleID, vin, signals, accumulatedSignals)
+	t.trackCharging(ctx, vehicleID, vin, signals, accumulatedSignals)
 }
 
 // CleanupStaleSessions closes sessions that have been open too long without updates.
+// Also cleans up orphaned DB sessions (open sessions with no in-memory tracker,
+// e.g. from before a restart).
 func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, staleTimeout time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	now := time.Now()
+	now := time.Now().UTC()
 	for vehicleID, drive := range t.activeDrives {
 		if now.Sub(drive.LastSeen) > staleTimeout {
 			log.Warn().Int64("vehicle_id", vehicleID).Int64("drive_id", drive.DriveID).
@@ -167,6 +199,22 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 			t.completeChargeLocked(ctx, vehicleID, charge, nil)
 		}
 	}
+
+	// Close orphaned DB sessions — drives/charges with NULL end_date that started
+	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart)
+	cutoff := now.Add(-staleTimeout)
+	_, err := t.db.Pool.Exec(ctx,
+		`UPDATE drives SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
+		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+	if err != nil {
+		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
+	}
+	_, err = t.db.Pool.Exec(ctx,
+		`UPDATE charging_sessions SET end_date = $1, duration_min = EXTRACT(EPOCH FROM ($1 - start_date))/60
+		 WHERE end_date IS NULL AND start_date < $2`, now, cutoff)
+	if err != nil {
+		log.Warn().Err(err).Msg("telemetry: failed to close orphaned charges")
+	}
 }
 
 func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool) {
@@ -174,6 +222,41 @@ func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool)
 		if v, ok := signals[key]; ok {
 			return toFloatOk(v)
 		}
+	}
+	return 0, false
+}
+
+// signalLatLon extracts latitude and longitude from the signals map.
+// Tesla Fleet Telemetry sends Location as a JSON object {"latitude": N, "longitude": N},
+// while the REST API may send separate Latitude/Longitude signals.
+func signalLatLon(signals map[string]interface{}) (lat, lon float64, ok bool) {
+	// Fleet Telemetry: Location is a map with latitude/longitude keys
+	if loc, isMap := signals["Location"].(map[string]interface{}); isMap {
+		la, laOk := toFloatOk(loc["latitude"])
+		lo, loOk := toFloatOk(loc["longitude"])
+		if laOk && loOk {
+			return la, lo, true
+		}
+	}
+	// REST API fallback: separate Latitude/Longitude signals
+	la, laOk := signalFloat(signals, "Latitude")
+	lo, loOk := signalFloat(signals, "Longitude")
+	if laOk && loOk {
+		return la, lo, true
+	}
+	return 0, 0, false
+}
+
+// signalPowerKW extracts power in kW. Tesla Fleet Telemetry has no "PackPower"
+// signal; power is computed from PackVoltage (V) × PackCurrent (A) → kW.
+func signalPowerKW(signals map[string]interface{}) (float64, bool) {
+	if v, ok := signalFloat(signals, "PackPower", "Power"); ok {
+		return v, true
+	}
+	voltage, vOk := toFloatOk(signals["PackVoltage"])
+	current, cOk := toFloatOk(signals["PackCurrent"])
+	if vOk && cOk {
+		return voltage * current / 1000.0, true
 	}
 	return 0, false
 }
@@ -205,14 +288,15 @@ func intPtr(v int) *int           { return &v }
 func boolPtr(v bool) *bool        { return &v }
 func strPtr(v string) *string     { return &v }
 
-func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
 	if !hasSpeed {
-		// Even without speed, update active drive with other signals if present
+		// Even without speed, accumulate signals for active drive
 		t.mu.Lock()
 		if active, ok := t.activeDrives[vehicleID]; ok {
-			t.recordDriveTelemetry(ctx, active, signals)
-			active.LastSeen = time.Now()
+			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+			active.LastSeen = time.Now().UTC()
+			t.maybeFlushDriveTelemetry(ctx, active)
 		}
 		t.mu.Unlock()
 		return
@@ -225,16 +309,44 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 	if speed > 0 && !hasDrive {
 		// === START DRIVE ===
-		batteryLevel, _ := signalInt(signals, "BatteryLevel", "Soc")
+		// Use accumulated signals from the handler as fallback — the first batch
+		// with VehicleSpeed often lacks BatteryLevel, Odometer, Location etc.
+		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
+		if !hasBat {
+			batteryLevel, _ = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
+		}
 		odometer, hasOdo := signalFloat(signals, "Odometer")
-		lat, hasLat := signalFloat(signals, "Latitude", "Location.Latitude")
-		lon, hasLon := signalFloat(signals, "Longitude", "Location.Longitude")
-		elevation, _ := signalFloat(signals, "Elevation")
-		ratedRange, _ := signalFloat(signals, "RatedRange")
-		idealRange, _ := signalFloat(signals, "IdealBatteryRange")
-		estRange, _ := signalFloat(signals, "EstBatteryRange")
-		soc, _ := signalFloat(signals, "Soc", "BatteryLevel")
-		usableSoc, _ := signalFloat(signals, "UsableSoc")
+		if !hasOdo {
+			odometer, hasOdo = signalFloat(accumulatedSignals, "Odometer")
+		}
+		lat, lon, hasLoc := signalLatLon(signals)
+		if !hasLoc {
+			lat, lon, hasLoc = signalLatLon(accumulatedSignals)
+		}
+		elevation, hasElev := signalFloat(signals, "Elevation")
+		if !hasElev {
+			elevation, _ = signalFloat(accumulatedSignals, "Elevation")
+		}
+		ratedRange, hasRR := signalFloat(signals, "RatedRange")
+		if !hasRR {
+			ratedRange, _ = signalFloat(accumulatedSignals, "RatedRange")
+		}
+		idealRange, hasIR := signalFloat(signals, "IdealBatteryRange")
+		if !hasIR {
+			idealRange, _ = signalFloat(accumulatedSignals, "IdealBatteryRange")
+		}
+		estRange, hasER := signalFloat(signals, "EstBatteryRange")
+		if !hasER {
+			estRange, _ = signalFloat(accumulatedSignals, "EstBatteryRange")
+		}
+		soc, hasSoc := signalFloat(signals, "Soc", "BatteryLevel")
+		if !hasSoc {
+			soc, _ = signalFloat(accumulatedSignals, "Soc", "BatteryLevel")
+		}
+		usableSoc, hasUS := signalFloat(signals, "UsableSoc")
+		if !hasUS {
+			usableSoc, _ = signalFloat(accumulatedSignals, "UsableSoc")
+		}
 
 		drive := &models.Drive{
 			VehicleID:       vehicleID,
@@ -244,7 +356,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		if hasOdo {
 			drive.StartOdometer = floatPtr(odometer)
 		}
-		if hasLat && hasLon {
+		if hasLoc {
 			drive.StartLatitude = floatPtr(lat)
 			drive.StartLongitude = floatPtr(lon)
 		}
@@ -255,32 +367,32 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		}
 
 		sd := &streamingDrive{
-			DriveID:   drive.ID,
-			VehicleID: vehicleID,
-			StartTime: time.Now(),
-			LastSpeed: speed,
-			LastSeen:  time.Now(),
-			MaxSpeed:  speed,
-			MinSpeed:  speed,
-			SpeedSum:  speed,
-			SpeedCount: 1,
-			PowerMin:  math.MaxFloat64,
-			RatedRangeMin: math.MaxFloat64,
-			IdealRangeMin: math.MaxFloat64,
-			EstRangeMin:   math.MaxFloat64,
-			SocMin:        math.MaxFloat64,
-			UsableSocMin:  math.MaxFloat64,
+			DriveID:            drive.ID,
+			VehicleID:          vehicleID,
+			StartTime:          time.Now().UTC(),
+			LastSpeed:          speed,
+			LastSeen:           time.Now().UTC(),
+			MaxSpeed:           speed,
+			MinSpeed:           speed,
+			SpeedSum:           speed,
+			SpeedCount:         1,
+			PowerMin:           math.MaxFloat64,
+			RatedRangeMin:      math.MaxFloat64,
+			IdealRangeMin:      math.MaxFloat64,
+			EstRangeMin:        math.MaxFloat64,
+			SocMin:             math.MaxFloat64,
+			UsableSocMin:       math.MaxFloat64,
+			accumulatedSignals: make(map[string]interface{}),
+			lastTelemetryWrite: time.Now().UTC(),
 		}
 
 		if hasOdo {
 			sd.StartOdometer = floatPtr(odometer)
 			sd.LastOdometer = floatPtr(odometer)
 		}
-		if hasLat {
+		if hasLoc {
 			sd.StartLatitude = floatPtr(lat)
 			sd.LastLatitude = floatPtr(lat)
-		}
-		if hasLon {
 			sd.StartLongitude = floatPtr(lon)
 			sd.LastLongitude = floatPtr(lon)
 		}
@@ -324,11 +436,12 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		t.activeDrives[vehicleID] = sd
 		DriveSessionsActive.Inc()
 
-		// Record first telemetry reading
-		t.recordDriveTelemetry(ctx, sd, signals)
+		// Accumulate first batch and write immediately
+		sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
+		t.flushDriveTelemetry(ctx, sd)
 
 		// Reverse geocode start address (async to not block)
-		if hasLat && hasLon {
+		if hasLoc {
 			go t.resolveAndUpdateAddress(drive.ID, lat, lon, true)
 		}
 
@@ -341,7 +454,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 	} else if speed > 0 && hasDrive {
 		// === UPDATE ACTIVE DRIVE ===
 		active.LastSpeed = speed
-		active.LastSeen = time.Now()
+		active.LastSeen = time.Now().UTC()
 		active.LastSpeedZeroTime = time.Time{}
 
 		// Speed stats
@@ -354,8 +467,8 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		active.SpeedSum += speed
 		active.SpeedCount++
 
-		// Power
-		if power, ok := signalFloat(signals, "PackPower", "Power"); ok {
+		// Power — compute from PackVoltage * PackCurrent when PackPower not available
+		if power, ok := signalPowerKW(signals); ok {
 			if power > active.PowerMax {
 				active.PowerMax = power
 			}
@@ -376,12 +489,10 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		// Elevation
 		t.updateDriveElevation(active, signals)
 
-		// Position
-		if lat, ok := signalFloat(signals, "Latitude", "Location.Latitude"); ok {
-			active.LastLatitude = floatPtr(lat)
-		}
-		if lon, ok := signalFloat(signals, "Longitude", "Location.Longitude"); ok {
-			active.LastLongitude = floatPtr(lon)
+		// Position — extract from Location map (fleet telemetry) or separate signals
+		if la, lo, ok := signalLatLon(signals); ok {
+			active.LastLatitude = floatPtr(la)
+			active.LastLongitude = floatPtr(lo)
 		}
 		if odo, ok := signalFloat(signals, "Odometer"); ok {
 			active.LastOdometer = floatPtr(odo)
@@ -394,16 +505,17 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			}
 		}
 
-		// Record telemetry reading
-		t.recordDriveTelemetry(ctx, active, signals)
+		// Accumulate signals and flush periodically
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+		t.maybeFlushDriveTelemetry(ctx, active)
 
 	} else if speed == 0 && hasDrive {
 		// === SPEED IS ZERO — check for drive end ===
-		active.LastSeen = time.Now()
+		active.LastSeen = time.Now().UTC()
 		active.LastSpeed = 0
 
 		if active.LastSpeedZeroTime.IsZero() {
-			active.LastSpeedZeroTime = time.Now()
+			active.LastSpeedZeroTime = time.Now().UTC()
 		}
 
 		if !active.LastSpeedZeroTime.IsZero() && time.Since(active.LastSpeedZeroTime) > 2*time.Minute {
@@ -486,19 +598,40 @@ func (t *TelemetrySessionTracker) updateDriveElevation(active *streamingDrive, s
 	active.LastElevation = floatPtr(elev)
 }
 
+// maybeFlushDriveTelemetry writes accumulated signals if the write interval has elapsed.
+func (t *TelemetrySessionTracker) maybeFlushDriveTelemetry(ctx context.Context, drive *streamingDrive) {
+	if time.Since(drive.lastTelemetryWrite) < telemetryWriteInterval {
+		return
+	}
+	t.flushDriveTelemetry(ctx, drive)
+}
+
+// flushDriveTelemetry writes a telemetry reading from accumulated signals and resets the accumulator.
+func (t *TelemetrySessionTracker) flushDriveTelemetry(ctx context.Context, drive *streamingDrive) {
+	if len(drive.accumulatedSignals) == 0 {
+		return
+	}
+	t.recordDriveTelemetry(ctx, drive, drive.accumulatedSignals)
+	drive.accumulatedSignals = make(map[string]interface{})
+	drive.lastTelemetryWrite = time.Now().UTC()
+}
+
 func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, drive *streamingDrive, signals map[string]interface{}) {
 	reading := &models.DriveTelemetryReading{
 		DriveID:   drive.DriveID,
 		VehicleID: drive.VehicleID,
 	}
 
-	if v, ok := signalFloat(signals, "Latitude", "Location.Latitude"); ok { reading.Latitude = floatPtr(v) }
-	if v, ok := signalFloat(signals, "Longitude", "Location.Longitude"); ok { reading.Longitude = floatPtr(v) }
+	// Location — extract from Location map (fleet telemetry) or separate signals
+	if la, lo, ok := signalLatLon(signals); ok {
+		reading.Latitude = floatPtr(la)
+		reading.Longitude = floatPtr(lo)
+	}
 	if v, ok := signalFloat(signals, "Elevation"); ok { reading.Elevation = floatPtr(v) }
-	if v, ok := signalInt(signals, "Heading"); ok { reading.Heading = intPtr(v) }
+	if v, ok := signalInt(signals, "GpsHeading", "Heading"); ok { reading.Heading = intPtr(v) }
 	if v, ok := signalFloat(signals, "Odometer"); ok { reading.Odometer = floatPtr(v) }
 	if v, ok := signalFloat(signals, "VehicleSpeed"); ok { reading.Speed = floatPtr(v) }
-	if v, ok := signalFloat(signals, "PackPower", "Power"); ok { reading.Power = floatPtr(v) }
+	if v, ok := signalPowerKW(signals); ok { reading.Power = floatPtr(v) }
 	if v, ok := signalInt(signals, "BatteryLevel"); ok { reading.BatteryLevel = intPtr(v) }
 	if v, ok := signalFloat(signals, "Soc"); ok { reading.Soc = floatPtr(v) }
 	if v, ok := signalFloat(signals, "UsableSoc"); ok { reading.UsableSoc = floatPtr(v) }
@@ -507,16 +640,17 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	if v, ok := signalFloat(signals, "EstBatteryRange"); ok { reading.EstRange = floatPtr(v) }
 	if v, ok := signalFloat(signals, "InsideTemp"); ok { reading.InsideTemp = floatPtr(v) }
 	if v, ok := signalFloat(signals, "OutsideTemp"); ok { reading.OutsideTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "DriverSeatTemp", "DriverTemp"); ok { reading.DriverTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "PassengerSeatTemp", "PassengerTemp"); ok { reading.PassengerTemp = floatPtr(v) }
-	if v, ok := signalInt(signals, "FanStatus"); ok { reading.FanStatus = intPtr(v) }
+	if v, ok := signalFloat(signals, "HvacLeftTemperatureRequest", "DriverSeatTemp", "DriverTemp"); ok { reading.DriverTemp = floatPtr(v) }
+	if v, ok := signalFloat(signals, "HvacRightTemperatureRequest", "PassengerSeatTemp", "PassengerTemp"); ok { reading.PassengerTemp = floatPtr(v) }
+	if v, ok := signalInt(signals, "HvacFanStatus", "FanStatus"); ok { reading.FanStatus = intPtr(v) }
 	if v, ok := signals["IsClimateOn"]; ok {
 		if b, ok2 := v.(bool); ok2 { reading.IsClimateOn = boolPtr(b) }
 	}
-	if v, ok := signalFloat(signals, "TirePressureFL", "TpmsPressureFl", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TirePressureFR", "TpmsPressureFr", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TirePressureRL", "TpmsPressureRl", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TirePressureRR", "TpmsPressureRr", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
+	// Fleet Telemetry sends tire pressure in bar via TpmsPressure* signals
+	if v, ok := signalFloat(signals, "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
 	if v, ok := signals["BatteryHeaterOn"]; ok {
 		if b, ok2 := v.(bool); ok2 { reading.BatteryHeaterOn = boolPtr(b) }
 	}
@@ -527,11 +661,21 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 }
 
 func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
-	endBattery := 0
+	// Flush any remaining accumulated signals before closing
 	if signals != nil {
-		if bl, ok := signalInt(signals, "BatteryLevel", "Soc"); ok {
-			endBattery = bl
-		}
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+	}
+	t.flushDriveTelemetry(ctx, active)
+
+	// Use accumulated state for end values, falling back to final signals
+	finalSignals := signals
+	if finalSignals == nil {
+		finalSignals = map[string]interface{}{}
+	}
+
+	endBattery := 0
+	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
+		endBattery = bl
 	}
 
 	duration := time.Since(active.StartTime).Minutes()
@@ -576,20 +720,19 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// Get end ranges/SOC
 	var endRatedRange, endIdealRange, endEstRange *float64
 	var endSoc, endUsableSoc *float64
-	if signals != nil {
-		if v, ok := signalFloat(signals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
-		if v, ok := signalFloat(signals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
-		if v, ok := signalFloat(signals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
-		if v, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
-		if v, ok := signalFloat(signals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
-	}
+	if v, ok := signalFloat(finalSignals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
+	if v, ok := signalFloat(finalSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
 
 	var powerMax, powerMin *float64
-	if active.PowerMax != 0 {
+	if active.SpeedCount > 0 {
+		// Always store power stats if we had any speed readings (drive was active)
 		powerMax = &active.PowerMax
-	}
-	if active.PowerMin < math.MaxFloat64 {
-		powerMin = &active.PowerMin
+		if active.PowerMin < math.MaxFloat64 {
+			powerMin = &active.PowerMin
+		}
 	}
 
 	// Build enhanced fields map
@@ -744,20 +887,23 @@ func ptrStrOrNil(s string) *string {
 	return &s
 }
 
-func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	chargeState, hasChargeState := signalStr(signals, "DetailedChargeState", "ChargeState")
 	if !hasChargeState {
-		// Even without charge state, update active charge with readings
+		// Even without charge state, accumulate signals for active charge
 		t.mu.Lock()
 		if active, ok := t.activeCharges[vehicleID]; ok {
-			t.recordChargeTelemetry(ctx, active, signals)
-			active.LastSeen = time.Now()
+			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+			active.LastSeen = time.Now().UTC()
+			t.maybeFlushChargeTelemetry(ctx, active)
 		}
 		t.mu.Unlock()
 		return
 	}
 
-	isCharging := chargeState == "Charging" || chargeState == "Starting"
+	// Tesla Fleet Telemetry sends enum values with prefixes like
+	// "DetailedChargeStateCharging", "DetailedChargeStateStarting", or just "Enable".
+	isCharging := strings.Contains(chargeState, "Charging") || strings.Contains(chargeState, "Starting") || chargeState == "Enable"
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -766,10 +912,19 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	if isCharging && !hasCharge {
 		// === START CHARGE ===
-		batteryLevel, _ := signalInt(signals, "BatteryLevel", "Soc")
-		lat, hasLat := signalFloat(signals, "Latitude", "Location.Latitude")
-		lon, hasLon := signalFloat(signals, "Longitude", "Location.Longitude")
-		startRange, _ := signalFloat(signals, "RatedRange")
+		// Use accumulated signals from handler as fallback for start values
+		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
+		if !hasBat {
+			batteryLevel, _ = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
+		}
+		lat, lon, hasLoc := signalLatLon(signals)
+		if !hasLoc {
+			lat, lon, hasLoc = signalLatLon(accumulatedSignals)
+		}
+		startRange, hasRange := signalFloat(signals, "RatedRange")
+		if !hasRange {
+			startRange, _ = signalFloat(accumulatedSignals, "RatedRange")
+		}
 
 		session := &models.ChargingSession{
 			VehicleID:         vehicleID,
@@ -779,7 +934,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		if startRange > 0 {
 			session.StartRangeKm = floatPtr(startRange)
 		}
-		if hasLat && hasLon {
+		if hasLoc {
 			session.Latitude = floatPtr(lat)
 			session.Longitude = floatPtr(lon)
 		}
@@ -790,21 +945,26 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 
 		sc := &streamingCharge{
-			SessionID:         session.ID,
-			VehicleID:         vehicleID,
-			StartTime:         time.Now(),
-			LastSeen:          time.Now(),
-			StartBatteryLevel: batteryLevel,
+			SessionID:          session.ID,
+			VehicleID:          vehicleID,
+			StartTime:          time.Now().UTC(),
+			LastSeen:           time.Now().UTC(),
+			StartBatteryLevel:  batteryLevel,
+			accumulatedSignals: make(map[string]interface{}),
+			lastTelemetryWrite: time.Now().UTC(),
 		}
-		if hasLat { sc.Latitude = floatPtr(lat) }
-		if hasLon { sc.Longitude = floatPtr(lon) }
+		if hasLoc {
+			sc.Latitude = floatPtr(lat)
+			sc.Longitude = floatPtr(lon)
+		}
 		if startRange > 0 { sc.StartRangeKm = floatPtr(startRange) }
 
 		t.activeCharges[vehicleID] = sc
 		ChargeSessionsActive.Inc()
 
-		// Record first reading
-		t.recordChargeTelemetry(ctx, sc, signals)
+		// Accumulate and flush first reading immediately
+		sc.accumulatedSignals = accumulateSignals(sc.accumulatedSignals, signals)
+		t.flushChargeTelemetry(ctx, sc)
 
 		log.Info().Int64("vehicle_id", vehicleID).Int64("session_id", session.ID).Msg("telemetry: charging started")
 		if t.eventBus != nil {
@@ -814,7 +974,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	} else if isCharging && hasCharge {
 		// === UPDATE ACTIVE CHARGE ===
-		active.LastSeen = time.Now()
+		active.LastSeen = time.Now().UTC()
 
 		// Track energy
 		if ea, ok := signalFloat(signals, "DCChargingEnergyIn"); ok {
@@ -841,13 +1001,32 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			active.OutsideTempSum += ot
 		}
 
-		// Record telemetry reading
-		t.recordChargeTelemetry(ctx, active, signals)
+		// Accumulate signals and flush periodically
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+		t.maybeFlushChargeTelemetry(ctx, active)
 
 	} else if !isCharging && hasCharge {
 		// === CHARGE ENDED ===
 		t.completeChargeLocked(ctx, vehicleID, active, signals)
 	}
+}
+
+// maybeFlushChargeTelemetry writes accumulated signals if the write interval has elapsed.
+func (t *TelemetrySessionTracker) maybeFlushChargeTelemetry(ctx context.Context, charge *streamingCharge) {
+	if time.Since(charge.lastTelemetryWrite) < telemetryWriteInterval {
+		return
+	}
+	t.flushChargeTelemetry(ctx, charge)
+}
+
+// flushChargeTelemetry writes a telemetry reading from accumulated signals and resets the accumulator.
+func (t *TelemetrySessionTracker) flushChargeTelemetry(ctx context.Context, charge *streamingCharge) {
+	if len(charge.accumulatedSignals) == 0 {
+		return
+	}
+	t.recordChargeTelemetry(ctx, charge, charge.accumulatedSignals)
+	charge.accumulatedSignals = make(map[string]interface{})
+	charge.lastTelemetryWrite = time.Now().UTC()
 }
 
 func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, charge *streamingCharge, signals map[string]interface{}) {
@@ -869,9 +1048,11 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 	if v, ok := signalFloat(signals, "InsideTemp"); ok { reading.InsideTemp = floatPtr(v) }
 	if v, ok := signalFloat(signals, "OutsideTemp"); ok { reading.OutsideTemp = floatPtr(v) }
 	if v, ok := signalFloat(signals, "ModuleTempMax"); ok { reading.BatteryTemp = floatPtr(v) }
-	if v, ok := signalFloat(signals, "Latitude", "Location.Latitude"); ok { reading.Latitude = floatPtr(v) }
-	if v, ok := signalFloat(signals, "Longitude", "Location.Longitude"); ok { reading.Longitude = floatPtr(v) }
-	if v, ok := signalFloat(signals, "ChargeRateMph"); ok { reading.ChargeRate = floatPtr(v) }
+	if la, lo, ok := signalLatLon(signals); ok {
+		reading.Latitude = floatPtr(la)
+		reading.Longitude = floatPtr(lo)
+	}
+	if v, ok := signalFloat(signals, "ChargeRateMilePerHour", "ChargeRateMph"); ok { reading.ChargeRate = floatPtr(v) }
 
 	if err := t.chargeTelRepo.Insert(ctx, reading); err != nil {
 		log.Error().Err(err).Int64("session_id", charge.SessionID).Msg("telemetry: failed to insert charge telemetry reading")
@@ -879,26 +1060,49 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 }
 
 func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}) {
-	endBattery := 0
+	// Flush remaining accumulated signals
 	if signals != nil {
-		if bl, ok := signalInt(signals, "BatteryLevel", "Soc"); ok {
-			endBattery = bl
-		}
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+	}
+	t.flushChargeTelemetry(ctx, active)
+
+	finalSignals := signals
+	if finalSignals == nil {
+		finalSignals = map[string]interface{}{}
+	}
+
+	endBattery := 0
+	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
+		endBattery = bl
 	}
 	duration := time.Since(active.StartTime).Minutes()
 
+	// Backfill from telemetry readings if in-memory values are empty
+	if endBattery == 0 || active.EnergyAdded == 0 || active.Power == nil || active.Voltage == nil {
+		var maxBatt, maxPower, maxEnergy, maxVoltage, maxCurrent *float64
+		var maxPhases *int
+		_ = t.db.Pool.QueryRow(ctx, `SELECT 
+			MAX(battery_level)::float, MAX(power_kw), MAX(energy_added),
+			MAX(voltage), MAX(current_amps), MAX(phases)
+			FROM charge_telemetry_readings WHERE session_id = $1`,
+			active.SessionID).Scan(&maxBatt, &maxPower, &maxEnergy, &maxVoltage, &maxCurrent, &maxPhases)
+		if endBattery == 0 && maxBatt != nil { endBattery = int(*maxBatt) }
+		if active.EnergyAdded == 0 && maxEnergy != nil && *maxEnergy > 0 { active.EnergyAdded = *maxEnergy }
+		if active.Power == nil && maxPower != nil { active.Power = maxPower }
+		if active.Voltage == nil && maxVoltage != nil { v := int(*maxVoltage); active.Voltage = &v }
+		if active.Current == nil && maxCurrent != nil { v := int(*maxCurrent); active.Current = &v }
+		if active.Phases == nil && maxPhases != nil { active.Phases = maxPhases }
+	}
+
 	// Estimate energy from battery% diff if direct energy signal unavailable
 	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
-		// Estimate: typical Model Y pack is ~75 kWh, so 1% ≈ 0.75 kWh
 		estimatedKWh := float64(endBattery-active.StartBatteryLevel) * 0.75
 		active.EnergyAdded = estimatedKWh
 	}
 
 	// Get end range
 	var endRange *float64
-	if signals != nil {
-		if v, ok := signalFloat(signals, "RatedRange"); ok { endRange = floatPtr(v) }
-	}
+	if v, ok := signalFloat(finalSignals, "RatedRange"); ok { endRange = floatPtr(v) }
 
 	// Temperature averages
 	var insideAvg, outsideAvg *float64

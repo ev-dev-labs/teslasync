@@ -26,25 +26,27 @@ import {
   Bar,
 } from 'recharts'
 import clsx from 'clsx'
+import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { useSettings } from '../hooks/useSettings'
+import { fmtNumber, fmtInt, fmtWithUnit } from '../lib/numberFormat'
 
 // ---------------------------------------------------------------------------
 // Tooltip
 // ---------------------------------------------------------------------------
-interface TooltipPayload {
+interface CurveTooltipPayload {
   name: string
   value: number
   color?: string
 }
 
-function ChartTooltip({
+function CurveTooltip({
   active,
   payload,
   label,
   unit = 'kW',
 }: {
   active?: boolean
-  payload?: TooltipPayload[]
+  payload?: CurveTooltipPayload[]
   label?: string
   unit?: string
 }) {
@@ -63,7 +65,7 @@ function ChartTooltip({
       {payload.map((p) => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
           <span style={{ color: p.color }}>●</span> {p.name}:{' '}
-          {p.value?.toFixed(1)} {unit}
+          {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -126,11 +128,8 @@ function chargerColor(session: ChargingSession): string {
 }
 
 function sessionLabel(session: ChargingSession): string {
-  const date = new Date(session.start_date).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-  return `${date} · ${chargerLabel(session)} · ${session.charge_energy_added.toFixed(1)} kWh`
+  const date = formatDateShort(session.start_date)
+  return `${date} · ${chargerLabel(session)} · ${fmtWithUnit(session.charge_energy_added, 'kWh', 1)}`
 }
 
 function fmtDuration(minutes: number): string {
@@ -446,19 +445,19 @@ export default function ChargingCurve() {
               <SummaryCard
                 icon={<Zap className="h-4 w-4" />}
                 label="Total Energy"
-                value={`${summary.totalEnergy.toFixed(1)} kWh`}
+                value={fmtWithUnit(summary.totalEnergy, 'kWh', 1)}
                 accent="text-neon-green"
               />
               <SummaryCard
                 icon={<Activity className="h-4 w-4" />}
                 label="Avg Charge Rate"
-                value={`${summary.avgKw.toFixed(1)} kW`}
+                value={fmtWithUnit(summary.avgKw, 'kW', 1)}
                 accent="text-neon-purple"
               />
               <SummaryCard
                 icon={<Zap className="h-4 w-4" />}
                 label="Peak Rate"
-                value={`${summary.maxKw.toFixed(0)} kW`}
+                value={fmtWithUnit(summary.maxKw, 'kW', 0)}
                 accent="text-neon-amber"
               />
               <SummaryCard
@@ -470,7 +469,7 @@ export default function ChargingCurve() {
               <SummaryCard
                 icon={<DollarSign className="h-4 w-4" />}
                 label="Total Cost"
-                value={`$${summary.totalCost.toFixed(2)}`}
+                value={`$${fmtNumber(summary.totalCost, 2)}`}
                 accent="text-neon-green"
               />
             </div>
@@ -538,7 +537,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit="kW" />} />
+                    <Tooltip content={<CurveTooltip unit="kW" />} />
                     <Area
                       type="monotone"
                       dataKey="kw"
@@ -563,7 +562,7 @@ export default function ChargingCurve() {
               </h3>
               <SessionDetailRow
                 label="Date"
-                value={new Date(selectedSession.start_date).toLocaleString()}
+                value={formatDateTime(selectedSession.start_date)}
               />
               <SessionDetailRow
                 label="Duration"
@@ -571,7 +570,7 @@ export default function ChargingCurve() {
               />
               <SessionDetailRow
                 label="Energy Added"
-                value={`${selectedSession.charge_energy_added.toFixed(1)} kWh`}
+                value={fmtWithUnit(selectedSession.charge_energy_added, 'kWh', 1)}
               />
               <SessionDetailRow
                 label="Charger Type"
@@ -605,7 +604,7 @@ export default function ChargingCurve() {
                 label="Avg Charge Rate"
                 value={
                   selectedSession.duration_min > 0
-                    ? `${((selectedSession.charge_energy_added / selectedSession.duration_min) * 60).toFixed(1)} kW`
+                    ? fmtWithUnit((selectedSession.charge_energy_added / selectedSession.duration_min) * 60, 'kW', 1)
                     : '—'
                 }
               />
@@ -613,7 +612,7 @@ export default function ChargingCurve() {
                 label="Cost"
                 value={
                   selectedSession.cost != null
-                    ? `$${selectedSession.cost.toFixed(2)}`
+                    ? `$${fmtNumber(selectedSession.cost, 2)}`
                     : '—'
                 }
               />
@@ -622,7 +621,7 @@ export default function ChargingCurve() {
                 value={
                   selectedSession.cost != null &&
                   selectedSession.charge_energy_added > 0
-                    ? `$${(selectedSession.cost / selectedSession.charge_energy_added).toFixed(3)}/kWh`
+                    ? `$${fmtNumber(selectedSession.cost / selectedSession.charge_energy_added, 3)}/kWh`
                     : '—'
                 }
               />
@@ -635,7 +634,7 @@ export default function ChargingCurve() {
                 value={
                   selectedSession.start_range_km != null &&
                   selectedSession.end_range_km != null
-                    ? `+${convertDistance(selectedSession.end_range_km - selectedSession.start_range_km).toFixed(1)} ${distanceUnit}`
+                    ? `+${fmtNumber(convertDistance(selectedSession.end_range_km - selectedSession.start_range_km), 1)} ${distanceUnit}`
                     : '—'
                 }
               />
@@ -683,7 +682,7 @@ export default function ChargingCurve() {
                       fill: 'var(--text-muted)',
                     }}
                   />
-                  <Tooltip content={<ChartTooltip unit="kW" />} />
+                  <Tooltip content={<CurveTooltip unit="kW" />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {comparisonSessions.map((s, i) => (
                     <Line
@@ -752,7 +751,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<CurveTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Bar
                       yAxisId="kw"
@@ -810,7 +809,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit="kW" />} />
+                    <Tooltip content={<CurveTooltip unit="kW" />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line
                       type="monotone"
@@ -867,7 +866,7 @@ export default function ChargingCurve() {
                 label="Fastest Session"
                 value={
                   timeToChargeStats.fastest
-                    ? `${((timeToChargeStats.fastest.charge_energy_added / timeToChargeStats.fastest.duration_min) * 60).toFixed(0)} kW avg`
+                    ? `${fmtInt((timeToChargeStats.fastest.charge_energy_added / timeToChargeStats.fastest.duration_min) * 60)} kW avg`
                     : '—'
                 }
                 sub={
@@ -880,7 +879,7 @@ export default function ChargingCurve() {
                 label="Slowest Session"
                 value={
                   timeToChargeStats.slowest
-                    ? `${((timeToChargeStats.slowest.charge_energy_added / timeToChargeStats.slowest.duration_min) * 60).toFixed(0)} kW avg`
+                    ? `${fmtInt((timeToChargeStats.slowest.charge_energy_added / timeToChargeStats.slowest.duration_min) * 60)} kW avg`
                     : '—'
                 }
                 sub={
@@ -920,7 +919,7 @@ export default function ChargingCurve() {
                         fill: 'var(--text-muted)',
                       }}
                     />
-                    <Tooltip content={<ChartTooltip unit="min" />} />
+                    <Tooltip content={<CurveTooltip unit="min" />} />
                     <Bar
                       dataKey="avgMin"
                       name="Avg Duration"

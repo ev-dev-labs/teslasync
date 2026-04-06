@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, getTelemetryStatus, getWorkersHealth, getNotificationStats, getNotificationLogs, getExportJobs, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse, TelemetryStatus, WorkersHealth, NotificationStats, NotificationLog, ExportJobSummary } from '../api'
 import { getApiBase } from '../lib/resilience'
 import {
@@ -12,6 +13,8 @@ import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton
 import { AnimatedNumber } from '../components/Widgets'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
+import { formatDateTime, formatTime } from '../lib/dateFormat'
+import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 
 interface ComponentInfo {
   status: string
@@ -205,13 +208,13 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
         )}
       </div>
 
-      {/* Signals Modal */}
-      {showSignalsModal && info.details?.supported_signals && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
+      {/* Signals Modal — full screen via portal */}
+      {showSignalsModal && info.details?.supported_signals && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl border border-white/10 p-6 overflow-y-auto"
+            className="relative w-full max-w-5xl max-h-[90vh] rounded-2xl border border-white/10 p-6 overflow-y-auto shadow-2xl"
             style={{ background: 'var(--surface-1, #0a0b1a)' }}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
@@ -234,16 +237,17 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
               )
             })}
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
     </GlassPanel>
   )
 }
 
 function CostColor({ cost }: { cost: number }) {
-  if (cost < 5) return <span className="text-neon-green">${cost.toFixed(2)}</span>
-  if (cost < 8) return <span className="text-neon-amber">${cost.toFixed(2)}</span>
-  return <span className="text-neon-red">${cost.toFixed(2)}</span>
+  if (cost < 5) return <span className="text-neon-green">${fmtNumber(cost, 2)}</span>
+  if (cost < 8) return <span className="text-neon-amber">${fmtNumber(cost, 2)}</span>
+  return <span className="text-neon-red">${fmtNumber(cost, 2)}</span>
 }
 
 function ComponentHealthPanel() {
@@ -448,7 +452,7 @@ function APIUsageDashboard() {
             <p className="text-2xl font-bold">
               <CostColor cost={usage.estimated_cost} />
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">${usage.cost_per_request.toFixed(4)}/req</p>
+            <p className="text-[10px] text-[var(--text-muted)]">${fmtNumber(usage.cost_per_request, 4)}/req</p>
           </div>
 
           {/* Remaining credit */}
@@ -460,7 +464,7 @@ function APIUsageDashboard() {
             <p className="text-2xl font-bold text-neon-green">
               $<AnimatedNumber value={remaining} decimals={2} />
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">of ${usage.monthly_credit.toFixed(0)} credit</p>
+            <p className="text-[10px] text-[var(--text-muted)]">of ${fmtInt(usage.monthly_credit)} credit</p>
           </div>
 
           {/* Skipped polls */}
@@ -509,7 +513,7 @@ function APIUsageDashboard() {
             <span className="flex items-center gap-1.5">
               <DollarSign className="h-3.5 w-3.5 text-neon-amber" /> Cost Forecast
             </span>
-            <span className="font-semibold text-[var(--text-primary)]">${usage.monthly_credit.toFixed(0)} limit</span>
+            <span className="font-semibold text-[var(--text-primary)]">${fmtInt(usage.monthly_credit)} limit</span>
           </div>
           <div className="h-4 rounded-full bg-white/[0.04] overflow-hidden relative">
             {/* $10 limit marker */}
@@ -526,7 +530,7 @@ function APIUsageDashboard() {
           <div className="flex items-center justify-between mt-1.5 text-[10px] text-[var(--text-muted)]">
             <span>Current: <CostColor cost={usage.estimated_cost} /></span>
             <span className={clsx(remaining < 2 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
-              {remaining < 2 ? '⚠ Approaching limit' : `${((1 - costPct / 100) * 100).toFixed(0)}% budget remaining`}
+              {remaining < 2 ? '⚠ Approaching limit' : `${fmtPercent((1 - costPct / 100) * 100)} budget remaining`}
             </span>
           </div>
         </div>
@@ -552,12 +556,12 @@ function CompressionStatsPanel() {
 
   const formatBytes = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024, 1)} KB`
+    return `${fmtNumber(bytes / (1024 * 1024), 1)} MB`
   }
 
   const savingsPct = stats.total_positions > 0
-    ? ((stats.estimated_saved_rows / (stats.total_positions + stats.estimated_saved_rows)) * 100).toFixed(0)
+    ? fmtInt((stats.estimated_saved_rows / (stats.total_positions + stats.estimated_saved_rows)) * 100)
     : '0'
 
   return (
@@ -675,7 +679,7 @@ function AuditLogTable() {
               <tbody>
                 {logs.map((l: AuditLog) => (
                   <tr key={l.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{new Date(l.created_at).toLocaleString()}</td>
+                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</td>
                     <td className="py-2">
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
                         style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>
@@ -700,19 +704,25 @@ function AuditLogTable() {
 
 // Signal grouping for the expandable signal details view
 const SIGNAL_GROUPS: { label: string; color: string; signals: string[] }[] = [
-  { label: 'Location', color: '#3b82f6', signals: ['Location', 'GpsHeading', 'GpsState', 'VehicleSpeed', 'Odometer', 'Gear'] },
-  { label: 'Battery', color: '#10b981', signals: ['BatteryLevel', 'Soc', 'PackVoltage', 'PackCurrent', 'PackPower', 'EstBatteryRange', 'IdealBatteryRange', 'EnergyRemaining', 'BrickVoltageMax', 'BrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'IsolationResistance'] },
-  { label: 'Charging', color: '#f59e0b', signals: ['ChargeState', 'DetailedChargeState', 'ChargeAmps', 'ChargerVoltage', 'ChargerPhases', 'ChargeLimitSoc', 'ChargeCurrentRequest', 'ChargeRateMilePerHour', 'DCChargingPower', 'ACChargingPower', 'DCChargingEnergyIn', 'ACChargingEnergyIn', 'FastChargerPresent', 'FastChargerType', 'ChargingCableType', 'TimeToFullCharge', 'BatteryHeaterOn'] },
-  { label: 'Climate', color: '#8b5cf6', signals: ['InsideTemp', 'OutsideTemp', 'HvacPower', 'HvacFanSpeed', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest', 'CabinOverheatProtectionMode', 'DefrostMode', 'PreconditioningEnabled'] },
-  { label: 'Vehicle', color: '#ec4899', signals: ['Locked', 'DoorState', 'FdWindow', 'FpWindow', 'RdWindow', 'RpWindow', 'SentryMode', 'HomelinkNearby', 'GuestModeEnabled', 'SpeedLimitMode', 'CurrentLimitMph', 'Version', 'VehicleName'] },
-  { label: 'TPMS', color: '#14b8a6', signals: ['TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr'] },
-  { label: 'Drive', color: '#f97316', signals: ['DiStateR', 'DiAxleSpeedR', 'DiTorquemotor', 'DiStatorTempR', 'PedalPosition', 'BrakePedal', 'LateralAcceleration', 'LongitudinalAcceleration'] },
+  { label: 'Location', color: '#3b82f6', signals: ['Location', 'GpsHeading', 'GpsState', 'DestinationLocation', 'DestinationName', 'OriginLocation', 'RouteLine', 'RouteLastUpdated', 'RouteTrafficMinutesDelay', 'MilesToArrival', 'MinutesToArrival', 'LocatedAtHome', 'LocatedAtWork', 'LocatedAtFavorite'] },
+  { label: 'Driving', color: '#a855f7', signals: ['VehicleSpeed', 'Odometer', 'Gear', 'PedalPosition', 'BrakePedal', 'BrakePedalPos', 'CruiseSetSpeed', 'DriveRail', 'LateralAcceleration', 'LongitudinalAcceleration', 'LifetimeEnergyGainedRegen', 'LifetimeEnergyUsedDrive'] },
+  { label: 'Battery', color: '#10b981', signals: ['BatteryLevel', 'Soc', 'PackVoltage', 'PackCurrent', 'EnergyRemaining', 'EstBatteryRange', 'IdealBatteryRange', 'RatedRange', 'BrickVoltageMax', 'BrickVoltageMin', 'NumBrickVoltageMax', 'NumBrickVoltageMin', 'ModuleTempMax', 'ModuleTempMin', 'NumModuleTempMax', 'NumModuleTempMin', 'IsolationResistance', 'LifetimeEnergyUsed'] },
+  { label: 'Charging', color: '#f59e0b', signals: ['ChargeState', 'DetailedChargeState', 'ChargeAmps', 'ChargerVoltage', 'ChargerPhases', 'ChargeLimitSoc', 'ChargeCurrentRequest', 'ChargeCurrentRequestMax', 'ChargeEnableRequest', 'ChargeRateMilePerHour', 'DCChargingPower', 'ACChargingPower', 'DCChargingEnergyIn', 'ACChargingEnergyIn', 'FastChargerPresent', 'FastChargerType', 'ChargingCableType', 'ChargePort', 'ChargePortDoorOpen', 'ChargePortLatch', 'ChargePortColdWeatherMode', 'TimeToFullCharge', 'EstimatedHoursToChargeTermination', 'ExpectedEnergyPercentAtTripArrival', 'ScheduledChargingMode', 'ScheduledChargingPending', 'ScheduledChargingStartTime', 'ScheduledDepartureTime', 'SuperchargerSessionTripPlanner', 'BatteryHeaterOn', 'NotEnoughPowerToHeat', 'BMSState', 'BmsFullchargecomplete', 'DCDCEnable', 'PreconditioningEnabled'] },
+  { label: 'Powershare', color: '#06b6d4', signals: ['PowershareStatus', 'PowershareType', 'PowershareStopReason', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW'] },
+  { label: 'Climate', color: '#8b5cf6', signals: ['InsideTemp', 'OutsideTemp', 'HvacPower', 'HvacFanSpeed', 'HvacFanStatus', 'HvacACEnabled', 'HvacAutoMode', 'HvacLeftTemperatureRequest', 'HvacRightTemperatureRequest', 'HvacSteeringWheelHeatAuto', 'HvacSteeringWheelHeatLevel', 'ClimateKeeperMode', 'CabinOverheatProtectionMode', 'CabinOverheatProtectionTemperatureLimit', 'DefrostMode', 'DefrostForPreconditioning', 'RearDefrostEnabled', 'RearDisplayHvacEnabled', 'SeatHeaterLeft', 'SeatHeaterRight', 'SeatHeaterRearLeft', 'SeatHeaterRearCenter', 'SeatHeaterRearRight', 'SeatVentEnabled', 'ClimateSeatCoolingFrontLeft', 'ClimateSeatCoolingFrontRight', 'AutoSeatClimateLeft', 'AutoSeatClimateRight', 'WiperHeatEnabled'] },
+  { label: 'Powertrain', color: '#f97316', signals: ['DiTorquemotor', 'DiTorqueActualR', 'DiTorqueActualF', 'DiTorqueActualREL', 'DiTorqueActualRER', 'DiSlaveTorqueCmd', 'DiAxleSpeedF', 'DiAxleSpeedR', 'DiAxleSpeedREL', 'DiAxleSpeedRER', 'DiStateR', 'DiStateF', 'DiStateREL', 'DiStateRER', 'DiStatorTempR', 'DiStatorTempF', 'DiStatorTempREL', 'DiStatorTempRER', 'DiHeatsinkTR', 'DiHeatsinkTF', 'DiHeatsinkTREL', 'DiHeatsinkTRER', 'DiInverterTR', 'DiInverterTF', 'DiInverterTREL', 'DiInverterTRER', 'DiMotorCurrentR', 'DiMotorCurrentF', 'DiMotorCurrentREL', 'DiMotorCurrentRER', 'DiVBatR', 'DiVBatF', 'DiVBatREL', 'DiVBatRER', 'Hvil'] },
+  { label: 'Vehicle State', color: '#ec4899', signals: ['Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow', 'RdWindow', 'RpWindow', 'HomelinkNearby', 'HomelinkDeviceCount', 'GuestModeEnabled', 'GuestModeMobileAccessState', 'DriverSeatOccupied', 'CenterDisplay', 'CurrentLimitMph', 'SpeedLimitMode', 'ValetModeEnabled', 'ServiceMode', 'PairedPhoneKeyAndKeyFobQty', 'LightsHazardsActive', 'LightsHighBeams', 'LightsTurnSignal', 'TonneauPosition', 'TonneauOpenPercent', 'TonneauTentMode'] },
+  { label: 'Safety', color: '#ef4444', signals: ['DriverSeatBelt', 'PassengerSeatBelt', 'AutomaticEmergencyBrakingOff', 'AutomaticBlindSpotCamera', 'BlindSpotCollisionWarningChime', 'CruiseFollowDistance', 'EmergencyLaneDepartureAvoidance', 'ForwardCollisionWarning', 'LaneDepartureAvoidance', 'SpeedLimitWarning', 'PinToDriveEnabled', 'MilesSinceReset', 'SelfDrivingMilesSinceReset'] },
+  { label: 'TPMS', color: '#14b8a6', signals: ['TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr', 'TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr'] },
+  { label: 'Media', color: '#d946ef', signals: ['MediaNowPlayingTitle', 'MediaNowPlayingArtist', 'MediaNowPlayingAlbum', 'MediaNowPlayingStation', 'MediaNowPlayingDuration', 'MediaNowPlayingElapsed', 'MediaPlaybackStatus', 'MediaPlaybackSource', 'MediaAudioVolume', 'MediaAudioVolumeIncrement', 'MediaAudioVolumeMax'] },
+  { label: 'Vehicle Config', color: '#6366f1', signals: ['CarType', 'Trim', 'ExteriorColor', 'RoofColor', 'WheelType', 'VehicleName', 'Version', 'EuropeVehicle', 'RightHandDrive', 'RearSeatHeaters', 'EfficiencyPackage', 'SunroofInstalled', 'RemoteStartEnabled', 'OffroadLightbarPresent', 'SoftwareUpdateVersion', 'SoftwareUpdateDownloadPercentComplete', 'SoftwareUpdateInstallationPercentComplete', 'SoftwareUpdateExpectedDurationMinutes', 'SoftwareUpdateScheduledStartTime'] },
+  { label: 'User Preference', color: '#84cc16', signals: ['Setting24HourTime', 'SettingChargeUnit', 'SettingDistanceUnit', 'SettingTemperatureUnit', 'SettingTirePressureUnit'] },
 ]
 
 function formatSignalValue(value: unknown): string {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'boolean') return value ? '✓' : '✗'
-  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2)
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : fmtNumber(value, 2)
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
@@ -848,7 +858,7 @@ function TelemetryLivePanel() {
           {[
             { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? '#10b981' : '#f59e0b' },
             { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? '#10b981' : '#6b7280' },
-            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? totalSignalsPerSec.toFixed(1) : '0', color: '#00f0ff' },
+            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec, 1) : '0', color: '#00f0ff' },
             { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? '#10b981' : avgLatency < 5000 ? '#f59e0b' : '#ef4444' },
             { label: 'Total Signals', value: totalSignals.toLocaleString(), color: '#8b5cf6' },
           ].map(item => (
@@ -920,7 +930,7 @@ function TelemetryLivePanel() {
                               </span>
                             </span>
                             <span className="px-4 py-3 text-right font-mono text-xs text-neon-cyan">
-                              {v.signals_per_second > 0 ? v.signals_per_second.toFixed(1) : '—'}
+                              {v.signals_per_second > 0 ? fmtNumber(v.signals_per_second, 1) : '—'}
                             </span>
                             <span className={clsx(
                               'px-4 py-3 text-right font-mono text-xs',
@@ -947,7 +957,7 @@ function TelemetryLivePanel() {
                               <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)] mb-2">
                                 <span>Batch: {signalCount} signal{signalCount !== 1 ? 's' : ''}</span>
                                 {v.batch_count > 0 && <span>Batches: {v.batch_count.toLocaleString()}</span>}
-                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${(v.uptime_seconds / 3600).toFixed(1)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
+                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${fmtNumber(v.uptime_seconds / 3600, 1)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
                               </div>
                               {v.last_signals ? (
                                 <SignalGrid signals={v.last_signals as Record<string, unknown>} />
@@ -1051,7 +1061,8 @@ function NotificationDeliveryPanel() {
 
   if (!stats) return null
 
-  const successRate = stats.total_sent > 0 ? ((stats.sent / stats.total_sent) * 100).toFixed(1) : '—'
+  const successRateNum = stats.total_sent > 0 ? (stats.sent / stats.total_sent) * 100 : null
+  const successRate = successRateNum !== null ? fmtPercent(successRateNum, 1) : '—'
 
   return (
     <FadeIn delay={0.14}>
@@ -1071,7 +1082,7 @@ function NotificationDeliveryPanel() {
             { label: 'Total Sent', value: stats.total_sent, color: 'text-neon-cyan' },
             { label: 'Delivered', value: stats.sent, color: 'text-neon-green' },
             { label: 'Failed', value: stats.failed, color: 'text-red-400' },
-            { label: 'Success Rate', value: successRate + '%', color: Number(successRate) >= 95 ? 'text-neon-green' : Number(successRate) >= 80 ? 'text-neon-amber' : 'text-red-400' },
+            { label: 'Success Rate', value: successRate, color: (successRateNum ?? 0) >= 95 ? 'text-neon-green' : (successRateNum ?? 0) >= 80 ? 'text-neon-amber' : 'text-red-400' },
           ].map(s => (
             <div key={s.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{s.label}</p>
@@ -1097,7 +1108,7 @@ function NotificationDeliveryPanel() {
                     log.status === 'sent' ? 'text-neon-green' : log.status === 'failed' ? 'text-red-400' : 'text-neon-amber'
                   )}>{log.status}</span>
                   <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                    {new Date(log.created_at).toLocaleTimeString()}
+                    {formatTime(log.created_at)}
                   </span>
                 </div>
               ))}
@@ -1138,8 +1149,8 @@ function ExportJobQueuePanel() {
   const formatSize = (bytes: number) => {
     if (!bytes) return '—'
     if (bytes < 1024) return `${bytes}B`
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`
-    return `${(bytes / 1048576).toFixed(1)}MB`
+    if (bytes < 1048576) return `${fmtNumber(bytes / 1024, 1)}KB`
+    return `${fmtNumber(bytes / 1048576, 1)}MB`
   }
 
   return (
@@ -1186,7 +1197,7 @@ function ExportJobQueuePanel() {
                   {job.status}
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                  {new Date(job.created_at).toLocaleTimeString()}
+                  {formatTime(job.created_at)}
                 </span>
               </div>
             ))}

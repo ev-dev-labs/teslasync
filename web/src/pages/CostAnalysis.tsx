@@ -48,6 +48,8 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { CHARGER_COLORS } from '../lib/colors'
+import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 
 /* ── constants ───────────────────────────────────────────────── */
 
@@ -57,18 +59,10 @@ const KM_PER_MILE = 1.60934
 const CO2_PER_GAL_KG = 8.887         // kg CO₂ per gallon of gasoline
 const KG_CO2_PER_TREE_YEAR = 22      // kg CO₂ absorbed per tree per year
 
-const CHARGER_COLORS: Record<string, string> = {
-  Home:         '#10b981',
-  Supercharger: '#ef4444',
-  'Public DC':  '#a855f7',
-  'Work / L2':  '#f59e0b',
-  Other:        '#6366f1',
-}
 
+/* ── tooltip─────────────────────────────────────────────────── */
 
-/* ── tooltip ─────────────────────────────────────────────────── */
-
-interface TooltipPayload {
+interface CostTooltipPayload {
   name: string
   value: number
   color?: string
@@ -76,7 +70,7 @@ interface TooltipPayload {
   stroke?: string
 }
 
-function ChartTooltip({
+function CostTooltip({
   active,
   payload,
   label,
@@ -84,7 +78,7 @@ function ChartTooltip({
   suffix = '',
 }: {
   active?: boolean
-  payload?: TooltipPayload[]
+  payload?: CostTooltipPayload[]
   label?: string
   prefix?: string
   suffix?: string
@@ -99,7 +93,7 @@ function ChartTooltip({
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
           <span style={{ color: p.color || p.fill || p.stroke }}>●</span>{' '}
-          {p.name}: {prefix}{typeof p.value === 'number' ? p.value.toFixed(2) : p.value}{suffix}
+          {p.name}: {prefix}{typeof p.value === 'number' ? fmtNumber(p.value, 2) : p.value}{suffix}
         </p>
       ))}
     </div>
@@ -528,42 +522,42 @@ export default function CostAnalysis() {
               {[
                 {
                   label: 'Total Charging Cost',
-                  value: `$${totalCost.toFixed(2)}`,
+                  value: `$${fmtNumber(totalCost, 2)}`,
                   icon: DollarSign,
                   color: '#00f0ff',
                   sub: `${(sessions ?? []).length} sessions`,
                 },
                 {
                   label: `Cost per ${distanceUnit}`,
-                  value: `$${costPerUnit.toFixed(3)}`,
+                  value: `$${fmtNumber(costPerUnit, 3)}`,
                   icon: TrendingDown,
                   color: '#10b981',
-                  sub: `${convertDistance(totalDistanceKm).toFixed(0)} ${distanceUnit} driven`,
+                  sub: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit} driven`,
                 },
                 {
                   label: 'Avg Cost per kWh',
-                  value: `$${costPerKwh.toFixed(3)}`,
+                  value: `$${fmtNumber(costPerKwh, 3)}`,
                   icon: Zap,
                   color: '#f59e0b',
-                  sub: `${totalEnergy.toFixed(1)} kWh total`,
+                  sub: `${fmtWithUnit(totalEnergy, 'kWh')} total`,
                 },
                 {
                   label: 'Gas Equivalent',
-                  value: `$${gasEquiv.toFixed(2)}`,
+                  value: `$${fmtNumber(gasEquiv, 2)}`,
                   icon: Fuel,
                   color: '#ef4444',
-                  sub: `at $${gasPrice.toFixed(2)}/gal, ${mpg} mpg`,
+                  sub: `at $${fmtNumber(gasPrice, 2)}/gal, ${mpg} mpg`,
                 },
                 {
                   label: 'Total Savings',
-                  value: `$${totalSavings.toFixed(2)}`,
+                  value: `$${fmtNumber(totalSavings, 2)}`,
                   icon: PiggyBank,
                   color: totalSavings >= 0 ? '#10b981' : '#ef4444',
                   sub: `vs gasoline`,
                 },
                 {
                   label: 'Savings %',
-                  value: `${savingsPct.toFixed(1)}%`,
+                  value: `${fmtPercent(savingsPct, 1)}`,
                   icon: TrendingUp,
                   color: savingsPct >= 0 ? '#10b981' : '#ef4444',
                   sub: `cheaper than gas`,
@@ -613,7 +607,7 @@ export default function CostAnalysis() {
                       tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                       tickFormatter={v => `$${v}`}
                     />
-                    <Tooltip content={<ChartTooltip prefix="$" />} />
+                    <Tooltip content={<CostTooltip prefix="$" />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Area
                       type="monotone"
@@ -658,7 +652,7 @@ export default function CostAnalysis() {
                       tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                       tickFormatter={v => `$${v.toFixed(2)}`}
                     />
-                    <Tooltip content={<ChartTooltip prefix="$" suffix={`/${distanceUnit}`} />} />
+                    <Tooltip content={<CostTooltip prefix="$" suffix={`/${distanceUnit}`} />} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line
                       type="monotone"
@@ -715,7 +709,7 @@ export default function CostAnalysis() {
                           <Cell key={d.type} fill={d.fill} />
                         ))}
                       </Pie>
-                      <Tooltip content={<ChartTooltip prefix="$" />} />
+                      <Tooltip content={<CostTooltip prefix="$" />} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -747,7 +741,7 @@ export default function CostAnalysis() {
                                 {b.type}
                               </span>
                               <span style={{ color: 'var(--text-secondary)' }}>
-                                ${b.cost.toFixed(2)} · {b.sessions} sessions · ${b.avgCostKwh.toFixed(3)}/kWh
+                                ${fmtNumber(b.cost, 2)} · {b.sessions} sessions · ${fmtNumber(b.avgCostKwh, 3)}/kWh
                               </span>
                             </div>
                             <div className="w-full h-2 rounded-full" style={{ background: 'var(--surface-1)' }}>
@@ -817,7 +811,7 @@ export default function CostAnalysis() {
                       style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
                     />
                     <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                      Default from settings: ${settings.base_cost_per_kwh.toFixed(2)}/kWh
+                      Default from settings: ${fmtNumber(settings.base_cost_per_kwh, 2)}/kWh
                     </span>
                   </div>
                 </div>
@@ -843,7 +837,7 @@ export default function CostAnalysis() {
                           : '0 0 20px rgba(239,68,68,0.4)',
                       }}
                     >
-                      ${Math.abs(totalSavings).toFixed(2)}
+                      ${fmtNumber(Math.abs(totalSavings), 2)}
                     </p>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       {totalSavings >= 0 ? 'compared to gasoline' : 'more than gasoline (check your rates!)'}
@@ -853,19 +847,19 @@ export default function CostAnalysis() {
                     <div className="glass-card rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Monthly</p>
                       <p className="text-sm font-bold" style={{ color: '#00f0ff' }}>
-                        ${monthlySavings.toFixed(2)}
+                        ${fmtNumber(monthlySavings, 2)}
                       </p>
                     </div>
                     <div className="glass-card rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Annual (est.)</p>
                       <p className="text-sm font-bold" style={{ color: '#10b981' }}>
-                        ${annualSavings.toFixed(2)}
+                        ${fmtNumber(annualSavings, 2)}
                       </p>
                     </div>
                     <div className="glass-card rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Lifetime</p>
                       <p className="text-sm font-bold" style={{ color: '#a855f7' }}>
-                        ${lifetimeSavings.toFixed(2)}
+                        ${fmtNumber(lifetimeSavings, 2)}
                       </p>
                     </div>
                   </div>
@@ -928,25 +922,25 @@ export default function CostAnalysis() {
                             {isWorst && <span className="ml-1 text-neon-red text-[9px]">▼ Worst</span>}
                           </td>
                           <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            {row.energy.toFixed(1)}
+                            {fmtNumber(row.energy)}
                           </td>
                           <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            {row.distance.toFixed(1)}
+                            {fmtNumber(row.distance)}
                           </td>
                           <td className="py-2 px-2 font-medium" style={{ color: '#00f0ff' }}>
-                            ${row.cost.toFixed(2)}
+                            ${fmtNumber(row.cost, 2)}
                           </td>
                           <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            ${row.perUnit.toFixed(3)}
+                            ${fmtNumber(row.perUnit, 3)}
                           </td>
                           <td className="py-2 px-2" style={{ color: '#f59e0b' }}>
-                            ${row.gasCost.toFixed(2)}
+                            ${fmtNumber(row.gasCost, 2)}
                           </td>
                           <td
                             className="py-2 px-2 font-medium"
                             style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}
                           >
-                            {row.saved >= 0 ? '+' : ''}${row.saved.toFixed(2)}
+                            {row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved, 2)}
                           </td>
                         </tr>
                       )
@@ -983,7 +977,7 @@ export default function CostAnalysis() {
                           tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                           tickFormatter={v => `$${v.toFixed(2)}`}
                         />
-                        <Tooltip content={<ChartTooltip prefix="$" suffix="/kWh" />} />
+                        <Tooltip content={<CostTooltip prefix="$" suffix="/kWh" />} />
                         <Bar dataKey="avgRate" name="Avg $/kWh" radius={[3, 3, 0, 0]}>
                           {hourlyRates.map((entry, i) => (
                             <Cell
@@ -1017,7 +1011,7 @@ export default function CostAnalysis() {
                         Cheapest Time
                       </p>
                       <p className="text-sm font-bold" style={{ color: '#10b981' }}>
-                        {cheapestHour.hour} — ${cheapestHour.avgRate.toFixed(3)}/kWh
+                        {cheapestHour.hour} — ${fmtNumber(cheapestHour.avgRate, 3)}/kWh
                       </p>
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {cheapestHour.sessions} sessions
@@ -1033,7 +1027,7 @@ export default function CostAnalysis() {
                         Most Expensive Time
                       </p>
                       <p className="text-sm font-bold" style={{ color: '#ef4444' }}>
-                        {mostExpensiveHour.hour} — ${mostExpensiveHour.avgRate.toFixed(3)}/kWh
+                        {mostExpensiveHour.hour} — ${fmtNumber(mostExpensiveHour.avgRate, 3)}/kWh
                       </p>
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {mostExpensiveHour.sessions} sessions
@@ -1049,7 +1043,7 @@ export default function CostAnalysis() {
                         Best Rate by Type
                       </p>
                       <p className="text-sm font-bold" style={{ color: cheapestChargerType.fill }}>
-                        {cheapestChargerType.type} — ${cheapestChargerType.avgCostKwh.toFixed(3)}/kWh
+                        {cheapestChargerType.type} — ${fmtNumber(cheapestChargerType.avgCostKwh, 3)}/kWh
                       </p>
                     </div>
                   )}
@@ -1082,45 +1076,45 @@ export default function CostAnalysis() {
                 {[
                   {
                     label: 'Total Distance',
-                    value: `${convertDistance(totalDistanceKm).toFixed(0)} ${distanceUnit}`,
+                    value: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit}`,
                     color: '#00f0ff',
                     icon: TrendingUp,
                   },
                   {
                     label: 'Energy Consumed',
-                    value: `${totalEnergy.toFixed(1)} kWh`,
+                    value: `${fmtWithUnit(totalEnergy, 'kWh')}`,
                     color: '#f59e0b',
                     icon: Zap,
                   },
                   {
                     label: 'Charging Cost',
-                    value: `$${totalCost.toFixed(2)}`,
+                    value: `$${fmtNumber(totalCost, 2)}`,
                     color: '#00f0ff',
                     icon: DollarSign,
                   },
                   {
                     label: 'Gas Equivalent',
-                    value: `$${gasEquiv.toFixed(2)}`,
+                    value: `$${fmtNumber(gasEquiv, 2)}`,
                     color: '#ef4444',
                     icon: Fuel,
                   },
                   {
                     label: 'Total Savings',
-                    value: `$${totalSavings.toFixed(2)}`,
+                    value: `$${fmtNumber(totalSavings, 2)}`,
                     color: totalSavings >= 0 ? '#10b981' : '#ef4444',
                     icon: PiggyBank,
                   },
                   {
                     label: 'CO₂ Saved',
                     value: co2SavedKg >= 1000
-                      ? `${(co2SavedKg / 1000).toFixed(2)} tons`
-                      : `${co2SavedKg.toFixed(1)} kg`,
+                      ? `${fmtWithUnit((co2SavedKg / 1000), 'tons', 2)}`
+                      : `${fmtWithUnit(co2SavedKg, 'kg')}`,
                     color: '#10b981',
                     icon: Leaf,
                   },
                   {
                     label: 'Trees Equivalent',
-                    value: `${treesEquivalent.toFixed(1)} trees`,
+                    value: `${fmtWithUnit(treesEquivalent, 'trees')}`,
                     color: '#10b981',
                     icon: TreePine,
                   },
@@ -1152,12 +1146,12 @@ export default function CostAnalysis() {
                   By driving electric, you&apos;ve prevented{' '}
                   <span className="font-bold text-neon-green">
                     {co2SavedKg >= 1000
-                      ? `${(co2SavedKg / 1000).toFixed(2)} metric tons`
-                      : `${co2SavedKg.toFixed(1)} kg`}
+                      ? `${fmtNumber((co2SavedKg / 1000), 2)} metric tons`
+                      : `${fmtWithUnit(co2SavedKg, 'kg')}`}
                   </span>{' '}
                   of CO₂ emissions — equivalent to planting{' '}
                   <span className="font-bold text-neon-green">
-                    {treesEquivalent.toFixed(0)} trees
+                    {fmtInt(treesEquivalent)} trees
                   </span>{' '}
                   for a year.
                 </p>

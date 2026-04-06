@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAPICallLogs, getAPICallLogStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, StatCard } from '../components/ui'
+import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -203,7 +204,7 @@ export default function ApiLogs() {
                           style={{ borderColor: 'var(--glass-border)' }}
                         >
                           <td className="px-4 py-3 text-xs font-mono text-[var(--text-muted)] whitespace-nowrap">
-                            {new Date(log.created_at).toLocaleString()}
+                            {formatDateTime(log.created_at)}
                           </td>
                           <td className="px-4 py-3"><MethodBadge method={log.method} /></td>
                           <td className="px-4 py-3 text-xs font-mono text-[var(--text-secondary)] max-w-[300px] truncate" title={log.url}>
@@ -246,7 +247,7 @@ export default function ApiLogs() {
                         <span className="text-[10px] font-mono text-[var(--text-muted)] ml-auto">{log.duration_ms}ms</span>
                       </div>
                       <p className="text-xs font-mono text-[var(--text-secondary)] truncate">{log.url.replace(/^https?:\/\/[^/]+/, '')}</p>
-                      <p className="text-[10px] text-[var(--text-muted)] mt-1">{new Date(log.created_at).toLocaleString()}</p>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDateTime(log.created_at)}</p>
                       {log.error && <p className="text-[10px] text-red-400 mt-1 truncate">{log.error}</p>}
                     </div>
                     {expandedId === log.id && (

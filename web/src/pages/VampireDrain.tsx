@@ -11,6 +11,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
 import { exportAsCSV, exportAsJSON } from '../lib/export'
+import { formatDateShort, formatDate } from '../lib/dateFormat'
 
 function StatCard({ icon, label, value, unit, color }: { icon: React.ReactNode; label: string; value: string; unit: string; color: string }) {
   return (
@@ -51,7 +52,7 @@ export default function VampireDrain() {
   })
 
   const chartData = (events ?? []).slice(0, 50).reverse().map(e => ({
-    date: new Date(e.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    date: formatDateShort(e.start_date),
     drain: e.drain_rate_pct_per_hour,
     battery_lost: e.battery_lost,
     duration: e.duration_hours,
@@ -205,7 +206,7 @@ export default function VampireDrain() {
               <tbody>
                 {events.map(e => (
                   <tr key={e.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="py-2.5 pr-4" style={{ color: 'var(--text-primary)' }}>{new Date(e.start_date).toLocaleDateString()}</td>
+                    <td className="py-2.5 pr-4" style={{ color: 'var(--text-primary)' }}>{formatDate(e.start_date)}</td>
                     <td className="text-right pr-4 text-[var(--text-secondary)]">{e.duration_hours.toFixed(1)}h</td>
                     <td className="text-right pr-4 text-neon-red">{e.battery_lost}%</td>
                     <td className="text-right pr-4 text-neon-purple">{e.drain_rate_pct_per_hour.toFixed(2)}%/hr</td>

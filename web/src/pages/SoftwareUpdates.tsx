@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getSoftwareUpdates, Vehicle } from '../api'
+import { getVehicles, getSoftwareUpdates, getVehicleState, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../components/ui'
 import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
+import { formatDate } from '../lib/dateFormat'
 
 const statusConfig: Record<string, { color: string; bg: string; icon: typeof CheckCircle; label: string }> = {
   installed: { color: 'text-neon-green', bg: 'bg-neon-green/10', icon: CheckCircle, label: 'Installed' },
@@ -30,10 +31,17 @@ export default function SoftwareUpdates() {
     enabled: vehicleId !== null,
   })
 
+  // Get current version from vehicle state (SignalStore / Fleet API)
+  const { data: vehicleState } = useQuery({
+    queryKey: ['vehicle-state-sw', vehicleId],
+    queryFn: () => getVehicleState(vehicleId!),
+    enabled: vehicleId !== null,
+  })
+
   const vehicleMap = new Map<number, Vehicle>()
   vehicles?.forEach(v => vehicleMap.set(v.id, v))
 
-  const latestVersion = updates?.[0]?.version ?? 'Unknown'
+  const latestVersion = updates?.[0]?.version ?? vehicleState?.state?.software_version ?? 'Unknown'
   const totalUpdates = updates?.length ?? 0
   const installedCount = updates?.filter(u => u.status === 'installed').length ?? 0
 
@@ -130,16 +138,16 @@ export default function SoftwareUpdates() {
                           {u.installed_at && (
                             <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
                               <Calendar className="h-3 w-3" />
-                              <span>{new Date(u.installed_at).toLocaleDateString()}</span>
+                              <span>{formatDate(u.installed_at)}</span>
                             </div>
                           )}
                           {u.scheduled_at && !u.installed_at && (
                             <div className="flex items-center gap-1 text-xs text-neon-amber">
                               <Clock className="h-3 w-3" />
-                              <span>Scheduled: {new Date(u.scheduled_at).toLocaleDateString()}</span>
+                              <span>Scheduled: {formatDate(u.scheduled_at)}</span>
                             </div>
                           )}
-                          <p className="text-[10px] text-gray-600 mt-0.5">{new Date(u.created_at).toLocaleDateString()}</p>
+                          <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(u.created_at)}</p>
                         </div>
                       </div>
                     </div>

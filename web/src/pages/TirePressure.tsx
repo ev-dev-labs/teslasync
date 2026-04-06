@@ -6,16 +6,19 @@ import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from 'luc
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateShort, formatDateTime } from '../lib/dateFormat'
+import { STATUS_COLORS } from '../lib/colors'
+import { fmtNumber } from '../lib/numberFormat'
 
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface PressureTooltipPayload { name: string; value: number; color?: string }
+function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: PressureTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -39,7 +42,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/5" />
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" strokeDasharray={`${pct * 2.64} 264`} strokeLinecap="round" className={color} />
         </svg>
-        <span className={clsx('text-2xl font-bold', color)}>{psi > 0 ? psi.toFixed(1) : '--'}</span>
+        <span className={clsx('text-2xl font-bold', color)}>{psi > 0 ? fmtNumber(psi) : '--'}</span>
       </div>
       <div className="flex items-center gap-1.5">
         {psi === 0 ? (
@@ -52,7 +55,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
           <><TrendingUp className="h-3.5 w-3.5 text-neon-amber" /><span className="text-xs text-neon-amber">High</span></>
         )}
       </div>
-      <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${psi.toFixed(1)} ${unit}` : 'N/A'}</span>
+      <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${fmtNumber(psi)} ${unit}` : 'N/A'}</span>
     </div>
   )
 }
@@ -68,11 +71,11 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
     if (v < 35 || v > 45) return 'amber'
     return 'green'
   }
-  const statusColors = { green: '#10b981', amber: '#f59e0b', red: '#ef4444' } as const
+  const statusColors = { green: STATUS_COLORS.good, amber: STATUS_COLORS.warning, red: STATUS_COLORS.critical } as const
   const statusLabels = { green: 'OK', amber: 'WARN', red: 'CRIT' } as const
   const getColor = (v: number | null) => statusColors[getStatus(v)]
   const allNormal = [fl, fr, rl, rr].every(v => v !== null && v >= 35 && v <= 45)
-  const fmt = (v: number | null) => (v !== null && v > 0 ? v.toFixed(1) : '--')
+  const fmt = (v: number | null) => (v !== null && v > 0 ? fmtNumber(v) : '--')
   // Pressure ring: percentage fill for the pressure ring (0-100)
   const pressurePct = (v: number | null) => {
     if (v === null || v === 0) return 0
@@ -88,7 +91,7 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
     if (diffMin < 60) return `${diffMin}m ago`
     const diffH = Math.floor(diffMin / 60)
     if (diffH < 24) return `${diffH}h ago`
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    return formatDateShort(d)
   }
 
   const tires = [
@@ -277,9 +280,17 @@ export default function TirePressure() {
   // Thresholds in the display unit
   const lowThreshold = convertPressure(2.4)   // ~35 PSI
 
+  const [timeRange, setTimeRange] = useState(200)
+  const TIME_OPTIONS = [
+    { label: '7 days', value: 50 },
+    { label: '30 days', value: 200 },
+    { label: '90 days', value: 500 },
+    { label: 'All', value: 2000 },
+  ]
+
   const { data: history, isLoading: loadingHistory } = useQuery({
-    queryKey: ['tire-pressure-history', vehicleId],
-    queryFn: () => getTirePressure(vehicleId!, 200),
+    queryKey: ['tire-pressure-history', vehicleId, timeRange],
+    queryFn: () => getTirePressure(vehicleId!, timeRange),
     enabled: vehicleId !== null,
     refetchInterval: 10000,
   })
@@ -306,7 +317,7 @@ export default function TirePressure() {
   const convRR = compositeLatest?.rear_right != null ? convertPressure(compositeLatest.rear_right) : null
 
   const chartData = (history ?? []).slice().reverse().map(s => ({
-    time: new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    time: formatDateTime(s.created_at),
     fl: s.front_left != null ? convertPressure(s.front_left) : null,
     fr: s.front_right != null ? convertPressure(s.front_right) : null,
     rl: s.rear_left != null ? convertPressure(s.rear_left) : null,
@@ -319,16 +330,30 @@ export default function TirePressure() {
     <FadeIn>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
         <PageHeader title="Tire Pressure" subtitle="Monitor tire pressure across all four tires" icon={<Gauge className="h-7 w-7 text-neon-cyan" />} />
-        {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
-            onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {TIME_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => setTimeRange(opt.value)}
+                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+                  timeRange === opt.value
+                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                    : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                )}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {vehicles && vehicles.length > 1 && (
+            <select
+              value={vehicleId ?? ''}
+              onChange={e => setSelectedVehicle(Number(e.target.value))}
+              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+            >
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
+            </select>
+          )}
+        </div>
       </div>
 
       {anyLow && (
@@ -383,7 +408,7 @@ export default function TirePressure() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis domain={[convertPressure(2.0), convertPressure(3.6)]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickFormatter={v => `${v.toFixed(0)}`} />
-              <Tooltip content={<ChartTooltip unit={pressureUnit} />} />
+              <Tooltip content={<PressureTooltip unit={pressureUnit} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="fl" name="Front Left" stroke="#00f0ff" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="fr" name="Front Right" stroke="#a855f7" strokeWidth={2} dot={false} />

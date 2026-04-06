@@ -16,6 +16,7 @@ import {
 } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState } from '../components/ui'
 import { useToast } from '../components/Toast'
+import { formatDateTime } from '../lib/dateFormat'
 
 const CHANNEL_TYPES = [
   { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
@@ -288,7 +289,7 @@ export default function Notifications() {
                   {logs.map((log: NotificationLog) => (
                     <tr key={log.id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
                       <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        {new Date(log.created_at).toLocaleString()}
+                        {formatDateTime(log.created_at)}
                       </td>
                       <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>
                         <div className="flex items-center gap-2">

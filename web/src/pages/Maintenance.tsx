@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDate } from '../lib/dateFormat'
 
 /* ────────────────────────────── Types ────────────────────────────── */
 
@@ -56,10 +57,6 @@ const STORAGE_KEY = 'teslasync-maintenance-log'
 const ICE_ANNUAL_COST = 1200
 
 /* ────────────────────────── Helpers ────────────────────────── */
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
 
 function monthsFromNow(iso: string): number {
   const d = new Date(iso)

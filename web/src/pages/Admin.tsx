@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { FadeIn, GlassPanel, PageHeader, Skeleton } from '../components/ui'
 import { useToast } from '../components/Toast'
+import { formatDate, formatDateTime } from '../lib/dateFormat'
 import {
   getAPIUsage,
   getBackupStats,
@@ -264,7 +265,7 @@ export default function Admin() {
                 {auditLogs.map((log) => (
                   <tr key={log.id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="py-2 pr-4 text-xs font-mono whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {new Date(log.created_at).toLocaleString()}
+                      {formatDateTime(log.created_at)}
                     </td>
                     <td className="py-2 pr-4 text-white">{log.action}</td>
                     <td className="py-2 pr-4 font-mono text-neon-cyan">{log.resource}</td>
@@ -316,10 +317,10 @@ export default function Admin() {
                       <span className="px-1.5 py-0.5 text-xs rounded bg-white/10 text-gray-300">{key.permissions}</span>
                     </td>
                     <td className="py-2 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}
+                      {key.last_used_at ? formatDate(key.last_used_at) : 'Never'}
                     </td>
                     <td className="py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {key.expires_at ? new Date(key.expires_at).toLocaleDateString() : '—'}
+                      {key.expires_at ? formatDate(key.expires_at) : '—'}
                     </td>
                   </tr>
                 ))}

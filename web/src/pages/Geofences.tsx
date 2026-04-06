@@ -6,6 +6,7 @@ import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyS
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
+import { CHART_COLORS } from '../lib/colors'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapContainer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
@@ -24,7 +25,6 @@ interface FormData {
 
 const emptyForm: FormData = { name: '', latitude: '', longitude: '', radius: '50', cost_per_kwh: '' }
 
-const GEOFENCE_COLORS = ['#a855f7', '#00f0ff', '#10b981', '#f59e0b', '#ef4444', '#4f46e5']
 
 function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect }: {
   geofence: Geofence; onEdit: () => void; onDelete: () => void; color: string; isSelected: boolean; onSelect: () => void
@@ -396,7 +396,7 @@ export default function Geofences() {
               <ClickHandler onClick={handleMapClick} />
 
               {geofences?.map((g, i) => {
-                const color = GEOFENCE_COLORS[i % GEOFENCE_COLORS.length]
+                const color = CHART_COLORS[i % CHART_COLORS.length]
                 return (
                   <div key={g.id}>
                     <Circle
@@ -446,7 +446,7 @@ export default function Geofences() {
             <StaggerItem key={g.id}>
               <GeofenceCard
                 geofence={g}
-                color={GEOFENCE_COLORS[i % GEOFENCE_COLORS.length]}
+                color={CHART_COLORS[i % CHART_COLORS.length]}
                 isSelected={selectedId === g.id}
                 onSelect={() => setSelectedId(g.id === selectedId ? null : g.id)}
                 onEdit={() => startEdit(g)}

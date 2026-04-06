@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -42,6 +43,7 @@ type Worker struct {
 	mqttClient    *mqtt.Client
 	eventBus      *events.Bus
 	cfg           config.WorkerConfig
+	sessionSvc    *service.SessionService
 
 	// Fleet Telemetry integration — when enabled, telemetry is primary and
 	// the worker only polls as a fallback for non-streaming vehicles.
@@ -51,11 +53,6 @@ type Worker struct {
 	// streaming via Fleet Telemetry are skipped entirely (telemetry-primary
 	// mode) or get reduced polling (hybrid mode).
 	IsVehicleStreaming func(vin string) bool
-
-	// Track active sessions per vehicle (guarded by sessionMu)
-	sessionMu     sync.Mutex
-	activeDrives  map[int64]int64 // vehicleID -> driveID
-	activeCharges map[int64]int64 // vehicleID -> chargingSessionID
 
 	// Per-vehicle health tracking for adaptive backoff (guarded by mu)
 	mu             sync.Mutex
@@ -87,8 +84,7 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		mqttClient:        mc,
 		eventBus:          eb,
 		cfg:               cfg,
-		activeDrives:      make(map[int64]int64),
-		activeCharges:     make(map[int64]int64),
+		sessionSvc:        service.NewSessionService(db, eb),
 		vehicleHealth:     make(map[int64]*vehicleHealth),
 		discoveryInterval: 5 * time.Minute,
 	}
@@ -526,99 +522,11 @@ func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse)
 }
 
 func (w *Worker) trackDriving(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	isDriving := data.DriveState.Speed != nil && *data.DriveState.Speed > 0
-
-	w.sessionMu.Lock()
-	activeDriveID, hasActiveDrive := w.activeDrives[vehicle.ID]
-	w.sessionMu.Unlock()
-
-	if isDriving && !hasActiveDrive {
-		// Start new drive
-		drive := &models.Drive{
-			VehicleID:   vehicle.ID,
-			StartDate:   time.Now().UTC(),
-			StartBatteryLvl: &data.ChargeState.BatteryLevel,
-		}
-		range_ := data.ChargeState.BatteryRange
-		drive.StartRangeKm = &range_
-
-		if err := w.driveRepo.Create(ctx, drive); err != nil {
-			log.Error().Err(err).Int64("vehicleID", vehicle.ID).Msg("failed to create drive")
-			return
-		}
-		w.sessionMu.Lock()
-		w.activeDrives[vehicle.ID] = drive.ID
-		w.sessionMu.Unlock()
-		log.Info().Int64("vehicleID", vehicle.ID).Int64("driveID", drive.ID).Msg("drive started")
-		if w.eventBus != nil {
-			w.eventBus.Publish(events.Event{Type: events.DriveStarted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"drive_id": drive.ID, "battery_level": data.ChargeState.BatteryLevel}})
-		}
-	} else if !isDriving && hasActiveDrive {
-		// End drive
-		endRange := data.ChargeState.BatteryRange
-		endBattery := data.ChargeState.BatteryLevel
-		if err := w.driveRepo.Complete(ctx, activeDriveID, time.Now().UTC(),
-			nil, nil, 0, 0, &endRange, &endBattery, nil, nil, nil, nil, nil); err != nil {
-			log.Error().Err(err).Int64("driveID", activeDriveID).Msg("failed to complete drive")
-		}
-		w.sessionMu.Lock()
-		delete(w.activeDrives, vehicle.ID)
-		w.sessionMu.Unlock()
-		log.Info().Int64("vehicleID", vehicle.ID).Int64("driveID", activeDriveID).Msg("drive ended")
-		if w.eventBus != nil {
-			w.eventBus.Publish(events.Event{Type: events.DriveEnded, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"drive_id": activeDriveID, "battery_level": data.ChargeState.BatteryLevel}})
-		}
-	}
+	w.sessionSvc.TrackDriveFromAPI(ctx, vehicle, data)
 }
 
 func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
-	isCharging := data.ChargeState.ChargingState == "Charging"
-
-	w.sessionMu.Lock()
-	activeChargeID, hasActiveCharge := w.activeCharges[vehicle.ID]
-	w.sessionMu.Unlock()
-
-	if isCharging && !hasActiveCharge {
-		session := &models.ChargingSession{
-			VehicleID:         vehicle.ID,
-			StartDate:         time.Now().UTC(),
-			StartBatteryLevel: data.ChargeState.BatteryLevel,
-		}
-		range_ := data.ChargeState.BatteryRange
-		session.StartRangeKm = &range_
-
-		if err := w.chargeRepo.Create(ctx, session); err != nil {
-			log.Error().Err(err).Int64("vehicleID", vehicle.ID).Msg("failed to create charging session")
-			return
-		}
-		w.sessionMu.Lock()
-		w.activeCharges[vehicle.ID] = session.ID
-		w.sessionMu.Unlock()
-		log.Info().Int64("vehicleID", vehicle.ID).Int64("sessionID", session.ID).Msg("charging started")
-		if w.eventBus != nil {
-			w.eventBus.Publish(events.Event{Type: events.ChargeStarted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"session_id": session.ID, "battery_level": data.ChargeState.BatteryLevel}})
-		}
-	} else if !isCharging && hasActiveCharge {
-		endBattery := data.ChargeState.BatteryLevel
-		endRange := data.ChargeState.BatteryRange
-		power := data.ChargeState.ChargerPower
-		voltage := data.ChargeState.ChargerVoltage
-		current := data.ChargeState.ChargerActualCurrent
-
-		if err := w.chargeRepo.Complete(ctx, activeChargeID, time.Now().UTC(),
-			data.ChargeState.ChargeEnergyAdded, nil, &endBattery, &endRange,
-			data.ChargeState.ChargerPhases, &voltage, &current, &power,
-			nil, nil, nil, nil, 0); err != nil {
-			log.Error().Err(err).Int64("sessionID", activeChargeID).Msg("failed to complete charging session")
-		}
-		w.sessionMu.Lock()
-		delete(w.activeCharges, vehicle.ID)
-		w.sessionMu.Unlock()
-		log.Info().Int64("vehicleID", vehicle.ID).Int64("sessionID", activeChargeID).Msg("charging ended")
-		if w.eventBus != nil {
-			w.eventBus.Publish(events.Event{Type: events.ChargeCompleted, VehicleID: vehicle.ID, VIN: vehicle.VIN, Data: map[string]interface{}{"session_id": activeChargeID, "battery_level": data.ChargeState.BatteryLevel, "energy_added": data.ChargeState.ChargeEnergyAdded}})
-		}
-	}
+	w.sessionSvc.TrackChargeFromAPI(ctx, vehicle, data)
 }
 
 func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {

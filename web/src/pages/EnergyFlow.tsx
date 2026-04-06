@@ -6,17 +6,19 @@ import { Zap, Battery, Activity, Gauge, AlertTriangle, CheckCircle, Thermometer,
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
+import { fmtNumber, fmtWithUnit, fmtInt } from '../lib/numberFormat'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
-interface TooltipPayload { name: string; value: number; color?: string }
-function ChartTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: TooltipPayload[]; label?: string; unit?: string }) {
+interface EnergyTooltipPayload { name: string; value: number; color?: string }
+function EnergyTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: EnergyTooltipPayload[]; label?: string; unit?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(2)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 2)} {unit}
         </p>
       ))}
     </div>
@@ -35,7 +37,7 @@ function StatusGauge({ label, value, unit, min, max, color = 'text-neon-cyan', f
 }) {
   const val = value ?? 0
   const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100))
-  const fmt = formatValue ?? ((v: number) => v.toFixed(1))
+  const fmt = formatValue ?? ((v: number) => fmtNumber(v))
   return (
     <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
@@ -77,7 +79,7 @@ function PowerFlowArrow({ dcPower, acPower, energyRemaining }: { dcPower?: numbe
   const hasDc = dcPower != null && dcPower > 0
   const hasAc = acPower != null && acPower > 0
   const activeColor = hasDc ? '#00f0ff' : hasAc ? '#a855f7' : '#334155'
-  const powerLabel = hasDc ? `DC ${dcPower?.toFixed(1)} kW` : hasAc ? `AC ${acPower?.toFixed(1)} kW` : 'No Charge'
+  const powerLabel = hasDc ? `DC ${fmtWithUnit(dcPower, 'kW')}` : hasAc ? `AC ${fmtWithUnit(acPower, 'kW')}` : 'No Charge'
   return (
     <svg viewBox="0 0 480 120" className="w-full" style={{ maxWidth: 480 }}>
       <defs>
@@ -105,7 +107,7 @@ function PowerFlowArrow({ dcPower, acPower, energyRemaining }: { dcPower?: numbe
       {/* Battery */}
       <rect x="380" y="30" width="90" height="60" rx="12" fill="#0f172a" stroke="#10b981" strokeWidth="1.5" />
       <text x="425" y="52" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#10b981">
-        {energyRemaining != null ? `${energyRemaining.toFixed(1)}` : '--'}
+        {energyRemaining != null ? `${fmtNumber(energyRemaining)}` : '--'}
       </text>
       <text x="425" y="66" textAnchor="middle" fontSize="8" fill="#9ca3af">kWh</text>
       <text x="425" y="80" textAnchor="middle" fontSize="8" fill="#10b981">Battery</text>
@@ -118,7 +120,7 @@ function StatCard({ label, value, unit, color = 'text-neon-cyan' }: { label: str
   return (
     <div className="glass-card p-4 sm:p-5">
       <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>{label}</p>
-      <p className={clsx('text-2xl font-bold', color)}>{value != null ? value.toFixed(1) : '--'}</p>
+      <p className={clsx('text-2xl font-bold', color)}>{value != null ? fmtNumber(value) : '--'}</p>
       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{unit}</p>
     </div>
   )
@@ -150,8 +152,7 @@ export default function EnergyFlow() {
   })
 
   /* ── Formatted timestamp helper ── */
-  const fmtTime = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const fmtTime = (iso: string) => formatDateTime(iso)
 
   /* ── Cell voltage chart data ── */
   const cellVoltageData = useMemo(() => {
@@ -284,10 +285,10 @@ export default function EnergyFlow() {
         </div>
       ) : !noData && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <StatusGauge label="Pack Voltage" value={latest?.pack_voltage} unit="V" min={300} max={420} color="text-neon-cyan" formatValue={v => v.toFixed(1)} />
-          <StatusGauge label="Pack Current" value={latest?.pack_current} unit="A" min={-50} max={300} color="text-neon-green" formatValue={v => v.toFixed(1)} />
-          <StatusGauge label="Energy Remaining" value={latest?.energy_remaining} unit="kWh" min={0} max={100} color="text-yellow-400" formatValue={v => v.toFixed(1)} />
-          <StatusGauge label="State of Charge" value={latest?.soc ?? latest?.battery_level} unit="%" min={0} max={100} color="text-purple-400" formatValue={v => v.toFixed(0)} />
+          <StatusGauge label="Pack Voltage" value={latest?.pack_voltage} unit="V" min={300} max={420} color="text-neon-cyan" formatValue={(v: number) => fmtNumber(v)} />
+          <StatusGauge label="Pack Current" value={latest?.pack_current} unit="A" min={-50} max={300} color="text-neon-green" formatValue={(v: number) => fmtNumber(v)} />
+          <StatusGauge label="Energy Remaining" value={latest?.energy_remaining} unit="kWh" min={0} max={100} color="text-yellow-400" formatValue={(v: number) => fmtNumber(v)} />
+          <StatusGauge label="State of Charge" value={latest?.soc ?? latest?.battery_level} unit="%" min={0} max={100} color="text-purple-400" formatValue={(v: number) => fmtInt(v)} />
         </div>
       )}
 
@@ -304,19 +305,19 @@ export default function EnergyFlow() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>DC Power</p>
-              <p className="text-lg font-bold text-neon-cyan">{latest?.dc_charging_power != null ? `${latest.dc_charging_power.toFixed(1)} kW` : '--'}</p>
+              <p className="text-lg font-bold text-neon-cyan">{latest?.dc_charging_power != null ? `${fmtWithUnit(latest.dc_charging_power, 'kW')}` : '--'}</p>
             </div>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>AC Power</p>
-              <p className="text-lg font-bold text-purple-400">{latest?.ac_charging_power != null ? `${latest.ac_charging_power.toFixed(1)} kW` : '--'}</p>
+              <p className="text-lg font-bold text-purple-400">{latest?.ac_charging_power != null ? `${fmtWithUnit(latest.ac_charging_power, 'kW')}` : '--'}</p>
             </div>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Charger Voltage</p>
-              <p className="text-lg font-bold text-yellow-400">{latest?.charger_voltage != null ? `${latest.charger_voltage.toFixed(1)} V` : '--'}</p>
+              <p className="text-lg font-bold text-yellow-400">{latest?.charger_voltage != null ? `${fmtWithUnit(latest.charger_voltage, 'V')}` : '--'}</p>
             </div>
             <div className="glass-card p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Charge Amps</p>
-              <p className="text-lg font-bold text-neon-green">{latest?.charge_amps != null ? `${latest.charge_amps.toFixed(1)} A` : '--'}</p>
+              <p className="text-lg font-bold text-neon-green">{latest?.charge_amps != null ? `${fmtWithUnit(latest.charge_amps, 'A')}` : '--'}</p>
             </div>
           </div>
           {/* Power flow chart */}
@@ -327,7 +328,7 @@ export default function EnergyFlow() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                   <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <Tooltip content={<ChartTooltip unit="kW" />} />
+                  <Tooltip content={<EnergyTooltip unit="kW" />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Area type="monotone" dataKey="dc" name="DC Power" stroke="#00f0ff" fill="#00f0ff" fillOpacity={0.15} strokeWidth={2} dot={false} connectNulls />
                   <Area type="monotone" dataKey="ac" name="AC Power" stroke="#a855f7" fill="#a855f7" fillOpacity={0.15} strokeWidth={2} dot={false} connectNulls />
@@ -348,7 +349,7 @@ export default function EnergyFlow() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Max</p>
               <p className="text-2xl font-bold text-neon-cyan">
-                {latest?.brick_voltage_max != null ? `${latest.brick_voltage_max.toFixed(3)} V` : '--'}
+                {latest?.brick_voltage_max != null ? `${fmtWithUnit(latest.brick_voltage_max, 'V', 3)}` : '--'}
               </p>
               {latest?.num_brick_voltage_max != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_max}</p>
@@ -357,7 +358,7 @@ export default function EnergyFlow() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Min</p>
               <p className="text-2xl font-bold text-purple-400">
-                {latest?.brick_voltage_min != null ? `${latest.brick_voltage_min.toFixed(3)} V` : '--'}
+                {latest?.brick_voltage_min != null ? `${fmtWithUnit(latest.brick_voltage_min, 'V', 3)}` : '--'}
               </p>
               {latest?.num_brick_voltage_min != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_min}</p>
@@ -366,7 +367,7 @@ export default function EnergyFlow() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Spread</p>
               <p className={clsx('text-2xl font-bold', cellHealthy ? 'text-neon-green' : cellSpread != null ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
-                {cellSpread != null ? `${cellSpread.toFixed(1)} mV` : '--'}
+                {cellSpread != null ? `${fmtWithUnit(cellSpread, 'mV')}` : '--'}
               </p>
               <div className="flex items-center justify-center gap-1.5 mt-1">
                 {cellSpread != null ? cellHealthy ? (
@@ -386,7 +387,7 @@ export default function EnergyFlow() {
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis yAxisId="v" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} domain={['auto', 'auto']} />
                 <YAxis yAxisId="mv" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<EnergyTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line yAxisId="v" type="monotone" dataKey="max" name="Max (V)" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
                 <Line yAxisId="v" type="monotone" dataKey="min" name="Min (V)" stroke="#a855f7" strokeWidth={2} dot={false} connectNulls />
@@ -407,7 +408,7 @@ export default function EnergyFlow() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Max Module Temp</p>
               <p className="text-2xl font-bold text-red-400">
-                {latest?.module_temp_max != null ? `${convertTemp(latest.module_temp_max).toFixed(1)} ${tempUnit}` : '--'}
+                {latest?.module_temp_max != null ? `${fmtNumber(convertTemp(latest.module_temp_max))} ${tempUnit}` : '--'}
               </p>
               {latest?.num_module_temp_max != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Module #{latest.num_module_temp_max}</p>
@@ -416,7 +417,7 @@ export default function EnergyFlow() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Min Module Temp</p>
               <p className="text-2xl font-bold text-blue-400">
-                {latest?.module_temp_min != null ? `${convertTemp(latest.module_temp_min).toFixed(1)} ${tempUnit}` : '--'}
+                {latest?.module_temp_min != null ? `${fmtNumber(convertTemp(latest.module_temp_min))} ${tempUnit}` : '--'}
               </p>
               {latest?.num_module_temp_min != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Module #{latest.num_module_temp_min}</p>
@@ -429,7 +430,7 @@ export default function EnergyFlow() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                <Tooltip content={<ChartTooltip unit={tempUnit} />} />
+                <Tooltip content={<EnergyTooltip unit={tempUnit} />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="max" name="Max Temp" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />
                 <Line type="monotone" dataKey="min" name="Min Temp" stroke="#3b82f6" strokeWidth={2} dot={false} connectNulls />
@@ -493,13 +494,13 @@ export default function EnergyFlow() {
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Hours Left</p>
               <p className="text-lg font-bold text-yellow-400">
-                {latest?.powershare_hours_left != null ? `${latest.powershare_hours_left.toFixed(1)} h` : '--'}
+                {latest?.powershare_hours_left != null ? `${fmtWithUnit(latest.powershare_hours_left, 'h')}` : '--'}
               </p>
             </div>
             <div className="glass-card p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Power</p>
               <p className="text-lg font-bold text-purple-400">
-                {latest?.powershare_power_kw != null ? `${latest.powershare_power_kw.toFixed(1)} kW` : '--'}
+                {latest?.powershare_power_kw != null ? `${fmtWithUnit(latest.powershare_power_kw, 'kW')}` : '--'}
               </p>
             </div>
           </div>
@@ -524,7 +525,7 @@ export default function EnergyFlow() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="v" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} domain={['auto', 'auto']} />
               <YAxis yAxisId="a" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<EnergyTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line yAxisId="v" type="monotone" dataKey="voltage" name="Voltage (V)" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="a" type="monotone" dataKey="current" name="Current (A)" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
@@ -545,7 +546,7 @@ export default function EnergyFlow() {
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="rate" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis yAxisId="hours" orientation="right" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<EnergyTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line yAxisId="rate" type="monotone" dataKey="rate" name="Charge Rate (mi/h)" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="hours" type="monotone" dataKey="ttf" name="Time to Full (h)" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />

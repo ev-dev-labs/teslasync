@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
 import { exportAsCSV, exportAsJSON } from '../lib/export'
+import { formatDate } from '../lib/dateFormat'
 
 function formatDuration(startDate: string, endDate: string | null): string {
   if (!endDate) return 'In progress'
@@ -169,7 +170,7 @@ export default function Trips() {
                     <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)] mt-0.5">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {new Date(trip.start_date).toLocaleDateString()}
+                        {formatDate(trip.start_date)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />

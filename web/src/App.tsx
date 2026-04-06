@@ -66,6 +66,14 @@ const TrueCostOwnership = lazy(() => import('./pages/TrueCostOwnership'))
 const SleepEfficiency = lazy(() => import('./pages/SleepEfficiency'))
 const ChargingHeatmap = lazy(() => import('./pages/ChargingHeatmap'))
 const SpeedProfile = lazy(() => import('./pages/SpeedProfile'))
+const SignalExplorer = lazy(() => import('./pages/SignalExplorer'))
+const SignalLogViewer = lazy(() => import('./pages/SignalLogViewer'))
+const LiveSignalMonitor = lazy(() => import('./pages/LiveSignalMonitor'))
+const StateMachineDebugger = lazy(() => import('./pages/StateMachineDebugger'))
+const SignalDiff = lazy(() => import('./pages/SignalDiff'))
+const SignalGapDetector = lazy(() => import('./pages/SignalGapDetector'))
+const DBHealthDashboard = lazy(() => import('./pages/DBHealthDashboard'))
+const MQTTInspector = lazy(() => import('./pages/MQTTInspector'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -116,6 +124,14 @@ export default function App() {
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
+        <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
+        <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
+        <Route path="live-monitor" element={<SafeRoute name="LiveSignalMonitor"><LiveSignalMonitor /></SafeRoute>} />
+        <Route path="state-debugger" element={<SafeRoute name="StateMachineDebugger"><StateMachineDebugger /></SafeRoute>} />
+        <Route path="signal-diff" element={<SafeRoute name="SignalDiff"><SignalDiff /></SafeRoute>} />
+        <Route path="signal-gaps" element={<SafeRoute name="SignalGapDetector"><SignalGapDetector /></SafeRoute>} />
+        <Route path="db-health" element={<SafeRoute name="DBHealthDashboard"><DBHealthDashboard /></SafeRoute>} />
+        <Route path="mqtt-inspector" element={<SafeRoute name="MQTTInspector"><MQTTInspector /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />

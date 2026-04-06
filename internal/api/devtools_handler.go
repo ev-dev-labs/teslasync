@@ -688,12 +688,13 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	}
 
 	var req struct {
-		VINs     []string `json:"vins"`
-		Hostname string   `json:"hostname"`
-		Port     int      `json:"port"`
-		CA       string   `json:"ca"`
-		Fields   []string `json:"fields"`
-		Interval int      `json:"interval_seconds"`
+		VINs           []string       `json:"vins"`
+		Hostname       string         `json:"hostname"`
+		Port           int            `json:"port"`
+		CA             string         `json:"ca"`
+		Fields         []string       `json:"fields"`
+		Interval       int            `json:"interval_seconds"`
+		FieldIntervals map[string]int `json:"field_intervals"` // per-signal interval overrides
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -740,8 +741,35 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		"SelfDrivingMilesSinceReset": 1.0,
 		"MilesSinceReset":           1.0,
 	}
+
+	// Tiered intervals: driving-critical signals get faster updates
+	fastDrivingSignals := map[string]bool{
+		"VehicleSpeed": true, "Location": true, "Gear": true,
+		"PackVoltage": true, "PackCurrent": true,
+		"BrakePedal": true, "PedalPosition": true,
+		"LateralAcceleration": true, "LongitudinalAcceleration": true,
+		"GpsHeading": true, "DiTorquemotor": true,
+	}
+	slowConfigSignals := map[string]bool{
+		"CarType": true, "VehicleName": true, "Version": true, "WheelType": true,
+		"ExteriorColor": true, "RoofColor": true, "Trim": true,
+		"EfficiencyPackage": true, "RearSeatHeaters": true,
+		"RightHandDrive": true, "EuropeVehicle": true,
+		"OffroadLightbarPresent": true, "SunroofInstalled": true,
+		"RemoteStartEnabled": true,
+	}
+
 	for _, f := range req.Fields {
-		field := tesla.FleetTelemetryField{IntervalSeconds: req.Interval}
+		// Priority: per-signal interval from UI > tiered defaults > global interval
+		interval := req.Interval
+		if perSignal, ok := req.FieldIntervals[f]; ok {
+			interval = perSignal
+		} else if fastDrivingSignals[f] && req.Interval >= 10 {
+			interval = 0
+		} else if slowConfigSignals[f] {
+			interval = 300
+		}
+		field := tesla.FleetTelemetryField{IntervalSeconds: interval}
 		if delta, ok := minDeltaFields[f]; ok {
 			field.MinimumDelta = &delta
 		}

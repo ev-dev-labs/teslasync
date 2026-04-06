@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
@@ -90,8 +92,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	})
 
+	// Services
+	vehicleSvc := service.NewVehicleService(db)
+	energySvc := service.NewEnergyService(db)
+
 	// Handlers
-	vehicleHandler := NewVehicleHandler(db, teslaClient)
+	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient)
 	driveHandler := NewDriveHandler(db)
 	chargingHandler := NewChargingHandler(db)
 	geofenceHandler := NewGeofenceHandler(db)
@@ -99,7 +105,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	settingsHandler := NewSettingsHandler(db)
 	alertHandler := NewAlertHandler(db)
 	commandHandler := NewCommandHandler(db, teslaClient)
-	energyHandler := NewEnergyHandler(db)
+	energyHandler := NewEnergyHandler(energySvc)
 	batteryHandler := NewBatteryHandler(db)
 	analyticsHandler := NewAnalyticsHandler(db)
 	notificationHandler := NewNotificationHandler(db)
@@ -138,11 +144,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
+	} else {
+		// Reusing handler from main — wire the eventHub created by the router
+		telemetryHandler.SetEventHub(eventHub)
 	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
 
 	// Wire telemetry handler into vehicle handler for streaming-aware state
 	vehicleHandler.SetTelemetryHandler(telemetryHandler)
+
+	// Wire telemetry handler into settings handler for capture toggle sync
+	settingsHandler.SetTelemetryHandler(telemetryHandler)
 
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
@@ -367,14 +379,22 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/trips", tripHandler.List)
 
 		// Vehicle States / Timeline
-		r.Route("/states", func(r chi.Router) {
+		r.Route("/vehicle-states", func(r chi.Router) {
 			r.Get("/timeline", vehicleStateHandler.Timeline)
 			r.Get("/summary", vehicleStateHandler.Summary)
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
 		})
 
 		// Real-time SSE stream
-		r.Get("/events", SSEHandler(eventHub))
+		if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
+			// SSE with authentik JWT validation (production — bypasses ForwardAuth)
+			r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(eventHub))
+			// Token endpoint (behind ForwardAuth — returns JWT to frontend)
+			r.Get("/sse-token", SSETokenHandler())
+		} else {
+			// No auth on SSE (development)
+			r.Get("/events", SSEHandler(eventHub))
+		}
 
 		// System endpoints
 		r.Route("/system", func(r chi.Router) {
@@ -451,7 +471,54 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/release-notes", devToolsHandler.ReleaseNotes)
 			r.Get("/recent-alerts", devToolsHandler.RecentAlerts)
 			r.Get("/service-data", devToolsHandler.ServiceData)
+
+			// Raw telemetry signal capture
+			r.Route("/telemetry-capture", func(r chi.Router) {
+				r.Get("/", telemetryHandler.CaptureList)
+				r.Get("/stats", telemetryHandler.CaptureStats)
+				r.Delete("/", telemetryHandler.CaptureDrop)
+				r.Get("/export", telemetryHandler.CaptureExport)
+			})
 		})
+
+		// Signal History (MongoDB-backed per-signal log)
+		if telemetryHandler != nil && telemetryHandler.signalLogRepo != nil {
+			signalHandler := NewSignalHandler(telemetryHandler.signalLogRepo)
+			r.Route("/signals/{vehicleID}", func(r chi.Router) {
+				r.Get("/available", signalHandler.AvailableSignals)
+				r.Get("/stats", signalHandler.Stats)
+				r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
+					// Live state from in-memory SignalStore
+					store := telemetryHandler.GetSignalStore()
+					if store == nil {
+						writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal store not initialized"})
+						return
+					}
+					vid, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
+					if err != nil {
+						writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+						return
+					}
+					raw := store.GetAll(vid)
+					// Convert to JSON-friendly format with timestamps
+					signals := make(map[string]interface{}, len(raw))
+					for k, v := range raw {
+						if v != nil {
+							signals[k] = map[string]interface{}{
+								"value":     v.Raw,
+								"timestamp": v.Timestamp,
+							}
+						}
+					}
+					writeJSON(w, http.StatusOK, map[string]interface{}{
+						"vehicle_id": vid,
+						"count":      len(signals),
+						"signals":    signals,
+					})
+				})
+				r.Get("/{signalName}/history", signalHandler.History)
+			})
+		}
 
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {

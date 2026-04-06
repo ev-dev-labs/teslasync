@@ -36,6 +36,16 @@ data:
   FLEET_TELEMETRY_TOPIC_BASE: {{ .Values.fleetTelemetry.topicBase | default "telemetry" | quote }}
   FLEET_TELEMETRY_BATCH_MS: {{ .Values.fleetTelemetry.batchMs | default 100 | quote }}
   {{- end }}
+  {{- if or .Values.mongodb.enabled .Values.mongodb.external.uri }}
+  MONGODB_ENABLED: "true"
+  {{- if .Values.mongodb.external.uri }}
+  MONGODB_URI: {{ .Values.mongodb.external.uri | quote }}
+  {{- else }}
+  MONGODB_URI: {{ printf "mongodb://%s:%s" (include "teslasync.mongodb.host" .) (include "teslasync.mongodb.port" .) | quote }}
+  {{- end }}
+  MONGODB_DATABASE: {{ .Values.mongodb.database | default "teslasync" | quote }}
+  MONGODB_TTL_DAYS: {{ .Values.mongodb.ttlDays | default 7 | quote }}
+  {{- end }}
   NOTIFICATION_WORKER_HOST: {{ include "teslasync.notificationWorker.host" . | quote }}
   NOTIFICATION_WORKER_PORT: {{ include "teslasync.notificationWorker.port" . | quote }}
   EXPORT_WORKER_HOST: {{ include "teslasync.exportWorker.host" . | quote }}
@@ -59,4 +69,10 @@ data:
   {{- end }}
   {{- if .Values.config.azureMaps.apiKey }}
   AZURE_MAPS_API_KEY: {{ .Values.config.azureMaps.apiKey | quote }}
+  {{- end }}
+  {{- if .Values.config.authentikURL }}
+  AUTHENTIK_URL: {{ .Values.config.authentikURL | quote }}
+  {{- end }}
+  {{- if .Values.config.authentikHMACKey }}
+  AUTHENTIK_HMAC_KEY: {{ .Values.config.authentikHMACKey | quote }}
   {{- end }}

@@ -5,6 +5,8 @@ import {
   Alert, AlertRule, NotificationChannel, Vehicle,
 } from '../api'
 import { useSettings } from '../hooks/useSettings'
+import { formatDateTime } from '../lib/dateFormat'
+import { CHART_COLORS } from '../lib/colors'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
@@ -17,6 +19,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useToast } from '../components/Toast'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
+import { ChartTooltip } from '../components/Charts'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -231,21 +234,6 @@ function getRuleDescription(type: string, units?: { speedUnit: string; tempUnit:
 }
 
 // ─── Tooltip for recharts ────────────────────────────────────────────────────
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
 
 // ─── Time helper ─────────────────────────────────────────────────────────────
 
@@ -870,7 +858,7 @@ function NotificationHistory() {
                   {logs.map(log => (
                     <tr key={log.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
                       <td className="py-2 px-3 text-[var(--text-muted)] whitespace-nowrap">
-                        {new Date(log.created_at).toLocaleString()}
+                        {formatDateTime(log.created_at)}
                       </td>
                       <td className="py-2 px-3 text-[var(--text-primary)] max-w-[200px] truncate">{log.title}</td>
                       <td className="py-2 px-3 text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</td>
@@ -1164,13 +1152,12 @@ export default function Alerts() {
     if (!alerts?.length) return []
     const counts: Record<string, number> = {}
     alerts.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1 })
-    const colors = ['#00f0ff', '#10b981', '#a855f7', '#f59e0b', '#ef4444', '#4f46e5']
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .map(([type, count], i) => ({
         name: type.replace(/_/g, ' '),
         value: count,
-        fill: colors[i % colors.length],
+        fill: CHART_COLORS[i % CHART_COLORS.length],
       }))
   }, [alerts])
 

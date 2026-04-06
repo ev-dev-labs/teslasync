@@ -8,6 +8,8 @@ import {
   getMediaLatest, getLocationSnapshotLatest,
 } from '../api'
 import { cleanNil } from '../lib/cleanNil'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { formatDateShort } from '../lib/dateFormat'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
@@ -23,21 +25,7 @@ import { AnimatedNumber, TimelineItem, RadialGauge, StatusPill, MiniChart } from
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useSettings } from '../hooks/useSettings'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { ChartTooltip } from '../components/Charts'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
@@ -65,7 +53,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
             </div>
             <div>
               <p className="text-xs text-[var(--text-muted)]">Temp</p>
-              <p className="text-sm font-bold text-[var(--text-primary)]">{state.inside_temp != null ? `${convertTemp(state.inside_temp).toFixed(0)}°` : '—'}</p>
+              <p className="text-sm font-bold text-[var(--text-primary)]">{state.inside_temp != null ? `${fmtInt(convertTemp(state.inside_temp))}°` : '—'}</p>
             </div>
           </div>
         ) : (
@@ -86,7 +74,7 @@ function formatTimeAgo(date: Date): string {
   if (hrs < 24) return `${hrs}h ago`
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return formatDateShort(date)
 }
 
 /* ---------- Main Dashboard ---------- */
@@ -233,14 +221,14 @@ export default function Dashboard() {
   const activityItems: { type: string; title: string; subtitle: string; time: Date }[] = []
   recentDrives?.forEach(d => activityItems.push({
     type: 'drive',
-    title: `${convertDistance(d.distance ?? 0).toFixed(1)} ${distanceUnit} drive`,
+    title: `${fmtNumber(convertDistance(d.distance ?? 0), 1)} ${distanceUnit} drive`,
     subtitle: `${Math.floor((d.duration_min ?? 0) / 60)}h ${Math.round((d.duration_min ?? 0) % 60)}m · ${d.start_battery_level ?? '?'}% → ${d.end_battery_level ?? '?'}%`,
     time: new Date(d.start_date),
   }))
   recentCharges?.forEach(s => activityItems.push({
     type: 'charge',
-    title: `${(s.charge_energy_added ?? 0).toFixed(1)} kWh charged`,
-    subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}% · ${typeof s.cost === 'number' ? `$${s.cost.toFixed(2)}` : ''}`,
+    title: `${fmtNumber(s.charge_energy_added ?? 0, 1)} kWh charged`,
+    subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}% · ${typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : ''}`,
     time: new Date(s.start_date),
   }))
   activityItems.sort((a, b) => b.time.getTime() - a.time.getTime())
@@ -337,16 +325,23 @@ export default function Dashboard() {
 
                   {primaryState ? (
                     <div className="mt-4 sm:mt-6">
-                      {/* Radial gauges row */}
+                      {/* Context-aware radial gauges — show what's relevant to current state */}
                       <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
                         <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={primaryState.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70} />
                         <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={70} />
-                        <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color={primaryState.speed > 0 ? '#a855f7' : '#374151'} size={70} />
+                        {/* Show Speed gauge only when driving */}
+                        {(primaryVehicle?.state === 'driving' || primaryState.speed > 0) && (
+                          <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color="#a855f7" size={70} />
+                        )}
+                        {/* Show Charge Power gauge when charging */}
+                        {primaryState.is_charging && (
+                          <RadialGauge value={Math.round(primaryState.charger_power ?? 0)} max={250} label="Power" unit="kW" color="#10b981" size={70} />
+                        )}
                         <RadialGauge value={Math.round(convertTemp(primaryState.inside_temp))} max={isFahrenheit ? 122 : 50} label="Inside" unit={tempUnit} color="#f97316" size={70} />
                         <RadialGauge value={Math.round(convertTemp(primaryState.outside_temp))} max={isFahrenheit ? 122 : 50} label="Outside" unit={tempUnit} color="#3b82f6" size={70} />
                       </div>
 
-                      {/* Charging details when currently charging */}
+                      {/* Charging details — only when charging */}
                       {primaryState.is_charging && (
                         <div className="mb-4 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                           <div className="flex items-center gap-2 mb-2">
@@ -360,36 +355,78 @@ export default function Dashboard() {
                             </div>
                             <div>
                               <p className="text-[var(--text-muted)]">Rate</p>
-                              <p className="text-sm font-bold text-[var(--text-primary)]">{convertDistance(primaryState.charge_rate ?? 0).toFixed(0)} {distanceUnit}/h</p>
+                              <p className="text-sm font-bold text-[var(--text-primary)]">{fmtInt(convertDistance(primaryState.charge_rate ?? 0))} {distanceUnit}/h</p>
                             </div>
                             <div>
                               <p className="text-[var(--text-muted)]">Time to Full</p>
-                              <p className="text-sm font-bold text-[var(--text-primary)]">{primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 ? `${primaryState.time_to_full_charge.toFixed(1)}h` : '—'}</p>
+                              <p className="text-sm font-bold text-[var(--text-primary)]">
+                                {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0
+                                  ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h`
+                                  : '—'}
+                              </p>
+                              {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 && (
+                                <p className="text-[10px] text-[var(--text-muted)]">
+                                  Done ~{new Date(Date.now() + primaryState.time_to_full_charge * 3600000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {/* Quick telemetry grid */}
+                      {/* Context-aware telemetry grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {[
-                          { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? convertTemp(primaryState.inside_temp).toFixed(1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
-                          { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? convertTemp(primaryState.outside_temp).toFixed(1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
-                          { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
-                          { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
-                          { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
-                          { icon: Gauge, label: 'Firmware', value: primaryState.software_version || '—', color: '#6366f1' },
-                          { icon: Zap, label: 'Power', value: `${primaryState.power} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
-                          { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
-                        ].map(item => (
-                          <div key={item.label} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                            <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
-                            <div className="min-w-0">
-                              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                              <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.value}</p>
+                        {(() => {
+                          const isDriving = primaryVehicle?.state === 'driving' || primaryState.speed > 0
+                          const isCharging = primaryState.is_charging
+
+                          // Build cards based on current state
+                          const cards: { icon: typeof Thermometer; label: string; value: string; color: string }[] = []
+
+                          if (isDriving) {
+                            // Driving: speed, power, odometer, heading
+                            cards.push(
+                              { icon: Gauge, label: 'Speed', value: `${Math.round(convertSpeed(primaryState.speed))} ${speedUnit}`, color: '#a855f7' },
+                              { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
+                            )
+                          } else if (isCharging) {
+                            // Charging: charge rate, energy, charge limit, cable
+                            cards.push(
+                              { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: '#10b981' },
+                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
+                              { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
+                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                            )
+                          } else {
+                            // Parked/Online: temps, odometer, range
+                            cards.push(
+                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp), 1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
+                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp), 1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
+                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
+                            )
+                          }
+
+                          // Always show lock and sentry
+                          cards.push(
+                            { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
+                            { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
+                            { icon: Gauge, label: 'Firmware', value: primaryState.software_version || '—', color: '#6366f1' },
+                            { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                          )
+
+                          return cards.map(item => (
+                            <div key={item.label} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                              <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
+                              <div className="min-w-0">
+                                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
+                                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{item.value}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        })()}
                       </div>
 
                       {/* Quick actions */}
@@ -559,17 +596,17 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Total Cost</span>
-                      <span className="text-sm font-bold text-neon-amber">${((analytics?.total_cost ?? 0)).toFixed(2)}</span>
+                      <span className="text-sm font-bold text-neon-amber">${fmtNumber((analytics?.total_cost ?? 0), 2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">CO2 Saved</span>
-                      <span className="text-sm font-bold text-neon-green">{((analytics?.total_energy_kwh ?? 0) * 0.42).toFixed(0)} kg</span>
+                      <span className="text-sm font-bold text-neon-green">{fmtInt((analytics?.total_energy_kwh ?? 0) * 0.42)} kg</span>
                     </div>
                     {analytics?.most_efficient_vehicle && (
                       <div className="mt-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/10">
                         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Most Efficient</p>
                         <p className="text-sm font-semibold text-neon-green">{analytics.most_efficient_vehicle.name}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{convertEfficiency(analytics.most_efficient_vehicle.efficiency ?? 0).toFixed(0)} {efficiencyUnit}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{fmtInt(convertEfficiency(analytics.most_efficient_vehicle.efficiency ?? 0))} {efficiencyUnit}</p>
                       </div>
                     )}
                   </div>
@@ -651,7 +688,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Motor Temp</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {motorData.di_stator_temp != null ? `${convertTemp(motorData.di_stator_temp).toFixed(0)}${tempUnit}` : '—'}
+                        {motorData.di_stator_temp != null ? `${fmtInt(convertTemp(motorData.di_stator_temp))}${tempUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -671,7 +708,7 @@ export default function Dashboard() {
                       <span className="text-xs text-[var(--text-secondary)]">G-Force</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
                         {motorData.lateral_accel != null || motorData.longitudinal_accel != null
-                          ? `${Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)).toFixed(2)}g`
+                          ? `${fmtNumber(Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)), 2)}g`
                           : '—'}
                       </span>
                     </div>
@@ -693,19 +730,19 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Cabin</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {climateData.inside_temp != null ? `${convertTemp(climateData.inside_temp).toFixed(0)}${tempUnit}` : '—'}
+                        {climateData.inside_temp != null ? `${fmtInt(convertTemp(climateData.inside_temp))}${tempUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Outside</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {climateData.outside_temp != null ? `${convertTemp(climateData.outside_temp).toFixed(0)}${tempUnit}` : '—'}
+                        {climateData.outside_temp != null ? `${fmtInt(convertTemp(climateData.outside_temp))}${tempUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">HVAC Power</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {climateData.hvac_power != null ? `${climateData.hvac_power.toFixed(1)} kW` : '—'}
+                        {climateData.hvac_power != null ? `${fmtNumber(climateData.hvac_power, 1)} kW` : '—'}
                       </span>
                     </div>
                     <div>
@@ -829,7 +866,7 @@ export default function Dashboard() {
                           <div key={t.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
                             <p className="text-[10px] text-[var(--text-muted)] uppercase">{t.label}</p>
                             <p className={`text-sm font-bold ${getPressureColor(t.value)}`}>
-                              {t.value != null ? `${convertPressure(t.value).toFixed(1)}` : '—'}
+                              {t.value != null ? fmtNumber(convertPressure(t.value), 1) : '—'}
                             </p>
                             <p className="text-[9px] text-[var(--text-muted)]">{pressureUnit}</p>
                           </div>
@@ -921,7 +958,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Distance</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {locationData.miles_to_arrival != null ? `${convertDistance(locationData.miles_to_arrival * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
+                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934), 1)} ${distanceUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

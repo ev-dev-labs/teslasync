@@ -11,30 +11,13 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
-
-interface TooltipPayload { name: string; value: number; color?: string; fill?: string }
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
-      <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(1) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
+import { formatDateTime, formatDateShort } from '../lib/dateFormat'
+import { ChartTooltip } from '../components/Charts'
 
 function formatDuration(min: number): string {
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function getEfficiency(drive: Drive): number | null {
@@ -74,7 +57,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDate(drive.start_date)}</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateTime(drive.start_date)}</p>
               <span className="text-xs px-2 py-0.5 rounded-full bg-neon-cyan/10 text-neon-cyan font-medium">
                 {convertDistance(actualDistance).toFixed(1)} {distanceUnit}
               </span>
@@ -102,10 +85,10 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
                 </span>
               )}
             </div>
-            {drive.start_address && drive.end_address && (
+            {(drive.start_address || drive.end_address) && (
               <div className="mt-1 text-[10px] text-[var(--text-secondary)] flex items-center gap-1 truncate">
                 <MapPin className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{drive.start_address} → {drive.end_address}</span>
+                <span className="truncate">{drive.start_address || '?'} → {drive.end_address || '?'}</span>
               </div>
             )}
           </div>
@@ -192,7 +175,7 @@ export default function Drives() {
   const distanceTrend = useMemo(() => {
     if (!drives) return []
     return drives.slice(0, 20).reverse().map(d => ({
-      date: new Date(d.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      date: formatDateShort(d.start_date),
       distance: parseFloat(d.distance.toFixed(1)),
       efficiency: getEfficiency(d) ? Math.round(getEfficiency(d)!) : 0,
     }))

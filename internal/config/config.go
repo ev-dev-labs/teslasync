@@ -20,6 +20,7 @@ type Config struct {
 	Auth           AuthConfig
 	Retention      RetentionConfig
 	FleetTelemetry FleetTelemetryConfig
+	MongoDB        MongoDBConfig
 	GasPrice       GasPriceConfig
 	OpenTelemetry  OpenTelemetryConfig
 	GoogleMaps     GoogleMapsConfig
@@ -49,6 +50,13 @@ type GasPriceConfig struct {
 	Enabled      bool
 	PollInterval string // "daily", "7d", "15d", "30d"
 	APIKey       string
+}
+
+type MongoDBConfig struct {
+	Enabled  bool
+	URI      string
+	Database string
+	TTLDays  int
 }
 
 type FleetTelemetryConfig struct {
@@ -125,8 +133,10 @@ func (r RedisConfig) Addr() string {
 }
 
 type AuthConfig struct {
-	Enabled   bool
-	JWTSecret string
+	Enabled        bool
+	JWTSecret      string
+	AuthentikURL   string // Authentik JWKS URL for SSE token validation (RS256)
+	AuthentikHMACKey string // Authentik client secret for HS256 token validation
 }
 
 type RetentionConfig struct {
@@ -195,8 +205,10 @@ func Load() (*Config, error) {
 		},
 
 		Auth: AuthConfig{
-			Enabled:   envBool("AUTH_ENABLED", false),
-			JWTSecret: envStr("AUTH_JWT_SECRET", ""),
+			Enabled:        envBool("AUTH_ENABLED", false),
+			JWTSecret:      envStr("AUTH_JWT_SECRET", ""),
+			AuthentikURL:   envStr("AUTHENTIK_URL", ""),
+			AuthentikHMACKey: envStr("AUTHENTIK_HMAC_KEY", ""),
 		},
 
 		Retention: RetentionConfig{
@@ -212,6 +224,13 @@ func Load() (*Config, error) {
 			BatchMs:              envInt("FLEET_TELEMETRY_BATCH_MS", 100),
 			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 5*time.Minute),
 			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 60*time.Second),
+		},
+
+		MongoDB: MongoDBConfig{
+			Enabled:  envBool("MONGODB_ENABLED", false),
+			URI:      envStr("MONGODB_URI", "mongodb://localhost:27017"),
+			Database: envStr("MONGODB_DATABASE", "teslasync"),
+			TTLDays:  envInt("MONGODB_TTL_DAYS", 7),
 		},
 
 		GasPrice: GasPriceConfig{

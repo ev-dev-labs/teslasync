@@ -11,12 +11,18 @@ import (
 
 // SettingsHandler handles user settings.
 type SettingsHandler struct {
-	settingsRepo *database.SettingsRepo
-	db           *database.DB
+	settingsRepo     *database.SettingsRepo
+	db               *database.DB
+	telemetryHandler *TelemetryHandler
 }
 
 func NewSettingsHandler(db *database.DB) *SettingsHandler {
 	return &SettingsHandler{settingsRepo: database.NewSettingsRepo(db), db: db}
+}
+
+// SetTelemetryHandler allows the settings handler to sync capture toggle changes.
+func (h *SettingsHandler) SetTelemetryHandler(th *TelemetryHandler) {
+	h.telemetryHandler = th
 }
 
 func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -139,5 +145,11 @@ func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Req
 	}
 
 	log.Info().Interface("polling_config", pc).Msg("polling config updated")
+
+	// Sync telemetry capture toggle if telemetry handler is wired
+	if h.telemetryHandler != nil {
+		h.telemetryHandler.SetCaptureEnabled(pc.TelemetryCapture)
+	}
+
 	writeJSON(w, http.StatusOK, pc)
 }

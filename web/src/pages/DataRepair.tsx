@@ -12,6 +12,7 @@ import {
 import type { ChargingSession, Drive } from '../api'
 import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton } from '../components/ui'
 import { useToast } from '../components/Toast'
+import { formatDateTime } from '../lib/dateFormat'
 import { Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle, X, Save, Clock, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -22,16 +23,6 @@ function hoursOpen(startDate: string): string {
   if (h < 24) return `${h}h`
   const d = Math.floor(h / 24)
   return `${d}d ${h % 24}h`
-}
-
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 /* ───────── Charging edit form ───────── */
@@ -339,7 +330,7 @@ function ChargingRow({ session, expanded, onToggle }: { session: ChargingSession
     <>
       <tr onClick={onToggle} className={clsx('border-b border-white/[0.04] cursor-pointer transition-colors', expanded ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]')}>
         <Td>{session.id}</Td>
-        <Td>{fmtDate(session.start_date)}</Td>
+        <Td>{formatDateTime(session.start_date)}</Td>
         <Td>{session.start_battery_level}%</Td>
         <Td>{session.vehicle_id}</Td>
         <Td><span className="text-amber-400">{hoursOpen(session.start_date)}</span></Td>
@@ -359,7 +350,7 @@ function DriveRow({ drive, expanded, onToggle }: { drive: Drive; expanded: boole
     <>
       <tr onClick={onToggle} className={clsx('border-b border-white/[0.04] cursor-pointer transition-colors', expanded ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]')}>
         <Td>{drive.id}</Td>
-        <Td>{fmtDate(drive.start_date)}</Td>
+        <Td>{formatDateTime(drive.start_date)}</Td>
         <Td>{drive.start_battery_level != null ? `${drive.start_battery_level}%` : '—'}</Td>
         <Td>{drive.vehicle_id}</Td>
         <Td><span className="text-amber-400">{hoursOpen(drive.start_date)}</span></Td>
