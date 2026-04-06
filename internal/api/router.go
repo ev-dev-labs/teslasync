@@ -383,7 +383,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Real-time SSE stream
-		r.Get("/events", SSEHandler(eventHub))
+		if cfg.Auth.AuthentikURL != "" {
+			// SSE with authentik JWT validation (production — bypasses ForwardAuth)
+			r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL)).Get("/events", SSEHandler(eventHub))
+			// Token endpoint (behind ForwardAuth — returns JWT to frontend)
+			r.Get("/sse-token", SSETokenHandler())
+		} else {
+			// No auth on SSE (development)
+			r.Get("/events", SSEHandler(eventHub))
+		}
 
 		// System endpoints
 		r.Route("/system", func(r chi.Router) {

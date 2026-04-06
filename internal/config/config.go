@@ -133,8 +133,9 @@ func (r RedisConfig) Addr() string {
 }
 
 type AuthConfig struct {
-	Enabled   bool
-	JWTSecret string
+	Enabled      bool
+	JWTSecret    string
+	AuthentikURL string // Authentik JWKS URL for SSE token validation
 }
 
 type RetentionConfig struct {
@@ -203,8 +204,9 @@ func Load() (*Config, error) {
 		},
 
 		Auth: AuthConfig{
-			Enabled:   envBool("AUTH_ENABLED", false),
-			JWTSecret: envStr("AUTH_JWT_SECRET", ""),
+			Enabled:      envBool("AUTH_ENABLED", false),
+			JWTSecret:    envStr("AUTH_JWT_SECRET", ""),
+			AuthentikURL: envStr("AUTHENTIK_URL", ""),
 		},
 
 		Retention: RetentionConfig{
