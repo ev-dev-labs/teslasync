@@ -379,7 +379,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/trips", tripHandler.List)
 
 		// Vehicle States / Timeline
-		r.Route("/states", func(r chi.Router) {
+		r.Route("/vehicle-states", func(r chi.Router) {
 			r.Get("/timeline", vehicleStateHandler.Timeline)
 			r.Get("/summary", vehicleStateHandler.Summary)
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)

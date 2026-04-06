@@ -36,6 +36,29 @@ func (r *VehicleStateRepo) GetByVehicle(ctx context.Context, vehicleID int64, li
 	return states, rows.Err()
 }
 
+// GetTimeline returns vehicle state records within the last N days, ordered chronologically.
+func (r *VehicleStateRepo) GetTimeline(ctx context.Context, vehicleID int64, days int) ([]*models.VehicleStateRecord, error) {
+	query := `SELECT id, vehicle_id, state, start_date, end_date, COALESCE(duration_min, 0) as duration_min, created_at
+		FROM vehicle_states
+		WHERE vehicle_id=$1 AND start_date >= NOW() - make_interval(days := $2)
+		ORDER BY start_date ASC`
+	rows, err := r.db.Pool.Query(ctx, query, vehicleID, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var states []*models.VehicleStateRecord
+	for rows.Next() {
+		s := &models.VehicleStateRecord{}
+		if err := rows.Scan(&s.ID, &s.VehicleID, &s.State, &s.StartDate, &s.EndDate, &s.DurationMin, &s.CreatedAt); err != nil {
+			return nil, err
+		}
+		states = append(states, s)
+	}
+	return states, rows.Err()
+}
+
 func (r *VehicleStateRepo) GetStateSummary(ctx context.Context, vehicleID int64, days int) ([]map[string]interface{}, error) {
 	query := `SELECT state, COUNT(*) as count, COALESCE(SUM(duration_min), 0) as total_min
 		FROM vehicle_states WHERE vehicle_id=$1 AND start_date >= NOW() - make_interval(days := $2)
