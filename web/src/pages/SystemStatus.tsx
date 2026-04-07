@@ -1518,8 +1518,19 @@ export default function SystemStatus() {
         </GlassPanel>
       </FadeIn>
 
-      {/* Endpoint Status Strip */}
-      <FadeIn delay={0.05}>
+      {/* ── SECTION: Health Probes ──────────────────────────── */}
+      <AccordionSection
+        icon={<HeartPulse className="h-4 w-4 text-neon-green" />}
+        title="Health Probes"
+        description="Liveness & readiness checks"
+        defaultOpen
+        badges={
+          <>
+            <StatusBadge color={healthz?.ok ? 'green' : healthz === undefined ? 'gray' : 'red'} label={`healthz ${healthz?.ok ? '200' : '—'}`} />
+            <StatusBadge color={readyz?.ok ? 'green' : readyz === undefined ? 'gray' : 'red'} label={`readyz ${readyz?.ok ? '200' : '—'}`} />
+          </>
+        }
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <GlassPanel className="p-4 flex items-center gap-3">
             <div className={clsx('w-3 h-3 rounded-full', healthz === undefined ? 'bg-yellow-500 animate-pulse' : healthz?.ok ? 'bg-neon-green animate-pulse' : 'bg-neon-red')} />
@@ -1542,16 +1553,23 @@ export default function SystemStatus() {
             </span>
           </GlassPanel>
         </div>
-      </FadeIn>
+      </AccordionSection>
 
-      {/* Backend Info & Endpoints */}
-      {version && (
-        <FadeIn delay={0.08}>
+      {/* ── SECTION: Backend Status ──────────────────────────── */}
+      <AccordionSection
+        icon={<Server className="h-4 w-4 text-neon-cyan" />}
+        title="Backend Status"
+        description="Version, runtime & endpoints"
+        defaultOpen
+        badges={
+          <>
+            {version && <StatusBadge color="green" label={`v${version.chart_version}`} />}
+            {version && <StatusBadge color="green" label={`${version.go_version}`} />}
+          </>
+        }
+      >
+        {version && (
           <GlassPanel className="p-5">
-            <h3 className="section-title flex items-center gap-2 mb-4">
-              <Server className="h-4 w-4 text-neon-cyan" /> Backend Status
-            </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {[
                 { label: 'Version', value: `v${version.chart_version}`, icon: Shield },
@@ -1615,23 +1633,33 @@ export default function SystemStatus() {
               </div>
             )}
           </GlassPanel>
-        </FadeIn>
-      )}
+        )}
+      </AccordionSection>
 
-      {/* Service Components Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-44" />)}
-        </div>
-      ) : (
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {components.map(([name, info]) => (
-            <StaggerItem key={name}>
-              <ComponentCard name={name} info={info} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      )}
+      {/* ── SECTION: Service Health ──────────────────────────── */}
+      <AccordionSection
+        icon={<Database className="h-4 w-4 text-neon-green" />}
+        title="Service Health"
+        description="Component status & connectivity"
+        defaultOpen
+        badges={
+          <StatusBadge color={healthyCount === totalCount ? 'green' : 'amber'} label={`${healthyCount}/${totalCount} healthy`} />
+        }
+      >
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-44" />)}
+          </div>
+        ) : (
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {components.map(([name, info]) => (
+              <StaggerItem key={name}>
+                <ComponentCard name={name} info={info} />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        )}
+      </AccordionSection>
 
       {/* ── SECTION: Infrastructure ──────────────────────────── */}
       <AccordionSection
