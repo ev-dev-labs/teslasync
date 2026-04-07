@@ -64,16 +64,59 @@ function getStatusIcon(status: string) {
   }
 }
 
-function SectionHeader({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+/** Collapsible accordion section with summary badges in the header. */
+function AccordionSection({ icon, title, description, badges, defaultOpen = false, children }: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  badges?: React.ReactNode
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="flex items-center gap-3 pt-6 pb-2">
-      <div className="flex items-center gap-2.5 shrink-0">
-        {icon}
-        <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
-      </div>
-      <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
-      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider shrink-0 hidden sm:block">{description}</p>
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 pt-6 pb-2 group cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-2.5 shrink-0">
+          {icon}
+          <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
+        </div>
+        {/* Summary badges (visible when collapsed) */}
+        {!open && badges && <div className="flex items-center gap-2 shrink-0">{badges}</div>}
+        <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider shrink-0 hidden sm:block">{description}</p>
+        <ChevronDown className={clsx('h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 shrink-0', open && 'rotate-180')} />
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        className="overflow-hidden"
+      >
+        <div className="space-y-4 pb-2">
+          {children}
+        </div>
+      </motion.div>
     </div>
+  )
+}
+
+/** Small colored dot with optional label for accordion summary badges. */
+function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray'; label: string }) {
+  const colors = {
+    green: 'bg-green-500/20 text-green-400 border-green-500/30',
+    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    red: 'bg-red-500/20 text-red-400 border-red-500/30',
+    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  }
+  return (
+    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
+      {label}
+    </span>
   )
 }
 
@@ -1367,6 +1410,19 @@ export default function SystemStatus() {
     staleTime: 60_000,
   })
 
+  // Top-level queries for accordion summary badges
+  const { data: telemetryStatus } = useQuery<TelemetryStatus>({
+    queryKey: ['telemetry-status'],
+    queryFn: getTelemetryStatus,
+    refetchInterval: 30_000,
+  })
+  const { data: workersStatus } = useQuery<WorkersHealth>({
+    queryKey: ['workers-health'],
+    queryFn: getWorkersHealth,
+    refetchInterval: 30_000,
+  })
+  const { diagnostics: sseDiag } = useRealtimeEvents()
+
   useEffect(() => {
     if (dataUpdatedAt) setLastChecked(new Date(dataUpdatedAt))
   }, [dataUpdatedAt])
@@ -1578,65 +1634,75 @@ export default function SystemStatus() {
       )}
 
       {/* ── SECTION: Infrastructure ──────────────────────────── */}
-      <SectionHeader
+      <AccordionSection
         icon={<Server className="h-4 w-4 text-neon-cyan" />}
         title="Infrastructure"
         description="Backend runtime & endpoints"
-      />
-
-      {/* Component Health (Extended) */}
-      <ComponentHealthPanel />
+        badges={
+          <>
+            {version && <StatusBadge color="green" label={`v${version.app_version}`} />}
+            <StatusBadge color={healthyCount === totalCount ? 'green' : 'amber'} label={`${healthyCount}/${totalCount} healthy`} />
+          </>
+        }
+      >
+        <ComponentHealthPanel />
+      </AccordionSection>
 
       {/* ── SECTION: Data Pipeline ───────────────────────────── */}
-      <SectionHeader
+      <AccordionSection
         icon={<Rss className="h-4 w-4 text-neon-blue" />}
         title="Data Pipeline"
         description="Telemetry, streaming & polling"
-      />
-
-      {/* Fleet Telemetry Live Feed */}
-      <TelemetryLivePanel />
-
-      {/* SSE Real-Time Stream */}
-      <SSEConnectionPanel />
-
-      {/* Adaptive Polling Engine */}
-      <PollingEnginePanel />
-
-      {/* Background Workers */}
-      <WorkerHealthPanel />
+        badges={
+          <>
+            <StatusBadge
+              color={telemetryStatus?.enabled ? 'green' : 'gray'}
+              label={telemetryStatus?.enabled ? `Telemetry ${telemetryStatus.aggregate_stats?.streaming_vehicles ?? 0} vehicles` : 'Telemetry off'}
+            />
+            <StatusBadge
+              color={sseDiag.state === 'connected' ? 'green' : sseDiag.state === 'reconnecting' ? 'amber' : 'gray'}
+              label={`SSE ${sseDiag.state === 'connected' ? '✓' : sseDiag.state === 'reconnecting' ? '…' : 'off'}`}
+            />
+            {workersStatus && (
+              <StatusBadge
+                color={workersStatus.healthy_count === workersStatus.total ? 'green' : 'amber'}
+                label={`Workers ${workersStatus.healthy_count}/${workersStatus.total}`}
+              />
+            )}
+          </>
+        }
+      >
+        <TelemetryLivePanel />
+        <SSEConnectionPanel />
+        <PollingEnginePanel />
+        <WorkerHealthPanel />
+      </AccordionSection>
 
       {/* ── SECTION: Operations ──────────────────────────────── */}
-      <SectionHeader
+      <AccordionSection
         icon={<BarChart3 className="h-4 w-4 text-neon-amber" />}
         title="Operations"
         description="API usage, limits & jobs"
-      />
-
-      {/* API Usage Dashboard */}
-      <APIUsageDashboard />
-
-      {/* Rate Limits */}
-      <RateLimitsPanel />
-
-      {/* Notification & Export Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <NotificationDeliveryPanel />
-        <ExportJobQueuePanel />
-      </div>
+        badges={<StatusBadge color="green" label="Active" />}
+      >
+        <APIUsageDashboard />
+        <RateLimitsPanel />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <NotificationDeliveryPanel />
+          <ExportJobQueuePanel />
+        </div>
+      </AccordionSection>
 
       {/* ── SECTION: Diagnostics ─────────────────────────────── */}
-      <SectionHeader
+      <AccordionSection
         icon={<HardDrive className="h-4 w-4 text-neon-purple" />}
         title="Diagnostics"
         description="Compression, logs & internals"
-      />
-
-      {/* Data Compression Stats */}
-      <CompressionStatsPanel />
-
-      {/* Audit Logs */}
-      <AuditLogTable />
+        badges={<StatusBadge color="gray" label="Logs" />}
+      >
+        <CompressionStatsPanel />
+        <AuditLogTable />
+      </AccordionSection>
     </div>
   )
 }
