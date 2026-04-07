@@ -1,7 +1,10 @@
 {
   "uid": "teslasync-infra-sessions",
   "title": "TeslaSync - Sessions & Business Metrics",
-  "tags": ["teslasync", "infra"],
+  "tags": [
+    "teslasync",
+    "infra"
+  ],
   "timezone": "browser",
   "schemaVersion": 38,
   "version": 1,
@@ -19,7 +22,12 @@
       "id": 100,
       "type": "row",
       "title": "Active Sessions",
-      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false,
       "panels": []
     },
@@ -28,14 +36,24 @@
       "type": "stat",
       "title": "Active Drive Sessions",
       "description": "Number of currently active drive sessions",
-      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           },
           "unit": "short",
@@ -44,7 +62,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -54,10 +78,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_drive_sessions_active",
           "legendFormat": "Active Drives",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -66,14 +95,24 @@
       "type": "stat",
       "title": "Active Charge Sessions",
       "description": "Number of currently active charge sessions",
-      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           },
           "unit": "short",
@@ -82,7 +121,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -92,10 +137,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_charge_sessions_active",
           "legendFormat": "Active Charges",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -104,14 +154,24 @@
       "type": "stat",
       "title": "Drives Completed",
       "description": "Total number of drive sessions completed",
-      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "purple", "value": null }
+              {
+                "color": "purple",
+                "value": null
+              }
             ]
           },
           "unit": "short",
@@ -120,7 +180,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "area",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -130,10 +196,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_drive_sessions_completed_total",
           "legendFormat": "Drives",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -142,14 +213,24 @@
       "type": "stat",
       "title": "Charges Completed",
       "description": "Total number of charge sessions completed",
-      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           },
           "unit": "short",
@@ -158,7 +239,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "area",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -168,10 +255,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_charge_sessions_completed_total",
           "legendFormat": "Charges",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -180,14 +272,24 @@
       "type": "stat",
       "title": "Total Distance Driven",
       "description": "Cumulative distance driven in kilometers",
-      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           },
           "unit": "km",
@@ -196,7 +298,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -206,10 +314,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_total_distance_km",
           "legendFormat": "Distance",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -218,14 +331,24 @@
       "type": "stat",
       "title": "Total Energy Added",
       "description": "Cumulative energy added in kWh",
-      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           },
           "unit": "kwatth",
@@ -234,7 +357,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -244,10 +373,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_total_energy_kwh",
           "legendFormat": "Energy",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -255,7 +389,12 @@
       "id": 101,
       "type": "row",
       "title": "Session Rates",
-      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false,
       "panels": []
     },
@@ -264,10 +403,18 @@
       "type": "timeseries",
       "title": "Drive Completion Rate",
       "description": "Rate of drive session completions over time",
-      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
@@ -277,30 +424,56 @@
             "drawStyle": "line",
             "fillOpacity": 15,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "unit": "ops"
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "rate(teslasync_drive_sessions_completed_total[5m])",
           "legendFormat": "Drives Completed",
-          "refId": "A"
+          "refId": "A",
+          "range": true,
+          "instant": false
         }
       ]
     },
@@ -309,10 +482,18 @@
       "type": "timeseries",
       "title": "Charge Completion Rate",
       "description": "Rate of charge session completions over time",
-      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "fixed", "fixedColor": "green" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
@@ -322,30 +503,56 @@
             "drawStyle": "line",
             "fillOpacity": 15,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "unit": "ops"
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "rate(teslasync_charge_sessions_completed_total[5m])",
           "legendFormat": "Charges Completed",
-          "refId": "A"
+          "refId": "A",
+          "range": true,
+          "instant": false
         }
       ]
     },
@@ -353,7 +560,12 @@
       "id": 102,
       "type": "row",
       "title": "Vehicles & Fleet",
-      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false,
       "panels": []
     },
@@ -362,14 +574,24 @@
       "type": "stat",
       "title": "Vehicles Registered",
       "description": "Total number of registered vehicles",
-      "gridPos": { "x": 0, "y": 15, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 6,
+        "h": 4
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "blue", "value": null }
+              {
+                "color": "blue",
+                "value": null
+              }
             ]
           },
           "unit": "short",
@@ -378,7 +600,13 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "graphMode": "none",
         "colorMode": "background",
         "justifyMode": "auto",
@@ -388,10 +616,15 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_vehicles_registered",
           "legendFormat": "Vehicles",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -400,26 +633,54 @@
       "type": "piechart",
       "title": "Vehicle States",
       "description": "Distribution of vehicles by current state",
-      "gridPos": { "x": 6, "y": 15, "w": 6, "h": 8 },
+      "gridPos": {
+        "x": 6,
+        "y": 15,
+        "w": 6,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "short"
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "pieType": "donut",
-        "tooltip": { "mode": "single", "sort": "none" },
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_vehicles_by_state",
           "legendFormat": "{{state}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -428,10 +689,17 @@
       "type": "timeseries",
       "title": "Geocoding Results",
       "description": "Rate of geocoding operations grouped by result (stacked)",
-      "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
@@ -441,30 +709,56 @@
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "normal" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "unit": "ops"
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "sum by (result) (rate(teslasync_geocoding_total[5m]))",
           "legendFormat": "{{result}}",
-          "refId": "A"
+          "refId": "A",
+          "range": true,
+          "instant": false
         }
       ]
     },
@@ -472,7 +766,12 @@
       "id": 103,
       "type": "row",
       "title": "Geocoding & Geofencing",
-      "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false,
       "panels": []
     },
@@ -481,10 +780,18 @@
       "type": "timeseries",
       "title": "Geocoding Duration (P95)",
       "description": "95th percentile of geocoding request duration",
-      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 8,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
@@ -494,30 +801,56 @@
             "drawStyle": "line",
             "fillOpacity": 15,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "unit": "s"
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_geocoding_duration_seconds_bucket[5m])))",
           "legendFormat": "P95 Geocoding",
-          "refId": "A"
+          "refId": "A",
+          "range": true,
+          "instant": false
         }
       ]
     },
@@ -526,16 +859,32 @@
       "type": "gauge",
       "title": "Address Backfill Progress",
       "description": "Address backfill completion: remaining vs completed",
-      "gridPos": { "x": 8, "y": 24, "w": 8, "h": 8 },
+      "gridPos": {
+        "x": 8,
+        "y": 24,
+        "w": 8,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 50 },
-              { "color": "green", "value": 90 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
             ]
           },
           "unit": "percent",
@@ -546,17 +895,28 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "showThresholdLabels": false,
         "showThresholdMarkers": true,
         "orientation": "auto"
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "teslasync_address_backfill_completed / (teslasync_address_backfill_completed + teslasync_address_backfill_remaining) * 100",
           "legendFormat": "Backfill %",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -565,10 +925,17 @@
       "type": "timeseries",
       "title": "Geofence Events",
       "description": "Rate of geofence events by type (enter, exit, etc.)",
-      "gridPos": { "x": 16, "y": 24, "w": 8, "h": 8 },
+      "gridPos": {
+        "x": 16,
+        "y": 24,
+        "w": 8,
+        "h": 8
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
@@ -578,35 +945,65 @@
             "drawStyle": "line",
             "fillOpacity": 15,
             "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "unit": "ops"
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "DS_TESLASYNC_PROMETHEUS"
+          },
           "expr": "sum by (type) (rate(teslasync_geofence_events_total[5m]))",
           "legendFormat": "{{type}}",
-          "refId": "A"
+          "refId": "A",
+          "range": true,
+          "instant": false
         }
       ]
     }
   ],
-  "templating": { "list": [] },
-  "annotations": { "list": [] },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
   "links": []
 }
