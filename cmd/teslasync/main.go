@@ -97,6 +97,12 @@ func main() {
 	}
 	log.Info().Msg("database migrations applied")
 
+	// If running in migrate-only mode (Helm pre-upgrade job), exit after migrations
+	if os.Getenv("MIGRATE_ONLY") == "true" {
+		log.Info().Msg("MIGRATE_ONLY=true — migrations complete, exiting")
+		return
+	}
+
 	// MQTT — non-fatal, system degrades gracefully without it
 	var mqttClient *mqtt.Client
 	if cfg.MQTT.Enabled {
