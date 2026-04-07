@@ -42,6 +42,8 @@ type ChargeState struct {
 	ChargingState            string   `json:"charging_state"` // Charging, Stopped, Disconnected, Complete
 	ChargeEnergyAdded        float64  `json:"charge_energy_added"`
 	ChargeLimitSoc           int      `json:"charge_limit_soc"`
+	ChargePortDoorOpen       bool     `json:"charge_port_door_open"`
+	ChargePortLatch          string   `json:"charge_port_latch"` // Engaged, Disengaged
 	TimeToFullCharge         float64  `json:"time_to_full_charge"`
 	FastChargerType          string   `json:"fast_charger_type"`
 	FastChargerBrand         string   `json:"fast_charger_brand"`

@@ -19,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -31,6 +32,7 @@ type RouterOptions struct {
 	Encryptor        *crypto.Encryptor
 	TelemetryHandler *TelemetryHandler       // If set, reuses existing handler (for hybrid mode wiring)
 	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
+	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -425,6 +427,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", apiCallLogHandler.List)
 			r.Get("/stats", apiCallLogHandler.Stats)
 		})
+
+		// Adaptive Polling Engine
+		if opt.PollEngine != nil {
+			handlers := PollEngineHandlers(opt.PollEngine)
+			r.Route("/polling", func(r chi.Router) {
+				r.Get("/status", handlers["status"])
+				r.Get("/decisions", handlers["decisions"])
+				r.Get("/predictions", handlers["predictions"])
+				r.Get("/savings", handlers["savings"])
+				r.Get("/config", handlers["config"])
+				r.Post("/demo", handlers["demo"])
+			})
+		}
 
 		// API Keys
 		r.Route("/api-keys", func(r chi.Router) {

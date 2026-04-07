@@ -35,6 +35,8 @@ data:
   FLEET_TELEMETRY_PORT: {{ include "teslasync.fleetTelemetry.port" . | quote }}
   FLEET_TELEMETRY_TOPIC_BASE: {{ .Values.fleetTelemetry.topicBase | default "telemetry" | quote }}
   FLEET_TELEMETRY_BATCH_MS: {{ .Values.fleetTelemetry.batchMs | default 100 | quote }}
+  FLEET_TELEMETRY_STALE_TIMEOUT: {{ .Values.fleetTelemetry.staleTimeout | default "15m" | quote }}
+  FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL: {{ .Values.fleetTelemetry.fallbackPollInterval | default "5m" | quote }}
   {{- end }}
   {{- if or .Values.mongodb.enabled .Values.mongodb.external.uri }}
   MONGODB_ENABLED: "true"
