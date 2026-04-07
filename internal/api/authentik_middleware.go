@@ -249,20 +249,36 @@ func AuthentikSSEAuth(jwksURL, hmacKey string) func(http.Handler) http.Handler {
 				token = r.URL.Query().Get("token")
 			}
 
-			if token == "" {
-				http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+			// If a JWT token is available, validate it
+			if token != "" {
+				claims, err := verifyJWT(token, cache, hmacKey)
+				if err != nil {
+					log.Warn().Err(err).Msg("SSE auth: invalid token")
+					http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
+					return
+				}
+				ctx := context.WithValue(r.Context(), authentikUserCtxKey, claims)
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 
-			claims, err := verifyJWT(token, cache, hmacKey)
-			if err != nil {
-				log.Warn().Err(err).Msg("SSE auth: invalid token")
-				http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
+			// 4. Fallback: trust Traefik ForwardAuth identity headers.
+			// When /events is NOT on the SSE bypass route, ForwardAuth already
+			// authenticated the request via session cookie. Traefik injects
+			// identity headers that prove the user was validated by authentik.
+			if email := r.Header.Get("X-authentik-email"); email != "" {
+				claims := &AuthentikClaims{
+					Email: email,
+					Name:  r.Header.Get("X-authentik-name"),
+					Sub:   r.Header.Get("X-authentik-uid"),
+				}
+				log.Debug().Str("email", email).Msg("SSE auth: using ForwardAuth identity")
+				ctx := context.WithValue(r.Context(), authentikUserCtxKey, claims)
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), authentikUserCtxKey, claims)
-			next.ServeHTTP(w, r.WithContext(ctx))
+			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
 		})
 	}
 }

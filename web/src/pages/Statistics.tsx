@@ -4,7 +4,7 @@ import {
   getVehicles, getFleetAnalytics, getEnergyStats, getBatteryReport,
   getMileageStats, getStateSummary
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
 import {
   BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge
 } from 'lucide-react'
@@ -35,7 +35,7 @@ export default function Statistics() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
-  const { data: analytics, isLoading } = useQuery({
+  const { data: analytics, isLoading, error: analyticsError, refetch: refetchAnalytics } = useQuery({
     queryKey: ['fleet-analytics', startDate],
     queryFn: () => getFleetAnalytics(30, startDate),
   })
@@ -110,6 +110,8 @@ export default function Statistics() {
           )}
         </div>
       </div>
+
+      {analyticsError && <QueryError error={analyticsError} onRetry={refetchAnalytics} />}
 
       {/* Fleet Summary */}
       {isLoading ? (

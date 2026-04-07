@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getChargingSessions, ChargingSession, Vehicle } from '../api'
 import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download, Cable, Activity, Gauge } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter, QueryError } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -122,7 +122,7 @@ export default function Charging() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
 
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
-  const { data: sessions, isLoading } = useQuery({
+  const { data: sessions, isLoading, error, refetch } = useQuery({
     queryKey: ['charging', vehicleId, startDate, endDate, page, pageSize],
     queryFn: () => getChargingSessions(vehicleId!, pageSize, (page - 1) * pageSize, startDate, endDate),
     enabled: vehicleId !== null,
@@ -331,6 +331,8 @@ export default function Charging() {
           onApply={() => setPage(1)}
         />
       </FadeIn>
+
+      {error && <QueryError error={error} onRetry={refetch} />}
 
       {/* Hero gauges */}
       {stats && (

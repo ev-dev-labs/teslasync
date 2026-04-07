@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getDrives, getMileageStats, getDailyMileage } from '../api'
 import type { Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError } from '../components/ui'
 import {
   Wrench, RefreshCw, Wind, Droplets, CloudRain, Crosshair, Snowflake,
   Thermometer, Gauge, CheckCircle, AlertTriangle, Clock, Plus,
@@ -167,7 +167,7 @@ export default function Maintenance() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   /* ── API queries ── */
-  const { data: stateResp, isLoading: loadingState } = useQuery({
+  const { data: stateResp, isLoading: loadingState, error: stateError, refetch } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
     queryFn: () => getVehicleState(vehicleId!),
     enabled: vehicleId !== null,
@@ -343,6 +343,8 @@ export default function Maintenance() {
           ) : undefined
         }
       />
+
+      {stateError && <QueryError error={stateError} onRetry={refetch} />}
 
       {/* ── Current Odometer ── */}
       <GlassPanel className="p-5 sm:p-6 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">

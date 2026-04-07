@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVisitedLocations } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, QueryError } from '../components/ui'
 import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import clsx from 'clsx'
@@ -15,7 +15,7 @@ export default function Locations() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
 
-  const { data: locations, isLoading } = useQuery({
+  const { data: locations, isLoading, error, refetch } = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize],
     queryFn: () => getVisitedLocations(vehicleId ?? undefined, pageSize, (page - 1) * pageSize),
     enabled: vehicleId !== null,
@@ -55,6 +55,8 @@ export default function Locations() {
           </select>
         )}
       </div>
+
+      {error && <QueryError error={error} onRetry={refetch} />}
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">

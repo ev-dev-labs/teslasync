@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTrips } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter, QueryError } from '../components/ui'
 import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
@@ -30,14 +30,14 @@ export default function Trips() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
 
-  const { data: trips, isLoading } = useQuery({
+  const { data: trips, isLoading, error, refetch } = useQuery({
     queryKey: ['trips', vehicleId, startDate, endDate, page, pageSize],
     queryFn: () => getTrips(vehicleId ?? undefined, pageSize, (page - 1) * pageSize, startDate, endDate),
     enabled: true,
   })
 
   const allTrips = trips ?? []
-  const filteredTrips = vehicleId ? allTrips.filter(t => t.vehicle_id === vehicleId) : allTrips
+  const filteredTrips = allTrips
 
   // Stats
   const totalDist = filteredTrips.reduce((s, t) => s + t.total_distance_km, 0)
@@ -80,6 +80,8 @@ export default function Trips() {
           onApply={() => setPage(1)}
         />
       </FadeIn>
+
+      {error && <QueryError error={error} onRetry={refetch} />}
 
       {/* Stats Cards */}
       {isLoading ? (

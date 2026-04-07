@@ -14,6 +14,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -389,7 +390,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Real-time SSE stream
 		if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
-			// SSE with authentik JWT validation (production — bypasses ForwardAuth)
+			if cfg.Auth.AuthentikURL == "" || cfg.Auth.AuthentikHMACKey == "" {
+				log.Warn().
+					Bool("has_url", cfg.Auth.AuthentikURL != "").
+					Bool("has_hmac", cfg.Auth.AuthentikHMACKey != "").
+					Msg("partial authentik config: set both AUTHENTIK_URL and AUTHENTIK_HMAC_KEY for full JWT validation; SSE will fall back to ForwardAuth headers")
+			}
+			// SSE with authentik JWT validation + ForwardAuth header fallback
 			r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(eventHub))
 			// Token endpoint (behind ForwardAuth — returns JWT to frontend)
 			r.Get("/sse-token", SSETokenHandler())

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleTimeline, getStateSummary, getDailyStateBreakdown } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
 import { Clock, Activity, Car, BatteryCharging, Moon, Wifi, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -59,7 +59,7 @@ export default function Timeline() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
-  const { data: timeline, isLoading } = useQuery({
+  const { data: timeline, isLoading, error: timelineError, refetch } = useQuery({
     queryKey: ['vehicle-timeline', vehicleId],
     queryFn: () => getVehicleTimeline(vehicleId!, 500),
     enabled: vehicleId !== null,
@@ -132,6 +132,8 @@ export default function Timeline() {
           )}
         </div>
       </div>
+
+      {timelineError && <QueryError error={timelineError} onRetry={refetch} />}
 
       {/* State Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6 sm:mb-8">

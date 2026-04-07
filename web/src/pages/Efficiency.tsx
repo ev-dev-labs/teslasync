@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
@@ -22,7 +22,7 @@ export default function Efficiency() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
-  const { data: energy, isLoading } = useQuery({
+  const { data: energy, isLoading, error, refetch } = useQuery({
     queryKey: ['energy-stats', vehicleId, startDate],
     queryFn: () => getEnergyStats(vehicleId!, 30, startDate),
     enabled: vehicleId !== null,
@@ -151,6 +151,8 @@ export default function Efficiency() {
           )}
         </div>
       </div>
+
+      {error && <QueryError error={error} onRetry={refetch} />}
 
       {/* Stats Cards */}
       {isLoading ? (

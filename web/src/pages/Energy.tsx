@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getChargingSessions, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight } from 'lucide-react'
 import {
@@ -53,7 +53,7 @@ export default function Energy() {
 
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error: statsError, refetch } = useQuery({
     queryKey: ['energy-stats', vehicleId, startDate],
     queryFn: () => getEnergyStats(vehicleId!, 30, startDate),
     enabled: vehicleId !== null,
@@ -138,6 +138,8 @@ export default function Energy() {
           </div>
         }
       />
+
+      {statsError && <QueryError error={statsError} onRetry={refetch} />}
 
       {/* Hero gauges */}
       <FadeIn>
