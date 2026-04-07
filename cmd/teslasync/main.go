@@ -297,6 +297,35 @@ func main() {
 	})
 	log.Info().Msg("maintenance worker started")
 
+	// Trip generator — backfill monthly summaries on startup, then daily
+	tripRepo := database.NewTripRepo(db)
+	go func() {
+		// Backfill on startup
+		count, err := tripRepo.GenerateMonthlyTrips(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("trip generator: backfill failed")
+		} else if count > 0 {
+			log.Info().Int("created", count).Msg("trip generator: backfilled monthly summaries")
+		}
+
+		// Then run daily at midnight
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				n, err := tripRepo.GenerateMonthlyTrips(ctx)
+				if err != nil {
+					log.Warn().Err(err).Msg("trip generator: periodic run failed")
+				} else if n > 0 {
+					log.Info().Int("created", n).Msg("trip generator: new monthly summaries")
+				}
+			}
+		}
+	}()
+
 	// Gas price worker — polls EIA API for US average gasoline price
 	var gasPriceWorker *worker.GasPriceWorker
 	if cfg.GasPrice.APIKey != "" {

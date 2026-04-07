@@ -70,13 +70,13 @@ func (p *Predictor) refresh(ctx context.Context) {
 	// Learn departure patterns from drives table
 	departureRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
-		       EXTRACT(HOUR FROM d.start_time) AS hour,
-		       EXTRACT(DOW FROM d.start_time) AS dow,
+		       EXTRACT(HOUR FROM d.start_date) AS hour,
+		       EXTRACT(DOW FROM d.start_date) AS dow,
 		       COUNT(*) AS freq
 		FROM drives d
 		JOIN vehicles v ON d.vehicle_id = v.id
-		WHERE d.start_time > NOW() - make_interval(days => $1)
-		  AND d.start_time IS NOT NULL
+		WHERE d.start_date > NOW() - make_interval(days => $1)
+		  AND d.start_date IS NOT NULL
 		GROUP BY v.vin, hour, dow
 		HAVING COUNT(*) >= 2
 		ORDER BY v.vin, freq DESC
@@ -113,13 +113,13 @@ func (p *Predictor) refresh(ctx context.Context) {
 	// Learn charging patterns from charging_sessions table
 	chargeRows, err := p.pool.Query(ctx, `
 		SELECT v.vin,
-		       EXTRACT(HOUR FROM cs.start_time) AS hour,
-		       EXTRACT(DOW FROM cs.start_time) AS dow,
+		       EXTRACT(HOUR FROM cs.start_date) AS hour,
+		       EXTRACT(DOW FROM cs.start_date) AS dow,
 		       COUNT(*) AS freq
 		FROM charging_sessions cs
 		JOIN vehicles v ON cs.vehicle_id = v.id
-		WHERE cs.start_time > NOW() - make_interval(days => $1)
-		  AND cs.start_time IS NOT NULL
+		WHERE cs.start_date > NOW() - make_interval(days => $1)
+		  AND cs.start_date IS NOT NULL
 		GROUP BY v.vin, hour, dow
 		HAVING COUNT(*) >= 2
 		ORDER BY v.vin, freq DESC
