@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getPollingConfig, updatePollingConfig, getCaptureStats, AppSettings, PollingConfig, Vehicle } from '../api'
+import { getSettings, updateSettings, toggleAPISuspend, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getVersionInfo, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getPollingConfig, updatePollingConfig, getCaptureStats, AppSettings, PollingConfig } from '../api'
 import { useState, useEffect, useCallback } from 'react'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Globe, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Link, Fuel, Zap, ToggleLeft, ToggleRight } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
@@ -32,7 +32,6 @@ export default function Settings() {
   const queryClient = useQueryClient()
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { data: version } = useQuery({ queryKey: ['version'], queryFn: getVersionInfo, staleTime: 60_000 })
   const { data: gasPriceStatus, refetch: refetchGasPrice } = useQuery({ queryKey: ['gas-price-status'], queryFn: getGasPriceStatus, retry: false, refetchInterval: 30_000 })
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
@@ -163,18 +162,6 @@ export default function Settings() {
         window.location.href = data.auth_url
       },
     })
-  }
-
-  const [exportStart, setExportStart] = useState('')
-  const [exportEnd, setExportEnd] = useState('')
-  const [exportVehicle, setExportVehicle] = useState('')
-
-  function buildExportUrl(type: string, format: string) {
-    const params = new URLSearchParams({ format })
-    if (exportStart) params.set('start', exportStart)
-    if (exportEnd) params.set('end', exportEnd)
-    if (exportVehicle) params.set('vehicle_id', exportVehicle)
-    return `/api/v1/export/${type}?${params.toString()}`
   }
 
   return (
@@ -934,102 +921,20 @@ export default function Settings() {
         </GlassPanel>
       </FadeIn>
 
-      {/* Data Export */}
+      {/* Data Export — link to dedicated page */}
       <FadeIn delay={0.18}>
-        <GlassPanel className="p-6 space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-green/10 text-neon-green ring-1 ring-neon-green/20">
+        <a href="/data-export" className="block">
+          <GlassPanel className="p-5 flex items-center gap-4 hover:border-white/10 transition-colors cursor-pointer group">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-green/10 text-neon-green ring-1 ring-neon-green/20 shrink-0">
               <Download className="h-5 w-5" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h2 className="text-base font-semibold text-[var(--text-primary)]">Data Export</h2>
-              <p className="text-xs text-[var(--text-muted)]">Export your vehicle data as CSV or JSON with optional filters</p>
+              <p className="text-xs text-[var(--text-muted)]">Export drives, charging, analytics, or full backup as CSV/JSON</p>
             </div>
-          </div>
-
-          {/* Filters */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <SettingField label="Start Date">
-              <input
-                type="date"
-                value={exportStart}
-                onChange={e => setExportStart(e.target.value)}
-                className="glass-input w-full px-3 py-2.5 text-sm"
-              />
-            </SettingField>
-            <SettingField label="End Date">
-              <input
-                type="date"
-                value={exportEnd}
-                onChange={e => setExportEnd(e.target.value)}
-                className="glass-input w-full px-3 py-2.5 text-sm"
-              />
-            </SettingField>
-            <SettingField label="Vehicle">
-              <select
-                value={exportVehicle}
-                onChange={e => setExportVehicle(e.target.value)}
-                className="glass-input w-full px-3 py-2.5 text-sm"
-              >
-                <option value="">All vehicles</option>
-                {vehicles?.map((v: Vehicle) => (
-                  <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-                ))}
-              </select>
-            </SettingField>
-          </div>
-
-          {/* Export options */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">Drives</p>
-                <p className="text-xs text-[var(--text-muted)]">Trip history with distance, duration, speed, and battery usage</p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <a href={buildExportUrl('drives', 'csv')} download="teslasync-drives.csv" className="glass-button text-xs flex items-center gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> CSV
-                </a>
-                <a href={buildExportUrl('drives', 'json')} download="teslasync-drives.json" className="glass-button text-xs flex items-center gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> JSON
-                </a>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">Charging</p>
-                <p className="text-xs text-[var(--text-muted)]">Charging sessions with energy added, cost, power, and battery levels</p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <a href={buildExportUrl('charging', 'csv')} download="teslasync-charging.csv" className="glass-button text-xs flex items-center gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> CSV
-                </a>
-                <a href={buildExportUrl('charging', 'json')} download="teslasync-charging.json" className="glass-button text-xs flex items-center gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> JSON
-                </a>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)]">Positions</p>
-                <p className="text-xs text-[var(--text-muted)]">GPS position data with timestamps and vehicle state</p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <a href={buildExportUrl('positions', 'json')} download="teslasync-positions.json" className="glass-button text-xs flex items-center gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> JSON
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {(exportStart || exportEnd || exportVehicle) && (
-            <button onClick={() => { setExportStart(''); setExportEnd(''); setExportVehicle('') }} className="text-xs text-[var(--text-muted)] hover:text-gray-300 transition-colors">
-              Clear filters
-            </button>
-          )}
-        </GlassPanel>
+            <ExternalLink className="h-4 w-4 text-[var(--text-muted)] group-hover:text-neon-cyan transition-colors shrink-0" />
+          </GlassPanel>
+        </a>
       </FadeIn>
 
       {/* System Info & Endpoints */}
