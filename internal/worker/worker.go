@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -65,6 +66,10 @@ type Worker struct {
 
 	// Cached polling config — refreshed each poll cycle from the database.
 	pollingConfig *models.PollingConfig
+
+	// Adaptive polling engine — evaluates API responses to determine optimal
+	// poll intervals. When set, replaces the fixed-interval backoff logic.
+	PollEngine *polling.PollEngine
 }
 
 // New creates a new Worker that polls the Tesla API at the configured interval,
@@ -252,6 +257,9 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		// skip polling entirely — telemetry is the data source.
 		if w.FleetTelemetryEnabled && w.IsVehicleStreaming != nil && w.IsVehicleStreaming(vehicle.VIN) {
 			log.Debug().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Msg("skipping poll — vehicle streaming via Fleet Telemetry (primary)")
+			if w.PollEngine != nil {
+				w.PollEngine.MarkStreamingSkip(vehicle.VIN)
+			}
 			continue
 		}
 
@@ -273,15 +281,28 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 			w.mu.Unlock()
 		}
 
-		// Check per-vehicle backoff
-		w.mu.Lock()
-		vh, exists := w.vehicleHealth[vehicle.ID]
-		if exists && time.Now().Before(vh.backoffUntil) {
+		// Check per-vehicle backoff — use PollEngine if available, else legacy
+		if w.PollEngine != nil {
+			shouldPoll, decision := w.PollEngine.ShouldPoll(vehicle.VIN)
+			if !shouldPoll {
+				log.Debug().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).
+					Str("profile", string(decision.Profile)).
+					Strs("reasons", decision.Reasons).
+					Dur("next_in", decision.NextInterval).
+					Msg("poll engine: skipping poll")
+				continue
+			}
+		} else {
+			// Legacy backoff
+			w.mu.Lock()
+			vh, exists := w.vehicleHealth[vehicle.ID]
+			if exists && time.Now().Before(vh.backoffUntil) {
+				w.mu.Unlock()
+				log.Debug().Int64("vehicle_id", vehicle.ID).Time("backoff_until", vh.backoffUntil).Msg("skipping vehicle (backoff)")
+				continue
+			}
 			w.mu.Unlock()
-			log.Debug().Int64("vehicle_id", vehicle.ID).Time("backoff_until", vh.backoffUntil).Msg("skipping vehicle (backoff)")
-			continue
 		}
-		w.mu.Unlock()
 
 		if w.FleetTelemetryEnabled {
 			log.Info().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Msg("polling via Tesla API (fallback — vehicle not streaming)")
@@ -421,6 +442,9 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 		}
 		w.publishMQTT(vehicle, "state", "asleep")
 		w.recordVehicleAsleep(vehicle.ID)
+		if w.PollEngine != nil {
+			w.PollEngine.MarkSleeping(vehicle.VIN)
+		}
 		return
 	}
 	if errors.Is(err, tesla.ErrRateLimited) {
@@ -484,7 +508,19 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	// Publish to MQTT
 	w.publishVehicleData(vehicle, data)
 
-	logger.Debug().Str("state", data.State).Int("battery", data.ChargeState.BatteryLevel).Msg("polled vehicle")
+	// Feed response to the adaptive polling engine for next-interval decision
+	if w.PollEngine != nil {
+		decision := w.PollEngine.Assess(vehicle.VIN, data)
+		logger.Debug().
+			Str("state", data.State).
+			Int("battery", data.ChargeState.BatteryLevel).
+			Str("engine_profile", string(decision.Profile)).
+			Str("engine_activity", decision.Activity.String()).
+			Dur("engine_next", decision.NextInterval).
+			Msg("polled vehicle (engine-managed)")
+	} else {
+		logger.Debug().Str("state", data.State).Int("battery", data.ChargeState.BatteryLevel).Msg("polled vehicle")
+	}
 }
 
 func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse) *models.Position {

@@ -222,8 +222,8 @@ func Load() (*Config, error) {
 			Port:                 envInt("FLEET_TELEMETRY_PORT", 4443),
 			TopicBase:            envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
 			BatchMs:              envInt("FLEET_TELEMETRY_BATCH_MS", 100),
-			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 5*time.Minute),
-			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 60*time.Second),
+			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 15*time.Minute),
+			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 5*time.Minute),
 		},
 
 		MongoDB: MongoDBConfig{

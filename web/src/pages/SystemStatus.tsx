@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
+import PollingEnginePanel from '../components/PollingEngine'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { formatDateTime, formatTime } from '../lib/dateFormat'
@@ -1474,6 +1475,9 @@ export default function SystemStatus() {
 
       {/* Fleet Telemetry Live Feed */}
       <TelemetryLivePanel />
+
+      {/* Adaptive Polling Engine */}
+      <PollingEnginePanel />
 
       {/* Background Workers */}
       <WorkerHealthPanel />

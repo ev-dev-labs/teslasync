@@ -282,11 +282,11 @@ fleetTelemetry:
   batchMs: 100
 
   # -- Time without signals before a vehicle is considered stale.
-  staleTimeout: "5m"
+  staleTimeout: "15m"
 
   # -- Polling interval for vehicles that stop streaming.
   # Set to "0" to disable fallback polling entirely.
-  fallbackPollInterval: "60s"
+  fallbackPollInterval: "5m"
 
   # -- Traefik IngressRouteTCP for TLS passthrough.
   # Required because vehicles connect with mTLS (client certificates).

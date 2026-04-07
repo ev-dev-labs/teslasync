@@ -32,13 +32,15 @@ services:
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET:-dev-client-secret}
       - TESLA_REDIRECT_URI=http://localhost:8080/api/v1/auth/callback
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
-      - POLL_INTERVAL=30s
+      - WORKER_POLL_INTERVAL=30s
       - LOG_LEVEL=debug
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
       - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
       - FLEET_TELEMETRY_PORT=4443
       - FLEET_TELEMETRY_TOPIC_BASE=telemetry
       - FLEET_TELEMETRY_BATCH_MS=100
+      - FLEET_TELEMETRY_STALE_TIMEOUT=15m
+      - FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL=5m
       # Tracing enabled by default in dev
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=jaeger:4317

@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -246,6 +247,21 @@ func main() {
 	// When fleet telemetry is enabled, the worker operates in fallback mode:
 	// it only polls vehicles that are NOT actively streaming via telemetry.
 	w := worker.New(db, teslaClient, mqttClient, cfg.Worker, eventBus, encryptor)
+
+	// Initialise the adaptive polling engine
+	pollEngineCfg := polling.DefaultEngineConfig()
+	pollEngineCfg.FleetTelemetryEnabled = cfg.FleetTelemetry.Enabled
+	pollEngine := polling.NewPollEngine(pollEngineCfg)
+
+	// Wire the predictive scheduler if we have a database
+	if db != nil && db.Pool != nil {
+		predictor := polling.NewPredictor(db.Pool)
+		predictor.RefreshIfNeeded(ctx)
+		pollEngine.SetPredictor(predictor)
+	}
+
+	w.PollEngine = pollEngine
+
 	if telemetryHandler != nil {
 		w.IsVehicleStreaming = telemetryHandler.IsVehicleStreaming
 		w.FleetTelemetryEnabled = true
@@ -255,6 +271,12 @@ func main() {
 			Dur("stale_timeout", cfg.FleetTelemetry.StaleTimeout).
 			Msg("fleet telemetry primary mode — worker will only poll non-streaming vehicles as fallback")
 	}
+
+	log.Info().
+		Bool("fleet_telemetry", pollEngineCfg.FleetTelemetryEnabled).
+		Bool("predictor", pollEngine != nil).
+		Msg("adaptive polling engine initialised")
+
 	resilience.SafeGoLoop(ctx, "vehicle-poller", func(loopCtx context.Context) {
 		w.Start(loopCtx)
 	})
@@ -391,6 +413,7 @@ func main() {
 		Encryptor:        encryptor,
 		TelemetryHandler: telemetryHandler,
 		GasPriceWorker:   gasPriceWorker,
+		PollEngine:       pollEngine,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
