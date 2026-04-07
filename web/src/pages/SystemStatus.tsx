@@ -1523,7 +1523,6 @@ export default function SystemStatus() {
         icon={<HeartPulse className="h-4 w-4 text-neon-green" />}
         title="Health Probes"
         description="Liveness & readiness checks"
-        defaultOpen
         badges={
           <>
             <StatusBadge color={healthz?.ok ? 'green' : healthz === undefined ? 'gray' : 'red'} label={`healthz ${healthz?.ok ? '200' : '—'}`} />
@@ -1560,7 +1559,6 @@ export default function SystemStatus() {
         icon={<Server className="h-4 w-4 text-neon-cyan" />}
         title="Backend Status"
         description="Version, runtime & endpoints"
-        defaultOpen
         badges={
           <>
             {version && <StatusBadge color="green" label={`v${version.chart_version}`} />}
@@ -1641,7 +1639,6 @@ export default function SystemStatus() {
         icon={<Database className="h-4 w-4 text-neon-green" />}
         title="Service Health"
         description="Component status & connectivity"
-        defaultOpen
         badges={
           <StatusBadge color={healthyCount === totalCount ? 'green' : 'amber'} label={`${healthyCount}/${totalCount} healthy`} />
         }
