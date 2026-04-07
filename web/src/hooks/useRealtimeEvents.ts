@@ -1,5 +1,16 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 
+export type SSEState = 'connected' | 'reconnecting' | 'unavailable'
+
+export interface SSEDiagnostics {
+  state: SSEState
+  connected: boolean
+  failCount: number
+  lastConnected: Date | null
+  endpoint: string
+  nextRetryIn: number | null
+}
+
 interface SSEOptions {
   onVehicleUpdate?: (data: unknown) => void
   onAlert?: (data: unknown) => void
@@ -30,17 +41,24 @@ async function fetchSSEToken(): Promise<string | null> {
  * real-time vehicle updates and alerts. Automatically reconnects with
  * exponential backoff (up to 30s) on connection failure.
  *
- * In production, fetches an authentik JWT first and passes it as a query
- * parameter, since EventSource can't set custom headers.
+ * Returns a richer state:
+ * - `connected`: live SSE stream active
+ * - `reconnecting`: temporarily lost, retrying (1-3 attempts)
+ * - `unavailable`: SSE not available, app uses polling fallback
+ *
+ * After giving up, retries every 5 minutes in case the issue resolves.
  */
 export function useRealtimeEvents(options: SSEOptions = {}) {
   const { enabled = true } = options
-  const [connected, setConnected] = useState(false)
+  const [state, setState] = useState<SSEState>('reconnecting')
+  const [failCount, setFailCount] = useState(0)
+  const [lastConnected, setLastConnected] = useState<Date | null>(null)
+  const [nextRetryIn, setNextRetryIn] = useState<number | null>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const reconnectTimer = useRef<number>(undefined)
+  const retryTimer = useRef<number>(undefined)
   const backoffRef = useRef(1000) // start at 1s, max 30s
   const failCountRef = useRef(0)
-  // Store callbacks in refs to avoid re-creating the connect function on every render
   const callbacksRef = useRef(options)
   callbacksRef.current = options
 
@@ -49,7 +67,6 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
       sourceRef.current.close()
     }
 
-    // Fetch auth token (returns null in dev mode)
     const token = await fetchSSEToken()
     const url = token ? `/api/v1/events?token=${encodeURIComponent(token)}` : '/api/v1/events'
 
@@ -57,9 +74,16 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     sourceRef.current = source
 
     source.addEventListener('connected', (e) => {
-      setConnected(true)
-      backoffRef.current = 1000 // reset backoff on successful connection
-      failCountRef.current = 0  // reset failure count
+      setState('connected')
+      backoffRef.current = 1000
+      failCountRef.current = 0
+      setFailCount(0)
+      setLastConnected(new Date())
+      setNextRetryIn(null)
+      if (retryTimer.current) {
+        clearTimeout(retryTimer.current)
+        retryTimer.current = undefined
+      }
       const data = JSON.parse(e.data)
       callbacksRef.current.onConnected?.(data.client_id)
     })
@@ -84,33 +108,58 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     })
 
     source.onerror = () => {
-      setConnected(false)
       callbacksRef.current.onDisconnected?.()
       source.close()
       sourceRef.current = null
       failCountRef.current++
-      // Give up after 3 consecutive failures — let polling handle updates
+      setFailCount(failCountRef.current)
+
       if (failCountRef.current >= 3) {
-        console.debug('[SSE] Disabled after repeated failures — using polling fallback')
+        setState('unavailable')
+        setNextRetryIn(300)
+        console.debug('[SSE] Falling back to polling — will retry in 5m')
+        if (!retryTimer.current) {
+          retryTimer.current = window.setInterval(() => {
+            failCountRef.current = 0
+            backoffRef.current = 1000
+            setFailCount(0)
+            setState('reconnecting')
+            setNextRetryIn(null)
+            connect()
+          }, 5 * 60_000)
+        }
         return
       }
-      // Exponential backoff with jitter, capped at 30s
+
+      setState('reconnecting')
       const jitter = Math.random() * 500
       const delay = Math.min(backoffRef.current + jitter, 30_000)
       backoffRef.current = Math.min(backoffRef.current * 2, 30_000)
       reconnectTimer.current = window.setTimeout(connect, delay)
     }
-  }, []) // No dependencies — uses callbacksRef for stable reference
+  }, [])
 
   useEffect(() => {
     if (!enabled) return
     connect()
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      if (retryTimer.current) clearInterval(retryTimer.current)
       sourceRef.current?.close()
       sourceRef.current = null
     }
   }, [enabled, connect])
 
-  return { connected }
+  const endpoint = '/api/v1/events'
+
+  const diagnostics: SSEDiagnostics = {
+    state,
+    connected: state === 'connected',
+    failCount,
+    lastConnected,
+    endpoint,
+    nextRetryIn,
+  }
+
+  return { connected: state === 'connected', state, diagnostics }
 }

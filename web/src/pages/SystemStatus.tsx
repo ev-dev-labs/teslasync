@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, getTelemetryStatus, getWorkersHealth, getNotificationStats, getNotificationLogs, getExportJobs, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse, TelemetryStatus, WorkersHealth, NotificationStats, NotificationLog, ExportJobSummary } from '../api'
 import { getApiBase } from '../lib/resilience'
+import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
@@ -986,6 +987,96 @@ function TelemetryLivePanel() {
   )
 }
 
+// ── SSE Connection Panel ────────────────────────────────────────────────────
+function SSEConnectionPanel() {
+  const { diagnostics } = useRealtimeEvents()
+  const { state, failCount, lastConnected, endpoint, nextRetryIn } = diagnostics
+
+  const stateConfig = {
+    connected: { label: 'Connected', color: '#10b981', icon: <Wifi className="h-4 w-4 text-neon-green" />, bg: 'bg-neon-green/10 border-neon-green/20' },
+    reconnecting: { label: 'Reconnecting', color: '#f59e0b', icon: <RefreshCw className="h-4 w-4 text-amber-400 animate-spin" />, bg: 'bg-amber-400/10 border-amber-400/20' },
+    unavailable: { label: 'Polling Fallback', color: '#6b7280', icon: <WifiOff className="h-4 w-4 text-[var(--text-muted)]" />, bg: 'bg-white/5 border-white/10' },
+  }
+  const cfg = stateConfig[state]
+
+  return (
+    <FadeIn delay={0.11}>
+      <GlassPanel className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title flex items-center gap-2">
+            <Rss className="h-4 w-4 text-neon-blue" /> SSE Real-Time Stream
+          </h3>
+          <span className={clsx('text-xs font-medium px-2.5 py-1 rounded-full border', cfg.bg)} style={{ color: cfg.color }}>
+            {cfg.label}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Connection State */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-center gap-2 mb-2">
+              {cfg.icon}
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Status</p>
+            </div>
+            <p className="text-sm font-semibold" style={{ color: cfg.color }}>{cfg.label}</p>
+            {state === 'connected' && (
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">Push updates active</p>
+            )}
+            {state === 'reconnecting' && (
+              <p className="text-[10px] text-amber-400/70 mt-1">Attempt {failCount + 1}/3…</p>
+            )}
+            {state === 'unavailable' && (
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                {nextRetryIn ? `Retry in ${Math.floor(nextRetryIn / 60)}m` : 'Using REST polling'}
+              </p>
+            )}
+          </div>
+
+          {/* Endpoint */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Endpoint</p>
+            <p className="text-xs font-mono text-[var(--text-primary)]">{endpoint}</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">Server-Sent Events</p>
+          </div>
+
+          {/* Last Connected */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Last Connected</p>
+            <p className="text-xs text-[var(--text-primary)]">
+              {lastConnected ? formatTime(lastConnected.toISOString()) : '—'}
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              {failCount > 0 ? `${failCount} failed attempt${failCount > 1 ? 's' : ''}` : 'No failures'}
+            </p>
+          </div>
+
+          {/* Fallback Mode */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Data Delivery</p>
+            <p className="text-xs text-[var(--text-primary)]">
+              {state === 'connected' ? 'Real-time push' : 'REST polling'}
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              {state === 'connected' ? 'Instant updates' : 'Refresh every 30-60s'}
+            </p>
+          </div>
+        </div>
+
+        {/* Impact explanation when not connected */}
+        {state !== 'connected' && (
+          <div className="mt-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Impact</p>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              All features work normally via REST polling. Dashboard, vehicle status, and alerts refresh every 30–60 seconds instead of instantly.
+              {state === 'unavailable' && ' SSE will automatically retry every 5 minutes.'}
+            </p>
+          </div>
+        )}
+      </GlassPanel>
+    </FadeIn>
+  )
+}
+
 // ── Worker Health Panel ──────────────────────────────────────────────────────
 function WorkerHealthPanel() {
   const { data: workers } = useQuery<WorkersHealth>({
@@ -1475,6 +1566,9 @@ export default function SystemStatus() {
 
       {/* Fleet Telemetry Live Feed */}
       <TelemetryLivePanel />
+
+      {/* SSE Real-Time Stream */}
+      <SSEConnectionPanel />
 
       {/* Adaptive Polling Engine */}
       <PollingEnginePanel />

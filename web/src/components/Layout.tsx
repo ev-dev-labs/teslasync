@@ -94,12 +94,19 @@ const navI18nKeys: Record<string, string> = {
   'Route Efficiency': 'nav.routeEfficiency',
 }
 
-function SSEStatusDot({ connected }: { connected: boolean }) {
+type SSEState = 'connected' | 'reconnecting' | 'unavailable'
+
+function SSEStatusDot({ state }: { state: SSEState }) {
+  if (state === 'unavailable') return null // hide dot — polling handles everything
+  const isConnected = state === 'connected'
   return (
     <span
-      title={connected ? 'SSE Connected' : 'SSE Disconnected'}
-      className={clsx('inline-block h-2 w-2 rounded-full shrink-0', connected ? 'bg-neon-green' : 'bg-red-500')}
-      style={{ boxShadow: `0 0 6px ${connected ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }}
+      title={isConnected ? 'Live updates active' : 'Reconnecting live updates…'}
+      className={clsx(
+        'inline-block h-2 w-2 rounded-full shrink-0',
+        isConnected ? 'bg-neon-green' : 'bg-amber-400 animate-pulse',
+      )}
+      style={{ boxShadow: `0 0 6px ${isConnected ? 'rgba(16,185,129,0.5)' : 'rgba(251,191,36,0.5)'}` }}
     />
   )
 }
@@ -211,7 +218,7 @@ export default function Layout() {
   const { t } = useTranslation()
 
   // SSE connection status
-  const { connected: sseConnected } = useRealtimeEvents()
+  const { state: sseState } = useRealtimeEvents()
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
@@ -411,7 +418,7 @@ export default function Layout() {
               <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
             </div>
             <SystemHealthDot />
-            <SSEStatusDot connected={sseConnected} />
+            <SSEStatusDot state={sseState} />
           </div>
         </div>
       </aside>
