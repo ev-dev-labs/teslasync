@@ -160,7 +160,7 @@ jobs:
 
   helm:
     name: Publish Helm Chart
-    needs: version-tag
+    needs: [version-tag, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: read
