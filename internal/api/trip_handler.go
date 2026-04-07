@@ -18,7 +18,7 @@ func NewTripHandler(db *database.DB) *TripHandler {
 }
 
 func (h *TripHandler) List(w http.ResponseWriter, r *http.Request) {
-	limit, _ := pagination(r)
+	limit, offset := pagination(r)
 	startTime, endTime := parseDateRange(r)
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 
@@ -28,7 +28,7 @@ func (h *TripHandler) List(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}
-		trips, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit, startTime, endTime)
+		trips, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to get trips")
 			writeError(w, http.StatusInternalServerError, "failed to get trips")
@@ -41,7 +41,7 @@ func (h *TripHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trips, err := h.repo.GetAll(r.Context(), limit, startTime, endTime)
+	trips, err := h.repo.GetAll(r.Context(), limit, offset, startTime, endTime)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get trips")
 		writeError(w, http.StatusInternalServerError, "failed to get trips")

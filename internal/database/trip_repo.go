@@ -16,7 +16,7 @@ func NewTripRepo(db *DB) *TripRepo {
 	return &TripRepo{db: db}
 }
 
-func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int, startTime, endTime time.Time) ([]*models.Trip, error) {
+func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Trip, error) {
 	query := `SELECT id, vehicle_id, name, start_date, end_date, total_distance_km, total_energy_kwh,
 		total_cost, drive_count, charge_count, created_at
 		FROM trips WHERE vehicle_id=$1`
@@ -32,8 +32,8 @@ func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int,
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY start_date DESC LIMIT $%d", argIdx)
-	args = append(args, limit)
+	query += fmt.Sprintf(" ORDER BY start_date DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (r *TripRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int,
 	return trips, rows.Err()
 }
 
-func (r *TripRepo) GetAll(ctx context.Context, limit int, startTime, endTime time.Time) ([]*models.Trip, error) {
+func (r *TripRepo) GetAll(ctx context.Context, limit, offset int, startTime, endTime time.Time) ([]*models.Trip, error) {
 	query := `SELECT id, vehicle_id, name, start_date, end_date, total_distance_km, total_energy_kwh,
 		total_cost, drive_count, charge_count, created_at
 		FROM trips WHERE 1=1`
@@ -68,8 +68,8 @@ func (r *TripRepo) GetAll(ctx context.Context, limit int, startTime, endTime tim
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY start_date DESC LIMIT $%d", argIdx)
-	args = append(args, limit)
+	query += fmt.Sprintf(" ORDER BY start_date DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -108,10 +108,12 @@ func (r *TripRepo) GetDriveIDs(ctx context.Context, tripID int64) ([]int64, erro
 }
 
 // GenerateMonthlyTrips creates monthly trip summaries by aggregating drives
-// and charging sessions. It only creates trips for months that don't already
-// have one, making it safe to call repeatedly (idempotent).
+// and charging sessions. Creates trips for all months with drives, including
+// the current month (marked as in-progress). Idempotent — existing trips are
+// updated for the current month, and completed months are never re-created.
 func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 	// Find all vehicle/month combinations that have drives but no trip yet
+	// (excluding the current month — handled separately with upsert)
 	query := `
 		WITH drive_months AS (
 			SELECT vehicle_id,
@@ -131,7 +133,7 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 			LEFT JOIN existing_trips et
 			  ON dm.vehicle_id = et.vehicle_id AND dm.month_start = et.month_start
 			WHERE et.vehicle_id IS NULL
-			  AND dm.month_start < date_trunc('month', NOW()) -- don't generate for current month (incomplete)
+			  AND dm.month_start < date_trunc('month', NOW())
 			ORDER BY dm.month_start
 		)
 		SELECT vehicle_id, month_start FROM missing
@@ -161,65 +163,160 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 
 	created := 0
 	for _, mk := range missing {
-		monthEnd := mk.monthStart.AddDate(0, 1, 0)
-		name := mk.monthStart.Format("Jan 2006") + " Summary"
-
-		// Aggregate drives for this month
-		var totalDist float64
-		var driveCount int
-		err := r.db.Pool.QueryRow(ctx, `
-			SELECT COALESCE(SUM(distance), 0), COUNT(*)
-			FROM drives
-			WHERE vehicle_id = $1
-			  AND start_date >= $2 AND start_date < $3
-		`, mk.vehicleID, mk.monthStart, monthEnd).Scan(&totalDist, &driveCount)
-		if err != nil {
-			return created, fmt.Errorf("aggregate drives: %w", err)
+		if _, err := r.upsertMonthTrip(ctx, mk.vehicleID, mk.monthStart, false); err != nil {
+			return created, err
 		}
+		created++
+	}
 
-		// Aggregate charging for this month
-		var totalEnergy float64
-		var totalCost float64
-		var chargeCount int
-		err = r.db.Pool.QueryRow(ctx, `
-			SELECT COALESCE(SUM(charge_energy_added), 0),
-			       COALESCE(SUM(cost), 0),
-			       COUNT(*)
-			FROM charging_sessions
-			WHERE vehicle_id = $1
-			  AND start_date >= $2 AND start_date < $3
-		`, mk.vehicleID, mk.monthStart, monthEnd).Scan(&totalEnergy, &totalCost, &chargeCount)
-		if err != nil {
-			return created, fmt.Errorf("aggregate charges: %w", err)
+	// Also upsert the current month as in-progress (updates if it already exists)
+	currentMonth := time.Now().UTC().Truncate(24 * time.Hour)
+	currentMonth = time.Date(currentMonth.Year(), currentMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	curMonthVehicles, err := r.vehiclesWithDrivesInMonth(ctx, currentMonth)
+	if err != nil {
+		return created, fmt.Errorf("current month vehicles: %w", err)
+	}
+	for _, vid := range curMonthVehicles {
+		if _, err := r.upsertMonthTrip(ctx, vid, currentMonth, true); err != nil {
+			return created, fmt.Errorf("upsert current month: %w", err)
 		}
-
-		// Insert the trip
-		var tripID int64
-		err = r.db.Pool.QueryRow(ctx, `
-			INSERT INTO trips (vehicle_id, name, start_date, end_date,
-			                   total_distance_km, total_energy_kwh, total_cost,
-			                   drive_count, charge_count)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-			RETURNING id
-		`, mk.vehicleID, name, mk.monthStart, monthEnd,
-			totalDist, totalEnergy, totalCost, driveCount, chargeCount).Scan(&tripID)
-		if err != nil {
-			return created, fmt.Errorf("insert trip: %w", err)
-		}
-
-		// Link drives to the trip via trip_drives
-		_, err = r.db.Pool.Exec(ctx, `
-			INSERT INTO trip_drives (trip_id, drive_id)
-			SELECT $1, id FROM drives
-			WHERE vehicle_id = $2
-			  AND start_date >= $3 AND start_date < $4
-		`, tripID, mk.vehicleID, mk.monthStart, monthEnd)
-		if err != nil {
-			return created, fmt.Errorf("link drives: %w", err)
-		}
-
 		created++
 	}
 
 	return created, nil
+}
+
+// vehiclesWithDrivesInMonth returns vehicle IDs that have drives in the given month.
+func (r *TripRepo) vehiclesWithDrivesInMonth(ctx context.Context, monthStart time.Time) ([]int64, error) {
+	monthEnd := monthStart.AddDate(0, 1, 0)
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT DISTINCT vehicle_id FROM drives
+		WHERE start_date >= $1 AND start_date < $2 AND start_date IS NOT NULL
+	`, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// upsertMonthTrip creates or updates a trip summary for a given vehicle/month.
+// For in-progress months, it updates the existing trip with fresh aggregates.
+func (r *TripRepo) upsertMonthTrip(ctx context.Context, vehicleID int64, monthStart time.Time, inProgress bool) (int64, error) {
+	monthEnd := monthStart.AddDate(0, 1, 0)
+	name := monthStart.Format("Jan 2006") + " Summary"
+	if inProgress {
+		name = monthStart.Format("Jan 2006") + " (In Progress)"
+	}
+
+	// Use NOW() as end_date for the current in-progress month
+	effectiveEnd := monthEnd
+	if inProgress {
+		effectiveEnd = time.Now().UTC()
+	}
+
+	// Aggregate drives for this month
+	var totalDist float64
+	var driveCount int
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(distance), 0), COUNT(*)
+		FROM drives
+		WHERE vehicle_id = $1
+		  AND start_date >= $2 AND start_date < $3
+	`, vehicleID, monthStart, monthEnd).Scan(&totalDist, &driveCount)
+	if err != nil {
+		return 0, fmt.Errorf("aggregate drives: %w", err)
+	}
+
+	// Aggregate charging for this month
+	var totalEnergy float64
+	var totalCost float64
+	var chargeCount int
+	err = r.db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(charge_energy_added), 0),
+		       COALESCE(SUM(cost), 0),
+		       COUNT(*)
+		FROM charging_sessions
+		WHERE vehicle_id = $1
+		  AND start_date >= $2 AND start_date < $3
+	`, vehicleID, monthStart, monthEnd).Scan(&totalEnergy, &totalCost, &chargeCount)
+	if err != nil {
+		return 0, fmt.Errorf("aggregate charges: %w", err)
+	}
+
+	// Upsert: update if a trip for this month already exists, otherwise insert
+	var tripID int64
+	err = r.db.Pool.QueryRow(ctx, `
+		INSERT INTO trips (vehicle_id, name, start_date, end_date,
+		                   total_distance_km, total_energy_kwh, total_cost,
+		                   drive_count, charge_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (vehicle_id, start_date) WHERE start_date = date_trunc('month', start_date)
+		DO UPDATE SET name = EXCLUDED.name,
+		              end_date = EXCLUDED.end_date,
+		              total_distance_km = EXCLUDED.total_distance_km,
+		              total_energy_kwh = EXCLUDED.total_energy_kwh,
+		              total_cost = EXCLUDED.total_cost,
+		              drive_count = EXCLUDED.drive_count,
+		              charge_count = EXCLUDED.charge_count
+		RETURNING id
+	`, vehicleID, name, monthStart, effectiveEnd,
+		totalDist, totalEnergy, totalCost, driveCount, chargeCount).Scan(&tripID)
+	if err != nil {
+		// ON CONFLICT may not work if there's no unique index — fall back to check-then-insert
+		var existingID int64
+		checkErr := r.db.Pool.QueryRow(ctx, `
+			SELECT id FROM trips WHERE vehicle_id = $1 AND start_date = $2
+		`, vehicleID, monthStart).Scan(&existingID)
+		if checkErr == nil {
+			// Trip exists — update it
+			_, err = r.db.Pool.Exec(ctx, `
+				UPDATE trips SET name=$1, end_date=$2, total_distance_km=$3,
+				                 total_energy_kwh=$4, total_cost=$5,
+				                 drive_count=$6, charge_count=$7
+				WHERE id=$8
+			`, name, effectiveEnd, totalDist, totalEnergy, totalCost,
+				driveCount, chargeCount, existingID)
+			if err != nil {
+				return 0, fmt.Errorf("update trip: %w", err)
+			}
+			tripID = existingID
+		} else {
+			// Trip doesn't exist — insert without ON CONFLICT
+			err = r.db.Pool.QueryRow(ctx, `
+				INSERT INTO trips (vehicle_id, name, start_date, end_date,
+				                   total_distance_km, total_energy_kwh, total_cost,
+				                   drive_count, charge_count)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+				RETURNING id
+			`, vehicleID, name, monthStart, effectiveEnd,
+				totalDist, totalEnergy, totalCost, driveCount, chargeCount).Scan(&tripID)
+			if err != nil {
+				return 0, fmt.Errorf("insert trip: %w", err)
+			}
+		}
+	}
+
+	// Link drives to the trip via trip_drives (idempotent with ON CONFLICT DO NOTHING)
+	_, err = r.db.Pool.Exec(ctx, `
+		INSERT INTO trip_drives (trip_id, drive_id)
+		SELECT $1, id FROM drives
+		WHERE vehicle_id = $2
+		  AND start_date >= $3 AND start_date < $4
+		ON CONFLICT DO NOTHING
+	`, tripID, vehicleID, monthStart, monthEnd)
+	if err != nil {
+		return 0, fmt.Errorf("link drives: %w", err)
+	}
+
+	return tripID, nil
 }
