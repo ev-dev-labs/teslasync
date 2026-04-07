@@ -107,7 +107,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 2,
@@ -207,7 +211,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 3,
@@ -274,7 +282,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 4,
@@ -352,7 +364,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 8,
@@ -431,7 +447,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 101,
@@ -533,7 +553,11 @@
           "format": "table",
           "instant": true
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 6,
@@ -611,7 +635,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 102,
@@ -702,7 +730,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 9,
@@ -781,7 +813,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     }
   ],
   "templating": {

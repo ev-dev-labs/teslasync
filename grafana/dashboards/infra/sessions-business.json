@@ -88,7 +88,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 2,
@@ -147,7 +151,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 3,
@@ -206,7 +214,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 4,
@@ -265,7 +277,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 5,
@@ -324,7 +340,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 6,
@@ -383,7 +403,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 101,
@@ -475,7 +499,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 8,
@@ -554,7 +582,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 102,
@@ -626,7 +658,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 10,
@@ -682,7 +718,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 11,
@@ -760,7 +800,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 103,
@@ -852,7 +896,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 13,
@@ -918,7 +966,11 @@
           "instant": true,
           "range": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     },
     {
       "id": 14,
@@ -996,7 +1048,11 @@
           "range": true,
           "instant": false
         }
-      ]
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      }
     }
   ],
   "templating": {
