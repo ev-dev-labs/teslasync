@@ -74,6 +74,7 @@ const SignalDiff = lazy(() => import('./pages/SignalDiff'))
 const SignalGapDetector = lazy(() => import('./pages/SignalGapDetector'))
 const DBHealthDashboard = lazy(() => import('./pages/DBHealthDashboard'))
 const MQTTInspector = lazy(() => import('./pages/MQTTInspector'))
+const FleetAPI = lazy(() => import('./pages/FleetAPI'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="compare" element={<SafeRoute name="Compare"><Compare /></SafeRoute>} />
         <Route path="admin" element={<SafeRoute name="Admin"><Admin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
+        <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
         <Route path="signal-log" element={<SafeRoute name="SignalLogViewer"><SignalLogViewer /></SafeRoute>} />
