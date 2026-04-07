@@ -1093,6 +1093,23 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	if v, ok := toFloatOk(signals["ChargeRateMilePerHour"]); ok {
 		signals["ChargeRateMilePerHour"] = v * mphToKmh
 	}
+
+	// Gear: Tesla Fleet Telemetry sends "ShiftStateDrive", "ShiftStateReverse",
+	// "ShiftStatePark", "ShiftStateNeutral" — normalize to single-letter D/R/P/N
+	// that the frontend and REST API path use.
+	if g, ok := signals["Gear"]; ok {
+		gs := toString(g)
+		switch {
+		case strings.Contains(gs, "Drive") || gs == "D":
+			signals["Gear"] = "D"
+		case strings.Contains(gs, "Reverse") || gs == "R":
+			signals["Gear"] = "R"
+		case strings.Contains(gs, "Park") || gs == "P":
+			signals["Gear"] = "P"
+		case strings.Contains(gs, "Neutral") || gs == "N":
+			signals["Gear"] = "N"
+		}
+	}
 }
 
 func toFloat(v interface{}) float64 {
