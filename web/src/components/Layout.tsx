@@ -187,15 +187,25 @@ const navSections = [
     title: 'System',
     items: [
       { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
-      { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/fleet-api', icon: Zap, label: 'Fleet API', color: 'text-sky-400' },
-      { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
+      { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
+    ],
+  },
+  {
+    title: 'Data',
+    items: [
       { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
       { to: '/backup', icon: DatabaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
       { to: '/data-repair', icon: Wrench, label: 'Data Repair', color: 'text-amber-400' },
-      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
-      { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
+    ],
+  },
+  {
+    title: 'Developer',
+    items: [
+      { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
     ],
   },
   {
