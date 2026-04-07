@@ -176,10 +176,10 @@ export const getSoftwareUpdates = (vehicleId?: number, limit = 100, offset = 0) 
 // === Vehicle States / Timeline ===
 /** Fetches the vehicle state timeline (asleep, online, driving, charging transitions). */
 export const getVehicleTimeline = (vehicleId: number, limit = 200, offset = 0) =>
-  request<VehicleStateRecord[]>(`/states/timeline?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
+  request<VehicleStateRecord[]>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&limit=${limit}&offset=${offset}`)
 /** Fetches a summary of time spent in each state over a period. */
 export const getStateSummary = (vehicleId: number, days = 30, start?: string) =>
-  request<StateSummary[]>(`/states/summary?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)
+  request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)
 /** Fetches daily state breakdown showing minutes in each state per day. */
 export const getDailyStateBreakdown = (vehicleId: number, days = 30, start?: string) =>
-  request<DailyStateBreakdown[]>(`/states/daily?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)
+  request<DailyStateBreakdown[]>(`/vehicle-states/daily?vehicle_id=${vehicleId}&${start ? `start=${start}` : `days=${days}`}`)

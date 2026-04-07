@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import InstallPrompt from './InstallPrompt'
 import {
   LayoutDashboard,
   Car,
@@ -460,6 +461,9 @@ export default function Layout() {
 
       {/* Onboarding Wizard */}
       <OnboardingWizard />
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   )
 }
