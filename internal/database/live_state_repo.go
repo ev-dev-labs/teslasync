@@ -184,6 +184,17 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 				}
 			}
 		}
+		// Validate type: skip values that would cause Postgres type mismatches.
+		// Fleet Telemetry can occasionally produce time.Time or string values
+		// for columns that expect numeric/boolean types.
+		switch v.(type) {
+		case float64, int, int64, bool, string:
+			// OK — these are the types pgx can handle for the live_state columns
+		default:
+			// Skip unexpected types (e.g., time.Time, map, slice) to prevent
+			// "column X is of type double precision but expression is of type timestamp" errors
+			continue
+		}
 		paramIdx++
 		cols = append(cols, colName)
 		vals = append(vals, v)
