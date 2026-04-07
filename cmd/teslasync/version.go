@@ -1,4 +1,7 @@
 package main
 
-// Version is set via ldflags at build time.
-var Version = "dev"
+// Version and Commit are set via ldflags at build time.
+var (
+	Version = "dev"
+	Commit  = "unknown"
+)

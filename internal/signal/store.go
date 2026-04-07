@@ -9,10 +9,12 @@ package signal
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // Value holds a signal's current value and when it was last updated.
@@ -80,6 +82,9 @@ func (s *Store) Update(vehicleID int64, signals map[string]interface{}) {
 		m[k] = &Value{Raw: v, Timestamp: now}
 	}
 	s.mu.Unlock()
+
+	// Update freshness metric
+	metrics.VehicleLastSeen.WithLabelValues(strconv.FormatInt(vehicleID, 10)).Set(0)
 
 	// Periodic flush to DB (non-blocking check)
 	s.maybeFlush(vehicleID)
@@ -225,11 +230,13 @@ func (s *Store) maybeFlush(vehicleID int64) {
 		return
 	}
 	go func() {
+		flushStart := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := s.flusher.FlushLiveState(ctx, vehicleID, raw); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: flush to DB failed")
 		}
+		metrics.SignalFlushDuration.Observe(time.Since(flushStart).Seconds())
 	}()
 }
 
@@ -238,8 +245,11 @@ func (s *Store) VehicleIDs() []int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	ids := make([]int64, 0, len(s.vehicles))
-	for id := range s.vehicles {
+	total := 0
+	for id, sigs := range s.vehicles {
 		ids = append(ids, id)
+		total += len(sigs)
 	}
+	metrics.SignalStoreEntries.Set(float64(total))
 	return ids
 }

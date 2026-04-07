@@ -19,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // vehicleHealth tracks per-vehicle polling state for backoff.
@@ -424,6 +425,7 @@ func (w *Worker) recordVehicleAsleep(vehicleID int64) {
 
 func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 	logger := log.With().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Logger()
+	pollStart := time.Now()
 
 	// Apply timeout to prevent hanging on unresponsive Tesla API
 	pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -475,6 +477,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 		}
 	} else if err != nil {
 		logger.Warn().Err(err).Msg("failed to get vehicle data")
+		metrics.PollsTotal.WithLabelValues("error").Inc()
 		if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, vehicle.State, false); err != nil {
 			logger.Error().Err(err).Msg("failed to mark vehicle unhealthy")
 		}
@@ -484,6 +487,8 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
 
 	// Successful poll — reset backoff
 	w.recordVehicleSuccess(vehicle.ID)
+	metrics.PollsTotal.WithLabelValues("success").Inc()
+	metrics.PollCycleDuration.Observe(time.Since(pollStart).Seconds())
 
 	// Update vehicle state
 	if err := w.vehicleRepo.UpdateState(ctx, vehicle.ID, data.State, true); err != nil {

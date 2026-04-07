@@ -427,6 +427,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/version", VersionHandler(ver, cfg))
 			r.Get("/update-check", UpdateCheckHandler())
 			r.Get("/workers", WorkersHealthHandler())
+			r.Get("/metrics-catalog", MetricsCatalogHandler())
 		})
 
 		// API Call Logs

@@ -29,12 +29,14 @@ func (h *EventHub) Subscribe(id string) (<-chan []byte, func()) {
 	h.mu.Lock()
 	h.clients[id] = ch
 	h.mu.Unlock()
+	SSEConnectionsActive.Inc()
 
 	return ch, func() {
 		h.mu.Lock()
 		delete(h.clients, id)
 		close(ch)
 		h.mu.Unlock()
+		SSEConnectionsActive.Dec()
 	}
 }
 
@@ -54,6 +56,7 @@ func (h *EventHub) Broadcast(eventType string, data interface{}) {
 	for id, ch := range h.clients {
 		select {
 		case ch <- msg:
+			SSEEventsSent.WithLabelValues(eventType).Inc()
 		default:
 			log.Warn().Str("client", id).Msg("SSE client buffer full, dropping event")
 		}

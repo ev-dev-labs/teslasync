@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -51,6 +53,8 @@ func main() {
 
 	setupLogger(cfg.LogLevel)
 	log.Info().Str("version", Version).Msg("starting TeslaSync")
+
+	startupStart := time.Now()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -97,6 +101,12 @@ func main() {
 	}
 	log.Info().Msg("database migrations applied")
 
+	// Record current migration version metric
+	var migVer int
+	if err := db.Pool.QueryRow(ctx, "SELECT version FROM schema_migrations LIMIT 1").Scan(&migVer); err == nil {
+		metrics.MigrationVersion.Set(float64(migVer))
+	}
+
 	// If running in migrate-only mode (Helm pre-upgrade job), exit after migrations
 	if os.Getenv("MIGRATE_ONLY") == "true" {
 		log.Info().Msg("MIGRATE_ONLY=true — migrations complete, exiting")
@@ -114,9 +124,11 @@ func main() {
 		if mqttErr != nil {
 			log.Warn().Err(mqttErr).Msg("MQTT unavailable — running in degraded mode without real-time MQTT publishing")
 			health.RecordFailure("mqtt", mqttErr)
+			metrics.MQTTConnected.Set(0)
 		} else {
 			defer mqttClient.Disconnect()
 			health.RecordSuccess("mqtt")
+			metrics.MQTTConnected.Set(1)
 			log.Info().Msg("connected to MQTT broker")
 		}
 	}
@@ -460,6 +472,22 @@ func main() {
 		WriteTimeout: 0, // Disabled for SSE long-lived connections (heartbeat keeps alive)
 		IdleTimeout:  120 * time.Second,
 	}
+
+	// Record startup metrics
+	metrics.AppInfo.WithLabelValues(Version, runtime.Version(), Commit).Set(1)
+	metrics.StartupDuration.Set(time.Since(startupStart).Seconds())
+	go func() {
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				metrics.UptimeSeconds.Set(time.Since(startupStart).Seconds())
+			}
+		}
+	}()
 
 	go func() {
 		log.Info().Int("port", cfg.Port).Msg("HTTP server listening")

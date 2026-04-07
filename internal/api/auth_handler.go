@@ -53,10 +53,12 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	tokenResp, err := h.teslaClient.ExchangeCode(r.Context(), code)
 	if err != nil {
+		AuthAttempts.WithLabelValues("failure").Inc()
 		log.Error().Err(err).Msg("failed to exchange code")
 		writeError(w, http.StatusBadGateway, "failed to exchange authorization code")
 		return
 	}
+	AuthAttempts.WithLabelValues("success").Inc()
 
 	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	token := &models.Token{
@@ -77,10 +79,12 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	tokenResp, err := h.teslaClient.RefreshTokens(r.Context())
 	if err != nil {
+		TokenRefreshes.WithLabelValues("failure").Inc()
 		log.Error().Err(err).Msg("failed to refresh token")
 		writeError(w, http.StatusBadGateway, "failed to refresh token")
 		return
 	}
+	TokenRefreshes.WithLabelValues("success").Inc()
 
 	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	token := &models.Token{

@@ -36,6 +36,25 @@ service:
   #   service.beta.kubernetes.io/aws-load-balancer-type: nlb
   #   service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
+# -- Prometheus metrics configuration
+# The API exposes /metrics in Prometheus format. Enable these options
+# to let your Prometheus Operator auto-discover and scrape TeslaSync.
+metrics:
+  # Adds prometheus.io/* annotations to the API Service for auto-discovery
+  enabled: true
+  serviceMonitor:
+    # Creates a ServiceMonitor CRD (requires Prometheus Operator)
+    enabled: false
+    # namespace: monitoring    # Deploy ServiceMonitor to a different namespace
+    interval: "30s"            # Scrape interval
+    # scrapeTimeout: "10s"     # Timeout per scrape
+    labels: {}                 # Extra labels for ServiceMonitor (e.g., release: kube-prometheus)
+    # labels:
+    #   release: kube-prometheus-stack
+    namespaceSelector: {}      # Namespace selector for cross-namespace monitoring
+    metricRelabelings: []      # Metric relabeling rules
+    relabelings: []            # Target relabeling rules
+
 resources:
   limits:
     cpu: 500m

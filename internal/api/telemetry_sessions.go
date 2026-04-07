@@ -897,6 +897,10 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	delete(t.activeDrives, vehicleID)
 	DriveSessionsActive.Dec()
 	DriveSessionsCompleted.Inc()
+	TotalDrives.Inc()
+	if distance > 0 {
+		TotalDistanceKm.Add(distance)
+	}
 }
 
 func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lon float64, isStart bool) {
@@ -911,6 +915,7 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	// 1. Check geofences first (user-defined names like "Home", "Office")
 	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
 		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: geofences[0].Name})
+		GeocodingTotal.WithLabelValues("geofence").Inc()
 		return
 	}
 
@@ -918,15 +923,20 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
 		_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
 		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
+		GeocodingTotal.WithLabelValues("cached").Inc()
 		return
 	}
 
 	// 3. Reverse geocode via Nominatim (or Google when configured)
+	geocodeStart := time.Now()
 	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
+	GeocodingDuration.Observe(time.Since(geocodeStart).Seconds())
 	if err != nil {
+		GeocodingTotal.WithLabelValues("failure").Inc()
 		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
 		return
 	}
+	GeocodingTotal.WithLabelValues("success").Inc()
 
 	name := result.ShortName()
 
@@ -959,6 +969,7 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		return
 	}
 	log.Info().Int("count", len(drives)).Msg("backfill: geocoding drives with missing addresses")
+	AddressBackfillRemaining.Set(float64(len(drives)))
 
 	filled := 0
 	for _, d := range drives {
@@ -973,6 +984,8 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		if needStart {
 			t.resolveAndUpdateAddress(d.ID, *d.StartLatitude, *d.StartLongitude, true)
 			filled++
+			AddressBackfillCompleted.Inc()
+			AddressBackfillRemaining.Dec()
 			// Rate-limit to avoid hammering the geocoder (Nominatim 1 req/sec policy)
 			time.Sleep(1100 * time.Millisecond)
 		}
@@ -982,6 +995,8 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 			}
 			t.resolveAndUpdateAddress(d.ID, *d.EndLatitude, *d.EndLongitude, false)
 			filled++
+			AddressBackfillCompleted.Inc()
+			AddressBackfillRemaining.Dec()
 			time.Sleep(1100 * time.Millisecond)
 		}
 	}
@@ -1318,4 +1333,8 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	delete(t.activeCharges, vehicleID)
 	ChargeSessionsActive.Dec()
 	ChargeSessionsCompleted.Inc()
+	TotalCharges.Inc()
+	if active.EnergyAdded > 0 {
+		TotalEnergyKwh.Add(active.EnergyAdded)
+	}
 }
