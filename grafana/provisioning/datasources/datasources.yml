@@ -24,7 +24,7 @@ datasources:
     uid: DS_TESLASYNC_PROMETHEUS
     type: prometheus
     access: proxy
-    url: ${PROMETHEUS_URL:-http://prometheus:9090}
+    url: http://prometheus:9090
     isDefault: false
     editable: true
     jsonData:
