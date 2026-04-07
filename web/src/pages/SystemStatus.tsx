@@ -64,6 +64,19 @@ function getStatusIcon(status: string) {
   }
 }
 
+function SectionHeader({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-6 pb-2">
+      <div className="flex items-center gap-2.5 shrink-0">
+        {icon}
+        <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
+      </div>
+      <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider shrink-0 hidden sm:block">{description}</p>
+    </div>
+  )
+}
+
 function getStatusLabel(status: string): string {
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': return 'Healthy'
@@ -1564,6 +1577,23 @@ export default function SystemStatus() {
         </StaggerContainer>
       )}
 
+      {/* ── SECTION: Infrastructure ──────────────────────────── */}
+      <SectionHeader
+        icon={<Server className="h-4 w-4 text-neon-cyan" />}
+        title="Infrastructure"
+        description="Backend runtime & endpoints"
+      />
+
+      {/* Component Health (Extended) */}
+      <ComponentHealthPanel />
+
+      {/* ── SECTION: Data Pipeline ───────────────────────────── */}
+      <SectionHeader
+        icon={<Rss className="h-4 w-4 text-neon-blue" />}
+        title="Data Pipeline"
+        description="Telemetry, streaming & polling"
+      />
+
       {/* Fleet Telemetry Live Feed */}
       <TelemetryLivePanel />
 
@@ -1576,48 +1606,34 @@ export default function SystemStatus() {
       {/* Background Workers */}
       <WorkerHealthPanel />
 
+      {/* ── SECTION: Operations ──────────────────────────────── */}
+      <SectionHeader
+        icon={<BarChart3 className="h-4 w-4 text-neon-amber" />}
+        title="Operations"
+        description="API usage, limits & jobs"
+      />
+
+      {/* API Usage Dashboard */}
+      <APIUsageDashboard />
+
+      {/* Rate Limits */}
+      <RateLimitsPanel />
+
       {/* Notification & Export Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <NotificationDeliveryPanel />
         <ExportJobQueuePanel />
       </div>
 
-      {/* System Info */}
-      <FadeIn delay={0.15}>
-        <GlassPanel className="p-5">
-          <h3 className="section-title flex items-center gap-2 mb-4">
-            <Cpu className="h-4 w-4 text-neon-cyan" /> System Information
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'API Endpoint', value: version?.endpoints?.api ?? window.location.origin, icon: Server },
-              { label: 'Auto Refresh', value: '15 seconds', icon: RefreshCw },
-              { label: 'Last Check', value: lastChecked.toLocaleTimeString(), icon: Clock },
-              { label: 'Connection', value: navigator.onLine ? 'Online' : 'Offline', icon: navigator.onLine ? Wifi : WifiOff },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassPanel>
-      </FadeIn>
-
-      {/* Component Health (Extended) */}
-      <ComponentHealthPanel />
-
-      {/* API Usage Dashboard */}
-      <APIUsageDashboard />
+      {/* ── SECTION: Diagnostics ─────────────────────────────── */}
+      <SectionHeader
+        icon={<HardDrive className="h-4 w-4 text-neon-purple" />}
+        title="Diagnostics"
+        description="Compression, logs & internals"
+      />
 
       {/* Data Compression Stats */}
       <CompressionStatsPanel />
-
-      {/* Rate Limits */}
-      <RateLimitsPanel />
 
       {/* Audit Logs */}
       <AuditLogTable />
