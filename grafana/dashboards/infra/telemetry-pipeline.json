@@ -1,0 +1,508 @@
+{
+  "uid": "teslasync-infra-telemetry",
+  "title": "TeslaSync - Telemetry Pipeline",
+  "tags": ["teslasync", "infra"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Telemetry Overview",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Telemetry Message Rate",
+      "description": "Rate of telemetry messages received per second",
+      "gridPos": { "x": 0, "y": 1, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 10 }
+            ]
+          },
+          "unit": "ops",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "area",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "rate(teslasync_telemetry_messages_received_total[5m])",
+          "legendFormat": "msg/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Active Streaming Vehicles",
+      "description": "Number of vehicles currently streaming telemetry",
+      "gridPos": { "x": 6, "y": 1, "w": 6, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "teslasync_streaming_vehicles_active",
+          "legendFormat": "Vehicles",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "MQTT Connection",
+      "description": "MQTT broker connection status (1 = connected, 0 = disconnected)",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "Disconnected", "color": "red" }, "1": { "text": "Connected", "color": "green" } } }
+          ],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "textMode": "value",
+        "wideLayout": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "teslasync_mqtt_connected",
+          "legendFormat": "MQTT",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "SSE Active Connections",
+      "description": "Number of active Server-Sent Events connections",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "teslasync_sse_connections_active",
+          "legendFormat": "SSE Connections",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "gauge",
+      "title": "Signal Store Size",
+      "description": "Number of entries in the signal store buffer",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5000 },
+              { "color": "red", "value": 10000 }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "max": 15000
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "teslasync_signal_store_entries",
+          "legendFormat": "Entries",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Signal Processing",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Signal Processing Rate",
+      "description": "Total rate of telemetry signals processed",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "signals/s",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "sum(rate(teslasync_telemetry_signals_processed_total[5m]))",
+          "legendFormat": "Signals Processed",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Top Signals by Volume",
+      "description": "Top 15 signal types ranked by processing rate",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 10,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "topk(15, sum by (signal) (rate(teslasync_telemetry_signals_processed_total[5m])))",
+          "legendFormat": "{{signal}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Processing Latency (P95)",
+      "description": "95th percentile of telemetry processing duration",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_telemetry_processing_duration_seconds_bucket[5m])))",
+          "legendFormat": "P95 Latency",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Signal Flush Duration (P95)",
+      "description": "95th percentile of signal flush duration to persistent storage",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_signal_flush_duration_seconds_bucket[5m])))",
+          "legendFormat": "P95 Flush Duration",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "SSE & Streaming",
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "SSE Events by Type",
+      "description": "Rate of SSE events sent grouped by event type",
+      "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "events/s",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "sum by (event_type) (rate(teslasync_sse_events_sent_total[5m]))",
+          "legendFormat": "{{event_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Vehicle Last Seen",
+      "description": "Seconds since each vehicle was last seen",
+      "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 900 }
+            ]
+          },
+          "unit": "s",
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "color-background" },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "vehicle" },
+            "properties": [
+              { "id": "custom.width", "value": 200 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Value", "desc": true }],
+        "cellHeight": "sm",
+        "footer": { "show": false }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+          "expr": "teslasync_vehicle_last_seen_seconds",
+          "legendFormat": "{{vehicle}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "links": []
+}

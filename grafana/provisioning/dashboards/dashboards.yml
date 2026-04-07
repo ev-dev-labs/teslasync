@@ -1,12 +1,19 @@
 apiVersion: 1
 
 providers:
-  - name: TeslaSync
+  - name: TeslaSync System
     orgId: 1
-    folder: TeslaSync
+    folder: TeslaSync - System
     type: file
     disableDeletion: false
     editable: true
     options:
-      path: /var/lib/grafana/dashboards
-      foldersFromFilesStructure: false
+      path: /var/lib/grafana/dashboards/system
+  - name: TeslaSync Infra
+    orgId: 1
+    folder: TeslaSync - Infra
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards/infra
