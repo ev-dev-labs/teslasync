@@ -370,16 +370,10 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		}()
 	}
 
-	// Extract position data from all supported signals
-	pos := h.extractPosition(signals)
-
-	// Store position
-	if err == nil && pos != nil {
-		pos.VehicleID = vehicleID
-		if err := h.posRepo.Insert(ctx, pos); err != nil {
-			log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to store position")
-		}
-	}
+	// Position writing is deferred to the accumulated/throttled write path below
+	// so that per-vehicle signal batches are merged before storing. This prevents
+	// thousands of sparse positions (93% with odometer=0, battery=0) when Tesla
+	// Fleet Telemetry sends each signal as a separate MQTT message.
 
 	// Publish signals to MQTT only when called from the HTTP endpoint.
 	// When called from the MQTT subscriber, fleet-telemetry already published.
@@ -546,6 +540,16 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 			// Store user preference snapshots
 			h.trackUserPreferences(bgCtx, vehicleID, writeSignals)
+
+			// Store accumulated position — uses merged signals so fields like
+			// odometer, battery, location, speed are all populated from different
+			// MQTT batches within the 10s accumulation window.
+			if pos := h.extractPosition(writeSignals); pos != nil {
+				pos.VehicleID = vehicleID
+				if err := h.posRepo.Insert(bgCtx, pos); err != nil {
+					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store accumulated position")
+				}
+			}
 		}()
 	}
 }

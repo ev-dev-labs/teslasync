@@ -313,7 +313,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		// with VehicleSpeed often lacks BatteryLevel, Odometer, Location etc.
 		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
 		if !hasBat {
-			batteryLevel, _ = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
+			batteryLevel, hasBat = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
 		}
 		odometer, hasOdo := signalFloat(signals, "Odometer")
 		if !hasOdo {
@@ -349,9 +349,13 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		}
 
 		drive := &models.Drive{
-			VehicleID:       vehicleID,
-			StartDate:       time.Now().UTC(),
-			StartBatteryLvl: &batteryLevel,
+			VehicleID: vehicleID,
+			StartDate: time.Now().UTC(),
+		}
+		// Only set start battery when we actually have it — prevents storing 0
+		// when the first MQTT batch only contains VehicleSpeed.
+		if hasBat {
+			drive.StartBatteryLvl = &batteryLevel
 		}
 		if hasOdo {
 			drive.StartOdometer = floatPtr(odometer)
@@ -456,6 +460,63 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		active.LastSpeed = speed
 		active.LastSeen = time.Now().UTC()
 		active.LastSpeedZeroTime = time.Time{}
+
+		// Deferred start value backfill — if the first MQTT batch lacked
+		// battery/odometer, capture them from the first batch that has them.
+		startBackfill := map[string]interface{}{}
+		if active.StartOdometer == nil {
+			if odo, ok := signalFloat(signals, "Odometer"); ok {
+				active.StartOdometer = floatPtr(odo)
+				active.LastOdometer = floatPtr(odo)
+				startBackfill["start_odometer"] = odo
+			}
+		}
+		if active.StartSoc == nil {
+			if soc, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok {
+				active.StartSoc = floatPtr(soc)
+				bl := int(soc)
+				startBackfill["start_battery_level"] = bl
+				startBackfill["soc_start"] = soc
+				// Initialize SOC accumulators
+				active.SocMax = soc
+				active.SocMin = soc
+				active.SocSum = soc
+				active.SocCount = 1
+			}
+		}
+		if active.StartLatitude == nil {
+			if la, lo, ok := signalLatLon(signals); ok {
+				active.StartLatitude = floatPtr(la)
+				active.StartLongitude = floatPtr(lo)
+				startBackfill["start_latitude"] = la
+				startBackfill["start_longitude"] = lo
+				// Reverse geocode start address if not already done
+				go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
+			}
+		}
+		if active.StartRatedRange == nil {
+			if rr, ok := signalFloat(signals, "RatedRange"); ok {
+				active.StartRatedRange = floatPtr(rr)
+				startBackfill["start_rated_range_km"] = rr
+			}
+		}
+		if active.StartIdealRange == nil {
+			if ir, ok := signalFloat(signals, "IdealBatteryRange"); ok {
+				active.StartIdealRange = floatPtr(ir)
+				startBackfill["start_ideal_range_km"] = ir
+			}
+		}
+		if active.StartEstRange == nil {
+			if er, ok := signalFloat(signals, "EstBatteryRange"); ok {
+				active.StartEstRange = floatPtr(er)
+				startBackfill["start_est_range_km"] = er
+			}
+		}
+		if len(startBackfill) > 0 {
+			if err := t.driveRepo.PartialUpdate(ctx, active.DriveID, startBackfill); err != nil {
+				log.Warn().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to backfill drive start values")
+			}
+		}
 
 		// Speed stats
 		if speed > active.MaxSpeed {
@@ -676,6 +737,12 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	endBattery := 0
 	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
 		endBattery = bl
+	} else if active.SocCount > 0 && active.SocMin < math.MaxFloat64 {
+		// Fallback: use the last SOC reading from the accumulator when
+		// the final signal batch doesn't contain BatteryLevel.
+		endBattery = int(active.SocMin)
+	} else if active.StartSoc != nil {
+		endBattery = int(*active.StartSoc)
 	}
 
 	duration := time.Since(active.StartTime).Minutes()
