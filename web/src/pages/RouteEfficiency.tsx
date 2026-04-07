@@ -256,7 +256,8 @@ export default function RouteEfficiency() {
             <MapPin className="mx-auto h-12 w-12 text-neon-cyan opacity-40 mb-4" />
             <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>No route data yet</p>
             <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
-              Drive the same route at least twice with geocoded addresses to see efficiency comparisons.
+              Routes appear once you have drives with geocoded start &amp; end addresses and distance &gt; 1 km.
+              Make sure Fleet Telemetry or API polling is capturing location data for your drives.
             </p>
           </GlassPanel>
         </FadeIn>
