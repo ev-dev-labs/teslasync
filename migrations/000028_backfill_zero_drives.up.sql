@@ -12,8 +12,8 @@ FROM (
     EXTRACT(EPOCH FROM (d2.end_date - d2.start_date)) / 60.0 AS calc_duration
   FROM drives d2
   JOIN positions p ON p.vehicle_id = d2.vehicle_id
-    AND p.date >= d2.start_date
-    AND p.date <= d2.end_date
+    AND p.created_at >= d2.start_date
+    AND p.created_at <= d2.end_date
   WHERE d2.end_date IS NOT NULL
     AND d2.distance = 0
     AND d2.duration_min = 0
@@ -29,12 +29,12 @@ SET start_battery_level = COALESCE(d.start_battery_level, sub.first_battery),
 FROM (
   SELECT DISTINCT ON (d2.id)
     d2.id AS drive_id,
-    first_value(p.battery_level) OVER (PARTITION BY d2.id ORDER BY p.date ASC) AS first_battery,
-    first_value(p.battery_level) OVER (PARTITION BY d2.id ORDER BY p.date DESC) AS last_battery
+    first_value(p.battery_level) OVER (PARTITION BY d2.id ORDER BY p.created_at ASC) AS first_battery,
+    first_value(p.battery_level) OVER (PARTITION BY d2.id ORDER BY p.created_at DESC) AS last_battery
   FROM drives d2
   JOIN positions p ON p.vehicle_id = d2.vehicle_id
-    AND p.date >= d2.start_date
-    AND p.date <= d2.end_date
+    AND p.created_at >= d2.start_date
+    AND p.created_at <= d2.end_date
   WHERE d2.end_date IS NOT NULL
     AND (d2.start_battery_level IS NULL OR d2.end_battery_level IS NULL)
     AND p.battery_level > 0
@@ -48,8 +48,8 @@ FROM (
   SELECT d2.id AS drive_id, MAX(p.speed) AS max_speed
   FROM drives d2
   JOIN positions p ON p.vehicle_id = d2.vehicle_id
-    AND p.date >= d2.start_date
-    AND p.date <= d2.end_date
+    AND p.created_at >= d2.start_date
+    AND p.created_at <= d2.end_date
   WHERE d2.end_date IS NOT NULL
     AND d2.speed_max IS NULL
     AND p.speed IS NOT NULL
@@ -73,14 +73,14 @@ SET start_latitude = sub.first_lat,
 FROM (
   SELECT DISTINCT ON (d2.id)
     d2.id AS drive_id,
-    first_value(p.latitude) OVER (PARTITION BY d2.id ORDER BY p.date ASC) AS first_lat,
-    first_value(p.longitude) OVER (PARTITION BY d2.id ORDER BY p.date ASC) AS first_lon,
-    first_value(p.latitude) OVER (PARTITION BY d2.id ORDER BY p.date DESC) AS last_lat,
-    first_value(p.longitude) OVER (PARTITION BY d2.id ORDER BY p.date DESC) AS last_lon
+    first_value(p.latitude) OVER (PARTITION BY d2.id ORDER BY p.created_at ASC) AS first_lat,
+    first_value(p.longitude) OVER (PARTITION BY d2.id ORDER BY p.created_at ASC) AS first_lon,
+    first_value(p.latitude) OVER (PARTITION BY d2.id ORDER BY p.created_at DESC) AS last_lat,
+    first_value(p.longitude) OVER (PARTITION BY d2.id ORDER BY p.created_at DESC) AS last_lon
   FROM drives d2
   JOIN positions p ON p.vehicle_id = d2.vehicle_id
-    AND p.date >= d2.start_date
-    AND p.date <= d2.end_date
+    AND p.created_at >= d2.start_date
+    AND p.created_at <= d2.end_date
   WHERE d2.end_date IS NOT NULL
     AND d2.start_latitude IS NULL
     AND p.latitude != 0 AND p.longitude != 0

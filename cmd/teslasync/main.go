@@ -225,6 +225,9 @@ func main() {
 		// Start periodic cleanup of stale streaming/session state
 		telemetryHandler.StartCleanup(ctx)
 
+		// Backfill addresses for drives that have coordinates but no geocoded name
+		go telemetryHandler.SessionTracker().BackfillAddresses(ctx)
+
 		// Start MQTT subscriber for fleet-telemetry data
 		if mqttClient != nil && cfg.FleetTelemetry.TopicBase != "" {
 			ftSubscriber := mqtt.NewSubscriber(

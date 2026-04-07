@@ -168,6 +168,11 @@ func (h *TelemetryHandler) GetSignalStore() *signal.Store {
 	return h.signalStore
 }
 
+// SessionTracker returns the underlying session tracker for backfill tasks.
+func (h *TelemetryHandler) SessionTracker() *TelemetrySessionTracker {
+	return h.sessionTracker
+}
+
 // SetSignalLogRepo enables per-signal logging to MongoDB.
 func (h *TelemetryHandler) SetSignalLogRepo(repo *database.SignalLogRepo) {
 	h.signalLogRepo = repo
@@ -188,11 +193,11 @@ func (h *TelemetryHandler) IsCaptureEnabled() bool {
 func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 	// Run cleanup immediately on startup to close orphaned DB sessions
 	if h.sessionTracker != nil {
-		h.sessionTracker.CleanupStaleSessions(ctx, 30*time.Minute)
+		h.sessionTracker.CleanupStaleSessions(ctx, 10*time.Minute)
 	}
 
 	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
+		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
@@ -200,9 +205,9 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 				return
 			case <-ticker.C:
 				h.cleanupStaleEntries()
-				// Also clean up stale drive/charge sessions
+				// Close drive/charge sessions with no signals for 5+ minutes
 				if h.sessionTracker != nil {
-					h.sessionTracker.CleanupStaleSessions(ctx, 30*time.Minute)
+					h.sessionTracker.CleanupStaleSessions(ctx, 5*time.Minute)
 				}
 			}
 		}

@@ -947,6 +947,47 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	}
 }
 
+// BackfillAddresses geocodes drives that have coordinates but no address names.
+// Runs as a background goroutine at startup to fill in missing addresses.
+func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
+	drives, err := t.driveRepo.FindMissingAddresses(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("backfill: failed to query drives missing addresses")
+		return
+	}
+	if len(drives) == 0 {
+		return
+	}
+	log.Info().Int("count", len(drives)).Msg("backfill: geocoding drives with missing addresses")
+
+	filled := 0
+	for _, d := range drives {
+		// Respect context cancellation (app shutdown)
+		if ctx.Err() != nil {
+			break
+		}
+
+		needStart := (d.StartAddress == nil || *d.StartAddress == "") && d.StartLatitude != nil && d.StartLongitude != nil
+		needEnd := (d.EndAddress == nil || *d.EndAddress == "") && d.EndLatitude != nil && d.EndLongitude != nil
+
+		if needStart {
+			t.resolveAndUpdateAddress(d.ID, *d.StartLatitude, *d.StartLongitude, true)
+			filled++
+			// Rate-limit to avoid hammering the geocoder (Nominatim 1 req/sec policy)
+			time.Sleep(1100 * time.Millisecond)
+		}
+		if needEnd {
+			if ctx.Err() != nil {
+				break
+			}
+			t.resolveAndUpdateAddress(d.ID, *d.EndLatitude, *d.EndLongitude, false)
+			filled++
+			time.Sleep(1100 * time.Millisecond)
+		}
+	}
+	log.Info().Int("resolved", filled).Int("total_drives", len(drives)).Msg("backfill: address geocoding complete")
+}
+
 func ptrStrOrNil(s string) *string {
 	if s == "" {
 		return nil
