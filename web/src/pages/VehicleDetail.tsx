@@ -859,10 +859,10 @@ export default function VehicleDetail() {
                       { label: 'Efficiency', value: cleanNil(vehicleConfigData.efficiency_package) },
                       { label: 'SW Update', value: cleanNil(vehicleConfigData.software_update_version) || 'None' },
                       { label: 'SW Download', value: vehicleConfigData.software_update_download_pct != null ? `${vehicleConfigData.software_update_download_pct}%` : '—' },
-                    ].filter(item => item.value).map(item => (
+                    ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value || '—'}</p>
                       </div>
                     ))}
                   </div>
@@ -885,10 +885,10 @@ export default function VehicleDetail() {
                       { label: 'Charge Unit', value: cleanNil(userPrefData.setting_charge_unit) },
                       { label: 'Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
                       { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
-                    ].filter(item => item.value).map(item => (
+                    ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value || '—'}</p>
                       </div>
                     ))}
                   </div>

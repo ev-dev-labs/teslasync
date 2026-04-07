@@ -17,6 +17,8 @@ interface SSEOptions {
   onExportStatus?: (data: unknown) => void
   onConnected?: (clientId: string) => void
   onDisconnected?: () => void
+  /** Called once when SSE gives up and falls back to polling. Use to invalidate queries. */
+  onFallbackToPolling?: () => void
   enabled?: boolean
 }
 
@@ -118,6 +120,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
         setState('unavailable')
         setNextRetryIn(300)
         console.debug('[SSE] Falling back to polling — will retry in 5m')
+        callbacksRef.current.onFallbackToPolling?.()
         if (!retryTimer.current) {
           retryTimer.current = window.setInterval(() => {
             failCountRef.current = 0

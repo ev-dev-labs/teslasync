@@ -96,6 +96,7 @@ export default function Dashboard() {
   const { convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure, isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
   const { connected } = useRealtimeEvents({
     onVehicleUpdate: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
+    onFallbackToPolling: () => queryClient.invalidateQueries(),
   })
 
   // Get state for the primary (first) vehicle
