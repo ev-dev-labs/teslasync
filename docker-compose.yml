@@ -158,12 +158,38 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-teslasync}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teslasync}
       - POSTGRES_DB=${POSTGRES_DB:-teslasync}
+      - PROMETHEUS_URL=http://prometheus:9090
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       postgres:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: teslasync-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9099}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    depends_on:
+      teslasync-api:
         condition: service_healthy
     deploy:
       resources:
@@ -342,3 +368,4 @@ volumes:
   grafana_data:
   mosquitto_data:
   redis_data:
+  prometheus_data:
