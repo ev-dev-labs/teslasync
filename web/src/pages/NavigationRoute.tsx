@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getLocationSnapshots, getLocationSnapshotLatest } from '../api'
-import { request } from '../api/client'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
-import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone } from 'lucide-react'
+import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone, Satellite, Map, CircleDot, LocateFixed } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDateTime } from '../lib/dateFormat'
 
 /* ------------------------------------------------------------------ */
@@ -150,18 +150,13 @@ export default function NavigationRoute() {
     refetchInterval: 10000,
   })
 
-  // Live signals for real-time at-home/work/favorite status
-  const { data: liveSignals } = useQuery<{ signals: Record<string, { value: unknown }> }>({
-    queryKey: ['live-location-signals', vehicleId],
-    queryFn: () => request(`/signals/${vehicleId}/live`),
-    enabled: vehicleId !== null,
-    refetchInterval: 5000,
-  })
+  // Live SSE state for real-time navigation signals
+  const { state: liveState, connected: sseConnected } = useVehicleLive(vehicleId ?? undefined)
 
-  // Extract live location booleans (prefer live over stale DB snapshot)
-  const isAtHome = liveSignals?.signals?.LocatedAtHome?.value === true || latest?.located_at_home === true
-  const isAtWork = liveSignals?.signals?.LocatedAtWork?.value === true || latest?.located_at_work === true
-  const isAtFavorite = liveSignals?.signals?.LocatedAtFavorite?.value === true || latest?.located_at_favorite === true
+  // Prefer SSE live state over polled snapshot for location booleans
+  const isAtHome = liveState.locatedAtHome || latest?.located_at_home === true
+  const isAtWork = liveState.locatedAtWork || latest?.located_at_work === true
+  const isAtFavorite = liveState.locatedAtFavorite || latest?.located_at_favorite === true
 
   /* History for charts and recent destinations table */
   const { data: history, isLoading: loadingHistory } = useQuery({
@@ -374,6 +369,182 @@ export default function NavigationRoute() {
           loading={loadingLatest}
         />
       </div>
+
+      {/* ============================================================ */}
+      {/*  2b. Live Location Signals (all Fleet Telemetry signals)       */}
+      {/* ============================================================ */}
+      <GlassPanel className="p-5 sm:p-6 mb-6 sm:mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Satellite className="h-5 w-5 text-neon-purple" />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Live Location Signals</h3>
+          </div>
+          <span className={clsx(
+            'text-[10px] px-2 py-0.5 rounded-full font-medium',
+            sseConnected ? 'bg-neon-green/20 text-neon-green' : 'bg-white/10 text-[var(--text-muted)]',
+          )}>
+            {sseConnected ? '● LIVE' : '○ POLLING'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* GPS State */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', liveState.gpsState ? 'bg-neon-green/10' : 'bg-white/5')}>
+              <Satellite className={clsx('h-4 w-4', liveState.gpsState ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>GPS State</p>
+              <p className={clsx('text-sm font-semibold', liveState.gpsState ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
+                {liveState.gpsState ? 'Lock Acquired' : 'No Lock'}
+              </p>
+            </div>
+          </div>
+
+          {/* Current Position */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-cyan/10">
+              <LocateFixed className="h-4 w-4 text-neon-cyan" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Position</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {liveState.latitude !== 0 ? `${liveState.latitude.toFixed(5)}, ${liveState.longitude.toFixed(5)}` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Heading */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-blue/10">
+              <Compass className="h-4 w-4 text-neon-blue" style={{ transform: `rotate(${liveState.heading}deg)` }} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Heading</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {liveState.heading > 0 ? `${Math.round(liveState.heading)}°` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Destination */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', liveState.destinationName ? 'bg-neon-cyan/10' : 'bg-white/5')}>
+              <MapPin className={clsx('h-4 w-4', liveState.destinationName ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Destination</p>
+              <p className={clsx('text-sm font-semibold truncate', liveState.destinationName ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+                {liveState.destinationName || 'None'}
+              </p>
+            </div>
+          </div>
+
+          {/* Destination Location */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/5">
+              <Map className="h-4 w-4 text-[var(--text-secondary)]" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Dest. Coordinates</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {liveState.destinationLatitude !== 0 ? `${liveState.destinationLatitude.toFixed(5)}, ${liveState.destinationLongitude.toFixed(5)}` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Distance to Arrival */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', liveState.distanceToArrival > 0 ? 'bg-neon-amber/10' : 'bg-white/5')}>
+              <Route className={clsx('h-4 w-4', liveState.distanceToArrival > 0 ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Distance to Arrival</p>
+              <p className={clsx('text-sm font-semibold', liveState.distanceToArrival > 0 ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
+                {liveState.distanceToArrival > 0 ? `${convertDistance(liveState.distanceToArrival).toFixed(1)} ${distanceUnit}` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Minutes to Arrival */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', liveState.minutesToArrival > 0 ? 'bg-neon-purple/10' : 'bg-white/5')}>
+              <Timer className={clsx('h-4 w-4', liveState.minutesToArrival > 0 ? 'text-neon-purple' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>ETA</p>
+              <p className={clsx('text-sm font-semibold', liveState.minutesToArrival > 0 ? 'text-neon-purple' : 'text-[var(--text-muted)]')}>
+                {liveState.minutesToArrival > 0 ? `${Math.round(liveState.minutesToArrival)} min` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Origin Location */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/5">
+              <CircleDot className="h-4 w-4 text-[var(--text-secondary)]" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Origin</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {liveState.originLatitude !== 0 ? `${liveState.originLatitude.toFixed(5)}, ${liveState.originLongitude.toFixed(5)}` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Route Line */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', liveState.routeLine ? 'bg-neon-cyan/10' : 'bg-white/5')}>
+              <Route className={clsx('h-4 w-4', liveState.routeLine ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Route Line</p>
+              <p className={clsx('text-sm font-semibold', liveState.routeLine ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+                {liveState.routeLine ? `${liveState.routeLine.length} chars (encoded)` : 'No route'}
+              </p>
+            </div>
+          </div>
+
+          {/* Located At Home */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', isAtHome ? 'bg-neon-green/10' : 'bg-white/5')}>
+              <Home className={clsx('h-4 w-4', isAtHome ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>At Home</p>
+              <p className={clsx('text-sm font-semibold', isAtHome ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
+                {isAtHome ? 'Yes' : 'No'}
+              </p>
+            </div>
+          </div>
+
+          {/* Located At Work */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', isAtWork ? 'bg-neon-blue/10' : 'bg-white/5')}>
+              <Building className={clsx('h-4 w-4', isAtWork ? 'text-neon-blue' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>At Work</p>
+              <p className={clsx('text-sm font-semibold', isAtWork ? 'text-neon-blue' : 'text-[var(--text-muted)]')}>
+                {isAtWork ? 'Yes' : 'No'}
+              </p>
+            </div>
+          </div>
+
+          {/* Located At Favorite */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', isAtFavorite ? 'bg-neon-amber/10' : 'bg-white/5')}>
+              <Star className={clsx('h-4 w-4', isAtFavorite ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>At Favorite</p>
+              <p className={clsx('text-sm font-semibold', isAtFavorite ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
+                {isAtFavorite ? 'Yes' : 'No'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </GlassPanel>
 
       {/* ============================================================ */}
       {/*  3. Route Traffic Delay                                       */}

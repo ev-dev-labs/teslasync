@@ -62,6 +62,20 @@ export interface VehicleLiveState {
   wheelType: string
   exteriorColor: string
 
+  // Navigation
+  destinationName: string
+  destinationLatitude: number
+  destinationLongitude: number
+  distanceToArrival: number
+  minutesToArrival: number
+  routeLine: string
+  locatedAtHome: boolean
+  locatedAtWork: boolean
+  locatedAtFavorite: boolean
+  gpsState: boolean
+  originLatitude: number
+  originLongitude: number
+
   // Meta
   lastUpdated: Date | null
   signalCount: number
@@ -77,6 +91,10 @@ const EMPTY_STATE: VehicleLiveState = {
   locked: false, sentryMode: false, doorState: '', centerDisplay: '',
   tirePressureFl: 0, tirePressureFr: 0, tirePressureRl: 0, tirePressureRr: 0,
   vehicleName: '', carType: '', version: '', wheelType: '', exteriorColor: '',
+  destinationName: '', destinationLatitude: 0, destinationLongitude: 0,
+  distanceToArrival: 0, minutesToArrival: 0, routeLine: '',
+  locatedAtHome: false, locatedAtWork: false, locatedAtFavorite: false,
+  gpsState: false, originLatitude: 0, originLongitude: 0,
   lastUpdated: null, signalCount: 0,
 }
 
@@ -167,6 +185,26 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['Version'] != null) s.version = str('Version')
   if (raw['WheelType'] != null) s.wheelType = str('WheelType')
   if (raw['ExteriorColor'] != null) s.exteriorColor = str('ExteriorColor')
+
+  // Navigation
+  if (raw['DestinationName'] != null) s.destinationName = str('DestinationName')
+  if (raw['DestinationLocation'] != null && typeof raw['DestinationLocation'] === 'object') {
+    const dest = raw['DestinationLocation'] as Record<string, unknown>
+    if (dest['latitude'] != null) s.destinationLatitude = dest['latitude'] as number
+    if (dest['longitude'] != null) s.destinationLongitude = dest['longitude'] as number
+  }
+  if (raw['MilesToArrival'] != null) s.distanceToArrival = n('MilesToArrival')
+  if (raw['MinutesToArrival'] != null) s.minutesToArrival = n('MinutesToArrival')
+  if (raw['RouteLine'] != null) s.routeLine = str('RouteLine')
+  if (raw['LocatedAtHome'] != null) s.locatedAtHome = bool('LocatedAtHome')
+  if (raw['LocatedAtWork'] != null) s.locatedAtWork = bool('LocatedAtWork')
+  if (raw['LocatedAtFavorite'] != null) s.locatedAtFavorite = bool('LocatedAtFavorite')
+  if (raw['GpsState'] != null) s.gpsState = bool('GpsState')
+  if (raw['OriginLocation'] != null && typeof raw['OriginLocation'] === 'object') {
+    const orig = raw['OriginLocation'] as Record<string, unknown>
+    if (orig['latitude'] != null) s.originLatitude = orig['latitude'] as number
+    if (orig['longitude'] != null) s.originLongitude = orig['longitude'] as number
+  }
 
   return s
 }
