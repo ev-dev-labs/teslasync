@@ -136,13 +136,19 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
 
           {state && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              {[
-                { icon: Battery, label: 'Battery', value: `${state.battery_level}%`, color: state.battery_level > 50 ? 'text-neon-green' : state.battery_level > 20 ? 'text-neon-amber' : 'text-neon-red' },
-                { icon: Zap, label: 'Range', value: `${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
-                { icon: Thermometer, label: 'Inside', value: `${convertTemp(state.inside_temp).toFixed(1)}${tempUnit}`, color: state.inside_temp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
-                { icon: Wifi, label: 'Status', value: status, color: status === 'online' || status === 'driving' ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
-                { icon: Cpu, label: 'Firmware', value: liveState.version || 'N/A', color: 'text-[var(--text-primary)]' },
-              ].map(item => (
+              {(() => {
+                // Prefer SSE live state (always-complete from SignalStore), fall back to polled state
+                const battery = liveState.batteryLevel || state.battery_level || 0
+                const range = liveState.ratedRange || state.rated_range || 0
+                const insideTemp = liveState.insideTemp || state.inside_temp || 0
+                return [
+                  { icon: Battery, label: 'Battery', value: `${battery}%`, color: battery > 50 ? 'text-neon-green' : battery > 20 ? 'text-neon-amber' : 'text-neon-red' },
+                  { icon: Zap, label: 'Range', value: `${Math.round(convertDistance(range))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
+                  { icon: Thermometer, label: 'Inside', value: `${convertTemp(insideTemp).toFixed(1)}${tempUnit}`, color: insideTemp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
+                  { icon: Wifi, label: 'Status', value: status, color: status === 'online' || status === 'driving' ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
+                  { icon: Cpu, label: 'Firmware', value: liveState.version || 'N/A', color: 'text-[var(--text-primary)]' },
+                ]
+              })().map(item => (
                 <div key={item.label} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <item.icon className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
                   <div>
@@ -158,12 +164,12 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
         {/* Car visualization */}
         <div className="shrink-0">
           <TeslaCarViz
-            batteryLevel={state?.battery_level ?? 0}
-            isCharging={state?.is_charging ?? false}
-            isLocked={state?.is_locked ?? true}
-            isClimateOn={state?.is_climate_on ?? false}
-            sentryMode={state?.sentry_mode ?? false}
-            speed={state?.speed ?? 0}
+            batteryLevel={liveState.batteryLevel || state?.battery_level || 0}
+            isCharging={liveState.isCharging || state?.is_charging || false}
+            isLocked={state?.is_locked ?? !liveState.locked}
+            isClimateOn={state?.is_climate_on ?? liveState.hvacPower}
+            sentryMode={liveState.sentryMode || state?.sentry_mode || false}
+            speed={liveState.speed || state?.speed || 0}
             model={parseModelKey(vehicle.model)}
             size="md"
           />
@@ -232,7 +238,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
           <CommandButton
             icon={<Wind className="h-5 w-5" />}
             label="Climate"
-            sublabel={state?.is_climate_on ? `ON · ${convertTemp(state.inside_temp).toFixed(0)}${tempUnit}` : 'OFF'}
+            sublabel={(state?.is_climate_on || liveState.hvacPower) ? `ON · ${convertTemp(liveState.insideTemp || state?.inside_temp || 0).toFixed(0)}${tempUnit}` : 'OFF'}
             onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')}
             loading={cmd.isPending}
             active={state?.is_climate_on}
