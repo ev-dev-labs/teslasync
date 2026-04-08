@@ -373,7 +373,7 @@
     {
       "id": 8,
       "type": "stat",
-      "title": "Auth Attempts",
+      "title": "API Errors Total",
       "description": "Total authentication attempts by result",
       "gridPos": {
         "x": 15,
@@ -441,7 +441,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum by (result) (teslasync_auth_attempts_total)",
+          "expr": "sum by (category) (teslasync_api_errors_total)",
           "legendFormat": "{{result}}",
           "refId": "A",
           "instant": true,
@@ -657,7 +657,7 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Tesla API Calls",
+      "title": "HTTP Requests by Method",
       "description": "Rate of calls to Tesla API by endpoint and result",
       "gridPos": {
         "x": 0,
@@ -724,7 +724,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum by (endpoint, result) (rate(teslasync_tesla_api_calls_total[5m]))",
+          "expr": "sum by (method) (rate(teslasync_http_requests_total[5m]))",
           "legendFormat": "{{endpoint}} - {{result}}",
           "refId": "A",
           "range": true,
@@ -739,7 +739,7 @@
     {
       "id": 9,
       "type": "timeseries",
-      "title": "Rate Limits Hit",
+      "title": "API Errors Rate",
       "description": "Rate at which rate limits are being exceeded",
       "gridPos": {
         "x": 12,
@@ -807,7 +807,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "rate(teslasync_rate_limit_exceeded_total[5m])",
+          "expr": "rate(teslasync_api_errors_total[5m])",
           "legendFormat": "Rate Limit Exceeded",
           "refId": "A",
           "range": true,

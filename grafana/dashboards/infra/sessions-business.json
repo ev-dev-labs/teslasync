@@ -667,7 +667,7 @@
     {
       "id": 10,
       "type": "piechart",
-      "title": "Vehicle States",
+      "title": "Active Streaming Vehicles",
       "description": "Distribution of vehicles by current state",
       "gridPos": {
         "x": 6,
@@ -712,7 +712,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "teslasync_vehicles_by_state",
+          "expr": "teslasync_streaming_vehicles_active",
           "legendFormat": "{{state}}",
           "refId": "A",
           "instant": true,
@@ -960,7 +960,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "teslasync_address_backfill_completed / (teslasync_address_backfill_completed + teslasync_address_backfill_remaining) * 100",
+          "expr": "teslasync_address_backfill_completed_total / (teslasync_address_backfill_completed_total + teslasync_address_backfill_remaining) * 100",
           "legendFormat": "Backfill %",
           "refId": "A",
           "instant": true,
@@ -975,7 +975,7 @@
     {
       "id": 14,
       "type": "timeseries",
-      "title": "Geofence Events",
+      "title": "Address Backfill Rate",
       "description": "Rate of geofence events by type (enter, exit, etc.)",
       "gridPos": {
         "x": 16,
@@ -1042,7 +1042,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum by (type) (rate(teslasync_geofence_events_total[5m]))",
+          "expr": "rate(teslasync_address_backfill_completed_total[5m])",
           "legendFormat": "{{type}}",
           "refId": "A",
           "range": true,
