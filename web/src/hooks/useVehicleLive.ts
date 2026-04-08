@@ -31,6 +31,29 @@ export interface VehicleLiveState {
   outsideTemp: number
   hvacPower: boolean
   fanSpeed: number
+  hvacACEnabled: boolean
+  hvacAutoMode: string
+  hvacFanStatus: number
+  climateKeeperMode: string
+  cabinOverheatMode: string
+  cabinOverheatTempLimit: string
+  defrostMode: boolean
+  defrostPreconditioning: boolean
+  rearDefrost: boolean
+  rearDisplayHvac: boolean
+  wiperHeat: boolean
+  steeringWheelHeatAuto: boolean
+  steeringWheelHeatLevel: number
+  seatHeaterLeft: number
+  seatHeaterRight: number
+  seatHeaterRearLeft: number
+  seatHeaterRearCenter: number
+  seatHeaterRearRight: number
+  seatCoolingFrontLeft: number
+  seatCoolingFrontRight: number
+  autoSeatClimateLeft: boolean
+  autoSeatClimateRight: boolean
+  seatVentEnabled: boolean
 
   // Charging
   chargeState: string
@@ -143,6 +166,15 @@ const EMPTY_STATE: VehicleLiveState = {
   batteryLevel: 0, soc: 0, idealRange: 0, ratedRange: 0, estRange: 0, energyRemaining: 0,
   latitude: 0, longitude: 0,
   insideTemp: 0, outsideTemp: 0, hvacPower: false, fanSpeed: 0,
+  hvacACEnabled: false, hvacAutoMode: '', hvacFanStatus: 0,
+  climateKeeperMode: '', cabinOverheatMode: '', cabinOverheatTempLimit: '',
+  defrostMode: false, defrostPreconditioning: false, rearDefrost: false,
+  rearDisplayHvac: false, wiperHeat: false,
+  steeringWheelHeatAuto: false, steeringWheelHeatLevel: 0,
+  seatHeaterLeft: 0, seatHeaterRight: 0, seatHeaterRearLeft: 0,
+  seatHeaterRearCenter: 0, seatHeaterRearRight: 0,
+  seatCoolingFrontLeft: 0, seatCoolingFrontRight: 0,
+  autoSeatClimateLeft: false, autoSeatClimateRight: false, seatVentEnabled: false,
   chargeState: '', detailedChargeState: '', chargerVoltage: 0, chargeAmps: 0,
   chargeRate: 0, chargerPower: 0, chargeLimitSoc: 0, timeToFullCharge: 0, isCharging: false,
   locked: false, sentryMode: false, doorState: '', centerDisplay: '',
@@ -223,6 +255,29 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['OutsideTemp'] != null) s.outsideTemp = n('OutsideTemp')
   if (raw['HvacPower'] != null) s.hvacPower = bool('HvacPower')
   if (raw['HvacFanSpeed'] != null) s.fanSpeed = Math.round(n('HvacFanSpeed'))
+  if (raw['HvacACEnabled'] != null) s.hvacACEnabled = bool('HvacACEnabled')
+  if (raw['HvacAutoMode'] != null) s.hvacAutoMode = str('HvacAutoMode')
+  if (raw['HvacFanStatus'] != null) s.hvacFanStatus = n('HvacFanStatus')
+  if (raw['ClimateKeeperMode'] != null) s.climateKeeperMode = str('ClimateKeeperMode')
+  if (raw['CabinOverheatProtectionMode'] != null) s.cabinOverheatMode = str('CabinOverheatProtectionMode')
+  if (raw['CabinOverheatProtectionTemperatureLimit'] != null) s.cabinOverheatTempLimit = str('CabinOverheatProtectionTemperatureLimit')
+  if (raw['DefrostMode'] != null) s.defrostMode = bool('DefrostMode')
+  if (raw['DefrostForPreconditioning'] != null) s.defrostPreconditioning = bool('DefrostForPreconditioning')
+  if (raw['RearDefrostEnabled'] != null) s.rearDefrost = bool('RearDefrostEnabled')
+  if (raw['RearDisplayHvacEnabled'] != null) s.rearDisplayHvac = bool('RearDisplayHvacEnabled')
+  if (raw['WiperHeatEnabled'] != null) s.wiperHeat = bool('WiperHeatEnabled')
+  if (raw['HvacSteeringWheelHeatAuto'] != null) s.steeringWheelHeatAuto = bool('HvacSteeringWheelHeatAuto')
+  if (raw['HvacSteeringWheelHeatLevel'] != null) s.steeringWheelHeatLevel = n('HvacSteeringWheelHeatLevel')
+  if (raw['SeatHeaterLeft'] != null) s.seatHeaterLeft = n('SeatHeaterLeft')
+  if (raw['SeatHeaterRight'] != null) s.seatHeaterRight = n('SeatHeaterRight')
+  if (raw['SeatHeaterRearLeft'] != null) s.seatHeaterRearLeft = n('SeatHeaterRearLeft')
+  if (raw['SeatHeaterRearCenter'] != null) s.seatHeaterRearCenter = n('SeatHeaterRearCenter')
+  if (raw['SeatHeaterRearRight'] != null) s.seatHeaterRearRight = n('SeatHeaterRearRight')
+  if (raw['ClimateSeatCoolingFrontLeft'] != null) s.seatCoolingFrontLeft = n('ClimateSeatCoolingFrontLeft')
+  if (raw['ClimateSeatCoolingFrontRight'] != null) s.seatCoolingFrontRight = n('ClimateSeatCoolingFrontRight')
+  if (raw['AutoSeatClimateLeft'] != null) s.autoSeatClimateLeft = bool('AutoSeatClimateLeft')
+  if (raw['AutoSeatClimateRight'] != null) s.autoSeatClimateRight = bool('AutoSeatClimateRight')
+  if (raw['SeatVentEnabled'] != null) s.seatVentEnabled = bool('SeatVentEnabled')
 
   // Charging
   if (raw['ChargeState'] != null) s.chargeState = str('ChargeState')
