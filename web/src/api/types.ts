@@ -469,6 +469,12 @@ export interface TirePressureSnapshot {
   front_right: number | null
   rear_left: number | null
   rear_right: number | null
+  tpms_hard_warnings?: string
+  tpms_soft_warnings?: string
+  last_seen_time_fl?: string
+  last_seen_time_fr?: string
+  last_seen_time_rl?: string
+  last_seen_time_rr?: string
   created_at: string
 }
 

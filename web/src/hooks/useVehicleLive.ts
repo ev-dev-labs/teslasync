@@ -79,6 +79,13 @@ export interface VehicleLiveState {
   tirePressureFr: number
   tirePressureRl: number
   tirePressureRr: number
+  tpmsHardWarnings: string
+  tpmsSoftWarnings: string
+  tpmsLastSeenFl: string
+  tpmsLastSeenFr: string
+  tpmsLastSeenRl: string
+  tpmsLastSeenRr: string
+  isolationResistance: number
 
   // Vehicle Info
   vehicleName: string
@@ -144,6 +151,9 @@ const EMPTY_STATE: VehicleLiveState = {
   driverSeatOccupied: false, pairedKeyCount: 0,
   homelinkNearby: false, homelinkDeviceCount: 0,
   tirePressureFl: 0, tirePressureFr: 0, tirePressureRl: 0, tirePressureRr: 0,
+  tpmsHardWarnings: '', tpmsSoftWarnings: '',
+  tpmsLastSeenFl: '', tpmsLastSeenFr: '', tpmsLastSeenRl: '', tpmsLastSeenRr: '',
+  isolationResistance: 0,
   vehicleName: '', carType: '', version: '', wheelType: '', exteriorColor: '',
   trim: '', roofColor: '', efficiencyPackage: '', rearSeatHeaters: '', sunroofInstalled: '',
   europeVehicle: false, rightHandDrive: false, remoteStartEnabled: false, offroadLightbar: false,
@@ -263,6 +273,13 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['TpmsPressureFr'] != null) s.tirePressureFr = n('TpmsPressureFr')
   if (raw['TpmsPressureRl'] != null) s.tirePressureRl = n('TpmsPressureRl')
   if (raw['TpmsPressureRr'] != null) s.tirePressureRr = n('TpmsPressureRr')
+  if (raw['TpmsHardWarnings'] != null) s.tpmsHardWarnings = str('TpmsHardWarnings')
+  if (raw['TpmsSoftWarnings'] != null) s.tpmsSoftWarnings = str('TpmsSoftWarnings')
+  if (raw['TpmsLastSeenPressureTimeFl'] != null) s.tpmsLastSeenFl = str('TpmsLastSeenPressureTimeFl')
+  if (raw['TpmsLastSeenPressureTimeFr'] != null) s.tpmsLastSeenFr = str('TpmsLastSeenPressureTimeFr')
+  if (raw['TpmsLastSeenPressureTimeRl'] != null) s.tpmsLastSeenRl = str('TpmsLastSeenPressureTimeRl')
+  if (raw['TpmsLastSeenPressureTimeRr'] != null) s.tpmsLastSeenRr = str('TpmsLastSeenPressureTimeRr')
+  if (raw['IsolationResistance'] != null) s.isolationResistance = n('IsolationResistance')
 
   // Vehicle Info
   if (raw['VehicleName'] != null) s.vehicleName = str('VehicleName')
