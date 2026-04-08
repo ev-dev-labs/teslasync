@@ -73,3 +73,33 @@ The central table is **`vehicles`** — nearly every other table references it v
 - `drives` → `addresses` (start/end location)
 - `trips` → `trip_drives` → `drives`
 - `geofences` → `geofence_events` → `vehicles`
+
+## Migrations
+
+TeslaSync uses `golang-migrate` for schema versioning. All 39 migrations run automatically on startup.
+
+### Recent Migrations (030–039)
+
+These migrations were added for the CEP Rule Engine, signal coverage, and state machine features:
+
+| Migration | Description |
+|-----------|-------------|
+| **030** | Add vehicle state + config columns to `vehicle_live_state` |
+| **031** | Add `decimal_precision` setting |
+| **032** | Seed `software_updates` from `vehicle_config_snapshots` |
+| **033** | Create enriched views (`v_drives`, `v_charging_sessions`) with NULLIF for zero-value protection |
+| **034** | Add state machine persistence columns (`last_gear`, `last_speed_time`) to `vehicle_live_state` |
+| **035** | Add 158 columns to `vehicle_live_state` for 100% signal coverage (229/230 signals) |
+| **036** | CEP Rule Engine: add `conditions` (JSONB), `cooldown_min`, `severity`, `msg_template`, `notify_channels`, `tags`, `fire_count`, `last_fired_at` to `alert_rules` |
+| **037** | Fix column types: boolean → varchar for enum signals (e.g., `HvacAutoModeState`) |
+| **038** | Fix `vehicle_config` column types: boolean → varchar |
+| **039** | Add `quiet_hours_start`, `quiet_hours_end`, `quiet_hours_enabled`, `alert_digest_mode` to `settings` |
+
+### vehicle_live_state
+
+The `vehicle_live_state` table stores the **always-complete vehicle state** — one row per vehicle, UPSERT'd every 5 seconds from the in-memory SignalStore. It has **236 columns** (77 original + 158 added in migration 035) covering all Tesla Fleet Telemetry signal categories.
+
+This table enables:
+- **Pod restart recovery** — `LoadFromDB()` restores the SignalStore from the last flush
+- **Historical snapshots** — state at the time of the last telemetry flush
+- **CEP evaluation** — rules can reference any persisted signal

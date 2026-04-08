@@ -84,7 +84,7 @@ The Go backend is organized into well-defined packages under `internal/`:
 
 ```
 internal/
-├── api/            # HTTP handlers, middleware, routing
+├── api/            # HTTP handlers, middleware, routing, SSE EventHub, CEP rule engine
 ├── cache/          # Redis + in-memory cache abstraction
 ├── config/         # Environment-based configuration
 ├── crypto/         # AES-256-GCM encryption for data at rest
@@ -92,10 +92,12 @@ internal/
 ├── events/         # Domain event bus (MQTT-backed)
 ├── export/         # Export worker — async data export & backup processing
 ├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
+├── metrics/        # Prometheus metric declarations (CEP, SSE, core)
 ├── models/         # Domain models and types
 ├── mqtt/           # MQTT telemetry publisher
 ├── notification/   # Notification worker & channel senders
 ├── resilience/     # Circuit breaker, health checks
+├── signal/         # In-memory SignalStore with DB flush (per-vehicle signal map)
 ├── backup/         # Backup processor and storage provider abstraction
 ├── tracing/        # OpenTelemetry tracer initialization and span helpers
 ├── tesla/          # Tesla Fleet API client
@@ -190,6 +192,75 @@ sequenceDiagram
 ```
 
 The `EventHub` pattern broadcasts events to all connected clients using goroutines. Each client gets its own channel, and the hub fans out events to all subscribers.
+
+#### SSE Singleton Architecture (Frontend)
+
+The frontend uses a **singleton EventSource** (`web/src/lib/sseManager.ts`) — one connection per browser tab shared across all hooks. Previously each page opened its own SSE connection (up to 16 simultaneous), causing token leaks and connection churn.
+
+```
+Browser Tab
+  └─ sseManager (singleton EventSource → /api/v1/events)
+       ├─ useVehicleLive hook (Dashboard, VehicleDetail, EnergyFlow, ...)
+       ├─ useRealtimeEvents hook (Layout.tsx → global alert toast)
+       └─ useAdaptiveInterval hook (3s when SSE down, 30s when connected)
+```
+
+#### Adaptive Polling
+
+The `useAdaptiveInterval` hook adjusts polling frequency based on SSE connection state:
+- **SSE connected:** 30s polling interval (SSE provides real-time data, polling is backup)
+- **SSE disconnected:** 3s polling interval (aggressive polling as SSE is unavailable)
+
+### CEP Rule Engine
+
+The Complex Event Processing engine evaluates rules against live telemetry signals on every signal batch:
+
+```mermaid
+sequenceDiagram
+    participant FT as Fleet Telemetry
+    participant PS as ProcessSignals
+    participant CEP as CEP Engine
+    participant DB as PostgreSQL
+    participant SSE as SSE EventHub
+    participant MQTT as MQTT Worker
+
+    FT->>PS: Signal batch
+    PS->>CEP: evaluateCEPRules(vehicleID, signals)
+    CEP->>CEP: For each enabled rule:<br/>1. Check cooldown<br/>2. Evaluate condition tree<br/>3. Check temporal sustain<br/>4. Detect transitions
+    CEP->>DB: INSERT alert (if fired)
+    CEP->>SSE: Broadcast alert event
+    CEP->>MQTT: Publish notification request
+    MQTT->>MQTT: Notification worker delivers<br/>to Discord/Slack/Email/etc.
+```
+
+**Key features:**
+- **Recursive condition tree** — AND/OR/NOT groups with unlimited nesting
+- **11 operators** — comparison, equality, string, boolean, transition detection
+- **Temporal sustain** — `for_seconds` requires condition to hold for duration before firing
+- **Transition detection** — `changed_to`/`changed_from` compares current vs previous signal values per (ruleID, vehicleID)
+- **Per-rule cooldown** — configurable (default 15min), prevents alert spam
+- **Template rendering** — `{{BatteryLevel}}` replaced with real signal values
+- **Quiet hours** — server-side suppression of non-critical alerts during configured hours
+
+### Vehicle State Machine
+
+The state machine detects vehicle state (driving, charging, parked, asleep, offline) using a priority-based approach:
+
+```
+Signal arrives →
+  1. Gear-based detection (instant — highest priority)
+     └─ Gear=D/R → driving, Gear=P → parked
+  2. Speed-based fallback (30s debounce, 2min drive hold)
+     └─ Speed > 0 for 30s → driving (when gear not available)
+  3. Charging detection
+     └─ ChargeState=Charging → charging
+  4. Stale gear check (10min freshness)
+     └─ Ignore cached gear older than 10min for state detection
+  5. Traffic light guard
+     └─ Speed=0 but Gear=D/R → stay in driving state
+  6. Charging orphan guard
+     └─ Starting a drive force-completes any active charge session
+```
 
 ### MQTT Telemetry
 

@@ -102,7 +102,9 @@ Each domain has its own handler file:
 | `drive_handler.go` | `DriveHandler` | Drive history listing, detail |
 | `charging_handler.go` | `ChargingHandler` | Charging session history |
 | `geofence_handler.go` | `GeofenceHandler` | Geofence CRUD |
-| `alert_handler.go` | `AlertHandler` | Alert listing, rules, mark-read |
+| `alert_handler.go` | `AlertHandler` | Alert listing, rules, mark-read, CEP rule CRUD, test notifications |
+| `rule_engine.go` | — | CEP condition tree evaluator (recursive AND/OR/NOT, 11 operators, temporal, transitions) |
+| `telemetry_alerts.go` | `TelemetryAlertEvaluator` | CEP + legacy rule evaluation, alert firing, quiet hours, SSE broadcast |
 | `command_handler.go` | `CommandHandler` | Remote vehicle commands |
 | `energy_handler.go` | `EnergyHandler` | Energy consumption stats |
 | `battery_handler.go` | `BatteryHandler` | Battery health reports |
@@ -117,7 +119,10 @@ Each domain has its own handler file:
 | `trip_handler.go` | `TripHandler` | Multi-drive trips |
 | `vehicle_state_handler.go` | `VehicleStateHandler` | State timeline |
 | `auth_handler.go` | `AuthHandler` | OAuth2 flow |
-| `sse_handler.go` | — | Server-Sent Events streaming |
+| `sse_handler.go` | — | Server-Sent Events streaming, EventHub with Prometheus metrics |
+| `telemetry_handler.go` | `TelemetryHandler` | Fleet Telemetry signal processing pipeline (~2400 lines) |
+| `telemetry_sessions.go` | — | Drive/charge session lifecycle, gear-based + speed fallback |
+| `metrics.go` | — | Prometheus metric aliases for api package |
 | `export_handler.go` | `ExportHandler` | CSV/JSON data export + async export jobs |
 | `health.go` | — | Health, readiness, system status |
 | `middleware.go` | — | Logging, recovery, security |
@@ -156,6 +161,9 @@ Each domain entity has its own repository file:
 | `charging_repo.go` | `ListChargingSessions`, `GetChargingSession`, `InsertSession` |
 | `geofence_repo.go` | `ListGeofences`, `CreateGeofence`, `UpdateGeofence`, `DeleteGeofence` |
 | `alert_repo.go` | `ListAlerts`, `InsertAlert`, `MarkAlertRead`, `ListRules`, `UpdateRule` |
+| `alert_rule_repo.go` | CEP rule CRUD: `Create`, `GetAll`, `Update`, `Delete`, `Toggle` |
+| `live_state_repo.go` | `FlushLiveState`, `LoadLiveState` (229 signal columns, enum→bool) |
+| `notification_repo.go` | `GetChannel`, `GetAllChannels`, notification log CRUD |
 | `settings_repo.go` | `GetSettings`, `UpdateSettings` |
 | `token_repo.go` | `GetTokens`, `SaveTokens` |
 | `maintenance.go` | `CleanupOldData` (data retention) |
@@ -182,7 +190,7 @@ All repositories use `pgx/v5` for high-performance PostgreSQL access with prepar
 
 ### Pages (`web/src/pages/`)
 
-25+ pages, all lazy-loaded via `React.lazy()`:
+69+ pages, all lazy-loaded via `React.lazy()`:
 
 - Each page is a self-contained module with its own data fetching (TanStack Query)
 - Pages use shared components from `components/`
@@ -192,12 +200,13 @@ All repositories use `pgx/v5` for high-performance PostgreSQL access with prepar
 
 | Component | Purpose |
 |-----------|---------|
-| `Layout.tsx` | Main app shell — sidebar navigation, top bar, command palette |
+| `Layout.tsx` | Main app shell — sidebar navigation, top bar, command palette, global SSE alert toast |
 | `ui.tsx` | 13 reusable glass-morphism UI primitives (GlassPanel, StatCard, Button, Input, Table, Modal, Badge, etc.) |
 | `ThemeProvider.tsx` | 5-theme system using CSS custom properties |
 | `CommandPalette.tsx` | Cmd+K quick navigation |
 | `TeslaCarViz.tsx` | Vehicle visualization component |
 | `Toast.tsx` | Toast notification system |
+| `RuleBuilder.tsx` | Visual CEP condition tree editor — signal picker with category grouping, context-aware operators, AND/OR groups |
 | `ErrorBoundary.tsx` | Error isolation per route |
 | `ServiceStatus.tsx` | Backend health indicator |
 | `Widgets.tsx` | Reusable dashboard widgets |
@@ -207,6 +216,18 @@ All repositories use `pgx/v5` for high-performance PostgreSQL access with prepar
 | Hook | Purpose |
 |------|---------|
 | `useRealtimeEvents.ts` | SSE connection with auto-reconnect, event parsing, connection status |
+| `useVehicleLive.ts` | SSE-based live vehicle state hook (460+ lines, all signal fields) |
+| `useAdaptiveInterval.ts` | Adaptive polling — 3s when SSE disconnected, 30s when connected |
+
+### Libraries (`web/src/lib/`)
+
+| Library | Purpose |
+|---------|---------|
+| `sseManager.ts` | Singleton EventSource manager — one connection per browser tab shared across all hooks |
+| `signalCatalog.ts` | 230 signal metadata entries (name, category, type, unit, description) |
+| `numberFormat.ts` | Global number formatting with configurable decimal precision |
+| `parseSettingEnum.ts` | Tesla enum value parser for human-readable display |
+| `dateFormat.ts` | Date/time formatting utilities |
 
 ### API Client (`web/src/api.ts`)
 
@@ -231,6 +252,12 @@ Migrations are in `migrations/` using the `golang-migrate` format:
 000003_states_vampire_mileage.up.sql   # Vehicle states, vampire drain, mileage
 000004_geofence_electricity_cost.up.sql # Geofence cost tracking
 000005_notifications.up.sql    # Notification channels, logs, chat, tire pressure
+...
+000030_vehicle_state_columns.up.sql    # Vehicle state + config on live_state
+000035_complete_live_state.up.sql      # 158 columns for 100% signal coverage
+000036_cep_rule_engine.up.sql          # CEP conditions JSONB, cooldown, severity, etc.
+000037_fix_column_types.up.sql         # Boolean → varchar for enum signals
+000039_quiet_hours.up.sql              # Quiet hours + alert digest mode
 ```
 
 Migrations run automatically on backend startup. The `positions` table uses native PostgreSQL partitioning for efficient time-series queries.
