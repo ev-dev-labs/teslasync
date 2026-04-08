@@ -492,6 +492,84 @@
       "title": "Battery Voltage",
       "type": "timeseries",
       "transparent": false
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Per-Motor Battery Voltage",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS time,\n  di_v_bat_f AS \"Front (V)\",\n  di_v_bat_r AS \"Rear (V)\",\n  di_v_bat_rel AS \"Rear-Left (V)\",\n  di_v_bat_rer AS \"Rear-Right (V)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND di_v_bat_f IS NOT NULL\nORDER BY created_at",
+          "format": "time_series",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Per-Motor Axle Speed",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS time,\n  di_axle_speed AS \"Rear (RPM)\",\n  di_axle_speed_f AS \"Front (RPM)\",\n  di_axle_speed_rel AS \"Rear-Left (RPM)\",\n  di_axle_speed_rer AS \"Rear-Right (RPM)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (di_axle_speed IS NOT NULL OR di_axle_speed_f IS NOT NULL)\nORDER BY created_at",
+          "format": "time_series",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
     }
   ],
   "schemaVersion": 39,

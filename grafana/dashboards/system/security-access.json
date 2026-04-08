@@ -535,6 +535,99 @@
       "title": "Recent Events Table",
       "type": "table",
       "transparent": false
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Lights & Turn Signal History",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN lights_hazards_active THEN 'ON' ELSE 'Off' END AS \"Hazards\",\n  CASE WHEN lights_high_beams THEN 'ON' ELSE 'Off' END AS \"High Beams\",\n  COALESCE(lights_turn_signal, 'Off') AS \"Turn Signal\",\n  COALESCE(center_display, '—') AS \"Center Display\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (lights_hazards_active IS NOT NULL OR lights_high_beams IS NOT NULL OR lights_turn_signal IS NOT NULL)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Access Modes Timeline",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN valet_mode_enabled THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN service_mode THEN 'ON' ELSE 'Off' END AS \"Service\",\n  CASE WHEN speed_limit_mode THEN 'ON' ELSE 'Off' END AS \"Speed Limit\",\n  CASE WHEN guest_mode THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  current_limit_mph AS \"Speed Limit (mph)\",\n  paired_phone_key_count AS \"Paired Keys\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Driver & Seatbelt Status",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN driver_seat_occupied THEN 'Occupied' ELSE 'Empty' END AS \"Driver Seat\",\n  CASE WHEN driver_seat_belt THEN 'Buckled' ELSE 'Unbuckled' END AS \"Driver Belt\",\n  CASE WHEN passenger_seat_belt THEN 'Buckled' ELSE 'Unbuckled' END AS \"Passenger Belt\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (driver_seat_occupied IS NOT NULL OR driver_seat_belt IS NOT NULL)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
     }
   ],
   "schemaVersion": 39,

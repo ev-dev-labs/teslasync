@@ -438,12 +438,22 @@ export function useVehicleLive(vehicleId?: number) {
       .then(r => r.json())
       .then(data => {
         if (data.signals) {
-          const parsed = parseSignals(data.signals)
+          // The /live endpoint wraps each signal as {value, timestamp}.
+          // Unwrap to flat key→value format that parseSignals expects.
+          const flat: Record<string, unknown> = {}
+          for (const [k, v] of Object.entries(data.signals)) {
+            if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
+              flat[k] = (v as Record<string, unknown>).value
+            } else {
+              flat[k] = v
+            }
+          }
+          const parsed = parseSignals(flat)
           setState(prev => ({
             ...prev,
             ...parsed,
             lastUpdated: new Date(),
-            signalCount: Object.keys(data.signals).length,
+            signalCount: Object.keys(flat).length,
           }))
         }
       })

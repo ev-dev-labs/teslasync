@@ -354,6 +354,37 @@
       "title": "Rear Right",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "TPMS Warnings History",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  COALESCE(tpms_hard_warnings, 'None') AS \"Hard Warnings\",\n  COALESCE(tpms_soft_warnings, 'None') AS \"Soft Warnings\",\n  last_seen_time_fl AS \"FL Last Seen\",\n  last_seen_time_fr AS \"FR Last Seen\",\n  last_seen_time_rl AS \"RL Last Seen\",\n  last_seen_time_rr AS \"RR Last Seen\"\nFROM tire_pressure_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (tpms_hard_warnings IS NOT NULL OR tpms_soft_warnings IS NOT NULL OR last_seen_time_fl IS NOT NULL)\nORDER BY created_at DESC LIMIT 30",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
     }
   ],
   "schemaVersion": 39,
