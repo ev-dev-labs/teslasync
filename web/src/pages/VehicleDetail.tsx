@@ -23,6 +23,7 @@ import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import clsx from 'clsx'
 import { formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
@@ -53,6 +54,7 @@ export default function VehicleDetail() {
 
   // SSE live state for real-time vehicle signals
   const { state: live, connected: sseConnected } = useVehicleLive(vehicleId)
+  const pollInterval = useAdaptiveInterval()
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -88,25 +90,25 @@ export default function VehicleDetail() {
   const { data: motorData } = useQuery({
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId),
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
 
   const { data: climateData } = useQuery({
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId),
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
 
   const { data: securityData } = useQuery({
     queryKey: ['security-latest', vehicleId],
     queryFn: () => getSecurityLatest(vehicleId),
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
 
   const { data: tireData } = useQuery({
     queryKey: ['tire-latest', vehicleId],
     queryFn: () => getLatestTirePressure(vehicleId),
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
   const { data: chargingTelemetry } = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],

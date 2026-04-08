@@ -337,6 +337,27 @@ export interface AlertRule {
   vehicle_id: number | null
   created_at: string
   updated_at: string
+  // CEP rule engine fields
+  conditions?: RuleConditionTree | null
+  expression?: string
+  cooldown_min?: number
+  for_duration_s?: number | null
+  severity?: 'info' | 'warning' | 'critical'
+  msg_template?: string
+  notify_channels?: number[]
+  last_fired_at?: string | null
+  fire_count?: number
+  tags?: string[]
+}
+
+/** Condition tree node — matches backend models.RuleCondition. */
+export interface RuleConditionTree {
+  op?: 'AND' | 'OR' | 'NOT'
+  rules?: RuleConditionTree[]
+  signal?: string
+  compare?: string
+  value?: string | number | boolean
+  for_seconds?: number
 }
 
 export interface StatsSummary {

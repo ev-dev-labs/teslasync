@@ -185,6 +185,7 @@ const navSections = [
     items: [
       { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400' },
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
+      { to: '/alert-studio', icon: Zap, label: 'Alert Studio', color: 'text-neon-cyan' },
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
       { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
       { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },

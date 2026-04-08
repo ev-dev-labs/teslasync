@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getClimateData, getClimateLatest } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Thermometer, Wind, Snowflake, Sun, Fan, Flame, Shield, Zap, Activity, Car } from 'lucide-react'
 import {
@@ -177,6 +178,7 @@ export default function ClimateControl() {
 
   // SSE live state for real-time climate signals
   const { state: live } = useVehicleLive(vehicleId ?? undefined)
+  const pollInterval = useAdaptiveInterval()
 
   const { data: climateData, isLoading: loadingHistory } = useQuery({
     queryKey: ['climate', vehicleId, limit],
@@ -189,7 +191,7 @@ export default function ClimateControl() {
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
 
   // ---- derived data -------------------------------------------------------

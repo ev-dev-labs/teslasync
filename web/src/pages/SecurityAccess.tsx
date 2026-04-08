@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSecurityEvents, getSecurityLatest, SecurityEvent } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import {
   Lock, Unlock, Shield, ShieldCheck, ShieldAlert, Eye,
@@ -370,6 +371,7 @@ export default function SecurityAccess() {
 
   // SSE live state for instant updates
   const { state: live, connected: sseConnected } = useVehicleLive(vehicleId ?? undefined)
+  const pollInterval = useAdaptiveInterval()
 
   const { data: securityData, isLoading: loadingHistory } = useQuery({
     queryKey: ['security', vehicleId, limit],
@@ -382,7 +384,7 @@ export default function SecurityAccess() {
     queryKey: ['security-latest', vehicleId],
     queryFn: () => getSecurityLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
 
   // ── Computed values ──────────────────────────────────────────────────────────

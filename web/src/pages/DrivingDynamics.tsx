@@ -10,6 +10,7 @@ import {
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { parseGear, GEAR_COLORS } from '../lib/gear'
 
@@ -126,15 +127,16 @@ export default function DrivingDynamics() {
     refetchInterval: 5000,
   })
 
+  /* --- Live SSE state for instant gear updates --- */
+  const { state: liveState } = useVehicleLive(vehicleId ?? undefined)
+  const pollInterval = useAdaptiveInterval()
+
   const { data: latest, isLoading: loadingLatest } = useQuery({
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 30_000,
+    refetchInterval: pollInterval,
   })
-
-  /* --- Live SSE state for instant gear updates --- */
-  const { state: liveState } = useVehicleLive(vehicleId ?? undefined)
 
   /* --- Derived chart data --- */
   const history = motorData ?? []
