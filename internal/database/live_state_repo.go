@@ -103,6 +103,17 @@ var signalToColumn = map[string]string{
 	"Version":       "version",
 	"WheelType":     "wheel_type",
 	"ExteriorColor": "exterior_color",
+
+	// Vehicle Configuration
+	"Trim":                    "trim",
+	"RoofColor":               "roof_color",
+	"EfficiencyPackage":       "efficiency_package",
+	"RearSeatHeaters":         "rear_seat_heaters",
+	"SunroofInstalled":        "sunroof_installed",
+	"EuropeVehicle":           "europe_vehicle",
+	"RightHandDrive":          "right_hand_drive",
+	"RemoteStartEnabled":      "remote_start_enabled",
+	"OffroadLightbarPresent":  "offroad_lightbar_present",
 }
 
 // FlushLiveState upserts the vehicle's live state into vehicle_live_state.
@@ -176,14 +187,18 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	// Boolean columns that come as enum strings from Fleet Telemetry.
 	// These need conversion: any non-Off/empty/false string → true.
 	enumBoolSignals := map[string]string{
-		"GuestModeEnabled":  "guest_mode",
-		"HomelinkNearby":    "homelink_nearby",
-		"DriverSeatOccupied": "driver_seat_occupied",
-		"SpeedLimitMode":    "speed_limit_mode",
-		"ValetModeEnabled":  "valet_mode_enabled",
-		"ServiceMode":       "service_mode",
-		"LightsHazardsActive": "lights_hazards_active",
-		"LightsHighBeams":   "lights_high_beams",
+		"GuestModeEnabled":        "guest_mode",
+		"HomelinkNearby":          "homelink_nearby",
+		"DriverSeatOccupied":      "driver_seat_occupied",
+		"SpeedLimitMode":          "speed_limit_mode",
+		"ValetModeEnabled":        "valet_mode_enabled",
+		"ServiceMode":             "service_mode",
+		"LightsHazardsActive":     "lights_hazards_active",
+		"LightsHighBeams":         "lights_high_beams",
+		"EuropeVehicle":           "europe_vehicle",
+		"RightHandDrive":          "right_hand_drive",
+		"RemoteStartEnabled":      "remote_start_enabled",
+		"OffroadLightbarPresent":  "offroad_lightbar_present",
 	}
 	for sig, col := range enumBoolSignals {
 		if v, ok := signals[sig]; ok && v != nil {
@@ -295,7 +310,9 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		       current_limit_mph, paired_phone_key_count,
 		       lights_hazards_active, lights_high_beams, lights_turn_signal,
 		       sw_update_version, sw_update_download_pct, sw_update_install_pct,
-		       sw_update_expected_duration, sw_update_scheduled_start
+		       sw_update_expected_duration, sw_update_scheduled_start,
+		       trim, roof_color, efficiency_package, rear_seat_heaters, sunroof_installed,
+		       europe_vehicle, right_hand_drive, remote_start_enabled, offroad_lightbar_present
 		FROM vehicle_live_state WHERE vehicle_id = $1`, vehicleID)
 
 	var lat, lon, speed, power, odo, idealR, ratedR, estR, energyRem *float64
@@ -311,10 +328,12 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	var vehicleName, carType, version *string
 	var guestMobileAccess, lightsTurnSignal *string
 	var swUpdateVersion, swScheduledStart *string
+	var trimVal, roofColor, efficiencyPkg, rearSeatHeaters, sunroofInstalled *string
 	var hvacPower, locked, sentryMode *bool
 	var guestMode, homelinkNearby, driverSeatOccupied *bool
 	var speedLimitMode, valetMode, serviceMode *bool
 	var lightsHazards, lightsHighBeams *bool
+	var europeVehicle, rightHandDrive, remoteStartEnabled, offroadLightbar *bool
 
 	err := row.Scan(
 		&lat, &lon, &heading, &speed, &power, &odo, &gear,
@@ -332,6 +351,8 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		&lightsHazards, &lightsHighBeams, &lightsTurnSignal,
 		&swUpdateVersion, &swDownloadPct, &swInstallPct,
 		&swExpectedDur, &swScheduledStart,
+		&trimVal, &roofColor, &efficiencyPkg, &rearSeatHeaters, &sunroofInstalled,
+		&europeVehicle, &rightHandDrive, &remoteStartEnabled, &offroadLightbar,
 	)
 	if err != nil {
 		return nil, err
@@ -397,6 +418,16 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if swInstallPct != nil { result["SoftwareUpdateInstallationPercentComplete"] = *swInstallPct }
 	if swExpectedDur != nil { result["SoftwareUpdateExpectedDurationMinutes"] = *swExpectedDur }
 	if swScheduledStart != nil { result["SoftwareUpdateScheduledStartTime"] = *swScheduledStart }
+	// Vehicle Configuration
+	if trimVal != nil { result["Trim"] = *trimVal }
+	if roofColor != nil { result["RoofColor"] = *roofColor }
+	if efficiencyPkg != nil { result["EfficiencyPackage"] = *efficiencyPkg }
+	if rearSeatHeaters != nil { result["RearSeatHeaters"] = *rearSeatHeaters }
+	if sunroofInstalled != nil { result["SunroofInstalled"] = *sunroofInstalled }
+	if europeVehicle != nil { result["EuropeVehicle"] = *europeVehicle }
+	if rightHandDrive != nil { result["RightHandDrive"] = *rightHandDrive }
+	if remoteStartEnabled != nil { result["RemoteStartEnabled"] = *remoteStartEnabled }
+	if offroadLightbar != nil { result["OffroadLightbarPresent"] = *offroadLightbar }
 
 	return result, nil
 }

@@ -944,8 +944,14 @@ export default function VehicleDetail() {
                       { label: 'Charge Port', value: cleanNil(vehicleConfigData.charge_port) },
                       { label: 'Rear Heaters', value: cleanNil(vehicleConfigData.rear_seat_heaters) },
                       { label: 'Efficiency', value: cleanNil(vehicleConfigData.efficiency_package) },
+                      { label: 'Sunroof', value: cleanNil(vehicleConfigData.sunroof_installed) || 'Not Installed' },
+                      { label: 'Europe Vehicle', value: vehicleConfigData.europe_vehicle != null ? (vehicleConfigData.europe_vehicle ? 'Yes' : 'No') : '—' },
+                      { label: 'Right-Hand Drive', value: vehicleConfigData.right_hand_drive != null ? (vehicleConfigData.right_hand_drive ? 'Yes' : 'No') : '—' },
+                      { label: 'Remote Start', value: vehicleConfigData.remote_start_enabled != null ? (vehicleConfigData.remote_start_enabled ? 'Active' : 'Off') : '—' },
+                      { label: 'Offroad Lightbar', value: vehicleConfigData.offroad_lightbar_present != null ? (vehicleConfigData.offroad_lightbar_present ? 'Present' : 'No') : '—' },
                       { label: 'SW Update', value: cleanNil(vehicleConfigData.software_update_version) || 'None' },
                       { label: 'SW Download', value: vehicleConfigData.software_update_download_pct != null ? `${vehicleConfigData.software_update_download_pct}%` : '—' },
+                      { label: 'SW Install', value: vehicleConfigData.software_update_install_pct != null ? `${vehicleConfigData.software_update_install_pct}%` : '—' },
                     ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>

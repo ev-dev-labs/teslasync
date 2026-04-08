@@ -1,4 +1,4 @@
--- Migration 30 (down): Remove Vehicle State signal columns from vehicle_live_state
+-- Migration 30 (down): Remove Vehicle State + Configuration signal columns from vehicle_live_state
 ALTER TABLE vehicle_live_state
   DROP COLUMN IF EXISTS guest_mode,
   DROP COLUMN IF EXISTS guest_mode_mobile_access,
@@ -17,4 +17,13 @@ ALTER TABLE vehicle_live_state
   DROP COLUMN IF EXISTS sw_update_download_pct,
   DROP COLUMN IF EXISTS sw_update_install_pct,
   DROP COLUMN IF EXISTS sw_update_expected_duration,
-  DROP COLUMN IF EXISTS sw_update_scheduled_start;
+  DROP COLUMN IF EXISTS sw_update_scheduled_start,
+  DROP COLUMN IF EXISTS trim,
+  DROP COLUMN IF EXISTS roof_color,
+  DROP COLUMN IF EXISTS efficiency_package,
+  DROP COLUMN IF EXISTS rear_seat_heaters,
+  DROP COLUMN IF EXISTS sunroof_installed,
+  DROP COLUMN IF EXISTS europe_vehicle,
+  DROP COLUMN IF EXISTS right_hand_drive,
+  DROP COLUMN IF EXISTS remote_start_enabled,
+  DROP COLUMN IF EXISTS offroad_lightbar_present;

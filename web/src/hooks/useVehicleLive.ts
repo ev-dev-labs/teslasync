@@ -86,6 +86,15 @@ export interface VehicleLiveState {
   version: string
   wheelType: string
   exteriorColor: string
+  trim: string
+  roofColor: string
+  efficiencyPackage: string
+  rearSeatHeaters: string
+  sunroofInstalled: string
+  europeVehicle: boolean
+  rightHandDrive: boolean
+  remoteStartEnabled: boolean
+  offroadLightbar: boolean
 
   // Navigation
   destinationName: string
@@ -129,6 +138,8 @@ const EMPTY_STATE: VehicleLiveState = {
   homelinkNearby: false, homelinkDeviceCount: 0,
   tirePressureFl: 0, tirePressureFr: 0, tirePressureRl: 0, tirePressureRr: 0,
   vehicleName: '', carType: '', version: '', wheelType: '', exteriorColor: '',
+  trim: '', roofColor: '', efficiencyPackage: '', rearSeatHeaters: '', sunroofInstalled: '',
+  europeVehicle: false, rightHandDrive: false, remoteStartEnabled: false, offroadLightbar: false,
   destinationName: '', destinationLatitude: 0, destinationLongitude: 0,
   distanceToArrival: 0, minutesToArrival: 0, routeLine: '',
   locatedAtHome: false, locatedAtWork: false, locatedAtFavorite: false,
@@ -250,6 +261,15 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['Version'] != null) s.version = str('Version')
   if (raw['WheelType'] != null) s.wheelType = str('WheelType')
   if (raw['ExteriorColor'] != null) s.exteriorColor = str('ExteriorColor')
+  if (raw['Trim'] != null) s.trim = str('Trim')
+  if (raw['RoofColor'] != null) s.roofColor = str('RoofColor')
+  if (raw['EfficiencyPackage'] != null) s.efficiencyPackage = str('EfficiencyPackage')
+  if (raw['RearSeatHeaters'] != null) s.rearSeatHeaters = str('RearSeatHeaters')
+  if (raw['SunroofInstalled'] != null) s.sunroofInstalled = str('SunroofInstalled')
+  if (raw['EuropeVehicle'] != null) s.europeVehicle = bool('EuropeVehicle')
+  if (raw['RightHandDrive'] != null) s.rightHandDrive = bool('RightHandDrive')
+  if (raw['RemoteStartEnabled'] != null) s.remoteStartEnabled = bool('RemoteStartEnabled')
+  if (raw['OffroadLightbarPresent'] != null) s.offroadLightbar = bool('OffroadLightbarPresent')
 
   // Navigation
   if (raw['DestinationName'] != null) s.destinationName = str('DestinationName')
