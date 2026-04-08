@@ -889,7 +889,7 @@ type SecurityEvent struct {
 	GuestModeMobileAccessState *string `json:"guest_mode_mobile_access_state,omitempty" db:"guest_mode_mobile_access_state"`
 	DriverSeatOccupied  *bool    `json:"driver_seat_occupied,omitempty" db:"driver_seat_occupied"`
 	CenterDisplay       *string  `json:"center_display,omitempty" db:"center_display"`
-	SpeedLimitMode      *bool    `json:"speed_limit_mode,omitempty" db:"speed_limit_mode"`
+	SpeedLimitMode      *string  `json:"speed_limit_mode,omitempty" db:"speed_limit_mode"`
 	ValetModeEnabled    *bool    `json:"valet_mode_enabled,omitempty" db:"valet_mode_enabled"`
 	ServiceMode         *bool    `json:"service_mode,omitempty" db:"service_mode"`
 	CurrentLimitMph     *float64 `json:"current_limit_mph,omitempty" db:"current_limit_mph"`
@@ -1030,7 +1030,7 @@ type LocationSnapshot struct {
 	LocatedAtHome          *bool     `json:"located_at_home,omitempty" db:"located_at_home"`
 	LocatedAtWork          *bool     `json:"located_at_work,omitempty" db:"located_at_work"`
 	LocatedAtFavorite      *bool     `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
-	GpsState               *bool     `json:"gps_state,omitempty" db:"gps_state"`
+	GpsState               *string   `json:"gps_state,omitempty" db:"gps_state"`
 	RouteLastUpdated       *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
 	CurrentLat             *float64  `json:"current_lat,omitempty" db:"current_lat"`
 	CurrentLon             *float64  `json:"current_lon,omitempty" db:"current_lon"`
@@ -1043,7 +1043,7 @@ type SafetySnapshot struct {
 	VehicleID                       int64     `json:"vehicle_id" db:"vehicle_id"`
 	AutomaticBlindSpotCamera        *bool     `json:"automatic_blind_spot_camera,omitempty" db:"automatic_blind_spot_camera"`
 	AutomaticEmergencyBrakingOff    *bool     `json:"automatic_emergency_braking_off,omitempty" db:"automatic_emergency_braking_off"`
-	BlindSpotCollisionWarning       *bool     `json:"blind_spot_collision_warning,omitempty" db:"blind_spot_collision_warning"`
+	BlindSpotCollisionWarning       *string   `json:"blind_spot_collision_warning,omitempty" db:"blind_spot_collision_warning"`
 	CruiseFollowDistance            *string   `json:"cruise_follow_distance,omitempty" db:"cruise_follow_distance"`
 	EmergencyLaneDepartureAvoidance *bool     `json:"emergency_lane_departure_avoidance,omitempty" db:"emergency_lane_departure_avoidance"`
 	ForwardCollisionWarning         *string   `json:"forward_collision_warning,omitempty" db:"forward_collision_warning"`

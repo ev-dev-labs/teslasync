@@ -54,7 +54,8 @@ var signalToColumn = map[string]string{
 	"ChargeAmps":          "charge_amps",
 	"ChargeRateMilePerHour": "charge_rate",
 	"DCChargingPower":     "charger_power",
-	"ACChargingPower":     "charger_power",
+	// ACChargingPower also maps to charger_power but is handled in the skip/special logic
+	// to avoid duplicate column errors when both signals arrive in the same batch.
 	"ChargeLimitSoc":      "charge_limit_soc",
 	"TimeToFullCharge":    "time_to_full_charge",
 	"ChargingCableType":   "charging_cable_type",
@@ -370,6 +371,17 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		vals = append(vals, locked)
 	}
 
+	// Handle ACChargingPower → charger_power (fallback if DCChargingPower not present)
+	// Both map to same column, so only write one to avoid "column specified more than once"
+	if _, hasDC := signals["DCChargingPower"]; !hasDC {
+		if v, ok := signals["ACChargingPower"]; ok {
+			if f, fOk := toFloat64(v); fOk {
+				cols = append(cols, "charger_power")
+				vals = append(vals, f)
+			}
+		}
+	}
+
 	// Boolean columns that come as enum strings from Fleet Telemetry.
 	// These need conversion: any non-Off/empty/false string → true.
 	enumBoolSignals := map[string]string{
@@ -434,7 +446,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	// Set of columns already handled above — skip in generic loop
 	skipCols := map[string]bool{
 		"latitude": true, "longitude": true, "locked": true, "sentry_mode": true,
-		"hvac_power": true, "fan_speed": true, "power": true,
+		"hvac_power": true, "fan_speed": true, "power": true, "charger_power": true,
 	}
 	for _, col := range enumBoolSignals {
 		skipCols[col] = true

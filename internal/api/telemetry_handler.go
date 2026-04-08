@@ -1805,8 +1805,8 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		ev.CenterDisplay = &s
 	}
 	if v, ok := signals["SpeedLimitMode"]; ok {
-		b := toBool(v)
-		ev.SpeedLimitMode = &b
+		s := toString(v)
+		ev.SpeedLimitMode = &s
 	}
 	if v, ok := signals["ValetModeEnabled"]; ok {
 		b := toBool(v)
@@ -2376,8 +2376,8 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 		snap.LocatedAtFavorite = &b
 	}
 	if v, ok := signals["GpsState"]; ok {
-		b := toBool(v)
-		snap.GpsState = &b
+		s := toString(v)
+		snap.GpsState = &s
 	}
 	if v, ok := signals["RouteLastUpdated"]; ok {
 		if t := toTimestamp(v); t != nil {
@@ -2420,8 +2420,8 @@ func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, sig
 		snap.AutomaticEmergencyBrakingOff = &b
 	}
 	if v, ok := signals["BlindSpotCollisionWarningChime"]; ok {
-		b := toBool(v)
-		snap.BlindSpotCollisionWarning = &b
+		s := toString(v)
+		snap.BlindSpotCollisionWarning = &s
 	}
 	if v, ok := signals["CruiseFollowDistance"]; ok {
 		s := toString(v)
