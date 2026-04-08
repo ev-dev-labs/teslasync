@@ -23,6 +23,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
+	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
@@ -108,7 +109,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	settingsHandler := NewSettingsHandler(db)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil { pahoForAlerts = mqttClient.Underlying() }
-	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts)
+	var alertSignalStore *signal.Store
+	if opt.TelemetryHandler != nil {
+		alertSignalStore = opt.TelemetryHandler.GetSignalStore()
+	}
+	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(energySvc)
 	batteryHandler := NewBatteryHandler(db)

@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // AlertHandler handles alert and alert rule HTTP requests.
@@ -18,15 +19,17 @@ type AlertHandler struct {
 	notifRepo     *database.NotificationRepo
 	eventHub      *EventHub
 	mqttClient    pahomqtt.Client
+	signalStore   *signal.Store
 }
 
-func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client) *AlertHandler {
+func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store *signal.Store) *AlertHandler {
 	return &AlertHandler{
 		alertRepo:     database.NewAlertRepo(db),
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
 		eventHub:      hub,
 		mqttClient:    mc,
+		signalStore:   store,
 	}
 }
 
@@ -200,6 +203,17 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	message := body.MsgTemplate
 	if message == "" {
 		message = "This is a test notification from Alert Studio"
+	}
+
+	// Render template with current signal values from SignalStore
+	if h.signalStore != nil {
+		for _, vid := range h.signalStore.VehicleIDs() {
+			raw := h.signalStore.GetRawMap(vid)
+			if raw != nil {
+				message = renderTemplate(message, raw)
+				break
+			}
+		}
 	}
 
 	// Create test alert in DB
