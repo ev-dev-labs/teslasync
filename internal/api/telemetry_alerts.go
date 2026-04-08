@@ -52,12 +52,14 @@ func (e *TelemetryAlertEvaluator) LoadState(ctx context.Context) {
 
 // Evaluate checks all alert rules against the given signals for a vehicle.
 func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+	evalStart := time.Now()
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("cep: failed to load alert rules, skipping evaluation")
 		return
 	}
 
+	enabledCount := 0
 	for _, rule := range rules {
 		if !rule.Enabled {
 			continue
@@ -65,17 +67,18 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		if rule.VehicleID != nil && *rule.VehicleID != vehicleID {
 			continue
 		}
+		enabledCount++
 
 		var triggered bool
 		var message string
 
 		if rule.IsCEPRule() {
-			// === CEP RULE ENGINE ===
+			metrics.CEPRulesEvaluated.Inc()
 			result := e.ruleEngine.Evaluate(rule, vehicleID, signals)
 			triggered = result.Triggered
 			message = result.Message
 		} else {
-			// === LEGACY SIMPLE RULES (backward compat) ===
+			metrics.AlertsEvaluated.Inc()
 			triggered, message = e.evaluateLegacy(rule, signals)
 		}
 
@@ -83,6 +86,8 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 			e.fireAlert(ctx, rule, vehicleID, vin, message)
 		}
 	}
+	metrics.CEPActiveRules.Set(float64(enabledCount))
+	metrics.CEPEvalDuration.Observe(time.Since(evalStart).Seconds())
 }
 
 // evaluateLegacy handles the old Type+Threshold rules.
@@ -152,6 +157,12 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 	log.Info().Int64("rule_id", rule.ID).Str("name", rule.Name).Str("severity", severity).
 		Int64("vehicle_id", vehicleID).Str("message", message).Msg("cep: alert fired")
 
+	// Prometheus metrics
+	metrics.AlertsFired.WithLabelValues(severity).Inc()
+	if rule.IsCEPRule() {
+		metrics.CEPRulesFired.WithLabelValues(rule.Name, severity).Inc()
+	}
+
 	// 2. Broadcast via SSE (instant browser notification)
 	if e.eventHub != nil {
 		e.eventHub.Broadcast("alert", map[string]interface{}{
@@ -215,6 +226,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, 
 		if err := notification.Publish(e.mqttClient, req); err != nil {
 			log.Warn().Int64("channel_id", chID).Str("type", ch.Type).Err(err).Msg("cep: notification dispatch failed")
 		} else {
+			metrics.NotificationsDispatched.WithLabelValues(ch.Type).Inc()
 			log.Info().Int64("channel_id", chID).Str("type", ch.Type).Msg("cep: notification dispatched to worker")
 		}
 	}

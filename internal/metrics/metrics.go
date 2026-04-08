@@ -160,6 +160,44 @@ var (
 		Name:      "notifications_sent_total",
 		Help:      "Total notifications sent by channel type and result",
 	}, []string{"channel_type", "result"})
+
+	// CEP Rule Engine metrics
+	CEPRulesEvaluated = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_evaluated_total",
+		Help:      "Total CEP rule evaluations (conditions checked)",
+	})
+
+	CEPRulesFired = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_fired_total",
+		Help:      "CEP rules fired by rule name and severity",
+	}, []string{"rule_name", "severity"})
+
+	CEPRulesCooldownSkipped = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "cep_rules_cooldown_skipped_total",
+		Help:      "CEP rule evaluations skipped due to cooldown",
+	})
+
+	CEPEvalDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "cep_eval_duration_seconds",
+		Help:      "Time to evaluate all CEP rules for a signal batch",
+		Buckets:   []float64{.0001, .0005, .001, .005, .01, .05, .1},
+	})
+
+	CEPActiveRules = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "cep_active_rules",
+		Help:      "Number of enabled CEP rules currently loaded",
+	})
+
+	NotificationsDispatched = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "notifications_dispatched_total",
+		Help:      "Notifications dispatched to worker by channel type",
+	}, []string{"channel_type"})
 )
 
 // ── API Errors ─────────────────────────────────────────────

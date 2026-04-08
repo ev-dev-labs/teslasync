@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -63,6 +64,7 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 			cooldown = 15 * time.Minute
 		}
 		if time.Since(*st.LastFiredAt) < cooldown {
+			metrics.CEPRulesCooldownSkipped.Inc()
 			return EvalResult{} // still in cooldown
 		}
 	}
