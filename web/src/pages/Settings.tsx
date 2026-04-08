@@ -50,6 +50,7 @@ export default function Settings() {
     gas_price_per_unit: 3.50,
     gas_unit: 'gallon',
     gas_efficiency_mpg: 25,
+    decimal_precision: 1,
   })
   const [saved, setSaved] = useState(false)
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
@@ -351,6 +352,20 @@ export default function Settings() {
                 >
                   <option value="rated">Rated</option>
                   <option value="ideal">Ideal</option>
+                </select>
+              </SettingField>
+
+              <SettingField label="Decimal Precision">
+                <select
+                  value={form.decimal_precision}
+                  onChange={e => setForm({ ...form, decimal_precision: Number(e.target.value) })}
+                  className="glass-input w-full px-3 py-2.5 text-sm"
+                >
+                  <option value={0}>0 — 14</option>
+                  <option value={1}>1 — 14.2</option>
+                  <option value={2}>2 — 14.25</option>
+                  <option value={3}>3 — 14.249</option>
+                  <option value={4}>4 — 14.2485</option>
                 </select>
               </SettingField>
 

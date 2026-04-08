@@ -327,6 +327,7 @@ type Settings struct {
 	GasPricePerUnit float64 `json:"gas_price_per_unit" db:"gas_price_per_unit"` // price per gallon/liter
 	GasUnit         string  `json:"gas_unit" db:"gas_unit"`                   // gallon, liter
 	GasEfficiencyMPG float64 `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
+	DecimalPrecision int     `json:"decimal_precision" db:"decimal_precision"`   // 1, 2, 3, or 4 decimal places for display
 	PollingConfig   PollingConfig `json:"polling_config" db:"polling_config"`
 }
 

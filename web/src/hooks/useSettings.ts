@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSettings, type AppSettings } from '../api'
+import { setGlobalPrecision } from '../lib/numberFormat'
 
 const defaults: AppSettings = {
   unit_of_length: 'km',
@@ -15,6 +16,7 @@ const defaults: AppSettings = {
   gas_price_per_unit: 0,
   gas_unit: 'gallon',
   gas_efficiency_mpg: 25,
+  decimal_precision: 1,
 }
 
 /**
@@ -38,6 +40,10 @@ export function useSettings() {
   })
 
   const s = settings ?? defaults
+  const decimals = s.decimal_precision ?? 1
+
+  // Sync global precision so fmtNumber/fmtPercent/etc. use it automatically
+  setGlobalPrecision(decimals)
 
   const isMiles = s.unit_of_length === 'mi'
   const isFahrenheit = s.unit_of_temp === 'F'
@@ -65,21 +71,22 @@ export function useSettings() {
   const rangeType = s.preferred_range as 'rated' | 'ideal'
 
   /** Format a distance value with unit */
-  const fmtDistance = (km: number, decimals = 1): string =>
-    `${convertDistance(km).toFixed(decimals)} ${distanceUnit}`
+  const fmtDistance = (km: number, d?: number): string =>
+    `${convertDistance(km).toFixed(d ?? decimals)} ${distanceUnit}`
 
   /** Format a speed value with unit */
-  const fmtSpeed = (kmh: number, decimals = 0): string =>
-    `${convertSpeed(kmh).toFixed(decimals)} ${speedUnit}`
+  const fmtSpeed = (kmh: number, d?: number): string =>
+    `${convertSpeed(kmh).toFixed(d ?? Math.max(0, decimals - 1))} ${speedUnit}`
 
   /** Format a temperature value with unit */
-  const fmtTemp = (celsius: number, decimals = 1): string =>
-    `${convertTemp(celsius).toFixed(decimals)} ${tempUnit}`
+  const fmtTemp = (celsius: number, d?: number): string =>
+    `${convertTemp(celsius).toFixed(d ?? decimals)} ${tempUnit}`
 
   return {
     settings: s,
     isMiles,
     isFahrenheit,
+    decimals,
     convertDistance,
     convertSpeed,
     convertTemp,
