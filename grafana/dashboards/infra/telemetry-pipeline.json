@@ -785,7 +785,7 @@
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
           "expr": "rate(teslasync_mqtt_reconnects_total[5m])",
-          "legendFormat": "{{event_type}}",
+          "legendFormat": "Reconnects/s",
           "refId": "A",
           "range": true,
           "instant": false
@@ -873,7 +873,7 @@
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
           "expr": "teslasync_streaming_vehicles_active",
-          "legendFormat": "{{vehicle}}",
+          "legendFormat": "Streaming",
           "refId": "A",
           "format": "table",
           "instant": true
