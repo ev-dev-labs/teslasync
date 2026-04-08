@@ -19,6 +19,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
@@ -144,7 +146,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
-		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub),
+		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client { if mc != nil { return mc.Underlying() }; return nil }()),
 		staleTimeout:   staleTimeout,
 		bgCtx:          bgCtx,
 		bgCancel:       bgCancel,

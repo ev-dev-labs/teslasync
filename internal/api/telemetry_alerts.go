@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
 
 // TelemetryAlertEvaluator runs alert rules against incoming streaming signals.
@@ -21,10 +23,11 @@ type TelemetryAlertEvaluator struct {
 	eventBus      *events.Bus
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
+	mqttClient    pahomqtt.Client
 }
 
 // NewTelemetryAlertEvaluator creates an alert evaluator for streaming data.
-func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *EventHub) *TelemetryAlertEvaluator {
+func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *EventHub, mqttClient pahomqtt.Client) *TelemetryAlertEvaluator {
 	return &TelemetryAlertEvaluator{
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		alertRepo:     database.NewAlertRepo(db),
@@ -32,6 +35,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		eventBus:      eventBus,
 		eventHub:      hub,
 		ruleEngine:    NewRuleEngine(),
+		mqttClient:    mqttClient,
 	}
 }
 
@@ -188,7 +192,9 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 	metrics.TelemetryMessagesReceived.Inc() // reuse counter for now
 }
 
-// dispatchNotifications sends the alert to all configured notification channels.
+// dispatchNotifications publishes alert to the notification worker via MQTT.
+// The worker handles delivery, retry, rate limiting, and metrics — fully decoupled.
+// Falls back to direct send if MQTT is unavailable.
 func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -199,10 +205,17 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, 
 			log.Warn().Int64("channel_id", chID).Err(err).Msg("cep: notification channel not found")
 			continue
 		}
-		if err := sendNotification(ch, rule.Name, message); err != nil {
-			log.Warn().Int64("channel_id", chID).Str("type", ch.Type).Err(err).Msg("cep: notification send failed")
+		req := &notification.Request{
+			ChannelType: ch.Type,
+			Config:      ch.Config,
+			Title:       rule.Name,
+			Message:     message,
+			ChannelID:   ch.ID,
+		}
+		if err := notification.Publish(e.mqttClient, req); err != nil {
+			log.Warn().Int64("channel_id", chID).Str("type", ch.Type).Err(err).Msg("cep: notification dispatch failed")
 		} else {
-			log.Info().Int64("channel_id", chID).Str("type", ch.Type).Msg("cep: notification sent")
+			log.Info().Int64("channel_id", chID).Str("type", ch.Type).Msg("cep: notification dispatched to worker")
 		}
 	}
 }
