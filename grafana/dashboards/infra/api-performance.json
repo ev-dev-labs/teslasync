@@ -442,7 +442,7 @@
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
           "expr": "sum by (category) (teslasync_api_errors_total)",
-          "legendFormat": "{{result}}",
+          "legendFormat": "{{category}}",
           "refId": "A",
           "instant": true,
           "range": false
@@ -725,7 +725,7 @@
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
           "expr": "sum by (method) (rate(teslasync_http_requests_total[5m]))",
-          "legendFormat": "{{endpoint}} - {{result}}",
+          "legendFormat": "{{method}}",
           "refId": "A",
           "range": true,
           "instant": false

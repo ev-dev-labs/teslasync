@@ -466,7 +466,7 @@
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
           "expr": "sum by (method) (rate(teslasync_http_requests_total[5m]))",
-          "legendFormat": "{{operation}}",
+          "legendFormat": "{{method}}",
           "refId": "A",
           "range": true,
           "instant": false
@@ -629,8 +629,8 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum by (code) (rate(teslasync_http_requests_total[5m]))",
-          "legendFormat": "{{result}}",
+          "expr": "sum by (status) (rate(teslasync_http_requests_total[5m]))",
+          "legendFormat": "{{status}}",
           "refId": "A",
           "range": true,
           "instant": false
