@@ -14,6 +14,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -22,6 +23,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
+	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
@@ -105,7 +107,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
-	alertHandler := NewAlertHandler(db)
+	var pahoForAlerts pahomqtt.Client
+	if mqttClient != nil { pahoForAlerts = mqttClient.Underlying() }
+	var alertSignalStore *signal.Store
+	if opt.TelemetryHandler != nil {
+		alertSignalStore = opt.TelemetryHandler.GetSignalStore()
+	}
+	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertSignalStore)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(energySvc)
 	batteryHandler := NewBatteryHandler(db)
@@ -253,6 +261,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/rules", alertHandler.CreateRule)
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
+			r.Post("/test", alertHandler.TestRule)
 		})
 
 		// Analytics
@@ -389,7 +398,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Real-time SSE stream
 		if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
-			// SSE with authentik JWT validation (production — bypasses ForwardAuth)
+			if cfg.Auth.AuthentikURL == "" || cfg.Auth.AuthentikHMACKey == "" {
+				log.Warn().
+					Bool("has_url", cfg.Auth.AuthentikURL != "").
+					Bool("has_hmac", cfg.Auth.AuthentikHMACKey != "").
+					Msg("partial authentik config: set both AUTHENTIK_URL and AUTHENTIK_HMAC_KEY for full JWT validation; SSE will fall back to ForwardAuth headers")
+			}
+			// SSE with authentik JWT validation + ForwardAuth header fallback
 			r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(eventHub))
 			// Token endpoint (behind ForwardAuth — returns JWT to frontend)
 			r.Get("/sse-token", SSETokenHandler())
@@ -420,6 +435,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/version", VersionHandler(ver, cfg))
 			r.Get("/update-check", UpdateCheckHandler())
 			r.Get("/workers", WorkersHealthHandler())
+			r.Get("/metrics-catalog", MetricsCatalogHandler())
 		})
 
 		// API Call Logs

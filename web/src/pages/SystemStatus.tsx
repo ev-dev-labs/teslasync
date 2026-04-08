@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, getTelemetryStatus, getWorkersHealth, getNotificationStats, getNotificationLogs, getExportJobs, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse, TelemetryStatus, WorkersHealth, NotificationStats, NotificationLog, ExportJobSummary } from '../api'
 import { getApiBase } from '../lib/resilience'
+import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import {
   Server, Database, Radio, Wifi, WifiOff, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Activity, Clock, Cpu, HardDrive,
@@ -61,6 +62,62 @@ function getStatusIcon(status: string) {
     default:
       return <AlertTriangle className="h-5 w-5 text-[var(--text-muted)]" />
   }
+}
+
+/** Collapsible accordion section with summary badges in the header. */
+function AccordionSection({ icon, title, description, badges, defaultOpen = false, children }: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  badges?: React.ReactNode
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 pt-6 pb-2 group cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-2.5 shrink-0">
+          {icon}
+          <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
+        </div>
+        {/* Summary badges (visible when collapsed) */}
+        {!open && badges && <div className="flex items-center gap-2 shrink-0">{badges}</div>}
+        <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider shrink-0 hidden sm:block">{description}</p>
+        <ChevronDown className={clsx('h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 shrink-0', open && 'rotate-180')} />
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        className="overflow-hidden"
+      >
+        <div className="space-y-4 pb-2">
+          {children}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+/** Small colored dot with optional label for accordion summary badges. */
+function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray'; label: string }) {
+  const colors = {
+    green: 'bg-green-500/20 text-green-400 border-green-500/30',
+    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    red: 'bg-red-500/20 text-red-400 border-red-500/30',
+    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  }
+  return (
+    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
+      {label}
+    </span>
+  )
 }
 
 function getStatusLabel(status: string): string {
@@ -986,6 +1043,96 @@ function TelemetryLivePanel() {
   )
 }
 
+// ── SSE Connection Panel ────────────────────────────────────────────────────
+function SSEConnectionPanel() {
+  const { diagnostics } = useRealtimeEvents()
+  const { state, failCount, lastConnected, endpoint, nextRetryIn } = diagnostics
+
+  const stateConfig = {
+    connected: { label: 'Connected', color: '#10b981', icon: <Wifi className="h-4 w-4 text-neon-green" />, bg: 'bg-neon-green/10 border-neon-green/20' },
+    reconnecting: { label: 'Reconnecting', color: '#f59e0b', icon: <RefreshCw className="h-4 w-4 text-amber-400 animate-spin" />, bg: 'bg-amber-400/10 border-amber-400/20' },
+    unavailable: { label: 'Polling Fallback', color: '#6b7280', icon: <WifiOff className="h-4 w-4 text-[var(--text-muted)]" />, bg: 'bg-white/5 border-white/10' },
+  }
+  const cfg = stateConfig[state]
+
+  return (
+    <FadeIn delay={0.11}>
+      <GlassPanel className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title flex items-center gap-2">
+            <Rss className="h-4 w-4 text-neon-blue" /> SSE Real-Time Stream
+          </h3>
+          <span className={clsx('text-xs font-medium px-2.5 py-1 rounded-full border', cfg.bg)} style={{ color: cfg.color }}>
+            {cfg.label}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Connection State */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-center gap-2 mb-2">
+              {cfg.icon}
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Status</p>
+            </div>
+            <p className="text-sm font-semibold" style={{ color: cfg.color }}>{cfg.label}</p>
+            {state === 'connected' && (
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">Push updates active</p>
+            )}
+            {state === 'reconnecting' && (
+              <p className="text-[10px] text-amber-400/70 mt-1">Attempt {failCount + 1}/3…</p>
+            )}
+            {state === 'unavailable' && (
+              <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                {nextRetryIn ? `Retry in ${Math.floor(nextRetryIn / 60)}m` : 'Using REST polling'}
+              </p>
+            )}
+          </div>
+
+          {/* Endpoint */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Endpoint</p>
+            <p className="text-xs font-mono text-[var(--text-primary)]">{endpoint}</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">Server-Sent Events</p>
+          </div>
+
+          {/* Last Connected */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Last Connected</p>
+            <p className="text-xs text-[var(--text-primary)]">
+              {lastConnected ? formatTime(lastConnected.toISOString()) : '—'}
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              {failCount > 0 ? `${failCount} failed attempt${failCount > 1 ? 's' : ''}` : 'No failures'}
+            </p>
+          </div>
+
+          {/* Fallback Mode */}
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">Data Delivery</p>
+            <p className="text-xs text-[var(--text-primary)]">
+              {state === 'connected' ? 'Real-time push' : 'REST polling'}
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              {state === 'connected' ? 'Instant updates' : 'Refresh every 30-60s'}
+            </p>
+          </div>
+        </div>
+
+        {/* Impact explanation when not connected */}
+        {state !== 'connected' && (
+          <div className="mt-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Impact</p>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              All features work normally via REST polling. Dashboard, vehicle status, and alerts refresh every 30–60 seconds instead of instantly.
+              {state === 'unavailable' && ' SSE will automatically retry every 5 minutes.'}
+            </p>
+          </div>
+        )}
+      </GlassPanel>
+    </FadeIn>
+  )
+}
+
 // ── Worker Health Panel ──────────────────────────────────────────────────────
 function WorkerHealthPanel() {
   const { data: workers } = useQuery<WorkersHealth>({
@@ -1263,6 +1410,19 @@ export default function SystemStatus() {
     staleTime: 60_000,
   })
 
+  // Top-level queries for accordion summary badges
+  const { data: telemetryStatus } = useQuery<TelemetryStatus>({
+    queryKey: ['telemetry-status'],
+    queryFn: getTelemetryStatus,
+    refetchInterval: 30_000,
+  })
+  const { data: workersStatus } = useQuery<WorkersHealth>({
+    queryKey: ['workers-health'],
+    queryFn: getWorkersHealth,
+    refetchInterval: 30_000,
+  })
+  const { diagnostics: sseDiag } = useRealtimeEvents()
+
   useEffect(() => {
     if (dataUpdatedAt) setLastChecked(new Date(dataUpdatedAt))
   }, [dataUpdatedAt])
@@ -1358,8 +1518,18 @@ export default function SystemStatus() {
         </GlassPanel>
       </FadeIn>
 
-      {/* Endpoint Status Strip */}
-      <FadeIn delay={0.05}>
+      {/* ── SECTION: Health Probes ──────────────────────────── */}
+      <AccordionSection
+        icon={<HeartPulse className="h-4 w-4 text-neon-green" />}
+        title="Health Probes"
+        description="Liveness & readiness checks"
+        badges={
+          <>
+            <StatusBadge color={healthz?.ok ? 'green' : healthz === undefined ? 'gray' : 'red'} label={`healthz ${healthz?.ok ? '200' : '—'}`} />
+            <StatusBadge color={readyz?.ok ? 'green' : readyz === undefined ? 'gray' : 'red'} label={`readyz ${readyz?.ok ? '200' : '—'}`} />
+          </>
+        }
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <GlassPanel className="p-4 flex items-center gap-3">
             <div className={clsx('w-3 h-3 rounded-full', healthz === undefined ? 'bg-yellow-500 animate-pulse' : healthz?.ok ? 'bg-neon-green animate-pulse' : 'bg-neon-red')} />
@@ -1382,16 +1552,22 @@ export default function SystemStatus() {
             </span>
           </GlassPanel>
         </div>
-      </FadeIn>
+      </AccordionSection>
 
-      {/* Backend Info & Endpoints */}
-      {version && (
-        <FadeIn delay={0.08}>
+      {/* ── SECTION: Backend Status ──────────────────────────── */}
+      <AccordionSection
+        icon={<Server className="h-4 w-4 text-neon-cyan" />}
+        title="Backend Status"
+        description="Version, runtime & endpoints"
+        badges={
+          <>
+            {version && <StatusBadge color="green" label={`v${version.chart_version}`} />}
+            {version && <StatusBadge color="green" label={`${version.go_version}`} />}
+          </>
+        }
+      >
+        {version && (
           <GlassPanel className="p-5">
-            <h3 className="section-title flex items-center gap-2 mb-4">
-              <Server className="h-4 w-4 text-neon-cyan" /> Backend Status
-            </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {[
                 { label: 'Version', value: `v${version.chart_version}`, icon: Shield },
@@ -1455,78 +1631,103 @@ export default function SystemStatus() {
               </div>
             )}
           </GlassPanel>
-        </FadeIn>
-      )}
+        )}
+      </AccordionSection>
 
-      {/* Service Components Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-44" />)}
-        </div>
-      ) : (
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {components.map(([name, info]) => (
-            <StaggerItem key={name}>
-              <ComponentCard name={name} info={info} />
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      )}
-
-      {/* Fleet Telemetry Live Feed */}
-      <TelemetryLivePanel />
-
-      {/* Adaptive Polling Engine */}
-      <PollingEnginePanel />
-
-      {/* Background Workers */}
-      <WorkerHealthPanel />
-
-      {/* Notification & Export Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <NotificationDeliveryPanel />
-        <ExportJobQueuePanel />
-      </div>
-
-      {/* System Info */}
-      <FadeIn delay={0.15}>
-        <GlassPanel className="p-5">
-          <h3 className="section-title flex items-center gap-2 mb-4">
-            <Cpu className="h-4 w-4 text-neon-cyan" /> System Information
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'API Endpoint', value: version?.endpoints?.api ?? window.location.origin, icon: Server },
-              { label: 'Auto Refresh', value: '15 seconds', icon: RefreshCw },
-              { label: 'Last Check', value: lastChecked.toLocaleTimeString(), icon: Clock },
-              { label: 'Connection', value: navigator.onLine ? 'Online' : 'Offline', icon: navigator.onLine ? Wifi : WifiOff },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
-                </div>
-              </div>
-            ))}
+      {/* ── SECTION: Service Health ──────────────────────────── */}
+      <AccordionSection
+        icon={<Database className="h-4 w-4 text-neon-green" />}
+        title="Service Health"
+        description="Component status & connectivity"
+        badges={
+          <StatusBadge color={healthyCount === totalCount ? 'green' : 'amber'} label={`${healthyCount}/${totalCount} healthy`} />
+        }
+      >
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-44" />)}
           </div>
-        </GlassPanel>
-      </FadeIn>
+        ) : (
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {components.map(([name, info]) => (
+              <StaggerItem key={name}>
+                <ComponentCard name={name} info={info} />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        )}
+      </AccordionSection>
 
-      {/* Component Health (Extended) */}
-      <ComponentHealthPanel />
+      {/* ── SECTION: Infrastructure ──────────────────────────── */}
+      <AccordionSection
+        icon={<Server className="h-4 w-4 text-neon-cyan" />}
+        title="Infrastructure"
+        description="Backend runtime & endpoints"
+        badges={
+          <>
+            {version && <StatusBadge color="green" label={`v${version.app_version}`} />}
+            <StatusBadge color={healthyCount === totalCount ? 'green' : 'amber'} label={`${healthyCount}/${totalCount} healthy`} />
+          </>
+        }
+      >
+        <ComponentHealthPanel />
+      </AccordionSection>
 
-      {/* API Usage Dashboard */}
-      <APIUsageDashboard />
+      {/* ── SECTION: Data Pipeline ───────────────────────────── */}
+      <AccordionSection
+        icon={<Rss className="h-4 w-4 text-neon-blue" />}
+        title="Data Pipeline"
+        description="Telemetry, streaming & polling"
+        badges={
+          <>
+            <StatusBadge
+              color={telemetryStatus?.enabled ? 'green' : 'gray'}
+              label={telemetryStatus?.enabled ? `Telemetry ${telemetryStatus.aggregate_stats?.streaming_vehicles ?? 0} vehicles` : 'Telemetry off'}
+            />
+            <StatusBadge
+              color={sseDiag.state === 'connected' ? 'green' : sseDiag.state === 'reconnecting' ? 'amber' : 'gray'}
+              label={`SSE ${sseDiag.state === 'connected' ? '✓' : sseDiag.state === 'reconnecting' ? '…' : 'off'}`}
+            />
+            {workersStatus && (
+              <StatusBadge
+                color={workersStatus.healthy_count === workersStatus.total ? 'green' : 'amber'}
+                label={`Workers ${workersStatus.healthy_count}/${workersStatus.total}`}
+              />
+            )}
+          </>
+        }
+      >
+        <TelemetryLivePanel />
+        <SSEConnectionPanel />
+        <PollingEnginePanel />
+        <WorkerHealthPanel />
+      </AccordionSection>
 
-      {/* Data Compression Stats */}
-      <CompressionStatsPanel />
+      {/* ── SECTION: Operations ──────────────────────────────── */}
+      <AccordionSection
+        icon={<BarChart3 className="h-4 w-4 text-neon-amber" />}
+        title="Operations"
+        description="API usage, limits & jobs"
+        badges={<StatusBadge color="green" label="Active" />}
+      >
+        <APIUsageDashboard />
+        <RateLimitsPanel />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <NotificationDeliveryPanel />
+          <ExportJobQueuePanel />
+        </div>
+      </AccordionSection>
 
-      {/* Rate Limits */}
-      <RateLimitsPanel />
-
-      {/* Audit Logs */}
-      <AuditLogTable />
+      {/* ── SECTION: Diagnostics ─────────────────────────────── */}
+      <AccordionSection
+        icon={<HardDrive className="h-4 w-4 text-neon-purple" />}
+        title="Diagnostics"
+        description="Compression, logs & internals"
+        badges={<StatusBadge color="gray" label="Logs" />}
+      >
+        <CompressionStatsPanel />
+        <AuditLogTable />
+      </AccordionSection>
     </div>
   )
 }

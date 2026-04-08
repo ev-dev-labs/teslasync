@@ -7,6 +7,7 @@ import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBa
 import { AnimatedNumber } from '../components/Widgets'
 import { TeslaCarViz } from '../components/TeslaCarViz'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 
 function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Vehicle) => void }) {
@@ -233,6 +234,9 @@ export default function Vehicles() {
     queryFn: getVehicles,
   })
 
+  const primaryVehicleId = vehicles?.[0]?.id
+  const { state: live } = useVehicleLive(primaryVehicleId)
+
   const syncMut = useMutation({
     mutationFn: syncVehicles,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
@@ -255,7 +259,7 @@ export default function Vehicles() {
     <div className="space-y-8">
       <PageHeader
         title="Fleet Management"
-        subtitle="View, manage, and sync your Tesla vehicles"
+        subtitle={live.vehicleName ? `${live.vehicleName} · View, manage, and sync your Tesla vehicles` : "View, manage, and sync your Tesla vehicles"}
         actions={
           <button
             onClick={() => syncMut.mutate()}

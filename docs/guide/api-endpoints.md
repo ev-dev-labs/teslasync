@@ -600,7 +600,7 @@ curl "http://localhost:8080/api/v1/analytics/battery-degradation?vehicle_id=1"
 
 ---
 
-## Alerts
+## Alerts & CEP Rule Engine
 
 ### GET `/api/v1/alerts/`
 
@@ -648,7 +648,7 @@ curl -X POST http://localhost:8080/api/v1/alerts/7/read
 
 ### GET `/api/v1/alerts/rules`
 
-List all alert rules and their configurations.
+List all alert rules (legacy + CEP). CEP rules include `conditions`, `cooldown_min`, `severity`, `msg_template`, `notify_channels`, `tags`, `fire_count`, and `last_fired_at`.
 
 **curl:**
 ```bash
@@ -660,36 +660,122 @@ curl http://localhost:8080/api/v1/alerts/rules
 [
   {
     "id": 1,
-    "name": "Low Battery Alert",
-    "type": "battery_low",
+    "name": "Low Battery Warning",
+    "type": "custom",
     "enabled": true,
-    "threshold": 20.0,
+    "threshold": null,
     "vehicle_id": null,
-    "created_at": "2025-01-01T00:00:00Z"
+    "severity": "warning",
+    "cooldown_min": 30,
+    "msg_template": "🔋 Battery at {{BatteryLevel}}%",
+    "conditions": {
+      "operator": "AND",
+      "children": [
+        { "signal": "BatteryLevel", "op": "<", "value": 20 },
+        { "signal": "ChargeState", "op": "!=", "value": "Charging" }
+      ]
+    },
+    "notify_channels": [1, 3],
+    "tags": ["battery"],
+    "fire_count": 5,
+    "last_fired_at": "2026-04-08T20:30:00Z",
+    "created_at": "2026-04-01T00:00:00Z"
   }
 ]
 ```
 
+### POST `/api/v1/alerts/rules`
+
+Create a new CEP alert rule.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/alerts/rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Overspeed Alert",
+    "type": "custom",
+    "enabled": true,
+    "severity": "critical",
+    "cooldown_min": 15,
+    "msg_template": "🚨 Speed {{VehicleSpeed}} km/h exceeds limit!",
+    "conditions": {
+      "signal": "VehicleSpeed",
+      "op": ">",
+      "value": 130,
+      "for_seconds": 10
+    },
+    "notify_channels": [1]
+  }'
+```
+
+**Response:** `201 Created` with the new rule object.
+
 ### PUT `/api/v1/alerts/rules/{ruleID}`
 
-Update an alert rule's enabled status or threshold.
+Update an alert rule.
 
 **curl:**
 ```bash
 curl -X PUT http://localhost:8080/api/v1/alerts/rules/1 \
   -H "Content-Type: application/json" \
-  -d '{"enabled": true, "threshold": 15.0}'
-```
-
-**Request Body:**
-```json
-{
-  "enabled": true,
-  "threshold": 15.0
-}
+  -d '{"enabled": true, "cooldown_min": 60, "severity": "warning"}'
 ```
 
 **Response:** Updated `AlertRule` object.
+
+### DELETE `/api/v1/alerts/rules/{ruleID}`
+
+Delete an alert rule.
+
+**curl:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/alerts/rules/1
+```
+
+**Response:**
+```json
+{ "status": "deleted" }
+```
+
+### POST `/api/v1/alerts/rules/{ruleID}/toggle`
+
+Enable or disable a rule without deleting it.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/alerts/rules/1/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+```
+
+**Response:** Updated `AlertRule` object.
+
+### POST `/api/v1/alerts/test`
+
+Fire a test alert — creates a DB alert, broadcasts via SSE, and dispatches to selected notification channels. Templates are rendered with real signal values from the in-memory SignalStore.
+
+**curl:**
+```bash
+curl -X POST http://localhost:8080/api/v1/alerts/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Rule",
+    "severity": "info",
+    "msg_template": "Battery is at {{BatteryLevel}}%, speed is {{VehicleSpeed}} km/h",
+    "notify_channels": [1]
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "sent",
+  "alert": { "id": 42, "type": "test", "severity": "info", "..." : "..." },
+  "dispatched": 1,
+  "message": "Test notification sent — check your browser toast and notification channels"
+}
+```
 
 ---
 

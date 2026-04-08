@@ -45,84 +45,7 @@
             "mode": "palette-classic"
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "🔗 ID"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "title": "View Drive Detail",
-                    "url": "/d/teslasync-drive-detail?var-drive_id=${__value.raw}&var-vehicle_id=${vehicle_id}&${__url_time_range}",
-                    "targetBlank": false
-                  }
-                ]
-              },
-              {
-                "id": "custom.width",
-                "value": 60
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "📅 Date"
-            },
-            "properties": [
-              {
-                "id": "links",
-                "value": [
-                  {
-                    "title": "View Drive Detail",
-                    "url": "/d/teslasync-drive-detail?var-drive_id=${__data.fields[\"🔗 ID\"]}&var-vehicle_id=${vehicle_id}&${__url_time_range}",
-                    "targetBlank": false
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "🏷️ Type"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 120
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "🚦 Speed"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 50
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "📊 Usage"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 100
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 20,
@@ -153,11 +76,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  d.id AS \"🔗 ID\",\n  d.start_date AS \"📅 Date\",\n  CASE\n    WHEN d.distance > 100 THEN '🛣️ Road Trip'\n    WHEN d.distance > 30 THEN '🚗 Drive'\n    WHEN d.distance > 0 THEN '🏙️ Short'\n    ELSE '🅿️ Parked'\n  END AS \"🏷️ Type\",\n  ROUND(convert_distance(d.distance)::numeric, 1) AS \"📏 Distance\",\n  ROUND(d.duration_min::numeric) AS \"⏱️ Duration\",\n  ROUND(convert_speed(d.distance / NULLIF(d.duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  ROUND(convert_speed(d.speed_max)::numeric) AS \"🏎️ Max Speed\",\n  CASE\n    WHEN d.speed_max > 130 THEN '🔴'\n    WHEN d.speed_max > 100 THEN '🟡'\n    ELSE '🟢'\n  END AS \"🚦 Speed\",\n  d.start_battery_level AS \"🔋 Start %\",\n  d.end_battery_level AS \"🔋 End %\",\n  CASE\n    WHEN (d.start_battery_level - COALESCE(d.end_battery_level, d.start_battery_level)) > 20 THEN '⚠️ High'\n    WHEN (d.start_battery_level - COALESCE(d.end_battery_level, d.start_battery_level)) > 10 THEN '📊 Medium'\n    ELSE '✅ Low'\n  END AS \"📊 Usage\",\n  ROUND(convert_distance(d.start_range_km)::numeric) AS \"📏 Range Start\",\n  ROUND(convert_distance(d.end_range_km)::numeric) AS \"📏 Range End\",\n  ROUND(convert_temp(d.outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\"\nFROM drives d\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.start_date)\nORDER BY d.start_date DESC\nLIMIT 200",
+          "rawSql": "WITH monthly_drives AS (\n  SELECT\n    DATE_TRUNC('month', d.start_date) AS month,\n    d.vehicle_id,\n    COUNT(*) AS drives,\n    ROUND(convert_distance(SUM(d.distance))::numeric, 1) AS distance_km,\n    ROUND(SUM(d.duration_min)::numeric) AS duration_min,\n    ROUND(convert_speed(SUM(d.distance) / NULLIF(SUM(d.duration_min), 0) * 60)::numeric, 1) AS avg_speed,\n    ROUND(convert_speed(MAX(d.speed_max))::numeric) AS top_speed\n  FROM v_drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n  GROUP BY DATE_TRUNC('month', d.start_date), d.vehicle_id\n),\nmonthly_charges AS (\n  SELECT\n    DATE_TRUNC('month', cs.start_date) AS month,\n    cs.vehicle_id,\n    COUNT(*) AS charges,\n    ROUND(SUM(cs.charge_energy_added)::numeric, 1) AS energy_kwh,\n    ROUND(SUM(CASE WHEN cs.cost IS NOT NULL THEN cs.cost END)::numeric, 2) AS cost\n  FROM v_charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n  GROUP BY DATE_TRUNC('month', cs.start_date), cs.vehicle_id\n)\nSELECT\n  TO_CHAR(md.month, 'YYYY-MM') AS \"📅 Month\",\n  md.drives AS \"🛣️ Drives\",\n  md.distance_km AS \"📏 Distance\",\n  md.duration_min AS \"⏱️ Duration\",\n  md.avg_speed AS \"🚗 Avg Speed\",\n  md.top_speed AS \"🏎️ Top Speed\",\n  COALESCE(mc.charges, 0) AS \"⚡ Charges\",\n  mc.energy_kwh AS \"⚡ Energy\",\n  mc.cost AS \"💰 Cost\"\nFROM monthly_drives md\nLEFT JOIN monthly_charges mc ON mc.month = md.month AND mc.vehicle_id = md.vehicle_id\nORDER BY md.month DESC",
           "refId": "A"
         }
       ],
-      "title": "Drive History",
+      "title": "Monthly Statistics",
       "type": "table",
       "transparent": false
     }
@@ -246,13 +169,13 @@
     ]
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-365d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 🛣️ Drive History",
-  "uid": "teslasync-drives",
+  "title": "TeslaSync 📈 Monthly Statistics",
+  "uid": "teslasync-statistics",
   "version": 1,
   "weekStart": ""
 }

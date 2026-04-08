@@ -6,6 +6,7 @@ import { Music, Volume2, Play, Pause, Square, Radio, Headphones, BarChart3, Cloc
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
@@ -168,6 +169,7 @@ export default function MediaPlayer() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
 
   const TIME_RANGES = [
     { label: '24h', hours: 24, limit: 200 },
@@ -254,7 +256,7 @@ export default function MediaPlayer() {
     <FadeIn>
       {/* Header + vehicle selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
-        <PageHeader title="Media Player" subtitle="Now playing, volume, and playback history" icon={<Music className="h-7 w-7 text-neon-cyan" />} />
+        <PageHeader title="Media Player" subtitle={live.vehicleName ? `${live.vehicleName} · Now playing, volume, and playback history` : "Now playing, volume, and playback history"} icon={<Music className="h-7 w-7 text-neon-cyan" />} />
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {TIME_RANGES.map(tr => (

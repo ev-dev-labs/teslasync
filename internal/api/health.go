@@ -250,6 +250,114 @@ func MetricsHandler() http.Handler {
 	return promhttp.Handler()
 }
 
+// MetricsCatalogHandler returns a JSON catalog of all available Prometheus metrics.
+// Helps users building dashboards discover what metrics TeslaSync exposes.
+func MetricsCatalogHandler() http.HandlerFunc {
+	type metricEntry struct {
+		Name   string   `json:"name"`
+		Type   string   `json:"type"`
+		Help   string   `json:"help"`
+		Labels []string `json:"labels,omitempty"`
+	}
+
+	catalog := []metricEntry{
+		// App Info & Startup
+		{Name: "teslasync_app_info", Type: "gauge", Help: "Application build information (always 1)", Labels: []string{"version", "go_version", "commit"}},
+		{Name: "teslasync_uptime_seconds", Type: "gauge", Help: "Seconds since application startup"},
+		{Name: "teslasync_migration_version", Type: "gauge", Help: "Current database migration version"},
+		{Name: "teslasync_startup_duration_seconds", Type: "gauge", Help: "Time from process start to HTTP server ready"},
+
+		// HTTP
+		{Name: "teslasync_http_requests_total", Type: "counter", Help: "Total HTTP requests", Labels: []string{"method", "path", "status"}},
+		{Name: "teslasync_http_request_duration_seconds", Type: "histogram", Help: "HTTP request duration in seconds", Labels: []string{"method", "path"}},
+		{Name: "teslasync_http_response_size_bytes", Type: "histogram", Help: "HTTP response size in bytes", Labels: []string{"method", "path"}},
+
+		// Telemetry
+		{Name: "teslasync_telemetry_signals_processed_total", Type: "counter", Help: "Telemetry signals processed", Labels: []string{"signal"}},
+		{Name: "teslasync_telemetry_messages_received_total", Type: "counter", Help: "MQTT telemetry messages received"},
+		{Name: "teslasync_telemetry_processing_duration_seconds", Type: "histogram", Help: "Telemetry message batch processing time"},
+		{Name: "teslasync_streaming_vehicles_active", Type: "gauge", Help: "Vehicles currently streaming telemetry"},
+
+		// Sessions
+		{Name: "teslasync_drive_sessions_active", Type: "gauge", Help: "Currently active drive sessions"},
+		{Name: "teslasync_drive_sessions_completed_total", Type: "counter", Help: "Total completed drive sessions"},
+		{Name: "teslasync_charge_sessions_active", Type: "gauge", Help: "Currently active charge sessions"},
+		{Name: "teslasync_charge_sessions_completed_total", Type: "counter", Help: "Total completed charge sessions"},
+
+		// Database
+		{Name: "teslasync_db_query_duration_seconds", Type: "histogram", Help: "Database query duration", Labels: []string{"operation", "table"}},
+		{Name: "teslasync_db_pool_connections", Type: "gauge", Help: "Database connection pool stats", Labels: []string{"state"}},
+		{Name: "teslasync_db_transactions_total", Type: "counter", Help: "Database transactions", Labels: []string{"result"}},
+
+		// Alerts & Notifications
+		{Name: "teslasync_alerts_evaluated_total", Type: "counter", Help: "Total alert rule evaluations"},
+		{Name: "teslasync_alerts_fired_total", Type: "counter", Help: "Alerts fired", Labels: []string{"severity"}},
+		{Name: "teslasync_notifications_sent_total", Type: "counter", Help: "Notifications sent", Labels: []string{"channel_type", "result"}},
+
+		// API
+		{Name: "teslasync_api_errors_total", Type: "counter", Help: "API errors", Labels: []string{"code", "category"}},
+		{Name: "teslasync_tesla_api_calls_total", Type: "counter", Help: "Tesla Fleet API calls", Labels: []string{"endpoint", "result"}},
+
+		// Vehicles
+		{Name: "teslasync_vehicles_registered", Type: "gauge", Help: "Total registered vehicles"},
+		{Name: "teslasync_vehicles_by_state", Type: "gauge", Help: "Vehicles by state", Labels: []string{"state"}},
+
+		// Geocoding
+		{Name: "teslasync_geocoding_total", Type: "counter", Help: "Geocoding operations", Labels: []string{"result"}},
+		{Name: "teslasync_geocoding_duration_seconds", Type: "histogram", Help: "Reverse geocoding API call duration"},
+		{Name: "teslasync_address_backfill_remaining", Type: "gauge", Help: "Drives still needing address geocoding"},
+		{Name: "teslasync_address_backfill_completed_total", Type: "counter", Help: "Addresses backfilled since startup"},
+
+		// Connections
+		{Name: "teslasync_mqtt_connected", Type: "gauge", Help: "MQTT broker connection state (1=connected, 0=disconnected)"},
+		{Name: "teslasync_mqtt_messages_published_total", Type: "counter", Help: "MQTT messages published"},
+		{Name: "teslasync_mqtt_reconnects_total", Type: "counter", Help: "MQTT reconnection attempts"},
+		{Name: "teslasync_sse_connections_active", Type: "gauge", Help: "Active SSE client connections"},
+		{Name: "teslasync_sse_events_sent_total", Type: "counter", Help: "SSE events sent", Labels: []string{"event_type"}},
+
+		// Polling & Workers
+		{Name: "teslasync_poll_cycle_duration_seconds", Type: "histogram", Help: "Vehicle poll cycle duration"},
+		{Name: "teslasync_polls_total", Type: "counter", Help: "Vehicle polls", Labels: []string{"result"}},
+		{Name: "teslasync_polls_saved_total", Type: "counter", Help: "Polls avoided by optimization", Labels: []string{"reason"}},
+		{Name: "teslasync_export_jobs_total", Type: "counter", Help: "Export jobs", Labels: []string{"status"}},
+		{Name: "teslasync_maintenance_runs_total", Type: "counter", Help: "Maintenance worker runs"},
+
+		// Cache
+		{Name: "teslasync_cache_operations_total", Type: "counter", Help: "Cache operations", Labels: []string{"cache", "result"}},
+		{Name: "teslasync_cache_entries", Type: "gauge", Help: "Cache entry count", Labels: []string{"cache"}},
+		{Name: "teslasync_cache_evictions_total", Type: "counter", Help: "Cache evictions", Labels: []string{"cache"}},
+
+		// Auth & Security
+		{Name: "teslasync_auth_attempts_total", Type: "counter", Help: "Authentication attempts", Labels: []string{"result"}},
+		{Name: "teslasync_token_refreshes_total", Type: "counter", Help: "Tesla token refresh attempts", Labels: []string{"result"}},
+		{Name: "teslasync_rate_limit_exceeded_total", Type: "counter", Help: "Rate limit exceeded", Labels: []string{"endpoint"}},
+
+		// Data Freshness
+		{Name: "teslasync_vehicle_last_seen_seconds", Type: "gauge", Help: "Seconds since last telemetry per vehicle", Labels: []string{"vehicle_id"}},
+		{Name: "teslasync_signal_store_entries", Type: "gauge", Help: "Total entries in live signal store"},
+		{Name: "teslasync_signal_flush_duration_seconds", Type: "histogram", Help: "Signal store flush to DB duration"},
+
+		// Business
+		{Name: "teslasync_total_distance_km", Type: "counter", Help: "Cumulative distance driven (km)"},
+		{Name: "teslasync_total_energy_kwh", Type: "counter", Help: "Cumulative energy added (kWh)"},
+		{Name: "teslasync_total_drives", Type: "counter", Help: "Lifetime completed drives"},
+		{Name: "teslasync_total_charges", Type: "counter", Help: "Lifetime completed charge sessions"},
+		{Name: "teslasync_geofence_events_total", Type: "counter", Help: "Geofence events", Labels: []string{"type"}},
+
+		// Backup (from internal/backup/processor.go)
+		{Name: "teslasync_backup_runs_total", Type: "counter", Help: "Backup runs", Labels: []string{"status", "provider"}},
+		{Name: "teslasync_backup_duration_seconds", Type: "histogram", Help: "Backup duration"},
+		{Name: "teslasync_backup_size_bytes", Type: "histogram", Help: "Backup size in bytes"},
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"total":   len(catalog),
+			"metrics": catalog,
+		})
+	}
+}
+
 // APIUsageHandler returns Tesla API usage statistics for billing estimation.
 // Queries the api_call_logs table for real request counts and calculates
 // estimated costs based on the Tesla Fleet API pricing.

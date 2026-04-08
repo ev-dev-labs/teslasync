@@ -1,8 +1,147 @@
 # Alerts & Notifications
 
-TeslaSync includes a flexible alert system with configurable rules and multi-channel notification delivery.
+TeslaSync includes a powerful alert system combining legacy threshold rules with a **CEP (Complex Event Processing) Rule Engine** and multi-channel notification delivery.
 
-## Alert System
+## CEP Rule Engine
+
+The CEP Rule Engine (`internal/api/rule_engine.go`) evaluates recursive condition trees against live vehicle telemetry signals. It supports complex logic, temporal conditions, and transition detection — all configurable through the visual **Alert Studio** UI.
+
+### Condition Tree Structure
+
+Rules use a recursive condition tree with AND/OR/NOT grouping:
+
+```json
+{
+  "operator": "AND",
+  "children": [
+    { "signal": "BatteryLevel", "op": "<", "value": 20 },
+    { "signal": "ChargeState", "op": "!=", "value": "Charging" }
+  ]
+}
+```
+
+### Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `==` | Equals | `BatteryLevel == 100` |
+| `!=` | Not equals | `ChargeState != "Charging"` |
+| `>` | Greater than | `VehicleSpeed > 120` |
+| `<` | Less than | `BatteryLevel < 20` |
+| `>=` | Greater or equal | `InsideTemp >= 40` |
+| `<=` | Less or equal | `OutsideTemp <= -10` |
+| `contains` | String contains | `SoftwareUpdate contains "2026"` |
+| `changed_to` | Transition detection | `Gear changed_to "P"` |
+| `changed_from` | Transition detection | `ChargeState changed_from "Charging"` |
+| `is_true` | Boolean true check | `SentryMode is_true` |
+| `is_false` | Boolean false check | `Locked is_false` |
+
+### Temporal Conditions
+
+Add `for_seconds` to require a condition to sustain before firing:
+
+```json
+{
+  "signal": "VehicleSpeed",
+  "op": ">",
+  "value": 130,
+  "for_seconds": 30
+}
+```
+
+This fires only if speed exceeds 130 for 30 continuous seconds — prevents false alerts from brief spikes.
+
+### Cooldown & Deduplication
+
+Each rule has a configurable `cooldown_min` (default 15 minutes). After firing, the rule won't fire again for the same vehicle until the cooldown expires. Tracked both in-memory (fast) and in the database (`last_fired_at` column for pod restart recovery).
+
+### Message Templates
+
+Templates support signal interpolation with `{{SignalName}}` syntax:
+
+```
+🔋 Battery at {{BatteryLevel}}% — Vehicle speed: {{VehicleSpeed}} km/h
+```
+
+Available signals: any of the 230 Fleet Telemetry signals from the Signal Catalog. Templates are rendered with real-time values when alerts fire and when test notifications are sent.
+
+## Alert Studio
+
+The **Alert Studio** page (`/alert-studio`) provides a visual rule editor:
+
+### Features
+- **50+ pre-built templates** across 12 categories (Battery, Charging, Climate, Driving, Security, Geofence, Maintenance, Software, Efficiency, Fleet, Safety, Custom)
+- **Visual RuleBuilder** — condition tree editor with signal picker, category grouping, and context-aware operators
+- **Signal Catalog** — browse all 230 signals with metadata (name, category, type, unit, description)
+- **Test notifications** — fire a test alert with real signal values interpolated into templates
+- **Channel selection** — choose which notification channels receive alerts per rule
+- **Severity & cooldown** — configure per-rule severity (info/warning/critical) and cooldown period
+- **Enable/disable** — toggle rules on/off without deleting them
+- **Fire count tracking** — see how many times each rule has fired and when it last fired
+
+### Alert Studio API
+
+```bash
+# List all CEP rules
+curl http://localhost:8080/api/v1/alerts/rules
+
+# Create a CEP rule
+curl -X POST http://localhost:8080/api/v1/alerts/rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Low Battery Warning",
+    "type": "custom",
+    "enabled": true,
+    "severity": "warning",
+    "cooldown_min": 30,
+    "msg_template": "🔋 Battery at {{BatteryLevel}}% on {{VehicleName}}",
+    "conditions": {
+      "operator": "AND",
+      "children": [
+        { "signal": "BatteryLevel", "op": "<", "value": 20 },
+        { "signal": "ChargeState", "op": "!=", "value": "Charging" }
+      ]
+    },
+    "notify_channels": [1, 3]
+  }'
+
+# Toggle a rule on/off
+curl -X POST http://localhost:8080/api/v1/alerts/rules/1/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+
+# Fire a test notification
+curl -X POST http://localhost:8080/api/v1/alerts/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Rule",
+    "severity": "info",
+    "msg_template": "Battery is at {{BatteryLevel}}%",
+    "notify_channels": [1]
+  }'
+
+# Delete a rule
+curl -X DELETE http://localhost:8080/api/v1/alerts/rules/1
+```
+
+## Quiet Hours
+
+Server-side quiet hours suppress **non-critical** alerts during configured hours (e.g., 11 PM – 7 AM). Critical alerts always fire regardless.
+
+Configuration is stored in the `settings` table (`quiet_hours_start`, `quiet_hours_end`, `quiet_hours_enabled`) and checked in `fireAlert()` before dispatching notifications.
+
+```bash
+# Configure quiet hours
+curl -X PUT http://localhost:8080/api/v1/settings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "quiet_hours_enabled": true,
+    "quiet_hours_start": "23:00",
+    "quiet_hours_end": "07:00"
+  }'
+```
+
+## Legacy Alert System
 
 Alerts are triggered automatically based on rules you configure. Each alert has a type, severity, and message.
 
@@ -63,11 +202,11 @@ curl -X POST http://localhost:8080/api/v1/alerts/42/read
 ]
 ```
 
-## Alert Rules
+## Legacy Alert Rules
 
-Alert rules define the conditions that trigger alerts. You can configure them per vehicle or globally.
+Legacy alert rules use simple threshold-based conditions. These are still supported alongside CEP rules for backward compatibility.
 
-### Managing Rules
+### Managing Legacy Rules
 
 ```bash
 # List all alert rules
@@ -258,3 +397,19 @@ The **Notifications** page (`/notifications`) lets you:
 - Use the test button after creating a channel to verify it works
 - Monitor the notification logs for delivery failures
 - Webhook channels should respond with 2xx status codes within 10 seconds
+
+## CEP Prometheus Metrics
+
+The CEP Rule Engine exposes 7 Prometheus metrics for monitoring:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `teslasync_cep_active_rules` | Gauge | Number of enabled CEP rules |
+| `teslasync_cep_rules_evaluated_total` | Counter | Total rule evaluations |
+| `teslasync_cep_rules_cooldown_skipped_total` | Counter | Evaluations skipped due to cooldown |
+| `teslasync_cep_eval_duration_seconds` | Histogram | Rule evaluation latency |
+| `teslasync_alerts_fired_total` | Counter | Total alerts fired (by severity, rule) |
+| `teslasync_alerts_suppressed_quiet_hours_total` | Counter | Alerts suppressed by quiet hours |
+| `teslasync_cep_condition_errors_total` | Counter | Condition evaluation errors |
+
+A pre-built **CEP Rule Engine** Grafana dashboard (12 panels) is included for monitoring all these metrics.

@@ -100,6 +100,7 @@ export type {
   SleepAnalytics,
   RegenData,
   BatteryDegradationData,
+  RuleConditionTree,
 } from './types'
 
 export { getAuthStatus, getAuthURL, refreshAuth, disconnectAuth } from './auth'

@@ -54,7 +54,8 @@ var signalToColumn = map[string]string{
 	"ChargeAmps":          "charge_amps",
 	"ChargeRateMilePerHour": "charge_rate",
 	"DCChargingPower":     "charger_power",
-	"ACChargingPower":     "charger_power",
+	// ACChargingPower also maps to charger_power but is handled in the skip/special logic
+	// to avoid duplicate column errors when both signals arrive in the same batch.
 	"ChargeLimitSoc":      "charge_limit_soc",
 	"TimeToFullCharge":    "time_to_full_charge",
 	"ChargingCableType":   "charging_cable_type",
@@ -69,6 +70,28 @@ var signalToColumn = map[string]string{
 	"RpWindow":     "rp_window",
 	"CenterDisplay": "center_display",
 
+	// Vehicle State (access modes, lights, driver)
+	"GuestModeEnabled":          "guest_mode",
+	"GuestModeMobileAccessState": "guest_mode_mobile_access",
+	"HomelinkNearby":            "homelink_nearby",
+	"HomelinkDeviceCount":       "homelink_device_count",
+	"DriverSeatOccupied":        "driver_seat_occupied",
+	"SpeedLimitMode":            "speed_limit_mode",
+	"ValetModeEnabled":          "valet_mode_enabled",
+	"ServiceMode":               "service_mode",
+	"CurrentLimitMph":           "current_limit_mph",
+	"PairedPhoneKeyAndKeyFobQty": "paired_phone_key_count",
+	"LightsHazardsActive":       "lights_hazards_active",
+	"LightsHighBeams":           "lights_high_beams",
+	"LightsTurnSignal":          "lights_turn_signal",
+
+	// Software Update
+	"SoftwareUpdateVersion":                    "sw_update_version",
+	"SoftwareUpdateDownloadPercentComplete":     "sw_update_download_pct",
+	"SoftwareUpdateInstallationPercentComplete": "sw_update_install_pct",
+	"SoftwareUpdateExpectedDurationMinutes":     "sw_update_expected_duration",
+	"SoftwareUpdateScheduledStartTime":          "sw_update_scheduled_start",
+
 	// Tire Pressure
 	"TpmsPressureFl": "tire_pressure_fl",
 	"TpmsPressureFr": "tire_pressure_fr",
@@ -81,30 +104,222 @@ var signalToColumn = map[string]string{
 	"Version":       "version",
 	"WheelType":     "wheel_type",
 	"ExteriorColor": "exterior_color",
+
+	// State Machine (persisted for pod restart recovery)
+	"_LastGear":      "last_gear",
+	"_LastSpeedTime": "last_speed_time",
+
+	// Vehicle Configuration
+	"Trim":                    "trim",
+	"RoofColor":               "roof_color",
+	"EfficiencyPackage":       "efficiency_package",
+	"RearSeatHeaters":         "rear_seat_heaters",
+	"SunroofInstalled":        "sunroof_installed",
+	"EuropeVehicle":           "europe_vehicle",
+	"RightHandDrive":          "right_hand_drive",
+	"RemoteStartEnabled":      "remote_start_enabled",
+	"OffroadLightbarPresent":  "offroad_lightbar_present",
+
+	// === Complete Signal Coverage (all remaining Fleet Telemetry signals) ===
+
+	// Charging telemetry
+	"ACChargingEnergyIn":               "ac_charging_energy_in",
+	"ChargeCurrentRequest":             "charge_current_request",
+	"ChargeCurrentRequestMax":          "charge_current_request_max",
+	"ChargeEnableRequest":              "charge_enable_request",
+	"ChargePort":                       "charge_port",
+	"ChargePortColdWeatherMode":        "charge_port_cold_weather_mode",
+	"ChargePortDoorOpen":               "charge_port_door_open",
+	"ChargePortLatch":                  "charge_port_latch",
+	"ChargerPhases":                    "charger_phases",
+	"DCChargingEnergyIn":               "dc_charging_energy_in",
+	"EstimatedHoursToChargeTermination": "estimated_hours_to_charge_termination",
+	"FastChargerPresent":               "fast_charger_present",
+	"FastChargerType":                  "fast_charger_type",
+	"ScheduledChargingMode":            "scheduled_charging_mode",
+	"ScheduledChargingPending":         "scheduled_charging_pending",
+	"ScheduledChargingStartTime":       "scheduled_charging_start_time",
+	"ScheduledDepartureTime":           "scheduled_departure_time",
+	"SuperchargerSessionTripPlanner":   "supercharger_session_trip_planner",
+
+	// Motor/Powertrain
+	"BrakePedalPos":     "brake_pedal_pos",
+	"DCDCEnable":        "dcdc_enable",
+	"DiAxleSpeedF":      "di_axle_speed_f",
+	"DiAxleSpeedR":      "di_axle_speed_r",
+	"DiAxleSpeedREL":    "di_axle_speed_rel",
+	"DiAxleSpeedRER":    "di_axle_speed_rer",
+	"DiHeatsinkTF":      "di_heatsink_tf",
+	"DiHeatsinkTR":      "di_heatsink_tr",
+	"DiHeatsinkTREL":    "di_heatsink_trel",
+	"DiHeatsinkTRER":    "di_heatsink_trer",
+	"DiInverterTF":      "di_inverter_tf",
+	"DiInverterTR":      "di_inverter_tr",
+	"DiInverterTREL":    "di_inverter_trel",
+	"DiInverterTRER":    "di_inverter_trer",
+	"DiMotorCurrentF":   "di_motor_current_f",
+	"DiMotorCurrentR":   "di_motor_current_r",
+	"DiMotorCurrentREL": "di_motor_current_rel",
+	"DiMotorCurrentRER": "di_motor_current_rer",
+	"DiSlaveTorqueCmd":  "di_slave_torque_cmd",
+	"DiStateF":          "di_state_f",
+	"DiStateR":          "di_state_r",
+	"DiStateREL":        "di_state_rel",
+	"DiStateRER":        "di_state_rer",
+	"DiStatorTempF":     "di_stator_temp_f",
+	"DiStatorTempR":     "di_stator_temp_r",
+	"DiStatorTempREL":   "di_stator_temp_rel",
+	"DiStatorTempRER":   "di_stator_temp_rer",
+	"DiTorqueActualF":   "di_torque_actual_f",
+	"DiTorqueActualR":   "di_torque_actual_r",
+	"DiTorqueActualREL": "di_torque_actual_rel",
+	"DiTorqueActualRER": "di_torque_actual_rer",
+	"DiTorquemotor":     "di_torquemotor",
+	"DiVBatF":           "di_v_bat_f",
+	"DiVBatR":           "di_v_bat_r",
+	"DiVBatREL":         "di_v_bat_rel",
+	"DiVBatRER":         "di_v_bat_rer",
+	"DriveRail":         "drive_rail",
+
+	// Climate
+	"AutoSeatClimateLeft":                    "auto_seat_climate_left",
+	"AutoSeatClimateRight":                   "auto_seat_climate_right",
+	"CabinOverheatProtectionMode":            "cabin_overheat_protection_mode",
+	"CabinOverheatProtectionTemperatureLimit": "cabin_overheat_protection_temperature_limit",
+	"ClimateKeeperMode":                      "climate_keeper_mode",
+	"ClimateSeatCoolingFrontLeft":             "climate_seat_cooling_front_left",
+	"ClimateSeatCoolingFrontRight":            "climate_seat_cooling_front_right",
+	"DefrostForPreconditioning":              "defrost_for_preconditioning",
+	"DefrostMode":                            "defrost_mode",
+	"HvacACEnabled":                          "hvac_ac_enabled",
+	"HvacAutoMode":                           "hvac_auto_mode",
+	"HvacFanSpeed":                           "hvac_fan_speed",
+	"HvacFanStatus":                          "hvac_fan_status",
+	"HvacLeftTemperatureRequest":             "hvac_left_temperature_request",
+	"HvacPower":                              "hvac_power",
+	"HvacRightTemperatureRequest":            "hvac_right_temperature_request",
+	"HvacSteeringWheelHeatAuto":              "hvac_steering_wheel_heat_auto",
+	"HvacSteeringWheelHeatLevel":             "hvac_steering_wheel_heat_level",
+	"Hvil":                                   "hvil",
+	"NotEnoughPowerToHeat":                   "not_enough_power_to_heat",
+	"PreconditioningEnabled":                 "preconditioning_enabled",
+	"RearDefrostEnabled":                     "rear_defrost_enabled",
+	"RearDisplayHvacEnabled":                 "rear_display_hvac_enabled",
+	"SeatHeaterLeft":                         "seat_heater_left",
+	"SeatHeaterRearCenter":                   "seat_heater_rear_center",
+	"SeatHeaterRearLeft":                     "seat_heater_rear_left",
+	"SeatHeaterRearRight":                    "seat_heater_rear_right",
+	"SeatHeaterRight":                        "seat_heater_right",
+	"SeatVentEnabled":                        "seat_vent_enabled",
+	"WiperHeatEnabled":                       "wiper_heat_enabled",
+
+	// Safety/ADAS
+	"AutomaticBlindSpotCamera":         "automatic_blind_spot_camera",
+	"AutomaticEmergencyBrakingOff":     "automatic_emergency_braking_off",
+	"BlindSpotCollisionWarningChime":   "blind_spot_collision_warning_chime",
+	"CruiseFollowDistance":             "cruise_follow_distance",
+	"CruiseSetSpeed":                   "cruise_set_speed",
+	"DriverSeatBelt":                   "driver_seat_belt",
+	"EmergencyLaneDepartureAvoidance":  "emergency_lane_departure_avoidance",
+	"ForwardCollisionWarning":          "forward_collision_warning",
+	"LaneDepartureAvoidance":           "lane_departure_avoidance",
+	"PassengerSeatBelt":                "passenger_seat_belt",
+	"SpeedLimitWarning":                "speed_limit_warning",
+
+	// Media
+	"MediaAudioVolume":          "media_audio_volume",
+	"MediaAudioVolumeIncrement": "media_audio_volume_increment",
+	"MediaAudioVolumeMax":       "media_audio_volume_max",
+	"MediaNowPlayingAlbum":      "media_now_playing_album",
+	"MediaNowPlayingArtist":     "media_now_playing_artist",
+	"MediaNowPlayingDuration":   "media_now_playing_duration",
+	"MediaNowPlayingElapsed":    "media_now_playing_elapsed",
+	"MediaNowPlayingStation":    "media_now_playing_station",
+	"MediaNowPlayingTitle":      "media_now_playing_title",
+	"MediaPlaybackSource":       "media_playback_source",
+	"MediaPlaybackStatus":       "media_playback_status",
+
+	// Navigation
+	"DestinationName":                   "destination_name",
+	"ExpectedEnergyPercentAtTripArrival": "expected_energy_percent_at_trip_arrival",
+	"MilesSinceReset":                   "miles_since_reset",
+	"MilesToArrival":                    "miles_to_arrival",
+	"MinutesToArrival":                  "minutes_to_arrival",
+	"RouteLastUpdated":                  "route_last_updated",
+	"RouteLine":                         "route_line",
+	"RouteTrafficMinutesDelay":          "route_traffic_minutes_delay",
+	"SelfDrivingMilesSinceReset":        "self_driving_miles_since_reset",
+
+	// TPMS
+	"TpmsHardWarnings":            "tpms_hard_warnings",
+	"TpmsLastSeenPressureTimeFl":  "tpms_last_seen_pressure_time_fl",
+	"TpmsLastSeenPressureTimeFr":  "tpms_last_seen_pressure_time_fr",
+	"TpmsLastSeenPressureTimeRl":  "tpms_last_seen_pressure_time_rl",
+	"TpmsLastSeenPressureTimeRr":  "tpms_last_seen_pressure_time_rr",
+	"TpmsSoftWarnings":            "tpms_soft_warnings",
+
+	// Battery/BMS
+	"BMSState":                  "bms_state",
+	"BatteryHeaterOn":           "battery_heater_on",
+	"BmsFullchargecomplete":     "bms_fullchargecomplete",
+	"BrickVoltageMax":           "brick_voltage_max",
+	"BrickVoltageMin":           "brick_voltage_min",
+	"IsolationResistance":       "isolation_resistance",
+	"LifetimeEnergyGainedRegen": "lifetime_energy_gained_regen",
+	"LifetimeEnergyUsed":        "lifetime_energy_used",
+	"LifetimeEnergyUsedDrive":   "lifetime_energy_used_drive",
+	"ModuleTempMax":             "module_temp_max",
+	"ModuleTempMin":             "module_temp_min",
+	"NumBrickVoltageMax":        "num_brick_voltage_max",
+	"NumBrickVoltageMin":        "num_brick_voltage_min",
+	"NumModuleTempMax":          "num_module_temp_max",
+	"NumModuleTempMin":          "num_module_temp_min",
+	"PackCurrent":               "pack_current",
+	"PackVoltage":               "pack_voltage",
+
+	// User Preferences
+	"Setting24HourTime":       "setting24_hour_time",
+	"SettingChargeUnit":       "setting_charge_unit",
+	"SettingDistanceUnit":     "setting_distance_unit",
+	"SettingTemperatureUnit":  "setting_temperature_unit",
+	"SettingTirePressureUnit": "setting_tire_pressure_unit",
+
+	// Powershare
+	"PowershareHoursLeft":            "powershare_hours_left",
+	"PowershareInstantaneousPowerKW": "powershare_instantaneous_power_kw",
+	"PowershareStatus":               "powershare_status",
+	"PowershareStopReason":           "powershare_stop_reason",
+	"PowershareType":                 "powershare_type",
+
+	// Other
+	"LateralAcceleration":      "lateral_acceleration",
+	"LocatedAtFavorite":        "located_at_favorite",
+	"LocatedAtHome":            "located_at_home",
+	"LocatedAtWork":            "located_at_work",
+	"LongitudinalAcceleration": "longitudinal_acceleration",
+	"PinToDriveEnabled":        "pin_to_drive_enabled",
+	"TonneauOpenPercent":       "tonneau_open_percent",
+	"TonneauPosition":          "tonneau_position",
+	"TonneauTentMode":          "tonneau_tent_mode",
 }
 
 // FlushLiveState upserts the vehicle's live state into vehicle_live_state.
 // Only columns with non-nil values in the signals map are updated.
 func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
-	// Map signal names to column names and values
+	// Collect column names and values; parameter indices are computed at the
+	// end so INSERT and ON CONFLICT UPDATE use identical numbering.
 	cols := []string{}
 	vals := []interface{}{}
-	updates := []string{}
-	paramIdx := 2 // $1 is vehicle_id
 
 	// Handle Location (JSON object with latitude/longitude)
 	if loc, ok := signals["Location"].(map[string]interface{}); ok {
 		if lat, ok := loc["latitude"]; ok {
-			paramIdx++
 			cols = append(cols, "latitude")
 			vals = append(vals, lat)
-			updates = append(updates, fmt.Sprintf("latitude = $%d", paramIdx))
 		}
 		if lon, ok := loc["longitude"]; ok {
-			paramIdx++
 			cols = append(cols, "longitude")
 			vals = append(vals, lon)
-			updates = append(updates, fmt.Sprintf("longitude = $%d", paramIdx))
 		}
 	}
 
@@ -115,10 +330,8 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 			pc, pcOk := toFloat64(signals["PackCurrent"])
 			if pvOk && pcOk {
 				power := pv * pc / 1000.0
-				paramIdx++
 				cols = append(cols, "power")
 				vals = append(vals, power)
-				updates = append(updates, fmt.Sprintf("power = $%d", paramIdx))
 			}
 		}
 	}
@@ -127,28 +340,22 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	if v, ok := signals["HvacPower"]; ok {
 		s := fmt.Sprintf("%v", v)
 		isOn := strings.Contains(s, "On") || strings.Contains(s, "Precondition")
-		paramIdx++
 		cols = append(cols, "hvac_power")
 		vals = append(vals, isOn)
-		updates = append(updates, fmt.Sprintf("hvac_power = $%d", paramIdx))
 	}
 
 	// Handle HvacFanSpeed
 	if v, ok := signals["HvacFanSpeed"]; ok {
-		paramIdx++
 		cols = append(cols, "fan_speed")
 		vals = append(vals, v)
-		updates = append(updates, fmt.Sprintf("fan_speed = $%d", paramIdx))
 	}
 
 	// Handle SentryMode (enum → boolean)
 	if v, ok := signals["SentryMode"]; ok {
 		s := fmt.Sprintf("%v", v)
 		isActive := !strings.Contains(s, "Off") && s != "" && s != "false" && s != "0"
-		paramIdx++
 		cols = append(cols, "sentry_mode")
 		vals = append(vals, isActive)
-		updates = append(updates, fmt.Sprintf("sentry_mode = $%d", paramIdx))
 	}
 
 	// Handle Locked (may be bool or string)
@@ -160,16 +367,94 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		case string:
 			locked = lv == "true" || lv == "1"
 		}
-		paramIdx++
 		cols = append(cols, "locked")
 		vals = append(vals, locked)
-		updates = append(updates, fmt.Sprintf("locked = $%d", paramIdx))
+	}
+
+	// Handle ACChargingPower → charger_power (fallback if DCChargingPower not present)
+	// Both map to same column, so only write one to avoid "column specified more than once"
+	if _, hasDC := signals["DCChargingPower"]; !hasDC {
+		if v, ok := signals["ACChargingPower"]; ok {
+			if f, fOk := toFloat64(v); fOk {
+				cols = append(cols, "charger_power")
+				vals = append(vals, f)
+			}
+		}
+	}
+
+	// Boolean columns that come as enum strings from Fleet Telemetry.
+	// These need conversion: any non-Off/empty/false string → true.
+	enumBoolSignals := map[string]string{
+		"GuestModeEnabled":        "guest_mode",
+		"HomelinkNearby":          "homelink_nearby",
+		"DriverSeatOccupied":      "driver_seat_occupied",
+		"SpeedLimitMode":          "speed_limit_mode",
+		"ValetModeEnabled":        "valet_mode_enabled",
+		"ServiceMode":             "service_mode",
+		"LightsHazardsActive":     "lights_hazards_active",
+		"LightsHighBeams":         "lights_high_beams",
+		"EuropeVehicle":           "europe_vehicle",
+		"RightHandDrive":          "right_hand_drive",
+		"RemoteStartEnabled":      "remote_start_enabled",
+		"OffroadLightbarPresent":              "offroad_lightbar_present",
+		"AutoSeatClimateLeft":                 "auto_seat_climate_left",
+		"AutoSeatClimateRight":                "auto_seat_climate_right",
+		"AutomaticBlindSpotCamera":            "automatic_blind_spot_camera",
+		"AutomaticEmergencyBrakingOff":        "automatic_emergency_braking_off",
+		"BatteryHeaterOn":                     "battery_heater_on",
+		"BlindSpotCollisionWarningChime":      "blind_spot_collision_warning_chime",
+		"BmsFullchargecomplete":               "bms_fullchargecomplete",
+		"ChargeEnableRequest":                 "charge_enable_request",
+		"ChargePortColdWeatherMode":           "charge_port_cold_weather_mode",
+		"ChargePortDoorOpen":                  "charge_port_door_open",
+		"DCDCEnable":                          "dcdc_enable",
+		"DefrostForPreconditioning":           "defrost_for_preconditioning",
+		"DefrostMode":                         "defrost_mode",
+		"DriveRail":                           "drive_rail",
+		"DriverSeatBelt":                      "driver_seat_belt",
+		"EmergencyLaneDepartureAvoidance":     "emergency_lane_departure_avoidance",
+		"FastChargerPresent":                  "fast_charger_present",
+		"HvacACEnabled":                       "hvac_ac_enabled",
+		"HvacSteeringWheelHeatAuto":           "hvac_steering_wheel_heat_auto",
+		"LocatedAtFavorite":                   "located_at_favorite",
+		"LocatedAtHome":                       "located_at_home",
+		"LocatedAtWork":                       "located_at_work",
+		"NotEnoughPowerToHeat":                "not_enough_power_to_heat",
+		"PassengerSeatBelt":                   "passenger_seat_belt",
+		"PinToDriveEnabled":                   "pin_to_drive_enabled",
+		"PreconditioningEnabled":              "preconditioning_enabled",
+		"RearDefrostEnabled":                  "rear_defrost_enabled",
+		"RearDisplayHvacEnabled":              "rear_display_hvac_enabled",
+		"ScheduledChargingPending":            "scheduled_charging_pending",
+		"SeatVentEnabled":                     "seat_vent_enabled",
+		"WiperHeatEnabled":                    "wiper_heat_enabled",
+	}
+	for sig, col := range enumBoolSignals {
+		if v, ok := signals[sig]; ok && v != nil {
+			b := false
+			switch sv := v.(type) {
+			case bool:
+				b = sv
+			case string:
+				b = sv != "" && !strings.Contains(sv, "Off") && sv != "false" && sv != "0"
+			}
+			cols = append(cols, col)
+			vals = append(vals, b)
+		}
+	}
+
+	// Set of columns already handled above — skip in generic loop
+	skipCols := map[string]bool{
+		"latitude": true, "longitude": true, "locked": true, "sentry_mode": true,
+		"hvac_power": true, "fan_speed": true, "power": true, "charger_power": true,
+	}
+	for _, col := range enumBoolSignals {
+		skipCols[col] = true
 	}
 
 	// Map all simple signals
 	for signalName, colName := range signalToColumn {
-		// Skip signals already handled above
-		if colName == "latitude" || colName == "longitude" || colName == "locked" || colName == "sentry_mode" {
+		if skipCols[colName] {
 			continue
 		}
 		v, ok := signals[signalName]
@@ -184,10 +469,18 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 				}
 			}
 		}
-		paramIdx++
+		// Validate type: skip values that would cause Postgres type mismatches.
+		// Fleet Telemetry can occasionally produce time.Time or string values
+		// for columns that expect numeric/boolean types.
+		switch v.(type) {
+		case float64, int, int64, bool, string, time.Time:
+			// OK — these are the types pgx can handle for the live_state columns
+		default:
+			// Skip unexpected types (e.g., time.Time, map, slice)
+			continue
+		}
 		cols = append(cols, colName)
 		vals = append(vals, v)
-		updates = append(updates, fmt.Sprintf("%s = $%d", colName, paramIdx))
 	}
 
 	if len(cols) == 0 {
@@ -195,16 +488,18 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	}
 
 	// Always update updated_at
-	paramIdx++
 	cols = append(cols, "updated_at")
 	vals = append(vals, time.Now().UTC())
-	updates = append(updates, fmt.Sprintf("updated_at = $%d", paramIdx))
 
-	// Build the UPSERT query
+	// Build parameter placeholders and update clauses using the same indices.
+	// $1 is vehicle_id; column values start at $2.
 	colList := strings.Join(cols, ", ")
 	placeholders := make([]string, len(cols))
-	for i := range cols {
-		placeholders[i] = fmt.Sprintf("$%d", i+2) // $1 is vehicle_id
+	updates := make([]string, len(cols))
+	for i, col := range cols {
+		idx := i + 2 // $1 is vehicle_id
+		placeholders[i] = fmt.Sprintf("$%d", idx)
+		updates[i] = fmt.Sprintf("%s = $%d", col, idx)
 	}
 
 	query := fmt.Sprintf(
@@ -236,18 +531,41 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		       charge_state, detailed_charge_state, charger_voltage, charge_amps,
 		       charge_rate, charger_power, charge_limit_soc, time_to_full_charge,
 		       locked, sentry_mode, door_state, center_display,
+		       fd_window, fp_window, rd_window, rp_window,
 		       tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr,
-		       vehicle_name, car_type, version
+		       vehicle_name, car_type, version,
+		       guest_mode, guest_mode_mobile_access, homelink_nearby, homelink_device_count,
+		       driver_seat_occupied, speed_limit_mode, valet_mode_enabled, service_mode,
+		       current_limit_mph, paired_phone_key_count,
+		       lights_hazards_active, lights_high_beams, lights_turn_signal,
+		       sw_update_version, sw_update_download_pct, sw_update_install_pct,
+		       sw_update_expected_duration, sw_update_scheduled_start,
+		       trim, roof_color, efficiency_package, rear_seat_heaters, sunroof_installed,
+		       europe_vehicle, right_hand_drive, remote_start_enabled, offroad_lightbar_present,
+		       last_gear, last_speed_time
 		FROM vehicle_live_state WHERE vehicle_id = $1`, vehicleID)
 
 	var lat, lon, speed, power, odo, idealR, ratedR, estR, energyRem *float64
 	var insideT, outsideT, chargerV, chargeAmps, chargeRate, chargerPower, ttfc *float64
 	var tpFL, tpFR, tpRL, tpRR *float64
+	var currentLimitMph *float64
 	var heading, battLvl, fanSpeed, chargeLimitSoc *int
+	var homelinkDevCount, pairedKeyCount *int
+	var swDownloadPct, swInstallPct, swExpectedDur *int
 	var soc *float64
 	var gear, chargeState, detailedCS, doorState, centerDisp *string
+	var fdWindow, fpWindow, rdWindow, rpWindow *string
 	var vehicleName, carType, version *string
+	var guestMobileAccess, lightsTurnSignal *string
+	var swUpdateVersion, swScheduledStart *string
+	var trimVal, roofColor, efficiencyPkg, rearSeatHeaters, sunroofInstalled *string
 	var hvacPower, locked, sentryMode *bool
+	var guestMode, homelinkNearby, driverSeatOccupied *bool
+	var speedLimitMode, valetMode, serviceMode *bool
+	var lightsHazards, lightsHighBeams *bool
+	var europeVehicle, rightHandDrive, remoteStartEnabled, offroadLightbar *bool
+	var lastGearDB *string
+	var lastSpeedTimeDB *time.Time
 
 	err := row.Scan(
 		&lat, &lon, &heading, &speed, &power, &odo, &gear,
@@ -256,8 +574,18 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		&chargeState, &detailedCS, &chargerV, &chargeAmps,
 		&chargeRate, &chargerPower, &chargeLimitSoc, &ttfc,
 		&locked, &sentryMode, &doorState, &centerDisp,
+		&fdWindow, &fpWindow, &rdWindow, &rpWindow,
 		&tpFL, &tpFR, &tpRL, &tpRR,
 		&vehicleName, &carType, &version,
+		&guestMode, &guestMobileAccess, &homelinkNearby, &homelinkDevCount,
+		&driverSeatOccupied, &speedLimitMode, &valetMode, &serviceMode,
+		&currentLimitMph, &pairedKeyCount,
+		&lightsHazards, &lightsHighBeams, &lightsTurnSignal,
+		&swUpdateVersion, &swDownloadPct, &swInstallPct,
+		&swExpectedDur, &swScheduledStart,
+		&trimVal, &roofColor, &efficiencyPkg, &rearSeatHeaters, &sunroofInstalled,
+		&europeVehicle, &rightHandDrive, &remoteStartEnabled, &offroadLightbar,
+		&lastGearDB, &lastSpeedTimeDB,
 	)
 	if err != nil {
 		return nil, err
@@ -293,6 +621,10 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if sentryMode != nil { result["SentryMode"] = *sentryMode }
 	if doorState != nil { result["DoorState"] = *doorState }
 	if centerDisp != nil { result["CenterDisplay"] = *centerDisp }
+	if fdWindow != nil { result["FdWindow"] = *fdWindow }
+	if fpWindow != nil { result["FpWindow"] = *fpWindow }
+	if rdWindow != nil { result["RdWindow"] = *rdWindow }
+	if rpWindow != nil { result["RpWindow"] = *rpWindow }
 	if tpFL != nil { result["TpmsPressureFl"] = *tpFL }
 	if tpFR != nil { result["TpmsPressureFr"] = *tpFR }
 	if tpRL != nil { result["TpmsPressureRl"] = *tpRL }
@@ -300,6 +632,38 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if vehicleName != nil { result["VehicleName"] = *vehicleName }
 	if carType != nil { result["CarType"] = *carType }
 	if version != nil { result["Version"] = *version }
+	// Vehicle State signals
+	if guestMode != nil { result["GuestModeEnabled"] = *guestMode }
+	if guestMobileAccess != nil { result["GuestModeMobileAccessState"] = *guestMobileAccess }
+	if homelinkNearby != nil { result["HomelinkNearby"] = *homelinkNearby }
+	if homelinkDevCount != nil { result["HomelinkDeviceCount"] = *homelinkDevCount }
+	if driverSeatOccupied != nil { result["DriverSeatOccupied"] = *driverSeatOccupied }
+	if speedLimitMode != nil { result["SpeedLimitMode"] = *speedLimitMode }
+	if valetMode != nil { result["ValetModeEnabled"] = *valetMode }
+	if serviceMode != nil { result["ServiceMode"] = *serviceMode }
+	if currentLimitMph != nil { result["CurrentLimitMph"] = *currentLimitMph }
+	if pairedKeyCount != nil { result["PairedPhoneKeyAndKeyFobQty"] = *pairedKeyCount }
+	if lightsHazards != nil { result["LightsHazardsActive"] = *lightsHazards }
+	if lightsHighBeams != nil { result["LightsHighBeams"] = *lightsHighBeams }
+	if lightsTurnSignal != nil { result["LightsTurnSignal"] = *lightsTurnSignal }
+	if swUpdateVersion != nil { result["SoftwareUpdateVersion"] = *swUpdateVersion }
+	if swDownloadPct != nil { result["SoftwareUpdateDownloadPercentComplete"] = *swDownloadPct }
+	if swInstallPct != nil { result["SoftwareUpdateInstallationPercentComplete"] = *swInstallPct }
+	if swExpectedDur != nil { result["SoftwareUpdateExpectedDurationMinutes"] = *swExpectedDur }
+	if swScheduledStart != nil { result["SoftwareUpdateScheduledStartTime"] = *swScheduledStart }
+	// Vehicle Configuration
+	if trimVal != nil { result["Trim"] = *trimVal }
+	if roofColor != nil { result["RoofColor"] = *roofColor }
+	if efficiencyPkg != nil { result["EfficiencyPackage"] = *efficiencyPkg }
+	if rearSeatHeaters != nil { result["RearSeatHeaters"] = *rearSeatHeaters }
+	if sunroofInstalled != nil { result["SunroofInstalled"] = *sunroofInstalled }
+	if europeVehicle != nil { result["EuropeVehicle"] = *europeVehicle }
+	if rightHandDrive != nil { result["RightHandDrive"] = *rightHandDrive }
+	if remoteStartEnabled != nil { result["RemoteStartEnabled"] = *remoteStartEnabled }
+	if offroadLightbar != nil { result["OffroadLightbarPresent"] = *offroadLightbar }
+	// State machine recovery
+	if lastGearDB != nil { result["_LastGear"] = *lastGearDB }
+	if lastSpeedTimeDB != nil { result["_LastSpeedTime"] = *lastSpeedTimeDB }
 
 	return result, nil
 }

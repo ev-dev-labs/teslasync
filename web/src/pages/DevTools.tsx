@@ -9,11 +9,12 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
   MapPin, FileText,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
+import { PageHeader, GlassPanel } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
 import SignalConfigModal from '../components/SignalConfigModal'
+import { motion } from 'framer-motion'
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
@@ -46,38 +47,59 @@ function ResultPanel({ title, data, error }: { title: string; data: unknown; err
   )
 }
 
-function SectionHeader({
-  icon: Icon,
-  color,
-  title,
-  subtitle,
-  isOpen,
-  onToggle,
-}: {
-  icon: React.ElementType
-  color: string
+/** Collapsible accordion section matching System Status style. */
+function AccordionSection({ icon, title, description, badges, children, isOpen, onToggle }: {
+  icon: React.ReactNode
   title: string
-  subtitle: string
+  description: string
+  badges?: React.ReactNode
+  children: React.ReactNode
   isOpen: boolean
   onToggle: () => void
 }) {
-  const colorMap: Record<string, string> = {
-    cyan: 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20',
-    green: 'bg-neon-green/10 text-neon-green ring-1 ring-neon-green/20',
-    purple: 'bg-neon-purple/10 text-neon-purple ring-1 ring-neon-purple/20',
-    amber: 'bg-neon-amber/10 text-neon-amber ring-1 ring-neon-amber/20',
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 pt-6 pb-2 group cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-2.5 shrink-0">
+          {icon}
+          <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
+        </div>
+        {!isOpen && badges && <div className="flex items-center gap-2 shrink-0">{badges}</div>}
+        <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider shrink-0 hidden sm:block">{description}</p>
+        <ChevronDown className={clsx('h-4 w-4 text-[var(--text-muted)] transition-transform duration-200 shrink-0', isOpen && 'rotate-180')} />
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+        className="overflow-hidden"
+      >
+        <div className="space-y-4 pb-2">
+          {children}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray' | 'cyan' | 'purple'; label: string }) {
+  const colors = {
+    green: 'bg-green-500/20 text-green-400 border-green-500/30',
+    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    red: 'bg-red-500/20 text-red-400 border-red-500/30',
+    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    purple: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   }
   return (
-    <button onClick={onToggle} className="w-full flex items-center gap-3 p-5 text-left hover:bg-white/[0.02] transition-colors rounded-xl">
-      <div className={clsx('flex h-9 w-9 items-center justify-center rounded-xl shrink-0', colorMap[color] || colorMap.cyan)}>
-        <Icon className="h-4.5 w-4.5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
-        <p className="text-[11px] text-[var(--text-muted)]">{subtitle}</p>
-      </div>
-      {isOpen ? <ChevronDown className="h-4 w-4 text-[var(--text-muted)] shrink-0" /> : <ChevronRight className="h-4 w-4 text-[var(--text-muted)] shrink-0" />}
-    </button>
+    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
+      {label}
+    </span>
   )
 }
 
@@ -2163,12 +2185,7 @@ function ClientUtilitiesSection() {
 // ─── Main Page Component ─────────────────────────────────────────
 
 export default function DevTools() {
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    workflow: true,
-    fleet: true,
-    infra: false,
-    client: true,
-  })
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
   const toggle = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
 
   return (
@@ -2179,102 +2196,82 @@ export default function DevTools() {
       />
 
       {/* Section 0: Guided Onboarding Workflow */}
-      <FadeIn>
-        <GlassPanel className="overflow-hidden">
-          <SectionHeader
-            icon={ListChecks}
-            color="cyan"
-            title="Fleet API Setup Wizard"
-            subtitle="Step-by-step guided workflow to onboard with Tesla Fleet API"
-            isOpen={!!openSections.workflow}
-            onToggle={() => toggle('workflow')}
-          />
-          {openSections.workflow && (
-            <div className="p-4 pt-0">
-              <OnboardingWorkflow />
-            </div>
-          )}
-        </GlassPanel>
-      </FadeIn>
+      <AccordionSection
+        icon={<ListChecks className="h-4 w-4 text-neon-cyan" />}
+        title="Fleet API Setup Wizard"
+        description="Guided onboarding workflow"
+        badges={<StatusBadge color="cyan" label="Setup" />}
+        isOpen={!!openSections.workflow}
+        onToggle={() => toggle('workflow')}
+      >
+        <OnboardingWorkflow />
+      </AccordionSection>
 
       {/* Section 1: Tesla Fleet API */}
-      <FadeIn delay={0.05}>
-        <GlassPanel className="overflow-hidden">
-          <SectionHeader
-            icon={Wrench}
-            color="cyan"
-            title="Tesla Fleet API"
-            subtitle="Partner registration, fleet telemetry, region detection, API connectivity, and token management"
-            isOpen={!!openSections.fleet}
-            onToggle={() => toggle('fleet')}
-          />
-          {openSections.fleet && <FleetApiSection />}
-        </GlassPanel>
-      </FadeIn>
+      <AccordionSection
+        icon={<Wrench className="h-4 w-4 text-neon-cyan" />}
+        title="Tesla Fleet API"
+        description="API tools & diagnostics"
+        badges={<StatusBadge color="cyan" label="API" />}
+        isOpen={!!openSections.fleet}
+        onToggle={() => toggle('fleet')}
+      >
+        <FleetApiSection />
+      </AccordionSection>
 
       {/* Section 2: Infrastructure */}
-      <FadeIn delay={0.05}>
-        <GlassPanel className="overflow-hidden">
-          <SectionHeader
-            icon={Server}
-            color="green"
-            title="Infrastructure"
-            subtitle="Database stats, migrations, MQTT, environment, and runtime diagnostics"
-            isOpen={!!openSections.infra}
-            onToggle={() => toggle('infra')}
-          />
-          {openSections.infra && <InfrastructureSection />}
-        </GlassPanel>
-      </FadeIn>
+      <AccordionSection
+        icon={<Server className="h-4 w-4 text-neon-green" />}
+        title="Infrastructure"
+        description="Database, MQTT & runtime"
+        badges={<StatusBadge color="green" label="Infra" />}
+        isOpen={!!openSections.infra}
+        onToggle={() => toggle('infra')}
+      >
+        <InfrastructureSection />
+      </AccordionSection>
 
       {/* Section 3: Client-Side Utilities */}
-      <FadeIn delay={0.1}>
-        <GlassPanel className="overflow-hidden">
-          <SectionHeader
-            icon={Cpu}
-            color="purple"
-            title="Client-Side Utilities"
-            subtitle="VIN decoder, JWT decoder, timestamp converter, and more — all in-browser, no backend needed"
-            isOpen={!!openSections.client}
-            onToggle={() => toggle('client')}
-          />
-          {openSections.client && <ClientUtilitiesSection />}
-        </GlassPanel>
-      </FadeIn>
+      <AccordionSection
+        icon={<Cpu className="h-4 w-4 text-neon-purple" />}
+        title="Client-Side Utilities"
+        description="In-browser tools"
+        badges={<StatusBadge color="purple" label="Browser" />}
+        isOpen={!!openSections.client}
+        onToggle={() => toggle('client')}
+      >
+        <ClientUtilitiesSection />
+      </AccordionSection>
 
       {/* Reference Links */}
-      <FadeIn delay={0.15}>
-        <GlassPanel className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05] text-[var(--text-muted)] ring-1 ring-white/[0.08]">
-              <ExternalLink className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Reference</h3>
-              <p className="text-[11px] text-[var(--text-muted)]">Tesla Fleet API documentation</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              { label: 'Fleet API Overview', url: 'https://developer.tesla.com/docs/fleet-api' },
-              { label: 'Partner Endpoints', url: 'https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#register' },
-              { label: 'Tesla Developer Portal', url: 'https://developer.tesla.com' },
-              { label: 'Fleet Telemetry Guide', url: 'https://developer.tesla.com/docs/fleet-api/fleet-telemetry' },
-            ].map(link => (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors"
-              >
-                <ExternalLink className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
-                <span className="text-xs text-[var(--text-primary)]">{link.label}</span>
-              </a>
-            ))}
-          </div>
-        </GlassPanel>
-      </FadeIn>
+      <AccordionSection
+        icon={<ExternalLink className="h-4 w-4 text-[var(--text-muted)]" />}
+        title="Reference"
+        description="Tesla Fleet API docs"
+        badges={<StatusBadge color="gray" label="Docs" />}
+        isOpen={!!openSections.reference}
+        onToggle={() => toggle('reference')}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { label: 'Fleet API Overview', url: 'https://developer.tesla.com/docs/fleet-api' },
+            { label: 'Partner Endpoints', url: 'https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#register' },
+            { label: 'Tesla Developer Portal', url: 'https://developer.tesla.com' },
+            { label: 'Fleet Telemetry Guide', url: 'https://developer.tesla.com/docs/fleet-api/fleet-telemetry' },
+          ].map(link => (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
+              <span className="text-xs text-[var(--text-primary)]">{link.label}</span>
+            </a>
+          ))}
+        </div>
+      </AccordionSection>
     </div>
   )
 }

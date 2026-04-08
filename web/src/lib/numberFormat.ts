@@ -1,13 +1,27 @@
+/** Global decimal precision — set by useSettings, read by all formatters */
+let _globalPrecision = 1
+
+/** Set the global decimal precision (called by useSettings on load) */
+export function setGlobalPrecision(decimals: number) {
+  _globalPrecision = Math.max(0, Math.min(4, decimals))
+}
+
+/** Get the current global decimal precision */
+export function getGlobalPrecision(): number {
+  return _globalPrecision
+}
+
 /** Safe number extraction from unknown values, returns 0 for nullish/NaN */
 export function safeNumber(v: unknown): number {
   return typeof v === 'number' && isFinite(v) ? v : 0
 }
 
-/** Format a number with locale-aware separators: 1234.5 → "1,234.5" */
-export function fmtNumber(v: unknown, decimals = 1): string {
+/** Format a number with locale-aware separators. Uses global precision unless overridden. */
+export function fmtNumber(v: unknown, decimals?: number): string {
+  const d = decimals ?? _globalPrecision
   return safeNumber(v).toLocaleString('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
   })
 }
 

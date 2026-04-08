@@ -39,12 +39,16 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
   const actualDistance = drive.start_odometer != null && drive.end_odometer != null && drive.end_odometer > drive.start_odometer
     ? drive.end_odometer - drive.start_odometer
     : drive.distance
+  const isCompleted = drive.end_date != null
+  const hasData = actualDistance > 0 || (drive.duration_min > 0)
   const avgSpeed = drive.speed_avg != null
     ? convertSpeed(drive.speed_avg).toFixed(0)
-    : drive.duration_min > 0 ? convertSpeed(actualDistance / (drive.duration_min / 60)).toFixed(0) : '—'
+    : drive.duration_min > 0 && actualDistance > 0 ? convertSpeed(actualDistance / (drive.duration_min / 60)).toFixed(0) : '—'
   const eff = getEfficiency(drive)
   const effConverted = eff ? convertEfficiency(eff) : null
   const score = getEfficiencyScore(eff)
+  const hasBattery = drive.start_battery_level !== null && drive.end_battery_level !== null
+    && !(drive.start_battery_level === 0 && drive.end_battery_level === 0 && isCompleted)
 
   return (
     <Link to={`/drives/${drive.id}`}>
@@ -58,9 +62,19 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateTime(drive.start_date)}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-neon-cyan/10 text-neon-cyan font-medium">
-                {convertDistance(actualDistance).toFixed(1)} {distanceUnit}
-              </span>
+              {hasData ? (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-neon-cyan/10 text-neon-cyan font-medium">
+                  {convertDistance(actualDistance).toFixed(1)} {distanceUnit}
+                </span>
+              ) : isCompleted ? (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-neon-amber/10 text-neon-amber font-medium">
+                  No telemetry
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-medium">
+                  In progress
+                </span>
+              )}
               {drive.speed_max !== null && drive.speed_max > 130 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-red/10 text-neon-red font-medium">
                   High speed
@@ -73,10 +87,10 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
               {drive.speed_max !== null && (
                 <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Max {convertSpeed(drive.speed_max).toFixed(0)} {speedUnit}</span>
               )}
-              {drive.start_battery_level !== null && drive.end_battery_level !== null && (
+              {hasBattery && (
                 <span className="flex items-center gap-1">
                   <Battery className="h-3 w-3" />
-                  <span className="text-neon-green">{drive.start_battery_level}%</span> → <span className={clsx(drive.end_battery_level < 20 ? 'text-neon-red' : 'text-neon-amber')}>{drive.end_battery_level}%</span>
+                  <span className="text-neon-green">{drive.start_battery_level}%</span> → <span className={clsx(drive.end_battery_level! < 20 ? 'text-neon-red' : 'text-neon-amber')}>{drive.end_battery_level}%</span>
                 </span>
               )}
               {effConverted && (

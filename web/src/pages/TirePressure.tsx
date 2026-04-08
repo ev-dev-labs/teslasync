@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTirePressure } from '../api'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
-import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from 'lucide-react'
+import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Clock, Zap, ShieldAlert } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
@@ -277,6 +278,13 @@ export default function TirePressure() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
   const { convertPressure, pressureUnit } = useSettings()
 
+  // SSE live state for real-time TPMS warnings and service signals
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
+
+  // Parse TPMS warnings — format is "TireLocationFl:Warning,TireLocationFr:Warning,..."
+  const hasHardWarning = live.tpmsHardWarnings !== '' && !live.tpmsHardWarnings.toLowerCase().includes('none')
+  const hasSoftWarning = live.tpmsSoftWarnings !== '' && !live.tpmsSoftWarnings.toLowerCase().includes('none')
+
   // Thresholds in the display unit
   const lowThreshold = convertPressure(2.4)   // ~35 PSI
 
@@ -362,6 +370,46 @@ export default function TirePressure() {
           <p className="text-sm text-neon-red">One or more tires have low pressure. Check and inflate to recommended levels.</p>
         </div>
       )}
+
+      {/* TPMS Warning Alerts */}
+      {hasHardWarning && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
+          <ShieldAlert className="h-5 w-5 text-neon-red shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-neon-red">TPMS Hard Warning</p>
+            <p className="text-xs text-neon-red/80">Tire pressure severely out of range — inspect immediately. {live.tpmsHardWarnings}</p>
+          </div>
+        </div>
+      )}
+      {hasSoftWarning && !hasHardWarning && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-neon-amber/30 bg-neon-amber/5 p-4">
+          <AlertTriangle className="h-5 w-5 text-neon-amber shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-neon-amber">TPMS Soft Warning</p>
+            <p className="text-xs text-neon-amber/80">Tire pressure slightly out of range. {live.tpmsSoftWarnings}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Service Signals — Last Seen Times & Isolation Resistance */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {[
+          { label: 'FL Last Seen', value: live.tpmsLastSeenFl ? new Date(live.tpmsLastSeenFl).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', icon: <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> },
+          { label: 'FR Last Seen', value: live.tpmsLastSeenFr ? new Date(live.tpmsLastSeenFr).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', icon: <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> },
+          { label: 'RL Last Seen', value: live.tpmsLastSeenRl ? new Date(live.tpmsLastSeenRl).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', icon: <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> },
+          { label: 'RR Last Seen', value: live.tpmsLastSeenRr ? new Date(live.tpmsLastSeenRr).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', icon: <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" /> },
+          { label: 'Hard Warnings', value: hasHardWarning ? live.tpmsHardWarnings : 'None', icon: <ShieldAlert className={clsx('h-3.5 w-3.5', hasHardWarning ? 'text-neon-red' : 'text-[var(--text-muted)]')} /> },
+          { label: 'HV Isolation', value: live.isolationResistance > 0 ? `${Math.round(live.isolationResistance)} Ω` : '—', icon: <Zap className="h-3.5 w-3.5 text-neon-cyan" /> },
+        ].map(item => (
+          <div key={item.label} className="glass-card p-3 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              {item.icon}
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+            </div>
+            <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
+          </div>
+        ))}
+      </div>
 
       {!loadingHistory && compositeLatest && (
         <div className="mb-6">

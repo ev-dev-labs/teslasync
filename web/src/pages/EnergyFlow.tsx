@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getChargingTelemetry, getChargingTelemetryLatest } from '../api'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { Zap, Battery, Activity, Gauge, AlertTriangle, CheckCircle, Thermometer, Shield, BatteryCharging } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts'
@@ -135,13 +136,40 @@ export default function EnergyFlow() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
   const { convertTemp, tempUnit } = useSettings()
 
-  /* ── Live latest telemetry ── */
-  const { data: latest } = useQuery({
+  // SSE live state for real-time charging signals
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
+
+  /* ── Live latest telemetry (polled fallback for deep battery data) ── */
+  const { data: polled } = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],
     queryFn: () => getChargingTelemetryLatest(vehicleId!),
     enabled: vehicleId !== null,
     refetchInterval: 5000,
   })
+
+  // Merge: prefer SSE live values, fall back to polled charging_telemetry
+  const latest = useMemo(() => {
+    if (!polled) return polled
+    return {
+      ...polled,
+      pack_voltage: polled.pack_voltage || (live.batteryLevel > 0 ? undefined : undefined),
+      pack_current: polled.pack_current,
+      soc: live.soc || polled.soc,
+      battery_level: live.batteryLevel || polled.battery_level,
+      energy_remaining: live.energyRemaining || polled.energy_remaining,
+      dc_charging_power: live.chargerPower || polled.dc_charging_power,
+      ac_charging_power: polled.ac_charging_power,
+      charger_voltage: live.chargerVoltage || polled.charger_voltage,
+      charge_amps: live.chargeAmps || polled.charge_amps,
+      charge_state: live.chargeState || polled.charge_state,
+      detailed_charge_state: live.detailedChargeState || polled.detailed_charge_state,
+      charge_limit_soc: live.chargeLimitSoc || polled.charge_limit_soc,
+      time_to_full_charge: live.timeToFullCharge || polled.time_to_full_charge,
+      est_battery_range: live.estRange || polled.est_battery_range,
+      ideal_battery_range: live.idealRange || polled.ideal_battery_range,
+      rated_range: live.ratedRange || polled.rated_range,
+    }
+  }, [polled, live])
 
   /* ── Historical telemetry ── */
   const { data: history, isLoading } = useQuery({
@@ -266,6 +294,51 @@ export default function EnergyFlow() {
           </select>
         )}
       </div>
+
+      {/* ── Live Charging Status (from SSE) ── */}
+      {live.isCharging && (
+        <div className="mb-6 rounded-xl border border-neon-green/20 bg-neon-green/5 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <BatteryCharging className="h-5 w-5 text-neon-green animate-pulse" />
+            <span className="text-sm font-semibold text-neon-green">Charging — Live</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green ml-auto">{live.detailedChargeState || live.chargeState || 'Charging'}</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Battery</p>
+              <p className="text-lg font-bold text-neon-cyan">{live.batteryLevel > 0 ? `${live.batteryLevel}%` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>SOC</p>
+              <p className="text-lg font-bold text-purple-400">{live.soc > 0 ? `${fmtNumber(live.soc)}%` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Power</p>
+              <p className="text-lg font-bold text-neon-green">{live.chargerPower > 0 ? `${fmtNumber(live.chargerPower)} kW` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Voltage</p>
+              <p className="text-lg font-bold text-yellow-400">{live.chargerVoltage > 0 ? `${fmtNumber(live.chargerVoltage)} V` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Current</p>
+              <p className="text-lg font-bold text-neon-cyan">{live.chargeAmps > 0 ? `${fmtNumber(live.chargeAmps)} A` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Limit</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{live.chargeLimitSoc > 0 ? `${live.chargeLimitSoc}%` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Time Left</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{live.timeToFullCharge > 0 ? `${fmtNumber(live.timeToFullCharge)}h` : '--'}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Range</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{live.ratedRange > 0 ? `${fmtInt(live.ratedRange)} km` : '--'}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Empty state ── */}
       {noData && (

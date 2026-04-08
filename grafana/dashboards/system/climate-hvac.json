@@ -635,6 +635,107 @@
       "title": "Cabin Overheat Protection",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Seat Heater Levels Over Time",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS time,\n  seat_heater_left AS \"Driver\",\n  seat_heater_right AS \"Passenger\",\n  seat_heater_rear_left AS \"Rear Left\",\n  seat_heater_rear_center AS \"Rear Center\",\n  seat_heater_rear_right AS \"Rear Right\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
+          "format": "time_series",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Steering Wheel & Defrost",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  hvac_steering_wheel_heat_level AS \"Steering Wheel Level\",\n  CASE WHEN defrost_mode THEN 'ON' ELSE 'Off' END AS \"Defrost\",\n  CASE WHEN rear_defrost_enabled THEN 'ON' ELSE 'Off' END AS \"Rear Defrost\",\n  CASE WHEN wiper_heat_enabled THEN 'ON' ELSE 'Off' END AS \"Wiper Heat\",\n  COALESCE(climate_keeper_mode, 'Off') AS \"Climate Keeper\",\n  COALESCE(cabin_overheat_mode, 'Off') AS \"Overheat Protection\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Seat Cooling & Auto Climate",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  climate_seat_cooling_front_left AS \"Cool FL\",\n  climate_seat_cooling_front_right AS \"Cool FR\",\n  CASE WHEN auto_seat_climate_left THEN 'Auto' ELSE 'Manual' END AS \"Left Mode\",\n  CASE WHEN auto_seat_climate_right THEN 'Auto' ELSE 'Manual' END AS \"Right Mode\",\n  CASE WHEN seat_vent_enabled THEN 'ON' ELSE 'Off' END AS \"Ventilation\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (climate_seat_cooling_front_left IS NOT NULL OR auto_seat_climate_left IS NOT NULL)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
     }
   ],
   "schemaVersion": 39,

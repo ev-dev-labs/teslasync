@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { BATTERY_COLORS } from '../lib/colors'
@@ -247,7 +247,7 @@ export default function BatteryCells() {
   const { convertTemp, tempUnit } = useSettings()
 
   /* ── API queries ── */
-  const { data: report, isLoading: loadingReport } = useQuery({
+  const { data: report, isLoading: loadingReport, error: reportError, refetch } = useQuery({
     queryKey: ['battery-report', vehicleId],
     queryFn: () => getBatteryReport(vehicleId!),
     enabled: vehicleId !== null,
@@ -260,9 +260,9 @@ export default function BatteryCells() {
   })
 
   /* ── Core metrics from battery report ── */
-  const healthScore = report?.health_score ?? 95
-  const degradation = report?.degradation_pct ?? 5
-  const currentCapacityPct = report?.current_capacity_pct ?? 95
+  const healthScore = report?.health_score ?? 0
+  const degradation = report?.degradation_pct ?? 0
+  const currentCapacityPct = report?.current_capacity_pct ?? 0
   const cycles = report?.total_cycles ?? 0
 
   // Estimate kWh capacity from percentage (assume 75 kWh nominal pack)
@@ -486,6 +486,8 @@ export default function BatteryCells() {
           </select>
         )}
       </div>
+
+      {reportError && <QueryError error={reportError} onRetry={refetch} />}
 
       {/* ── Warning banner ── */}
       {!isLoading && voltageStatus === 'warning' && (

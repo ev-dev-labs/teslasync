@@ -1,19 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getAlerts, markAlertRead, getAlertRules, updateAlertRule, createAlertRule, deleteAlertRule,
-  getNotificationChannels, getNotificationLogs, getNotificationStats, getVehicles,
-  Alert, AlertRule, NotificationChannel, Vehicle,
+  getAlerts, markAlertRead, getAlertRules,
+  getNotificationChannels, getNotificationLogs, getNotificationStats,
+  Alert,
 } from '../api'
-import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { CHART_COLORS } from '../lib/colors'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
-  Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings, CheckCircle, Clock, Pencil,
-  Plus, Settings2, BarChart3, PieChart as PieChartIcon, X, Trash2, Moon, Send, TrendingDown,
-  Car, Lock, Droplets, Database, Radio, Wifi, HardDrive, Activity,
+  Zap, Shield, Gauge, Thermometer, Eye, Filter, Settings, CheckCircle, Clock,
+  Settings2, BarChart3, PieChart as PieChartIcon, Moon, Send, TrendingDown,
+  Lock, Droplets, Database, Radio, Wifi, HardDrive, Activity,
 } from 'lucide-react'
 import { useState, useMemo, useCallback } from 'react'
 import { useToast } from '../components/Toast'
@@ -53,184 +52,6 @@ const typeIcons: Record<string, React.ElementType> = {
   system_redis: HardDrive,
   system_tesla_api: Radio,
   system_worker: Activity,
-}
-
-// ─── Rule type definitions (expanded) ────────────────────────────────────────
-
-const allRuleTypes = [
-  'battery_low', 'battery_high', 'geofence_enter', 'geofence_exit',
-  'charging_complete', 'charging_cost', 'speed_limit', 'vampire_drain',
-  'tire_pressure_low', 'idle_unlocked', 'software_update', 'efficiency_drop',
-  'system_database', 'system_mqtt', 'system_redis', 'system_tesla_api', 'system_worker',
-] as const
-type RuleType = typeof allRuleTypes[number]
-
-const ruleDescriptions: Record<string, { label: string; description: string; thresholdLabel: string; thresholdUnit: string; thresholdHint: string }> = {
-  battery_low: {
-    label: 'Battery Low',
-    description: 'Battery drops below threshold',
-    thresholdLabel: 'Battery %',
-    thresholdUnit: '%',
-    thresholdHint: 'e.g. 20',
-  },
-  battery_high: {
-    label: 'Battery High',
-    description: 'Battery exceeds threshold (overcharge protection)',
-    thresholdLabel: 'Battery %',
-    thresholdUnit: '%',
-    thresholdHint: 'e.g. 90',
-  },
-  low_battery: {
-    label: 'Low Battery',
-    description: 'Alert when battery level drops below a set threshold',
-    thresholdLabel: 'Alert when battery drops below',
-    thresholdUnit: '%',
-    thresholdHint: 'e.g. 20',
-  },
-  charging_complete: {
-    label: 'Charging Complete',
-    description: 'Charging session finishes',
-    thresholdLabel: 'Alert when charge reaches',
-    thresholdUnit: '%',
-    thresholdHint: 'e.g. 90 (0 = any)',
-  },
-  charging_cost: {
-    label: 'Charging Cost',
-    description: 'Single charge cost exceeds amount',
-    thresholdLabel: 'Cost $',
-    thresholdUnit: '$',
-    thresholdHint: 'e.g. 25',
-  },
-  geofence_exit: {
-    label: 'Geofence Exit',
-    description: 'Vehicle exits a geofence zone',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  geofence_enter: {
-    label: 'Geofence Enter',
-    description: 'Vehicle enters a geofence zone',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  sentry_event: {
-    label: 'Sentry Mode Event',
-    description: 'Alert when sentry mode detects an event',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  speed_limit: {
-    label: 'Speed Limit',
-    description: 'Speed exceeds threshold',
-    thresholdLabel: 'Speed km/h',
-    thresholdUnit: 'km/h',
-    thresholdHint: 'e.g. 130',
-  },
-  vampire_drain: {
-    label: 'Vampire Drain',
-    description: 'Drain rate exceeds threshold',
-    thresholdLabel: 'Wh/km',
-    thresholdUnit: 'Wh/km',
-    thresholdHint: 'e.g. 5',
-  },
-  tire_pressure_low: {
-    label: 'Tire Pressure Low',
-    description: 'Any tire drops below PSI threshold',
-    thresholdLabel: 'PSI',
-    thresholdUnit: 'PSI',
-    thresholdHint: 'e.g. 38',
-  },
-  idle_unlocked: {
-    label: 'Idle Unlocked',
-    description: 'Vehicle parked and unlocked for X minutes',
-    thresholdLabel: 'Minutes',
-    thresholdUnit: 'min',
-    thresholdHint: 'e.g. 10',
-  },
-  temperature: {
-    label: 'Temperature Alert',
-    description: 'Alert when cabin temperature exceeds the threshold',
-    thresholdLabel: 'Alert when temperature exceeds',
-    thresholdUnit: '°C',
-    thresholdHint: 'e.g. 40',
-  },
-  software_update: {
-    label: 'Software Update',
-    description: 'New software update available',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  efficiency_drop: {
-    label: 'Efficiency Drop',
-    description: 'Efficiency worse than threshold',
-    thresholdLabel: 'Wh/km',
-    thresholdUnit: 'Wh/km',
-    thresholdHint: 'e.g. 180',
-  },
-  system_database: {
-    label: 'Database Down',
-    description: 'PostgreSQL becomes unhealthy or recovers',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  system_mqtt: {
-    label: 'MQTT Disconnected',
-    description: 'MQTT broker connection lost or restored',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  system_redis: {
-    label: 'Redis Down',
-    description: 'Redis cache becomes unreachable or recovers',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  system_tesla_api: {
-    label: 'Tesla API Unavailable',
-    description: 'Tesla Fleet API connectivity issues or recovery',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-  system_worker: {
-    label: 'Poller Down',
-    description: 'Vehicle polling worker stopped or recovered',
-    thresholdLabel: '',
-    thresholdUnit: '',
-    thresholdHint: '',
-  },
-}
-
-function getRuleDescription(type: string, units?: { speedUnit: string; tempUnit: string; efficiencyUnit: string; pressureUnit: string }) {
-  const base = ruleDescriptions[type] ?? {
-    label: type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    description: 'Custom alert rule',
-    thresholdLabel: 'Threshold',
-    thresholdUnit: '',
-    thresholdHint: '',
-  }
-  if (!units) return base
-  switch (type) {
-    case 'speed_limit':
-      return { ...base, thresholdLabel: `Speed ${units.speedUnit}`, thresholdUnit: units.speedUnit }
-    case 'vampire_drain':
-      return { ...base, thresholdLabel: units.efficiencyUnit, thresholdUnit: units.efficiencyUnit }
-    case 'temperature':
-      return { ...base, thresholdUnit: units.tempUnit }
-    case 'efficiency_drop':
-      return { ...base, thresholdLabel: units.efficiencyUnit, thresholdUnit: units.efficiencyUnit }
-    case 'tire_pressure_low':
-      return { ...base, thresholdLabel: units.pressureUnit, thresholdUnit: units.pressureUnit }
-    default:
-      return base
-  }
 }
 
 // ─── Tooltip for recharts ────────────────────────────────────────────────────
@@ -277,16 +98,6 @@ function loadDigestMode(): DigestMode {
   return 'instant'
 }
 
-// ─── Per-type toggles ────────────────────────────────────────────────────────
-
-function loadTypeToggles(): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem('teslasync-alert-types-enabled')
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return {}
-}
-
 // ─── AlertCard ───────────────────────────────────────────────────────────────
 
 function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void }) {
@@ -327,413 +138,6 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
               <Eye className="h-3 w-3" /> Mark read
             </button>
           )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── RuleCard (existing rules) ───────────────────────────────────────────────
-
-function RuleCard({ rule, lastTriggered, onUpdate, onDelete }: {
-  rule: AlertRule
-  lastTriggered?: string
-  onUpdate: (changes: { enabled?: boolean; threshold?: number }) => void
-  onDelete: () => void
-}) {
-  const { speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
-  const Icon = typeIcons[rule.type] || Bell
-  const desc = getRuleDescription(rule.type, { speedUnit, tempUnit, efficiencyUnit, pressureUnit })
-  const hasThreshold = !!desc.thresholdLabel
-  const [editingThreshold, setEditingThreshold] = useState(false)
-  const [thresholdValue, setThresholdValue] = useState(String(rule.threshold))
-
-  const handleThresholdSave = () => {
-    const val = parseFloat(thresholdValue)
-    if (!isNaN(val) && val !== rule.threshold) {
-      onUpdate({ threshold: val })
-    }
-    setEditingThreshold(false)
-  }
-
-  return (
-    <GlassPanel
-      className={clsx(
-        'p-5 transition-all duration-300',
-        rule.enabled ? 'ring-1 ring-neon-cyan/15' : 'opacity-60'
-      )}
-    >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3">
-          <div className={clsx(
-            'rounded-xl p-2.5 ring-1 transition-colors',
-            rule.enabled
-              ? 'bg-neon-cyan/10 text-neon-cyan ring-neon-cyan/20'
-              : 'bg-white/5 text-[var(--text-muted)] ring-white/10'
-          )}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div>
-            <p className={clsx('text-sm font-semibold', rule.enabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]')}>
-              {rule.name || desc.label}
-            </p>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">{desc.description}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onDelete}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-red hover:bg-neon-red/10 transition-colors"
-            aria-label="Delete rule"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => onUpdate({ enabled: !rule.enabled })}
-            className={clsx(
-              'relative h-7 w-12 rounded-full transition-colors duration-200',
-              rule.enabled ? 'bg-neon-cyan/30' : 'bg-white/10'
-            )}
-            aria-label={rule.enabled ? 'Disable rule' : 'Enable rule'}
-          >
-            <span className={clsx(
-              'absolute top-0.5 h-6 w-6 rounded-full transition-all duration-200',
-              rule.enabled
-                ? 'left-[22px] bg-neon-cyan shadow-[0_0_10px_rgba(0,240,255,0.5)]'
-                : 'left-0.5 bg-gray-500'
-            )} />
-          </button>
-        </div>
-      </div>
-
-      {hasThreshold && (
-        <div className="mt-3 pt-3 border-t border-white/[0.06]">
-          <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">
-            {desc.thresholdLabel}
-          </label>
-          <div className="flex items-center gap-2 mt-1.5">
-            {editingThreshold ? (
-              <>
-                <input
-                  type="number"
-                  value={thresholdValue}
-                  onChange={e => setThresholdValue(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleThresholdSave(); if (e.key === 'Escape') setEditingThreshold(false) }}
-                  autoFocus
-                  placeholder={desc.thresholdHint}
-                  className="w-20 rounded-lg border px-3 py-1.5 text-sm outline-none transition-colors focus:border-neon-cyan/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-                />
-                <span className="text-xs text-[var(--text-secondary)]">{desc.thresholdUnit}</span>
-                <button
-                  onClick={handleThresholdSave}
-                  className="rounded-lg px-2 py-1 text-xs font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 transition-colors"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => { setEditingThreshold(false); setThresholdValue(String(rule.threshold)) }}
-                  className="rounded-lg px-2 py-1 text-xs text-[var(--text-muted)] hover:text-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => { setThresholdValue(String(rule.threshold)); setEditingThreshold(true) }}
-                className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-1.5 text-sm font-mono hover:bg-white/[0.08] transition-colors group"
-              >
-                <span className={clsx(rule.threshold > 0 ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
-                  {rule.threshold > 0 ? rule.threshold : '—'}
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">{desc.thresholdUnit}</span>
-                <Pencil className="h-3 w-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/[0.06]">
-        <span className={clsx(
-          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-          rule.enabled
-            ? 'bg-neon-green/10 text-neon-green'
-            : 'bg-white/5 text-[var(--text-muted)]'
-        )}>
-          <span className={clsx('h-1.5 w-1.5 rounded-full', rule.enabled ? 'bg-neon-green animate-pulse' : 'bg-gray-600')} />
-          {rule.enabled ? 'Active' : 'Inactive'}
-        </span>
-        {lastTriggered && (
-          <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-            <Clock className="h-2.5 w-2.5" />
-            Last triggered {getTimeAgo(lastTriggered)}
-          </span>
-        )}
-        {rule.vehicle_id != null && (
-          <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-            <Car className="h-2.5 w-2.5" />
-            Vehicle #{rule.vehicle_id}
-          </span>
-        )}
-        {rule.updated_at && (
-          <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-            Updated {getTimeAgo(rule.updated_at)}
-          </span>
-        )}
-        <span className="ml-auto flex items-center gap-1">
-          <button
-            onClick={() => onUpdate({ enabled: !rule.enabled })}
-            className={clsx('px-2 py-1 rounded text-[10px] font-medium transition-all',
-              rule.enabled ? 'bg-neon-amber/10 text-neon-amber hover:bg-neon-amber/20' : 'bg-neon-green/10 text-neon-green hover:bg-neon-green/20'
-            )}
-          >
-            {rule.enabled ? 'Disable' : 'Enable'}
-          </button>
-          <button
-            onClick={() => { setThresholdValue(String(rule.threshold)); setEditingThreshold(true) }}
-            className="px-2 py-1 rounded text-[10px] font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 transition-all flex items-center gap-1"
-          >
-            <Pencil className="h-2.5 w-2.5" /> Edit
-          </button>
-          <button
-            onClick={onDelete}
-            className="px-2 py-1 rounded text-[10px] font-medium bg-neon-red/10 text-neon-red hover:bg-neon-red/20 transition-all"
-          >
-            Delete
-          </button>
-        </span>
-      </div>
-    </GlassPanel>
-  )
-}
-
-// ─── Create Alert Rule Modal ─────────────────────────────────────────────────
-
-interface CreateRuleForm {
-  name: string
-  type: RuleType
-  threshold: string
-  vehicle_id: string
-  severity: 'info' | 'warning' | 'critical'
-  enabled: boolean
-  notify_push: boolean
-  notify_mqtt: boolean
-  channelIds: number[]
-}
-
-const emptyForm: CreateRuleForm = {
-  name: '', type: 'battery_low', threshold: '', vehicle_id: 'all',
-  severity: 'warning', enabled: true, notify_push: true, notify_mqtt: false, channelIds: [],
-}
-
-function CreateRuleModal({ open, onClose, vehicles, channels }: {
-  open: boolean
-  onClose: () => void
-  vehicles: Vehicle[]
-  channels: NotificationChannel[]
-}) {
-  const { speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
-  const queryClient = useQueryClient()
-  const toast = useToast()
-  const [form, setForm] = useState<CreateRuleForm>({ ...emptyForm })
-
-  const createMut = useMutation({
-    mutationFn: (f: CreateRuleForm) => {
-      const desc = getRuleDescription(f.type)
-      return createAlertRule({
-        name: f.name || desc.label,
-        type: f.type,
-        threshold: parseFloat(f.threshold) || 0,
-        vehicle_id: f.vehicle_id === 'all' ? null : parseInt(f.vehicle_id),
-        enabled: f.enabled,
-      })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success('Alert rule created')
-      setForm({ ...emptyForm })
-      onClose()
-    },
-    onError: () => toast.error('Failed to create alert rule'),
-  })
-
-  const desc = getRuleDescription(form.type, { speedUnit, tempUnit, efficiencyUnit, pressureUnit })
-  const hasThreshold = !!desc.thresholdLabel
-
-  if (!open) return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative glass-panel p-4 sm:p-6 max-w-md sm:max-w-lg w-full mx-3 sm:mx-4 max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-            <Plus className="h-5 w-5 text-neon-cyan" /> Create Alert Rule
-          </h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-white/5 transition-colors">
-            <X className="h-4 w-4 text-[var(--text-muted)]" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {/* Rule Name */}
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Rule Name</label>
-            <input
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder={desc.label}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-            />
-          </div>
-
-          {/* Type */}
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Alert Type</label>
-            <select
-              value={form.type}
-              onChange={e => setForm(f => ({ ...f, type: e.target.value as RuleType }))}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-            >
-              {allRuleTypes.map(t => (
-                <option key={t} value={t} style={{ background: 'var(--bg)' }}>
-                  {getRuleDescription(t).label} — {getRuleDescription(t).description}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Threshold */}
-          {hasThreshold && (
-            <div>
-              <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">
-                {desc.thresholdLabel}
-              </label>
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="number"
-                  value={form.threshold}
-                  onChange={e => setForm(f => ({ ...f, threshold: e.target.value }))}
-                  placeholder={desc.thresholdHint}
-                  className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-                />
-                <span className="text-xs text-[var(--text-secondary)] shrink-0">{desc.thresholdUnit}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Vehicle */}
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Vehicle</label>
-            <select
-              value={form.vehicle_id}
-              onChange={e => setForm(f => ({ ...f, vehicle_id: e.target.value }))}
-              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:border-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-            >
-              <option value="all" style={{ background: 'var(--bg)' }}>All vehicles</option>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id} style={{ background: 'var(--bg)' }}>
-                  {v.display_name} ({v.vin})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Severity */}
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Severity</label>
-            <div className="flex items-center gap-2 mt-1">
-              {(['info', 'warning', 'critical'] as const).map(s => {
-                const sc = severityConfig[s]
-                return (
-                  <button
-                    key={s}
-                    onClick={() => setForm(f => ({ ...f, severity: s }))}
-                    className={clsx(
-                      'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
-                      form.severity === s
-                        ? `${sc.bg} ${sc.color} ring-1 ${sc.border}`
-                        : 'bg-white/[0.03] text-[var(--text-muted)] hover:bg-white/[0.06]'
-                    )}
-                  >
-                    <sc.icon className="h-3 w-3" /> {s}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Enabled */}
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Enabled</label>
-            <button
-              onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))}
-              className={clsx(
-                'relative h-7 w-12 rounded-full transition-colors duration-200',
-                form.enabled ? 'bg-neon-cyan/30' : 'bg-white/10'
-              )}
-            >
-              <span className={clsx(
-                'absolute top-0.5 h-6 w-6 rounded-full transition-all duration-200',
-                form.enabled ? 'left-[22px] bg-neon-cyan shadow-[0_0_10px_rgba(0,240,255,0.5)]' : 'left-0.5 bg-gray-500'
-              )} />
-            </button>
-          </div>
-
-          {/* Notification Channels */}
-          <div>
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Notify Via</label>
-            {channels.length > 0 ? (
-              <div className="space-y-2 mt-1.5">
-                {channels.map(ch => (
-                  <label key={ch.id} className="flex items-center gap-2 text-xs cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={form.channelIds.includes(ch.id)}
-                      onChange={e => {
-                        setForm(f => ({
-                          ...f,
-                          channelIds: e.target.checked
-                            ? [...f.channelIds, ch.id]
-                            : f.channelIds.filter(id => id !== ch.id),
-                        }))
-                      }}
-                      className="rounded border-gray-600 bg-white/5 text-neon-cyan focus:ring-neon-cyan/50"
-                    />
-                    <span className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
-                      {ch.name} <span className="text-[var(--text-muted)]">({ch.type})</span>
-                    </span>
-                    {!ch.enabled && <span className="text-[10px] text-neon-amber">(disabled)</span>}
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-1.5 rounded-lg border border-dashed border-white/10 p-3 text-center">
-                <p className="text-xs text-[var(--text-muted)]">No notification channels configured.</p>
-                <a href="/notifications" className="text-xs text-neon-cyan hover:underline mt-1 inline-block">+ Add a channel (Discord, Slack, Email...)</a>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-white/[0.06]">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all">
-            Cancel
-          </button>
-          <button
-            onClick={() => createMut.mutate(form)}
-            disabled={createMut.isPending}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/30 hover:bg-neon-cyan/30 transition-all disabled:opacity-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {createMut.isPending ? 'Creating…' : 'Create Rule'}
-          </button>
         </div>
       </div>
     </div>
@@ -904,7 +308,6 @@ function NotificationHistory() {
 function PreferencesSection() {
   const [quietHours, setQuietHours] = useState<QuietHours>(loadQuietHours)
   const [digestMode, setDigestMode] = useState<DigestMode>(loadDigestMode)
-  const [typeToggles, setTypeToggles] = useState<Record<string, boolean>>(loadTypeToggles)
   const toast = useToast()
 
   const saveQuietHours = useCallback((qh: QuietHours) => {
@@ -915,14 +318,6 @@ function PreferencesSection() {
   const saveDigest = useCallback((mode: DigestMode) => {
     setDigestMode(mode)
     localStorage.setItem('teslasync-alert-digest', mode)
-  }, [])
-
-  const toggleType = useCallback((type: string) => {
-    setTypeToggles(prev => {
-      const next = { ...prev, [type]: !(prev[type] ?? true) }
-      localStorage.setItem('teslasync-alert-types-enabled', JSON.stringify(next))
-      return next
-    })
   }, [])
 
   const quietActive = isQuietHoursActive(quietHours)
@@ -1033,41 +428,17 @@ function PreferencesSection() {
         </GlassPanel>
       </div>
 
-      {/* Per-type toggles */}
+      {/* Alert Studio link */}
       <GlassPanel className="p-5">
-        <h4 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-          <BarChart3 className="h-4 w-4 text-neon-green" /> Per-Type Toggles
+        <h4 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-2">
+          <BarChart3 className="h-4 w-4 text-neon-green" /> Rule Management
         </h4>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Enable or disable each alert type globally.</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {allRuleTypes.map(type => {
-            const d = getRuleDescription(type)
-            const Icon = typeIcons[type] || Bell
-            const enabled = typeToggles[type] ?? true
-            return (
-              <div key={type} className="flex items-center justify-between rounded-lg px-3 py-2 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Icon className={clsx('h-3.5 w-3.5 shrink-0', enabled ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
-                  <span className={clsx('text-xs truncate', enabled ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]')}>
-                    {d.label}
-                  </span>
-                </div>
-                <button
-                  onClick={() => toggleType(type)}
-                  className={clsx(
-                    'relative h-5 w-9 rounded-full transition-colors duration-200 shrink-0 ml-2',
-                    enabled ? 'bg-neon-cyan/30' : 'bg-white/10'
-                  )}
-                >
-                  <span className={clsx(
-                    'absolute top-0.5 h-4 w-4 rounded-full transition-all duration-200',
-                    enabled ? 'left-[18px] bg-neon-cyan' : 'left-0.5 bg-gray-500'
-                  )} />
-                </button>
-              </div>
-            )
-          })}
-        </div>
+        <p className="text-xs text-[var(--text-muted)] mb-3">
+          Create, edit, and manage alert rules in the Alert Studio — build custom rules from any of 230+ Fleet Telemetry signals.
+        </p>
+        <a href="/alert-studio" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-neon-cyan/15 text-neon-cyan ring-1 ring-neon-cyan/25 hover:bg-neon-cyan/25 transition-all">
+          Open Alert Studio →
+        </a>
       </GlassPanel>
     </div>
   )
@@ -1078,9 +449,8 @@ function PreferencesSection() {
 export default function Alerts() {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [tab, setTab] = useState<'alerts' | 'rules' | 'history' | 'preferences'>('alerts')
+  const [tab, setTab] = useState<'alerts' | 'history' | 'preferences'>('alerts')
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all')
-  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   // ─ Data queries ─
   const { data: alerts, isLoading: alertsLoading } = useQuery({
@@ -1089,19 +459,9 @@ export default function Alerts() {
     refetchInterval: 30_000,
   })
 
-  const { data: rules, isLoading: rulesLoading } = useQuery({
+  const { data: rules } = useQuery({
     queryKey: ['alert-rules'],
     queryFn: getAlertRules,
-  })
-
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: getVehicles,
-  })
-
-  const { data: channels } = useQuery({
-    queryKey: ['notification-channels'],
-    queryFn: getNotificationChannels,
   })
 
   // ─ Mutations ─
@@ -1111,27 +471,6 @@ export default function Alerts() {
       queryClient.invalidateQueries({ queryKey: ['alerts'] })
       toast.info('Alert marked as read')
     },
-  })
-
-  const updateRuleMut = useMutation({
-    mutationFn: ({ id, ...changes }: { id: number; enabled?: boolean; threshold?: number }) => updateAlertRule(id, changes),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      if (variables.enabled !== undefined) {
-        toast.success(`Alert rule ${variables.enabled ? 'enabled' : 'disabled'}`)
-      } else if (variables.threshold !== undefined) {
-        toast.success(`Threshold updated to ${variables.threshold}`)
-      }
-    },
-  })
-
-  const deleteRuleMut = useMutation({
-    mutationFn: deleteAlertRule,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-      toast.success('Alert rule deleted')
-    },
-    onError: () => toast.error('Failed to delete alert rule'),
   })
 
   // ─ Computed ─
@@ -1179,18 +518,7 @@ export default function Alerts() {
     return Object.entries(days).map(([day, v]) => ({ day, ...v }))
   }, [alerts])
 
-  const lastTriggeredByType = useMemo(() => {
-    const map: Record<string, string> = {}
-    if (!alerts?.length) return map
-    alerts.forEach(a => {
-      if (!map[a.type] || new Date(a.created_at) > new Date(map[a.type])) {
-        map[a.type] = a.created_at
-      }
-    })
-    return map
-  }, [alerts])
-
-  const enabledRules = rules?.filter(r => r.enabled).length ?? 0
+  const enabledRules= rules?.filter(r => r.enabled).length ?? 0
 
   const weekAlertCount = useMemo(() =>
     alertsByDay.reduce((s, d) => s + d.info + d.warning + d.critical, 0)
@@ -1299,16 +627,23 @@ export default function Alerts() {
       <FadeIn delay={0.05}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'Active Rules', value: `${enabledRules}/${rules?.length ?? 0}`, color: 'text-neon-cyan' },
+            { label: 'Active Rules', value: `${enabledRules}/${rules?.length ?? 0}`, color: 'text-neon-cyan', link: '/alert-studio' },
             { label: 'Read Rate', value: totalCount > 0 ? `${Math.round((readCount / totalCount) * 100)}%` : '—', color: 'text-neon-green' },
             { label: 'Most Common', value: alertsByType[0]?.name ?? '—', color: 'text-neon-purple' },
             { label: 'Last 7 Days', value: `${weekAlertCount}`, color: 'text-neon-amber' },
-          ].map(m => (
-            <div key={m.label} className="glass-panel p-3 text-center">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{m.label}</p>
-              <p className={`text-sm font-bold ${m.color}`}>{m.value}</p>
-            </div>
-          ))}
+          ].map(m => {
+            const content = (
+              <div key={m.label} className={clsx('glass-panel p-3 text-center', 'link' in m && 'cursor-pointer hover:border-neon-cyan/30 transition-colors')}>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{m.label}</p>
+                <p className={`text-sm font-bold ${m.color}`}>{m.value}</p>
+                {'link' in m && <p className="text-[9px] text-neon-cyan mt-1">→ Alert Studio</p>}
+              </div>
+            )
+            if ('link' in m) {
+              return <a key={m.label} href={(m as { link: string }).link}>{content}</a>
+            }
+            return content
+          })}
         </div>
       </FadeIn>
 
@@ -1370,7 +705,6 @@ export default function Alerts() {
         <TabNav
           tabs={[
             { key: 'alerts', label: 'Alerts', icon: <Bell className="h-4 w-4" /> },
-            { key: 'rules', label: 'Alert Rules', icon: <Settings className="h-4 w-4" /> },
             { key: 'history', label: 'History', icon: <Send className="h-4 w-4" /> },
             { key: 'preferences', label: 'Preferences', icon: <Settings2 className="h-4 w-4" /> },
           ]}
@@ -1416,57 +750,6 @@ export default function Alerts() {
               description={filter === 'all' ? 'Your fleet is running smoothly. Alerts will appear here.' : `No ${filter} alerts right now.`}
             />
           )}
-        </>
-      )}
-
-      {/* ── Rules Tab ── */}
-      {tab === 'rules' && (
-        <>
-          <FadeIn delay={0.05}>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-[var(--text-muted)]">
-                {enabledRules} of {rules?.length ?? 0} rules active
-              </p>
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-neon-cyan/15 text-neon-cyan ring-1 ring-neon-cyan/25 hover:bg-neon-cyan/25 transition-all"
-              >
-                <Plus className="h-4 w-4" /> Create Alert Rule
-              </button>
-            </div>
-          </FadeIn>
-
-          {rulesLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-48" />)}
-            </div>
-          ) : rules && rules.length > 0 ? (
-            <StaggerContainer className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {rules.map(r => (
-                <StaggerItem key={r.id}>
-                  <RuleCard
-                    rule={r}
-                    lastTriggered={lastTriggeredByType[r.type]}
-                    onUpdate={changes => updateRuleMut.mutate({ id: r.id, ...changes })}
-                    onDelete={() => deleteRuleMut.mutate(r.id)}
-                  />
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          ) : (
-            <EmptyState
-              icon={<Settings className="h-8 w-8" />}
-              title="No alert rules configured"
-              description="Create your first alert rule to get started."
-            />
-          )}
-
-          <CreateRuleModal
-            open={createModalOpen}
-            onClose={() => setCreateModalOpen(false)}
-            vehicles={vehicles ?? []}
-            channels={channels ?? []}
-          />
         </>
       )}
 

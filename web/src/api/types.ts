@@ -229,6 +229,11 @@ export interface AppSettings {
   gas_price_per_unit: number
   gas_unit: string
   gas_efficiency_mpg: number
+  decimal_precision: number
+  quiet_hours_enabled: boolean
+  quiet_hours_start: string
+  quiet_hours_end: string
+  alert_digest_mode: string
   google_maps_api_key?: string
   polling_config?: PollingConfig
 }
@@ -336,6 +341,27 @@ export interface AlertRule {
   vehicle_id: number | null
   created_at: string
   updated_at: string
+  // CEP rule engine fields
+  conditions?: RuleConditionTree | null
+  expression?: string
+  cooldown_min?: number
+  for_duration_s?: number | null
+  severity?: 'info' | 'warning' | 'critical'
+  msg_template?: string
+  notify_channels?: number[]
+  last_fired_at?: string | null
+  fire_count?: number
+  tags?: string[]
+}
+
+/** Condition tree node — matches backend models.RuleCondition. */
+export interface RuleConditionTree {
+  op?: 'AND' | 'OR' | 'NOT'
+  rules?: RuleConditionTree[]
+  signal?: string
+  compare?: string
+  value?: string | number | boolean
+  for_seconds?: number
 }
 
 export interface StatsSummary {
@@ -469,6 +495,12 @@ export interface TirePressureSnapshot {
   front_right: number | null
   rear_left: number | null
   rear_right: number | null
+  tpms_hard_warnings?: string
+  tpms_soft_warnings?: string
+  last_seen_time_fl?: string
+  last_seen_time_fr?: string
+  last_seen_time_rl?: string
+  last_seen_time_rr?: string
   created_at: string
 }
 

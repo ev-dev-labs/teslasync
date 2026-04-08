@@ -34,14 +34,16 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, backup & restore, and more
+- **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, Alert Studio, backup & restore, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
-- **Real-time SSE streaming** — Instant vehicle updates pushed to connected browsers
+- **Real-time SSE streaming** — Singleton connection per browser tab, instant vehicle + alert updates pushed to connected browsers
+- **CEP Rule Engine** — Complex Event Processing with recursive condition trees, temporal sustain, transition detection, cooldown, and 50+ templates
+- **Alert Studio** — Visual rule builder with 230-signal catalog, test notifications, quiet hours, multi-channel dispatch
 - **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
-- **26 Grafana dashboards** — Pre-built dashboards for deep analytics
-- **231 Tesla fleet telemetry fields** — 100% Tesla Fleet Telemetry Protocol coverage (all signals from `vehicle_data.proto` subscribed AND processed)
-- **In-memory SignalStore** — Always-complete vehicle state with nanosecond reads, 30KB RAM per vehicle
+- **28 Grafana dashboards** — Pre-built dashboards for deep analytics, CEP monitoring, SSE real-time, and infrastructure
+- **230 Tesla fleet telemetry fields** — 100% Tesla Fleet Telemetry Protocol coverage, 229/230 signals persisted in PostgreSQL
+- **In-memory SignalStore** — Always-complete vehicle state with nanosecond reads, 30KB RAM per vehicle, pod restart recovery
 - **MongoDB Signal Log** — Every telemetry signal persisted forever with per-signal queryable history
 - **8 Diagnostics Tools** — Live signal monitor, signal explorer, signal diff, gap detector, state machine debugger, MQTT inspector, DB health dashboard, signal log viewer
 - **Helm chart** — Production-ready Kubernetes deployment with external service support
@@ -100,6 +102,16 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - ⚙️ **State Machine Debugger** — Vehicle state visualization with transition timeline and duration distribution
 - 📡 **MQTT Inspector** — MQTT connection status, throughput chart, and per-vehicle signal breakdown
 - 🗄️ **DB Health Dashboard** — PostgreSQL table sizes, row counts, index stats, and migration status
+
+### ⚡ CEP Rule Engine & Alert Studio (NEW)
+- 🧠 **Complex Event Processing** — Recursive condition tree evaluation with AND/OR/NOT grouping, 11 operators, temporal `for_seconds` sustain, `changed_to`/`changed_from` transition detection
+- 🎨 **Alert Studio** — Visual rule editor at `/alert-studio` with drag-and-drop condition builder, 50+ pre-built templates across 12 categories
+- 📋 **Signal Catalog** — 230 signal metadata entries with name, category, type, unit, and description for rule building
+- 🔕 **Quiet Hours** — Server-side suppression of non-critical alerts during configured hours; critical alerts always fire
+- 🧪 **Test Notifications** — Fire test alerts with real signal value interpolation (`{{BatteryLevel}}`, `{{VehicleSpeed}}`, etc.) and dispatch to selected channels
+- ⏱️ **Per-Rule Cooldown** — Configurable cooldown (default 15min) prevents alert spam, tracked in-memory + DB
+- 📊 **CEP Grafana Dashboard** — 12 panels: active rules, eval rate, alerts fired, cooldown skips, latency percentiles, condition errors
+- 📡 **SSE & Real-Time Dashboard** — 18 panels: active SSE clients, events by type, bandwidth, broadcast latency, drops, MQTT status
 
 ### 🎮 Remote Vehicle Control
 - Wake / Lock / Unlock
@@ -175,7 +187,10 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Redis Caching** — Fast lookups for vehicle state and sessions
 - **In-Memory SignalStore** — Per-vehicle signal map with nanosecond reads, periodic DB flush, pod restart recovery
 - **MongoDB Signal Log** — Per-signal time-series storage with compound indexes for history queries
-- **Debounced State Machine** — 5-state vehicle detection (driving/charging/parked/online/offline) with hysteresis to prevent flapping
+- **Debounced State Machine** — 5-state vehicle detection (driving/charging/parked/online/offline) with gear-based transitions, traffic light guard, charging orphan detection, stale gear freshness, and hysteresis to prevent flapping
+- **CEP Rule Engine** — Recursive condition tree evaluator with temporal sustain, transition detection, per-rule cooldown, and template rendering
+- **SSE Singleton** — One EventSource per browser tab shared across all hooks; 11 Prometheus metrics (active clients, events by type, drops, broadcast latency, bandwidth)
+- **Adaptive Polling** — 3s interval when SSE disconnected, 30s when connected (via `useAdaptiveInterval` hook)
 - **7-Channel Notifications**— Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
 - **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
 - **API Suspend Toggle** — Suspend all Tesla Fleet API calls from Settings UI or API when vehicle is in service
@@ -200,7 +215,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
  │                                                                  │
  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
  │  │  React SPA   │  │  PWA Shell   │  │  Grafana Dashboards  │  │
- │  │  (Vite 5)    │  │  (manifest)  │  │  (26 dashboards)     │  │
+ │  │  (Vite 5)    │  │  (manifest)  │  │  (28 dashboards)     │  │
  │  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
  └─────────┼─────────────────┼─────────────────────┼──────────────┘
            │                 │                     │ SQL
@@ -233,10 +248,10 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
  │  │  │  Router   │ │ Handlers │ │ Middleware  │ │   SSE    │ │  │
  │  │  │  (chi)    │ │ (28 API) │ │(rate/CORS) │ │EventHub  │ │  │
  │  │  └──────────┘ └──────────┘ └────────────┘ └──────────┘ │  │
- │  │  ┌──────────┐ ┌──────────┐ ┌────────────┐              │  │
- │  │  │ Circuit  │ │  Worker  │ │ Prometheus  │              │  │
- │  │  │ Breaker  │ │  Poller  │ │  Metrics    │              │  │
- │  │  └──────────┘ └──────────┘ └────────────┘              │  │
+ │  │  ┌──────────┐ ┌──────────┐ ┌────────────┐ ┌──────────┐ │  │
+ │  │  │ Circuit  │ │  Worker  │ │ Prometheus  │ │   CEP    │ │  │
+ │  │  │ Breaker  │ │  Poller  │ │  Metrics    │ │  Engine  │ │  │
+ │  │  └──────────┘ └──────────┘ └────────────┘ └──────────┘ │  │
  │  └──────────────────────────────────────────────────────────┘  │
  └────────┬──────────────┬──────────────┬──────────────┬──────────┘
           │              │              │              │
@@ -259,10 +274,11 @@ ProcessSignals()
     ├─ normalizeFleetUnits()      — mph→km/h, miles→km
     ├─ SignalStore.Update()       — in-memory (nanoseconds, always complete)
     ├─ signalLogger.Write()       — MongoDB signal_log (every signal, forever)
-    ├─ liveState.Flush()          — Postgres vehicle_live_state (every 5s)
+    ├─ liveState.Flush()          — Postgres vehicle_live_state (every 5s, 229 columns)
     ├─ extractPosition()          — Postgres positions (every 10s)
-    ├─ sessionTracker             — drives + charge sessions (event-driven)
-    ├─ trackStateTransition()     — debounced 5-state machine
+    ├─ sessionTracker             — drives + charge sessions (gear-based + speed fallback)
+    ├─ trackStateTransition()     — 5-state machine (gear-based, stale freshness, orphan guard)
+    ├─ evaluateCEPRules()         — CEP condition trees → alerts + SSE + notification dispatch
     └─ track*() snapshots         — 15 domain tables (every 10s)
 ```
 
@@ -287,10 +303,11 @@ internal/
 ├── cache/          # Redis caching layer
 ├── config/         # Environment + YAML configuration
 ├── crypto/         # ECDSA key management
-├── database/       # PostgreSQL queries, DBTX transactions, places cache, 24 migrations
+├── database/       # PostgreSQL queries, DBTX transactions, places cache, 39 migrations
 ├── events/         # SSE event hub
 ├── export/         # CSV/JSON export engine
 ├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
+├── metrics/        # Prometheus metric declarations (11 SSE + 7 CEP + core)
 ├── models/         # Domain models
 ├── mqtt/           # MQTT publisher
 ├── notification/   # 7-channel notification dispatch
@@ -347,7 +364,7 @@ Navigate to **Settings** in the web UI and connect your Tesla account via OAuth2
 
 ## Grafana Dashboards
 
-TeslaSync ships with **26 pre-built Grafana dashboards**:
+TeslaSync ships with **28 pre-built Grafana dashboards**:
 
 | Dashboard | Description |
 |-----------|-------------|
@@ -377,6 +394,8 @@ TeslaSync ships with **26 pre-built Grafana dashboards**:
 | Drivetrain Thermal | Stator/heatsink/inverter temps, motor currents |
 | Comfort & Media | Seat heaters, HVAC modes, now playing, volume |
 | Vehicle Intelligence | Config, software, safety, navigation, preferences |
+| CEP Rule Engine | Active rules, eval rate, alerts fired, cooldown skips, latency, errors |
+| SSE & Real-Time | Active clients, events by type, bandwidth, broadcast latency, drops, MQTT |
 
 ## Development
 
@@ -486,13 +505,21 @@ The Helm chart uses a **single ingress route** pointing all traffic to `teslasyn
 | GET | `/api/v1/user-preferences` | User preference snapshots |
 | GET | `/api/v1/drives/:id/positions` | Drive route positions |
 
-### Notifications
+### Notifications & Alerts
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/notifications` | List channels |
 | POST | `/api/v1/notifications` | Create channel |
 | POST | `/api/v1/notifications/:id/test` | Test channel |
+| GET | `/api/v1/alerts` | List alerts |
+| POST | `/api/v1/alerts/:id/read` | Mark alert as read |
+| GET | `/api/v1/alerts/rules` | List CEP rules |
+| POST | `/api/v1/alerts/rules` | Create CEP rule |
+| PUT | `/api/v1/alerts/rules/:id` | Update CEP rule |
+| DELETE | `/api/v1/alerts/rules/:id` | Delete CEP rule |
+| POST | `/api/v1/alerts/rules/:id/toggle` | Enable/disable rule |
+| POST | `/api/v1/alerts/test` | Fire test alert with template rendering |
 
 ### Settings
 

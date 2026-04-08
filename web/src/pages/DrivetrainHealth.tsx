@@ -6,6 +6,7 @@ import { Cog, Thermometer, Activity, Gauge, AlertTriangle, CheckCircle, Trending
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { cleanNil } from '../lib/cleanNil'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
@@ -47,12 +48,16 @@ function tempLabel(celsius: number | null | undefined) {
 }
 
 /* ─── Motor card component ─── */
-function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, convertTemp, tempUnit }: {
+function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, axleSpeed, state, vBat, torque, convertTemp, tempUnit }: {
   name: string
   statorTemp: number | null | undefined
   heatsinkTemp: number | null | undefined
   inverterTemp: number | null | undefined
   current: number | null | undefined
+  axleSpeed: number | null | undefined
+  state: string | null | undefined
+  vBat: number | null | undefined
+  torque: number | null | undefined
   convertTemp: (c: number) => number
   tempUnit: string
 }) {
@@ -102,6 +107,30 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, conv
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Current</span>
           <span className="text-sm font-semibold text-neon-cyan">{current != null ? `${fmtNumber(current, 1)} A` : '--'}</span>
+        </div>
+        {/* Axle Speed */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Axle Speed</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{axleSpeed != null ? `${fmtInt(axleSpeed)} RPM` : '--'}</span>
+        </div>
+        {/* Torque */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Torque</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{torque != null ? `${fmtNumber(torque, 1)} Nm` : '--'}</span>
+        </div>
+        {/* Battery Voltage */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Battery Voltage</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{vBat != null ? `${fmtNumber(vBat, 1)} V` : '--'}</span>
+        </div>
+        {/* State */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Inverter State</span>
+          <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium',
+            state === 'Enabled' ? 'bg-neon-green/10 text-neon-green'
+            : state === 'Standby' ? 'bg-neon-amber/10 text-neon-amber'
+            : 'bg-white/5 text-[var(--text-muted)]'
+          )}>{state ?? '--'}</span>
         </div>
       </div>
 
@@ -157,6 +186,7 @@ export default function DrivetrainHealth() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
   const { convertTemp, convertSpeed, tempUnit, speedUnit } = useSettings()
 
   /* ── Latest motor snapshot ── */
@@ -259,10 +289,10 @@ export default function DrivetrainHealth() {
 
   /* ── Motor positions: map available data to motor cards ── */
   const motors = useMemo(() => [
-    { name: 'Front Motor', stator: latest?.di_stator_temp_f ?? null, heatsink: latest?.di_heatsink_t_f ?? null, inverter: latest?.di_inverter_t_f ?? null, current: latest?.di_motor_current_f ?? null },
-    { name: 'Rear Motor', stator: latest?.di_stator_temp ?? null, heatsink: latest?.di_heatsink_t_r ?? null, inverter: latest?.di_inverter_t_r ?? null, current: latest?.di_motor_current_r ?? null },
-    { name: 'Rear-Left Motor', stator: latest?.di_stator_temp_rel ?? null, heatsink: latest?.di_heatsink_t_rel ?? null, inverter: latest?.di_inverter_t_rel ?? null, current: latest?.di_motor_current_rel ?? null },
-    { name: 'Rear-Right Motor', stator: latest?.di_stator_temp_rer ?? null, heatsink: latest?.di_heatsink_t_rer ?? null, inverter: latest?.di_inverter_t_rer ?? null, current: latest?.di_motor_current_rer ?? null },
+    { name: 'Front Motor', stator: latest?.di_stator_temp_f ?? null, heatsink: latest?.di_heatsink_t_f ?? null, inverter: latest?.di_inverter_t_f ?? null, current: latest?.di_motor_current_f ?? null, axleSpeed: latest?.di_axle_speed_f ?? null, state: cleanNil(latest?.di_state_f), vBat: latest?.di_v_bat_f ?? null, torque: latest?.di_torque_actual_f ?? null },
+    { name: 'Rear Motor', stator: latest?.di_stator_temp ?? null, heatsink: latest?.di_heatsink_t_r ?? null, inverter: latest?.di_inverter_t_r ?? null, current: latest?.di_motor_current_r ?? null, axleSpeed: latest?.di_axle_speed ?? null, state: cleanNil(latest?.di_state), vBat: latest?.di_v_bat_r ?? null, torque: latest?.di_torque_actual_r ?? null },
+    { name: 'Rear-Left Motor', stator: latest?.di_stator_temp_rel ?? null, heatsink: latest?.di_heatsink_t_rel ?? null, inverter: latest?.di_inverter_t_rel ?? null, current: latest?.di_motor_current_rel ?? null, axleSpeed: latest?.di_axle_speed_rel ?? null, state: cleanNil(latest?.di_state_rel), vBat: latest?.di_v_bat_rel ?? null, torque: latest?.di_torque_actual_rel ?? null },
+    { name: 'Rear-Right Motor', stator: latest?.di_stator_temp_rer ?? null, heatsink: latest?.di_heatsink_t_rer ?? null, inverter: latest?.di_inverter_t_rer ?? null, current: latest?.di_motor_current_rer ?? null, axleSpeed: latest?.di_axle_speed_rer ?? null, state: cleanNil(latest?.di_state_rer), vBat: latest?.di_v_bat_rer ?? null, torque: latest?.di_torque_actual_rer ?? null },
   ], [latest])
 
   /* ── Drive state helpers ── */
@@ -271,9 +301,10 @@ export default function DrivetrainHealth() {
     : cleanNil(latest?.di_state) === 'charge' ? 'text-yellow-400'
     : 'text-[var(--text-muted)]'
 
-  const gearColor = cleanNil(latest?.gear) === 'D' ? 'text-neon-green'
-    : cleanNil(latest?.gear) === 'R' ? 'text-neon-amber'
-    : cleanNil(latest?.gear) === 'P' ? 'text-neon-cyan'
+  const gearValue = live.gear || cleanNil(latest?.gear)
+  const gearColor = gearValue === 'D' ? 'text-neon-green'
+    : gearValue === 'R' ? 'text-neon-amber'
+    : gearValue === 'P' ? 'text-neon-cyan'
     : 'text-[var(--text-muted)]'
 
   const noData = !isLoading && (!history || history.length === 0)
@@ -326,6 +357,10 @@ export default function DrivetrainHealth() {
               heatsinkTemp={m.heatsink}
               inverterTemp={m.inverter}
               current={m.current}
+              axleSpeed={m.axleSpeed}
+              state={m.state}
+              vBat={m.vBat}
+              torque={m.torque}
               convertTemp={convertTemp}
               tempUnit={tempUnit}
             />
@@ -337,7 +372,7 @@ export default function DrivetrainHealth() {
       {!noData && latest && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
           <StatusBadge label="Drive Inverter State" value={cleanNil(latest.di_state)} color={diStateColor} />
-          <StatusBadge label="Gear" value={cleanNil(latest.gear)} color={gearColor} />
+          <StatusBadge label="Gear" value={gearValue} color={gearColor} />
           <div className="glass-card p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Activity className="h-5 w-5 text-neon-cyan" />
@@ -345,7 +380,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Vehicle Speed</p>
               <p className="text-sm font-semibold text-neon-cyan">
-                {latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(latest.vehicle_speed), 1)} ${speedUnit}` : '--'}
+                {live.speed || latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(live.speed || latest.vehicle_speed!), 1)} ${speedUnit}` : '--'}
               </p>
             </div>
           </div>
@@ -357,6 +392,56 @@ export default function DrivetrainHealth() {
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Axle Speed</p>
               <p className="text-sm font-semibold text-yellow-400">
                 {latest.di_axle_speed != null ? `${fmtInt(latest.di_axle_speed)} RPM` : '--'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Powertrain command signals ── */}
+      {!noData && latest && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-purple/10">
+              <Cog className="h-5 w-5 text-neon-purple" />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Motor Torque Cmd</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {latest.di_torque != null ? `${fmtNumber(latest.di_torque, 1)} Nm` : '--'}
+              </p>
+            </div>
+          </div>
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-amber/10">
+              <Cog className="h-5 w-5 text-neon-amber" />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Slave Torque Cmd</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {latest.di_slave_torque_cmd != null ? `${fmtNumber(latest.di_slave_torque_cmd, 1)} Nm` : '--'}
+              </p>
+            </div>
+          </div>
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-cyan/10">
+              <Gauge className="h-5 w-5 text-neon-cyan" />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Brake Pedal Pos</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {latest.brake_pedal_pos != null ? `${fmtPercent(latest.brake_pedal_pos * 100)}` : '--'}
+              </p>
+            </div>
+          </div>
+          <div className="glass-card p-4 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', cleanNil(latest.hvil) === 'Fault' ? 'bg-neon-red/10' : 'bg-neon-green/10')}>
+              <Shield className={clsx('h-5 w-5', cleanNil(latest.hvil) === 'Fault' ? 'text-neon-red' : 'text-neon-green')} />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>HV Interlock (HVIL)</p>
+              <p className={clsx('text-sm font-semibold', cleanNil(latest.hvil) === 'Fault' ? 'text-neon-red' : 'text-neon-green')}>
+                {cleanNil(latest.hvil) ?? '--'}
               </p>
             </div>
           </div>

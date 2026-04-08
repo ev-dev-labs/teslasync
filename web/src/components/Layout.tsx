@@ -61,6 +61,7 @@ import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
+import { useToast } from './Toast'
 import { useSettings } from '../hooks/useSettings'
 
 const navI18nKeys: Record<string, string> = {
@@ -94,12 +95,19 @@ const navI18nKeys: Record<string, string> = {
   'Route Efficiency': 'nav.routeEfficiency',
 }
 
-function SSEStatusDot({ connected }: { connected: boolean }) {
+type SSEState = 'connected' | 'reconnecting' | 'unavailable'
+
+function SSEStatusDot({ state }: { state: SSEState }) {
+  if (state === 'unavailable') return null // hide dot — polling handles everything
+  const isConnected = state === 'connected'
   return (
     <span
-      title={connected ? 'SSE Connected' : 'SSE Disconnected'}
-      className={clsx('inline-block h-2 w-2 rounded-full shrink-0', connected ? 'bg-neon-green' : 'bg-red-500')}
-      style={{ boxShadow: `0 0 6px ${connected ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }}
+      title={isConnected ? 'Live updates active' : 'Reconnecting live updates…'}
+      className={clsx(
+        'inline-block h-2 w-2 rounded-full shrink-0',
+        isConnected ? 'bg-neon-green' : 'bg-amber-400 animate-pulse',
+      )}
+      style={{ boxShadow: `0 0 6px ${isConnected ? 'rgba(16,185,129,0.5)' : 'rgba(251,191,36,0.5)'}` }}
     />
   )
 }
@@ -117,33 +125,60 @@ const navSections = [
     ],
   },
   {
-    title: 'Intelligence',
+    title: 'Driving',
     items: [
-      { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
-      { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
-      { to: '/tco', icon: Wallet, label: 'Cost of Ownership', color: 'text-green-400' },
+      { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
+      { to: '/trips', icon: Navigation, label: 'Trips', color: 'text-teal-400' },
+      { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
+      { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
+      { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },
+      { to: '/regen-efficiency', icon: Recycle, label: 'Regen Braking', color: 'text-green-400' },
+    ],
+  },
+  {
+    title: 'Battery & Charging',
+    items: [
       { to: '/battery', icon: HeartPulse, label: 'Battery Health', color: 'text-rose-400' },
       { to: '/battery-cells', icon: Battery, label: 'Battery Cells', color: 'text-purple-400' },
       { to: '/battery-degradation', icon: TrendingDown, label: 'Degradation', color: 'text-orange-400' },
-      { to: '/drives', icon: Route, label: 'Drives', color: 'text-violet-400' },
-      { to: '/drive-score', icon: Trophy, label: 'Drive Score', color: 'text-yellow-400' },
       { to: '/charging', icon: BatteryCharging, label: 'Charging', color: 'text-green-400' },
       { to: '/charging-heatmap', icon: BarChart3, label: 'Charging Patterns', color: 'text-cyan-400' },
       { to: '/charging-curve', icon: TrendingUp, label: 'Charging Curve', color: 'text-lime-400' },
-      { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
-      { to: '/regen-efficiency', icon: Recycle, label: 'Regen Braking', color: 'text-green-400' },
-      { to: '/speed-profile', icon: Gauge, label: 'Speed Profile', color: 'text-rose-400' },
-      { to: '/efficiency', icon: Zap, label: 'Efficiency', color: 'text-amber-400' },
-      { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
-      { to: '/driving-dynamics', icon: Cog, label: 'Driving Dynamics', color: 'text-red-400' },
-      { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
-      { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
-      { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
-      { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
+    ],
+  },
+  {
+    title: 'Energy & Efficiency',
+    items: [
+      { to: '/energy', icon: Bolt, label: 'Energy', color: 'text-yellow-400' },
       { to: '/energy-flow', icon: Zap, label: 'Energy Flow', color: 'text-yellow-400' },
-      { to: '/drivetrain-health', icon: Cog, label: 'Drivetrain Health', color: 'text-red-400' },
-      { to: '/temperature-impact', icon: Thermometer, label: 'Temperature Impact', color: 'text-blue-400' },
+      { to: '/efficiency', icon: Zap, label: 'Efficiency', color: 'text-amber-400' },
       { to: '/route-efficiency', icon: Route, label: 'Route Efficiency', color: 'text-emerald-400' },
+      { to: '/projected-range', icon: Target, label: 'Projected Range', color: 'text-pink-400' },
+      { to: '/mileage', icon: Milestone, label: 'Mileage', color: 'text-teal-400' },
+      { to: '/temperature-impact', icon: Thermometer, label: 'Temperature Impact', color: 'text-blue-400' },
+      { to: '/cost-analysis', icon: DollarSign, label: 'Cost Analysis', color: 'text-emerald-400' },
+      { to: '/tco', icon: Wallet, label: 'Cost of Ownership', color: 'text-green-400' },
+    ],
+  },
+  {
+    title: 'Vehicle',
+    items: [
+      { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
+      { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
+      { to: '/drivetrain-health', icon: Cog, label: 'Drivetrain Health', color: 'text-red-400' },
+      { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
+      { to: '/sleep-efficiency', icon: BedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
+      { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
+      { to: '/maintenance', icon: WrenchIcon, label: 'Maintenance', color: 'text-amber-400' },
+    ],
+  },
+  {
+    title: 'Analytics',
+    items: [
+      { to: '/analytics', icon: BarChart3, label: 'Analytics', color: 'text-indigo-400' },
+      { to: '/statistics', icon: BarChart3, label: 'Statistics', color: 'text-cyan-400' },
+      { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
+      { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
     ],
   },
   {
@@ -151,22 +186,11 @@ const navSections = [
     items: [
       { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400' },
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
+      { to: '/alert-studio', icon: Zap, label: 'Alert Studio', color: 'text-neon-cyan' },
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
       { to: '/notifications', icon: BellRing, label: 'Notifications', color: 'text-purple-400' },
       { to: '/security-access', icon: Lock, label: 'Security & Access', color: 'text-emerald-400' },
       { to: '/safety-settings', icon: Shield, label: 'Safety Settings', color: 'text-amber-400' },
-    ],
-  },
-  {
-    title: 'History',
-    items: [
-      { to: '/timeline', icon: Clock, label: 'Timeline', color: 'text-sky-400' },
-      { to: '/locations', icon: MapPin, label: 'Locations', color: 'text-emerald-400' },
-      { to: '/trips', icon: Navigation, label: 'Trips', color: 'text-violet-400' },
-      { to: '/vampire-drain', icon: Moon, label: 'Vampire Drain', color: 'text-indigo-400' },
-      { to: '/sleep-efficiency', icon: BedDouble, label: 'Sleep Efficiency', color: 'text-purple-400' },
-      { to: '/software-updates', icon: Download, label: 'Software Updates', color: 'text-teal-400' },
-      { to: '/maintenance', icon: WrenchIcon, label: 'Maintenance', color: 'text-amber-400' },
     ],
   },
   {
@@ -180,14 +204,25 @@ const navSections = [
     title: 'System',
     items: [
       { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
-      { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
-      { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/fleet-api', icon: Zap, label: 'Fleet API', color: 'text-sky-400' },
+      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
+      { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
+    ],
+  },
+  {
+    title: 'Data',
+    items: [
       { to: '/data-export', icon: HardDriveDownload, label: 'Data Export', color: 'text-lime-400' },
       { to: '/backup', icon: DatabaseBackup, label: 'Backup & Restore', color: 'text-teal-400' },
       { to: '/data-repair', icon: Wrench, label: 'Data Repair', color: 'text-amber-400' },
-      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
-      { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
+    ],
+  },
+  {
+    title: 'Developer',
+    items: [
+      { to: '/dev-tools', icon: Wrench, label: 'Dev Tools', color: 'text-cyan-400' },
+      { to: '/roadmap', icon: Target, label: 'Roadmap', color: 'text-violet-400' },
     ],
   },
   {
@@ -210,8 +245,16 @@ export default function Layout() {
   const location = useLocation()
   const { t } = useTranslation()
 
-  // SSE connection status
-  const { connected: sseConnected } = useRealtimeEvents()
+  // SSE connection status + global alert toast
+  const toast = useToast()
+  const { state: sseState } = useRealtimeEvents({
+    onAlert: (data) => {
+      const alert = data as { title?: string; message?: string; severity?: string }
+      const severity = alert.severity ?? 'info'
+      const method = severity === 'critical' ? toast.error : severity === 'warning' ? toast.warning : toast.info
+      method(alert.title ?? 'Alert', alert.message ?? '')
+    },
+  })
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
@@ -411,7 +454,7 @@ export default function Layout() {
               <p className="text-[10px] text-[var(--text-muted)]">{onlineVehicles}/{vehicles?.length ?? 0} vehicles · {uptimeStr}</p>
             </div>
             <SystemHealthDot />
-            <SSEStatusDot connected={sseConnected} />
+            <SSEStatusDot state={sseState} />
           </div>
         </div>
       </aside>

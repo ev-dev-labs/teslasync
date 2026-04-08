@@ -15,9 +15,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
@@ -37,6 +40,7 @@ type TelemetryHandler struct {
 	locationRepo   *database.LocationSnapshotRepo
 	safetyRepo     *database.SafetyRepo
 	userPrefRepo   *database.UserPreferenceRepo
+	swUpdateRepo   *database.SoftwareUpdateRepo
 	mqttClient     *mqtt.Client
 	logRepo        *database.APICallLogRepo
 	eventHub       *EventHub
@@ -73,20 +77,24 @@ type TelemetryHandler struct {
 	signalLogRepo *database.SignalLogRepo
 }
 
-// vehicleStateMachine implements debounced state detection to prevent flapping.
-// A state change must be confirmed for `confirmDuration` before being committed.
+// vehicleStateMachine tracks vehicle state transitions.
+// When Gear signals are available (Fleet Telemetry), transitions are immediate
+// since Gear is authoritative from the car's MCU.
+// For the legacy polling path (no Gear), debounced speed/charge heuristics are used.
 type vehicleStateMachine struct {
 	currentState   string    // committed state in DB
-	pendingState   string    // candidate state (not yet confirmed)
-	pendingSince   time.Time // when the candidate was first seen
-	lastDriveSpeed float64   // last non-zero speed (for hysteresis)
+	lastGear       string    // last known gear (D/R/P/N) — empty if never received
+	pendingState   string    // candidate state (only for speed-based fallback)
+	pendingSince   time.Time // when the candidate was first seen (speed-based only)
+	lastDriveSpeed float64   // last non-zero speed (for speed-based hysteresis)
 	lastSpeedTime  time.Time // when last non-zero speed was seen
 }
 
 const (
 	// States must be observed for this duration before transition is committed.
+	// Only applies to the speed-based fallback path (no Gear signal).
 	stateConfirmDuration = 30 * time.Second
-	// After driving, stay in "driving" for this long even if speed=0 (e.g. at a red light).
+	// After driving (speed-based only), stay in "driving" for this long even if speed=0.
 	driveHoldDuration = 2 * time.Minute
 )
 
@@ -133,11 +141,12 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		locationRepo:   database.NewLocationSnapshotRepo(db),
 		safetyRepo:     database.NewSafetyRepo(db),
 		userPrefRepo:   database.NewUserPreferenceRepo(db),
+		swUpdateRepo:   database.NewSoftwareUpdateRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
-		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder),
-		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
+		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client { if mc != nil { return mc.Underlying() }; return nil }()),
 		staleTimeout:   staleTimeout,
 		bgCtx:          bgCtx,
 		bgCancel:       bgCancel,
@@ -156,6 +165,9 @@ func (h *TelemetryHandler) SetRawTelemetryRepo(repo *database.RawTelemetryRepo) 
 // SetSignalStore sets the in-memory signal store for real-time state tracking.
 func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 	h.signalStore = store
+	if h.sessionTracker != nil {
+		h.sessionTracker.signalStore = store
+	}
 }
 
 // SetEventHub sets the SSE event hub for real-time browser updates.
@@ -166,6 +178,11 @@ func (h *TelemetryHandler) SetEventHub(hub *EventHub) {
 // GetSignalStore returns the signal store (for use by other handlers).
 func (h *TelemetryHandler) GetSignalStore() *signal.Store {
 	return h.signalStore
+}
+
+// SessionTracker returns the underlying session tracker for backfill tasks.
+func (h *TelemetryHandler) SessionTracker() *TelemetrySessionTracker {
+	return h.sessionTracker
 }
 
 // SetSignalLogRepo enables per-signal logging to MongoDB.
@@ -188,11 +205,11 @@ func (h *TelemetryHandler) IsCaptureEnabled() bool {
 func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 	// Run cleanup immediately on startup to close orphaned DB sessions
 	if h.sessionTracker != nil {
-		h.sessionTracker.CleanupStaleSessions(ctx, 30*time.Minute)
+		h.sessionTracker.CleanupStaleSessions(ctx, 10*time.Minute)
 	}
 
 	go func() {
-		ticker := time.NewTicker(10 * time.Minute)
+		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
@@ -200,9 +217,9 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 				return
 			case <-ticker.C:
 				h.cleanupStaleEntries()
-				// Also clean up stale drive/charge sessions
+				// Close drive/charge sessions with no signals for 5+ minutes
 				if h.sessionTracker != nil {
-					h.sessionTracker.CleanupStaleSessions(ctx, 30*time.Minute)
+					h.sessionTracker.CleanupStaleSessions(ctx, 5*time.Minute)
 				}
 			}
 		}
@@ -320,6 +337,8 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 // published to MQTT topics (used by the HTTP endpoint). When called from the
 // MQTT subscriber, publishToMQTT should be false to avoid a publish loop.
 func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signals map[string]interface{}, publishToMQTT bool) {
+	metrics.TelemetryMessagesReceived.Inc()
+
 	// Raw telemetry capture — async insert to MongoDB when enabled (before normalization)
 	if h.captureEnabled.Load() && h.rawTelemetryRepo != nil {
 		source := "mqtt_subscriber"
@@ -361,25 +380,24 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 	// Log every signal to MongoDB for full history (async, non-blocking)
 	if vehicleID > 0 && h.signalLogRepo != nil {
+		// Copy map to avoid concurrent map read/write with the goroutine
+		signalsCopy := make(map[string]interface{}, len(signals))
+		for k, v := range signals {
+			signalsCopy[k] = v
+		}
 		go func() {
 			logCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := h.signalLogRepo.WriteBatch(logCtx, vehicleID, signals); err != nil {
+			if err := h.signalLogRepo.WriteBatch(logCtx, vehicleID, signalsCopy); err != nil {
 				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to log signals to MongoDB")
 			}
 		}()
 	}
 
-	// Extract position data from all supported signals
-	pos := h.extractPosition(signals)
-
-	// Store position
-	if err == nil && pos != nil {
-		pos.VehicleID = vehicleID
-		if err := h.posRepo.Insert(ctx, pos); err != nil {
-			log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to store position")
-		}
-	}
+	// Position writing is deferred to the accumulated/throttled write path below
+	// so that per-vehicle signal batches are merged before storing. This prevents
+	// thousands of sparse positions (93% with odometer=0, battery=0) when Tesla
+	// Fleet Telemetry sends each signal as a separate MQTT message.
 
 	// Publish signals to MQTT only when called from the HTTP endpoint.
 	// When called from the MQTT subscriber, fleet-telemetry already published.
@@ -460,6 +478,20 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
 	}
 
+	// --- Immediate gear-based state tracking ---
+	// When the batch contains a Gear signal, run state transition immediately
+	// so the UI updates within milliseconds (via SSE). Don't wait for the
+	// 10s accumulated write cycle.
+	if vehicleID > 0 {
+		if _, hasGear := signals["Gear"]; hasGear {
+			go func() {
+				bgCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+				defer cancel()
+				h.trackStateTransition(bgCtx, vehicleID, signals)
+			}()
+		}
+	}
+
 	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
 	// Throttle snapshot writes to once every 10 seconds per vehicle to prevent
 	// DB connection pool exhaustion from high-frequency telemetry batches.
@@ -504,9 +536,14 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				h.accumulatedSignalsMu.Unlock()
 			}
 
-			// State machine handles state transitions with debouncing
+			// State machine handles state transitions.
+			// Skip if no Gear signal in accumulated — gear-based transitions
+			// are handled immediately above, not in the throttled path.
 			if shouldWrite && writeSignals != nil {
-				h.trackStateTransition(bgCtx, vehicleID, writeSignals)
+				if _, hasGear := writeSignals["Gear"]; !hasGear {
+					// No gear signal — use speed-based fallback with debounce
+					h.trackStateTransition(bgCtx, vehicleID, writeSignals)
+				}
 			}
 
 			// Throttled snapshot writes — only run every 10s per vehicle
@@ -546,6 +583,16 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 			// Store user preference snapshots
 			h.trackUserPreferences(bgCtx, vehicleID, writeSignals)
+
+			// Store accumulated position — uses merged signals so fields like
+			// odometer, battery, location, speed are all populated from different
+			// MQTT batches within the 10s accumulation window.
+			if pos := h.extractPosition(writeSignals); pos != nil {
+				pos.VehicleID = vehicleID
+				if err := h.posRepo.Insert(bgCtx, pos); err != nil {
+					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store accumulated position")
+				}
+			}
 		}()
 	}
 }
@@ -553,18 +600,69 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 // detectVehicleState determines the vehicle state from telemetry signals.
 // Uses signal priority: driving > charging > online.
 func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) string {
-	// Priority 1: Driving — speed > 1 km/h or Gear in D/R (ShiftStateDrive/ShiftStateReverse)
-	if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 1.0 {
-		return "driving"
+	// Priority 1: Gear signal — authoritative from car MCU
+	gear := ""
+	if g, ok := signals["Gear"]; ok {
+		gear = toString(g)
 	}
-	if gear, ok := signals["Gear"]; ok {
-		gs := toString(gear)
-		if strings.Contains(gs, "Drive") || strings.Contains(gs, "Reverse") || gs == "D" || gs == "R" {
-			return "driving"
+
+	// If no Gear in current batch, check SignalStore for last known (but only if fresh)
+	if gear == "" && h.signalStore != nil {
+		// Use SignalStore directly with timestamp check — stale gear can cause false state
+		h.mu.RLock()
+		for _, state := range h.streamingState {
+			if ls, ok := state.LastSignals["Gear"]; ok {
+				gear = toString(ls)
+				break
+			}
+		}
+		h.mu.RUnlock()
+		// Verify freshness: if the Gear signal is older than 10 minutes, ignore it
+		if gear != "" {
+			for _, vid := range h.signalStore.VehicleIDs() {
+				if gv := h.signalStore.Get(vid, "Gear"); gv != nil {
+					if time.Since(gv.Timestamp) > 10*time.Minute {
+						gear = "" // stale — fall through to speed-based path
+					}
+					break
+				}
+			}
 		}
 	}
 
-	// Priority 2: Charging — explicit charge state or active charge current (> 1A)
+	if gear != "" {
+		switch gear {
+		case "D", "R":
+			return "driving"
+		case "P":
+			// Check for active charging — Gear=P + charging = "charging"
+			if dcs, ok := signals["DetailedChargeState"]; ok {
+				dcsStr := toString(dcs)
+				if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
+					return "charging"
+				}
+			}
+			if cs, ok := signals["ChargeState"]; ok {
+				csStr := toString(cs)
+				if csStr == "Enable" || strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") {
+					return "charging"
+				}
+			}
+			if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
+				return "charging"
+			}
+			return "parked"
+		case "N":
+			return "online"
+		}
+	}
+
+	// Fallback: speed-based detection (REST API polling path, no Gear available)
+	if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 1.0 {
+		return "driving"
+	}
+
+	// Fallback: charging signals
 	if dcs, ok := signals["DetailedChargeState"]; ok {
 		dcsStr := toString(dcs)
 		if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
@@ -581,27 +679,21 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 		return "charging"
 	}
 
-	// Priority 3: Parked — Gear in P (ShiftStatePark)
-	if gear, ok := signals["Gear"]; ok {
-		gs := toString(gear)
-		if strings.Contains(gs, "Park") || gs == "P" {
-			return "parked"
-		}
-	}
-
 	return "online"
 }
 
-// trackStateTransition uses a debounced state machine to prevent state flapping.
+// trackStateTransition determines vehicle state from signals and commits transitions.
 //
 // Design principles:
-//   - Driving entry is IMMEDIATE (no delay) — we never want to miss a drive start
-//   - Driving exit requires 2 min of no speed (driveHoldDuration) — red lights, brief stops
-//   - All other transitions require 30s of consistent observation (stateConfirmDuration)
+//   - Gear signal = immediate commit (authoritative from car MCU, no debounce)
+//   - Speed-based fallback (no Gear) = debounced transitions (legacy path)
 //   - "offline" is set externally by MarkVehicleOffline when telemetry stops arriving
 func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	candidateState := h.detectVehicleState(signals)
 	now := time.Now().UTC()
+
+	// Check if this batch has a Gear signal — determines instant vs debounced path
+	_, hasGear := signals["Gear"]
 
 	h.vehicleStateMu.Lock()
 	sm, exists := h.vehicleStates[vehicleID]
@@ -612,7 +704,61 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		}
 		sm = &vehicleStateMachine{currentState: currentDB}
 		h.vehicleStates[vehicleID] = sm
+		// Restore persisted state machine fields from SignalStore (loaded from DB on startup)
+		if h.signalStore != nil {
+			if lg, ok := h.signalStore.GetString(vehicleID, "_LastGear"); ok && lg != "" {
+				sm.lastGear = lg
+			}
+			if lst := h.signalStore.Get(vehicleID, "_LastSpeedTime"); lst != nil {
+				if t, ok := lst.Raw.(time.Time); ok {
+					sm.lastSpeedTime = t
+				}
+			}
+		}
 	}
+
+	// Update last known gear
+	if hasGear {
+		sm.lastGear = toString(signals["Gear"])
+	}
+
+	// If candidate matches current, reset pending — no transition needed
+	if candidateState == sm.currentState {
+		sm.pendingState = ""
+		sm.pendingSince = time.Time{}
+		h.vehicleStateMu.Unlock()
+		return
+	}
+
+	// === GEAR-BASED PATH: Immediate transitions (no debounce) ===
+	// Only use gear path if we have a fresh Gear signal (current batch or recently received)
+	gearFresh := hasGear
+	if !gearFresh && sm.lastGear != "" && h.signalStore != nil {
+		if gv := h.signalStore.Get(vehicleID, "Gear"); gv != nil {
+			gearFresh = time.Since(gv.Timestamp) < 10*time.Minute
+		}
+	}
+	if gearFresh {
+		sm.currentState = candidateState
+		sm.pendingState = ""
+		sm.pendingSince = time.Time{}
+		if candidateState == "driving" {
+			sm.lastSpeedTime = now
+		}
+		h.vehicleStateMu.Unlock()
+		h.commitStateTransition(ctx, vehicleID, candidateState)
+		// Persist state machine fields to SignalStore for DB flush recovery
+		if h.signalStore != nil {
+			h.signalStore.Update(vehicleID, map[string]interface{}{
+				"_LastGear":      sm.lastGear,
+				"_LastSpeedTime": sm.lastSpeedTime,
+			})
+		}
+		log.Info().Int64("vehicle_id", vehicleID).Str("gear", sm.lastGear).Str("state", candidateState).Msg("telemetry: gear-based state transition")
+		return
+	}
+
+	// === SPEED-BASED FALLBACK: Debounced transitions (no Gear available) ===
 
 	// Track last speed for drive hold hysteresis
 	if candidateState == "driving" {
@@ -630,7 +776,6 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		}
 	}
 
-	// If candidate matches current, reset pending — no transition needed
 	if candidateState == sm.currentState {
 		sm.pendingState = ""
 		sm.pendingSince = time.Time{}
@@ -638,7 +783,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		return
 	}
 
-	// Fast path: entering "driving" is immediate (no confirmation delay)
+	// Fast path: entering "driving" is immediate even for speed-based
 	if candidateState == "driving" && sm.currentState != "driving" {
 		sm.currentState = candidateState
 		sm.pendingState = ""
@@ -649,7 +794,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		return
 	}
 
-	// All other transitions require confirmation period
+	// All other speed-based transitions require confirmation period
 	if candidateState != sm.pendingState {
 		sm.pendingState = candidateState
 		sm.pendingSince = now
@@ -682,20 +827,27 @@ func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID 
 	log.Info().Int64("vehicle_id", vehicleID).Str("state", newState).Msg("telemetry: state transition confirmed")
 }
 
-// MarkVehicleOffline transitions a vehicle to "offline" when telemetry stops arriving.
+// MarkVehicleOffline transitions a vehicle to "offline" or "asleep" when telemetry stops.
+// If the last state was "parked", the vehicle is likely asleep (normal behavior).
+// If the last state was "driving" or "charging", something unexpected happened → "offline".
 func (h *TelemetryHandler) MarkVehicleOffline(ctx context.Context, vehicleID int64) {
 	h.vehicleStateMu.Lock()
 	sm, exists := h.vehicleStates[vehicleID]
-	if exists && sm.currentState == "offline" {
+	if exists && (sm.currentState == "offline" || sm.currentState == "asleep") {
 		h.vehicleStateMu.Unlock()
 		return
 	}
+	// Choose asleep vs offline based on last known state
+	newState := "offline"
+	if exists && (sm.currentState == "parked" || sm.currentState == "online") {
+		newState = "asleep" // parked/online → quiet = normal sleep
+	}
 	if exists {
-		sm.currentState = "offline"
+		sm.currentState = newState
 		sm.pendingState = ""
 	}
 	h.vehicleStateMu.Unlock()
-	h.commitStateTransition(ctx, vehicleID, "offline")
+	h.commitStateTransition(ctx, vehicleID, newState)
 }
 
 // trackMileage updates daily mileage when odometer readings are present.
@@ -1069,9 +1221,8 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	}
 
 	// Distance: miles → km
-	if v, ok := toFloatOk(signals["Odometer"]); ok {
-		signals["Odometer"] = v * milesToKm
-	}
+	// NOTE: Odometer from Fleet Telemetry arrives in the vehicle's configured
+	// unit (km for metric vehicles). Do NOT convert — it's already in km.
 	if v, ok := toFloatOk(signals["EstBatteryRange"]); ok {
 		signals["EstBatteryRange"] = v * milesToKm
 	}
@@ -1088,6 +1239,23 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	// Charge rate: mph → km/h
 	if v, ok := toFloatOk(signals["ChargeRateMilePerHour"]); ok {
 		signals["ChargeRateMilePerHour"] = v * mphToKmh
+	}
+
+	// Gear: Tesla Fleet Telemetry sends "ShiftStateDrive", "ShiftStateReverse",
+	// "ShiftStatePark", "ShiftStateNeutral" — normalize to single-letter D/R/P/N
+	// that the frontend and REST API path use.
+	if g, ok := signals["Gear"]; ok {
+		gs := toString(g)
+		switch {
+		case strings.Contains(gs, "Drive") || gs == "D":
+			signals["Gear"] = "D"
+		case strings.Contains(gs, "Reverse") || gs == "R":
+			signals["Gear"] = "R"
+		case strings.Contains(gs, "Park") || gs == "P":
+			signals["Gear"] = "P"
+		case strings.Contains(gs, "Neutral") || gs == "N":
+			signals["Gear"] = "N"
+		}
 	}
 }
 
@@ -1644,8 +1812,8 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		ev.CenterDisplay = &s
 	}
 	if v, ok := signals["SpeedLimitMode"]; ok {
-		b := toBool(v)
-		ev.SpeedLimitMode = &b
+		s := toString(v)
+		ev.SpeedLimitMode = &s
 	}
 	if v, ok := signals["ValetModeEnabled"]; ok {
 		b := toBool(v)
@@ -2102,6 +2270,19 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 	if v, ok := signals["Version"]; ok {
 		s := toString(v)
 		snap.Version = &s
+		// Track firmware version changes — only insert if different from latest
+		if s != "" {
+			go func(vid int64, ver string) {
+				fwCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+				defer cancel()
+				inserted, err := h.swUpdateRepo.InsertIfChanged(fwCtx, vid, ver, "installed")
+				if err != nil {
+					log.Warn().Err(err).Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: failed to track firmware version")
+				} else if inserted {
+					log.Info().Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: new firmware version detected")
+				}
+			}(vehicleID, s)
+		}
 	}
 	if v, ok := signals["VehicleName"]; ok {
 		s := toString(v)
@@ -2202,8 +2383,8 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 		snap.LocatedAtFavorite = &b
 	}
 	if v, ok := signals["GpsState"]; ok {
-		b := toBool(v)
-		snap.GpsState = &b
+		s := toString(v)
+		snap.GpsState = &s
 	}
 	if v, ok := signals["RouteLastUpdated"]; ok {
 		if t := toTimestamp(v); t != nil {
@@ -2246,8 +2427,8 @@ func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, sig
 		snap.AutomaticEmergencyBrakingOff = &b
 	}
 	if v, ok := signals["BlindSpotCollisionWarningChime"]; ok {
-		b := toBool(v)
-		snap.BlindSpotCollisionWarning = &b
+		s := toString(v)
+		snap.BlindSpotCollisionWarning = &s
 	}
 	if v, ok := signals["CruiseFollowDistance"]; ok {
 		s := toString(v)

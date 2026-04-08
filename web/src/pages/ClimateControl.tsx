@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getClimateData, getClimateLatest } from '../api'
+import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
-import { Thermometer, Wind, Snowflake, Sun, Fan, Flame, Shield, Zap, Activity } from 'lucide-react'
+import { Thermometer, Wind, Snowflake, Sun, Fan, Flame, Shield, Zap, Activity, Car } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, AreaChart, Area,
@@ -174,6 +176,10 @@ export default function ClimateControl() {
   const [limit] = useState(100)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
+  // SSE live state for real-time climate signals
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
+  const pollInterval = useAdaptiveInterval()
+
   const { data: climateData, isLoading: loadingHistory } = useQuery({
     queryKey: ['climate', vehicleId, limit],
     queryFn: () => getClimateData(vehicleId!, limit),
@@ -185,7 +191,7 @@ export default function ClimateControl() {
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 3000,
+    refetchInterval: pollInterval,
   })
 
   // ---- derived data -------------------------------------------------------
@@ -564,6 +570,122 @@ export default function ClimateControl() {
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>snapshots</span>
         </div>
       </div>
+
+      {/* ================================================================ */}
+      {/* Section 8 — Live Climate Signals (SSE)                           */}
+      {/* ================================================================ */}
+      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
+        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+          <Car className="inline h-4 w-4 mr-1.5 text-neon-cyan" />
+          Live Climate Signals
+        </h3>
+
+        {/* Seat Heaters — 5 positions */}
+        <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Seat Heaters</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+          {[
+            { label: 'Driver', level: live.seatHeaterLeft },
+            { label: 'Passenger', level: live.seatHeaterRight },
+            { label: 'Rear Left', level: live.seatHeaterRearLeft },
+            { label: 'Rear Center', level: live.seatHeaterRearCenter },
+            { label: 'Rear Right', level: live.seatHeaterRearRight },
+          ].map(seat => (
+            <div key={seat.label} className="glass-card p-3 text-center">
+              <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{seat.label}</p>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                {[1, 2, 3].map(lvl => (
+                  <div key={lvl} className={clsx('w-3 h-3 rounded-sm', seat.level >= lvl ? 'bg-neon-red/70' : 'bg-white/[0.06]')} />
+                ))}
+              </div>
+              <span className={clsx('text-xs font-medium', seat.level > 0 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
+                {seat.level > 0 ? `Level ${seat.level}` : 'Off'}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Seat Cooling & Ventilation */}
+        <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Seat Cooling & Ventilation</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <div className="glass-card p-3 text-center">
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Front Left Cool</p>
+            <span className={clsx('text-sm font-semibold', live.seatCoolingFrontLeft > 0 ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+              {live.seatCoolingFrontLeft > 0 ? `Level ${live.seatCoolingFrontLeft}` : 'Off'}
+            </span>
+          </div>
+          <div className="glass-card p-3 text-center">
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Front Right Cool</p>
+            <span className={clsx('text-sm font-semibold', live.seatCoolingFrontRight > 0 ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+              {live.seatCoolingFrontRight > 0 ? `Level ${live.seatCoolingFrontRight}` : 'Off'}
+            </span>
+          </div>
+          <div className="glass-card p-3 text-center">
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Seat Vent</p>
+            <span className={clsx('text-sm font-semibold', live.seatVentEnabled ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+              {live.seatVentEnabled ? 'On' : 'Off'}
+            </span>
+          </div>
+          <div className="glass-card p-3 text-center">
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Auto Climate</p>
+            <span className={clsx('text-sm font-semibold', live.autoSeatClimateLeft || live.autoSeatClimateRight ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
+              {live.autoSeatClimateLeft && live.autoSeatClimateRight ? 'Both' : live.autoSeatClimateLeft ? 'Left' : live.autoSeatClimateRight ? 'Right' : 'Off'}
+            </span>
+          </div>
+        </div>
+
+        {/* HVAC System Details */}
+        <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>HVAC System</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>AC</span>
+            <span className={clsx('text-sm font-semibold', live.hvacACEnabled ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>{live.hvacACEnabled ? 'On' : 'Off'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Auto Mode</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.hvacAutoMode || 'Off'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Climate Keeper</span>
+            <span className={clsx('text-sm font-semibold', live.climateKeeperMode && live.climateKeeperMode !== 'Off' ? 'text-neon-green' : 'text-[var(--text-muted)]')}>{live.climateKeeperMode || 'Off'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Overheat Limit</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.cabinOverheatTempLimit || '—'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Fan Status</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.hvacFanStatus || '—'}</span>
+          </div>
+        </div>
+
+        {/* Heating & Defrost */}
+        <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Heating & Defrost</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Steering Wheel</span>
+            <span className={clsx('text-sm font-semibold', live.steeringWheelHeatLevel > 0 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
+              {live.steeringWheelHeatLevel > 0 ? `Level ${live.steeringWheelHeatLevel}` : 'Off'}
+            </span>
+            {live.steeringWheelHeatAuto && <span className="text-[9px] text-neon-green">Auto</span>}
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Preconditioning</span>
+            <span className={clsx('text-sm font-semibold', live.defrostPreconditioning ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>{live.defrostPreconditioning ? 'Active' : 'Off'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Rear Defrost</span>
+            <span className={clsx('text-sm font-semibold', live.rearDefrost ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>{live.rearDefrost ? 'On' : 'Off'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Rear Display HVAC</span>
+            <span className={clsx('text-sm font-semibold', live.rearDisplayHvac ? 'text-neon-green' : 'text-[var(--text-muted)]')}>{live.rearDisplayHvac ? 'On' : 'Off'}</span>
+          </div>
+          <div className="glass-card p-3 flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Wiper Heat</span>
+            <span className={clsx('text-sm font-semibold', live.wiperHeat ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>{live.wiperHeat ? 'On' : 'Off'}</span>
+          </div>
+        </div>
+      </GlassPanel>
     </FadeIn>
   )
 }

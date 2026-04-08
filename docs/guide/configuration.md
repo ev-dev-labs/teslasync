@@ -137,6 +137,22 @@ Redis is deployed automatically with the Helm chart and enabled by default. When
 The maintenance worker runs periodically to delete records older than the configured retention period. Lowering these values will permanently delete historical data. Make sure to export data before changing retention settings.
 :::
 
+### Alert & CEP Settings
+
+These settings are configured via the **Settings** page (`/settings`) or directly via `PUT /api/v1/settings`:
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `quiet_hours_enabled` | bool | `false` | Enable quiet hours suppression for non-critical alerts |
+| `quiet_hours_start` | string | `"23:00"` | Quiet hours start time (HH:MM) |
+| `quiet_hours_end` | string | `"07:00"` | Quiet hours end time (HH:MM) |
+| `alert_digest_mode` | string | `"instant"` | Alert delivery mode: `instant`, `hourly`, or `daily` |
+| `decimal_precision` | int | `1` | Number of decimal places for numeric values (0-4), applied globally |
+
+::: tip Quiet Hours
+During quiet hours, **non-critical** alerts (info, warning) are suppressed at the server level. **Critical** alerts always fire regardless of quiet hours. The setting is stored in the database and checked in the `fireAlert()` function.
+:::
+
 ### Docker Compose Variables
 
 These are used by `docker-compose.yml` and are not read by the Go application:

@@ -9,6 +9,8 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { parseGear, GEAR_COLORS } from '../lib/gear'
 
@@ -125,11 +127,15 @@ export default function DrivingDynamics() {
     refetchInterval: 5000,
   })
 
+  /* --- Live SSE state for instant gear updates --- */
+  const { state: liveState } = useVehicleLive(vehicleId ?? undefined)
+  const pollInterval = useAdaptiveInterval()
+
   const { data: latest, isLoading: loadingLatest } = useQuery({
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 3000,
+    refetchInterval: pollInterval,
   })
 
   /* --- Derived chart data --- */
@@ -175,8 +181,12 @@ export default function DrivingDynamics() {
     const max = (arr: number[]) => arr.length ? Math.max(...arr) : 0
     const min = (arr: number[]) => arr.length ? Math.min(...arr) : 0
 
+    // Parse raw gear values (e.g., "ShiftStateP" → "P") and count
     const gearCounts: Record<string, number> = {}
-    gears.forEach(g => { gearCounts[g] = (gearCounts[g] || 0) + 1 })
+    gears.forEach(g => {
+      const parsed = parseGear(g) ?? g
+      gearCounts[parsed] = (gearCounts[parsed] || 0) + 1
+    })
 
     return {
       totalReadings: history.length,
@@ -207,7 +217,7 @@ export default function DrivingDynamics() {
     return { text: 'Disabled', color: 'text-neon-red', bg: 'bg-neon-red/20' }
   }
 
-  /* --- Gear badge --- */
+  /* --- Gear badge — prefer live SSE state (instant), fall back to motor snapshot --- */
   const gearBadge = (gear?: string) => {
     const parsed = parseGear(gear)
     if (!parsed) return { text: '--', color: 'text-[var(--text-muted)]' }
@@ -215,7 +225,7 @@ export default function DrivingDynamics() {
   }
 
   const badge = motorStateBadge(latest?.di_state)
-  const gear = gearBadge(latest?.gear)
+  const gear = gearBadge(liveState.gear || latest?.gear)
 
   return (
     <FadeIn>

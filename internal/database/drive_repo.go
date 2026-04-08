@@ -237,6 +237,30 @@ func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endDa
 	return err
 }
 
+// FindMissingAddresses returns drives that have coordinates but no geocoded address name.
+// Used for backfilling addresses on startup for drives created before geocoding was added.
+func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*models.Drive, error) {
+	query := `SELECT ` + driveColumns + ` FROM drives
+		WHERE (start_latitude IS NOT NULL AND start_longitude IS NOT NULL AND (start_address IS NULL OR start_address = ''))
+		   OR (end_latitude IS NOT NULL AND end_longitude IS NOT NULL AND (end_address IS NULL OR end_address = ''))
+		ORDER BY id DESC`
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var drives []*models.Drive
+	for rows.Next() {
+		d, err := scanDrive(rows)
+		if err != nil {
+			return nil, err
+		}
+		drives = append(drives, d)
+	}
+	return drives, rows.Err()
+}
+
 // PartialUpdateWithTx is like PartialUpdate but uses the provided transaction.
 func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, fields map[string]interface{}) error {
 	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)

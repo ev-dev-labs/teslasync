@@ -42,26 +42,34 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
           },
           "mappings": [],
-          "min": 0,
-          "max": 100,
-          "unit": "percent",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 70
-              },
-              {
                 "color": "green",
-                "value": 85
+                "value": null
               }
             ]
           }
@@ -69,22 +77,25 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
+        "h": 8,
+        "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "options": {
-        "reduceOptions": {
+        "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "max"
           ],
-          "fields": "",
-          "values": false
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
@@ -93,14 +104,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT health_score AS \"Health %\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT created_at AS time, CASE WHEN locked THEN 1 ELSE 0 END AS \"Locked\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Battery Health Score",
-      "type": "gauge",
+      "title": "Lock Status Over Time",
+      "type": "timeseries",
       "transparent": false
     },
     {
@@ -111,8 +122,26 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "red",
-            "mode": "fixed"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -123,28 +152,30 @@
                 "value": null
               }
             ]
-          },
-          "decimals": 2
-        }
+          }
+        },
+        "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 4,
-        "y": 0
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
       },
       "id": 2,
       "options": {
-        "reduceOptions": {
+        "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "max"
           ],
-          "fields": "",
-          "values": false
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
@@ -153,14 +184,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(degradation_pct::numeric, 2) AS \"%\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT created_at AS time, CASE WHEN sentry_mode THEN 1 ELSE 0 END AS \"🛡️ Sentry\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Degradation",
-      "type": "stat",
+      "title": "Sentry Mode Over Time",
+      "type": "timeseries",
       "transparent": false
     },
     {
@@ -183,15 +214,14 @@
                 "value": null
               }
             ]
-          },
-          "unit": "kwatth"
+          }
         }
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 8,
-        "y": 0
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 16
       },
       "id": 3,
       "options": {
@@ -215,11 +245,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(capacity_kwh::numeric, 1) AS \"⚡ kWh\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT COUNT(*) AS \"Total Events\", COUNT(*) FILTER (WHERE locked = true) AS \"Locked Events\", COUNT(*) FILTER (WHERE sentry_mode = true) AS \"Sentry Active\", COUNT(*) FILTER (WHERE door_state = 'Open') AS \"Door Opens\", COUNT(DISTINCT DATE(created_at)) AS \"Days Tracked\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
           "refId": "A"
         }
       ],
-      "title": "Capacity",
+      "title": "Security Summary Stats",
       "type": "stat",
       "transparent": false
     },
@@ -231,10 +261,56 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "purple",
-            "mode": "fixed"
+            "mode": "palette-classic"
           },
-          "mappings": [],
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "Closed": {
+                  "index": 0,
+                  "text": "Closed"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "Venting": {
+                  "index": 1,
+                  "text": "Venting"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "Open": {
+                  "index": 2,
+                  "text": "Open"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -244,26 +320,29 @@
               }
             ]
           }
-        }
+        },
+        "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 12,
-        "y": 0
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 20
       },
       "id": 4,
       "options": {
-        "reduceOptions": {
+        "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "max"
           ],
-          "fields": "",
-          "values": false
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
@@ -272,14 +351,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT cycle_count AS \"Cycles\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT created_at AS time, fd_window AS \"Front Driver\", fp_window AS \"Front Passenger\", rd_window AS \"Rear Driver\", rp_window AS \"Rear Passenger\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND (fd_window IS NOT NULL OR fp_window IS NOT NULL) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Cycle Count",
-      "type": "stat",
+      "title": "Window States",
+      "type": "timeseries",
       "transparent": false
     },
     {
@@ -290,8 +369,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "green",
-            "mode": "fixed"
+            "mode": "palette-classic"
           },
           "mappings": [],
           "thresholds": {
@@ -302,387 +380,17 @@
                 "value": null
               }
             ]
-          },
-          "unit": "none"
-        }
+          }
+        },
+        "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 16,
-        "y": 0
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
       },
       "id": 5,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT ROUND(est_range_km::numeric, 1) AS \"km\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
-          "refId": "A"
-        }
-      ],
-      "title": "Est. Range",
-      "type": "stat",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "orange",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 20,
-        "y": 0
-      },
-      "id": 6,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT ROUND(avg_cell_temp_c::numeric, 1) AS \"Temp\" FROM battery_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
-          "refId": "A"
-        }
-      ],
-      "title": "Avg Cell Temp",
-      "type": "stat",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "kwatth"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, capacity_kwh AS \"Capacity kWh\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
-          "refId": "A"
-        }
-      ],
-      "title": "Battery Capacity Over Time",
-      "type": "timeseries",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, degradation_pct AS \"Degradation %\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
-          "refId": "A"
-        }
-      ],
-      "title": "Degradation % Over Time",
-      "type": "timeseries",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, health_score AS \"Health %\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at",
-          "refId": "A"
-        }
-      ],
-      "title": "Health Score Over Time",
-      "type": "timeseries",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "lineWidth": 1,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
-      "id": 10,
       "options": {
         "legend": {
           "calcs": [],
@@ -701,20 +409,232 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE\n    WHEN end_battery_level < 20 THEN '0-19%'\n    WHEN end_battery_level < 40 THEN '20-39%'\n    WHEN end_battery_level < 60 THEN '40-59%'\n    WHEN end_battery_level < 80 THEN '60-79%'\n    WHEN end_battery_level < 90 THEN '80-89%'\n    ELSE '90-100%'\n  END AS \"Range\",\n  COUNT(*) AS \"🔄 Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND end_battery_level IS NOT NULL\nGROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT DATE(created_at) AS time, COUNT(*) AS \"Events\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY DATE(created_at)",
           "refId": "A"
         }
       ],
-      "title": "Charge Level Distribution (Histogram)",
+      "title": "Daily Security Events",
       "type": "barchart",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "id": 6,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE sentry_mode = true) / NULLIF(COUNT(*), 0), 1) AS \"Sentry Uptime %\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Sentry Uptime %",
+      "type": "gauge",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 7,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS \"🕐 Time\", CASE WHEN locked THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN '🛡️ Active' ELSE '⬜ Off' END AS \"🛡️ Sentry\", COALESCE(door_state, '-') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"🪟 FD\", COALESCE(fp_window, '-') AS \"🪟 FP\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 50",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Events Table",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Lights & Turn Signal History",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN lights_hazards_active THEN 'ON' ELSE 'Off' END AS \"Hazards\",\n  CASE WHEN lights_high_beams THEN 'ON' ELSE 'Off' END AS \"High Beams\",\n  COALESCE(lights_turn_signal, 'Off') AS \"Turn Signal\",\n  COALESCE(center_display, '—') AS \"Center Display\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (lights_hazards_active IS NOT NULL OR lights_high_beams IS NOT NULL OR lights_turn_signal IS NOT NULL)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Access Modes Timeline",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN valet_mode_enabled THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN service_mode THEN 'ON' ELSE 'Off' END AS \"Service\",\n  CASE WHEN speed_limit_mode THEN 'ON' ELSE 'Off' END AS \"Speed Limit\",\n  CASE WHEN guest_mode THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  current_limit_mph AS \"Speed Limit (mph)\",\n  paired_phone_key_count AS \"Paired Keys\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Driver & Seatbelt Status",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN driver_seat_occupied THEN 'Occupied' ELSE 'Empty' END AS \"Driver Seat\",\n  CASE WHEN driver_seat_belt THEN 'Buckled' ELSE 'Unbuckled' END AS \"Driver Belt\",\n  CASE WHEN passenger_seat_belt THEN 'Buckled' ELSE 'Unbuckled' END AS \"Passenger Belt\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (driver_seat_occupied IS NOT NULL OR driver_seat_belt IS NOT NULL)\nORDER BY created_at DESC LIMIT 50",
+          "format": "table",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
     }
   ],
   "schemaVersion": 39,
   "tags": [
-    "teslasync"
+    "teslasync",
+    "security",
+    "sentry"
   ],
   "templating": {
     "list": [
@@ -796,13 +716,13 @@
     ]
   },
   "time": {
-    "from": "now-365d",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 🔋 Battery Health",
-  "uid": "teslasync-battery-health",
+  "title": "TeslaSync 🔒 Security & Access",
+  "uid": "teslasync-security-access",
   "version": 1,
   "weekStart": ""
 }

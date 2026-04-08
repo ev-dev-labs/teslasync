@@ -42,7 +42,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "green",
+            "fixedColor": "blue",
             "mode": "fixed"
           },
           "mappings": [],
@@ -58,8 +58,8 @@
         }
       },
       "gridPos": {
-        "h": 5,
-        "w": 6,
+        "h": 4,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -85,11 +85,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_efficiency((SUM(start_range_km - end_range_km) * 1000) / NULLIF(SUM(distance), 0))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 1",
+          "rawSql": "SELECT seat_heater_left AS \"Left\", seat_heater_right AS \"Right\", seat_heater_rear_left AS \"Rear Left\", seat_heater_rear_center AS \"Rear Center\", seat_heater_rear_right AS \"Rear Right\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Avg Wh/km (Period)",
+      "title": "Seat Heaters",
       "type": "stat",
       "transparent": false
     },
@@ -101,7 +101,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "dark-green",
+            "fixedColor": "blue",
             "mode": "fixed"
           },
           "mappings": [],
@@ -117,9 +117,9 @@
         }
       },
       "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
+        "h": 4,
+        "w": 12,
+        "x": 12,
         "y": 0
       },
       "id": 2,
@@ -144,130 +144,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(MIN((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0))))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5",
+          "rawSql": "SELECT COALESCE(hvac_auto_mode, 'Off') AS \"HVAC Mode\", CASE WHEN COALESCE(hvac_steering_wheel_heat_level, 0) > 0 THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\", CASE WHEN COALESCE(hvac_ac_enabled, false) THEN 'On' ELSE 'Off' END AS \"Auto Climate\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Best Efficiency",
-      "type": "stat",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "red",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        }
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 0
-      },
-      "id": 3,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT ROUND(MAX((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0))))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5",
-          "refId": "A"
-        }
-      ],
-      "title": "Worst Efficiency",
-      "type": "stat",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "orange",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        }
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_temp(AVG(outside_temp_avg))::numeric, 1) AS \"Temp\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND outside_temp_avg IS NOT NULL",
-          "refId": "A"
-        }
-      ],
-      "title": "Avg Outside Temp",
+      "title": "Climate Details",
       "type": "stat",
       "transparent": false
     },
@@ -317,9 +198,9 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 4
       },
-      "id": 5,
+      "id": 3,
       "options": {
         "legend": {
           "calcs": [
@@ -343,11 +224,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(start_date, '1d') AS time,\n  ROUND(convert_efficiency((SUM(start_range_km - end_range_km) * 1000) / NULLIF(SUM(distance), 0))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 1\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT created_at AS time, seat_heater_left AS \"Left\", seat_heater_right AS \"Right\", seat_heater_rear_left AS \"Rear Left\", seat_heater_rear_center AS \"Rear Center\", seat_heater_rear_right AS \"Rear Right\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Efficiency Over Time (Wh/km)",
+      "title": "Seat Heater History",
       "type": "timeseries",
       "transparent": false
     },
@@ -397,9 +278,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 12
       },
-      "id": 6,
+      "id": 4,
       "options": {
         "legend": {
           "calcs": [
@@ -423,11 +304,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_date AS time,\n  ROUND(convert_speed(distance / NULLIF(duration_min, 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  ROUND((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5\nORDER BY start_date",
+          "rawSql": "SELECT created_at AS time, CASE WHEN hvac_ac_enabled THEN 1 ELSE 0 END AS \"AC Enabled\", CASE WHEN defrost_mode THEN 1 ELSE 0 END AS \"Defrost\", CASE WHEN rear_defrost_enabled THEN 1 ELSE 0 END AS \"Rear Defrost\", CASE WHEN wiper_heat_enabled THEN 1 ELSE 0 END AS \"Wiper Heat\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Speed vs Efficiency (per drive)",
+      "title": "HVAC Mode History",
       "type": "timeseries",
       "transparent": false
     },
@@ -477,7 +358,146 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 13
+        "y": 12
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, hvac_fan_speed AS \"Fan Speed\", hvac_fan_status AS \"Fan Status\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Fan Speed & Status",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 6,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT now_playing_title AS \"Title\", now_playing_artist AS \"Artist\", now_playing_album AS \"Album\", playback_status AS \"Status\", playback_source AS \"Source\", audio_volume AS \"Volume\", created_at AS \"Time\" FROM media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Now Playing",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 26
       },
       "id": 7,
       "options": {
@@ -503,12 +523,81 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_date AS time,\n  ROUND(convert_temp(outside_temp_avg)::numeric, 1) AS \"🌡️ Temp\",\n  ROUND((convert_efficiency((start_range_km - end_range_km) * 1000 / NULLIF(distance, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) AND distance > 5 AND outside_temp_avg IS NOT NULL\nORDER BY start_date",
+          "rawSql": "SELECT created_at AS time, audio_volume AS \"Volume\" FROM media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Temperature vs Efficiency",
+      "title": "Volume Over Time",
       "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT playback_source AS \"Source\", COUNT(*) AS \"Count\" FROM media_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND playback_source IS NOT NULL GROUP BY playback_source ORDER BY COUNT(*) DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Playback Source",
+      "type": "piechart",
       "transparent": false
     }
   ],
@@ -601,8 +690,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync ⚙️ Driving Efficiency",
-  "uid": "teslasync-efficiency",
+  "title": "TeslaSync 🎵 Comfort & Media",
+  "uid": "teslasync-comfort-media",
   "version": 1,
   "weekStart": ""
 }

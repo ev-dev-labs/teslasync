@@ -64,6 +64,51 @@ sequenceDiagram
     TS-->>FT: 200 OK {"status":"accepted"}
 ```
 
+### Signal Coverage
+
+TeslaSync achieves **100% Tesla Fleet Telemetry Protocol coverage** — all 230 signals from Tesla's `vehicle_data.proto` are subscribed, processed, and persisted:
+
+| Category | Signals | Examples |
+|----------|---------|---------|
+| **Vehicle State** | 22 | Odometer, Gear, VehicleSpeed, Locked, SentryMode, doors, windows |
+| **Vehicle Config** | 14 | TrimBadging, ExteriorColor, WheelType, RoofColor, SeatType |
+| **Powertrain** | ~35 | Motor torque/RPM/temp (front/rear/REL/RER), pedal position, regen |
+| **Climate** | 29 | InsideTemp, OutsideTemp, HvacPower, seat heaters (5 pos), defrost |
+| **Security** | ~15 | Locked, SentryMode, doors, windows, lights, valet mode |
+| **Safety** | 14 | ForwardCollisionWarning, AutomaticBlindSpotCamera, SpeedLimitWarning |
+| **Charging** | ~30 | BatteryLevel, ChargeState, ChargerPower, pack voltage/current, BMS |
+| **TPMS** | 11 | Tire pressure (FL/FR/RL/RR), temperature, timestamp |
+| **Software** | 5 | SoftwareUpdate, VersionAvailable, ExpectedDuration |
+| **User Preferences** | 5 | DistanceUnit, TemperatureUnit, ChargeUnit, 24HourTime |
+
+All 229/230 signals are persisted to the `vehicle_live_state` table (158 columns added in migration 035). The remaining signal (Location) is stored as separate lat/lon columns from a JSON payload.
+
+### Signal Processing Pipeline
+
+```
+ProcessSignals()
+  ├─ normalizeFleetUnits()      — mph→km/h, miles→km
+  ├─ SignalStore.Update()       — in-memory (nanosecond reads, always complete)
+  ├─ signalLogger.Write()       — MongoDB signal_log (every signal, forever)
+  ├─ liveState.Flush()          — Postgres vehicle_live_state (every 5s, 229 columns)
+  ├─ extractPosition()          — Postgres positions (every 10s)
+  ├─ sessionTracker             — drives + charge sessions (gear-based + speed fallback)
+  ├─ trackStateTransition()     — 5-state machine (gear-based, stale freshness, orphan guard)
+  ├─ evaluateCEPRules()         — CEP condition trees → alerts + SSE + notification dispatch
+  └─ track*() snapshots         — 15 domain tables (every 10s)
+```
+
+### Signal Catalog
+
+A frontend Signal Catalog (`web/src/lib/signalCatalog.ts`) provides metadata for all 230 signals:
+- **Name** — Tesla signal name (e.g., `BatteryLevel`)
+- **Category** — Grouping (Battery, Climate, Driving, etc.)
+- **Type** — Data type (`number`, `string`, `boolean`, `enum`)
+- **Unit** — Measurement unit (`%`, `km/h`, `°C`, etc.)
+- **Description** — Human-readable explanation
+
+The catalog powers the Alert Studio signal picker and the Diagnostics Signal Explorer.
+
 ## Prerequisites
 
 | Requirement | Details |

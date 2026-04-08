@@ -327,6 +327,11 @@ type Settings struct {
 	GasPricePerUnit float64 `json:"gas_price_per_unit" db:"gas_price_per_unit"` // price per gallon/liter
 	GasUnit         string  `json:"gas_unit" db:"gas_unit"`                   // gallon, liter
 	GasEfficiencyMPG float64 `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
+	DecimalPrecision int     `json:"decimal_precision" db:"decimal_precision"`   // 1, 2, 3, or 4 decimal places for display
+	QuietHoursEnabled bool   `json:"quiet_hours_enabled" db:"quiet_hours_enabled"`
+	QuietHoursStart   string `json:"quiet_hours_start" db:"quiet_hours_start"`   // HH:MM (24h)
+	QuietHoursEnd     string `json:"quiet_hours_end" db:"quiet_hours_end"`       // HH:MM (24h)
+	AlertDigestMode   string `json:"alert_digest_mode" db:"alert_digest_mode"`   // instant, hourly, daily
 	PollingConfig   PollingConfig `json:"polling_config" db:"polling_config"`
 }
 
@@ -494,6 +499,7 @@ type Alert struct {
 }
 
 // AlertRule defines when an alert should be triggered.
+// Supports both legacy simple rules (Type + Threshold) and CEP rules (Conditions JSONB).
 type AlertRule struct {
 	ID         int64   `json:"id" db:"id"`
 	Name       string  `json:"name" db:"name"`
@@ -503,6 +509,39 @@ type AlertRule struct {
 	VehicleID  *int64  `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
+
+	// CEP rule engine fields
+	Conditions     json.RawMessage `json:"conditions,omitempty" db:"conditions"`
+	Expression     string          `json:"expression,omitempty" db:"expression"`
+	CooldownMin    int             `json:"cooldown_min" db:"cooldown_min"`
+	ForDurationS   *int            `json:"for_duration_s,omitempty" db:"for_duration_s"`
+	Severity       string          `json:"severity" db:"severity"`
+	MsgTemplate    string          `json:"msg_template,omitempty" db:"msg_template"`
+	NotifyChannels []int64         `json:"notify_channels,omitempty" db:"notify_channels"`
+	LastFiredAt    *time.Time      `json:"last_fired_at,omitempty" db:"last_fired_at"`
+	FireCount      int             `json:"fire_count" db:"fire_count"`
+	Tags           []string        `json:"tags,omitempty" db:"tags"`
+}
+
+// IsCEPRule returns true if this rule uses the CEP condition engine (vs legacy type+threshold).
+func (r *AlertRule) IsCEPRule() bool {
+	return len(r.Conditions) > 0 && string(r.Conditions) != "null"
+}
+
+// RuleCondition represents a node in the condition tree.
+// Can be a leaf (signal comparison) or a branch (AND/OR/NOT combinator).
+type RuleCondition struct {
+	// Branch fields (combinator)
+	Op    string          `json:"op,omitempty"`    // "AND", "OR", "NOT"
+	Rules []RuleCondition `json:"rules,omitempty"` // child conditions
+
+	// Leaf fields (signal comparison)
+	Signal  string      `json:"signal,omitempty"`  // e.g. "BatteryLevel", "Gear"
+	Compare string      `json:"compare,omitempty"` // "==", "!=", ">", "<", ">=", "<=", "contains", "changed_to", "changed_from", "is_true", "is_false"
+	Value   interface{} `json:"value,omitempty"`   // comparison target
+
+	// Temporal (applies to branch or leaf)
+	ForSeconds *int `json:"for_seconds,omitempty"` // condition must hold for this duration
 }
 
 // CommandLog records a vehicle command execution.
@@ -854,7 +893,7 @@ type SecurityEvent struct {
 	GuestModeMobileAccessState *string `json:"guest_mode_mobile_access_state,omitempty" db:"guest_mode_mobile_access_state"`
 	DriverSeatOccupied  *bool    `json:"driver_seat_occupied,omitempty" db:"driver_seat_occupied"`
 	CenterDisplay       *string  `json:"center_display,omitempty" db:"center_display"`
-	SpeedLimitMode      *bool    `json:"speed_limit_mode,omitempty" db:"speed_limit_mode"`
+	SpeedLimitMode      *string  `json:"speed_limit_mode,omitempty" db:"speed_limit_mode"`
 	ValetModeEnabled    *bool    `json:"valet_mode_enabled,omitempty" db:"valet_mode_enabled"`
 	ServiceMode         *bool    `json:"service_mode,omitempty" db:"service_mode"`
 	CurrentLimitMph     *float64 `json:"current_limit_mph,omitempty" db:"current_limit_mph"`
@@ -995,7 +1034,7 @@ type LocationSnapshot struct {
 	LocatedAtHome          *bool     `json:"located_at_home,omitempty" db:"located_at_home"`
 	LocatedAtWork          *bool     `json:"located_at_work,omitempty" db:"located_at_work"`
 	LocatedAtFavorite      *bool     `json:"located_at_favorite,omitempty" db:"located_at_favorite"`
-	GpsState               *bool     `json:"gps_state,omitempty" db:"gps_state"`
+	GpsState               *string   `json:"gps_state,omitempty" db:"gps_state"`
 	RouteLastUpdated       *time.Time `json:"route_last_updated,omitempty" db:"route_last_updated"`
 	CurrentLat             *float64  `json:"current_lat,omitempty" db:"current_lat"`
 	CurrentLon             *float64  `json:"current_lon,omitempty" db:"current_lon"`
@@ -1008,7 +1047,7 @@ type SafetySnapshot struct {
 	VehicleID                       int64     `json:"vehicle_id" db:"vehicle_id"`
 	AutomaticBlindSpotCamera        *bool     `json:"automatic_blind_spot_camera,omitempty" db:"automatic_blind_spot_camera"`
 	AutomaticEmergencyBrakingOff    *bool     `json:"automatic_emergency_braking_off,omitempty" db:"automatic_emergency_braking_off"`
-	BlindSpotCollisionWarning       *bool     `json:"blind_spot_collision_warning,omitempty" db:"blind_spot_collision_warning"`
+	BlindSpotCollisionWarning       *string   `json:"blind_spot_collision_warning,omitempty" db:"blind_spot_collision_warning"`
 	CruiseFollowDistance            *string   `json:"cruise_follow_distance,omitempty" db:"cruise_follow_distance"`
 	EmergencyLaneDepartureAvoidance *bool     `json:"emergency_lane_departure_avoidance,omitempty" db:"emergency_lane_departure_avoidance"`
 	ForwardCollisionWarning         *string   `json:"forward_collision_warning,omitempty" db:"forward_collision_warning"`

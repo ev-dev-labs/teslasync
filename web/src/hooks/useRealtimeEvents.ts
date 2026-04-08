@@ -1,4 +1,16 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { sseManager } from '../lib/sseManager'
+
+export type SSEState = 'connected' | 'reconnecting' | 'unavailable'
+
+export interface SSEDiagnostics {
+  state: SSEState
+  connected: boolean
+  failCount: number
+  lastConnected: Date | null
+  endpoint: string
+  nextRetryIn: number | null
+}
 
 interface SSEOptions {
   onVehicleUpdate?: (data: unknown) => void
@@ -6,111 +18,64 @@ interface SSEOptions {
   onExportStatus?: (data: unknown) => void
   onConnected?: (clientId: string) => void
   onDisconnected?: () => void
+  onFallbackToPolling?: () => void
   enabled?: boolean
 }
 
 /**
- * Fetches an SSE auth token from the backend. The /sse-token endpoint is
- * behind authentik ForwardAuth, so it returns the JWT that was injected by
- * Traefik. Returns null if the endpoint isn't available (dev mode).
- */
-async function fetchSSEToken(): Promise<string | null> {
-  try {
-    const res = await fetch('/api/v1/sse-token')
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.token || null
-  } catch {
-    return null
-  }
-}
-
-/**
- * React hook that establishes an SSE connection to /api/v1/events for
- * real-time vehicle updates and alerts. Automatically reconnects with
- * exponential backoff (up to 30s) on connection failure.
- *
- * In production, fetches an authentik JWT first and passes it as a query
- * parameter, since EventSource can't set custom headers.
+ * React hook for real-time SSE events. Uses a SINGLETON connection
+ * shared across all hook instances — only ONE SSE connection is open
+ * no matter how many pages use useVehicleLive or useRealtimeEvents.
  */
 export function useRealtimeEvents(options: SSEOptions = {}) {
   const { enabled = true } = options
-  const [connected, setConnected] = useState(false)
-  const sourceRef = useRef<EventSource | null>(null)
-  const reconnectTimer = useRef<number>(undefined)
-  const backoffRef = useRef(1000) // start at 1s, max 30s
-  const failCountRef = useRef(0)
-  // Store callbacks in refs to avoid re-creating the connect function on every render
+  const [state, setState] = useState<SSEState>(() => sseManager.getState())
+  const [lastConnected, setLastConnected] = useState<Date | null>(null)
   const callbacksRef = useRef(options)
   callbacksRef.current = options
 
-  const connect = useCallback(async () => {
-    if (sourceRef.current) {
-      sourceRef.current.close()
-    }
-
-    // Fetch auth token (returns null in dev mode)
-    const token = await fetchSSEToken()
-    const url = token ? `/api/v1/events?token=${encodeURIComponent(token)}` : '/api/v1/events'
-
-    const source = new EventSource(url)
-    sourceRef.current = source
-
-    source.addEventListener('connected', (e) => {
-      setConnected(true)
-      backoffRef.current = 1000 // reset backoff on successful connection
-      failCountRef.current = 0  // reset failure count
-      const data = JSON.parse(e.data)
-      callbacksRef.current.onConnected?.(data.client_id)
-    })
-
-    source.addEventListener('vehicle_update', (e) => {
-      const data = JSON.parse(e.data)
-      callbacksRef.current.onVehicleUpdate?.(data)
-    })
-
-    source.addEventListener('alert', (e) => {
-      const data = JSON.parse(e.data)
-      callbacksRef.current.onAlert?.(data)
-    })
-
-    source.addEventListener('export_status', (e) => {
-      const data = JSON.parse(e.data)
-      callbacksRef.current.onExportStatus?.(data)
-    })
-
-    source.addEventListener('heartbeat', () => {
-      // Keep-alive received
-    })
-
-    source.onerror = () => {
-      setConnected(false)
-      callbacksRef.current.onDisconnected?.()
-      source.close()
-      sourceRef.current = null
-      failCountRef.current++
-      // Give up after 3 consecutive failures — let polling handle updates
-      if (failCountRef.current >= 3) {
-        console.debug('[SSE] Disabled after repeated failures — using polling fallback')
-        return
-      }
-      // Exponential backoff with jitter, capped at 30s
-      const jitter = Math.random() * 500
-      const delay = Math.min(backoffRef.current + jitter, 30_000)
-      backoffRef.current = Math.min(backoffRef.current * 2, 30_000)
-      reconnectTimer.current = window.setTimeout(connect, delay)
-    }
-  }, []) // No dependencies — uses callbacksRef for stable reference
-
   useEffect(() => {
     if (!enabled) return
-    connect()
-    return () => {
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
-      sourceRef.current?.close()
-      sourceRef.current = null
-    }
-  }, [enabled, connect])
 
-  return { connected }
+    const onVehicleUpdate = (data: unknown) => callbacksRef.current.onVehicleUpdate?.(data)
+    const onAlert = (data: unknown) => callbacksRef.current.onAlert?.(data)
+    const onExportStatus = (data: unknown) => callbacksRef.current.onExportStatus?.(data)
+    const onConnected = (data: unknown) => {
+      setState('connected')
+      setLastConnected(new Date())
+      const d = data as { client_id?: string }
+      callbacksRef.current.onConnected?.(d?.client_id ?? '')
+    }
+    const onDisconnected = () => {
+      const s = sseManager.getState()
+      setState(s)
+      if (s === 'unavailable') callbacksRef.current.onFallbackToPolling?.()
+      callbacksRef.current.onDisconnected?.()
+    }
+
+    sseManager.subscribe('vehicle_update', onVehicleUpdate)
+    sseManager.subscribe('alert', onAlert)
+    sseManager.subscribe('export_status', onExportStatus)
+    sseManager.subscribe('connected', onConnected)
+    sseManager.subscribe('disconnected', onDisconnected)
+
+    return () => {
+      sseManager.unsubscribe('vehicle_update', onVehicleUpdate)
+      sseManager.unsubscribe('alert', onAlert)
+      sseManager.unsubscribe('export_status', onExportStatus)
+      sseManager.unsubscribe('connected', onConnected)
+      sseManager.unsubscribe('disconnected', onDisconnected)
+    }
+  }, [enabled])
+
+  const diagnostics: SSEDiagnostics = {
+    state,
+    connected: state === 'connected',
+    failCount: 0,
+    lastConnected,
+    endpoint: '/api/v1/events',
+    nextRetryIn: null,
+  }
+
+  return { connected: state === 'connected', state, diagnostics }
 }

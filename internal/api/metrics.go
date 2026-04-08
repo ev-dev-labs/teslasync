@@ -6,168 +6,65 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
-// ── HTTP Metrics ───────────────────────────────────────────
-
+// Re-export metrics for use within the api package. Other packages should
+// import internal/metrics directly.
 var (
-	httpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "http_requests_total",
-		Help:      "Total HTTP requests by method, path, and status code",
-	}, []string{"method", "path", "status"})
+	// Telemetry
+	TelemetrySignalsProcessed   = metrics.TelemetrySignalsProcessed
+	TelemetryMessagesReceived   = metrics.TelemetryMessagesReceived
+	TelemetryProcessingDuration = metrics.TelemetryProcessingDuration
+	ActiveStreamingVehicles     = metrics.ActiveStreamingVehicles
 
-	httpRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "teslasync",
-		Name:      "http_request_duration_seconds",
-		Help:      "HTTP request duration in seconds",
-		Buckets:   []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5},
-	}, []string{"method", "path"})
+	// Sessions
+	DriveSessionsActive    = metrics.DriveSessionsActive
+	DriveSessionsCompleted = metrics.DriveSessionsCompleted
+	ChargeSessionsActive   = metrics.ChargeSessionsActive
+	ChargeSessionsCompleted = metrics.ChargeSessionsCompleted
 
-	httpResponseSize = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "teslasync",
-		Name:      "http_response_size_bytes",
-		Help:      "HTTP response size in bytes",
-		Buckets:   []float64{100, 1000, 10000, 100000, 1000000},
-	}, []string{"method", "path"})
-)
+	// Database
+	DBQueryDuration      = metrics.DBQueryDuration
+	DBConnectionPoolSize = metrics.DBConnectionPoolSize
+	DBTransactionsTotal  = metrics.DBTransactionsTotal
 
-// ── Telemetry Metrics ──────────────────────────────────────
+	// Alerts
+	AlertsEvaluated   = metrics.AlertsEvaluated
+	AlertsFired        = metrics.AlertsFired
+	NotificationsSent  = metrics.NotificationsSent
 
-var (
-	TelemetrySignalsProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "telemetry_signals_processed_total",
-		Help:      "Total telemetry signals processed by signal name",
-	}, []string{"signal"})
+	// API
+	APIErrors          = metrics.APIErrors
+	TeslaAPICallsTotal = metrics.TeslaAPICallsTotal
 
-	TelemetryMessagesReceived = promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "telemetry_messages_received_total",
-		Help:      "Total MQTT telemetry messages received",
-	})
+	// Vehicles
+	VehiclesRegistered = metrics.VehiclesRegistered
+	VehicleStateGauge  = metrics.VehicleStateGauge
 
-	TelemetryProcessingDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-		Namespace: "teslasync",
-		Name:      "telemetry_processing_duration_seconds",
-		Help:      "Time to process a telemetry message batch",
-		Buckets:   []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1},
-	})
+	// Geocoding
+	GeocodingTotal           = metrics.GeocodingTotal
+	GeocodingDuration        = metrics.GeocodingDuration
+	AddressBackfillRemaining = metrics.AddressBackfillRemaining
+	AddressBackfillCompleted = metrics.AddressBackfillCompleted
 
-	ActiveStreamingVehicles = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "teslasync",
-		Name:      "streaming_vehicles_active",
-		Help:      "Number of vehicles currently streaming telemetry",
-	})
-)
+	// Connections
+	SSEConnectionsActive = metrics.SSEConnectionsActive
+	SSEEventsSent        = metrics.SSEEventsSent
+	SSEEventsDropped     = metrics.SSEEventsDropped
+	SSEConnectionsTotal  = metrics.SSEConnectionsTotal
+	SSEBroadcastDuration = metrics.SSEBroadcastDuration
+	SSEBytesSent         = metrics.SSEBytesSent
 
-// ── Session Metrics ────────────────────────────────────────
+	// Auth
+	AuthAttempts    = metrics.AuthAttempts
+	TokenRefreshes  = metrics.TokenRefreshes
 
-var (
-	DriveSessionsActive = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "teslasync",
-		Name:      "drive_sessions_active",
-		Help:      "Number of currently active drive sessions",
-	})
-
-	DriveSessionsCompleted = promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "drive_sessions_completed_total",
-		Help:      "Total drive sessions completed",
-	})
-
-	ChargeSessionsActive = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "teslasync",
-		Name:      "charge_sessions_active",
-		Help:      "Number of currently active charge sessions",
-	})
-
-	ChargeSessionsCompleted = promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "charge_sessions_completed_total",
-		Help:      "Total charge sessions completed",
-	})
-)
-
-// ── Database Metrics ───────────────────────────────────────
-
-var (
-	DBQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: "teslasync",
-		Name:      "db_query_duration_seconds",
-		Help:      "Database query duration by operation and table",
-		Buckets:   []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 5},
-	}, []string{"operation", "table"})
-
-	DBConnectionPoolSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: "teslasync",
-		Name:      "db_pool_connections",
-		Help:      "Database connection pool stats",
-	}, []string{"state"})
-
-	DBTransactionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "db_transactions_total",
-		Help:      "Total database transactions by result",
-	}, []string{"result"})
-)
-
-// ── Backup Metrics (defined in internal/backup/processor.go to avoid circular imports) ──
-
-// ── Alert Metrics ──────────────────────────────────────────
-
-var (
-	AlertsEvaluated = promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "alerts_evaluated_total",
-		Help:      "Total alert rule evaluations",
-	})
-
-	AlertsFired = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "alerts_fired_total",
-		Help:      "Total alerts fired by severity",
-	}, []string{"severity"})
-
-	NotificationsSent = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "notifications_sent_total",
-		Help:      "Total notifications sent by channel type and result",
-	}, []string{"channel_type", "result"})
-)
-
-// ── API Error Metrics ──────────────────────────────────────
-
-var (
-	APIErrors = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "api_errors_total",
-		Help:      "Total API errors by error code and category",
-	}, []string{"code", "category"})
-
-	TeslaAPICallsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "teslasync",
-		Name:      "tesla_api_calls_total",
-		Help:      "Total Tesla Fleet API calls by endpoint and result",
-	}, []string{"endpoint", "result"})
-)
-
-// ── Vehicle Metrics ────────────────────────────────────────
-
-var (
-	VehiclesRegistered = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: "teslasync",
-		Name:      "vehicles_registered",
-		Help:      "Total number of registered vehicles",
-	})
-
-	VehicleStateGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: "teslasync",
-		Name:      "vehicles_by_state",
-		Help:      "Number of vehicles by state (online, asleep, offline, driving, charging)",
-	}, []string{"state"})
+	// Business
+	TotalDistanceKm = metrics.TotalDistanceKm
+	TotalEnergyKwh  = metrics.TotalEnergyKwh
+	TotalDrives     = metrics.TotalDrives
+	TotalCharges    = metrics.TotalCharges
 )
 
 // PrometheusMiddleware records HTTP request metrics.
@@ -183,9 +80,9 @@ func PrometheusMiddleware(next http.Handler) http.Handler {
 		// Normalize path to avoid high-cardinality label explosion
 		path := normalizePath(r.URL.Path)
 
-		httpRequestsTotal.WithLabelValues(r.Method, path, status).Inc()
-		httpRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
-		httpResponseSize.WithLabelValues(r.Method, path).Observe(float64(ww.BytesWritten()))
+		metrics.HTTPRequestsTotal.WithLabelValues(r.Method, path, status).Inc()
+		metrics.HTTPRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
+		metrics.HTTPResponseSize.WithLabelValues(r.Method, path).Observe(float64(ww.BytesWritten()))
 	})
 }
 

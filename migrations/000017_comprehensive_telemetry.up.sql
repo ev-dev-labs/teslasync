@@ -46,7 +46,7 @@ ALTER TABLE motor_snapshots ADD COLUMN IF NOT EXISTS drive_rail BOOLEAN;
 -- ALTER climate_snapshots: add extended HVAC/seat/vent columns
 -- ============================================================
 ALTER TABLE climate_snapshots ADD COLUMN IF NOT EXISTS hvac_ac_enabled BOOLEAN;
-ALTER TABLE climate_snapshots ADD COLUMN IF NOT EXISTS hvac_auto_mode BOOLEAN;
+ALTER TABLE climate_snapshots ADD COLUMN IF NOT EXISTS hvac_auto_mode VARCHAR(100);
 ALTER TABLE climate_snapshots ADD COLUMN IF NOT EXISTS hvac_fan_status INTEGER;
 ALTER TABLE climate_snapshots ADD COLUMN IF NOT EXISTS hvac_steering_wheel_heat_auto BOOLEAN;
 ALTER TABLE climate_snapshots ADD COLUMN IF NOT EXISTS hvac_steering_wheel_heat_level INTEGER;
@@ -139,11 +139,11 @@ CREATE TABLE IF NOT EXISTS safety_snapshots (
     vehicle_id                          BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
     automatic_blind_spot_camera         BOOLEAN,
     automatic_emergency_braking_off     BOOLEAN,
-    blind_spot_collision_warning        BOOLEAN,
+    blind_spot_collision_warning        VARCHAR(100),
     cruise_follow_distance              VARCHAR(10),
     emergency_lane_departure_avoidance  BOOLEAN,
-    forward_collision_warning           BOOLEAN,
-    lane_departure_avoidance            BOOLEAN,
+    forward_collision_warning           VARCHAR(100),
+    lane_departure_avoidance            VARCHAR(100),
     speed_limit_warning                 VARCHAR(20),
     pin_to_drive_enabled                BOOLEAN,
     miles_since_reset                   DOUBLE PRECISION,
@@ -178,9 +178,9 @@ CREATE TABLE IF NOT EXISTS vehicle_config_snapshots (
     exterior_color                  VARCHAR(50),
     roof_color                      VARCHAR(50),
     wheel_type                      VARCHAR(50),
-    rear_seat_heaters               BOOLEAN,
-    sunroof_installed               BOOLEAN,
-    efficiency_package              BOOLEAN,
+    rear_seat_heaters               VARCHAR(100),
+    sunroof_installed               VARCHAR(100),
+    efficiency_package              VARCHAR(100),
     europe_vehicle                  BOOLEAN,
     right_hand_drive                BOOLEAN,
     remote_start_enabled            BOOLEAN,

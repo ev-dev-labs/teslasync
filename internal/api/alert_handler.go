@@ -4,21 +4,32 @@ import (
 	"encoding/json"
 	"net/http"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // AlertHandler handles alert and alert rule HTTP requests.
 type AlertHandler struct {
 	alertRepo     *database.AlertRepo
 	alertRuleRepo *database.AlertRuleRepo
+	notifRepo     *database.NotificationRepo
+	eventHub      *EventHub
+	mqttClient    pahomqtt.Client
+	signalStore   *signal.Store
 }
 
-func NewAlertHandler(db *database.DB) *AlertHandler {
+func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store *signal.Store) *AlertHandler {
 	return &AlertHandler{
 		alertRepo:     database.NewAlertRepo(db),
 		alertRuleRepo: database.NewAlertRuleRepo(db),
+		notifRepo:     database.NewNotificationRepo(db),
+		eventHub:      hub,
+		mqttClient:    mc,
+		signalStore:   store,
 	}
 }
 
@@ -96,45 +107,34 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 
 func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name      string  `json:"name"`
-		Type      string  `json:"type"`
-		Enabled   bool    `json:"enabled"`
-		Threshold float64 `json:"threshold"`
-		Severity  string  `json:"severity"`
-		VehicleID *int64  `json:"vehicle_id"`
+		Name           string          `json:"name"`
+		Type           string          `json:"type"`
+		Enabled        bool            `json:"enabled"`
+		Threshold      float64         `json:"threshold"`
+		Severity       string          `json:"severity"`
+		VehicleID      *int64          `json:"vehicle_id"`
+		Conditions     json.RawMessage `json:"conditions"`
+		CooldownMin    int             `json:"cooldown_min"`
+		MsgTemplate    string          `json:"msg_template"`
+		NotifyChannels []int64         `json:"notify_channels"`
+		Tags           []string        `json:"tags"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if body.Name == "" || body.Type == "" {
-		writeError(w, http.StatusBadRequest, "name and type are required")
+	if body.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-
-	validTypes := map[string]bool{
-		"battery_low": true, "battery_high": true, "speed_limit": true,
-		"geofence_exit": true, "geofence_enter": true,
-		"charge_complete": true, "charge_started": true,
-		"drive_started": true, "drive_ended": true,
-		"sentry_event": true, "vehicle_offline": true,
-		"vampire_drain": true, "tire_pressure_low": true,
-		// System component alerts
-		"system_database": true, "system_mqtt": true, "system_redis": true,
-		"system_tesla_api": true, "system_worker": true,
+	if body.Type == "" {
+		body.Type = "custom"
 	}
-	if !validTypes[body.Type] {
-		writeError(w, http.StatusBadRequest, "invalid alert type")
-		return
+	if body.Severity == "" {
+		body.Severity = "warning"
 	}
-	validSeverity := map[string]bool{"low": true, "medium": true, "high": true, "critical": true}
-	if body.Severity != "" && !validSeverity[body.Severity] {
-		writeError(w, http.StatusBadRequest, "severity must be low, medium, high, or critical")
-		return
-	}
-	if body.Threshold < 0 || body.Threshold > 100000 {
-		writeError(w, http.StatusBadRequest, "threshold must be between 0 and 100000")
-		return
+	if body.CooldownMin <= 0 {
+		body.CooldownMin = 15
 	}
 	if len(body.Name) > 200 {
 		writeError(w, http.StatusBadRequest, "name must be 200 characters or less")
@@ -142,10 +142,16 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule := &models.AlertRule{
-		Name:      body.Name,
-		Type:      body.Type,
-		Enabled:   body.Enabled,
-		Threshold: body.Threshold,
+		Name:           body.Name,
+		Type:           body.Type,
+		Enabled:        body.Enabled,
+		Threshold:      body.Threshold,
+		Conditions:     body.Conditions,
+		CooldownMin:    body.CooldownMin,
+		Severity:       body.Severity,
+		MsgTemplate:    body.MsgTemplate,
+		NotifyChannels: body.NotifyChannels,
+		Tags:           body.Tags,
 	}
 	if body.VehicleID != nil {
 		rule.VehicleID = body.VehicleID
@@ -174,4 +180,111 @@ func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// TestRule fires a test alert for a rule — creates a test alert in DB and broadcasts via SSE.
+func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name           string  `json:"name"`
+		Severity       string  `json:"severity"`
+		MsgTemplate    string  `json:"msg_template"`
+		NotifyChannels []int64 `json:"notify_channels"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Name == "" {
+		body.Name = "Test Rule"
+	}
+	if body.Severity == "" {
+		body.Severity = "info"
+	}
+	message := body.MsgTemplate
+	if message == "" {
+		message = "This is a test notification from Alert Studio"
+	}
+
+	// Render template with current signal values from SignalStore
+	if h.signalStore != nil {
+		for _, vid := range h.signalStore.VehicleIDs() {
+			raw := h.signalStore.GetRawMap(vid)
+			if raw != nil {
+				message = renderTemplate(message, raw)
+				break
+			}
+		}
+	}
+
+	// Create test alert in DB
+	alert := &models.Alert{
+		Type:     "test",
+		Severity: body.Severity,
+		Title:    "[TEST] " + body.Name,
+		Message:  message,
+	}
+	if err := h.alertRepo.Create(r.Context(), alert); err != nil {
+		log.Error().Err(err).Msg("failed to create test alert")
+		writeError(w, http.StatusInternalServerError, "failed to create test alert")
+		return
+	}
+
+	// Broadcast via SSE
+	if h.eventHub != nil {
+		h.eventHub.Broadcast("alert", map[string]interface{}{
+			"id":        alert.ID,
+			"type":      "test",
+			"severity":  body.Severity,
+			"title":     "[TEST] " + body.Name,
+			"message":   message,
+			"timestamp": alert.CreatedAt,
+			"is_test":   true,
+		})
+	}
+
+	// Dispatch to selected notification channels (or all if none specified)
+	dispatched := 0
+	if len(body.NotifyChannels) > 0 {
+		for _, chID := range body.NotifyChannels {
+			ch, err := h.notifRepo.GetChannel(r.Context(), chID)
+			if err != nil || ch == nil {
+				continue
+			}
+			req := &notification.Request{
+				ChannelType: ch.Type,
+				Config:      ch.Config,
+				Title:       "[TEST] " + body.Name,
+				Message:     message,
+				ChannelID:   ch.ID,
+			}
+			if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
+				dispatched++
+			}
+		}
+	} else {
+		// No channels selected — dispatch to all enabled channels
+		channels, err := h.notifRepo.GetAllChannels(r.Context())
+		if err == nil {
+			for _, ch := range channels {
+				if !ch.Enabled { continue }
+				req := &notification.Request{
+					ChannelType: ch.Type,
+					Config:      ch.Config,
+					Title:       "[TEST] " + body.Name,
+					Message:     message,
+					ChannelID:   ch.ID,
+				}
+				if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
+					dispatched++
+				}
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":     "sent",
+		"alert":      alert,
+		"dispatched": dispatched,
+		"message":    "Test notification sent — check your browser toast and notification channels",
+	})
 }

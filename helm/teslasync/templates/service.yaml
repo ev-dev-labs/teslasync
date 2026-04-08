@@ -5,10 +5,15 @@ metadata:
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
     app.kubernetes.io/component: api
-  {{- with .Values.service.annotations }}
   annotations:
+    {{- if .Values.metrics.enabled }}
+    prometheus.io/scrape: "true"
+    prometheus.io/port: {{ .Values.service.port | quote }}
+    prometheus.io/path: "/metrics"
+    {{- end }}
+    {{- with .Values.service.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   type: {{ .Values.service.type }}
   {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}

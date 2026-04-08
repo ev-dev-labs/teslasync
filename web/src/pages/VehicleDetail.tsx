@@ -13,6 +13,7 @@ import {
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
   Cpu, BatteryCharging, ChevronRight, Cog, ShieldAlert, DoorClosed,
   Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin, Settings,
+  Lightbulb, Key, User, Monitor,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -21,10 +22,13 @@ import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge } from '
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
+import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import clsx from 'clsx'
 import { formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '../lib/numberFormat'
+import { parseSettingEnum } from '../lib/parseSettingEnum'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -47,6 +51,10 @@ export default function VehicleDetail() {
   const vehicleId = Number(id)
   const { convertDistance, convertSpeed, convertTemp, convertPressure, distanceUnit, speedUnit, tempUnit, pressureUnit } = useSettings()
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
+
+  // SSE live state for real-time vehicle signals
+  const { state: live, connected: sseConnected } = useVehicleLive(vehicleId)
+  const pollInterval = useAdaptiveInterval()
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -82,25 +90,25 @@ export default function VehicleDetail() {
   const { data: motorData } = useQuery({
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: pollInterval,
   })
 
   const { data: climateData } = useQuery({
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: pollInterval,
   })
 
   const { data: securityData } = useQuery({
     queryKey: ['security-latest', vehicleId],
     queryFn: () => getSecurityLatest(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: pollInterval,
   })
 
   const { data: tireData } = useQuery({
     queryKey: ['tire-latest', vehicleId],
     queryFn: () => getLatestTirePressure(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: pollInterval,
   })
   const { data: chargingTelemetry } = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],
@@ -567,6 +575,88 @@ export default function VehicleDetail() {
               </GlassPanel>
             </FadeIn>
 
+            {/* ---- Vehicle State Panel (Live SSE) ---- */}
+            <FadeIn delay={0.19}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Activity className="h-4 w-4 text-neon-cyan" /> Vehicle State
+                  {sseConnected && (
+                    <span className="ml-auto flex items-center gap-1 text-[10px] text-neon-green">
+                      <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
+                      Live
+                    </span>
+                  )}
+                </h3>
+                <div className="space-y-3">
+                  {/* Lights */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Lightbulb className="h-3 w-3" /> High Beams</span>
+                    <span className={clsx('text-xs font-medium', live.lightsHighBeams ? 'text-neon-cyan' : 'text-gray-500')}>
+                      {live.lightsHighBeams ? 'On' : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> Turn Signal</span>
+                    <span className={clsx('text-xs font-medium', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-gray-500')}>
+                      {live.lightsTurnSignal || 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Hazards</span>
+                    <span className={clsx('text-xs font-medium', live.lightsHazards ? 'text-neon-red' : 'text-gray-500')}>
+                      {live.lightsHazards ? 'Active' : 'Off'}
+                    </span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/5" />
+
+                  {/* Driver & Keys */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><User className="h-3 w-3" /> Driver Seat</span>
+                    <span className={clsx('text-xs font-medium', live.driverSeatOccupied ? 'text-green-400' : 'text-gray-500')}>
+                      {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Key className="h-3 w-3" /> Paired Keys</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{live.pairedKeyCount || '—'}</span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/5" />
+
+                  {/* Access Modes */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> Valet Mode</span>
+                    <span className={clsx('text-xs font-medium', live.valetMode ? 'text-purple-400' : 'text-gray-500')}>
+                      {live.valetMode ? 'Enabled' : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Settings className="h-3 w-3" /> Service Mode</span>
+                    <span className={clsx('text-xs font-medium', live.serviceMode ? 'text-amber-400' : 'text-gray-500')}>
+                      {live.serviceMode ? 'Active' : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Gauge className="h-3 w-3" /> Speed Limit</span>
+                    <span className={clsx('text-xs font-medium', live.speedLimitMode ? 'text-neon-cyan' : 'text-gray-500')}>
+                      {live.speedLimitMode ? `${Math.round(live.currentSpeedLimit)} mph` : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Monitor className="h-3 w-3" /> Center Display</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{live.centerDisplay || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><MapPin className="h-3 w-3" /> HomeLink Devices</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{live.homelinkDeviceCount || '—'}</span>
+                  </div>
+                </div>
+              </GlassPanel>
+            </FadeIn>
+
             {/* ---- Tire Pressure Panel ---- */}
             <FadeIn delay={0.2}>
               <GlassPanel className="p-6 h-full">
@@ -857,12 +947,18 @@ export default function VehicleDetail() {
                       { label: 'Charge Port', value: cleanNil(vehicleConfigData.charge_port) },
                       { label: 'Rear Heaters', value: cleanNil(vehicleConfigData.rear_seat_heaters) },
                       { label: 'Efficiency', value: cleanNil(vehicleConfigData.efficiency_package) },
+                      { label: 'Sunroof', value: cleanNil(vehicleConfigData.sunroof_installed) || 'Not Installed' },
+                      { label: 'Europe Vehicle', value: vehicleConfigData.europe_vehicle != null ? (vehicleConfigData.europe_vehicle ? 'Yes' : 'No') : '—' },
+                      { label: 'Right-Hand Drive', value: vehicleConfigData.right_hand_drive != null ? (vehicleConfigData.right_hand_drive ? 'Yes' : 'No') : '—' },
+                      { label: 'Remote Start', value: vehicleConfigData.remote_start_enabled != null ? (vehicleConfigData.remote_start_enabled ? 'Active' : 'Off') : '—' },
+                      { label: 'Offroad Lightbar', value: vehicleConfigData.offroad_lightbar_present != null ? (vehicleConfigData.offroad_lightbar_present ? 'Present' : 'No') : '—' },
                       { label: 'SW Update', value: cleanNil(vehicleConfigData.software_update_version) || 'None' },
                       { label: 'SW Download', value: vehicleConfigData.software_update_download_pct != null ? `${vehicleConfigData.software_update_download_pct}%` : '—' },
-                    ].filter(item => item.value).map(item => (
+                      { label: 'SW Install', value: vehicleConfigData.software_update_install_pct != null ? `${vehicleConfigData.software_update_install_pct}%` : '—' },
+                    ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value || '—'}</p>
                       </div>
                     ))}
                   </div>
@@ -876,19 +972,22 @@ export default function VehicleDetail() {
                 <GlassPanel className="p-5">
                   <h3 className="section-title mb-4 flex items-center gap-2">
                     <Settings className="h-4 w-4 text-neon-amber" />
-                    User Preferences
+                    Car Display Preferences
                   </h3>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-3">
+                    These are your vehicle's display settings — you can sync your app to match them from the Settings page.
+                  </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {[
-                      { label: 'Distance', value: cleanNil(userPrefData.setting_distance_unit) },
-                      { label: 'Temperature', value: cleanNil(userPrefData.setting_temperature_unit) },
-                      { label: 'Charge Unit', value: cleanNil(userPrefData.setting_charge_unit) },
-                      { label: 'Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
+                      { label: 'Distance', value: parseSettingEnum(userPrefData.setting_distance_unit, 'distance') },
+                      { label: 'Temperature', value: parseSettingEnum(userPrefData.setting_temperature_unit, 'temperature') },
+                      { label: 'Charge Unit', value: parseSettingEnum(userPrefData.setting_charge_unit, 'charge') },
+                      { label: 'Tire Pressure', value: parseSettingEnum(userPrefData.setting_tire_pressure_unit, 'pressure') },
                       { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
-                    ].filter(item => item.value).map(item => (
+                    ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value || '—'}</p>
                       </div>
                     ))}
                   </div>

@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS climate_snapshots (
     hvac_left_temp_request  DOUBLE PRECISION,
     hvac_right_temp_request DOUBLE PRECISION,
     cabin_overheat_mode     VARCHAR(10),
-    defrost_mode    BOOLEAN,
+    defrost_mode    VARCHAR(50),
     battery_heater_on BOOLEAN,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

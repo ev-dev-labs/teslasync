@@ -4,6 +4,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 // CostTracker tracks API call savings in real time. It compares actual polls
@@ -61,6 +63,7 @@ func (c *CostTracker) RecordSkip(reason string) {
 	case "sleep":
 		c.savedBySleep.Add(1)
 	}
+	metrics.PollsSaved.WithLabelValues(reason).Inc()
 }
 
 // RecordBaselineTick records that a poll would have been made at the base interval.

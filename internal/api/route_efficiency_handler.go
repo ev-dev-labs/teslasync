@@ -75,7 +75,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		  AND start_address IS NOT NULL AND end_address IS NOT NULL
 		  AND distance > 1
 		GROUP BY start_address, end_address
-		HAVING COUNT(*) >= 2
+		HAVING COUNT(*) >= 1
 		ORDER BY COUNT(*) DESC
 		LIMIT 15`, vehicleID)
 	if err != nil {

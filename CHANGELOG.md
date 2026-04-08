@@ -6,6 +6,59 @@ All notable changes to TeslaSync are documented here.
 
 ### 🚀 New Features
 
+#### CEP Rule Engine & Alert Studio
+- **Complex Event Processing (CEP)** rule engine (`internal/api/rule_engine.go`) with recursive condition tree evaluation
+  - Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `changed_to`, `changed_from`, `is_true`, `is_false`
+  - Temporal conditions: `for_seconds` — condition must sustain for duration before firing
+  - Transition detection: `changed_to` / `changed_from` compares current vs previous signal values per rule/vehicle
+  - Per-rule cooldown (configurable, default 15 min) with in-memory + DB tracking
+  - Message templates with signal interpolation: `{{BatteryLevel}}`, `{{VehicleSpeed}}`, etc.
+- **Alert Studio** (`/alert-studio`) — visual CEP rule editor with:
+  - 50+ pre-built rule templates across 12 categories (Battery, Charging, Climate, Driving, Security, Geofence, Maintenance, Software, Efficiency, Fleet, Safety, Custom)
+  - **RuleBuilder** component — visual condition tree editor with signal picker, category grouping, context-aware operators, AND/OR groups
+  - **Signal Catalog** — 230 signal metadata entries with name, category, type, unit, and description (`web/src/lib/signalCatalog.ts`)
+  - Test notification button with real-time signal value interpolation
+  - Notification channel selection per rule
+  - Severity levels (info/warning/critical) with configurable cooldown
+- **Quiet Hours** — server-side suppression of non-critical alerts during configured hours; critical alerts always fire regardless
+- **Test Notifications** — `POST /api/v1/alerts/test` fires a test alert with template rendering, SSE broadcast, and dispatch to selected channels
+- 7 new **Prometheus metrics** for CEP: `cep_active_rules`, `cep_rules_evaluated_total`, `cep_rules_cooldown_skipped_total`, `cep_eval_duration_seconds`, `alerts_fired_total`, `alerts_suppressed_quiet_hours_total`, `cep_condition_errors_total`
+- New Grafana dashboard: **CEP Rule Engine** (12 panels) — active rules, eval rate, alerts fired, cooldown skips, latency percentiles, condition errors, fired by severity/rule
+
+#### 100% Signal Coverage & Persistence
+- 229/230 Fleet Telemetry signals now persisted in `vehicle_live_state` (up from ~70)
+- Migration 035: Added 158 new columns to `vehicle_live_state` for complete signal coverage
+- All signal categories covered: Vehicle State, Vehicle Config, Powertrain, Climate, Security, Safety, TPMS, Software, User Preferences, Service
+- `signalToColumn` map expanded to 229 entries with special handling for Location (JSON→lat/lon), enum→boolean conversions (45 signals), and shared columns (AC/DC charging power)
+- Pod restart recovery: all signals survive restarts via DB persistence + `LoadFromDB()`
+
+#### SSE Singleton Architecture & New Metrics
+- **SSE singleton manager** (`web/src/lib/sseManager.ts`) — one EventSource connection per browser tab shared across all hooks
+- All `useRealtimeEvents` / `useVehicleLive` hooks subscribe/unsubscribe to shared connection (was: 16 separate connections)
+- 4 new SSE Prometheus metrics: `sse_events_dropped_total`, `sse_connections_total`, `sse_broadcast_duration_seconds`, `sse_bytes_sent_total`
+- New Grafana dashboard: **SSE & Real-Time** (18 panels) — active clients, events by type, bandwidth, broadcast latency (p50/p95/p99), drops, connection churn, MQTT status
+
+#### State Machine Improvements
+- Gear-based state transitions (instant) with speed as fallback (30s debounce, 2min drive hold)
+- Traffic light fix: checks SignalStore for Gear=D/R before ending speed-based drives (gear signals only fire on CHANGE)
+- Charging orphan guard: starting a drive force-completes any active charge session
+- Stale gear freshness: cached gear older than 10min ignored for state detection
+- `asleep` vs `offline` state distinction (parked+no-telemetry vs driving+no-telemetry)
+- `Completing` flag prevents double-completion race between cleanup timer and normal completion
+- State machine fields persisted to `vehicle_live_state` (_LastGear, _LastSpeedTime)
+
+#### Adaptive Polling & UX
+- **Adaptive polling** (`useAdaptiveInterval` hook) — 3s when SSE disconnected, 30s when connected
+- **Decimal precision setting** — configurable 0-4 decimal places with global enforcement via `numberFormat.ts`
+- **Global SSE alert toast** in `Layout.tsx` — CEP alerts appear as browser toasts (error/warning/info by severity)
+- `parseSettingEnum` utility for displaying Tesla enum values in human-readable form
+
+#### Signal Coverage on UI Pages
+- ~147 signals surfaced across all UI pages:
+  - Vehicle State (22), Vehicle Config (14), Software Updates (5), User Preferences (5)
+  - Service/TPMS (11), Safety (14), Powertrain (~35), Climate (29)
+- All 16 data pages now receive SSE live data via `useVehicleLive` hook
+
 #### Granular API Endpoint Polling Controls
 - Per-endpoint toggles for 20 Tesla Fleet API endpoints across three categories:
   - **Polling** (7): Vehicle Discovery, Charge State, Climate State, Drive State, Location Data, Vehicle State, Vehicle Config
@@ -17,6 +70,38 @@ All notable changes to TeslaSync are documented here.
 - Database migration: `polling_config` JSONB column on settings table
 - All toggles default to enabled — existing behavior preserved
 - Global `api_suspended` master switch continues to override all toggles
+
+### 🐛 Bug Fixes
+- Fixed `charger_power specified more than once` — duplicate signalToColumn mapping for AC/DC charging power
+- Fixed 6 column type mismatches (boolean columns receiving enum strings like `HvacAutoModeStateOn`)
+- Fixed `concurrent map iteration and map write` crash — copy signals map before passing to MongoDB goroutine
+- Fixed firmware not showing — `/live` endpoint wrapped signals in `{value, timestamp}` but `parseSignals` expected flat format
+- Fixed SSE token/connection leak — 16 pages each opening their own SSE connection, replaced with singleton manager
+- Fixed Energy Flow page showing "—" while charging — added SSE live data overlay
+- Fixed fresh install compatibility — updated original CREATE TABLE migrations with correct column types
+- Fixed false drive-end at traffic lights — check SignalStore for Gear=D/R before ending speed-based drives
+- Fixed test notification sending raw `{{BatteryLevel}}` templates — now renders with real signal values from SignalStore
+
+### 📊 Grafana Dashboards (28 total, +2 new)
+- **CEP Rule Engine** (12 panels) — active rules, eval rate, alerts fired, cooldown skips, latency, errors by severity/rule
+- **SSE & Real-Time** (18 panels) — active clients, events by type, bandwidth, broadcast latency, drops, MQTT status
+- Fixed 21 non-existent Prometheus metrics in infrastructure dashboards (replaced with real ones)
+- Fixed 8 SQL queries with wrong column names in system dashboards
+- Fixed 14 legend label mismatches (panels showing "—" instead of metric names)
+- Added enriched views (`v_drives`, `v_charging_sessions`) with NULLIF for zero-value protection
+- Enhanced 5 system dashboards with 14 new panels (security, climate, battery, tire, drivetrain)
+
+### 🗃️ Database Migrations (030–039)
+- **030**: Vehicle state + config columns on `vehicle_live_state`
+- **031**: Decimal precision setting
+- **032**: Seed `software_updates` from `vehicle_config_snapshots`
+- **033**: Enriched views (`v_drives`, `v_charging_sessions`)
+- **034**: State machine persistence (`last_gear`, `last_speed_time`)
+- **035**: Complete live state — 158 columns for 100% signal coverage
+- **036**: CEP rule engine (`conditions` JSONB, `cooldown_min`, `severity`, `msg_template`, `notify_channels`, `tags`, `fire_count`, `last_fired_at`)
+- **037**: Fix column types (boolean → varchar for enum signals)
+- **038**: Fix `vehicle_config` types (boolean → varchar)
+- **039**: Quiet hours + alert digest mode on settings table
 
 ## [0.7.0] — 2026-03-29
 

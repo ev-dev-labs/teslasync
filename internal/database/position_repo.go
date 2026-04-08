@@ -106,3 +106,45 @@ func (r *PositionRepo) GetLatest(ctx context.Context, vehicleID int64) (*models.
 	}
 	return p, nil
 }
+
+// FindNearestPosition finds the closest position to the given timestamp (within ±window)
+// that has non-zero values for battery_level OR odometer. This is used to backfill
+// drive start/end values when the exact moment didn't have a signal reading.
+//
+// The query uses UNION ALL to find the closest before and after the timestamp,
+// then picks whichever is closer. Returns nil if no suitable position is found.
+func (r *PositionRepo) FindNearestPosition(ctx context.Context, vehicleID int64, target time.Time, window time.Duration) (*models.Position, error) {
+	windowStart := target.Add(-window)
+	windowEnd := target.Add(window)
+
+	// Find the closest position (before or after) that has battery OR odometer data
+	query := `
+		WITH candidates AS (
+			(SELECT *, ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamptz))) AS dist
+			 FROM positions
+			 WHERE vehicle_id = $1 AND created_at >= $3 AND created_at <= $2
+			   AND (battery_level > 0 OR odometer > 0)
+			 ORDER BY created_at DESC LIMIT 1)
+			UNION ALL
+			(SELECT *, ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamptz))) AS dist
+			 FROM positions
+			 WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $4
+			   AND (battery_level > 0 OR odometer > 0)
+			 ORDER BY created_at ASC LIMIT 1)
+		)
+		SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
+			odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
+			fan_status, is_climate_on, created_at
+		FROM candidates ORDER BY dist LIMIT 1`
+
+	p := &models.Position{}
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID, target, windowStart, windowEnd).Scan(
+		&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,
+		&p.Elevation, &p.Odometer, &p.IdealRange, &p.RatedRange, &p.BatteryLvl,
+		&p.InsideTemp, &p.OutsideTemp, &p.FanStatus, &p.IsClimate, &p.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}

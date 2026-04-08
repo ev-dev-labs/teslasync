@@ -1,0 +1,2 @@
+-- No-op: backfill is a data repair, not a schema change.
+-- Cannot meaningfully reverse computed values back to zeros.

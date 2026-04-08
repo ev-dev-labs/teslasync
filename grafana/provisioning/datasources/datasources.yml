@@ -19,3 +19,14 @@ datasources:
       timescaledb: false
     isDefault: true
     editable: true
+
+  - name: TeslaSync Prometheus
+    uid: DS_TESLASYNC_PROMETHEUS
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST

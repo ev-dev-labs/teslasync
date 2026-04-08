@@ -8,7 +8,7 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 - ✅ Real-time vehicle tracking with SSE streaming
 - ✅ 36 interactive dashboard pages
 - ✅ 5 color themes × 4 display modes (glassmorphism UI)
-- ✅ 16 pre-built Grafana dashboards
+- ✅ 28 pre-built Grafana dashboards
 - ✅ Remote vehicle commands (14 commands)
 - ✅ Smart Insights Engine with auto-generated recommendations
 - ✅ Command Palette (`Cmd+K`) for instant navigation
@@ -19,6 +19,10 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 - ✅ Scheduled & recurring notifications
 - ✅ Alert rules (battery low/high, speed limit, charge complete, geofence, sentry)
 - ✅ Per-channel notification preferences
+- ✅ **CEP Rule Engine** — Complex Event Processing with recursive condition trees, 11 operators, temporal sustain, transition detection, per-rule cooldown
+- ✅ **Alert Studio** — Visual rule editor with 50+ templates, signal catalog (230 signals), RuleBuilder component
+- ✅ **Quiet Hours** — Server-side suppression of non-critical alerts during configured hours
+- ✅ **Test notifications** — Fire test alerts with real signal value interpolation and multi-channel dispatch
 
 ### Data & Analytics
 - ✅ Fleet analytics with deep drive/charging/battery insights
@@ -42,7 +46,12 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 ### Backup & Observability
 - ✅ Backup & Restore system with multi-provider storage
 - ✅ OpenTelemetry distributed tracing (optional)
-- ✅ 100% Tesla Fleet Telemetry protocol coverage (231 signals)
+- ✅ 100% Tesla Fleet Telemetry protocol coverage (230 signals, 229 persisted in PostgreSQL)
+- ✅ **SSE singleton architecture** — one connection per browser tab, 11 Prometheus metrics
+- ✅ **Adaptive polling** — 3s when SSE disconnected, 30s when connected
+- ✅ **State machine improvements** — gear-based transitions, traffic light guard, charging orphan detection, stale gear freshness
+- ✅ **28 Grafana dashboards** — including CEP Rule Engine (12 panels) and SSE & Real-Time (18 panels)
+- ✅ **Decimal precision setting** — configurable 0-4 decimal places globally
 - ✅ Frontend test suite (vitest, 41 tests, CI integrated)
 - ✅ Interactive database schema diagram
 

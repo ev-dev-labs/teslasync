@@ -42,166 +42,6 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN locked THEN 1 ELSE 0 END AS \"Locked\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
-          "refId": "A"
-        }
-      ],
-      "title": "Lock Status Over Time",
-      "type": "timeseries",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
-      "id": 2,
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN sentry_mode THEN 1 ELSE 0 END AS \"🛡️ Sentry\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
-          "refId": "A"
-        }
-      ],
-      "title": "Sentry Mode Over Time",
-      "type": "timeseries",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
             "fixedColor": "blue",
             "mode": "fixed"
           },
@@ -221,9 +61,9 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 0
       },
-      "id": 3,
+      "id": 1,
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -245,11 +85,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Total Events\", COUNT(*) FILTER (WHERE locked = true) AS \"Locked Events\", COUNT(*) FILTER (WHERE sentry_mode = true) AS \"Sentry Active\", COUNT(*) FILTER (WHERE door_state = 'Open') AS \"Door Opens\", COUNT(DISTINCT DATE(created_at)) AS \"Days Tracked\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
+          "rawSql": "SELECT convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp) AS \"Rear Stator\", convert_temp(di_heatsink_t_f) AS \"Front Heatsink\", convert_temp(di_heatsink_t_r) AS \"Rear Heatsink\", convert_temp(di_inverter_t_f) AS \"Front Inverter\", convert_temp(di_inverter_t_r) AS \"Rear Inverter\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Security Summary Stats",
+      "title": "Thermal Stats",
       "type": "stat",
       "transparent": false
     },
@@ -282,35 +122,7 @@
               "mode": "none"
             }
           },
-          "mappings": [
-            {
-              "options": {
-                "Closed": {
-                  "index": 0,
-                  "text": "Closed"
-                }
-              },
-              "type": "value"
-            },
-            {
-              "options": {
-                "Venting": {
-                  "index": 1,
-                  "text": "Venting"
-                }
-              },
-              "type": "value"
-            },
-            {
-              "options": {
-                "Open": {
-                  "index": 2,
-                  "text": "Open"
-                }
-              },
-              "type": "value"
-            }
-          ],
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -325,9 +137,169 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 20
+        "y": 4
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp) AS \"Rear Stator\", convert_temp(di_stator_temp_rel) AS \"Rear L Stator\", convert_temp(di_stator_temp_rer) AS \"Rear R Stator\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Stator Temperatures",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, convert_temp(di_heatsink_t_f) AS \"Front Heatsink\", convert_temp(di_heatsink_t_r) AS \"Rear Heatsink\", convert_temp(di_heatsink_t_rel) AS \"Rear L Heatsink\", convert_temp(di_heatsink_t_rer) AS \"Rear R Heatsink\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Heatsink Temperatures",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
       },
       "id": 4,
       "options": {
@@ -353,11 +325,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, fd_window AS \"Front Driver\", fp_window AS \"Front Passenger\", rd_window AS \"Rear Driver\", rp_window AS \"Rear Passenger\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) AND (fd_window IS NOT NULL OR fp_window IS NOT NULL) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, convert_temp(di_inverter_t_f) AS \"Front Inverter\", convert_temp(di_inverter_t_r) AS \"Rear Inverter\", convert_temp(di_inverter_t_rel) AS \"Rear L Inverter\", convert_temp(di_inverter_t_rer) AS \"Rear R Inverter\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Window States",
+      "title": "Inverter Temperatures",
       "type": "timeseries",
       "transparent": false
     },
@@ -370,6 +342,25 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -387,14 +378,17 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 28
+        "x": 12,
+        "y": 12
       },
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
@@ -411,78 +405,12 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE(created_at) AS time, COUNT(*) AS \"Events\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY DATE(created_at)",
+          "rawSql": "SELECT created_at AS time, di_motor_current_f AS \"Front Current\", di_motor_current_r AS \"Rear Current\", di_motor_current_rel AS \"Rear L Current\", di_motor_current_rer AS \"Rear R Current\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Daily Security Events",
-      "type": "barchart",
-      "transparent": false
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "DS_TESLASYNC_POSTGRESQL"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 50
-              },
-              {
-                "color": "green",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 28
-      },
-      "id": 6,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE sentry_mode = true) / NULLIF(COUNT(*), 0), 1) AS \"Sentry Uptime %\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)",
-          "refId": "A"
-        }
-      ],
-      "title": "Sentry Uptime %",
-      "type": "gauge",
+      "title": "Motor Currents",
+      "type": "timeseries",
       "transparent": false
     },
     {
@@ -494,6 +422,25 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -512,12 +459,22 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 20
       },
-      "id": 7,
+      "id": 6,
       "options": {
-        "showHeader": true,
-        "sortBy": []
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
@@ -526,22 +483,98 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS \"🕐 Time\", CASE WHEN locked THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"🔒 Lock\", CASE WHEN sentry_mode THEN '🛡️ Active' ELSE '⬜ Off' END AS \"🛡️ Sentry\", COALESCE(door_state, '-') AS \"🚪 Doors\", COALESCE(fd_window, '-') AS \"🪟 FD\", COALESCE(fp_window, '-') AS \"🪟 FP\" FROM security_events WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 50",
+          "rawSql": "SELECT created_at AS time, di_v_bat_f AS \"Front Battery V\", di_v_bat_r AS \"Rear Battery V\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
-      "title": "Recent Events Table",
-      "type": "table",
+      "title": "Battery Voltage",
+      "type": "timeseries",
       "transparent": false
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Per-Motor Battery Voltage",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS time,\n  di_v_bat_f AS \"Front (V)\",\n  di_v_bat_r AS \"Rear (V)\",\n  di_v_bat_rel AS \"Rear-Left (V)\",\n  di_v_bat_rer AS \"Rear-Right (V)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND di_v_bat_f IS NOT NULL\nORDER BY created_at",
+          "format": "time_series",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Per-Motor Axle Speed",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT created_at AS time,\n  di_axle_speed AS \"Rear (RPM)\",\n  di_axle_speed_f AS \"Front (RPM)\",\n  di_axle_speed_rel AS \"Rear-Left (RPM)\",\n  di_axle_speed_rer AS \"Rear-Right (RPM)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\n  AND (di_axle_speed IS NOT NULL OR di_axle_speed_f IS NOT NULL)\nORDER BY created_at",
+          "format": "time_series",
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
     }
   ],
   "schemaVersion": 39,
   "tags": [
-    "teslasync",
-    "security",
-    "sentry"
+    "teslasync"
   ],
   "templating": {
     "list": [
@@ -628,8 +661,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 🔒 Security & Access",
-  "uid": "teslasync-security-access",
+  "title": "TeslaSync 🌡️ Drivetrain Thermal",
+  "uid": "teslasync-drivetrain-thermal",
   "version": 1,
   "weekStart": ""
 }

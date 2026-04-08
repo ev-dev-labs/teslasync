@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSoftwareUpdates, getVehicleState, Vehicle } from '../api'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../components/ui'
-import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink } from 'lucide-react'
+import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDate } from '../lib/dateFormat'
 
@@ -38,10 +39,14 @@ export default function SoftwareUpdates() {
     enabled: vehicleId !== null,
   })
 
+  // SSE live state for real-time software update progress
+  const { state: live, connected: sseConnected } = useVehicleLive(vehicleId ?? undefined)
+  const hasActiveUpdate = live.swUpdateDownloadPct > 0 || live.swUpdateInstallPct > 0 || !!live.swUpdateVersion
+
   const vehicleMap = new Map<number, Vehicle>()
   vehicles?.forEach(v => vehicleMap.set(v.id, v))
 
-  const latestVersion = updates?.[0]?.version ?? vehicleState?.state?.software_version ?? 'Unknown'
+  const latestVersion = updates?.[0]?.version ?? live.version ?? live.swUpdateVersion ?? vehicleState?.state?.software_version ?? 'Unknown'
   const totalUpdates = updates?.length ?? 0
   const installedCount = updates?.filter(u => u.status === 'installed').length ?? 0
 
@@ -91,6 +96,90 @@ export default function SoftwareUpdates() {
           </div>
         </GlassPanel>
       </div>
+
+      {/* Live Update Progress (shown when an update is in progress) */}
+      {hasActiveUpdate && (
+        <GlassPanel className="p-5 mb-8 border border-neon-cyan/20">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-neon-cyan animate-pulse" />
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Update In Progress</h3>
+            </div>
+            {sseConnected && (
+              <span className="flex items-center gap-1.5 text-[10px] text-neon-green">
+                <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
+                Live
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {live.swUpdateVersion && (
+              <div className="flex items-center gap-2">
+                <ArrowUpCircle className="h-4 w-4 text-neon-cyan" />
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Target Version:</span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.swUpdateVersion}</span>
+              </div>
+            )}
+
+            {/* Download Progress */}
+            {live.swUpdateDownloadPct > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <Download className="h-3 w-3 inline mr-1" />Download
+                  </span>
+                  <span className="text-xs font-bold text-neon-blue">{live.swUpdateDownloadPct}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-neon-blue to-neon-cyan transition-all duration-500"
+                    style={{ width: `${Math.min(live.swUpdateDownloadPct, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Install Progress */}
+            {live.swUpdateInstallPct > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <ArrowUpCircle className="h-3 w-3 inline mr-1" />Installation
+                  </span>
+                  <span className="text-xs font-bold text-neon-green">{live.swUpdateInstallPct}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-neon-green to-neon-cyan transition-all duration-500"
+                    style={{ width: `${Math.min(live.swUpdateInstallPct, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Expected duration & scheduled start */}
+            <div className="flex flex-wrap gap-4">
+              {live.swUpdateExpectedMin > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    Est. {live.swUpdateExpectedMin} min remaining
+                  </span>
+                </div>
+              )}
+              {live.swUpdateScheduledStart && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    Scheduled: {live.swUpdateScheduledStart}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </GlassPanel>
+      )}
 
       {/* Timeline */}
       <GlassPanel className="p-6">
