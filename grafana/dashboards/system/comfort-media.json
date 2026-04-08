@@ -144,7 +144,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(hvac_auto_mode, 'N/A') AS \"HVAC Mode\", CASE WHEN steering_wheel_heat_on THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\", CASE WHEN is_auto_conditioning_on THEN 'On' ELSE 'Off' END AS \"Auto Climate\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT COALESCE(hvac_auto_mode, 'Off') AS \"HVAC Mode\", CASE WHEN COALESCE(hvac_steering_wheel_heat_level, 0) > 0 THEN 'On' ELSE 'Off' END AS \"Steering Wheel Heat\", CASE WHEN COALESCE(hvac_ac_enabled, false) THEN 'On' ELSE 'Off' END AS \"Auto Climate\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],

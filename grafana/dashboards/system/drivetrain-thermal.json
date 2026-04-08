@@ -85,7 +85,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp_r) AS \"Rear Stator\", convert_temp(di_heatsink_t_f) AS \"Front Heatsink\", convert_temp(di_heatsink_t_r) AS \"Rear Heatsink\", convert_temp(di_inverter_t_f) AS \"Front Inverter\", convert_temp(di_inverter_t_r) AS \"Rear Inverter\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
+          "rawSql": "SELECT convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp) AS \"Rear Stator\", convert_temp(di_heatsink_t_f) AS \"Front Heatsink\", convert_temp(di_heatsink_t_r) AS \"Rear Heatsink\", convert_temp(di_inverter_t_f) AS \"Front Inverter\", convert_temp(di_inverter_t_r) AS \"Rear Inverter\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} ORDER BY created_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -165,7 +165,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp_r) AS \"Rear Stator\", convert_temp(di_stator_temp_rel) AS \"Rear L Stator\", convert_temp(di_stator_temp_rer) AS \"Rear R Stator\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, convert_temp(di_stator_temp_f) AS \"Front Stator\", convert_temp(di_stator_temp) AS \"Rear Stator\", convert_temp(di_stator_temp_rel) AS \"Rear L Stator\", convert_temp(di_stator_temp_rer) AS \"Rear R Stator\" FROM motor_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],
