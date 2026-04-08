@@ -133,13 +133,14 @@ function SignalPicker({ value, onChange }: { value: string; onChange: (v: string
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute z-50 mt-1 w-80 max-h-72 overflow-auto glass-panel border border-white/10 rounded-lg shadow-xl">
-            <div className="sticky top-0 bg-[var(--glass-bg)] p-2 border-b border-white/5">
+          <div className="absolute z-50 mt-1 w-96 max-h-96 overflow-auto rounded-xl shadow-2xl border border-neon-cyan/20"
+               style={{ background: 'var(--bg, #0a0e1a)' }}>
+            <div className="sticky top-0 p-2.5 border-b border-white/10" style={{ background: 'var(--bg, #0a0e1a)' }}>
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
                 <input
                   autoFocus
-                  className="glass-input w-full pl-7 text-xs"
+                  className="glass-input w-full pl-8 text-sm py-2"
                   placeholder="Search signals…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -148,25 +149,31 @@ function SignalPicker({ value, onChange }: { value: string; onChange: (v: string
             </div>
             {grouped.map(([cat, items]) => (
               <div key={cat}>
-                <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-medium bg-white/[0.02] sticky top-[52px]">{cat}</p>
+                <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-neon-cyan/70 border-b border-white/5"
+                     style={{ background: 'var(--surface-2, #111827)' }}>
+                  {cat}
+                </div>
                 {items.map(s => (
                   <button
                     key={s.name}
                     type="button"
                     className={clsx(
-                      'w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 transition-colors flex items-center justify-between gap-2',
-                      s.name === value && 'bg-neon-cyan/10 text-neon-cyan',
+                      'w-full text-left px-4 py-2 text-sm hover:bg-neon-cyan/10 transition-colors flex items-center justify-between gap-3',
+                      s.name === value ? 'bg-neon-cyan/10 text-neon-cyan' : 'text-[var(--text-primary)]',
                     )}
                     onClick={() => { onChange(s.name); setOpen(false); setSearch('') }}
                   >
-                    <span className="truncate">{s.name}</span>
-                    {s.unit && <span className="text-[var(--text-muted)] text-[10px] shrink-0">{s.unit}</span>}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{s.name}</span>
+                      <span className="text-[10px] text-[var(--text-muted)]">{s.description}</span>
+                    </div>
+                    {s.unit && <span className="text-xs text-neon-cyan/60 shrink-0 font-mono">{s.unit}</span>}
                   </button>
                 ))}
               </div>
             ))}
             {grouped.length === 0 && (
-              <p className="p-3 text-xs text-[var(--text-muted)]">No signals match &quot;{search}&quot;</p>
+              <p className="p-4 text-sm text-[var(--text-muted)]">No signals match &quot;{search}&quot;</p>
             )}
           </div>
         </>
