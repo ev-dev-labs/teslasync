@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getVehicles, getUserPreferenceLatest, AppSettings } from '../api'
 import { useState, useEffect } from 'react'
+import { isSettingMiles, isSettingFahrenheit, parseSettingEnum } from '../lib/parseSettingEnum'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Fuel, Zap } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -122,15 +123,11 @@ export default function Settings() {
     if (!carPrefs) return
     const updates: Partial<AppSettings> = {}
 
-    // Map car's SettingDistanceUnit to app's unit_of_length
-    const dist = carPrefs.setting_distance_unit?.toLowerCase() ?? ''
-    if (dist.includes('mile')) updates.unit_of_length = 'mi'
-    else if (dist.includes('km') || dist.includes('kilo')) updates.unit_of_length = 'km'
+    if (isSettingMiles(carPrefs.setting_distance_unit)) updates.unit_of_length = 'mi'
+    else if (carPrefs.setting_distance_unit) updates.unit_of_length = 'km'
 
-    // Map car's SettingTemperatureUnit to app's unit_of_temp
-    const temp = carPrefs.setting_temperature_unit?.toLowerCase() ?? ''
-    if (temp.includes('fahr') || temp === 'f') updates.unit_of_temp = 'F'
-    else if (temp.includes('cel') || temp === 'c') updates.unit_of_temp = 'C'
+    if (isSettingFahrenheit(carPrefs.setting_temperature_unit)) updates.unit_of_temp = 'F'
+    else if (carPrefs.setting_temperature_unit) updates.unit_of_temp = 'C'
 
     if (Object.keys(updates).length > 0) {
       const newForm = { ...form, ...updates }
@@ -304,7 +301,7 @@ export default function Settings() {
                   <Car className="h-5 w-5 text-neon-cyan shrink-0" />
                   <div>
                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      Car uses {carPrefs.setting_distance_unit ?? '—'} / {carPrefs.setting_temperature_unit ?? '—'} / {carPrefs.setting_tire_pressure_unit ?? '—'}
+                      Car uses {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}
                     </p>
                     <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                       Sync your app's units to match your vehicle's display settings

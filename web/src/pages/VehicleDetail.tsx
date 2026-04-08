@@ -27,6 +27,7 @@ import clsx from 'clsx'
 import { formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '../lib/numberFormat'
+import { parseSettingEnum } from '../lib/parseSettingEnum'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -976,10 +977,10 @@ export default function VehicleDetail() {
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {[
-                      { label: 'Distance', value: cleanNil(userPrefData.setting_distance_unit) },
-                      { label: 'Temperature', value: cleanNil(userPrefData.setting_temperature_unit) },
-                      { label: 'Charge Unit', value: cleanNil(userPrefData.setting_charge_unit) },
-                      { label: 'Tire Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
+                      { label: 'Distance', value: parseSettingEnum(userPrefData.setting_distance_unit, 'distance') },
+                      { label: 'Temperature', value: parseSettingEnum(userPrefData.setting_temperature_unit, 'temperature') },
+                      { label: 'Charge Unit', value: parseSettingEnum(userPrefData.setting_charge_unit, 'charge') },
+                      { label: 'Tire Pressure', value: parseSettingEnum(userPrefData.setting_tire_pressure_unit, 'pressure') },
                       { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
                     ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
