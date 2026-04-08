@@ -1165,9 +1165,8 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	}
 
 	// Distance: miles → km
-	if v, ok := toFloatOk(signals["Odometer"]); ok {
-		signals["Odometer"] = v * milesToKm
-	}
+	// NOTE: Odometer from Fleet Telemetry arrives in the vehicle's configured
+	// unit (km for metric vehicles). Do NOT convert — it's already in km.
 	if v, ok := toFloatOk(signals["EstBatteryRange"]); ok {
 		signals["EstBatteryRange"] = v * milesToKm
 	}
