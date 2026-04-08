@@ -52,6 +52,10 @@ export default function Settings() {
     gas_unit: 'gallon',
     gas_efficiency_mpg: 25,
     decimal_precision: 1,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant',
   })
   const [saved, setSaved] = useState(false)
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')

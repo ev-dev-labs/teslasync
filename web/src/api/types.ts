@@ -230,6 +230,10 @@ export interface AppSettings {
   gas_unit: string
   gas_efficiency_mpg: number
   decimal_precision: number
+  quiet_hours_enabled: boolean
+  quiet_hours_start: string
+  quiet_hours_end: string
+  alert_digest_mode: string
   google_maps_api_key?: string
   polling_config?: PollingConfig
 }

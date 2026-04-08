@@ -328,6 +328,10 @@ type Settings struct {
 	GasUnit         string  `json:"gas_unit" db:"gas_unit"`                   // gallon, liter
 	GasEfficiencyMPG float64 `json:"gas_efficiency_mpg" db:"gas_efficiency_mpg"` // equivalent ICE car MPG for comparison
 	DecimalPrecision int     `json:"decimal_precision" db:"decimal_precision"`   // 1, 2, 3, or 4 decimal places for display
+	QuietHoursEnabled bool   `json:"quiet_hours_enabled" db:"quiet_hours_enabled"`
+	QuietHoursStart   string `json:"quiet_hours_start" db:"quiet_hours_start"`   // HH:MM (24h)
+	QuietHoursEnd     string `json:"quiet_hours_end" db:"quiet_hours_end"`       // HH:MM (24h)
+	AlertDigestMode   string `json:"alert_digest_mode" db:"alert_digest_mode"`   // instant, hourly, daily
 	PollingConfig   PollingConfig `json:"polling_config" db:"polling_config"`
 }
 

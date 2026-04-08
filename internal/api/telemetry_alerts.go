@@ -15,11 +15,11 @@ import (
 )
 
 // TelemetryAlertEvaluator runs alert rules against incoming streaming signals.
-// Supports both legacy simple rules (Type+Threshold) and CEP rules (JSONB conditions).
 type TelemetryAlertEvaluator struct {
 	alertRuleRepo *database.AlertRuleRepo
 	alertRepo     *database.AlertRepo
 	notifRepo     *database.NotificationRepo
+	settingsRepo  *database.SettingsRepo
 	eventBus      *events.Bus
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
@@ -32,6 +32,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		alertRuleRepo: database.NewAlertRuleRepo(db),
 		alertRepo:     database.NewAlertRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
+		settingsRepo:  database.NewSettingsRepo(db),
 		eventBus:      eventBus,
 		eventHub:      hub,
 		ruleEngine:    NewRuleEngine(),
@@ -134,7 +135,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		severity = "warning"
 	}
 
-	// 1. Create alert in DB
+	// 1. Create alert in DB (always — even during quiet hours)
 	vid := vehicleID
 	alert := &models.Alert{
 		VehicleID: &vid,
@@ -163,18 +164,33 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		metrics.CEPRulesFired.WithLabelValues(rule.Name, severity).Inc()
 	}
 
-	// 2. Broadcast via SSE (instant browser notification)
+	// Check quiet hours — suppress non-critical notifications during quiet hours
+	quietSuppressed := false
+	if severity != "critical" {
+		if settings, err := e.settingsRepo.Get(ctx); err == nil && settings.QuietHoursEnabled {
+			nowHHMM := now.Format("15:04")
+			start, end := settings.QuietHoursStart, settings.QuietHoursEnd
+			if start <= end {
+				quietSuppressed = nowHHMM >= start && nowHHMM < end
+			} else {
+				quietSuppressed = nowHHMM >= start || nowHHMM < end
+			}
+		}
+	}
+
+	// 2. Broadcast via SSE (always — let frontend decide to show/suppress)
 	if e.eventHub != nil {
 		e.eventHub.Broadcast("alert", map[string]interface{}{
-			"id":         alert.ID,
-			"vehicle_id": vehicleID,
-			"vin":        vin,
-			"type":       rule.Type,
-			"severity":   severity,
-			"title":      rule.Name,
-			"message":    message,
-			"rule_id":    rule.ID,
-			"timestamp":  now,
+			"id":              alert.ID,
+			"vehicle_id":      vehicleID,
+			"vin":             vin,
+			"type":            rule.Type,
+			"severity":        severity,
+			"title":           rule.Name,
+			"message":         message,
+			"rule_id":         rule.ID,
+			"timestamp":       now,
+			"quiet_suppressed": quietSuppressed,
 		})
 	}
 
@@ -194,8 +210,8 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		})
 	}
 
-	// 4. Dispatch to notification channels (async)
-	if len(rule.NotifyChannels) > 0 {
+	// 4. Dispatch to notification channels (skip during quiet hours for non-critical)
+	if len(rule.NotifyChannels) > 0 && !quietSuppressed {
 		go e.dispatchNotifications(rule, message)
 	}
 
