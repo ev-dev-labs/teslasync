@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -331,6 +332,8 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 // published to MQTT topics (used by the HTTP endpoint). When called from the
 // MQTT subscriber, publishToMQTT should be false to avoid a publish loop.
 func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signals map[string]interface{}, publishToMQTT bool) {
+	metrics.TelemetryMessagesReceived.Inc()
+
 	// Raw telemetry capture — async insert to MongoDB when enabled (before normalization)
 	if h.captureEnabled.Load() && h.rawTelemetryRepo != nil {
 		source := "mqtt_subscriber"
