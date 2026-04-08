@@ -500,39 +500,63 @@ export default function AlertStudio() {
               </div>
             </div>
 
-            {/* Notification channels */}
-            {channels && channels.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Notification Channels</label>
-                <div className="flex flex-wrap gap-2">
-                  {channels.map(ch => {
-                    const isSelected = editor.notify_channels.includes(ch.id)
-                    return (
-                      <button
-                        key={ch.id}
-                        type="button"
-                        className={clsx(
-                          'px-3 py-1.5 text-xs rounded-lg transition-colors border',
-                          isSelected
-                            ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                            : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
-                        )}
-                        onClick={() => {
-                          setEditor(s => ({
-                            ...s,
-                            notify_channels: isSelected
-                              ? s.notify_channels.filter(id => id !== ch.id)
-                              : [...s.notify_channels, ch.id],
-                          }))
-                        }}
-                      >
-                        {ch.name}
-                      </button>
-                    )
-                  })}
+            {/* Notification delivery */}
+            <div className="mb-4">
+              <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium">How You'll Be Notified</label>
+              <div className="space-y-2">
+                {/* Always-on: SSE + DB */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-neon-green" />
+                  <span style={{ color: 'var(--text-primary)' }}>Browser toast notification (real-time via SSE)</span>
                 </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-neon-green" />
+                  <span style={{ color: 'var(--text-primary)' }}>Alert history (saved to database)</span>
+                </div>
+
+                {/* Channels */}
+                {channels && channels.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)] mb-1.5 mt-1">External channels (click to toggle):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {channels.map(ch => {
+                        const isSelected = editor.notify_channels.includes(ch.id)
+                        return (
+                          <button
+                            key={ch.id}
+                            type="button"
+                            className={clsx(
+                              'px-3 py-1.5 text-xs rounded-lg transition-colors border',
+                              isSelected
+                                ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                                : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:border-white/20',
+                            )}
+                            onClick={() => {
+                              setEditor(s => ({
+                                ...s,
+                                notify_channels: isSelected
+                                  ? s.notify_channels.filter(id => id !== ch.id)
+                                  : [...s.notify_channels, ch.id],
+                              }))
+                            }}
+                          >
+                            <Bell className="h-3 w-3 inline mr-1" />
+                            {ch.name} ({ch.type})
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs mt-1">
+                    <span className="w-2 h-2 rounded-full bg-white/20" />
+                    <span className="text-[var(--text-muted)]">
+                      No external channels configured — <a href="/notifications" className="text-neon-cyan hover:underline">set up Discord, Slack, ntfy, or webhooks</a>
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Condition builder */}
             <div className="mb-4">

@@ -61,6 +61,7 @@ import Logo from './Logo'
 import OnboardingWizard from './OnboardingWizard'
 import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../api'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
+import { useToast } from './Toast'
 import { useSettings } from '../hooks/useSettings'
 
 const navI18nKeys: Record<string, string> = {
@@ -244,8 +245,16 @@ export default function Layout() {
   const location = useLocation()
   const { t } = useTranslation()
 
-  // SSE connection status
-  const { state: sseState } = useRealtimeEvents()
+  // SSE connection status + global alert toast
+  const toast = useToast()
+  const { state: sseState } = useRealtimeEvents({
+    onAlert: (data) => {
+      const alert = data as { title?: string; message?: string; severity?: string }
+      const severity = alert.severity ?? 'info'
+      const method = severity === 'critical' ? toast.error : severity === 'warning' ? toast.warning : toast.info
+      method(alert.title ?? 'Alert', alert.message ?? '')
+    },
+  })
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
