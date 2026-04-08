@@ -1,0 +1,2 @@
+-- Down migration: no-op (backfill is additive, not destructive)
+-- Original zero/null values can't be restored since we don't track what was backfilled.

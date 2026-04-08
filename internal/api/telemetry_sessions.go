@@ -927,6 +927,12 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		log.Error().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to complete drive")
 	}
 
+	// --- Backfill missing start/end values from nearest position data ---
+	// Fleet Telemetry sends signals at different intervals (SOC every ~5 min,
+	// odometer sporadically). If the drive start/end moment didn't coincide
+	// with a reading, we find the closest position within ±10 minutes.
+	go t.backfillDriveValues(active, vehicleID)
+
 	// Reverse geocode end address (async)
 	if endLat != nil && endLon != nil {
 		go t.resolveAndUpdateAddress(active.DriveID, *endLat, *endLon, false)
@@ -947,6 +953,98 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	TotalDrives.Inc()
 	if distance > 0 {
 		TotalDistanceKm.Add(distance)
+	}
+}
+
+// backfillDriveValues checks if a completed drive has missing start/end values
+// (SOC, odometer, range, elevation) and fills them from the nearest position data.
+// Runs async after drive completion — does not block the telemetry pipeline.
+func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, vehicleID int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	const lookupWindow = 10 * time.Minute
+	backfill := map[string]interface{}{}
+
+	// --- Backfill start values ---
+	startNeedsBackfill := active.StartSoc == nil || *active.StartSoc == 0 ||
+		active.StartOdometer == nil || *active.StartOdometer == 0 ||
+		active.StartRatedRange == nil || *active.StartRatedRange == 0
+
+	if startNeedsBackfill {
+		startPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, active.StartTime, lookupWindow)
+		if err == nil && startPos != nil {
+			if (active.StartSoc == nil || *active.StartSoc == 0) && startPos.BatteryLvl > 0 {
+				bl := startPos.BatteryLvl
+				backfill["start_battery_level"] = bl
+				backfill["soc_start"] = float64(bl)
+			}
+			if (active.StartOdometer == nil || *active.StartOdometer == 0) && startPos.Odometer > 0 {
+				backfill["start_odometer"] = startPos.Odometer
+			}
+			if (active.StartRatedRange == nil || *active.StartRatedRange == 0) && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
+				backfill["start_rated_range_km"] = *startPos.RatedRange
+			}
+			if active.StartIdealRange == nil && startPos.IdealRange != nil && *startPos.IdealRange > 0 {
+				backfill["start_ideal_range_km"] = *startPos.IdealRange
+			}
+			if active.StartEstRange == nil && startPos.Elevation != nil {
+				backfill["elevation_start"] = *startPos.Elevation
+			}
+			if active.StartLatitude == nil && startPos.Latitude != 0 {
+				backfill["start_latitude"] = startPos.Latitude
+				backfill["start_longitude"] = startPos.Longitude
+			}
+		}
+	}
+
+	// --- Backfill end values ---
+	endTime := time.Now().UTC()
+	endPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, endTime, lookupWindow)
+	if err == nil && endPos != nil {
+		if _, ok := backfill["soc_end"]; !ok {
+			if endPos.BatteryLvl > 0 {
+				backfill["end_battery_level"] = endPos.BatteryLvl
+				backfill["soc_end"] = float64(endPos.BatteryLvl)
+			}
+		}
+		if active.LastOdometer == nil && endPos.Odometer > 0 {
+			backfill["end_odometer"] = endPos.Odometer
+			// Recompute distance if we now have both start and end odometer
+			startOdo := 0.0
+			if active.StartOdometer != nil {
+				startOdo = *active.StartOdometer
+			} else if v, ok := backfill["start_odometer"]; ok {
+				startOdo = v.(float64)
+			}
+			if startOdo > 0 {
+				dist := endPos.Odometer - startOdo
+				if dist > 0 {
+					backfill["distance"] = dist
+				}
+			}
+		}
+		if endPos.RatedRange != nil && *endPos.RatedRange > 0 {
+			backfill["end_rated_range_km"] = *endPos.RatedRange
+		}
+		if endPos.IdealRange != nil && *endPos.IdealRange > 0 {
+			backfill["end_ideal_range_km"] = *endPos.IdealRange
+		}
+		if endPos.Elevation != nil {
+			backfill["elevation_end"] = *endPos.Elevation
+		}
+		if active.LastLatitude == nil && endPos.Latitude != 0 {
+			backfill["end_latitude"] = endPos.Latitude
+			backfill["end_longitude"] = endPos.Longitude
+		}
+	}
+
+	if len(backfill) > 0 {
+		if err := t.driveRepo.PartialUpdate(ctx, active.DriveID, backfill); err != nil {
+			log.Warn().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to backfill drive values")
+		} else {
+			log.Info().Int64("drive_id", active.DriveID).Int("fields", len(backfill)).Msg("telemetry: backfilled drive values from nearest positions")
+		}
 	}
 }
 
