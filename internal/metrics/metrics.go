@@ -293,6 +293,31 @@ var (
 		Name:      "sse_events_sent_total",
 		Help:      "Total SSE events sent by event type",
 	}, []string{"event_type"})
+
+	SSEEventsDropped = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_events_dropped_total",
+		Help:      "Total SSE events dropped due to full client buffer",
+	}, []string{"event_type"})
+
+	SSEConnectionsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_connections_total",
+		Help:      "Total SSE connections established since startup",
+	})
+
+	SSEBroadcastDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "sse_broadcast_duration_seconds",
+		Help:      "Time spent broadcasting SSE events to all clients",
+		Buckets:   []float64{0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1},
+	})
+
+	SSEBytesSent = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "sse_bytes_sent_total",
+		Help:      "Total bytes sent via SSE connections",
+	})
 )
 
 // ── Polling & Workers ──────────────────────────────────────

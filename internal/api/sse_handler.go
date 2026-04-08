@@ -30,6 +30,7 @@ func (h *EventHub) Subscribe(id string) (<-chan []byte, func()) {
 	h.clients[id] = ch
 	h.mu.Unlock()
 	SSEConnectionsActive.Inc()
+	SSEConnectionsTotal.Inc()
 
 	return ch, func() {
 		h.mu.Lock()
@@ -49,7 +50,9 @@ func (h *EventHub) Broadcast(eventType string, data interface{}) {
 	}
 
 	msg := fmt.Appendf(nil, "event: %s\ndata: %s\n\n", eventType, payload)
+	msgLen := float64(len(msg))
 
+	start := time.Now()
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -57,10 +60,13 @@ func (h *EventHub) Broadcast(eventType string, data interface{}) {
 		select {
 		case ch <- msg:
 			SSEEventsSent.WithLabelValues(eventType).Inc()
+			SSEBytesSent.Add(msgLen)
 		default:
+			SSEEventsDropped.WithLabelValues(eventType).Inc()
 			log.Warn().Str("client", id).Msg("SSE client buffer full, dropping event")
 		}
 	}
+	SSEBroadcastDuration.Observe(time.Since(start).Seconds())
 }
 
 // ClientCount returns the number of connected SSE clients.

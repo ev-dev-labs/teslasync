@@ -51,6 +51,10 @@ var (
 	// Connections
 	SSEConnectionsActive = metrics.SSEConnectionsActive
 	SSEEventsSent        = metrics.SSEEventsSent
+	SSEEventsDropped     = metrics.SSEEventsDropped
+	SSEConnectionsTotal  = metrics.SSEConnectionsTotal
+	SSEBroadcastDuration = metrics.SSEBroadcastDuration
+	SSEBytesSent         = metrics.SSEBytesSent
 
 	// Auth
 	AuthAttempts    = metrics.AuthAttempts
