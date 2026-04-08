@@ -10,6 +10,7 @@ import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForward, Zap, Shield, Lock, Eye } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { formatDateShort } from '../lib/dateFormat'
 
@@ -88,6 +89,7 @@ export default function LiveMap() {
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { convertSpeed, convertDistance, convertTemp, speedUnit, distanceUnit, tempUnit } = useSettings()
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const { state: live } = useVehicleLive(selectedId ?? undefined)
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
   const [replayMode, setReplayMode] = useState(false)
   const [replayIdx, setReplayIdx] = useState(0)
@@ -129,9 +131,15 @@ export default function LiveMap() {
   })
 
   const states = vehicleStates.data ?? {}
-  const markers = vehicles?.filter(v => states[v.id]?.latitude && states[v.id]?.longitude) ?? []
+  const markers = vehicles?.filter(v => {
+    if (selectedId === v.id && live.latitude && live.longitude) return true
+    return states[v.id]?.latitude && states[v.id]?.longitude
+  }) ?? []
   const center: LatLngExpression = markers.length > 0
-    ? [states[markers[0].id]!.latitude, states[markers[0].id]!.longitude]
+    ? [
+        (selectedId === markers[0].id && live.latitude && live.longitude) ? live.latitude : states[markers[0].id]!.latitude,
+        (selectedId === markers[0].id && live.latitude && live.longitude) ? live.longitude : states[markers[0].id]!.longitude,
+      ]
     : [37.7749, -122.4194]
 
   const trailPositions: Position[] = trail?.filter(p => p.latitude && p.longitude) ?? []
@@ -213,8 +221,8 @@ export default function LiveMap() {
           {selectedState && (
             <GlassPanel className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <RadialGauge value={selectedState.battery_level} max={100} label="Battery" unit="%" size={70} color="#10b981" />
-                <RadialGauge value={Math.round(convertSpeed(selectedState.speed))} max={200} label="Speed" unit={speedUnit} size={70} color="#00f0ff" />
+                <RadialGauge value={live.batteryLevel || selectedState.battery_level} max={100} label="Battery" unit="%" size={70} color="#10b981" />
+                <RadialGauge value={Math.round(convertSpeed(live.speed || selectedState.speed))} max={200} label="Speed" unit={speedUnit} size={70} color="#00f0ff" />
                 <RadialGauge value={Math.round(convertDistance(selectedState.rated_range))} max={600} label="Range" unit={distanceUnit} size={70} color="#a855f7" />
               </div>
             </GlassPanel>
@@ -294,11 +302,14 @@ export default function LiveMap() {
             {/* Vehicle markers */}
             {markers.map(v => {
               const s = states[v.id]!
+              const useLive = v.id === selectedId && live.latitude && live.longitude
+              const lat = useLive ? live.latitude : s.latitude
+              const lng = useLive ? live.longitude : s.longitude
               const status = getVehicleStatus(v, s)
               return (
                 <Marker
                   key={v.id}
-                  position={[s.latitude, s.longitude]}
+                  position={[lat, lng]}
                   icon={createVehicleIcon(status, s.speed > 0 ? 0 : 0)}
                   eventHandlers={{ click: () => setSelectedId(v.id) }}
                 >
@@ -307,8 +318,8 @@ export default function LiveMap() {
                       <p className="font-semibold text-sm">{v.display_name || v.vin}</p>
                       <p className="text-xs text-[var(--text-muted)]">{v.model} {v.trim_badging}</p>
                       <div className="mt-2 text-xs space-y-1">
-                        <p>🔋 Battery: {s.battery_level}%</p>
-                        <p>⚡ Speed: {Math.round(convertSpeed(s.speed))} {speedUnit}</p>
+                        <p>🔋 Battery: {(useLive && live.batteryLevel) || s.battery_level}%</p>
+                        <p>⚡ Speed: {Math.round(convertSpeed((useLive && live.speed) || s.speed))} {speedUnit}</p>
                         <p>📍 Range: {Math.round(convertDistance(s.rated_range))} {distanceUnit}</p>
                         <p>🌡️ Temp: {convertTemp(s.inside_temp).toFixed(0)}{tempUnit} / {convertTemp(s.outside_temp).toFixed(0)}{tempUnit}</p>
                         <p>{s.is_locked ? '🔒' : '🔓'} {s.is_locked ? 'Locked' : 'Unlocked'}</p>

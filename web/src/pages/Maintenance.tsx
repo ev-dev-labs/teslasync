@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDate } from '../lib/dateFormat'
 
 /* ────────────────────────────── Types ────────────────────────────── */
@@ -140,6 +141,7 @@ export default function Maintenance() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
 
   const { convertDistance, distanceUnit, isMiles } = useSettings()
 
@@ -194,6 +196,7 @@ export default function Maintenance() {
 
   /* ── Derive current odometer (km) ── */
   const currentOdometerKm = useMemo(() => {
+    if (live.odometer) return live.odometer
     if (stateResp?.state?.odometer) return stateResp.state.odometer
     if (dailyMileage?.length) return dailyMileage[0].odometer_end
     if (drives?.length) {
@@ -202,7 +205,7 @@ export default function Maintenance() {
       return totalDist
     }
     return mileageStats?.total_distance ?? 0
-  }, [stateResp, dailyMileage, drives, mileageStats])
+  }, [live, stateResp, dailyMileage, drives, mileageStats])
 
   /* ── Avg daily km ── */
   const avgDailyKm = mileageStats?.avg_daily ?? 0

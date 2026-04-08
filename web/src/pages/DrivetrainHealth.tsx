@@ -6,6 +6,7 @@ import { Cog, Thermometer, Activity, Gauge, AlertTriangle, CheckCircle, Trending
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { cleanNil } from '../lib/cleanNil'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
@@ -185,6 +186,7 @@ export default function DrivetrainHealth() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
   const { convertTemp, convertSpeed, tempUnit, speedUnit } = useSettings()
 
   /* ── Latest motor snapshot ── */
@@ -299,9 +301,10 @@ export default function DrivetrainHealth() {
     : cleanNil(latest?.di_state) === 'charge' ? 'text-yellow-400'
     : 'text-[var(--text-muted)]'
 
-  const gearColor = cleanNil(latest?.gear) === 'D' ? 'text-neon-green'
-    : cleanNil(latest?.gear) === 'R' ? 'text-neon-amber'
-    : cleanNil(latest?.gear) === 'P' ? 'text-neon-cyan'
+  const gearValue = live.gear || cleanNil(latest?.gear)
+  const gearColor = gearValue === 'D' ? 'text-neon-green'
+    : gearValue === 'R' ? 'text-neon-amber'
+    : gearValue === 'P' ? 'text-neon-cyan'
     : 'text-[var(--text-muted)]'
 
   const noData = !isLoading && (!history || history.length === 0)
@@ -369,7 +372,7 @@ export default function DrivetrainHealth() {
       {!noData && latest && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
           <StatusBadge label="Drive Inverter State" value={cleanNil(latest.di_state)} color={diStateColor} />
-          <StatusBadge label="Gear" value={cleanNil(latest.gear)} color={gearColor} />
+          <StatusBadge label="Gear" value={gearValue} color={gearColor} />
           <div className="glass-card p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Activity className="h-5 w-5 text-neon-cyan" />
@@ -377,7 +380,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Vehicle Speed</p>
               <p className="text-sm font-semibold text-neon-cyan">
-                {latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(latest.vehicle_speed), 1)} ${speedUnit}` : '--'}
+                {live.speed || latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(live.speed || latest.vehicle_speed!), 1)} ${speedUnit}` : '--'}
               </p>
             </div>
           </div>
