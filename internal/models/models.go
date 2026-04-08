@@ -495,6 +495,7 @@ type Alert struct {
 }
 
 // AlertRule defines when an alert should be triggered.
+// Supports both legacy simple rules (Type + Threshold) and CEP rules (Conditions JSONB).
 type AlertRule struct {
 	ID         int64   `json:"id" db:"id"`
 	Name       string  `json:"name" db:"name"`
@@ -504,6 +505,39 @@ type AlertRule struct {
 	VehicleID  *int64  `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
+
+	// CEP rule engine fields
+	Conditions     json.RawMessage `json:"conditions,omitempty" db:"conditions"`
+	Expression     string          `json:"expression,omitempty" db:"expression"`
+	CooldownMin    int             `json:"cooldown_min" db:"cooldown_min"`
+	ForDurationS   *int            `json:"for_duration_s,omitempty" db:"for_duration_s"`
+	Severity       string          `json:"severity" db:"severity"`
+	MsgTemplate    string          `json:"msg_template,omitempty" db:"msg_template"`
+	NotifyChannels []int64         `json:"notify_channels,omitempty" db:"notify_channels"`
+	LastFiredAt    *time.Time      `json:"last_fired_at,omitempty" db:"last_fired_at"`
+	FireCount      int             `json:"fire_count" db:"fire_count"`
+	Tags           []string        `json:"tags,omitempty" db:"tags"`
+}
+
+// IsCEPRule returns true if this rule uses the CEP condition engine (vs legacy type+threshold).
+func (r *AlertRule) IsCEPRule() bool {
+	return len(r.Conditions) > 0 && string(r.Conditions) != "null"
+}
+
+// RuleCondition represents a node in the condition tree.
+// Can be a leaf (signal comparison) or a branch (AND/OR/NOT combinator).
+type RuleCondition struct {
+	// Branch fields (combinator)
+	Op    string          `json:"op,omitempty"`    // "AND", "OR", "NOT"
+	Rules []RuleCondition `json:"rules,omitempty"` // child conditions
+
+	// Leaf fields (signal comparison)
+	Signal  string      `json:"signal,omitempty"`  // e.g. "BatteryLevel", "Gear"
+	Compare string      `json:"compare,omitempty"` // "==", "!=", ">", "<", ">=", "<=", "contains", "changed_to", "changed_from", "is_true", "is_false"
+	Value   interface{} `json:"value,omitempty"`   // comparison target
+
+	// Temporal (applies to branch or leaf)
+	ForSeconds *int `json:"for_seconds,omitempty"` // condition must hold for this duration
 }
 
 // CommandLog records a vehicle command execution.

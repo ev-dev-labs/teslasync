@@ -59,7 +59,8 @@ func NewAlertRuleRepo(db *DB) *AlertRuleRepo {
 }
 
 func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error) {
-	query := `SELECT id, name, type, enabled, threshold, vehicle_id, created_at, updated_at
+	query := `SELECT id, name, type, enabled, threshold, vehicle_id, created_at, updated_at,
+		conditions, cooldown_min, for_duration_s, severity, msg_template, notify_channels, last_fired_at, fire_count, tags
 		FROM alert_rules ORDER BY id LIMIT 1000`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
@@ -70,12 +71,20 @@ func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error)
 	var rules []*models.AlertRule
 	for rows.Next() {
 		ar := &models.AlertRule{}
-		if err := rows.Scan(&ar.ID, &ar.Name, &ar.Type, &ar.Enabled, &ar.Threshold, &ar.VehicleID, &ar.CreatedAt, &ar.UpdatedAt); err != nil {
+		if err := rows.Scan(&ar.ID, &ar.Name, &ar.Type, &ar.Enabled, &ar.Threshold, &ar.VehicleID, &ar.CreatedAt, &ar.UpdatedAt,
+			&ar.Conditions, &ar.CooldownMin, &ar.ForDurationS, &ar.Severity, &ar.MsgTemplate, &ar.NotifyChannels, &ar.LastFiredAt, &ar.FireCount, &ar.Tags); err != nil {
 			return nil, err
 		}
 		rules = append(rules, ar)
 	}
 	return rules, rows.Err()
+}
+
+func (r *AlertRuleRepo) UpdateFireState(ctx context.Context, ruleID int64, firedAt time.Time, fireCount int) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`UPDATE alert_rules SET last_fired_at=$2, fire_count=$3 WHERE id=$1`,
+		ruleID, firedAt, fireCount)
+	return err
 }
 
 func (r *AlertRuleRepo) Update(ctx context.Context, id int64, enabled bool, threshold float64) error {

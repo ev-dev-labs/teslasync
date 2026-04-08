@@ -144,7 +144,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
-		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
+		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub),
 		staleTimeout:   staleTimeout,
 		bgCtx:          bgCtx,
 		bgCancel:       bgCancel,
