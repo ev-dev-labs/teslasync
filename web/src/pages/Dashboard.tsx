@@ -10,6 +10,7 @@ import {
 import { cleanNil } from '../lib/cleanNil'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { formatDateShort } from '../lib/dateFormat'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
@@ -108,6 +109,12 @@ export default function Dashboard() {
     refetchInterval: 30_000,
   })
   const primaryState = primaryStateData?.state
+
+  // SSE live state for real-time signals (firmware, version, etc.)
+  const { state: live } = useVehicleLive(primaryVehicle?.id)
+
+  // Firmware: prefer SSE live version, then polled state, then '—'
+  const firmwareVersion = live.version || live.swUpdateVersion || primaryState?.software_version || '—'
 
   // Get recent drives and charges for the primary vehicle
   const { data: recentDrives } = useQuery({
@@ -414,7 +421,7 @@ export default function Dashboard() {
                           cards.push(
                             { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
                             { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
-                            { icon: Gauge, label: 'Firmware', value: primaryState.software_version || '—', color: '#6366f1' },
+                            { icon: Gauge, label: 'Firmware', value: firmwareVersion, color: '#6366f1' },
                             { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
                           )
 

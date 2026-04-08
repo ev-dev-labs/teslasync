@@ -46,7 +46,7 @@ export default function SoftwareUpdates() {
   const vehicleMap = new Map<number, Vehicle>()
   vehicles?.forEach(v => vehicleMap.set(v.id, v))
 
-  const latestVersion = updates?.[0]?.version ?? vehicleState?.state?.software_version ?? 'Unknown'
+  const latestVersion = updates?.[0]?.version ?? live.version ?? live.swUpdateVersion ?? vehicleState?.state?.software_version ?? 'Unknown'
   const totalUpdates = updates?.length ?? 0
   const installedCount = updates?.filter(u => u.status === 'installed').length ?? 0
 
