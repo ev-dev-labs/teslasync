@@ -596,9 +596,9 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 		gear = toString(g)
 	}
 
-	// If no Gear in current batch, check SignalStore for last known
+	// If no Gear in current batch, check SignalStore for last known (but only if fresh)
 	if gear == "" && h.signalStore != nil {
-		// Try all known vehicle IDs (usually just one active)
+		// Use SignalStore directly with timestamp check — stale gear can cause false state
 		h.mu.RLock()
 		for _, state := range h.streamingState {
 			if ls, ok := state.LastSignals["Gear"]; ok {
@@ -607,6 +607,17 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 			}
 		}
 		h.mu.RUnlock()
+		// Verify freshness: if the Gear signal is older than 10 minutes, ignore it
+		if gear != "" {
+			for _, vid := range h.signalStore.VehicleIDs() {
+				if gv := h.signalStore.Get(vid, "Gear"); gv != nil {
+					if time.Since(gv.Timestamp) > 10*time.Minute {
+						gear = "" // stale — fall through to speed-based path
+					}
+					break
+				}
+			}
+		}
 	}
 
 	if gear != "" {
@@ -683,6 +694,17 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		}
 		sm = &vehicleStateMachine{currentState: currentDB}
 		h.vehicleStates[vehicleID] = sm
+		// Restore persisted state machine fields from SignalStore (loaded from DB on startup)
+		if h.signalStore != nil {
+			if lg, ok := h.signalStore.GetString(vehicleID, "_LastGear"); ok && lg != "" {
+				sm.lastGear = lg
+			}
+			if lst := h.signalStore.Get(vehicleID, "_LastSpeedTime"); lst != nil {
+				if t, ok := lst.Raw.(time.Time); ok {
+					sm.lastSpeedTime = t
+				}
+			}
+		}
 	}
 
 	// Update last known gear
@@ -699,7 +721,14 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 	}
 
 	// === GEAR-BASED PATH: Immediate transitions (no debounce) ===
-	if hasGear || sm.lastGear != "" {
+	// Only use gear path if we have a fresh Gear signal (current batch or recently received)
+	gearFresh := hasGear
+	if !gearFresh && sm.lastGear != "" && h.signalStore != nil {
+		if gv := h.signalStore.Get(vehicleID, "Gear"); gv != nil {
+			gearFresh = time.Since(gv.Timestamp) < 10*time.Minute
+		}
+	}
+	if gearFresh {
 		sm.currentState = candidateState
 		sm.pendingState = ""
 		sm.pendingSince = time.Time{}
@@ -708,6 +737,13 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		}
 		h.vehicleStateMu.Unlock()
 		h.commitStateTransition(ctx, vehicleID, candidateState)
+		// Persist state machine fields to SignalStore for DB flush recovery
+		if h.signalStore != nil {
+			h.signalStore.Update(vehicleID, map[string]interface{}{
+				"_LastGear":      sm.lastGear,
+				"_LastSpeedTime": sm.lastSpeedTime,
+			})
+		}
 		log.Info().Int64("vehicle_id", vehicleID).Str("gear", sm.lastGear).Str("state", candidateState).Msg("telemetry: gear-based state transition")
 		return
 	}
@@ -781,20 +817,27 @@ func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID 
 	log.Info().Int64("vehicle_id", vehicleID).Str("state", newState).Msg("telemetry: state transition confirmed")
 }
 
-// MarkVehicleOffline transitions a vehicle to "offline" when telemetry stops arriving.
+// MarkVehicleOffline transitions a vehicle to "offline" or "asleep" when telemetry stops.
+// If the last state was "parked", the vehicle is likely asleep (normal behavior).
+// If the last state was "driving" or "charging", something unexpected happened → "offline".
 func (h *TelemetryHandler) MarkVehicleOffline(ctx context.Context, vehicleID int64) {
 	h.vehicleStateMu.Lock()
 	sm, exists := h.vehicleStates[vehicleID]
-	if exists && sm.currentState == "offline" {
+	if exists && (sm.currentState == "offline" || sm.currentState == "asleep") {
 		h.vehicleStateMu.Unlock()
 		return
 	}
+	// Choose asleep vs offline based on last known state
+	newState := "offline"
+	if exists && (sm.currentState == "parked" || sm.currentState == "online") {
+		newState = "asleep" // parked/online → quiet = normal sleep
+	}
 	if exists {
-		sm.currentState = "offline"
+		sm.currentState = newState
 		sm.pendingState = ""
 	}
 	h.vehicleStateMu.Unlock()
-	h.commitStateTransition(ctx, vehicleID, "offline")
+	h.commitStateTransition(ctx, vehicleID, newState)
 }
 
 // trackMileage updates daily mileage when odometer readings are present.

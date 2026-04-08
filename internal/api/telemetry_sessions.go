@@ -43,7 +43,8 @@ type streamingDrive struct {
 	LastSpeed float64
 	LastSeen  time.Time
 	LastSpeedZeroTime time.Time
-	GearBased bool // true if drive was started by Gear signal (not speed)
+	GearBased  bool // true if drive was started by Gear signal (not speed)
+	Completing bool // true while being completed — prevents double-completion
 
 	// Signal accumulator — merges signals across MQTT batches for rich telemetry writes.
 	// Fleet telemetry sends each field as a separate MQTT message, so individual batches
@@ -133,6 +134,7 @@ type streamingCharge struct {
 	// Battery at start
 	StartBatteryLevel int
 	StartRangeKm      *float64
+	Completing        bool // prevents double-completion race
 }
 
 // NewTelemetrySessionTracker creates a session tracker with comprehensive data tracking.
@@ -305,6 +307,12 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 		if isDrivingGear && !hasDrive {
 			// Gear→D/R with no active drive → START DRIVE immediately
+			// If there's an active charge session, force-complete it (unplug-and-go)
+			if activeCharge, hasCharge := t.activeCharges[vehicleID]; hasCharge {
+				log.Info().Int64("vehicle_id", vehicleID).Int64("charge_id", activeCharge.SessionID).
+					Msg("telemetry: drive starting while charge active — force-completing charge")
+				t.completeChargeLocked(ctx, vehicleID, activeCharge, signals)
+			}
 			t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, true)
 			return
 		}
@@ -345,6 +353,12 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 	if speed > 0 && !hasDrive {
 		// Speed > 0, no gear, no active drive → START DRIVE (fallback)
+		// Force-complete any active charge (same as gear-based path)
+		if activeCharge, hasCharge := t.activeCharges[vehicleID]; hasCharge {
+			log.Info().Int64("vehicle_id", vehicleID).Int64("charge_id", activeCharge.SessionID).
+				Msg("telemetry: drive starting (speed) while charge active — force-completing charge")
+			t.completeChargeLocked(ctx, vehicleID, activeCharge, signals)
+		}
 		t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, false)
 
 	} else if speed > 0 && hasDrive {
@@ -769,6 +783,12 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 }
 
 func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}) {
+	// Guard: prevent double-completion race between cleanup and normal end
+	if active.Completing {
+		return
+	}
+	active.Completing = true
+
 	// Flush any remaining accumulated signals before closing
 	if signals != nil {
 		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
@@ -1328,6 +1348,12 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 }
 
 func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}) {
+	// Guard: prevent double-completion race between cleanup and normal end
+	if active.Completing {
+		return
+	}
+	active.Completing = true
+
 	// Flush remaining accumulated signals
 	if signals != nil {
 		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)

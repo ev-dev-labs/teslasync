@@ -104,6 +104,10 @@ var signalToColumn = map[string]string{
 	"WheelType":     "wheel_type",
 	"ExteriorColor": "exterior_color",
 
+	// State Machine (persisted for pod restart recovery)
+	"_LastGear":      "last_gear",
+	"_LastSpeedTime": "last_speed_time",
+
 	// Vehicle Configuration
 	"Trim":                    "trim",
 	"RoofColor":               "roof_color",
@@ -244,7 +248,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		// Fleet Telemetry can occasionally produce time.Time or string values
 		// for columns that expect numeric/boolean types.
 		switch v.(type) {
-		case float64, int, int64, bool, string:
+		case float64, int, int64, bool, string, time.Time:
 			// OK — these are the types pgx can handle for the live_state columns
 		default:
 			// Skip unexpected types (e.g., time.Time, map, slice)
@@ -312,7 +316,8 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		       sw_update_version, sw_update_download_pct, sw_update_install_pct,
 		       sw_update_expected_duration, sw_update_scheduled_start,
 		       trim, roof_color, efficiency_package, rear_seat_heaters, sunroof_installed,
-		       europe_vehicle, right_hand_drive, remote_start_enabled, offroad_lightbar_present
+		       europe_vehicle, right_hand_drive, remote_start_enabled, offroad_lightbar_present,
+		       last_gear, last_speed_time
 		FROM vehicle_live_state WHERE vehicle_id = $1`, vehicleID)
 
 	var lat, lon, speed, power, odo, idealR, ratedR, estR, energyRem *float64
@@ -334,6 +339,8 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	var speedLimitMode, valetMode, serviceMode *bool
 	var lightsHazards, lightsHighBeams *bool
 	var europeVehicle, rightHandDrive, remoteStartEnabled, offroadLightbar *bool
+	var lastGearDB *string
+	var lastSpeedTimeDB *time.Time
 
 	err := row.Scan(
 		&lat, &lon, &heading, &speed, &power, &odo, &gear,
@@ -353,6 +360,7 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		&swExpectedDur, &swScheduledStart,
 		&trimVal, &roofColor, &efficiencyPkg, &rearSeatHeaters, &sunroofInstalled,
 		&europeVehicle, &rightHandDrive, &remoteStartEnabled, &offroadLightbar,
+		&lastGearDB, &lastSpeedTimeDB,
 	)
 	if err != nil {
 		return nil, err
@@ -428,6 +436,9 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if rightHandDrive != nil { result["RightHandDrive"] = *rightHandDrive }
 	if remoteStartEnabled != nil { result["RemoteStartEnabled"] = *remoteStartEnabled }
 	if offroadLightbar != nil { result["OffroadLightbarPresent"] = *offroadLightbar }
+	// State machine recovery
+	if lastGearDB != nil { result["_LastGear"] = *lastGearDB }
+	if lastSpeedTimeDB != nil { result["_LastSpeedTime"] = *lastSpeedTimeDB }
 
 	return result, nil
 }
