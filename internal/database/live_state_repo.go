@@ -86,25 +86,20 @@ var signalToColumn = map[string]string{
 // FlushLiveState upserts the vehicle's live state into vehicle_live_state.
 // Only columns with non-nil values in the signals map are updated.
 func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
-	// Map signal names to column names and values
+	// Collect column names and values; parameter indices are computed at the
+	// end so INSERT and ON CONFLICT UPDATE use identical numbering.
 	cols := []string{}
 	vals := []interface{}{}
-	updates := []string{}
-	paramIdx := 2 // $1 is vehicle_id
 
 	// Handle Location (JSON object with latitude/longitude)
 	if loc, ok := signals["Location"].(map[string]interface{}); ok {
 		if lat, ok := loc["latitude"]; ok {
-			paramIdx++
 			cols = append(cols, "latitude")
 			vals = append(vals, lat)
-			updates = append(updates, fmt.Sprintf("latitude = $%d", paramIdx))
 		}
 		if lon, ok := loc["longitude"]; ok {
-			paramIdx++
 			cols = append(cols, "longitude")
 			vals = append(vals, lon)
-			updates = append(updates, fmt.Sprintf("longitude = $%d", paramIdx))
 		}
 	}
 
@@ -115,10 +110,8 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 			pc, pcOk := toFloat64(signals["PackCurrent"])
 			if pvOk && pcOk {
 				power := pv * pc / 1000.0
-				paramIdx++
 				cols = append(cols, "power")
 				vals = append(vals, power)
-				updates = append(updates, fmt.Sprintf("power = $%d", paramIdx))
 			}
 		}
 	}
@@ -127,28 +120,22 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	if v, ok := signals["HvacPower"]; ok {
 		s := fmt.Sprintf("%v", v)
 		isOn := strings.Contains(s, "On") || strings.Contains(s, "Precondition")
-		paramIdx++
 		cols = append(cols, "hvac_power")
 		vals = append(vals, isOn)
-		updates = append(updates, fmt.Sprintf("hvac_power = $%d", paramIdx))
 	}
 
 	// Handle HvacFanSpeed
 	if v, ok := signals["HvacFanSpeed"]; ok {
-		paramIdx++
 		cols = append(cols, "fan_speed")
 		vals = append(vals, v)
-		updates = append(updates, fmt.Sprintf("fan_speed = $%d", paramIdx))
 	}
 
 	// Handle SentryMode (enum → boolean)
 	if v, ok := signals["SentryMode"]; ok {
 		s := fmt.Sprintf("%v", v)
 		isActive := !strings.Contains(s, "Off") && s != "" && s != "false" && s != "0"
-		paramIdx++
 		cols = append(cols, "sentry_mode")
 		vals = append(vals, isActive)
-		updates = append(updates, fmt.Sprintf("sentry_mode = $%d", paramIdx))
 	}
 
 	// Handle Locked (may be bool or string)
@@ -160,10 +147,8 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		case string:
 			locked = lv == "true" || lv == "1"
 		}
-		paramIdx++
 		cols = append(cols, "locked")
 		vals = append(vals, locked)
-		updates = append(updates, fmt.Sprintf("locked = $%d", paramIdx))
 	}
 
 	// Map all simple signals
@@ -191,14 +176,11 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		case float64, int, int64, bool, string:
 			// OK — these are the types pgx can handle for the live_state columns
 		default:
-			// Skip unexpected types (e.g., time.Time, map, slice) to prevent
-			// "column X is of type double precision but expression is of type timestamp" errors
+			// Skip unexpected types (e.g., time.Time, map, slice)
 			continue
 		}
-		paramIdx++
 		cols = append(cols, colName)
 		vals = append(vals, v)
-		updates = append(updates, fmt.Sprintf("%s = $%d", colName, paramIdx))
 	}
 
 	if len(cols) == 0 {
@@ -206,16 +188,18 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	}
 
 	// Always update updated_at
-	paramIdx++
 	cols = append(cols, "updated_at")
 	vals = append(vals, time.Now().UTC())
-	updates = append(updates, fmt.Sprintf("updated_at = $%d", paramIdx))
 
-	// Build the UPSERT query
+	// Build parameter placeholders and update clauses using the same indices.
+	// $1 is vehicle_id; column values start at $2.
 	colList := strings.Join(cols, ", ")
 	placeholders := make([]string, len(cols))
-	for i := range cols {
-		placeholders[i] = fmt.Sprintf("$%d", i+2) // $1 is vehicle_id
+	updates := make([]string, len(cols))
+	for i, col := range cols {
+		idx := i + 2 // $1 is vehicle_id
+		placeholders[i] = fmt.Sprintf("$%d", idx)
+		updates[i] = fmt.Sprintf("%s = $%d", col, idx)
 	}
 
 	query := fmt.Sprintf(
