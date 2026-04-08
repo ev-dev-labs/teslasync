@@ -143,7 +143,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
-		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder),
+		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus),
 		staleTimeout:   staleTimeout,
 		bgCtx:          bgCtx,
@@ -163,6 +163,9 @@ func (h *TelemetryHandler) SetRawTelemetryRepo(repo *database.RawTelemetryRepo) 
 // SetSignalStore sets the in-memory signal store for real-time state tracking.
 func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 	h.signalStore = store
+	if h.sessionTracker != nil {
+		h.sessionTracker.signalStore = store
+	}
 }
 
 // SetEventHub sets the SSE event hub for real-time browser updates.

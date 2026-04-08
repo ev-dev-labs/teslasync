@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // TelemetrySessionTracker detects drive starts/ends and charge starts/ends
@@ -29,6 +30,7 @@ type TelemetrySessionTracker struct {
 	placesCache       *database.PlacesCacheRepo
 	eventBus          *events.Bus
 	geocoder          geocoding.Geocoder
+	signalStore       *signal.Store
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
@@ -138,7 +140,7 @@ type streamingCharge struct {
 }
 
 // NewTelemetrySessionTracker creates a session tracker with comprehensive data tracking.
-func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder geocoding.Geocoder) *TelemetrySessionTracker {
+func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder geocoding.Geocoder, store *signal.Store) *TelemetrySessionTracker {
 	return &TelemetrySessionTracker{
 		db:            db,
 		driveRepo:     database.NewDriveRepo(db),
@@ -150,6 +152,7 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		placesCache:   database.NewPlacesCacheRepo(db),
 		eventBus:      eventBus,
 		geocoder:      geocoder,
+		signalStore:   store,
 		activeDrives:  make(map[int64]*streamingDrive),
 		activeCharges: make(map[int64]*streamingCharge),
 	}
@@ -376,7 +379,24 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			active.LastSpeedZeroTime = time.Now().UTC()
 		}
 
+		// Before ending: check SignalStore for last known Gear.
+		// If the car's gear is still D/R (traffic light, jam, long stop), do NOT end the drive.
+		// Gear signals only fire on CHANGE — a Gear=D from 2 hours ago is still valid
+		// as long as no Gear=P was received since.
 		if !active.LastSpeedZeroTime.IsZero() && time.Since(active.LastSpeedZeroTime) > 2*time.Minute {
+			if t.signalStore != nil {
+				if gv := t.signalStore.Get(vehicleID, "Gear"); gv != nil {
+					gearStr, _ := gv.Raw.(string)
+					if gearStr == "D" || gearStr == "R" {
+						// Last known Gear is D/R — car hasn't shifted to P.
+						// Keep the drive alive (traffic light, jam, accident, etc.)
+						active.LastSpeedZeroTime = time.Now().UTC()
+						log.Debug().Int64("vehicle_id", vehicleID).Str("gear", gearStr).
+							Msg("telemetry: speed=0 >2min but last Gear=D/R — keeping drive alive")
+						return
+					}
+				}
+			}
 			t.completeDriveLocked(ctx, vehicleID, active, signals)
 		}
 	}
