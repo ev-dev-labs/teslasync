@@ -6,11 +6,12 @@ import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import {
   Lock, Unlock, Wind, Car, Zap, Power, Shield,
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle, Loader2,
-  Thermometer, Battery, Wifi
+  Thermometer, Battery, Wifi, Cpu
 } from 'lucide-react'
 import { getVehicleStatus } from '../api'
 import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 
 interface CommandButtonProps {
@@ -79,6 +80,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
   const queryClient = useQueryClient()
   const toast = useToast()
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
+  const { state: liveState } = useVehicleLive(vehicle.id)
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string } | null>(null)
   const status = getVehicleStatus(vehicle, state)
   const name = vehicle.display_name || vehicle.vin
@@ -139,6 +141,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
                 { icon: Zap, label: 'Range', value: `${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
                 { icon: Thermometer, label: 'Inside', value: `${convertTemp(state.inside_temp).toFixed(1)}${tempUnit}`, color: state.inside_temp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
                 { icon: Wifi, label: 'Status', value: status, color: status === 'online' || status === 'driving' ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
+                { icon: Cpu, label: 'Firmware', value: liveState.version || 'N/A', color: 'text-[var(--text-primary)]' },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
                   <item.icon className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />

@@ -1482,4 +1482,52 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if active.EnergyAdded > 0 {
 		TotalEnergyKwh.Add(active.EnergyAdded)
 	}
+
+	// Backfill missing start/end values from nearest position data (async)
+	go t.backfillChargeValues(active, vehicleID)
+}
+
+// backfillChargeValues fills missing charging session start/end values
+// from the nearest position data, similar to backfillDriveValues.
+func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, vehicleID int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	const lookupWindow = 10 * time.Minute
+	backfill := map[string]interface{}{}
+
+	// Backfill start battery from nearest position
+	if active.StartBatteryLevel == 0 {
+		startPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, active.StartTime, lookupWindow)
+		if err == nil && startPos != nil && startPos.BatteryLvl > 0 {
+			backfill["start_battery_level"] = startPos.BatteryLvl
+		}
+		if err == nil && startPos != nil && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
+			backfill["start_range_km"] = *startPos.RatedRange
+		}
+	}
+
+	// Backfill end battery/range from nearest position to end time
+	endTime := time.Now().UTC()
+	endPos, err := t.posRepo.FindNearestPosition(ctx, vehicleID, endTime, lookupWindow)
+	if err == nil && endPos != nil {
+		if endPos.BatteryLvl > 0 {
+			backfill["end_battery_level"] = endPos.BatteryLvl
+		}
+		if endPos.RatedRange != nil && *endPos.RatedRange > 0 {
+			backfill["end_range_km"] = *endPos.RatedRange
+		}
+		if active.Latitude == nil && endPos.Latitude != 0 {
+			backfill["latitude"] = endPos.Latitude
+			backfill["longitude"] = endPos.Longitude
+		}
+	}
+
+	if len(backfill) > 0 {
+		if err := t.chargeRepo.PartialUpdate(ctx, active.SessionID, backfill); err != nil {
+			log.Warn().Err(err).Int64("session_id", active.SessionID).Msg("telemetry: failed to backfill charge values")
+		} else {
+			log.Info().Int64("session_id", active.SessionID).Int("fields", len(backfill)).Msg("telemetry: backfilled charge values from nearest positions")
+		}
+	}
 }

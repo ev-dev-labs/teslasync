@@ -37,6 +37,7 @@ type TelemetryHandler struct {
 	locationRepo   *database.LocationSnapshotRepo
 	safetyRepo     *database.SafetyRepo
 	userPrefRepo   *database.UserPreferenceRepo
+	swUpdateRepo   *database.SoftwareUpdateRepo
 	mqttClient     *mqtt.Client
 	logRepo        *database.APICallLogRepo
 	eventHub       *EventHub
@@ -137,6 +138,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		locationRepo:   database.NewLocationSnapshotRepo(db),
 		safetyRepo:     database.NewSafetyRepo(db),
 		userPrefRepo:   database.NewUserPreferenceRepo(db),
+		swUpdateRepo:   database.NewSoftwareUpdateRepo(db),
 		mqttClient:     mc,
 		logRepo:        database.NewAPICallLogRepo(db),
 		eventHub:       hub,
@@ -2213,6 +2215,19 @@ func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int
 	if v, ok := signals["Version"]; ok {
 		s := toString(v)
 		snap.Version = &s
+		// Track firmware version changes — only insert if different from latest
+		if s != "" {
+			go func(vid int64, ver string) {
+				fwCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+				defer cancel()
+				inserted, err := h.swUpdateRepo.InsertIfChanged(fwCtx, vid, ver, "installed")
+				if err != nil {
+					log.Warn().Err(err).Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: failed to track firmware version")
+				} else if inserted {
+					log.Info().Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: new firmware version detected")
+				}
+			}(vehicleID, s)
+		}
 	}
 	if v, ok := signals["VehicleName"]; ok {
 		s := toString(v)
