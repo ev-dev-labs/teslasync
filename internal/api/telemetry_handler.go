@@ -378,10 +378,15 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 
 	// Log every signal to MongoDB for full history (async, non-blocking)
 	if vehicleID > 0 && h.signalLogRepo != nil {
+		// Copy map to avoid concurrent map read/write with the goroutine
+		signalsCopy := make(map[string]interface{}, len(signals))
+		for k, v := range signals {
+			signalsCopy[k] = v
+		}
 		go func() {
 			logCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := h.signalLogRepo.WriteBatch(logCtx, vehicleID, signals); err != nil {
+			if err := h.signalLogRepo.WriteBatch(logCtx, vehicleID, signalsCopy); err != nil {
 				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to log signals to MongoDB")
 			}
 		}()
