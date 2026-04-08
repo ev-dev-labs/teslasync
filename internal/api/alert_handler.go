@@ -13,12 +13,14 @@ import (
 type AlertHandler struct {
 	alertRepo     *database.AlertRepo
 	alertRuleRepo *database.AlertRuleRepo
+	eventHub      *EventHub
 }
 
-func NewAlertHandler(db *database.DB) *AlertHandler {
+func NewAlertHandler(db *database.DB, hub *EventHub) *AlertHandler {
 	return &AlertHandler{
 		alertRepo:     database.NewAlertRepo(db),
 		alertRuleRepo: database.NewAlertRuleRepo(db),
+		eventHub:      hub,
 	}
 }
 
@@ -169,4 +171,59 @@ func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// TestRule fires a test alert for a rule — creates a test alert in DB and broadcasts via SSE.
+func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name        string `json:"name"`
+		Severity    string `json:"severity"`
+		MsgTemplate string `json:"msg_template"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Name == "" {
+		body.Name = "Test Rule"
+	}
+	if body.Severity == "" {
+		body.Severity = "info"
+	}
+	message := body.MsgTemplate
+	if message == "" {
+		message = "This is a test notification from Alert Studio"
+	}
+
+	// Create test alert in DB
+	alert := &models.Alert{
+		Type:     "test",
+		Severity: body.Severity,
+		Title:    "[TEST] " + body.Name,
+		Message:  message,
+	}
+	if err := h.alertRepo.Create(r.Context(), alert); err != nil {
+		log.Error().Err(err).Msg("failed to create test alert")
+		writeError(w, http.StatusInternalServerError, "failed to create test alert")
+		return
+	}
+
+	// Broadcast via SSE
+	if h.eventHub != nil {
+		h.eventHub.Broadcast("alert", map[string]interface{}{
+			"id":        alert.ID,
+			"type":      "test",
+			"severity":  body.Severity,
+			"title":     "[TEST] " + body.Name,
+			"message":   message,
+			"timestamp": alert.CreatedAt,
+			"is_test":   true,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "sent",
+		"alert":   alert,
+		"message": "Test notification sent — check your browser toast and notification channels",
+	})
 }

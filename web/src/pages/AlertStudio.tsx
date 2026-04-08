@@ -593,6 +593,25 @@ export default function AlertStudio() {
               )}
 
               <button
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20 transition-colors"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/v1/alerts/test', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio' }),
+                    })
+                    if (res.ok) toast.success('Test sent', 'Check your browser toast notification')
+                    else toast.error('Test failed', 'Could not send test notification')
+                  } catch { toast.error('Test failed', 'Network error') }
+                }}
+                disabled={!editor.name.trim()}
+              >
+                <Bell className="h-3.5 w-3.5" />
+                Test
+              </button>
+
+              <button
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition-colors ml-auto"
                 onClick={handleNewRule}
               >
