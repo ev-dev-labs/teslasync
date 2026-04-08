@@ -130,7 +130,7 @@ export default function DrivingDynamics() {
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
 
   /* --- Live SSE state for instant gear updates --- */

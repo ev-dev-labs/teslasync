@@ -189,7 +189,7 @@ export default function ClimateControl() {
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
 
   // ---- derived data -------------------------------------------------------

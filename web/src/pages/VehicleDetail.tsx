@@ -88,25 +88,25 @@ export default function VehicleDetail() {
   const { data: motorData } = useQuery({
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
 
   const { data: climateData } = useQuery({
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
 
   const { data: securityData } = useQuery({
     queryKey: ['security-latest', vehicleId],
     queryFn: () => getSecurityLatest(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
 
   const { data: tireData } = useQuery({
     queryKey: ['tire-latest', vehicleId],
     queryFn: () => getLatestTirePressure(vehicleId),
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
   const { data: chargingTelemetry } = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],

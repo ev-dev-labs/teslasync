@@ -382,7 +382,7 @@ export default function SecurityAccess() {
     queryKey: ['security-latest', vehicleId],
     queryFn: () => getSecurityLatest(vehicleId!),
     enabled: !!vehicleId,
-    refetchInterval: 3000,
+    refetchInterval: 30_000,
   })
 
   // ── Computed values ──────────────────────────────────────────────────────────
