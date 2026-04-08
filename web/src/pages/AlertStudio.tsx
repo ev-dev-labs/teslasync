@@ -599,7 +599,7 @@ export default function AlertStudio() {
                     await fetch('/api/v1/alerts/test', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio' }),
+                      body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio', notify_channels: editor.notify_channels }),
                     }).then(r => { if (r.ok) toast.success('Test sent!', 'Check your browser toast and Discord/Slack'); else throw new Error() })
                   } catch { toast.error('Test failed', 'Could not send test notification') }
                 }}

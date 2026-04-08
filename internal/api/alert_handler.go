@@ -182,9 +182,10 @@ func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 // TestRule fires a test alert for a rule — creates a test alert in DB and broadcasts via SSE.
 func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name        string `json:"name"`
-		Severity    string `json:"severity"`
-		MsgTemplate string `json:"msg_template"`
+		Name           string  `json:"name"`
+		Severity       string  `json:"severity"`
+		MsgTemplate    string  `json:"msg_template"`
+		NotifyChannels []int64 `json:"notify_channels"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -227,12 +228,12 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Dispatch to ALL enabled notification channels
-	channels, err := h.notifRepo.GetAllChannels(r.Context())
+	// Dispatch to selected notification channels (or all if none specified)
 	dispatched := 0
-	if err == nil {
-		for _, ch := range channels {
-			if !ch.Enabled {
+	if len(body.NotifyChannels) > 0 {
+		for _, chID := range body.NotifyChannels {
+			ch, err := h.notifRepo.GetChannel(r.Context(), chID)
+			if err != nil || ch == nil {
 				continue
 			}
 			req := &notification.Request{
@@ -244,6 +245,24 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 			}
 			if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
 				dispatched++
+			}
+		}
+	} else {
+		// No channels selected — dispatch to all enabled channels
+		channels, err := h.notifRepo.GetAllChannels(r.Context())
+		if err == nil {
+			for _, ch := range channels {
+				if !ch.Enabled { continue }
+				req := &notification.Request{
+					ChannelType: ch.Type,
+					Config:      ch.Config,
+					Title:       "[TEST] " + body.Name,
+					Message:     message,
+					ChannelID:   ch.ID,
+				}
+				if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
+					dispatched++
+				}
 			}
 		}
 	}
