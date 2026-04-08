@@ -22,7 +22,7 @@ import { useToast } from '../components/Toast'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
   AlertTriangle, AlertCircle, Info, Battery, Gauge, Lock,
-  Car, Droplets, Clock, Pencil, Sparkles,
+  Car, Droplets, Clock, Pencil, Sparkles, Thermometer, Shield, Search,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
@@ -42,6 +42,7 @@ type Severity = keyof typeof severityConfig
 interface RuleTemplate {
   name: string
   icon: React.ElementType
+  category: string
   severity: Severity
   msg_template: string
   cooldown_min: number
@@ -49,77 +50,80 @@ interface RuleTemplate {
 }
 
 const ruleTemplates: RuleTemplate[] = [
-  {
-    name: 'Battery Low (< 20%)',
-    icon: Battery,
-    severity: 'warning',
-    msg_template: 'Battery at {{BatteryLevel}}%',
-    cooldown_min: 30,
-    conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '<', value: 20 }] },
-  },
-  {
-    name: 'Battery Full (≥ 90%)',
-    icon: Battery,
-    severity: 'info',
-    msg_template: 'Battery reached {{BatteryLevel}}%',
-    cooldown_min: 60,
-    conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '>=', value: 90 }] },
-  },
-  {
-    name: 'Drive Started',
-    icon: Car,
-    severity: 'info',
-    msg_template: 'Drive started — gear is {{Gear}}',
-    cooldown_min: 5,
-    conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'D' }] },
-  },
-  {
-    name: 'Drive Ended',
-    icon: Car,
-    severity: 'info',
-    msg_template: 'Drive ended — gear is {{Gear}}',
-    cooldown_min: 5,
-    conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'P' }] },
-  },
-  {
-    name: 'Charge Complete',
-    icon: Zap,
-    severity: 'info',
-    msg_template: 'Charging complete at {{BatteryLevel}}%',
-    cooldown_min: 60,
-    conditions: { op: 'AND', rules: [{ signal: 'ChargeState', compare: 'changed_to', value: 'Complete' }] },
-  },
-  {
-    name: 'Speed Limit Exceeded',
-    icon: Gauge,
-    severity: 'warning',
-    msg_template: 'Speed {{VehicleSpeed}} km/h exceeded limit',
-    cooldown_min: 15,
-    conditions: { op: 'AND', rules: [{ signal: 'VehicleSpeed', compare: '>', value: 120 }] },
-  },
-  {
-    name: 'Car Unlocked While Parked',
-    icon: Lock,
-    severity: 'critical',
-    msg_template: 'Vehicle is unlocked and parked!',
-    cooldown_min: 30,
-    conditions: {
-      op: 'AND',
-      rules: [
-        { signal: 'Locked', compare: 'is_false' },
-        { signal: 'Gear', compare: '==', value: 'P' },
-      ],
-    },
-  },
-  {
-    name: 'Tire Pressure Low',
-    icon: Droplets,
-    severity: 'warning',
-    msg_template: 'Low tire pressure detected',
-    cooldown_min: 60,
-    conditions: { op: 'AND', rules: [{ signal: 'TpmsHardWarnings', compare: 'is_true' }] },
-  },
+  // ── Battery ────────────────────────────────────────
+  { name: 'Battery Low (< 20%)', icon: Battery, category: 'Battery', severity: 'warning', msg_template: 'Battery at {{BatteryLevel}}%', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '<', value: 20 }] } },
+  { name: 'Battery Critical (< 10%)', icon: Battery, category: 'Battery', severity: 'critical', msg_template: 'Battery critically low at {{BatteryLevel}}%!', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '<', value: 10 }] } },
+  { name: 'Battery Full (≥ 90%)', icon: Battery, category: 'Battery', severity: 'info', msg_template: 'Battery reached {{BatteryLevel}}%', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '>=', value: 90 }] } },
+  { name: 'Charge Limit Reached', icon: Battery, category: 'Battery', severity: 'info', msg_template: 'Battery at charge limit {{ChargeLimitSoc}}%', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'BatteryLevel', compare: '>=', value: 80 }] } },
+  { name: 'Range Below 50 km', icon: Battery, category: 'Battery', severity: 'warning', msg_template: 'Range low: {{RatedRange}} km remaining', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'RatedRange', compare: '<', value: 50 }] } },
+
+  // ── Charging ───────────────────────────────────────
+  { name: 'Charge Complete', icon: Zap, category: 'Charging', severity: 'info', msg_template: 'Charging complete at {{BatteryLevel}}%', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ChargeState', compare: 'changed_to', value: 'Complete' }] } },
+  { name: 'Charging Started', icon: Zap, category: 'Charging', severity: 'info', msg_template: 'Charging started — {{DetailedChargeState}}', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'DetailedChargeState', compare: 'changed_to', value: 'Charging' }] } },
+  { name: 'Charging Stopped Unexpectedly', icon: Zap, category: 'Charging', severity: 'warning', msg_template: 'Charging stopped — {{DetailedChargeState}}', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'DetailedChargeState', compare: 'changed_to', value: 'Stopped' }] } },
+  { name: 'Supercharging (DC Fast)', icon: Zap, category: 'Charging', severity: 'info', msg_template: 'Supercharging at {{DCChargingPower}} kW', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'DCChargingPower', compare: '>', value: 50 }] } },
+  { name: 'Slow Charge Rate', icon: Zap, category: 'Charging', severity: 'warning', msg_template: 'Charging slow: {{ChargeAmps}}A at {{ChargerVoltage}}V', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ChargeAmps', compare: '<', value: 5 }, { signal: 'ChargeAmps', compare: '>', value: 0 }] } },
+
+  // ── Driving ────────────────────────────────────────
+  { name: 'Drive Started', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Drive started — gear is {{Gear}}', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'D' }] } },
+  { name: 'Drive Ended', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Drive ended — gear is {{Gear}}', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'P' }] } },
+  { name: 'Speed Limit Exceeded', icon: Gauge, category: 'Driving', severity: 'warning', msg_template: 'Speed {{VehicleSpeed}} km/h exceeded limit', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'VehicleSpeed', compare: '>', value: 120 }] } },
+  { name: 'High Speed Alert (> 160 km/h)', icon: Gauge, category: 'Driving', severity: 'critical', msg_template: 'Very high speed: {{VehicleSpeed}} km/h!', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'VehicleSpeed', compare: '>', value: 160 }] } },
+  { name: 'Reverse Gear Engaged', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Vehicle in reverse', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'R' }] } },
+  { name: 'Drive Started Away from Home', icon: Car, category: 'Driving', severity: 'warning', msg_template: 'Driving from non-home location', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'Gear', compare: 'changed_to', value: 'D' }, { signal: 'LocatedAtHome', compare: 'is_false' }] } },
+  { name: 'Odometer Milestone (100k km)', icon: Car, category: 'Driving', severity: 'info', msg_template: 'Odometer: {{Odometer}} km', cooldown_min: 1440, conditions: { op: 'AND', rules: [{ signal: 'Odometer', compare: '>', value: 100000 }] } },
+
+  // ── Security ───────────────────────────────────────
+  { name: 'Car Unlocked While Parked', icon: Lock, category: 'Security', severity: 'critical', msg_template: 'Vehicle is unlocked and parked!', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'Locked', compare: 'is_false' }, { signal: 'Gear', compare: '==', value: 'P' }] } },
+  { name: 'Vehicle Locked', icon: Lock, category: 'Security', severity: 'info', msg_template: 'Vehicle locked', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Locked', compare: 'changed_to', value: true }] } },
+  { name: 'Vehicle Unlocked', icon: Lock, category: 'Security', severity: 'info', msg_template: 'Vehicle unlocked', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Locked', compare: 'changed_to', value: false }] } },
+  { name: 'Sentry Mode Activated', icon: Shield, category: 'Security', severity: 'info', msg_template: 'Sentry mode activated', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'SentryMode', compare: 'is_true' }] } },
+  { name: 'Door Opened While Parked', icon: Lock, category: 'Security', severity: 'warning', msg_template: 'Door opened — {{DoorState}}', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'DoorState', compare: '!=', value: 'Closed' }, { signal: 'Gear', compare: '==', value: 'P' }] } },
+  { name: 'Window Left Open', icon: Car, category: 'Security', severity: 'warning', msg_template: 'Window open — FD: {{FdWindow}}', cooldown_min: 60, conditions: { op: 'OR', rules: [{ signal: 'FdWindow', compare: '!=', value: 'Closed' }, { signal: 'FpWindow', compare: '!=', value: 'Closed' }, { signal: 'RdWindow', compare: '!=', value: 'Closed' }, { signal: 'RpWindow', compare: '!=', value: 'Closed' }] } },
+  { name: 'Valet Mode Enabled', icon: Shield, category: 'Security', severity: 'info', msg_template: 'Valet mode enabled', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ValetModeEnabled', compare: 'is_true' }] } },
+  { name: 'Guest Mode Enabled', icon: Shield, category: 'Security', severity: 'warning', msg_template: 'Guest mode enabled', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'GuestModeEnabled', compare: 'is_true' }] } },
+
+  // ── Climate ────────────────────────────────────────
+  { name: 'Cabin Overheat (> 40°C)', icon: Thermometer, category: 'Climate', severity: 'warning', msg_template: 'Cabin temp: {{InsideTemp}}°C', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'InsideTemp', compare: '>', value: 40 }] } },
+  { name: 'Cabin Freezing (< 0°C)', icon: Thermometer, category: 'Climate', severity: 'warning', msg_template: 'Cabin temp: {{InsideTemp}}°C — freezing!', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'InsideTemp', compare: '<', value: 0 }] } },
+  { name: 'HVAC Left On While Parked', icon: Thermometer, category: 'Climate', severity: 'info', msg_template: 'HVAC running while parked', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'HvacPower', compare: 'is_true' }, { signal: 'Gear', compare: '==', value: 'P' }] } },
+  { name: 'Climate Keeper Active', icon: Thermometer, category: 'Climate', severity: 'info', msg_template: 'Climate keeper: {{ClimateKeeperMode}}', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'ClimateKeeperMode', compare: '!=', value: 'Off' }] } },
+  { name: 'Steering Wheel Heater On', icon: Thermometer, category: 'Climate', severity: 'info', msg_template: 'Steering wheel heater level {{HvacSteeringWheelHeatLevel}}', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'HvacSteeringWheelHeatLevel', compare: '>', value: 0 }] } },
+
+  // ── Tire Pressure ──────────────────────────────────
+  { name: 'Tire Pressure Low', icon: Droplets, category: 'Tire Pressure', severity: 'warning', msg_template: 'Low tire pressure detected', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'TpmsHardWarnings', compare: 'is_true' }] } },
+  { name: 'Tire Pressure Soft Warning', icon: Droplets, category: 'Tire Pressure', severity: 'info', msg_template: 'Tire pressure slightly low', cooldown_min: 120, conditions: { op: 'AND', rules: [{ signal: 'TpmsSoftWarnings', compare: 'is_true' }] } },
+  { name: 'Front Left Tire Low (< 2.2 bar)', icon: Droplets, category: 'Tire Pressure', severity: 'warning', msg_template: 'FL tire: {{TpmsPressureFl}} bar', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'TpmsPressureFl', compare: '<', value: 2.2 }] } },
+
+  // ── Location ───────────────────────────────────────
+  { name: 'Arrived at Home', icon: Car, category: 'Location', severity: 'info', msg_template: 'Vehicle arrived at home', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'LocatedAtHome', compare: 'changed_to', value: true }] } },
+  { name: 'Left Home', icon: Car, category: 'Location', severity: 'info', msg_template: 'Vehicle left home', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'LocatedAtHome', compare: 'changed_from', value: true }] } },
+  { name: 'Arrived at Work', icon: Car, category: 'Location', severity: 'info', msg_template: 'Vehicle arrived at work', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'LocatedAtWork', compare: 'changed_to', value: true }] } },
+  { name: 'Navigation Started', icon: Car, category: 'Location', severity: 'info', msg_template: 'Navigating to {{DestinationName}}', cooldown_min: 10, conditions: { op: 'AND', rules: [{ signal: 'DestinationName', compare: '!=', value: '' }] } },
+
+  // ── Safety ─────────────────────────────────────────
+  { name: 'Driver Seatbelt Unbuckled', icon: Shield, category: 'Safety', severity: 'warning', msg_template: 'Driver seatbelt unbuckled while driving!', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'DriverSeatBelt', compare: 'is_false' }, { signal: 'Gear', compare: '==', value: 'D' }] } },
+  { name: 'Speed Limit Mode Active', icon: Shield, category: 'Safety', severity: 'info', msg_template: 'Speed limit mode active', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'SpeedLimitMode', compare: 'is_true' }] } },
+  { name: 'PIN to Drive Disabled', icon: Shield, category: 'Safety', severity: 'warning', msg_template: 'PIN to Drive has been disabled', cooldown_min: 1440, conditions: { op: 'AND', rules: [{ signal: 'PinToDriveEnabled', compare: 'is_false' }] } },
+
+  // ── Motor / Powertrain ─────────────────────────────
+  { name: 'High Motor Temperature (> 80°C)', icon: Thermometer, category: 'Motor', severity: 'warning', msg_template: 'Motor stator temp: {{DiStatorTempF}}°C', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'DiStatorTempF', compare: '>', value: 80 }] } },
+  { name: 'HVIL Fault', icon: Shield, category: 'Motor', severity: 'critical', msg_template: 'HV interlock fault detected!', cooldown_min: 5, conditions: { op: 'AND', rules: [{ signal: 'Hvil', compare: '==', value: 'Fault' }] } },
+  { name: 'High Regenerative Braking', icon: Zap, category: 'Motor', severity: 'info', msg_template: 'Regen power: {{Power}} kW', cooldown_min: 15, conditions: { op: 'AND', rules: [{ signal: 'Power', compare: '<', value: -50 }] } },
+
+  // ── Software ───────────────────────────────────────
+  { name: 'Software Update Available', icon: Zap, category: 'Software', severity: 'info', msg_template: 'Update available: {{SoftwareUpdateVersion}}', cooldown_min: 1440, conditions: { op: 'AND', rules: [{ signal: 'SoftwareUpdateVersion', compare: '!=', value: '' }] } },
+  { name: 'Software Update Installing', icon: Zap, category: 'Software', severity: 'info', msg_template: 'Installing update: {{SoftwareUpdateInstallationPercentComplete}}%', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'SoftwareUpdateInstallationPercentComplete', compare: '>', value: 0 }] } },
+
+  // ── Media ──────────────────────────────────────────
+  { name: 'Music Playing', icon: Car, category: 'Media', severity: 'info', msg_template: 'Now playing: {{MediaNowPlayingTitle}} by {{MediaNowPlayingArtist}}', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'MediaPlaybackStatus', compare: '==', value: 'Playing' }] } },
+  { name: 'Volume Too High', icon: Car, category: 'Media', severity: 'info', msg_template: 'Volume at {{MediaAudioVolume}}', cooldown_min: 30, conditions: { op: 'AND', rules: [{ signal: 'MediaAudioVolume', compare: '>', value: 8 }] } },
+
+  // ── Powershare ─────────────────────────────────────
+  { name: 'Powershare Active', icon: Zap, category: 'Powershare', severity: 'info', msg_template: 'Powershare active: {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 60, conditions: { op: 'AND', rules: [{ signal: 'PowershareStatus', compare: '!=', value: '' }] } },
 ]
+
+const templateCategories = [...new Set(ruleTemplates.map(t => t.category))].sort()
 
 // ─── Empty editor state ──────────────────────────────────────────────────────
 
@@ -176,6 +180,18 @@ export default function AlertStudio() {
   const [editor, setEditor] = useState<EditorState>(freshEditor)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [templateSearch, setTemplateSearch] = useState('')
+  const [templateCategory, setTemplateCategory] = useState<string | null>(null)
+
+  const filteredTemplates = useMemo(() => {
+    let list = ruleTemplates
+    if (templateCategory) list = list.filter(t => t.category === templateCategory)
+    if (templateSearch) {
+      const q = templateSearch.toLowerCase()
+      list = list.filter(t => t.name.toLowerCase().includes(q) || t.msg_template.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+    }
+    return list
+  }, [templateSearch, templateCategory])
 
   const isEditing = selectedId !== null
 
@@ -280,16 +296,51 @@ export default function AlertStudio() {
       {/* Template library */}
       {showTemplates && (
         <FadeIn>
-          <GlassPanel className="p-4">
-            <p className="text-sm font-medium text-[var(--text-primary)] mb-3">Rule Templates</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {ruleTemplates.map(tpl => {
+          <GlassPanel className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Rule Templates — {ruleTemplates.length} pre-built rules</p>
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <input
+                  className="glass-input w-full pl-8 text-xs py-1.5"
+                  placeholder="Search templates…"
+                  value={templateSearch}
+                  onChange={e => setTemplateSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Category tabs */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              <button
+                onClick={() => setTemplateCategory(null)}
+                className={clsx('px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors',
+                  templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                )}
+              >All ({ruleTemplates.length})</button>
+              {templateCategories.map(cat => {
+                const count = ruleTemplates.filter(t => t.category === cat).length
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
+                    className={clsx('px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors',
+                      templateCategory === cat ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    )}
+                  >{cat} ({count})</button>
+                )
+              })}
+            </div>
+
+            {/* Template grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {filteredTemplates.map(tpl => {
                 const Icon = tpl.icon
                 const sev = severityConfig[tpl.severity]
                 return (
                   <button
                     key={tpl.name}
-                    className="glass-panel p-3 text-left hover:border-neon-cyan/30 transition-all group"
+                    className="glass-card p-3 text-left hover:border-neon-cyan/30 transition-all group"
                     onClick={() => handleCloneTemplate(tpl)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
@@ -299,13 +350,19 @@ export default function AlertStudio() {
                       <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{tpl.name}</span>
                     </div>
                     <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{tpl.msg_template}</p>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <Copy className="h-3 w-3 text-[var(--text-muted)]" />
-                      <span className="text-[10px] text-[var(--text-muted)]">Click to use</span>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className={clsx('text-[9px] px-1.5 py-0.5 rounded font-medium', sev.bg, sev.color)}>{tpl.severity}</span>
+                      <div className="flex items-center gap-1">
+                        <Copy className="h-3 w-3 text-[var(--text-muted)]" />
+                        <span className="text-[10px] text-[var(--text-muted)]">Use</span>
+                      </div>
                     </div>
                   </button>
                 )
               })}
+              {filteredTemplates.length === 0 && (
+                <p className="col-span-full text-sm text-[var(--text-muted)] py-8 text-center">No templates match your search</p>
+              )}
             </div>
           </GlassPanel>
         </FadeIn>
