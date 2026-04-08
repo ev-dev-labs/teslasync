@@ -96,45 +96,34 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 
 func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name      string  `json:"name"`
-		Type      string  `json:"type"`
-		Enabled   bool    `json:"enabled"`
-		Threshold float64 `json:"threshold"`
-		Severity  string  `json:"severity"`
-		VehicleID *int64  `json:"vehicle_id"`
+		Name           string          `json:"name"`
+		Type           string          `json:"type"`
+		Enabled        bool            `json:"enabled"`
+		Threshold      float64         `json:"threshold"`
+		Severity       string          `json:"severity"`
+		VehicleID      *int64          `json:"vehicle_id"`
+		Conditions     json.RawMessage `json:"conditions"`
+		CooldownMin    int             `json:"cooldown_min"`
+		MsgTemplate    string          `json:"msg_template"`
+		NotifyChannels []int64         `json:"notify_channels"`
+		Tags           []string        `json:"tags"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if body.Name == "" || body.Type == "" {
-		writeError(w, http.StatusBadRequest, "name and type are required")
+	if body.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-
-	validTypes := map[string]bool{
-		"battery_low": true, "battery_high": true, "speed_limit": true,
-		"geofence_exit": true, "geofence_enter": true,
-		"charge_complete": true, "charge_started": true,
-		"drive_started": true, "drive_ended": true,
-		"sentry_event": true, "vehicle_offline": true,
-		"vampire_drain": true, "tire_pressure_low": true,
-		// System component alerts
-		"system_database": true, "system_mqtt": true, "system_redis": true,
-		"system_tesla_api": true, "system_worker": true,
+	if body.Type == "" {
+		body.Type = "custom"
 	}
-	if !validTypes[body.Type] {
-		writeError(w, http.StatusBadRequest, "invalid alert type")
-		return
+	if body.Severity == "" {
+		body.Severity = "warning"
 	}
-	validSeverity := map[string]bool{"low": true, "medium": true, "high": true, "critical": true}
-	if body.Severity != "" && !validSeverity[body.Severity] {
-		writeError(w, http.StatusBadRequest, "severity must be low, medium, high, or critical")
-		return
-	}
-	if body.Threshold < 0 || body.Threshold > 100000 {
-		writeError(w, http.StatusBadRequest, "threshold must be between 0 and 100000")
-		return
+	if body.CooldownMin <= 0 {
+		body.CooldownMin = 15
 	}
 	if len(body.Name) > 200 {
 		writeError(w, http.StatusBadRequest, "name must be 200 characters or less")
@@ -142,10 +131,16 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rule := &models.AlertRule{
-		Name:      body.Name,
-		Type:      body.Type,
-		Enabled:   body.Enabled,
-		Threshold: body.Threshold,
+		Name:           body.Name,
+		Type:           body.Type,
+		Enabled:        body.Enabled,
+		Threshold:      body.Threshold,
+		Conditions:     body.Conditions,
+		CooldownMin:    body.CooldownMin,
+		Severity:       body.Severity,
+		MsgTemplate:    body.MsgTemplate,
+		NotifyChannels: body.NotifyChannels,
+		Tags:           body.Tags,
 	}
 	if body.VehicleID != nil {
 		rule.VehicleID = body.VehicleID

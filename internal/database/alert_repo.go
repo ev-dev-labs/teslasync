@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -106,9 +107,11 @@ func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRul
 }
 
 func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) error {
-	query := `INSERT INTO alert_rules (name, type, enabled, threshold, vehicle_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id, created_at, updated_at`
-	return r.db.Pool.QueryRow(ctx, query, rule.Name, rule.Type, rule.Enabled, rule.Threshold, rule.VehicleID).
+	condJSON, _ := json.Marshal(rule.Conditions)
+	query := `INSERT INTO alert_rules (name, type, enabled, threshold, vehicle_id, conditions, cooldown_min, severity, msg_template, notify_channels, tags, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()) RETURNING id, created_at, updated_at`
+	return r.db.Pool.QueryRow(ctx, query, rule.Name, rule.Type, rule.Enabled, rule.Threshold, rule.VehicleID,
+		condJSON, rule.CooldownMin, rule.Severity, rule.MsgTemplate, rule.NotifyChannels, rule.Tags).
 		Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
 }
 
