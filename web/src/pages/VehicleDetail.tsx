@@ -969,14 +969,17 @@ export default function VehicleDetail() {
                 <GlassPanel className="p-5">
                   <h3 className="section-title mb-4 flex items-center gap-2">
                     <Settings className="h-4 w-4 text-neon-amber" />
-                    User Preferences
+                    Car Display Preferences
                   </h3>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-3">
+                    These are your vehicle's display settings — you can sync your app to match them from the Settings page.
+                  </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {[
                       { label: 'Distance', value: cleanNil(userPrefData.setting_distance_unit) },
                       { label: 'Temperature', value: cleanNil(userPrefData.setting_temperature_unit) },
                       { label: 'Charge Unit', value: cleanNil(userPrefData.setting_charge_unit) },
-                      { label: 'Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
+                      { label: 'Tire Pressure', value: cleanNil(userPrefData.setting_tire_pressure_unit) },
                       { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
                     ].map(item => (
                       <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">

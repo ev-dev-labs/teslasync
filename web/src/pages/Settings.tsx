@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, AppSettings } from '../api'
+import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, disconnectAuth, syncVehicles, getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig, getVehicles, getUserPreferenceLatest, AppSettings } from '../api'
 import { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Fuel, Zap } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
@@ -107,6 +107,39 @@ export default function Settings() {
       toast.error('Vehicle sync failed', err.message || 'Could not sync vehicles from Tesla')
     },
   })
+
+  // Vehicle user preferences for "Sync from Car" feature
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const firstVehicleId = vehicles?.[0]?.id ?? null
+  const { data: carPrefs } = useQuery({
+    queryKey: ['car-prefs', firstVehicleId],
+    queryFn: () => getUserPreferenceLatest(firstVehicleId!),
+    enabled: firstVehicleId !== null,
+  })
+
+  function syncUnitsFromCar() {
+    if (!carPrefs) return
+    const updates: Partial<AppSettings> = {}
+
+    // Map car's SettingDistanceUnit to app's unit_of_length
+    const dist = carPrefs.setting_distance_unit?.toLowerCase() ?? ''
+    if (dist.includes('mile')) updates.unit_of_length = 'mi'
+    else if (dist.includes('km') || dist.includes('kilo')) updates.unit_of_length = 'km'
+
+    // Map car's SettingTemperatureUnit to app's unit_of_temp
+    const temp = carPrefs.setting_temperature_unit?.toLowerCase() ?? ''
+    if (temp.includes('fahr') || temp === 'f') updates.unit_of_temp = 'F'
+    else if (temp.includes('cel') || temp === 'c') updates.unit_of_temp = 'C'
+
+    if (Object.keys(updates).length > 0) {
+      const newForm = { ...form, ...updates }
+      setForm(newForm)
+      settingsMut.mutate(newForm)
+      toast.success('Units synced from car', `Distance: ${updates.unit_of_length === 'mi' ? 'Miles' : 'Kilometers'}, Temperature: ${updates.unit_of_temp === 'F' ? 'Fahrenheit' : 'Celsius'}`)
+    } else {
+      toast.info('No changes', 'Could not detect car unit preferences')
+    }
+  }
 
   function handleLogin() {
     authUrlMut.mutate(undefined, {
@@ -262,6 +295,31 @@ export default function Settings() {
               {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16" />)}
             </div>
           ) : (
+            <>
+            {/* Sync from Car banner */}
+            {carPrefs && (carPrefs.setting_distance_unit || carPrefs.setting_temperature_unit) && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5 p-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5 text-neon-cyan shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      Car uses {carPrefs.setting_distance_unit ?? '—'} / {carPrefs.setting_temperature_unit ?? '—'} / {carPrefs.setting_tire_pressure_unit ?? '—'}
+                    </p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      Sync your app's units to match your vehicle's display settings
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={syncUnitsFromCar}
+                  className="neon-button flex items-center gap-1.5 text-xs shrink-0 px-3 py-2"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Sync from Car
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <SettingField label="Distance Unit">
                 <select
@@ -371,6 +429,7 @@ export default function Settings() {
                 </p>
               </SettingField>
             </div>
+            </>
           )}
 
           <div className="flex items-center gap-4">

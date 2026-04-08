@@ -117,6 +117,13 @@ export interface VehicleLiveState {
   swUpdateExpectedMin: number
   swUpdateScheduledStart: string
 
+  // User Preferences (from car)
+  setting24HourTime: boolean
+  settingChargeUnit: string
+  settingDistanceUnit: string
+  settingTemperatureUnit: string
+  settingTirePressureUnit: string
+
   // Meta
   lastUpdated: Date | null
   signalCount: number
@@ -146,6 +153,8 @@ const EMPTY_STATE: VehicleLiveState = {
   gpsState: false, originLatitude: 0, originLongitude: 0,
   swUpdateVersion: '', swUpdateDownloadPct: 0, swUpdateInstallPct: 0,
   swUpdateExpectedMin: 0, swUpdateScheduledStart: '',
+  setting24HourTime: false, settingChargeUnit: '', settingDistanceUnit: '',
+  settingTemperatureUnit: '', settingTirePressureUnit: '',
   lastUpdated: null, signalCount: 0,
 }
 
@@ -297,6 +306,13 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['SoftwareUpdateInstallationPercentComplete'] != null) s.swUpdateInstallPct = n('SoftwareUpdateInstallationPercentComplete')
   if (raw['SoftwareUpdateExpectedDurationMinutes'] != null) s.swUpdateExpectedMin = n('SoftwareUpdateExpectedDurationMinutes')
   if (raw['SoftwareUpdateScheduledStartTime'] != null) s.swUpdateScheduledStart = str('SoftwareUpdateScheduledStartTime')
+
+  // User Preferences
+  if (raw['Setting24HourTime'] != null) s.setting24HourTime = bool('Setting24HourTime')
+  if (raw['SettingChargeUnit'] != null) s.settingChargeUnit = str('SettingChargeUnit')
+  if (raw['SettingDistanceUnit'] != null) s.settingDistanceUnit = str('SettingDistanceUnit')
+  if (raw['SettingTemperatureUnit'] != null) s.settingTemperatureUnit = str('SettingTemperatureUnit')
+  if (raw['SettingTirePressureUnit'] != null) s.settingTirePressureUnit = str('SettingTirePressureUnit')
 
   return s
 }
