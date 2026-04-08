@@ -48,6 +48,31 @@ export interface VehicleLiveState {
   sentryMode: boolean
   doorState: string
   centerDisplay: string
+  fdWindow: string
+  fpWindow: string
+  rdWindow: string
+  rpWindow: string
+
+  // Vehicle State — Access Modes
+  guestMode: boolean
+  guestMobileAccess: string
+  valetMode: boolean
+  serviceMode: boolean
+  speedLimitMode: boolean
+  currentSpeedLimit: number
+
+  // Vehicle State — Lights
+  lightsHazards: boolean
+  lightsHighBeams: boolean
+  lightsTurnSignal: string
+
+  // Vehicle State — Driver & Keys
+  driverSeatOccupied: boolean
+  pairedKeyCount: number
+
+  // Vehicle State — Homelink
+  homelinkNearby: boolean
+  homelinkDeviceCount: number
 
   // Tire Pressure
   tirePressureFl: number
@@ -76,6 +101,13 @@ export interface VehicleLiveState {
   originLatitude: number
   originLongitude: number
 
+  // Software Update (live progress)
+  swUpdateVersion: string
+  swUpdateDownloadPct: number
+  swUpdateInstallPct: number
+  swUpdateExpectedMin: number
+  swUpdateScheduledStart: string
+
   // Meta
   lastUpdated: Date | null
   signalCount: number
@@ -89,12 +121,20 @@ const EMPTY_STATE: VehicleLiveState = {
   chargeState: '', detailedChargeState: '', chargerVoltage: 0, chargeAmps: 0,
   chargeRate: 0, chargerPower: 0, chargeLimitSoc: 0, timeToFullCharge: 0, isCharging: false,
   locked: false, sentryMode: false, doorState: '', centerDisplay: '',
+  fdWindow: '', fpWindow: '', rdWindow: '', rpWindow: '',
+  guestMode: false, guestMobileAccess: '', valetMode: false, serviceMode: false,
+  speedLimitMode: false, currentSpeedLimit: 0,
+  lightsHazards: false, lightsHighBeams: false, lightsTurnSignal: '',
+  driverSeatOccupied: false, pairedKeyCount: 0,
+  homelinkNearby: false, homelinkDeviceCount: 0,
   tirePressureFl: 0, tirePressureFr: 0, tirePressureRl: 0, tirePressureRr: 0,
   vehicleName: '', carType: '', version: '', wheelType: '', exteriorColor: '',
   destinationName: '', destinationLatitude: 0, destinationLongitude: 0,
   distanceToArrival: 0, minutesToArrival: 0, routeLine: '',
   locatedAtHome: false, locatedAtWork: false, locatedAtFavorite: false,
   gpsState: false, originLatitude: 0, originLongitude: 0,
+  swUpdateVersion: '', swUpdateDownloadPct: 0, swUpdateInstallPct: 0,
+  swUpdateExpectedMin: 0, swUpdateScheduledStart: '',
   lastUpdated: null, signalCount: 0,
 }
 
@@ -172,6 +212,31 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['SentryMode'] != null) s.sentryMode = bool('SentryMode')
   if (raw['DoorState'] != null) s.doorState = str('DoorState')
   if (raw['CenterDisplay'] != null) s.centerDisplay = str('CenterDisplay')
+  if (raw['FdWindow'] != null) s.fdWindow = str('FdWindow')
+  if (raw['FpWindow'] != null) s.fpWindow = str('FpWindow')
+  if (raw['RdWindow'] != null) s.rdWindow = str('RdWindow')
+  if (raw['RpWindow'] != null) s.rpWindow = str('RpWindow')
+
+  // Vehicle State — Access Modes
+  if (raw['GuestModeEnabled'] != null) s.guestMode = bool('GuestModeEnabled')
+  if (raw['GuestModeMobileAccessState'] != null) s.guestMobileAccess = str('GuestModeMobileAccessState')
+  if (raw['ValetModeEnabled'] != null) s.valetMode = bool('ValetModeEnabled')
+  if (raw['ServiceMode'] != null) s.serviceMode = bool('ServiceMode')
+  if (raw['SpeedLimitMode'] != null) s.speedLimitMode = bool('SpeedLimitMode')
+  if (raw['CurrentLimitMph'] != null) s.currentSpeedLimit = n('CurrentLimitMph')
+
+  // Vehicle State — Lights
+  if (raw['LightsHazardsActive'] != null) s.lightsHazards = bool('LightsHazardsActive')
+  if (raw['LightsHighBeams'] != null) s.lightsHighBeams = bool('LightsHighBeams')
+  if (raw['LightsTurnSignal'] != null) s.lightsTurnSignal = str('LightsTurnSignal')
+
+  // Vehicle State — Driver & Keys
+  if (raw['DriverSeatOccupied'] != null) s.driverSeatOccupied = bool('DriverSeatOccupied')
+  if (raw['PairedPhoneKeyAndKeyFobQty'] != null) s.pairedKeyCount = n('PairedPhoneKeyAndKeyFobQty')
+
+  // Vehicle State — Homelink
+  if (raw['HomelinkNearby'] != null) s.homelinkNearby = bool('HomelinkNearby')
+  if (raw['HomelinkDeviceCount'] != null) s.homelinkDeviceCount = n('HomelinkDeviceCount')
 
   // Tire Pressure
   if (raw['TpmsPressureFl'] != null) s.tirePressureFl = n('TpmsPressureFl')
@@ -205,6 +270,13 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
     if (orig['latitude'] != null) s.originLatitude = orig['latitude'] as number
     if (orig['longitude'] != null) s.originLongitude = orig['longitude'] as number
   }
+
+  // Software Update Progress
+  if (raw['SoftwareUpdateVersion'] != null) s.swUpdateVersion = str('SoftwareUpdateVersion')
+  if (raw['SoftwareUpdateDownloadPercentComplete'] != null) s.swUpdateDownloadPct = n('SoftwareUpdateDownloadPercentComplete')
+  if (raw['SoftwareUpdateInstallationPercentComplete'] != null) s.swUpdateInstallPct = n('SoftwareUpdateInstallationPercentComplete')
+  if (raw['SoftwareUpdateExpectedDurationMinutes'] != null) s.swUpdateExpectedMin = n('SoftwareUpdateExpectedDurationMinutes')
+  if (raw['SoftwareUpdateScheduledStartTime'] != null) s.swUpdateScheduledStart = str('SoftwareUpdateScheduledStartTime')
 
   return s
 }

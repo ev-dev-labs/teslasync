@@ -13,6 +13,7 @@ import {
   Zap, ArrowLeft, Power, Activity, Route, Clock, Eye, Wind,
   Cpu, BatteryCharging, ChevronRight, Cog, ShieldAlert, DoorClosed,
   Car, Fan, Snowflake, CircleDot, Headphones, Navigation2, MapPin, Settings,
+  Lightbulb, Key, User, Monitor,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -21,6 +22,7 @@ import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge } from '
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
@@ -47,6 +49,9 @@ export default function VehicleDetail() {
   const vehicleId = Number(id)
   const { convertDistance, convertSpeed, convertTemp, convertPressure, distanceUnit, speedUnit, tempUnit, pressureUnit } = useSettings()
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
+
+  // SSE live state for real-time vehicle signals
+  const { state: live, connected: sseConnected } = useVehicleLive(vehicleId)
 
   const { data: vehicle } = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -564,6 +569,88 @@ export default function VehicleDetail() {
                 ) : (
                   <p className="text-xs text-gray-600 text-center py-6">No security data available</p>
                 )}
+              </GlassPanel>
+            </FadeIn>
+
+            {/* ---- Vehicle State Panel (Live SSE) ---- */}
+            <FadeIn delay={0.19}>
+              <GlassPanel className="p-6 h-full">
+                <h3 className="section-title flex items-center gap-2 mb-5">
+                  <Activity className="h-4 w-4 text-neon-cyan" /> Vehicle State
+                  {sseConnected && (
+                    <span className="ml-auto flex items-center gap-1 text-[10px] text-neon-green">
+                      <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
+                      Live
+                    </span>
+                  )}
+                </h3>
+                <div className="space-y-3">
+                  {/* Lights */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Lightbulb className="h-3 w-3" /> High Beams</span>
+                    <span className={clsx('text-xs font-medium', live.lightsHighBeams ? 'text-neon-cyan' : 'text-gray-500')}>
+                      {live.lightsHighBeams ? 'On' : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> Turn Signal</span>
+                    <span className={clsx('text-xs font-medium', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-gray-500')}>
+                      {live.lightsTurnSignal || 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Hazards</span>
+                    <span className={clsx('text-xs font-medium', live.lightsHazards ? 'text-neon-red' : 'text-gray-500')}>
+                      {live.lightsHazards ? 'Active' : 'Off'}
+                    </span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/5" />
+
+                  {/* Driver & Keys */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><User className="h-3 w-3" /> Driver Seat</span>
+                    <span className={clsx('text-xs font-medium', live.driverSeatOccupied ? 'text-green-400' : 'text-gray-500')}>
+                      {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Key className="h-3 w-3" /> Paired Keys</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{live.pairedKeyCount || '—'}</span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/5" />
+
+                  {/* Access Modes */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> Valet Mode</span>
+                    <span className={clsx('text-xs font-medium', live.valetMode ? 'text-purple-400' : 'text-gray-500')}>
+                      {live.valetMode ? 'Enabled' : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Settings className="h-3 w-3" /> Service Mode</span>
+                    <span className={clsx('text-xs font-medium', live.serviceMode ? 'text-amber-400' : 'text-gray-500')}>
+                      {live.serviceMode ? 'Active' : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Gauge className="h-3 w-3" /> Speed Limit</span>
+                    <span className={clsx('text-xs font-medium', live.speedLimitMode ? 'text-neon-cyan' : 'text-gray-500')}>
+                      {live.speedLimitMode ? `${Math.round(live.currentSpeedLimit)} mph` : 'Off'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Monitor className="h-3 w-3" /> Center Display</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{live.centerDisplay || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><MapPin className="h-3 w-3" /> HomeLink Devices</span>
+                    <span className="text-xs font-medium text-[var(--text-primary)]">{live.homelinkDeviceCount || '—'}</span>
+                  </div>
+                </div>
               </GlassPanel>
             </FadeIn>
 

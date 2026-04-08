@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSecurityEvents, getSecurityLatest, SecurityEvent } from '../api'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import {
   Lock, Unlock, Shield, ShieldCheck, ShieldAlert, Eye,
   DoorOpen, DoorClosed, Home, UserCheck, AlertTriangle, CheckCircle,
-  Car, Activity, Clock, Hash,
+  Car, Activity, Clock, Hash, Lightbulb, Key, Gauge, User, Settings, Monitor,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -367,6 +368,9 @@ export default function SecurityAccess() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
   const [limit] = useState(100)
 
+  // SSE live state for instant updates
+  const { state: live, connected: sseConnected } = useVehicleLive(vehicleId ?? undefined)
+
   const { data: securityData, isLoading: loadingHistory } = useQuery({
     queryKey: ['security', vehicleId, limit],
     queryFn: () => getSecurityEvents(vehicleId!, limit),
@@ -631,6 +635,145 @@ export default function SecurityAccess() {
             })}
           </div>
         )}
+      </GlassPanel>
+
+      {/* ── Live Vehicle State Signals ──────────────────────────────────────── */}
+      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Live Vehicle State</h3>
+          {sseConnected && (
+            <span className="flex items-center gap-1.5 text-[10px] text-neon-green">
+              <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
+              Live
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {/* Lights */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.lightsHazards ? 'bg-neon-red/10' : 'bg-white/5')}>
+              <AlertTriangle className={clsx('h-4 w-4', live.lightsHazards ? 'text-neon-red' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Hazards</span>
+              <span className={clsx('text-sm font-semibold', live.lightsHazards ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
+                {live.lightsHazards ? 'Active' : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.lightsHighBeams ? 'bg-neon-cyan/10' : 'bg-white/5')}>
+              <Lightbulb className={clsx('h-4 w-4', live.lightsHighBeams ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>High Beams</span>
+              <span className={clsx('text-sm font-semibold', live.lightsHighBeams ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+                {live.lightsHighBeams ? 'On' : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'bg-neon-amber/10' : 'bg-white/5')}>
+              <Car className={clsx('h-4 w-4', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Turn Signal</span>
+              <span className={clsx('text-sm font-semibold', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
+                {live.lightsTurnSignal || 'Off'}
+              </span>
+            </div>
+          </div>
+
+          {/* Driver & Keys */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.driverSeatOccupied ? 'bg-neon-green/10' : 'bg-white/5')}>
+              <User className={clsx('h-4 w-4', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Seat</span>
+              <span className={clsx('text-sm font-semibold', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
+                {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
+              </span>
+            </div>
+          </div>
+
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-cyan/10">
+              <Key className="h-4 w-4 text-neon-cyan" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Paired Keys</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {live.pairedKeyCount || '--'}
+              </span>
+            </div>
+          </div>
+
+          {/* Access Modes */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.valetMode ? 'bg-neon-purple/10' : 'bg-white/5')}>
+              <Car className={clsx('h-4 w-4', live.valetMode ? 'text-neon-purple' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Valet Mode</span>
+              <span className={clsx('text-sm font-semibold', live.valetMode ? 'text-neon-purple' : 'text-[var(--text-muted)]')}>
+                {live.valetMode ? 'Enabled' : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.serviceMode ? 'bg-neon-amber/10' : 'bg-white/5')}>
+              <Settings className={clsx('h-4 w-4', live.serviceMode ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Service Mode</span>
+              <span className={clsx('text-sm font-semibold', live.serviceMode ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
+                {live.serviceMode ? 'Active' : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', live.speedLimitMode ? 'bg-neon-cyan/10' : 'bg-white/5')}>
+              <Gauge className={clsx('h-4 w-4', live.speedLimitMode ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Speed Limit</span>
+              <span className={clsx('text-sm font-semibold', live.speedLimitMode ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
+                {live.speedLimitMode ? `${Math.round(live.currentSpeedLimit)} mph` : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          {/* Homelink Device Count */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-purple-500/10">
+              <Home className="h-4 w-4 text-purple-400" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>HomeLink Devices</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {live.homelinkDeviceCount || '--'}
+              </span>
+            </div>
+          </div>
+
+          {/* Center Display */}
+          <div className="glass-card p-3 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-neon-cyan/10">
+              <Monitor className="h-4 w-4 text-neon-cyan" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Center Display</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {live.centerDisplay || '--'}
+              </span>
+            </div>
+          </div>
+        </div>
       </GlassPanel>
 
       {/* ── Security Statistics Panel ──────────────────────────────────────────── */}

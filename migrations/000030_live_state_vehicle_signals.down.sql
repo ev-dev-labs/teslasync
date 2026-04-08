@@ -1,0 +1,20 @@
+-- Migration 30 (down): Remove Vehicle State signal columns from vehicle_live_state
+ALTER TABLE vehicle_live_state
+  DROP COLUMN IF EXISTS guest_mode,
+  DROP COLUMN IF EXISTS guest_mode_mobile_access,
+  DROP COLUMN IF EXISTS homelink_nearby,
+  DROP COLUMN IF EXISTS homelink_device_count,
+  DROP COLUMN IF EXISTS driver_seat_occupied,
+  DROP COLUMN IF EXISTS speed_limit_mode,
+  DROP COLUMN IF EXISTS valet_mode_enabled,
+  DROP COLUMN IF EXISTS service_mode,
+  DROP COLUMN IF EXISTS current_limit_mph,
+  DROP COLUMN IF EXISTS paired_phone_key_count,
+  DROP COLUMN IF EXISTS lights_hazards_active,
+  DROP COLUMN IF EXISTS lights_high_beams,
+  DROP COLUMN IF EXISTS lights_turn_signal,
+  DROP COLUMN IF EXISTS sw_update_version,
+  DROP COLUMN IF EXISTS sw_update_download_pct,
+  DROP COLUMN IF EXISTS sw_update_install_pct,
+  DROP COLUMN IF EXISTS sw_update_expected_duration,
+  DROP COLUMN IF EXISTS sw_update_scheduled_start;

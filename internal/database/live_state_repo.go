@@ -69,6 +69,28 @@ var signalToColumn = map[string]string{
 	"RpWindow":     "rp_window",
 	"CenterDisplay": "center_display",
 
+	// Vehicle State (access modes, lights, driver)
+	"GuestModeEnabled":          "guest_mode",
+	"GuestModeMobileAccessState": "guest_mode_mobile_access",
+	"HomelinkNearby":            "homelink_nearby",
+	"HomelinkDeviceCount":       "homelink_device_count",
+	"DriverSeatOccupied":        "driver_seat_occupied",
+	"SpeedLimitMode":            "speed_limit_mode",
+	"ValetModeEnabled":          "valet_mode_enabled",
+	"ServiceMode":               "service_mode",
+	"CurrentLimitMph":           "current_limit_mph",
+	"PairedPhoneKeyAndKeyFobQty": "paired_phone_key_count",
+	"LightsHazardsActive":       "lights_hazards_active",
+	"LightsHighBeams":           "lights_high_beams",
+	"LightsTurnSignal":          "lights_turn_signal",
+
+	// Software Update
+	"SoftwareUpdateVersion":                    "sw_update_version",
+	"SoftwareUpdateDownloadPercentComplete":     "sw_update_download_pct",
+	"SoftwareUpdateInstallationPercentComplete": "sw_update_install_pct",
+	"SoftwareUpdateExpectedDurationMinutes":     "sw_update_expected_duration",
+	"SoftwareUpdateScheduledStartTime":          "sw_update_scheduled_start",
+
 	// Tire Pressure
 	"TpmsPressureFl": "tire_pressure_fl",
 	"TpmsPressureFr": "tire_pressure_fr",
@@ -151,10 +173,44 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		vals = append(vals, locked)
 	}
 
+	// Boolean columns that come as enum strings from Fleet Telemetry.
+	// These need conversion: any non-Off/empty/false string → true.
+	enumBoolSignals := map[string]string{
+		"GuestModeEnabled":  "guest_mode",
+		"HomelinkNearby":    "homelink_nearby",
+		"DriverSeatOccupied": "driver_seat_occupied",
+		"SpeedLimitMode":    "speed_limit_mode",
+		"ValetModeEnabled":  "valet_mode_enabled",
+		"ServiceMode":       "service_mode",
+		"LightsHazardsActive": "lights_hazards_active",
+		"LightsHighBeams":   "lights_high_beams",
+	}
+	for sig, col := range enumBoolSignals {
+		if v, ok := signals[sig]; ok && v != nil {
+			b := false
+			switch sv := v.(type) {
+			case bool:
+				b = sv
+			case string:
+				b = sv != "" && !strings.Contains(sv, "Off") && sv != "false" && sv != "0"
+			}
+			cols = append(cols, col)
+			vals = append(vals, b)
+		}
+	}
+
+	// Set of columns already handled above — skip in generic loop
+	skipCols := map[string]bool{
+		"latitude": true, "longitude": true, "locked": true, "sentry_mode": true,
+		"hvac_power": true, "fan_speed": true, "power": true,
+	}
+	for _, col := range enumBoolSignals {
+		skipCols[col] = true
+	}
+
 	// Map all simple signals
 	for signalName, colName := range signalToColumn {
-		// Skip signals already handled above
-		if colName == "latitude" || colName == "longitude" || colName == "locked" || colName == "sentry_mode" {
+		if skipCols[colName] {
 			continue
 		}
 		v, ok := signals[signalName]
@@ -231,18 +287,34 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		       charge_state, detailed_charge_state, charger_voltage, charge_amps,
 		       charge_rate, charger_power, charge_limit_soc, time_to_full_charge,
 		       locked, sentry_mode, door_state, center_display,
+		       fd_window, fp_window, rd_window, rp_window,
 		       tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr,
-		       vehicle_name, car_type, version
+		       vehicle_name, car_type, version,
+		       guest_mode, guest_mode_mobile_access, homelink_nearby, homelink_device_count,
+		       driver_seat_occupied, speed_limit_mode, valet_mode_enabled, service_mode,
+		       current_limit_mph, paired_phone_key_count,
+		       lights_hazards_active, lights_high_beams, lights_turn_signal,
+		       sw_update_version, sw_update_download_pct, sw_update_install_pct,
+		       sw_update_expected_duration, sw_update_scheduled_start
 		FROM vehicle_live_state WHERE vehicle_id = $1`, vehicleID)
 
 	var lat, lon, speed, power, odo, idealR, ratedR, estR, energyRem *float64
 	var insideT, outsideT, chargerV, chargeAmps, chargeRate, chargerPower, ttfc *float64
 	var tpFL, tpFR, tpRL, tpRR *float64
+	var currentLimitMph *float64
 	var heading, battLvl, fanSpeed, chargeLimitSoc *int
+	var homelinkDevCount, pairedKeyCount *int
+	var swDownloadPct, swInstallPct, swExpectedDur *int
 	var soc *float64
 	var gear, chargeState, detailedCS, doorState, centerDisp *string
+	var fdWindow, fpWindow, rdWindow, rpWindow *string
 	var vehicleName, carType, version *string
+	var guestMobileAccess, lightsTurnSignal *string
+	var swUpdateVersion, swScheduledStart *string
 	var hvacPower, locked, sentryMode *bool
+	var guestMode, homelinkNearby, driverSeatOccupied *bool
+	var speedLimitMode, valetMode, serviceMode *bool
+	var lightsHazards, lightsHighBeams *bool
 
 	err := row.Scan(
 		&lat, &lon, &heading, &speed, &power, &odo, &gear,
@@ -251,8 +323,15 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 		&chargeState, &detailedCS, &chargerV, &chargeAmps,
 		&chargeRate, &chargerPower, &chargeLimitSoc, &ttfc,
 		&locked, &sentryMode, &doorState, &centerDisp,
+		&fdWindow, &fpWindow, &rdWindow, &rpWindow,
 		&tpFL, &tpFR, &tpRL, &tpRR,
 		&vehicleName, &carType, &version,
+		&guestMode, &guestMobileAccess, &homelinkNearby, &homelinkDevCount,
+		&driverSeatOccupied, &speedLimitMode, &valetMode, &serviceMode,
+		&currentLimitMph, &pairedKeyCount,
+		&lightsHazards, &lightsHighBeams, &lightsTurnSignal,
+		&swUpdateVersion, &swDownloadPct, &swInstallPct,
+		&swExpectedDur, &swScheduledStart,
 	)
 	if err != nil {
 		return nil, err
@@ -288,6 +367,10 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if sentryMode != nil { result["SentryMode"] = *sentryMode }
 	if doorState != nil { result["DoorState"] = *doorState }
 	if centerDisp != nil { result["CenterDisplay"] = *centerDisp }
+	if fdWindow != nil { result["FdWindow"] = *fdWindow }
+	if fpWindow != nil { result["FpWindow"] = *fpWindow }
+	if rdWindow != nil { result["RdWindow"] = *rdWindow }
+	if rpWindow != nil { result["RpWindow"] = *rpWindow }
 	if tpFL != nil { result["TpmsPressureFl"] = *tpFL }
 	if tpFR != nil { result["TpmsPressureFr"] = *tpFR }
 	if tpRL != nil { result["TpmsPressureRl"] = *tpRL }
@@ -295,6 +378,25 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 	if vehicleName != nil { result["VehicleName"] = *vehicleName }
 	if carType != nil { result["CarType"] = *carType }
 	if version != nil { result["Version"] = *version }
+	// Vehicle State signals
+	if guestMode != nil { result["GuestModeEnabled"] = *guestMode }
+	if guestMobileAccess != nil { result["GuestModeMobileAccessState"] = *guestMobileAccess }
+	if homelinkNearby != nil { result["HomelinkNearby"] = *homelinkNearby }
+	if homelinkDevCount != nil { result["HomelinkDeviceCount"] = *homelinkDevCount }
+	if driverSeatOccupied != nil { result["DriverSeatOccupied"] = *driverSeatOccupied }
+	if speedLimitMode != nil { result["SpeedLimitMode"] = *speedLimitMode }
+	if valetMode != nil { result["ValetModeEnabled"] = *valetMode }
+	if serviceMode != nil { result["ServiceMode"] = *serviceMode }
+	if currentLimitMph != nil { result["CurrentLimitMph"] = *currentLimitMph }
+	if pairedKeyCount != nil { result["PairedPhoneKeyAndKeyFobQty"] = *pairedKeyCount }
+	if lightsHazards != nil { result["LightsHazardsActive"] = *lightsHazards }
+	if lightsHighBeams != nil { result["LightsHighBeams"] = *lightsHighBeams }
+	if lightsTurnSignal != nil { result["LightsTurnSignal"] = *lightsTurnSignal }
+	if swUpdateVersion != nil { result["SoftwareUpdateVersion"] = *swUpdateVersion }
+	if swDownloadPct != nil { result["SoftwareUpdateDownloadPercentComplete"] = *swDownloadPct }
+	if swInstallPct != nil { result["SoftwareUpdateInstallationPercentComplete"] = *swInstallPct }
+	if swExpectedDur != nil { result["SoftwareUpdateExpectedDurationMinutes"] = *swExpectedDur }
+	if swScheduledStart != nil { result["SoftwareUpdateScheduledStartTime"] = *swScheduledStart }
 
 	return result, nil
 }

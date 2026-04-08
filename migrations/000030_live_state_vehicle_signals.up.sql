@@ -1,0 +1,23 @@
+-- Migration 30: Add Vehicle State signal columns to vehicle_live_state
+-- These signals are already captured in security_events and vehicle_config_snapshots,
+-- but need to be in vehicle_live_state for SignalStore pod-restart recovery.
+
+ALTER TABLE vehicle_live_state
+  ADD COLUMN IF NOT EXISTS guest_mode                    BOOLEAN,
+  ADD COLUMN IF NOT EXISTS guest_mode_mobile_access      VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS homelink_nearby               BOOLEAN,
+  ADD COLUMN IF NOT EXISTS homelink_device_count         INTEGER,
+  ADD COLUMN IF NOT EXISTS driver_seat_occupied          BOOLEAN,
+  ADD COLUMN IF NOT EXISTS speed_limit_mode              BOOLEAN,
+  ADD COLUMN IF NOT EXISTS valet_mode_enabled            BOOLEAN,
+  ADD COLUMN IF NOT EXISTS service_mode                  BOOLEAN,
+  ADD COLUMN IF NOT EXISTS current_limit_mph             DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS paired_phone_key_count        INTEGER,
+  ADD COLUMN IF NOT EXISTS lights_hazards_active         BOOLEAN,
+  ADD COLUMN IF NOT EXISTS lights_high_beams             BOOLEAN,
+  ADD COLUMN IF NOT EXISTS lights_turn_signal            VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS sw_update_version             VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS sw_update_download_pct        INTEGER,
+  ADD COLUMN IF NOT EXISTS sw_update_install_pct         INTEGER,
+  ADD COLUMN IF NOT EXISTS sw_update_expected_duration   INTEGER,
+  ADD COLUMN IF NOT EXISTS sw_update_scheduled_start     VARCHAR(100);
