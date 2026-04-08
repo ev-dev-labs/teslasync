@@ -596,14 +596,12 @@ export default function AlertStudio() {
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20 transition-colors"
                 onClick={async () => {
                   try {
-                    const res = await fetch('/api/v1/alerts/test', {
+                    await fetch('/api/v1/alerts/test', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio' }),
-                    })
-                    if (res.ok) toast.success('Test sent', 'Check your browser toast notification')
-                    else toast.error('Test failed', 'Could not send test notification')
-                  } catch { toast.error('Test failed', 'Network error') }
+                    }).then(r => { if (r.ok) toast.success('Test sent!', 'Check your browser toast and Discord/Slack'); else throw new Error() })
+                  } catch { toast.error('Test failed', 'Could not send test notification') }
                 }}
                 disabled={!editor.name.trim()}
               >

@@ -4,23 +4,29 @@ import (
 	"encoding/json"
 	"net/http"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
 
 // AlertHandler handles alert and alert rule HTTP requests.
 type AlertHandler struct {
 	alertRepo     *database.AlertRepo
 	alertRuleRepo *database.AlertRuleRepo
+	notifRepo     *database.NotificationRepo
 	eventHub      *EventHub
+	mqttClient    pahomqtt.Client
 }
 
-func NewAlertHandler(db *database.DB, hub *EventHub) *AlertHandler {
+func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client) *AlertHandler {
 	return &AlertHandler{
 		alertRepo:     database.NewAlertRepo(db),
 		alertRuleRepo: database.NewAlertRuleRepo(db),
+		notifRepo:     database.NewNotificationRepo(db),
 		eventHub:      hub,
+		mqttClient:    mc,
 	}
 }
 
@@ -221,9 +227,31 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Dispatch to ALL enabled notification channels
+	channels, err := h.notifRepo.GetAllChannels(r.Context())
+	dispatched := 0
+	if err == nil {
+		for _, ch := range channels {
+			if !ch.Enabled {
+				continue
+			}
+			req := &notification.Request{
+				ChannelType: ch.Type,
+				Config:      ch.Config,
+				Title:       "[TEST] " + body.Name,
+				Message:     message,
+				ChannelID:   ch.ID,
+			}
+			if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
+				dispatched++
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"status":  "sent",
-		"alert":   alert,
-		"message": "Test notification sent — check your browser toast and notification channels",
+		"status":     "sent",
+		"alert":      alert,
+		"dispatched": dispatched,
+		"message":    "Test notification sent — check your browser toast and notification channels",
 	})
 }

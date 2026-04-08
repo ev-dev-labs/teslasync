@@ -106,7 +106,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	geofenceHandler := NewGeofenceHandler(db)
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	settingsHandler := NewSettingsHandler(db)
-	alertHandler := NewAlertHandler(db, eventHub)
+	var pahoForAlerts pahomqtt.Client
+	if mqttClient != nil { pahoForAlerts = mqttClient.Underlying() }
+	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts)
 	commandHandler := NewCommandHandler(db, teslaClient)
 	energyHandler := NewEnergyHandler(energySvc)
 	batteryHandler := NewBatteryHandler(db)
