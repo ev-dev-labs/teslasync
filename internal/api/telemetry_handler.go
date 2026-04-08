@@ -73,20 +73,24 @@ type TelemetryHandler struct {
 	signalLogRepo *database.SignalLogRepo
 }
 
-// vehicleStateMachine implements debounced state detection to prevent flapping.
-// A state change must be confirmed for `confirmDuration` before being committed.
+// vehicleStateMachine tracks vehicle state transitions.
+// When Gear signals are available (Fleet Telemetry), transitions are immediate
+// since Gear is authoritative from the car's MCU.
+// For the legacy polling path (no Gear), debounced speed/charge heuristics are used.
 type vehicleStateMachine struct {
 	currentState   string    // committed state in DB
-	pendingState   string    // candidate state (not yet confirmed)
-	pendingSince   time.Time // when the candidate was first seen
-	lastDriveSpeed float64   // last non-zero speed (for hysteresis)
+	lastGear       string    // last known gear (D/R/P/N) — empty if never received
+	pendingState   string    // candidate state (only for speed-based fallback)
+	pendingSince   time.Time // when the candidate was first seen (speed-based only)
+	lastDriveSpeed float64   // last non-zero speed (for speed-based hysteresis)
 	lastSpeedTime  time.Time // when last non-zero speed was seen
 }
 
 const (
 	// States must be observed for this duration before transition is committed.
+	// Only applies to the speed-based fallback path (no Gear signal).
 	stateConfirmDuration = 30 * time.Second
-	// After driving, stay in "driving" for this long even if speed=0 (e.g. at a red light).
+	// After driving (speed-based only), stay in "driving" for this long even if speed=0.
 	driveHoldDuration = 2 * time.Minute
 )
 
@@ -459,6 +463,20 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
 	}
 
+	// --- Immediate gear-based state tracking ---
+	// When the batch contains a Gear signal, run state transition immediately
+	// so the UI updates within milliseconds (via SSE). Don't wait for the
+	// 10s accumulated write cycle.
+	if vehicleID > 0 {
+		if _, hasGear := signals["Gear"]; hasGear {
+			go func() {
+				bgCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+				defer cancel()
+				h.trackStateTransition(bgCtx, vehicleID, signals)
+			}()
+		}
+	}
+
 	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
 	// Throttle snapshot writes to once every 10 seconds per vehicle to prevent
 	// DB connection pool exhaustion from high-frequency telemetry batches.
@@ -503,9 +521,14 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				h.accumulatedSignalsMu.Unlock()
 			}
 
-			// State machine handles state transitions with debouncing
+			// State machine handles state transitions.
+			// Skip if no Gear signal in accumulated — gear-based transitions
+			// are handled immediately above, not in the throttled path.
 			if shouldWrite && writeSignals != nil {
-				h.trackStateTransition(bgCtx, vehicleID, writeSignals)
+				if _, hasGear := writeSignals["Gear"]; !hasGear {
+					// No gear signal — use speed-based fallback with debounce
+					h.trackStateTransition(bgCtx, vehicleID, writeSignals)
+				}
 			}
 
 			// Throttled snapshot writes — only run every 10s per vehicle
@@ -562,18 +585,58 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 // detectVehicleState determines the vehicle state from telemetry signals.
 // Uses signal priority: driving > charging > online.
 func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) string {
-	// Priority 1: Driving — speed > 1 km/h or Gear in D/R (ShiftStateDrive/ShiftStateReverse)
-	if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 1.0 {
-		return "driving"
+	// Priority 1: Gear signal — authoritative from car MCU
+	gear := ""
+	if g, ok := signals["Gear"]; ok {
+		gear = toString(g)
 	}
-	if gear, ok := signals["Gear"]; ok {
-		gs := toString(gear)
-		if strings.Contains(gs, "Drive") || strings.Contains(gs, "Reverse") || gs == "D" || gs == "R" {
+
+	// If no Gear in current batch, check SignalStore for last known
+	if gear == "" && h.signalStore != nil {
+		// Try all known vehicle IDs (usually just one active)
+		h.mu.RLock()
+		for _, state := range h.streamingState {
+			if ls, ok := state.LastSignals["Gear"]; ok {
+				gear = toString(ls)
+				break
+			}
+		}
+		h.mu.RUnlock()
+	}
+
+	if gear != "" {
+		switch gear {
+		case "D", "R":
 			return "driving"
+		case "P":
+			// Check for active charging — Gear=P + charging = "charging"
+			if dcs, ok := signals["DetailedChargeState"]; ok {
+				dcsStr := toString(dcs)
+				if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
+					return "charging"
+				}
+			}
+			if cs, ok := signals["ChargeState"]; ok {
+				csStr := toString(cs)
+				if csStr == "Enable" || strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") {
+					return "charging"
+				}
+			}
+			if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
+				return "charging"
+			}
+			return "parked"
+		case "N":
+			return "online"
 		}
 	}
 
-	// Priority 2: Charging — explicit charge state or active charge current (> 1A)
+	// Fallback: speed-based detection (REST API polling path, no Gear available)
+	if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 1.0 {
+		return "driving"
+	}
+
+	// Fallback: charging signals
 	if dcs, ok := signals["DetailedChargeState"]; ok {
 		dcsStr := toString(dcs)
 		if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
@@ -590,27 +653,21 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 		return "charging"
 	}
 
-	// Priority 3: Parked — Gear in P (ShiftStatePark)
-	if gear, ok := signals["Gear"]; ok {
-		gs := toString(gear)
-		if strings.Contains(gs, "Park") || gs == "P" {
-			return "parked"
-		}
-	}
-
 	return "online"
 }
 
-// trackStateTransition uses a debounced state machine to prevent state flapping.
+// trackStateTransition determines vehicle state from signals and commits transitions.
 //
 // Design principles:
-//   - Driving entry is IMMEDIATE (no delay) — we never want to miss a drive start
-//   - Driving exit requires 2 min of no speed (driveHoldDuration) — red lights, brief stops
-//   - All other transitions require 30s of consistent observation (stateConfirmDuration)
+//   - Gear signal = immediate commit (authoritative from car MCU, no debounce)
+//   - Speed-based fallback (no Gear) = debounced transitions (legacy path)
 //   - "offline" is set externally by MarkVehicleOffline when telemetry stops arriving
 func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	candidateState := h.detectVehicleState(signals)
 	now := time.Now().UTC()
+
+	// Check if this batch has a Gear signal — determines instant vs debounced path
+	_, hasGear := signals["Gear"]
 
 	h.vehicleStateMu.Lock()
 	sm, exists := h.vehicleStates[vehicleID]
@@ -622,6 +679,35 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		sm = &vehicleStateMachine{currentState: currentDB}
 		h.vehicleStates[vehicleID] = sm
 	}
+
+	// Update last known gear
+	if hasGear {
+		sm.lastGear = toString(signals["Gear"])
+	}
+
+	// If candidate matches current, reset pending — no transition needed
+	if candidateState == sm.currentState {
+		sm.pendingState = ""
+		sm.pendingSince = time.Time{}
+		h.vehicleStateMu.Unlock()
+		return
+	}
+
+	// === GEAR-BASED PATH: Immediate transitions (no debounce) ===
+	if hasGear || sm.lastGear != "" {
+		sm.currentState = candidateState
+		sm.pendingState = ""
+		sm.pendingSince = time.Time{}
+		if candidateState == "driving" {
+			sm.lastSpeedTime = now
+		}
+		h.vehicleStateMu.Unlock()
+		h.commitStateTransition(ctx, vehicleID, candidateState)
+		log.Info().Int64("vehicle_id", vehicleID).Str("gear", sm.lastGear).Str("state", candidateState).Msg("telemetry: gear-based state transition")
+		return
+	}
+
+	// === SPEED-BASED FALLBACK: Debounced transitions (no Gear available) ===
 
 	// Track last speed for drive hold hysteresis
 	if candidateState == "driving" {
@@ -639,7 +725,6 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		}
 	}
 
-	// If candidate matches current, reset pending — no transition needed
 	if candidateState == sm.currentState {
 		sm.pendingState = ""
 		sm.pendingSince = time.Time{}
@@ -647,7 +732,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		return
 	}
 
-	// Fast path: entering "driving" is immediate (no confirmation delay)
+	// Fast path: entering "driving" is immediate even for speed-based
 	if candidateState == "driving" && sm.currentState != "driving" {
 		sm.currentState = candidateState
 		sm.pendingState = ""
@@ -658,7 +743,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		return
 	}
 
-	// All other transitions require confirmation period
+	// All other speed-based transitions require confirmation period
 	if candidateState != sm.pendingState {
 		sm.pendingState = candidateState
 		sm.pendingSince = now

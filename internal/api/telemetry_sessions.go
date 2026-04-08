@@ -43,6 +43,7 @@ type streamingDrive struct {
 	LastSpeed float64
 	LastSeen  time.Time
 	LastSpeedZeroTime time.Time
+	GearBased bool // true if drive was started by Gear signal (not speed)
 
 	// Signal accumulator — merges signals across MQTT batches for rich telemetry writes.
 	// Fleet telemetry sends each field as a separate MQTT message, so individual batches
@@ -290,288 +291,70 @@ func strPtr(v string) *string     { return &v }
 
 func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	speed, hasSpeed := signalFloat(signals, "VehicleSpeed")
-	if !hasSpeed {
-		// Even without speed, accumulate signals for active drive
-		t.mu.Lock()
-		if active, ok := t.activeDrives[vehicleID]; ok {
-			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
-			active.LastSeen = time.Now().UTC()
-			t.maybeFlushDriveTelemetry(ctx, active)
-		}
-		t.mu.Unlock()
-		return
-	}
+	gear, hasGear := signalStr(signals, "Gear")
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	active, hasDrive := t.activeDrives[vehicleID]
 
-	if speed > 0 && !hasDrive {
-		// === START DRIVE ===
-		// Use accumulated signals from the handler as fallback — the first batch
-		// with VehicleSpeed often lacks BatteryLevel, Odometer, Location etc.
-		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
-		if !hasBat {
-			batteryLevel, hasBat = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
-		}
-		odometer, hasOdo := signalFloat(signals, "Odometer")
-		if !hasOdo {
-			odometer, hasOdo = signalFloat(accumulatedSignals, "Odometer")
-		}
-		lat, lon, hasLoc := signalLatLon(signals)
-		if !hasLoc {
-			lat, lon, hasLoc = signalLatLon(accumulatedSignals)
-		}
-		elevation, hasElev := signalFloat(signals, "Elevation")
-		if !hasElev {
-			elevation, _ = signalFloat(accumulatedSignals, "Elevation")
-		}
-		ratedRange, hasRR := signalFloat(signals, "RatedRange")
-		if !hasRR {
-			ratedRange, _ = signalFloat(accumulatedSignals, "RatedRange")
-		}
-		idealRange, hasIR := signalFloat(signals, "IdealBatteryRange")
-		if !hasIR {
-			idealRange, _ = signalFloat(accumulatedSignals, "IdealBatteryRange")
-		}
-		estRange, hasER := signalFloat(signals, "EstBatteryRange")
-		if !hasER {
-			estRange, _ = signalFloat(accumulatedSignals, "EstBatteryRange")
-		}
-		soc, hasSoc := signalFloat(signals, "Soc", "BatteryLevel")
-		if !hasSoc {
-			soc, _ = signalFloat(accumulatedSignals, "Soc", "BatteryLevel")
-		}
-		usableSoc, hasUS := signalFloat(signals, "UsableSoc")
-		if !hasUS {
-			usableSoc, _ = signalFloat(accumulatedSignals, "UsableSoc")
-		}
+	// === GEAR-BASED PATH (primary) ===
+	if hasGear {
+		isDrivingGear := gear == "D" || gear == "R"
+		isParkGear := gear == "P" || gear == "N"
 
-		drive := &models.Drive{
-			VehicleID: vehicleID,
-			StartDate: time.Now().UTC(),
-		}
-		// Only set start battery when we actually have it — prevents storing 0
-		// when the first MQTT batch only contains VehicleSpeed.
-		if hasBat {
-			drive.StartBatteryLvl = &batteryLevel
-		}
-		if hasOdo {
-			drive.StartOdometer = floatPtr(odometer)
-		}
-		if hasLoc {
-			drive.StartLatitude = floatPtr(lat)
-			drive.StartLongitude = floatPtr(lon)
-		}
-
-		if err := t.driveRepo.Create(ctx, drive); err != nil {
-			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to create drive")
+		if isDrivingGear && !hasDrive {
+			// Gear→D/R with no active drive → START DRIVE immediately
+			t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, true)
 			return
 		}
 
-		sd := &streamingDrive{
-			DriveID:            drive.ID,
-			VehicleID:          vehicleID,
-			StartTime:          time.Now().UTC(),
-			LastSpeed:          speed,
-			LastSeen:           time.Now().UTC(),
-			MaxSpeed:           speed,
-			MinSpeed:           speed,
-			SpeedSum:           speed,
-			SpeedCount:         1,
-			PowerMin:           math.MaxFloat64,
-			RatedRangeMin:      math.MaxFloat64,
-			IdealRangeMin:      math.MaxFloat64,
-			EstRangeMin:        math.MaxFloat64,
-			SocMin:             math.MaxFloat64,
-			UsableSocMin:       math.MaxFloat64,
-			accumulatedSignals: make(map[string]interface{}),
-			lastTelemetryWrite: time.Now().UTC(),
+		if isDrivingGear && hasDrive {
+			// Gear still D/R — update active drive
+			active.LastSeen = time.Now().UTC()
+			active.LastSpeedZeroTime = time.Time{} // reset any speed-zero timer
+			t.updateActiveDriveLocked(ctx, active, signals, speed, hasSpeed)
+			return
 		}
 
-		if hasOdo {
-			sd.StartOdometer = floatPtr(odometer)
-			sd.LastOdometer = floatPtr(odometer)
-		}
-		if hasLoc {
-			sd.StartLatitude = floatPtr(lat)
-			sd.LastLatitude = floatPtr(lat)
-			sd.StartLongitude = floatPtr(lon)
-			sd.LastLongitude = floatPtr(lon)
-		}
-		sd.StartElevation = floatPtr(elevation)
-		sd.LastElevation = floatPtr(elevation)
-		sd.StartRatedRange = floatPtr(ratedRange)
-		sd.StartIdealRange = floatPtr(idealRange)
-		sd.StartEstRange = floatPtr(estRange)
-		sd.StartSoc = floatPtr(soc)
-		sd.StartUsableSoc = floatPtr(usableSoc)
-
-		// Initialize range accumulators
-		if ratedRange > 0 {
-			sd.RatedRangeMax = ratedRange
-			sd.RatedRangeMin = ratedRange
-			sd.RatedRangeSum = ratedRange
-			sd.RangeCount = 1
-		}
-		if idealRange > 0 {
-			sd.IdealRangeMax = idealRange
-			sd.IdealRangeMin = idealRange
-			sd.IdealRangeSum = idealRange
-		}
-		if estRange > 0 {
-			sd.EstRangeMax = estRange
-			sd.EstRangeMin = estRange
-			sd.EstRangeSum = estRange
-		}
-		if soc > 0 {
-			sd.SocMax = soc
-			sd.SocMin = soc
-			sd.SocSum = soc
-			sd.SocCount = 1
-		}
-		if usableSoc > 0 {
-			sd.UsableSocMax = usableSoc
-			sd.UsableSocMin = usableSoc
-			sd.UsableSocSum = usableSoc
+		if isParkGear && hasDrive {
+			// Gear→P with active drive → END DRIVE immediately
+			log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
+				Str("gear", gear).Msg("telemetry: gear→P, ending drive")
+			t.completeDriveLocked(ctx, vehicleID, active, signals)
+			return
 		}
 
-		t.activeDrives[vehicleID] = sd
-		DriveSessionsActive.Inc()
-
-		// Accumulate first batch and write immediately
-		sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
-		t.flushDriveTelemetry(ctx, sd)
-
-		// Reverse geocode start address (async to not block)
-		if hasLoc {
-			go t.resolveAndUpdateAddress(drive.ID, lat, lon, true)
+		// Gear=P/N with no active drive — nothing to do
+		if !hasDrive {
+			return
 		}
+	}
 
-		log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", drive.ID).Msg("telemetry: drive started")
-		if t.eventBus != nil {
-			t.eventBus.Publish(events.Event{Type: events.DriveStarted, VehicleID: vehicleID, VIN: vin,
-				Data: map[string]interface{}{"drive_id": drive.ID, "battery_level": batteryLevel, "source": "fleet_telemetry"}})
+	// === SPEED-BASED FALLBACK (no Gear signal in this batch) ===
+
+	if !hasSpeed {
+		// No speed and no gear — just accumulate for active drive
+		if hasDrive {
+			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+			active.LastSeen = time.Now().UTC()
+			t.maybeFlushDriveTelemetry(ctx, active)
 		}
+		return
+	}
+
+	if speed > 0 && !hasDrive {
+		// Speed > 0, no gear, no active drive → START DRIVE (fallback)
+		t.startDriveLocked(ctx, vehicleID, vin, signals, accumulatedSignals, speed, false)
 
 	} else if speed > 0 && hasDrive {
-		// === UPDATE ACTIVE DRIVE ===
-		active.LastSpeed = speed
+		// Speed > 0, active drive → UPDATE
 		active.LastSeen = time.Now().UTC()
 		active.LastSpeedZeroTime = time.Time{}
-
-		// Deferred start value backfill — if the first MQTT batch lacked
-		// battery/odometer, capture them from the first batch that has them.
-		startBackfill := map[string]interface{}{}
-		if active.StartOdometer == nil {
-			if odo, ok := signalFloat(signals, "Odometer"); ok {
-				active.StartOdometer = floatPtr(odo)
-				active.LastOdometer = floatPtr(odo)
-				startBackfill["start_odometer"] = odo
-			}
-		}
-		if active.StartSoc == nil {
-			if soc, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok {
-				active.StartSoc = floatPtr(soc)
-				bl := int(soc)
-				startBackfill["start_battery_level"] = bl
-				startBackfill["soc_start"] = soc
-				// Initialize SOC accumulators
-				active.SocMax = soc
-				active.SocMin = soc
-				active.SocSum = soc
-				active.SocCount = 1
-			}
-		}
-		if active.StartLatitude == nil {
-			if la, lo, ok := signalLatLon(signals); ok {
-				active.StartLatitude = floatPtr(la)
-				active.StartLongitude = floatPtr(lo)
-				startBackfill["start_latitude"] = la
-				startBackfill["start_longitude"] = lo
-				// Reverse geocode start address if not already done
-				go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
-			}
-		}
-		if active.StartRatedRange == nil {
-			if rr, ok := signalFloat(signals, "RatedRange"); ok {
-				active.StartRatedRange = floatPtr(rr)
-				startBackfill["start_rated_range_km"] = rr
-			}
-		}
-		if active.StartIdealRange == nil {
-			if ir, ok := signalFloat(signals, "IdealBatteryRange"); ok {
-				active.StartIdealRange = floatPtr(ir)
-				startBackfill["start_ideal_range_km"] = ir
-			}
-		}
-		if active.StartEstRange == nil {
-			if er, ok := signalFloat(signals, "EstBatteryRange"); ok {
-				active.StartEstRange = floatPtr(er)
-				startBackfill["start_est_range_km"] = er
-			}
-		}
-		if len(startBackfill) > 0 {
-			if err := t.driveRepo.PartialUpdate(ctx, active.DriveID, startBackfill); err != nil {
-				log.Warn().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to backfill drive start values")
-			}
-		}
-
-		// Speed stats
-		if speed > active.MaxSpeed {
-			active.MaxSpeed = speed
-		}
-		if speed < active.MinSpeed {
-			active.MinSpeed = speed
-		}
-		active.SpeedSum += speed
-		active.SpeedCount++
-
-		// Power — compute from PackVoltage * PackCurrent when PackPower not available
-		if power, ok := signalPowerKW(signals); ok {
-			if power > active.PowerMax {
-				active.PowerMax = power
-			}
-			if power < active.PowerMin {
-				active.PowerMin = power
-			}
-		}
-
-		// Range tracking
-		t.updateDriveRangeStats(active, signals)
-
-		// SOC tracking
-		t.updateDriveSocStats(active, signals)
-
-		// Temperature
-		t.updateDriveTempStats(active, signals)
-
-		// Elevation
-		t.updateDriveElevation(active, signals)
-
-		// Position — extract from Location map (fleet telemetry) or separate signals
-		if la, lo, ok := signalLatLon(signals); ok {
-			active.LastLatitude = floatPtr(la)
-			active.LastLongitude = floatPtr(lo)
-		}
-		if odo, ok := signalFloat(signals, "Odometer"); ok {
-			active.LastOdometer = floatPtr(odo)
-		}
-
-		// Battery heater
-		if bh, ok := signals["BatteryHeaterOn"]; ok {
-			if b, ok2 := bh.(bool); ok2 && b {
-				active.BatteryHeaterSeen = true
-			}
-		}
-
-		// Accumulate signals and flush periodically
-		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
-		t.maybeFlushDriveTelemetry(ctx, active)
+		t.updateActiveDriveLocked(ctx, active, signals, speed, true)
 
 	} else if speed == 0 && hasDrive {
-		// === SPEED IS ZERO — check for drive end ===
+		// Speed = 0, active drive → check for drive end (2-min timeout fallback)
 		active.LastSeen = time.Now().UTC()
 		active.LastSpeed = 0
 
@@ -583,6 +366,270 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			t.completeDriveLocked(ctx, vehicleID, active, signals)
 		}
 	}
+}
+
+// startDriveLocked creates a new drive session. Must be called with t.mu held.
+func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool) {
+	batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
+	if !hasBat {
+		batteryLevel, hasBat = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
+	}
+	odometer, hasOdo := signalFloat(signals, "Odometer")
+	if !hasOdo {
+		odometer, hasOdo = signalFloat(accumulatedSignals, "Odometer")
+	}
+	lat, lon, hasLoc := signalLatLon(signals)
+	if !hasLoc {
+		lat, lon, hasLoc = signalLatLon(accumulatedSignals)
+	}
+	elevation, hasElev := signalFloat(signals, "Elevation")
+	if !hasElev {
+		elevation, _ = signalFloat(accumulatedSignals, "Elevation")
+	}
+	ratedRange, hasRR := signalFloat(signals, "RatedRange")
+	if !hasRR {
+		ratedRange, _ = signalFloat(accumulatedSignals, "RatedRange")
+	}
+	idealRange, hasIR := signalFloat(signals, "IdealBatteryRange")
+	if !hasIR {
+		idealRange, _ = signalFloat(accumulatedSignals, "IdealBatteryRange")
+	}
+	estRange, hasER := signalFloat(signals, "EstBatteryRange")
+	if !hasER {
+		estRange, _ = signalFloat(accumulatedSignals, "EstBatteryRange")
+	}
+	soc, hasSoc := signalFloat(signals, "Soc", "BatteryLevel")
+	if !hasSoc {
+		soc, _ = signalFloat(accumulatedSignals, "Soc", "BatteryLevel")
+	}
+	usableSoc, hasUS := signalFloat(signals, "UsableSoc")
+	if !hasUS {
+		usableSoc, _ = signalFloat(accumulatedSignals, "UsableSoc")
+	}
+
+	drive := &models.Drive{
+		VehicleID: vehicleID,
+		StartDate: time.Now().UTC(),
+	}
+	if hasBat {
+		drive.StartBatteryLvl = &batteryLevel
+	}
+	if hasOdo {
+		drive.StartOdometer = floatPtr(odometer)
+	}
+	if hasLoc {
+		drive.StartLatitude = floatPtr(lat)
+		drive.StartLongitude = floatPtr(lon)
+	}
+
+	if err := t.driveRepo.Create(ctx, drive); err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to create drive")
+		return
+	}
+
+	sd := &streamingDrive{
+		DriveID:            drive.ID,
+		VehicleID:          vehicleID,
+		StartTime:          time.Now().UTC(),
+		LastSpeed:          speed,
+		LastSeen:           time.Now().UTC(),
+		GearBased:          gearBased,
+		PowerMin:           math.MaxFloat64,
+		RatedRangeMin:      math.MaxFloat64,
+		IdealRangeMin:      math.MaxFloat64,
+		EstRangeMin:        math.MaxFloat64,
+		SocMin:             math.MaxFloat64,
+		UsableSocMin:       math.MaxFloat64,
+		accumulatedSignals: make(map[string]interface{}),
+		lastTelemetryWrite: time.Now().UTC(),
+	}
+	if speed > 0 {
+		sd.MaxSpeed = speed
+		sd.MinSpeed = speed
+		sd.SpeedSum = speed
+		sd.SpeedCount = 1
+	}
+
+	if hasOdo {
+		sd.StartOdometer = floatPtr(odometer)
+		sd.LastOdometer = floatPtr(odometer)
+	}
+	if hasLoc {
+		sd.StartLatitude = floatPtr(lat)
+		sd.LastLatitude = floatPtr(lat)
+		sd.StartLongitude = floatPtr(lon)
+		sd.LastLongitude = floatPtr(lon)
+	}
+	sd.StartElevation = floatPtr(elevation)
+	sd.LastElevation = floatPtr(elevation)
+	sd.StartRatedRange = floatPtr(ratedRange)
+	sd.StartIdealRange = floatPtr(idealRange)
+	sd.StartEstRange = floatPtr(estRange)
+	sd.StartSoc = floatPtr(soc)
+	sd.StartUsableSoc = floatPtr(usableSoc)
+
+	// Initialize range accumulators
+	if ratedRange > 0 {
+		sd.RatedRangeMax = ratedRange
+		sd.RatedRangeMin = ratedRange
+		sd.RatedRangeSum = ratedRange
+		sd.RangeCount = 1
+	}
+	if idealRange > 0 {
+		sd.IdealRangeMax = idealRange
+		sd.IdealRangeMin = idealRange
+		sd.IdealRangeSum = idealRange
+	}
+	if estRange > 0 {
+		sd.EstRangeMax = estRange
+		sd.EstRangeMin = estRange
+		sd.EstRangeSum = estRange
+	}
+	if soc > 0 {
+		sd.SocMax = soc
+		sd.SocMin = soc
+		sd.SocSum = soc
+		sd.SocCount = 1
+	}
+	if usableSoc > 0 {
+		sd.UsableSocMax = usableSoc
+		sd.UsableSocMin = usableSoc
+		sd.UsableSocSum = usableSoc
+	}
+
+	t.activeDrives[vehicleID] = sd
+	DriveSessionsActive.Inc()
+
+	// Accumulate first batch and write immediately
+	sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
+	t.flushDriveTelemetry(ctx, sd)
+
+	// Reverse geocode start address (async to not block)
+	if hasLoc {
+		go t.resolveAndUpdateAddress(drive.ID, lat, lon, true)
+	}
+
+	trigger := "speed"
+	if gearBased {
+		trigger = "gear"
+	}
+	log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", drive.ID).Str("trigger", trigger).Msg("telemetry: drive started")
+	if t.eventBus != nil {
+		t.eventBus.Publish(events.Event{Type: events.DriveStarted, VehicleID: vehicleID, VIN: vin,
+			Data: map[string]interface{}{"drive_id": drive.ID, "battery_level": batteryLevel, "source": "fleet_telemetry", "trigger": trigger}})
+	}
+}
+
+// updateActiveDriveLocked updates an active drive with new signals. Must be called with t.mu held.
+func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, active *streamingDrive, signals map[string]interface{}, speed float64, hasSpeed bool) {
+	if hasSpeed && speed > 0 {
+		active.LastSpeed = speed
+		// Speed stats
+		if speed > active.MaxSpeed {
+			active.MaxSpeed = speed
+		}
+		if active.SpeedCount == 0 || speed < active.MinSpeed {
+			active.MinSpeed = speed
+		}
+		active.SpeedSum += speed
+		active.SpeedCount++
+	}
+
+	// Deferred start value backfill
+	startBackfill := map[string]interface{}{}
+	if active.StartOdometer == nil {
+		if odo, ok := signalFloat(signals, "Odometer"); ok {
+			active.StartOdometer = floatPtr(odo)
+			active.LastOdometer = floatPtr(odo)
+			startBackfill["start_odometer"] = odo
+		}
+	}
+	if active.StartSoc == nil {
+		if soc, ok := signalFloat(signals, "Soc", "BatteryLevel"); ok {
+			active.StartSoc = floatPtr(soc)
+			bl := int(soc)
+			startBackfill["start_battery_level"] = bl
+			startBackfill["soc_start"] = soc
+			active.SocMax = soc
+			active.SocMin = soc
+			active.SocSum = soc
+			active.SocCount = 1
+		}
+	}
+	if active.StartLatitude == nil {
+		if la, lo, ok := signalLatLon(signals); ok {
+			active.StartLatitude = floatPtr(la)
+			active.StartLongitude = floatPtr(lo)
+			startBackfill["start_latitude"] = la
+			startBackfill["start_longitude"] = lo
+			go t.resolveAndUpdateAddress(active.DriveID, la, lo, true)
+		}
+	}
+	if active.StartRatedRange == nil {
+		if rr, ok := signalFloat(signals, "RatedRange"); ok {
+			active.StartRatedRange = floatPtr(rr)
+			startBackfill["start_rated_range_km"] = rr
+		}
+	}
+	if active.StartIdealRange == nil {
+		if ir, ok := signalFloat(signals, "IdealBatteryRange"); ok {
+			active.StartIdealRange = floatPtr(ir)
+			startBackfill["start_ideal_range_km"] = ir
+		}
+	}
+	if active.StartEstRange == nil {
+		if er, ok := signalFloat(signals, "EstBatteryRange"); ok {
+			active.StartEstRange = floatPtr(er)
+			startBackfill["start_est_range_km"] = er
+		}
+	}
+	if len(startBackfill) > 0 {
+		if err := t.driveRepo.PartialUpdate(ctx, active.DriveID, startBackfill); err != nil {
+			log.Warn().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to backfill drive start values")
+		}
+	}
+
+	// Power
+	if power, ok := signalPowerKW(signals); ok {
+		if power > active.PowerMax {
+			active.PowerMax = power
+		}
+		if power < active.PowerMin {
+			active.PowerMin = power
+		}
+	}
+
+	// Range tracking
+	t.updateDriveRangeStats(active, signals)
+
+	// SOC tracking
+	t.updateDriveSocStats(active, signals)
+
+	// Temperature
+	t.updateDriveTempStats(active, signals)
+
+	// Elevation
+	t.updateDriveElevation(active, signals)
+
+	// Position
+	if la, lo, ok := signalLatLon(signals); ok {
+		active.LastLatitude = floatPtr(la)
+		active.LastLongitude = floatPtr(lo)
+	}
+	if odo, ok := signalFloat(signals, "Odometer"); ok {
+		active.LastOdometer = floatPtr(odo)
+	}
+
+	// Battery heater
+	if bh, ok := signals["BatteryHeaterOn"]; ok {
+		if b, ok2 := bh.(bool); ok2 && b {
+			active.BatteryHeaterSeen = true
+		}
+	}
+
+	// Accumulate signals and flush periodically
+	active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+	t.maybeFlushDriveTelemetry(ctx, active)
 }
 
 func (t *TelemetrySessionTracker) updateDriveRangeStats(active *streamingDrive, signals map[string]interface{}) {
