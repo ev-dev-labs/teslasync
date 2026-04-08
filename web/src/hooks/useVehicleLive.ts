@@ -69,6 +69,8 @@ export interface VehicleLiveState {
   // Vehicle State — Driver & Keys
   driverSeatOccupied: boolean
   pairedKeyCount: number
+  driverSeatBelt: boolean
+  passengerSeatBelt: boolean
 
   // Vehicle State — Homelink
   homelinkNearby: boolean
@@ -149,6 +151,7 @@ const EMPTY_STATE: VehicleLiveState = {
   speedLimitMode: false, currentSpeedLimit: 0,
   lightsHazards: false, lightsHighBeams: false, lightsTurnSignal: '',
   driverSeatOccupied: false, pairedKeyCount: 0,
+  driverSeatBelt: false, passengerSeatBelt: false,
   homelinkNearby: false, homelinkDeviceCount: 0,
   tirePressureFl: 0, tirePressureFr: 0, tirePressureRl: 0, tirePressureRr: 0,
   tpmsHardWarnings: '', tpmsSoftWarnings: '',
@@ -263,6 +266,8 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   // Vehicle State — Driver & Keys
   if (raw['DriverSeatOccupied'] != null) s.driverSeatOccupied = bool('DriverSeatOccupied')
   if (raw['PairedPhoneKeyAndKeyFobQty'] != null) s.pairedKeyCount = n('PairedPhoneKeyAndKeyFobQty')
+  if (raw['DriverSeatBelt'] != null) s.driverSeatBelt = bool('DriverSeatBelt')
+  if (raw['PassengerSeatBelt'] != null) s.passengerSeatBelt = bool('PassengerSeatBelt')
 
   // Vehicle State — Homelink
   if (raw['HomelinkNearby'] != null) s.homelinkNearby = bool('HomelinkNearby')

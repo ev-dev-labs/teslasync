@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSafetyData, getSafetyLatest } from '../api'
+import { useVehicleLive } from '../hooks/useVehicleLive'
 import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
 import {
   Shield, ShieldCheck, ShieldAlert, Eye, AlertTriangle, Car, Gauge, Lock,
-  Milestone, CheckCircle, XCircle, Activity,
+  Milestone, CheckCircle, XCircle, Activity, User, Bell,
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -184,6 +185,9 @@ export default function SafetySettings() {
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
 
+  // SSE live state for real-time seat belt and safety signals
+  const { state: live } = useVehicleLive(vehicleId ?? undefined)
+
   const { data: latest, isLoading: loadingLatest } = useQuery({
     queryKey: ['safety-latest', vehicleId],
     queryFn: () => getSafetyLatest(vehicleId!),
@@ -329,8 +333,61 @@ export default function SafetySettings() {
             description="PIN required to drive"
             value={boolStatus(latest?.pin_to_drive_enabled)}
           />
+          <SafetyCard
+            icon={<Bell className="h-5 w-5 text-neon-amber" />}
+            label="Blind Spot Warning Chime"
+            description="Audible collision alert"
+            value={boolStatus(latest?.blind_spot_collision_warning)}
+          />
+          <SafetyCard
+            icon={<ShieldAlert className="h-5 w-5 text-neon-red" />}
+            label="Emergency Lane Departure"
+            description="Lane keep assist"
+            value={boolStatus(latest?.emergency_lane_departure_avoidance)}
+          />
         </div>
       )}
+
+      {/* ---- Live Seat Belt Status ---- */}
+      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Live Safety Signals</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="glass-card p-4 flex flex-col items-center gap-2">
+          <div className={clsx('p-2.5 rounded-lg', live.driverSeatBelt ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
+            <User className={clsx('h-5 w-5', live.driverSeatBelt ? 'text-neon-green' : 'text-neon-red')} />
+          </div>
+          <span className={clsx('text-sm font-bold', live.driverSeatBelt ? 'text-neon-green' : 'text-neon-red')}>
+            {live.driverSeatBelt ? 'Buckled' : 'Unbuckled'}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Belt</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col items-center gap-2">
+          <div className={clsx('p-2.5 rounded-lg', live.passengerSeatBelt ? 'bg-neon-green/10' : 'bg-white/5')}>
+            <User className={clsx('h-5 w-5', live.passengerSeatBelt ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+          </div>
+          <span className={clsx('text-sm font-bold', live.passengerSeatBelt ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
+            {live.passengerSeatBelt ? 'Buckled' : 'Unbuckled'}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Passenger Belt</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col items-center gap-2">
+          <div className={clsx('p-2.5 rounded-lg', live.driverSeatOccupied ? 'bg-neon-green/10' : 'bg-white/5')}>
+            <Car className={clsx('h-5 w-5', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+          </div>
+          <span className={clsx('text-sm font-bold', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
+            {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Seat</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col items-center gap-2">
+          <div className={clsx('p-2.5 rounded-lg', live.locked ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
+            <Lock className={clsx('h-5 w-5', live.locked ? 'text-neon-green' : 'text-neon-red')} />
+          </div>
+          <span className={clsx('text-sm font-bold', live.locked ? 'text-neon-green' : 'text-neon-red')}>
+            {live.locked ? 'Locked' : 'Unlocked'}
+          </span>
+          <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vehicle Lock</span>
+        </div>
+      </div>
 
       {/* ---- Self-Driving Stats ---- */}
       <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Driving Statistics</h3>
