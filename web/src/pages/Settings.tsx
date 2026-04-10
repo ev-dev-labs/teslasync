@@ -3,7 +3,7 @@ import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, di
 import { useState, useEffect } from 'react'
 import { isSettingMiles, isSettingFahrenheit, parseSettingEnum } from '../lib/parseSettingEnum'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Fuel, Zap } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Select, Button, Input } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Select, Button, Input, IconBox } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
 import { useToast } from '../components/Toast'
@@ -159,9 +159,9 @@ export default function Settings() {
       <FadeIn>
         <GlassPanel className="p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-blue/10 text-neon-blue ring-1 ring-neon-blue/20">
+            <IconBox color="blue">
               <Shield className="h-5 w-5" />
-            </div>
+            </IconBox>
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">Tesla Account</h2>
               <p className="text-xs text-[var(--text-muted)]">Connect your Tesla account to sync vehicles and data</p>
@@ -248,9 +248,9 @@ export default function Settings() {
       <FadeIn delay={0.1}>
         <GlassPanel className="p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20">
+            <IconBox color="cyan">
               <SettingsIcon className="h-5 w-5" />
-            </div>
+            </IconBox>
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">Application</h2>
               <p className="text-xs text-[var(--text-muted)]">Units, language, and cost preferences</p>
@@ -450,9 +450,9 @@ export default function Settings() {
       <FadeIn delay={0.15}>
         <GlassPanel className="p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-purple/10 text-neon-purple ring-1 ring-neon-purple/20">
+            <IconBox color="purple">
               <Palette className="h-5 w-5" />
-            </div>
+            </IconBox>
             <div>
               <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Appearance</h2>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Customize colors and display mode</p>
@@ -610,9 +610,9 @@ export default function Settings() {
       <FadeIn delay={0.18}>
         <a href="/data-export" className="block">
           <GlassPanel className="p-5 flex items-center gap-4 hover:border-white/10 transition-colors cursor-pointer group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-green/10 text-neon-green ring-1 ring-neon-green/20 shrink-0">
+            <IconBox color="green">
               <Download className="h-5 w-5" />
-            </div>
+            </IconBox>
             <div className="flex-1 min-w-0">
               <h2 className="text-base font-semibold text-[var(--text-primary)]">Data Export</h2>
               <p className="text-xs text-[var(--text-muted)]">Export drives, charging, analytics, or full backup as CSV/JSON</p>

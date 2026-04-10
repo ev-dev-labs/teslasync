@@ -18,7 +18,7 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge, Button, IconBox, InlineMetric, MetricCard } from '../components/ui'
+import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge, Button, IconBox, InlineMetric, MetricCard, Badge } from '../components/ui'
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
@@ -817,12 +817,13 @@ export default function VehicleDetail() {
                             </span>
                           )}
                           {cleanNil(mediaData.playback_status) && (
-                            <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
-                              mediaData.playback_status === 'Playing' ? 'bg-green-500/10 text-green-400'
-                                : mediaData.playback_status === 'Paused' ? 'bg-amber-500/10 text-amber-400'
-                                : 'bg-white/5 text-[var(--text-muted)]')}>
+                            <Badge color={
+                              mediaData.playback_status === 'Playing' ? 'green'
+                                : mediaData.playback_status === 'Paused' ? 'amber'
+                                : 'neutral'
+                            }>
                               {cleanNil(mediaData.playback_status)}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       </div>
