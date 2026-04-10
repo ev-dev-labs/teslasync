@@ -45,6 +45,7 @@ export function DataTable<T>({
                   col.className,
                 )}
                 onClick={() => col.sortable && onSort?.(col.key)}
+                aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
               >
                 <span className="inline-flex items-center gap-1">
                   {col.header}
@@ -97,18 +98,19 @@ const modalSizes = {
   lg: 'max-w-2xl',
 }
 
-/** Generic modal dialog with portal, backdrop, focus trap basics. */
+/** Generic modal dialog with portal, backdrop, and accessibility attributes. */
 export function Modal({ open, onClose, title, children, size = 'md', className }: ModalProps) {
   if (!open) return null
   return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title || 'Dialog'}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           onClick={onClose}
+          aria-hidden="true"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -120,7 +122,7 @@ export function Modal({ open, onClose, title, children, size = 'md', className }
           {title && (
             <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
               <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
-              <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors">
+              <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -150,13 +152,14 @@ interface DrawerProps {
 export function Drawer({ open, onClose, title, children, side = 'right', className }: DrawerProps) {
   if (!open) return null
   return createPortal(
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title || 'Panel'}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
       <motion.div
         initial={{ x: side === 'right' ? '100%' : '-100%' }}
@@ -172,7 +175,7 @@ export function Drawer({ open, onClose, title, children, side = 'right', classNa
         {title && (
           <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
             <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
-            <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors">
+            <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -309,6 +312,7 @@ export function Accordion({ title, children, defaultOpen = false, icon, badge, c
     <div className={cn('rounded-xl border border-white/[0.06] overflow-hidden', className)}>
       <button
         onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
       >
         {icon && <div className="text-[var(--text-muted)]">{icon}</div>}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Bell, Plus, Trash2, TestTube, ToggleLeft, ToggleRight,
+  Bell, Plus, Trash2, TestTube,
   Send, MessageSquare, Mail, Webhook, Hash, Megaphone, Smartphone,
   CheckCircle, XCircle, Clock, BarChart3, Pencil, ChevronDown, ChevronUp,
 } from 'lucide-react'
@@ -166,17 +166,7 @@ export default function Notifications() {
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleMut.mutate({ id: ch.id, enabled: !ch.enabled })}
-                      className="transition-colors shrink-0"
-                      aria-label={ch.enabled ? 'Disable channel' : 'Enable channel'}
-                    >
-                      {ch.enabled ? (
-                        <ToggleRight className="h-7 w-7 text-neon-green" />
-                      ) : (
-                        <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />
-                      )}
-                    </button>
+                    <Toggle checked={ch.enabled} onChange={() => toggleMut.mutate({ id: ch.id, enabled: !ch.enabled })} />
                   </div>
 
                   {/* Config preview */}

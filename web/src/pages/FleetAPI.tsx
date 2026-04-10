@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, toggleAPISuspend, getPollingConfig, updatePollingConfig, getCaptureStats, getVersionInfo, PollingConfig } from '../api'
 import { useCallback } from 'react'
-import { Shield, Pause, Play, Globe, Link, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Shield, Pause, Play, Globe, Link } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, IconBox, Toggle } from '../components/ui'
 import { useToast } from '../components/Toast'
 
@@ -287,7 +287,7 @@ export default function FleetAPI() {
   )
 }
 
-function EndpointToggle({ label, desc, enabled, onToggle, disabled, iconColor }: {
+function EndpointToggle({ label, desc, enabled, onToggle, disabled }: {
   label: string; desc: string; enabled: boolean; onToggle: () => void; disabled: boolean; iconColor?: string
 }) {
   return (
@@ -296,18 +296,9 @@ function EndpointToggle({ label, desc, enabled, onToggle, disabled, iconColor }:
         <p className="text-xs font-medium text-[var(--text-primary)] truncate">{label}</p>
         <p className="text-[10px] text-[var(--text-muted)] truncate">{desc}</p>
       </div>
-      <button
-        onClick={onToggle}
-        className="transition-colors shrink-0 ml-2"
-        aria-label={enabled ? `Disable ${label}` : `Enable ${label}`}
-        disabled={disabled}
-      >
-        {enabled ? (
-          <ToggleRight className={`h-6 w-6 ${iconColor ?? 'text-neon-green'}`} />
-        ) : (
-          <ToggleLeft className="h-6 w-6 text-[var(--text-muted)]" />
-        )}
-      </button>
+      <div className="shrink-0 ml-2">
+        <Toggle checked={enabled} onChange={() => onToggle()} disabled={disabled} />
+      </div>
     </div>
   )
 }
