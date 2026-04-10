@@ -4,8 +4,10 @@ import { useCallback } from 'react'
 import { Shield, Pause, Play, Globe, Link } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, IconBox, Toggle } from '../components/ui'
 import { useToast } from '../components/Toast'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function FleetAPI() {
+  usePageTitle('Fleet API')
   const queryClient = useQueryClient()
   const toast = useToast()
 

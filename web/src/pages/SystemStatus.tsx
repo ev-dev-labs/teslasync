@@ -17,6 +17,7 @@ import clsx from 'clsx'
 import { formatDateTime, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 import { tableTokens } from '../lib/tokens'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface ComponentInfo {
   status: string
@@ -40,6 +41,7 @@ interface SystemStatus {
 }
 
 function getStatusColor(status: string): string {
+  usePageTitle('System Status')
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': case 'authenticated': case 'connected': case 'enabled': return '#10b981'
     case 'degraded': case 'disconnected': return '#f59e0b'

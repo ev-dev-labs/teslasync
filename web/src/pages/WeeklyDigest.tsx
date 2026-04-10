@@ -50,6 +50,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDate, formatDateWithDay } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ── WeeklyDigest types ──────────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ const comparisonColumns: Column<ComparisonRow>[] = [
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function getWeekRange(offset: number): [Date, Date] {
+  usePageTitle('Weekly Digest')
   const now = new Date()
   const dayOfWeek = now.getDay()
   const monday = new Date(now)

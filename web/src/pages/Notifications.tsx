@@ -16,6 +16,7 @@ import {
 import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState, Badge, Button, MetricCard, Toggle, Modal, DataTable, type Column } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const CHANNEL_TYPES = [
   { value: 'discord', label: 'Discord', icon: Hash, color: '#5865F2', fields: [
@@ -53,6 +54,7 @@ const CHANNEL_TYPES = [
 type ChannelType = typeof CHANNEL_TYPES[number]['value']
 
 function getChannelMeta(type: string) {
+  usePageTitle('Notifications')
   return CHANNEL_TYPES.find(t => t.value === type) ?? CHANNEL_TYPES[4]
 }
 
@@ -363,8 +365,9 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
 
           {/* Name */}
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Channel Name</label>
+            <label htmlFor="channel-name" className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Channel Name</label>
             <input
+              id="channel-name"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={`My ${meta.label} Channel`}

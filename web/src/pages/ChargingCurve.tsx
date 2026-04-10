@@ -27,6 +27,7 @@ import clsx from 'clsx'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtInt, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ---------------------------------------------------------------------------
 // Tooltip
@@ -140,6 +141,7 @@ function fmtDuration(minutes: number): string {
 // Main page component
 // ---------------------------------------------------------------------------
 export default function ChargingCurve() {
+  usePageTitle('Charging Curve')
   const { data: vehicles } = useQuery({
     queryKey: ['vehicles'],
     queryFn: getVehicles,

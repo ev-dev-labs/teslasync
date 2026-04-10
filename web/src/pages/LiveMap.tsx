@@ -14,8 +14,10 @@ import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function createVehicleIcon(status: string, heading: number = 0) {
+  usePageTitle('Live Map')
   const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
   return divIcon({
     className: '',

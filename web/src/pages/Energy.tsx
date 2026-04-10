@@ -13,8 +13,10 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
+  usePageTitle('Energy')
   const savings = (gasCost ?? 0) - (evCost ?? 0)
   const savingsPct = gasCost > 0 ? (savings / gasCost * 100) : 0
   return (

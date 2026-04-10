@@ -4,8 +4,10 @@ import { getVehicles, getFleetAnalytics } from '../api'
 import { GlassPanel, MetricCard } from '../components/ui'
 import { Car } from 'lucide-react'
 import { fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function QuickStats() {
+  usePageTitle('Quick Stats')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { data: analytics } = useQuery({ queryKey: ['fleet-analytics'], queryFn: () => getFleetAnalytics(30) })
   const { convertDistance, distanceUnit } = useSettings()

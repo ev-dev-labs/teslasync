@@ -9,8 +9,10 @@ import { TeslaCarViz } from '../components/TeslaCarViz'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Vehicle) => void }) {
+  usePageTitle('Vehicles')
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { data: stateData } = useQuery({
     queryKey: ['vehicle-state', vehicle.id],

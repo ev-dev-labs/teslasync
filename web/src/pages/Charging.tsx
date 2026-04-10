@@ -15,11 +15,13 @@ import { formatDateTime, formatDateShort } from '../lib/dateFormat'
 import { CHARGER_COLORS as chargerColors } from '../lib/colors'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power'
 type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home'
 
 function formatDuration(min: number): string {
+  usePageTitle('Charging')
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`

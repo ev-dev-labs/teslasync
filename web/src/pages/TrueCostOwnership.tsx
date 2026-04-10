@@ -9,8 +9,10 @@ import {
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid, ChartGradient } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function TrueCostOwnership() {
+  usePageTitle('Total Cost of Ownership')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

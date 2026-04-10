@@ -1,4 +1,4 @@
-import { type ReactNode, type HTMLAttributes, useState, useCallback } from 'react'
+import { type ReactNode, type HTMLAttributes, useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import { cn } from '../../lib/cn'
@@ -39,13 +39,16 @@ export function DataTable<T>({
             {columns.map(col => (
               <th
                 key={col.key}
+                scope="col"
                 className={cn(
                   compact ? 'px-3 py-2' : tableTokens.headCell,
                   col.sortable && 'cursor-pointer select-none hover:text-[var(--text-secondary)]',
                   col.className,
                 )}
                 onClick={() => col.sortable && onSort?.(col.key)}
+                onKeyDown={col.sortable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort?.(col.key) } } : undefined}
                 aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                {...(col.sortable ? { tabIndex: 0, role: 'button' as const } : {})}
               >
                 <span className="inline-flex items-center gap-1">
                   {col.header}
@@ -98,12 +101,41 @@ const modalSizes = {
   lg: 'max-w-2xl',
 }
 
+const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
 /** Generic modal dialog with portal, backdrop, and accessibility attributes. */
 export function Modal({ open, onClose, title, children, size = 'md', className }: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const modal = modalRef.current
+    if (!modal) return
+    const previouslyFocused = document.activeElement as HTMLElement
+
+    const focusable = modal.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+    if (focusable.length) focusable[0].focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key !== 'Tab') return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
+    }
+
+    modal.addEventListener('keydown', handleKeyDown)
+    return () => {
+      modal.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [open, onClose])
+
   if (!open) return null
   return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title || 'Dialog'}>
+      <div ref={modalRef} className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title || 'Dialog'}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -150,9 +182,36 @@ interface DrawerProps {
 
 /** Slide-in side panel. */
 export function Drawer({ open, onClose, title, children, side = 'right', className }: DrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const drawer = drawerRef.current
+    if (!drawer) return
+    const previouslyFocused = document.activeElement as HTMLElement
+
+    const focusable = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+    if (focusable.length) focusable[0].focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key !== 'Tab') return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
+    }
+
+    drawer.addEventListener('keydown', handleKeyDown)
+    return () => {
+      drawer.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [open, onClose])
+
   if (!open) return null
   return createPortal(
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title || 'Panel'}>
+    <div ref={drawerRef} className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title || 'Panel'}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -7,6 +7,7 @@ import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { formatRelative } from '../lib/dateFormat'
 import { fmtInt, fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 // clsx removed — using component library
 
 interface TelemetryStatus {
@@ -92,6 +93,7 @@ const vehicleColumns: Column<VehicleTelemetry>[] = [
 ]
 
 export default function MQTTInspector() {
+  usePageTitle('MQTT Inspector')
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([])
   const prevTotalRef = useRef<number | null>(null)
 

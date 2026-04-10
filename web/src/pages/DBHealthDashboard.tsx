@@ -9,6 +9,7 @@ import { request } from '../api/client'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface TableInfo {
   name: string
@@ -46,6 +47,7 @@ interface MigrationStatus {
 type SortKey = 'size' | 'rows' | 'name'
 
 function formatBytes(bytes: number): string {
+  usePageTitle('DB Health')
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`

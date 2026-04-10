@@ -13,6 +13,7 @@ import { fmtNumber } from '../lib/numberFormat'
 
 interface MediaTooltipPayload { name: string; value: number; color?: string }
 function MediaTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: MediaTooltipPayload[]; label?: string; unit?: string }) {
+  usePageTitle('Media Player')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -147,6 +148,7 @@ function SourceIcon({ source, className }: { source?: string; className?: string
 
 /** Filter out Go nil string representations */
 import { cleanNil } from '../lib/cleanNil'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ── Pie chart colors ─────────────────────────────────────────────────────── */
 

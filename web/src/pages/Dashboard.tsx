@@ -27,9 +27,11 @@ import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useSettings } from '../hooks/useSettings'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { ChartTooltip } from '../components/Charts'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
+  usePageTitle('Dashboard')
   const status = getVehicleStatus(vehicle, state)
   const { convertDistance, convertTemp, distanceUnit } = useSettings()
   return (

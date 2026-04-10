@@ -11,6 +11,7 @@ import { ChartTooltip } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type ComparisonRow = {
   label: string
@@ -20,6 +21,7 @@ type ComparisonRow = {
 }
 
 function highlightClass(raw: number[], idx: number, higherIsBetter: boolean): string {
+  usePageTitle('Compare')
   if (raw.length < 2 || raw.every(v => v === raw[0])) return ''
   const best = higherIsBetter ? Math.max(...raw) : Math.min(...raw)
   const worst = higherIsBetter ? Math.min(...raw) : Math.max(...raw)

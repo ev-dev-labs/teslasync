@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Badge } from '../components/ui'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type Phase = 'done' | 'current' | 'next' | 'future'
 
@@ -164,6 +165,7 @@ const roadmapItems: RoadmapItem[] = [
 ]
 
 function RoadmapCard({ item }: { item: RoadmapItem }) {
+  usePageTitle('Roadmap')
   const phase = phaseConfig[item.phase]
   const Icon = item.icon
 

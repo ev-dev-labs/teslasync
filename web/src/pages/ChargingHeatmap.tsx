@@ -6,11 +6,13 @@ import { BatteryCharging, Clock, Zap, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function heatColor(count: number, max: number): string {
+  usePageTitle('Charging Heatmap')
   if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)'
   const ratio = count / max
   if (ratio < 0.25) return 'rgba(0, 240, 255, 0.15)'

@@ -5,6 +5,7 @@ import {
   Search, LayoutDashboard, Car, Route, BatteryCharging, MapPin, Settings, Radar, Bolt,
   HeartPulse, Gamepad2, Bell, BarChart3, Command, ArrowRight
 } from 'lucide-react'
+import { Input } from './ui'
 import clsx from 'clsx'
 
 interface CommandItem {
@@ -117,15 +118,17 @@ export function CommandPalette() {
               {/* Search input */}
               <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--glass-border)' }}>
                 <Search className="h-5 w-5 text-[var(--text-muted)] flex-shrink-0" />
-                <input
-                  ref={inputRef}
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onKeyDown={handleInputKey}
-                  placeholder="Search commands, pages..."
-                  className="flex-1 bg-transparent text-sm placeholder-gray-500 outline-none"
-                  style={{ color: 'var(--text-primary)' }}
-                />
+                <div className="flex-1">
+                  <Input
+                    ref={inputRef}
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    onKeyDown={handleInputKey}
+                    placeholder="Search commands, pages..."
+                    className="!bg-transparent !border-0 !ring-0 !shadow-none !p-0 !rounded-none text-sm"
+                    style={{ color: 'var(--text-primary)' }}
+                  />
+                </div>
                 <kbd className="hidden sm:flex items-center gap-1 rounded-lg bg-white/[0.05] border border-white/[0.08] px-2 py-1 text-[10px] text-[var(--text-muted)] font-mono">
                   ESC
                 </kbd>

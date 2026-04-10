@@ -10,6 +10,7 @@ import { useToast } from '../components/Toast'
 import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const modeIcons: Record<string, React.ReactNode> = {
   dark: <Moon className="h-4 w-4" />,
@@ -22,6 +23,7 @@ const modeIcons: Record<string, React.ReactNode> = {
 }
 
 function SettingField({ label, children }: { label: string; children: React.ReactNode }) {
+  usePageTitle('Settings')
   return (
     <div>
       <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">{label}</label>

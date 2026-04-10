@@ -15,12 +15,14 @@ import {
 import clsx from 'clsx'
 import { formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
 type WindowState = 'Closed' | 'Venting' | 'Open' | 'Unknown'
 
 function parseWindowState(val?: string): WindowState {
+  usePageTitle('Security & Access')
   if (!val) return 'Unknown'
   const v = val.toLowerCase()
   if (v === 'closed' || v === 'close') return 'Closed'

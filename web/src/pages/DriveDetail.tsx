@@ -22,8 +22,10 @@ import { useUnits } from '../hooks/useUnits'
 import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; color: string; value: React.ReactNode; label: string }) {
+  usePageTitle('Drive Detail')
   return (
     <GlassPanel className="p-4 text-center">
       <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />

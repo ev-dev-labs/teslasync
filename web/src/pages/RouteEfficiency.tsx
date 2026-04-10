@@ -7,8 +7,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { formatDate } from '../lib/dateFormat'
 import { fmtNumber, fmtPercent, fmtInt, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function EfficiencyBar({ best, avg, worst }: { best: number; avg: number; worst: number }) {
+  usePageTitle('Route Efficiency')
   const max = Math.max(worst, 1)
   return (
     <div className="flex items-center gap-2 mt-2">

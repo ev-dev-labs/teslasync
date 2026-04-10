@@ -6,6 +6,7 @@ import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalLogEntry {
   timestamp: string
@@ -37,6 +38,7 @@ const TIME_RANGES = [
 ]
 
 export default function SignalLogViewer() {
+  usePageTitle('Signal Log')
   const vehicleId = 1
   const [selectedSignal, setSelectedSignal] = useState('')
   const [searchQuery, setSearchQuery] = useState('')

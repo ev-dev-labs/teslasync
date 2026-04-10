@@ -10,6 +10,7 @@ import {
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type RegenDrive = RegenData['drives'][number]
 
@@ -25,6 +26,7 @@ const regenDriveColumns: Column<RegenDrive>[] = [
 ]
 
 function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
+  usePageTitle('Regen Efficiency')
   const clamped = Math.min(Math.max(value, 0), 100)
   const r = (size - 20) / 2
   const circ = Math.PI * r // semicircle
@@ -44,7 +46,7 @@ function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
         <path
           d={`M ${10} ${size / 2} A ${r} ${r} 0 0 1 ${size - 10} ${size / 2}`}
           fill="none"
-          stroke="rgba(255,255,255,0.04)"
+          stroke="var(--glass-border)"
           strokeWidth={8}
           strokeLinecap="round"
         />

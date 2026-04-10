@@ -13,6 +13,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
@@ -170,6 +171,7 @@ function comfortLabel(score: number | null): { text: string; cls: string; bg: st
 // Main page
 // ---------------------------------------------------------------------------
 export default function ClimateControl() {
+  usePageTitle('Climate Control')
   const { convertTemp, tempUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)

@@ -9,8 +9,10 @@ import {
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function HealthGauge({ value, size = 200 }: { value: number; size?: number }) {
+  usePageTitle('Battery Degradation')
   const clamped = Math.min(Math.max(value, 0), 100)
   const r = (size - 20) / 2
   const circ = 2 * Math.PI * r * 0.75
@@ -27,7 +29,7 @@ function HealthGauge({ value, size = 200 }: { value: number; size?: number }) {
             <stop offset="100%" stopColor={color} stopOpacity={0.3} />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={10}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--glass-border)" strokeWidth={10}
           strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ * 0.25}
           transform={`rotate(${startAngle} ${size / 2} ${size / 2})`} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="url(#health-grad)" strokeWidth={10}

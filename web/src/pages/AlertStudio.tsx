@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ interface EditorState {
 }
 
 function freshEditor(): EditorState {
+  usePageTitle('Alert Studio')
   return {
     name: '',
     type: 'custom',

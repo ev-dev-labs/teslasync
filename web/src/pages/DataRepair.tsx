@@ -16,10 +16,12 @@ import { formatDateTime } from '../lib/dateFormat'
 import { Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle, X, Save, Clock, Trash2 } from 'lucide-react'
 import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type Tab = 'charging' | 'drives'
 
 function hoursOpen(startDate: string): string {
+  usePageTitle('Data Repair')
   const h = Math.round((Date.now() - new Date(startDate).getTime()) / 3600000)
   if (h < 24) return `${h}h`
   const d = Math.floor(h / 24)

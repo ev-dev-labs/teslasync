@@ -13,6 +13,7 @@ import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDate } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ────────────────────────────── Types ────────────────────────────── */
 
@@ -53,6 +54,7 @@ const ICE_ANNUAL_COST = 1200
 /* ────────────────────────── Helpers ────────────────────────── */
 
 function monthsFromNow(iso: string): number {
+  usePageTitle('Maintenance')
   const d = new Date(iso)
   const now = new Date()
   return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())

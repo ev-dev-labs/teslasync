@@ -54,6 +54,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { CHARGER_COLORS } from '../lib/colors'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ── constants ───────────────────────────────────────────────── */
 
@@ -152,6 +153,7 @@ function daysForRange(range: string): number | null {
 /* ── component ───────────────────────────────────────────────── */
 
 export default function CostAnalysis() {
+  usePageTitle('Cost Analysis')
   const { convertDistance, distanceUnit, settings } = useSettings()
 
   /* ── state ────────────────────────────────────── */

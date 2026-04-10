@@ -1,5 +1,6 @@
 import { GlassPanel, FadeIn, PageHeader, Badge } from '../components/ui'
 import { FileText, Calendar } from 'lucide-react'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface ChangelogEntry {
   version: string
@@ -80,6 +81,7 @@ const changelog: ChangelogEntry[] = [
 ]
 
 export default function Changelog() {
+  usePageTitle('Changelog')
   return (
     <FadeIn>
       <PageHeader

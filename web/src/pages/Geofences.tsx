@@ -15,6 +15,7 @@ import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import L from 'leaflet'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface FormData {
   name: string
@@ -241,6 +242,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 }
 
 export default function Geofences() {
+  usePageTitle('Geofences')
   const queryClient = useQueryClient()
   const toast = useToast()
   const { convertDistance, distanceUnit } = useSettings()

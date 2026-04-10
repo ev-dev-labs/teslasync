@@ -29,6 +29,7 @@ import { formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '../lib/numberFormat'
 import { parseSettingEnum } from '../lib/parseSettingEnum'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -47,6 +48,7 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
 }
 
 export default function VehicleDetail() {
+  usePageTitle('Vehicle Detail')
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
   const { convertDistance, convertSpeed, convertTemp, convertPressure, distanceUnit, speedUnit, tempUnit, pressureUnit } = useSettings()

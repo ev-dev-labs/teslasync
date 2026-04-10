@@ -15,10 +15,12 @@ import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
 import SignalConfigModal from '../components/SignalConfigModal'
 import { motion } from 'framer-motion'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
+  usePageTitle('Dev Tools')
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
     navigator.clipboard.writeText(text)
@@ -26,9 +28,9 @@ function CopyButton({ text }: { text: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
   return (
-    <button onClick={handleCopy} className="p-1 rounded hover:bg-white/10 transition-colors" title="Copy">
+    <Button variant="ghost" size="sm" onClick={handleCopy} aria-label="Copy to clipboard" title="Copy" className="!p-1 !rounded">
       {copied ? <CheckCircle className="h-3.5 w-3.5 text-neon-green" /> : <Copy className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-    </button>
+    </Button>
   )
 }
 

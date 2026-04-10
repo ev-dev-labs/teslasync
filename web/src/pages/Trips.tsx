@@ -9,8 +9,10 @@ import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } fr
 import { exportAsCSV, exportAsJSON } from '../lib/export'
 import { formatDate } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function formatDuration(startDate: string, endDate: string | null): string {
+  usePageTitle('Trips')
   if (!endDate) return 'In progress'
   const ms = new Date(endDate).getTime() - new Date(startDate).getTime()
   const hours = Math.floor(ms / 3600000)

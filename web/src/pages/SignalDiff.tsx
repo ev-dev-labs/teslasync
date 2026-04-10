@@ -7,6 +7,7 @@ import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalPoint {
   timestamp: string
@@ -32,6 +33,7 @@ interface RangeStats {
 }
 
 function computeStats(data: SignalPoint[]): RangeStats {
+  usePageTitle('Signal Diff')
   const nums = data.map(d => d.value_num).filter((v): v is number => v != null)
   if (nums.length === 0) return { min: 0, max: 0, avg: 0, count: 0 }
   const min = Math.min(...nums)

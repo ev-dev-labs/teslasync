@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAPIKeys, createAPIKey, deleteAPIKey, revokeAPIKey, APIKey } from '../api'
 import { Key, Plus, Trash2, Copy, Check, Shield, ShieldAlert, Crown, Clock, XCircle } from 'lucide-react'
-import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, ConfirmModal, Button, Badge, Modal, Select } from '../components/ui'
+import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, ConfirmModal, Button, Badge, Modal, Select, Input } from '../components/ui'
 import { formatDate } from '../lib/dateFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function PermissionBadge({ perm }: { perm: string }) {
+  usePageTitle('API Keys')
   const cfg: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
     'read':       { icon: <Shield className="h-3 w-3" />,      color: '#10b981', label: '🔒 Read' },
     'read-write': { icon: <ShieldAlert className="h-3 w-3" />, color: '#f59e0b', label: '✏️ Read-Write' },
@@ -83,7 +85,7 @@ export default function APIKeys() {
               <code className="flex-1 p-3 rounded-lg bg-black/30 border border-white/10 text-xs font-mono text-neon-cyan break-all">
                 {generatedKey}
               </code>
-              <Button variant="secondary" onClick={handleCopy} className="p-2.5 shrink-0" title="Copy">
+              <Button variant="secondary" onClick={handleCopy} className="p-2.5 shrink-0" title="Copy" aria-label="Copy API key">
                 {copied ? <Check className="h-4 w-4 text-neon-green" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
@@ -92,11 +94,11 @@ export default function APIKeys() {
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">Name</label>
-              <input
+              <label htmlFor="api-key-name" className="block text-xs text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">Name</label>
+              <Input
+                id="api-key-name"
                 type="text" value={newName} onChange={e => setNewName(e.target.value)}
                 placeholder="My Application"
-                className="w-full p-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-[var(--text-primary)] placeholder-gray-600 focus:outline-none focus:border-neon-cyan/40"
               />
             </div>
             <div>

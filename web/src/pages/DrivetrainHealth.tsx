@@ -10,10 +10,12 @@ import { useVehicleLive } from '../hooks/useVehicleLive'
 import { cleanNil } from '../lib/cleanNil'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface DrivetrainTooltipPayload { name: string; value: number; color?: string }
 function DrivetrainTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: DrivetrainTooltipPayload[]; label?: string; unit?: string }) {
+  usePageTitle('Drivetrain Health')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>

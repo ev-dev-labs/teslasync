@@ -10,6 +10,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
 /*  Chart Tooltip                                                      */
@@ -17,6 +18,7 @@ import { formatDateTime } from '../lib/dateFormat'
 
 interface SafetyTooltipPayload { name: string; value: number; color?: string }
 function SafetyTooltip({ active, payload, label }: { active?: boolean; payload?: SafetyTooltipPayload[]; label?: string }) {
+  usePageTitle('Safety Settings')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>

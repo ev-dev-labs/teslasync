@@ -18,8 +18,10 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, axisTick, axisTickSm, chartGrid, safe, fmt } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function MiniBar({ label, value, maxValue, color }: { label: string; value: number; maxValue: number; color: string }) {
+  usePageTitle('Analytics')
   const pct = safe(maxValue) > 0 ? Math.min((safe(value) / safe(maxValue)) * 100, 100) : 0
   return (
     <div className="flex items-center gap-2 text-xs">

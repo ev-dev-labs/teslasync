@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 
 const stateColors: Record<string, string> = {
@@ -31,6 +32,7 @@ const stateIcons: Record<string, typeof Car> = {
 
 interface TimelineTooltipPayload { name: string; value: number; color?: string; fill?: string }
 function TimelineTooltip({ active, payload, label }: { active?: boolean; payload?: TimelineTooltipPayload[]; label?: string }) {
+  usePageTitle('Timeline')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>

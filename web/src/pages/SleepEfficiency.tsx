@@ -11,6 +11,7 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
 import { formatDateShort, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type SleepDrainEvent = SleepAnalytics['recent_events'][number]
 
@@ -66,6 +67,7 @@ const STATE_LABELS: Record<string, string> = {
 }
 
 export default function SleepEfficiency() {
+  usePageTitle('Sleep Efficiency')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [days, setDays] = useState(30)

@@ -13,7 +13,7 @@ import {
   previewRestore,
 } from '../api'
 import type { BackupConfig, BackupRun } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal, DataTable, type Column, Input, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
   DatabaseBackup,
@@ -31,7 +31,6 @@ import {
   Zap,
   Archive,
   Shield,
-  ChevronDown,
   RefreshCw,
   AlertCircle,
   Download,
@@ -41,6 +40,7 @@ import {
 
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -77,6 +77,7 @@ const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
 /* ------------------------------------------------------------------ */
 
 function formatFileSize(bytes: number): string {
+  usePageTitle('Backup & Restore')
   if (!bytes || bytes === 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -509,14 +510,14 @@ export default function BackupRestore() {
                     { key: 'created', header: 'Created', render: (run) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(run.created_at)}</span> },
                     { key: 'actions', header: 'Actions', className: 'text-center', render: (run) => run.status === 'completed' ? (
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => downloadBackup(run.id)} title="Download backup" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-cyan hover:bg-neon-cyan/10 transition-all"><Download className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => handleVerify(run.id)} disabled={verifyResults[run.id] === 'loading'} title="Verify backup integrity" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-amber hover:bg-neon-amber/10 transition-all disabled:opacity-50 relative">
+                        <Button variant="ghost" size="sm" onClick={() => downloadBackup(run.id)} title="Download backup" aria-label="Download backup" className="!p-1.5 !rounded-lg hover:!text-neon-cyan hover:!bg-neon-cyan/10"><Download className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleVerify(run.id)} disabled={verifyResults[run.id] === 'loading'} title="Verify backup integrity" className="!p-1.5 !rounded-lg hover:!text-neon-amber hover:!bg-neon-amber/10 !relative">
                           {verifyResults[run.id] === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
                           {verifyResults[run.id] && verifyResults[run.id] !== 'loading' && (
                             <span className={clsx('absolute -top-1 -right-1 text-[9px] leading-none', (verifyResults[run.id] as { verified: boolean }).verified ? 'text-neon-green' : 'text-neon-red')}>{(verifyResults[run.id] as { verified: boolean }).verified ? '✅' : '❌'}</span>
                           )}
-                        </button>
-                        <button onClick={() => handlePreview(run.id)} title="Preview / Restore" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-purple hover:bg-neon-purple/10 transition-all"><Eye className="h-3.5 w-3.5" /></button>
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handlePreview(run.id)} title="Preview / Restore" aria-label="Preview backup" className="!p-1.5 !rounded-lg hover:!text-neon-purple hover:!bg-neon-purple/10"><Eye className="h-3.5 w-3.5" /></Button>
                       </div>
                     ) : <span className="text-[var(--text-muted)] text-xs">—</span> },
                   ] as Column<BackupRun>[]}
@@ -563,13 +564,13 @@ export default function BackupRestore() {
               <div className="space-y-5">
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Name</label>
-                  <input
+                  <label htmlFor="backup-name" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Name</label>
+                  <Input
+                    id="backup-name"
                     type="text"
                     value={form.name}
                     onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Daily full backup"
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all"
                   />
                 </div>
 
@@ -582,66 +583,51 @@ export default function BackupRestore() {
 
                 {/* Backup Type */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Backup Type</label>
-                  <div className="relative">
-                    <select
-                      value={form.backup_type}
-                      onChange={e => setForm(prev => ({ ...prev, backup_type: e.target.value }))}
-                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
-                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
-                    >
-                      {BACKUP_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  </div>
+                  <label htmlFor="backup-type" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Backup Type</label>
+                  <Select
+                    id="backup-type"
+                    value={form.backup_type}
+                    onChange={e => setForm(prev => ({ ...prev, backup_type: e.target.value }))}
+                    options={BACKUP_TYPES.map(bt => ({ value: bt.value, label: bt.label }))}
+                  />
                 </div>
 
                 {/* Frequency */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Frequency</label>
-                  <div className="relative">
-                    <select
-                      value={form.frequency_days}
-                      onChange={e => setForm(prev => ({ ...prev, frequency_days: Number(e.target.value) }))}
-                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
-                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
-                    >
-                      {FREQUENCY_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  </div>
+                  <label htmlFor="backup-frequency" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Frequency</label>
+                  <Select
+                    id="backup-frequency"
+                    value={String(form.frequency_days)}
+                    onChange={e => setForm(prev => ({ ...prev, frequency_days: Number(e.target.value) }))}
+                    options={FREQUENCY_OPTIONS.map(f => ({ value: String(f.value), label: f.label }))}
+                  />
                 </div>
 
                 {/* Max Retention */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Max Retention (backups to keep)</label>
-                  <input
+                  <label htmlFor="backup-retention" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Max Retention (backups to keep)</label>
+                  <Input
+                    id="backup-retention"
                     type="number"
                     min={1}
                     max={100}
                     value={form.max_retention}
                     onChange={e => setForm(prev => ({ ...prev, max_retention: Math.max(1, Math.min(100, Number(e.target.value) || 1)) }))}
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all"
                   />
                 </div>
 
                 {/* Provider */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Provider</label>
-                  <div className="relative">
-                    <select
-                      value={form.provider}
-                      onChange={e => {
-                        const newProvider = e.target.value
-                        setForm(prev => ({ ...prev, provider: newProvider, provider_config: {} }))
-                      }}
-                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
-                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
-                    >
-                      {PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  </div>
+                  <label htmlFor="backup-provider" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Provider</label>
+                  <Select
+                    id="backup-provider"
+                    value={form.provider}
+                    onChange={e => {
+                      const newProvider = e.target.value
+                      setForm(prev => ({ ...prev, provider: newProvider, provider_config: {} }))
+                    }}
+                    options={PROVIDERS.map(p => ({ value: p.value, label: p.label }))}
+                  />
                 </div>
 
                 {/* Provider Config Fields */}
@@ -660,12 +646,11 @@ export default function BackupRestore() {
                         className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all font-mono resize-none"
                       />
                     ) : (
-                      <input
+                      <Input
                         type={field.type ?? 'text'}
                         value={form.provider_config[field.key] ?? ''}
                         onChange={e => setProviderConfigField(field.key, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all"
                       />
                     )}
                   </div>

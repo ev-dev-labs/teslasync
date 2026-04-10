@@ -14,6 +14,7 @@ import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface CommandButtonProps {
   icon: React.ReactNode
@@ -27,6 +28,7 @@ interface CommandButtonProps {
 }
 
 function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'default', disabled, active }: CommandButtonProps) {
+  usePageTitle('Commands')
   const variants = {
     default: 'hover:border-neon-cyan/30 hover:shadow-[0_0_15px_rgba(0,240,255,0.08)]',
     danger: 'hover:border-neon-red/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.08)]',

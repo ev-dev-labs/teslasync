@@ -6,6 +6,7 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, MetricCard, Badge
 import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDate } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const statusConfig: Record<string, { color: string; bg: string; icon: typeof CheckCircle; label: string }> = {
   installed: { color: 'text-neon-green', bg: 'bg-neon-green/10', icon: CheckCircle, label: 'Installed' },
@@ -16,6 +17,7 @@ const statusConfig: Record<string, { color: string; bg: string; icon: typeof Che
 }
 
 function getStatus(status: string) {
+  usePageTitle('Software Updates')
   return statusConfig[status] ?? statusConfig.available
 }
 

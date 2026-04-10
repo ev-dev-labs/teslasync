@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -70,6 +71,7 @@ const DATE_PRESETS = [
 /* ------------------------------------------------------------------ */
 
 function formatFileSize(bytes: number): string {
+  usePageTitle('Data Export')
   if (!bytes || bytes === 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`

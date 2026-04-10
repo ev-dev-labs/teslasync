@@ -10,8 +10,10 @@ import {
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useUnits } from '../hooks/useUnits'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function bucketColor(bucket: string): string {
+  usePageTitle('Speed Profile')
   if (bucket.startsWith('0') || bucket.startsWith('15')) return '#10b981'
   if (bucket.startsWith('30') || bucket.startsWith('45')) return '#00f0ff'
   if (bucket.startsWith('60') || bucket.startsWith('75')) return '#f59e0b'

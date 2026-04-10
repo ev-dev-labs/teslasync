@@ -6,6 +6,7 @@ import { Badge, Button } from '../components/ui'
 import { request } from '../api/client'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalPoint {
   timestamp: string
@@ -39,6 +40,7 @@ const TIME_RANGES = [
 ]
 
 export default function SignalExplorer() {
+  usePageTitle('Signal Explorer')
   const [selectedSignal, setSelectedSignal] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [timeRange, setTimeRange] = useState(24)

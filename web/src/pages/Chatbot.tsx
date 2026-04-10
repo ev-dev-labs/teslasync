@@ -6,6 +6,7 @@ import { Button, GlassPanel } from '../components/ui'
 import clsx from 'clsx'
 import { sendChatMessage, getChatHistory, getChatSessions, ChatMessage } from '../api'
 import { formatTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const SUGGESTED_QUERIES = [
   'How many vehicles do I have?',
@@ -21,6 +22,7 @@ const SUGGESTED_QUERIES = [
 ]
 
 export default function Chatbot() {
+  usePageTitle('Chatbot')
   const [sessionId, setSessionId] = useState<string>('')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])

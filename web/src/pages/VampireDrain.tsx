@@ -12,8 +12,10 @@ import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } fr
 import { exportAsCSV, exportAsJSON } from '../lib/export'
 import { formatDateShort, formatDate } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function VampireDrain() {
+  usePageTitle('Vampire Drain')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

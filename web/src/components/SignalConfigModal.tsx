@@ -141,7 +141,8 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={onClose}
+      onKeyDown={e => { if (e.key === 'Escape') onClose() }}>
       <div className="bg-[var(--bg)] border border-[var(--border)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
@@ -152,7 +153,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             </h2>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">{selectedCount} / {totalCount} signals selected</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>

@@ -6,7 +6,7 @@ import {
 } from '../api'
 import { formatDateTime } from '../lib/dateFormat'
 import { CHART_COLORS } from '../lib/colors'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard, Button, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard, Button, DataTable, type Column, Toggle, Input } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
@@ -19,6 +19,7 @@ import { useToast } from '../components/Toast'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
 import { ChartTooltip } from '../components/Charts'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ const typeIcons: Record<string, React.ElementType> = {
 // ─── Time helper ─────────────────────────────────────────────────────────────
 
 function getTimeAgo(dateStr: string): string {
+  usePageTitle('Alerts')
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 60) return `${mins}m ago`
@@ -307,43 +309,35 @@ function PreferencesSection() {
           <p className="text-xs text-[var(--text-muted)] mb-3">During quiet hours, only critical alerts send notifications.</p>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-[var(--text-secondary)]">Enable quiet hours</span>
-            <button
-              onClick={() => {
-                saveQuietHours({ ...quietHours, enabled: !quietHours.enabled })
-                toast.info(quietHours.enabled ? 'Quiet hours disabled' : 'Quiet hours enabled')
+            <Toggle
+              checked={quietHours.enabled}
+              onChange={(v) => {
+                saveQuietHours({ ...quietHours, enabled: v })
+                toast.info(v ? 'Quiet hours enabled' : 'Quiet hours disabled')
               }}
-              className={clsx(
-                'relative h-7 w-12 rounded-full transition-colors duration-200',
-                quietHours.enabled ? 'bg-neon-purple/30' : 'bg-white/10'
-              )}
-            >
-              <span className={clsx(
-                'absolute top-0.5 h-6 w-6 rounded-full transition-all duration-200',
-                quietHours.enabled ? 'left-[22px] bg-neon-purple shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'left-0.5 bg-gray-500'
-              )} />
-            </button>
+            />
           </div>
           {quietHours.enabled && (
             <div className="flex items-center gap-3">
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Start</label>
-                <input
+                <label htmlFor="quiet-start" className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Start</label>
+                <Input
+                  id="quiet-start"
                   type="time"
                   value={quietHours.start}
                   onChange={e => saveQuietHours({ ...quietHours, start: e.target.value })}
-                  className="mt-1 block w-full rounded-lg border px-3 py-1.5 text-sm outline-none focus:border-neon-purple/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                  className="mt-1"
                 />
               </div>
               <span className="text-[var(--text-muted)] mt-4">—</span>
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">End</label>
-                <input
+                <label htmlFor="quiet-end" className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">End</label>
+                <Input
+                  id="quiet-end"
                   type="time"
                   value={quietHours.end}
                   onChange={e => saveQuietHours({ ...quietHours, end: e.target.value })}
-                  className="mt-1 block w-full rounded-lg border px-3 py-1.5 text-sm outline-none focus:border-neon-purple/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                  className="mt-1"
                 />
               </div>
             </div>

@@ -7,6 +7,7 @@ import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface VehicleState {
   state: string
@@ -37,6 +38,7 @@ const stateColors: Record<string, { bg: string; text: string; dot: string; hex: 
 }
 
 function getStateStyle(state?: string | null) {
+  usePageTitle('State Debugger')
   if (!state || typeof state !== 'string') return stateColors.offline
   return stateColors[state.toLowerCase()] ?? stateColors.offline
 }

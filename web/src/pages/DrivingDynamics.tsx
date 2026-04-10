@@ -13,10 +13,12 @@ import { useVehicleLive } from '../hooks/useVehicleLive'
 import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { parseGear, GEAR_COLORS } from '../lib/gear'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ---------- Tooltip ---------- */
 interface DynamicsTooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
 function DynamicsTooltip({ active, payload, label, unit }: { active?: boolean; payload?: DynamicsTooltipPayload[]; label?: string; unit?: string }) {
+  usePageTitle('Driving Dynamics')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>

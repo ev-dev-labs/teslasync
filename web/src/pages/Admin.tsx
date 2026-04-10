@@ -29,8 +29,10 @@ import {
   type APIUsage,
   type ExtendedHealthResponse,
 } from '../api'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
+  usePageTitle('Admin')
   return (
     <GlassPanel className="p-4">
       <div className="flex items-center gap-3">

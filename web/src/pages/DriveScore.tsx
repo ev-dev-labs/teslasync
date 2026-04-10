@@ -9,6 +9,7 @@ import { useSettings } from '../hooks/useSettings'
 import { formatDate, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -37,6 +38,7 @@ const GRADE_COLORS: Record<string, string> = {
 }
 
 function gradeColor(grade: string): string {
+  usePageTitle('Drive Score')
   return GRADE_COLORS[grade] ?? '#6b7280'
 }
 

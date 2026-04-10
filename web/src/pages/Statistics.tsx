@@ -15,10 +15,12 @@ import {
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const COLORS = ['#00f0ff', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#3b82f6']
 
 function formatDuration(min: number): string {
+  usePageTitle('Statistics')
   if (min < 60) return `${Math.round(min)}m`
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)

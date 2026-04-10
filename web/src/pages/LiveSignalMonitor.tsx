@@ -4,6 +4,7 @@ import { PageHeader, GlassPanel, FadeIn, StatCard, Badge, Button, DataTable, typ
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { formatTime } from '../lib/dateFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalEntry {
   id: number
@@ -61,6 +62,7 @@ const signalColumns: Column<SignalEntry>[] = [
 ]
 
 function detectType(value: unknown): 'number' | 'string' | 'boolean' {
+  usePageTitle('Live Monitor')
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
   return 'string'

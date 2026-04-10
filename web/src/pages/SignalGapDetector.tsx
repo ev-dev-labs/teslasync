@@ -5,6 +5,7 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, DataTable, t
 import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface LiveSignalState {
   signals: Record<string, { value: unknown; timestamp: string }>
@@ -22,6 +23,7 @@ type SortMode = 'staleness' | 'alpha' | 'category'
 type FilterMode = 'all' | 'stale' | 'active'
 
 function getStalenessColor(seconds: number, hasTimestamp: boolean) {
+  usePageTitle('Signal Gaps')
   if (!hasTimestamp) return { dot: 'bg-gray-500', text: 'text-gray-400', label: 'Never received', bg: 'bg-gray-500/10' }
   if (seconds < 30) return { dot: 'bg-neon-green', text: 'text-neon-green', label: 'Active', bg: 'bg-neon-green/10' }
   if (seconds < 300) return { dot: 'bg-neon-amber', text: 'text-neon-amber', label: 'Aging', bg: 'bg-neon-amber/10' }

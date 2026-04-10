@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const TEMP_COLORS: Record<string, string> = {
   'Below 0°C': '#3b82f6',
@@ -19,6 +20,7 @@ const TEMP_COLORS: Record<string, string> = {
 }
 
 function getBucketColor(bucket: string): string {
+  usePageTitle('Temperature Impact')
   return TEMP_COLORS[bucket] ?? '#00f0ff'
 }
 
