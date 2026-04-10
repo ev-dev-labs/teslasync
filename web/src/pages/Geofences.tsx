@@ -7,6 +7,7 @@ import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
 import { CHART_COLORS } from '../lib/colors'
+import { fmtNumber } from '../lib/numberFormat'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapContainer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
@@ -51,11 +52,11 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
               <Globe className="h-3 w-3" /> {geofence.latitude.toFixed(6)}, {geofence.longitude.toFixed(6)}
             </span>
             <span className="flex items-center gap-1">
-              <Ruler className="h-3 w-3" /> {convertDistance(geofence.radius / 1000).toFixed(geofence.radius >= 1000 ? 1 : 2)} {distanceUnit}
+              <Ruler className="h-3 w-3" /> {fmtNumber(convertDistance(geofence.radius / 1000), geofence.radius >= 1000 ? 1 : 2)} {distanceUnit}
             </span>
             {geofence.cost_per_kwh != null && (
               <span className="flex items-center gap-1 text-neon-green">
-                <Zap className="h-3 w-3" /> ${geofence.cost_per_kwh.toFixed(2)}/kWh
+                <Zap className="h-3 w-3" /> ${fmtNumber(geofence.cost_per_kwh, 2)}/kWh
               </span>
             )}
           </div>
@@ -355,7 +356,7 @@ export default function Geofences() {
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Avg Radius</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-[var(--text-primary)]">{(totalArea * convertDistance(1) ** 2).toFixed(2)} {distanceUnit}²</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(totalArea * convertDistance(1) ** 2, 2)} {distanceUnit}²</p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Area</p>
               </div>
               <div className="text-center">

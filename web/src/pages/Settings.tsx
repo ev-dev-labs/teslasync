@@ -7,6 +7,7 @@ import { PageHeader, GlassPanel, FadeIn, Skeleton, Select, Button, Input, IconBo
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
 import { useToast } from '../components/Toast'
+import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 
@@ -423,7 +424,7 @@ export default function Settings() {
             <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
               <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Current Price</p>
               <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {gasPriceStatus?.current_price ? `$${gasPriceStatus.current_price.toFixed(3)}/gal` : '—'}
+                {gasPriceStatus?.current_price ? `$${fmtNumber(gasPriceStatus.current_price, 3)}/gal` : '—'}
               </p>
             </div>
             <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">

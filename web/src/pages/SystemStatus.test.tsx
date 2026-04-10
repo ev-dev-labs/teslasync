@@ -188,10 +188,10 @@ describe('SystemStatus', () => {
     expect(screen.getByText('System Status')).toBeInTheDocument()
   })
 
-  it('displays the system information section', async () => {
+  it('displays the runtime section', async () => {
     renderPage(healthyStatus)
     await waitFor(() => {
-      expect(screen.getByText('System Information')).toBeInTheDocument()
+      expect(screen.getByText('Runtime')).toBeInTheDocument()
     })
   })
 })

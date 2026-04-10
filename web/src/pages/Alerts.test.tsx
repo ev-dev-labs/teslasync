@@ -151,9 +151,9 @@ describe('Alerts', () => {
     expect(screen.getAllByText('Unread').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows alert rules tab', () => {
+  it('shows alert preferences tab', () => {
     renderPage()
-    expect(screen.getByText('Alert Rules')).toBeInTheDocument()
+    expect(screen.getByText('Preferences')).toBeInTheDocument()
   })
 
   it('handles empty alerts', async () => {

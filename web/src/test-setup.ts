@@ -21,3 +21,26 @@ class MockIntersectionObserver {
 if (typeof globalThis.IntersectionObserver === 'undefined') {
   globalThis.IntersectionObserver = MockIntersectionObserver as any
 }
+
+// Mock EventSource for SSE tests (not available in jsdom)
+global.EventSource = class EventSource {
+  static CONNECTING = 0
+  static OPEN = 1
+  static CLOSED = 2
+
+  readyState = 0
+  url: string
+  onopen: ((ev: Event) => void) | null = null
+  onmessage: ((ev: MessageEvent) => void) | null = null
+  onerror: ((ev: Event) => void) | null = null
+
+  constructor(url: string) {
+    this.url = url
+    this.readyState = 1
+  }
+
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent() { return true }
+  close() { this.readyState = 2 }
+} as any
