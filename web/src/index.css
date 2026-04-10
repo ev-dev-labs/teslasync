@@ -314,11 +314,14 @@ select option:checked {
 }
 
 /* Override white bg translucent panels */
+:root.light-mode .bg-white\/\[0\.01\],
 :root.light-mode .bg-white\/\[0\.02\],
 :root.light-mode .bg-white\/\[0\.03\],
 :root.light-mode .bg-white\/\[0\.04\],
+:root.light-mode .bg-white\/\[0\.05\],
 :root.light-mode .bg-white\/\[0\.06\],
-:root.light-mode .bg-white\/\[0\.08\] {
+:root.light-mode .bg-white\/\[0\.08\],
+:root.light-mode .bg-white\/\[0\.1\] {
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
@@ -330,6 +333,8 @@ select option:checked {
 :root.light-mode .border-white\/\[0\.06\],
 :root.light-mode .border-white\/\[0\.08\],
 :root.light-mode .border-white\/10,
+:root.light-mode .border-white\/\[0\.1\],
+:root.light-mode .border-white\/\[0\.12\],
 :root.light-mode .border-white\/20 {
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
@@ -347,8 +352,12 @@ select option:checked {
 
 /* Override hover bg */
 :root.light-mode .hover\:bg-white\/5:hover,
+:root.light-mode .hover\:bg-white\/\[0\.02\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.03\]:hover,
 :root.light-mode .hover\:bg-white\/\[0\.04\]:hover,
-:root.light-mode .hover\:bg-white\/\[0\.06\]:hover {
+:root.light-mode .hover\:bg-white\/\[0\.05\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.06\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.08\]:hover {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
@@ -370,6 +379,13 @@ select option:checked {
   background: rgba(255, 255, 255, 0.7);
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* Gradient text headers: white→gray gradient invisible in light mode */
+:root.light-mode .bg-gradient-to-r.from-white.bg-clip-text {
+  -webkit-text-fill-color: initial;
+  background: none !important;
+  color: #0f172a !important;
 }
 
 :root.light-mode .glass-card {

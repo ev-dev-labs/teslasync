@@ -5,6 +5,7 @@ import { PageHeader, GlassPanel, FadeIn, StatCard, Button, Select, Input } from 
 import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { fmtNumber } from '../lib/numberFormat'
+import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
 
 function StatusBadge({ code }: { code: number | null }) {
@@ -167,38 +168,37 @@ export default function ApiLogs() {
             <>
               {/* Desktop table */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className={tableTokens.wrapper}>
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-wider text-[var(--text-muted)]" style={{ background: 'var(--surface-2)' }}>
-                      <th className="px-4 py-3 font-medium">Time</th>
-                      <th className="px-4 py-3 font-medium">Method</th>
-                      <th className="px-4 py-3 font-medium">Endpoint</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium text-right">Duration</th>
-                      <th className="px-4 py-3 font-medium">Error</th>
-                      <th className="px-4 py-3 font-medium w-8"></th>
+                    <tr className={tableTokens.head} style={{ background: 'var(--surface-2)' }}>
+                      <th className={tableTokens.headCell}>Time</th>
+                      <th className={tableTokens.headCell}>Method</th>
+                      <th className={tableTokens.headCell}>Endpoint</th>
+                      <th className={tableTokens.headCell}>Status</th>
+                      <th className={clsx(tableTokens.headCell, 'text-right')}>Duration</th>
+                      <th className={tableTokens.headCell}>Error</th>
+                      <th className={clsx(tableTokens.headCell, 'w-8')}></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--glass-border)' }}>
+                  <tbody className={tableTokens.body}>
                     {logs.map((log) => (
                       <>
                         <tr
                           key={log.id}
                           onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                          className="cursor-pointer transition-colors hover:bg-white/[0.02]"
-                          style={{ borderColor: 'var(--glass-border)' }}
+                          className={clsx(tableTokens.row, 'cursor-pointer')}
                         >
-                          <td className="px-4 py-3 text-xs font-mono text-[var(--text-muted)] whitespace-nowrap">
+                          <td className={clsx(tableTokens.cell, 'text-xs font-mono text-[var(--text-muted)] whitespace-nowrap')}>
                             {formatDateTime(log.created_at)}
                           </td>
-                          <td className="px-4 py-3"><MethodBadge method={log.method} /></td>
-                          <td className="px-4 py-3 text-xs font-mono text-[var(--text-secondary)] max-w-[300px] truncate" title={log.url}>
+                          <td className={tableTokens.cell}><MethodBadge method={log.method} /></td>
+                          <td className={clsx(tableTokens.cell, 'text-xs font-mono text-[var(--text-secondary)] max-w-[300px] truncate')} title={log.url}>
                             {log.url.replace(/^https?:\/\/[^/]+/, '')}
                           </td>
-                          <td className="px-4 py-3"><StatusBadge code={log.status_code} /></td>
-                          <td className="px-4 py-3 text-xs font-mono text-right text-[var(--text-secondary)]">{log.duration_ms}ms</td>
-                          <td className="px-4 py-3 text-xs text-red-400 max-w-[200px] truncate">{log.error || '—'}</td>
-                          <td className="px-4 py-3">
+                          <td className={tableTokens.cell}><StatusBadge code={log.status_code} /></td>
+                          <td className={clsx(tableTokens.cell, 'text-xs font-mono text-right text-[var(--text-secondary)]')}>{log.duration_ms}ms</td>
+                          <td className={clsx(tableTokens.cell, 'text-xs text-red-400 max-w-[200px] truncate')}>{log.error || '—'}</td>
+                          <td className={tableTokens.cell}>
                             {expandedId === log.id ? <ChevronUp className="h-3.5 w-3.5 text-[var(--text-muted)]" /> : <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
                           </td>
                         </tr>

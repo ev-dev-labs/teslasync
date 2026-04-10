@@ -16,6 +16,7 @@ import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { formatDateTime, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { tableTokens } from '../lib/tokens'
 
 interface ComponentInfo {
   status: string
@@ -888,15 +889,15 @@ function TelemetryLivePanel() {
         {/* Per-vehicle streaming table */}
         {vehicles.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
-            <table className="w-full text-sm">
+            <table className={tableTokens.wrapper}>
               <thead>
-                <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Status</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">VIN</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Source</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Signals/s</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Latency</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Total</th>
+                <tr className={clsx(tableTokens.head, 'bg-white/[0.02]')}>
+                  <th className={tableTokens.headCell}>Status</th>
+                  <th className={tableTokens.headCell}>VIN</th>
+                  <th className={tableTokens.headCell}>Source</th>
+                  <th className={clsx(tableTokens.headCell, 'text-right')}>Signals/s</th>
+                  <th className={clsx(tableTokens.headCell, 'text-right')}>Latency</th>
+                  <th className={clsx(tableTokens.headCell, 'text-right')}>Total</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>

@@ -14,6 +14,7 @@ import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button } f
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
 import { Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle, X, Save, Clock, Trash2 } from 'lucide-react'
+import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
 
 type Tab = 'charging' | 'drives'
@@ -274,9 +275,9 @@ export default function DataRepair() {
             <EmptyState icon={<CheckCircle className="h-10 w-10" />} title="All sessions are complete ✓" description="No stale charging sessions found." />
           ) : (
             <GlassPanel className="overflow-hidden">
-              <table className="w-full text-left">
+              <table className={tableTokens.wrapper}>
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
+                  <tr className={tableTokens.head}>
                     <Th>ID</Th>
                     <Th>Start Date</Th>
                     <Th>Start Battery</Th>
@@ -285,7 +286,7 @@ export default function DataRepair() {
                     <Th>Status</Th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className={tableTokens.body}>
                   {staleCharging.map(s => (
                     <ChargingRow key={s.id} session={s} expanded={expandedId === s.id} onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)} />
                   ))}
@@ -298,9 +299,9 @@ export default function DataRepair() {
             <EmptyState icon={<CheckCircle className="h-10 w-10" />} title="All sessions are complete ✓" description="No stale drives found." />
           ) : (
             <GlassPanel className="overflow-hidden">
-              <table className="w-full text-left">
+              <table className={tableTokens.wrapper}>
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
+                  <tr className={tableTokens.head}>
                     <Th>ID</Th>
                     <Th>Start Date</Th>
                     <Th>Start Battery</Th>
@@ -309,7 +310,7 @@ export default function DataRepair() {
                     <Th>Status</Th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className={tableTokens.body}>
                   {staleDrives.map(d => (
                     <DriveRow key={d.id} drive={d} expanded={expandedId === d.id} onToggle={() => setExpandedId(expandedId === d.id ? null : d.id)} />
                   ))}
@@ -328,7 +329,7 @@ export default function DataRepair() {
 function ChargingRow({ session, expanded, onToggle }: { session: ChargingSession; expanded: boolean; onToggle: () => void }) {
   return (
     <>
-      <tr onClick={onToggle} className={clsx('border-b border-white/[0.04] cursor-pointer transition-colors', expanded ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]')}>
+      <tr onClick={onToggle} className={clsx(tableTokens.row, 'border-b border-white/[0.04] cursor-pointer', expanded && 'bg-amber-500/[0.06]')}>
         <Td>{session.id}</Td>
         <Td>{formatDateTime(session.start_date)}</Td>
         <Td>{session.start_battery_level}%</Td>
@@ -348,7 +349,7 @@ function ChargingRow({ session, expanded, onToggle }: { session: ChargingSession
 function DriveRow({ drive, expanded, onToggle }: { drive: Drive; expanded: boolean; onToggle: () => void }) {
   return (
     <>
-      <tr onClick={onToggle} className={clsx('border-b border-white/[0.04] cursor-pointer transition-colors', expanded ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]')}>
+      <tr onClick={onToggle} className={clsx(tableTokens.row, 'border-b border-white/[0.04] cursor-pointer', expanded && 'bg-amber-500/[0.06]')}>
         <Td>{drive.id}</Td>
         <Td>{formatDateTime(drive.start_date)}</Td>
         <Td>{drive.start_battery_level != null ? `${drive.start_battery_level}%` : '—'}</Td>
@@ -394,9 +395,9 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean; o
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{children}</th>
+  return <th className={tableTokens.headCell}>{children}</th>
 }
 
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{children}</td>
+  return <td className={clsx(tableTokens.cell, 'text-[var(--text-secondary)]')}>{children}</td>
 }
