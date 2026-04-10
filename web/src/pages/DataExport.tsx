@@ -9,7 +9,7 @@ import {
   getChargingSessions,
 } from '../api'
 import type { ExportJobSummary, ExportJobSubmitRequest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, Button, MetricCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, Button, MetricCard, Select, Input } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
   Download,
@@ -28,7 +28,6 @@ import {
   FileDown,
   Package,
   Info,
-  ChevronDown,
   RefreshCw,
   Zap,
   Activity,
@@ -574,20 +573,15 @@ export default function DataExport() {
               Vehicle
             </label>
             <div className="relative">
-              <select
+              <Select
                 value={selectedVehicle}
                 onChange={e => setSelectedVehicle(e.target.value)}
-                className="glass-card w-full px-4 py-2.5 text-sm rounded-lg border border-white/10 focus:ring-1 focus:ring-neon-cyan/50 focus:border-neon-cyan/50 appearance-none cursor-pointer pr-10"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-              >
-                <option value="all">All Vehicles</option>
-                {vehicles?.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.display_name || v.vin}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                options={[
+                  { value: 'all', label: 'All Vehicles' },
+                  ...(vehicles?.map(v => ({ value: String(v.id), label: v.display_name || v.vin })) ?? []),
+                ]}
+                className="w-full"
+              />
             </div>
           </div>
 
@@ -608,21 +602,21 @@ export default function DataExport() {
             </button>
             {showCustomDates && (
               <div className="flex gap-3 mt-2">
-                <input
+                <Input
                   type="date"
                   value={customStartDate}
                   onChange={e => setCustomStartDate(e.target.value)}
-                  className="glass-card px-3 py-1.5 text-xs rounded-lg border border-white/10 focus:ring-1 focus:ring-neon-cyan/50"
-                  style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', colorScheme: 'dark' }}
+                  className="text-xs"
+                  style={{ colorScheme: 'dark' }}
                   placeholder="Start date"
                 />
                 <span className="text-[var(--text-muted)] self-center text-xs">to</span>
-                <input
+                <Input
                   type="date"
                   value={customEndDate}
                   onChange={e => setCustomEndDate(e.target.value)}
-                  className="glass-card px-3 py-1.5 text-xs rounded-lg border border-white/10 focus:ring-1 focus:ring-neon-cyan/50"
-                  style={{ background: 'var(--surface-2)', color: 'var(--text-primary)', colorScheme: 'dark' }}
+                  className="text-xs"
+                  style={{ colorScheme: 'dark' }}
                   placeholder="End date"
                 />
               </div>

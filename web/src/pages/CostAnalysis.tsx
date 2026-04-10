@@ -17,6 +17,7 @@ import {
   MetricCard,
   ChartContainer,
   Select,
+  Input,
 } from '../components/ui'
 import {
   DollarSign,
@@ -753,42 +754,39 @@ export default function CostAnalysis() {
                     <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                       Gas Price ($/gallon)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       step="0.10"
                       min="0"
                       value={gasPrice}
                       onChange={e => setGasPrice(Number(e.target.value) || DEFAULT_GAS_PRICE)}
-                      className="glass-card w-full px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      className="w-full"
                     />
                   </div>
                   <div>
                     <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                       Vehicle MPG Equivalent
                     </label>
-                    <input
+                    <Input
                       type="number"
                       step="1"
                       min="1"
                       value={mpg}
                       onChange={e => setMpg(Number(e.target.value) || DEFAULT_MPG)}
-                      className="glass-card w-full px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      className="w-full"
                     />
                   </div>
                   <div>
                     <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                       Electricity Rate ($/kWh)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={effectiveElecRate}
                       onChange={e => setElecRate(Number(e.target.value) || null)}
-                      className="glass-card w-full px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      className="w-full"
                     />
                     <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                       Default from settings: ${fmtNumber(settings.base_cost_per_kwh, 2)}/kWh

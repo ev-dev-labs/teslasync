@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSoftwareUpdates, getVehicleState, Vehicle } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, MetricCard, Badge } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, MetricCard, Badge, Select } from '../components/ui'
 import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDate } from '../lib/dateFormat'
@@ -55,14 +55,11 @@ export default function SoftwareUpdates() {
       <div className="flex items-center justify-between mb-8">
         <PageHeader title="Software Updates" subtitle="Track firmware versions and update history" icon={<Smartphone className="h-7 w-7 text-neon-cyan" />} />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 

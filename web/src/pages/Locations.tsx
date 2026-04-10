@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVisitedLocations } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, QueryError, MetricCard, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, QueryError, MetricCard, ChartContainer, Select } from '../components/ui'
 import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import clsx from 'clsx'
@@ -45,14 +45,11 @@ export default function Locations() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
         <PageHeader title="Visited Locations" subtitle="Places you've been — ranked by frequency" icon={<MapPin className="h-7 w-7 text-neon-green" />} />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 

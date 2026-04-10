@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getDrives, type Drive } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, DateRangeFilter, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, DateRangeFilter, ChartContainer, Select } from '../components/ui'
 import { Trophy, Zap, Gauge, ShieldCheck, Star, AlertTriangle, Lightbulb, Target, Award, Fuel, Wind, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts'
 import clsx from 'clsx'
@@ -483,14 +483,11 @@ export default function DriveScore() {
           icon={<Trophy className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 

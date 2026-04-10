@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getChargingSessions, type ChargingSession } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, Select } from '../components/ui'
 import {
   Zap,
   BatteryCharging,
@@ -367,21 +367,11 @@ export default function ChargingCurve() {
           icon={<Zap className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{
-              background: 'var(--surface-2)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.display_name || v.vin}
-              </option>
-            ))}
-          </select>
+            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -394,21 +384,12 @@ export default function ChargingCurve() {
           >
             Select Charging Session
           </label>
-          <select
+          <Select
             value={selectedSession?.id ?? ''}
             onChange={(e) => setSelectedSessionId(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 w-full sm:w-auto sm:min-w-[400px] focus:ring-1 focus:ring-neon-cyan/50"
-            style={{
-              background: 'var(--surface-2)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {sessionLabel(s)}
-              </option>
-            ))}
-          </select>
+            options={sessions.map((s) => ({ value: String(s.id), label: sessionLabel(s) }))}
+            className="w-full sm:w-auto sm:min-w-[400px]"
+          />
         </div>
       )}
 

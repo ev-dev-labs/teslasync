@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getDrives, getMileageStats, getDailyMileage } from '../api'
 import type { Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError, Badge, AlertBanner, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError, Badge, AlertBanner, Button, Select, Input } from '../components/ui'
 import {
   Wrench, RefreshCw, Wind, Droplets, CloudRain, Crosshair, Snowflake,
   Thermometer, Gauge, CheckCircle, AlertTriangle, Clock, Plus,
@@ -324,16 +324,11 @@ export default function Maintenance() {
         icon={<Wrench className="h-7 w-7 text-neon-cyan" />}
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
+            <Select
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           ) : undefined
         }
       />
@@ -564,27 +559,22 @@ export default function Maintenance() {
             {/* Item selector */}
             <div>
               <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>Service Item</label>
-              <select
+              <Select
                 value={formItemId}
                 onChange={e => setFormItemId(e.target.value)}
-                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-              >
-                {MAINTENANCE_SCHEDULE.map(i => (
-                  <option key={i.id} value={i.id}>{i.name}</option>
-                ))}
-              </select>
+                options={MAINTENANCE_SCHEDULE.map(i => ({ value: i.id, label: i.name }))}
+                className="w-full"
+              />
             </div>
 
             {/* Date */}
             <div>
               <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>Date</label>
-              <input
+              <Input
                 type="date"
                 value={formDate}
                 onChange={e => setFormDate(e.target.value)}
-                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                className="w-full"
               />
             </div>
 
@@ -593,26 +583,24 @@ export default function Maintenance() {
               <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>
                 Odometer ({distanceUnit})
               </label>
-              <input
+              <Input
                 type="number"
                 placeholder={convertDistance(currentOdometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 value={formOdometer}
                 onChange={e => setFormOdometer(e.target.value)}
-                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                className="w-full"
               />
             </div>
 
             {/* Notes */}
             <div>
               <label className="text-[10px] uppercase tracking-wider mb-1 block" style={{ color: 'var(--text-muted)' }}>Notes</label>
-              <input
+              <Input
                 type="text"
                 placeholder="Optional notes…"
                 value={formNotes}
                 onChange={e => setFormNotes(e.target.value)}
-                className="w-full glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                className="w-full"
               />
             </div>
 

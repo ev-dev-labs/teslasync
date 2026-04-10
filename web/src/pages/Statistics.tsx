@@ -4,7 +4,7 @@ import {
   getVehicles, getFleetAnalytics, getEnergyStats, getBatteryReport,
   getMileageStats, getStateSummary
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError, MetricCard, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError, MetricCard, ChartContainer, Select } from '../components/ui'
 import {
   BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge
 } from 'lucide-react'
@@ -99,14 +99,11 @@ export default function Statistics() {
             onEndDateChange={setEndDate}
           />
           {vehicles && vehicles.length > 1 && (
-            <select
+            <Select
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
         </div>
       </div>
