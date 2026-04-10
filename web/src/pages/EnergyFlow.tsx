@@ -44,11 +44,11 @@ function StatusGauge({ label, value, unit, min, max, color = 'text-neon-cyan', f
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/5" />
+          <circle cx="50" cy="50" r="42" fill="none" stroke="var(--glass-border)" strokeWidth="6" />
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6"
             strokeDasharray={`${pct * 2.64} 264`} strokeLinecap="round" className={color} />
         </svg>
-        <span className={clsx('text-2xl font-bold', color)}>{value != null ? fmt(val) : '--'}</span>
+        <span className="text-xl font-bold text-[var(--text-primary)] truncate max-w-[5rem] text-center">{value != null ? fmt(val) : '--'}</span>
       </div>
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', color)}>
         {value != null ? `${fmt(val)} ${unit}` : 'N/A'}
