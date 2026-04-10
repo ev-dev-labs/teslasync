@@ -522,19 +522,9 @@ export default function DriveScore() {
         <div className="space-y-6 sm:space-y-8">
 
           {/* ── Section 3: Overall Score (Hero) ──────────────────────── */}
-          <GlassPanel className="p-6 sm:p-10 !overflow-visible">
+          <GlassPanel className="p-6 sm:p-10">
             <div className="flex flex-col items-center">
-              <div className="relative">
-                {/* Outer glow pulse */}
-                <div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: `radial-gradient(circle, ${scoreColor(avgScore.total)}15 0%, transparent 70%)`,
-                    animation: 'pulse-glow 3s ease-in-out infinite',
-                    transform: 'scale(1.6)',
-                  }}
-                />
-                <ScoreRing
+              <ScoreRing
                   score={avgScore.total}
                   max={100}
                   size={200}
@@ -542,7 +532,6 @@ export default function DriveScore() {
                   grade={avgScore.grade}
                   showGrade
                 />
-              </div>
               <p className="mt-4 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Your average drive score
               </p>
