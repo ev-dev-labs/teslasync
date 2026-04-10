@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn, Badge, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button, Select } from '../components/ui'
 import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
@@ -199,10 +199,8 @@ export default function SignalLogViewer() {
               {/* Page size */}
               <div className="flex items-center gap-1 ml-auto">
                 <span className="text-[10px] text-[var(--text-muted)]">Rows:</span>
-                <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                  className="bg-[var(--bg)] border border-[var(--border)] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-primary)] outline-none">
-                  {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <Select value={String(pageSize)} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+                  options={PAGE_SIZES.map(s => ({ value: String(s), label: String(s) }))} />
               </div>
 
               {/* Record count */}

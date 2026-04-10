@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAPIKeys, createAPIKey, deleteAPIKey, revokeAPIKey, APIKey } from '../api'
 import { Key, Plus, Trash2, Copy, Check, Shield, ShieldAlert, Crown, Clock, XCircle } from 'lucide-react'
-import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, ConfirmModal, Button, Badge, Modal } from '../components/ui'
+import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, ConfirmModal, Button, Badge, Modal, Select } from '../components/ui'
 import { formatDate } from '../lib/dateFormat'
 import clsx from 'clsx'
 
@@ -101,12 +101,8 @@ export default function APIKeys() {
             </div>
             <div>
               <label className="block text-xs text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">Permissions</label>
-              <select value={newPerm} onChange={e => setNewPerm(e.target.value)}
-                className="w-full p-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-[var(--text-primary)] focus:outline-none focus:border-neon-cyan/40">
-                <option value="read">🔒 Read</option>
-                <option value="read-write">✏️ Read-Write</option>
-                <option value="admin">👑 Admin</option>
-              </select>
+              <Select value={newPerm} onChange={e => setNewPerm(e.target.value)}
+                options={[{ value: 'read', label: '🔒 Read' }, { value: 'read-write', label: '✏️ Read-Write' }, { value: 'admin', label: '👑 Admin' }]} />
             </div>
             <div className="flex gap-2">
               <Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => createMut.mutate({ name: newName, permissions: newPerm })} disabled={!newName.trim()} loading={createMut.isPending}>Generate Key</Button>

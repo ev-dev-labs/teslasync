@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, WifiOff } from 'lucide-react'
+import { Button } from './ui'
 
 interface Props {
   children: ReactNode
@@ -96,9 +97,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="text-sm font-medium text-gray-300">Component failed to load</p>
               <p className="text-xs text-[var(--text-muted)] truncate">{this.state.error?.message}</p>
             </div>
-            <button onClick={this.handleRetry} className="glass-button text-xs shrink-0">
+            <Button variant="secondary" size="sm" onClick={this.handleRetry} className="shrink-0">
               <RefreshCw className="h-3 w-3" /> Retry
-            </button>
+            </Button>
           </div>
         )
       }
@@ -129,17 +130,17 @@ export class ErrorBoundary extends Component<Props, State> {
               </p>
             )}
             <div className="flex items-center justify-center gap-3 mt-6">
-              <button
+              <Button
                 onClick={this.handleRetry}
-                className="neon-button text-sm"
+                variant="primary"
               >
                 <RefreshCw className="h-4 w-4" />
                 {tooManyRetries ? 'Try Again Anyway' : 'Try Again'}
-              </button>
-              <a href="/" className="glass-button text-sm">
+              </Button>
+              <Button variant="secondary" onClick={() => { window.location.href = '/' }}>
                 <Home className="h-4 w-4" />
                 Go Home
-              </a>
+              </Button>
             </div>
             {this.state.retryCount > 0 && (
               <p className="mt-4 text-[10px] text-gray-600">

@@ -11,6 +11,7 @@ import { signalCatalog, getSignalMeta } from '../lib/signalCatalog'
 import type { SignalMeta } from '../lib/signalCatalog'
 import { Plus, Trash2, ChevronDown, Layers, Clock, Search } from 'lucide-react'
 import clsx from 'clsx'
+import { Input, Select } from './ui'
 
 // ─── Operator helpers ────────────────────────────────────────────────────────
 
@@ -136,16 +137,14 @@ function SignalPicker({ value, onChange }: { value: string; onChange: (v: string
           <div className="absolute z-50 mt-1 w-96 max-h-96 overflow-auto rounded-xl shadow-2xl border border-neon-cyan/20"
                style={{ background: 'var(--bg, #0a0e1a)' }}>
             <div className="sticky top-0 p-2.5 border-b border-white/10" style={{ background: 'var(--bg, #0a0e1a)' }}>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <input
+              <Input
                   autoFocus
-                  className="glass-input w-full pl-8 text-sm py-2"
+                  icon={<Search className="h-3.5 w-3.5" />}
+                  className="w-full text-sm py-2"
                   placeholder="Search signals…"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
-              </div>
             </div>
             {grouped.map(([cat, items]) => (
               <div key={cat}>
@@ -196,37 +195,39 @@ function ValueInput({ signal, compare, value, onChange }: {
   // Enum dropdown
   if (signal?.enumValues?.length) {
     return (
-      <select
-        className="glass-input text-xs min-w-[120px]"
+      <Select
+        className="text-xs min-w-[120px]"
         value={String(value ?? '')}
         onChange={e => onChange(e.target.value)}
-      >
-        <option value="">Select…</option>
-        {signal.enumValues.map(v => <option key={v} value={v}>{v}</option>)}
-      </select>
+        options={[
+          { value: '', label: 'Select…' },
+          ...signal.enumValues.map(v => ({ value: v, label: v })),
+        ]}
+      />
     )
   }
 
   // Boolean
   if (signal?.type === 'boolean') {
     return (
-      <select
-        className="glass-input text-xs min-w-[80px]"
+      <Select
+        className="text-xs min-w-[80px]"
         value={String(value ?? 'true')}
         onChange={e => onChange(e.target.value === 'true')}
-      >
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </select>
+        options={[
+          { value: 'true', label: 'true' },
+          { value: 'false', label: 'false' },
+        ]}
+      />
     )
   }
 
   // Number
   if (signal?.type === 'number') {
     return (
-      <input
+      <Input
         type="number"
-        className="glass-input text-xs w-24"
+        className="text-xs w-24"
         placeholder="value"
         value={value === undefined || value === '' ? '' : Number(value)}
         onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
@@ -236,9 +237,9 @@ function ValueInput({ signal, compare, value, onChange }: {
 
   // Default: string
   return (
-    <input
+    <Input
       type="text"
-      className="glass-input text-xs min-w-[120px]"
+      className="text-xs min-w-[120px]"
       placeholder="value"
       value={String(value ?? '')}
       onChange={e => onChange(e.target.value)}
@@ -280,13 +281,12 @@ function ConditionRow({ node, path, onUpdate, onRemove, canRemove }: {
       />
 
       {/* Operator */}
-      <select
-        className="glass-input text-xs w-28"
+      <Select
+        className="text-xs w-28"
         value={node.compare ?? '=='}
         onChange={e => onUpdate(path, { compare: e.target.value })}
-      >
-        {operators.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+        options={operators.map(o => ({ value: o.value, label: o.label }))}
+      />
 
       {/* Value */}
       <ValueInput
@@ -315,10 +315,10 @@ function ConditionRow({ node, path, onUpdate, onRemove, canRemove }: {
       {showFor && (
         <div className="flex items-center gap-1">
           <span className="text-[10px] text-[var(--text-muted)]">for</span>
-          <input
+          <Input
             type="number"
             min={0}
-            className="glass-input text-xs w-16"
+            className="text-xs w-16"
             placeholder="sec"
             value={node.for_seconds ?? ''}
             onChange={e => onUpdate(path, { for_seconds: e.target.value ? Number(e.target.value) : undefined })}

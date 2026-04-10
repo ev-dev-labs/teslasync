@@ -1,6 +1,7 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { RefreshCw, X } from 'lucide-react'
 import { useState } from 'react'
+import { Button, GlassPanel } from './ui'
 
 /**
  * Shows a non-intrusive banner when a new version is deployed.
@@ -29,7 +30,7 @@ export default function ReloadPrompt() {
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-300">
-      <div className="glass-card !p-4 flex items-center gap-3 border border-neon-cyan/30 shadow-lg shadow-neon-cyan/10 max-w-sm">
+      <GlassPanel className="!p-4 flex items-center gap-3 border border-neon-cyan/30 shadow-lg shadow-neon-cyan/10 max-w-sm">
         <div className="rounded-lg bg-neon-cyan/10 p-2">
           <RefreshCw className="h-5 w-5 text-neon-cyan" />
         </div>
@@ -37,19 +38,21 @@ export default function ReloadPrompt() {
           <p className="text-sm font-semibold text-[var(--text-primary)]">New version available</p>
           <p className="text-xs text-[var(--text-muted)]">Reload to get the latest features</p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => updateServiceWorker(true)}
-          className="neon-button text-xs !px-3 !py-1.5 shrink-0"
+          className="shrink-0"
         >
           Reload
-        </button>
+        </Button>
         <button
           onClick={() => setDismissed(true)}
           className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
-      </div>
+      </GlassPanel>
     </div>
   )
 }

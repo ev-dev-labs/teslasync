@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { GitCompare, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Button, Input, Select } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { fmtNumber } from '../lib/numberFormat'
@@ -155,26 +155,21 @@ export default function SignalDiff() {
             {/* Signal Selector */}
             <div>
               <label className="block text-xs text-[var(--text-muted)] mb-1.5">Signal</label>
-              <select
+              <Select
                 value={selectedSignal}
                 onChange={e => setSelectedSignal(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] outline-none focus:border-neon-cyan/50"
-              >
-                <option value="">Select a signal…</option>
-                {(availableSignals?.signals ?? []).map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                options={[{ value: '', label: 'Select a signal…' }, ...(availableSignals?.signals ?? []).map(s => ({ value: s, label: s }))]}
+              />
             </div>
 
             {/* Range A */}
             <div>
               <label className="block text-xs text-neon-cyan mb-1.5">Range A</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={rangeAFrom} onChange={e => setRangeAFrom(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
-                <input type="datetime-local" value={rangeATo} onChange={e => setRangeATo(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
+                <Input type="datetime-local" value={rangeAFrom} onChange={e => setRangeAFrom(e.target.value)}
+                  className="flex-1" />
+                <Input type="datetime-local" value={rangeATo} onChange={e => setRangeATo(e.target.value)}
+                  className="flex-1" />
               </div>
             </div>
 
@@ -182,10 +177,10 @@ export default function SignalDiff() {
             <div>
               <label className="block text-xs text-neon-amber mb-1.5">Range B</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={rangeBFrom} onChange={e => setRangeBFrom(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
-                <input type="datetime-local" value={rangeBTo} onChange={e => setRangeBTo(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
+                <Input type="datetime-local" value={rangeBFrom} onChange={e => setRangeBFrom(e.target.value)}
+                  className="flex-1" />
+                <Input type="datetime-local" value={rangeBTo} onChange={e => setRangeBTo(e.target.value)}
+                  className="flex-1" />
               </div>
             </div>
           </div>

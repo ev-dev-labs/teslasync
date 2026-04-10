@@ -9,7 +9,7 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
   MapPin, FileText,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, Badge, Button } from '../components/ui'
+import { PageHeader, GlassPanel, Badge, Button, Input, Select } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
@@ -128,8 +128,7 @@ function ToolCard({
   )
 }
 
-const inputClasses = 'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 font-mono'
-const textareaClasses = 'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 font-mono resize-y min-h-[80px]'
+const textareaClasses= 'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 font-mono resize-y min-h-[80px]'
 
 // ─── Backend API helpers ─────────────────────────────────────────
 
@@ -284,7 +283,7 @@ function PartnerRegistrationTool() {
       </GlassPanel>
       <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">Your Domain</label>
       <div className="flex gap-3">
-        <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="teslasync.yourdomain.com" className={clsx(inputClasses, 'flex-1')} />
+        <Input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="teslasync.yourdomain.com" className="flex-1" />
         <Button variant="secondary" size="sm" onClick={() => mut.mutate()} disabled={!domain} loading={mut.isPending} icon={<KeyRound className="h-3.5 w-3.5" />} className="shrink-0">
           Register
         </Button>
@@ -403,10 +402,9 @@ function PublicKeySetupTool() {
           {/* Collapsible Public Key PEM */}
           {status.public_key_pem && (
             <div>
-              <button onClick={() => setShowPublicKeyPem(!showPublicKeyPem)} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
-                {showPublicKeyPem ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              <Button variant="ghost" size="sm" icon={showPublicKeyPem ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} onClick={() => setShowPublicKeyPem(!showPublicKeyPem)}>
                 {showPublicKeyPem ? 'Hide' : 'Show'} Public Key PEM
-              </button>
+              </Button>
               {showPublicKeyPem && (
                 <GlassPanel className="mt-2 p-3 relative">
                   <div className="absolute top-2 right-2"><CopyButton text={status.public_key_pem} /></div>
@@ -470,7 +468,7 @@ function PublicKeySetupTool() {
               {deleteMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
               Confirm Delete
             </button>
-            <button onClick={() => setConfirmDelete(false)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]">Cancel</button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
           </div>
         )}
       </div>
@@ -620,22 +618,22 @@ function FleetTelemetrySubscribeTool() {
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Hostname</label>
-          <input type="text" value={hostname} onChange={e => setHostname(e.target.value)} placeholder="telemetry.yourdomain.com" className={inputClasses} />
+          <Input type="text" value={hostname} onChange={e => setHostname(e.target.value)} placeholder="telemetry.yourdomain.com" />
         </div>
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Port</label>
-          <input type="text" value={port} onChange={e => setPort(e.target.value)} placeholder="4443" className={inputClasses} />
+          <Input type="text" value={port} onChange={e => setPort(e.target.value)} placeholder="4443" />
         </div>
       </div>
 
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Interval (seconds)</label>
-        <input type="text" value={interval} onChange={e => setInterval(e.target.value)} placeholder="10" className={clsx(inputClasses, 'w-24')} />
+        <Input type="text" value={interval} onChange={e => setInterval(e.target.value)} placeholder="10" className="w-24" />
       </div>
 
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">CA Certificate (optional)</label>
-        <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(inputClasses, 'h-16 resize-y font-mono text-[10px]')} />
+        <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(textareaClasses, 'h-16 text-[10px]')} />
       </div>
 
       {/* Signal Configuration */}
@@ -749,12 +747,7 @@ function FleetTelemetryConfigTool() {
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVin} onChange={e => handleVinChange(e.target.value)} className={inputClasses}>
-            <option value="">Select a vehicle...</option>
-            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
-              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
-            ))}
-          </select>
+          <Select value={selectedVin} onChange={e => handleVinChange(e.target.value)} options={[{ value: '', label: 'Select a vehicle...' }, ...vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => ({ value: v.vin, label: `${v.display_name} (${v.vin})` }))]} />
         ) : (
           <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
         )}
@@ -785,9 +778,7 @@ function FleetTelemetryConfigTool() {
               Fleet Telemetry Errors {errorsList.length > 0 && <span className="text-neon-amber">({errorsList.length})</span>}
             </h4>
             {errorsList.length > 0 && (
-              <button onClick={downloadErrors} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
-                <Download className="h-3 w-3" /> Download JSON
-              </button>
+              <Button variant="ghost" size="sm" icon={<Download className="h-3 w-3" />} onClick={downloadErrors}>Download JSON</Button>
             )}
           </div>
           {errorsList.length > 0 ? (
@@ -880,12 +871,7 @@ function VehicleDataTools() {
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVin} onChange={e => { setSelectedVin(e.target.value); setResult(null) }} className={inputClasses}>
-            <option value="">Select a vehicle...</option>
-            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
-              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
-            ))}
-          </select>
+          <Select value={selectedVin} onChange={e => { setSelectedVin(e.target.value); setResult(null) }} options={[{ value: '', label: 'Select a vehicle...' }, ...vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => ({ value: v.vin, label: `${v.display_name} (${v.vin})` }))]} />
         ) : (
           <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
         )}
@@ -1032,9 +1018,7 @@ function OnboardingWorkflow() {
         </div>
         <span className="text-[10px] text-[var(--text-muted)] shrink-0">{completedSteps.size}/{ONBOARDING_STEPS.length}</span>
         {completedSteps.size > 0 && (
-          <button onClick={resetAll} className="text-[10px] text-[var(--text-muted)] hover:text-neon-red ml-1 transition-colors" title="Reset progress">
-            <RefreshCw className="h-3 w-3" />
-          </button>
+          <Button variant="ghost" size="sm" icon={<RefreshCw className="h-3 w-3" />} onClick={resetAll} className="ml-1" title="Reset progress" />
         )}
       </div>
 
@@ -1285,11 +1269,11 @@ function MqttTestTool() {
       <div className="space-y-2 mb-3">
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Topic (optional)</label>
-          <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="test/topic" className={inputClasses} />
+          <Input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="test/topic" />
         </div>
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Message (optional)</label>
-          <input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello MQTT" className={inputClasses} />
+          <Input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello MQTT" />
         </div>
       </div>
       <Button variant="secondary" size="sm" onClick={() => mut.mutate()} loading={mut.isPending} icon={<Play className="h-3.5 w-3.5" />}>
@@ -1337,7 +1321,7 @@ function VinDecoderTool() {
 
   return (
     <ToolCard icon={Car} color="cyan" title="VIN Decoder" description="Decode Tesla VIN to model, year, drive type, battery">
-      <input type="text" value={vin} onChange={e => setVin(e.target.value)} placeholder="5YJ3E1EA1PF000000" maxLength={17} className={inputClasses} />
+      <Input type="text" value={vin} onChange={e => setVin(e.target.value)} placeholder="5YJ3E1EA1PF000000" maxLength={17} />
       {vin.length > 0 && vin.length !== 17 && <p className="text-[10px] text-neon-amber mt-1">{17 - vin.length} more characters needed</p>}
       {decoded && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
@@ -1421,7 +1405,7 @@ function TimestampTool() {
 
   return (
     <ToolCard icon={Clock} color="green" title="Timestamp Converter" description="Convert between Unix epoch, ISO 8601, and human-readable dates">
-      <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="1700000000, 2024-01-15T12:00:00Z, or Jan 15 2024" className={inputClasses} />
+      <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="1700000000, 2024-01-15T12:00:00Z, or Jan 15 2024" />
       <Button variant="secondary" size="sm" onClick={() => setInput(Math.floor(Date.now() / 1000).toString())} icon={<Clock className="h-3 w-3" />} className="mt-2">
         Now
       </Button>
@@ -1633,10 +1617,8 @@ function ByteSizeTool() {
   return (
     <ToolCard icon={HardDrive} color="amber" title="Byte Size Converter" description="Convert between B, KB, MB, GB, TB">
       <div className="flex gap-2">
-        <input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="1024" className={clsx(inputClasses, 'flex-1')} />
-        <select value={unit} onChange={e => setUnit(e.target.value)} className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40">
-          {BYTE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-        </select>
+        <Input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="1024" className="flex-1" />
+        <Select value={unit} onChange={e => setUnit(e.target.value)} options={BYTE_UNITS.map(u => ({ value: u, label: u }))} />
       </div>
       {conversions && (
         <div className="grid grid-cols-5 gap-2 mt-3">
@@ -1686,7 +1668,7 @@ function ColorConverterTool() {
   return (
     <ToolCard icon={Palette} color="purple" title="Color Converter" description="Convert between HEX, RGB, HSL">
       <div className="flex gap-2">
-        <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="#3B82F6 or rgb(59,130,246) or hsl(217,91%,60%)" className={clsx(inputClasses, 'flex-1')} />
+        <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="#3B82F6 or rgb(59,130,246) or hsl(217,91%,60%)" className="flex-1" />
         {result && <div className="w-10 h-10 rounded-lg border border-white/[0.08] shrink-0" style={{ backgroundColor: result.hex }} />}
       </div>
       {result && (
@@ -1750,7 +1732,7 @@ function CronParserTool() {
 
   return (
     <ToolCard icon={Timer} color="green" title="Cron Expression Parser" description="Parse cron expressions and show next run times">
-      <input type="text" value={cron} onChange={e => setCron(e.target.value)} placeholder="*/5 * * * *" className={inputClasses} />
+      <Input type="text" value={cron} onChange={e => setCron(e.target.value)} placeholder="*/5 * * * *" />
       <div className="flex flex-wrap gap-1.5 mt-2">
         {[
           { label: 'Every minute', val: '* * * * *' },
@@ -1893,7 +1875,7 @@ function HttpStatusTool() {
 
   return (
     <ToolCard icon={Network} color="cyan" title="HTTP Status Code Reference" description="Searchable table of HTTP status codes">
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by code or name..." className={inputClasses} />
+      <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by code or name..." />
       <div className="mt-3 max-h-64 overflow-y-auto space-y-1 pr-1">
         {filtered.map(([code, name, desc]) => (
           <div key={code} className="flex items-start gap-3 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -1951,7 +1933,7 @@ function TeslaApiRefTool() {
 
   return (
     <ToolCard icon={BookOpen} color="green" title="Tesla API Endpoint Reference" description="Common Tesla Fleet API endpoints">
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search endpoints..." className={inputClasses} />
+      <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search endpoints..." />
       <div className="mt-3 max-h-72 overflow-y-auto space-y-1 pr-1">
         {filtered.map(([method, path, desc], i) => (
           <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -2003,8 +1985,8 @@ function RegexTesterTool() {
     <ToolCard icon={Regex} color="amber" title="Regex Tester" description="Test regex patterns against input text">
       <div className="space-y-2">
         <div className="flex gap-2">
-          <input type="text" value={pattern} onChange={e => setPattern(e.target.value)} placeholder="Pattern: e.g. \d+" className={clsx(inputClasses, 'flex-1')} />
-          <input type="text" value={flags} onChange={e => setFlags(e.target.value)} placeholder="gi" className={clsx(inputClasses, 'w-16')} />
+          <Input type="text" value={pattern} onChange={e => setPattern(e.target.value)} placeholder="Pattern: e.g. \d+" className="flex-1" />
+          <Input type="text" value={flags} onChange={e => setFlags(e.target.value)} placeholder="gi" className="w-16" />
         </div>
         <textarea value={testStr} onChange={e => setTestStr(e.target.value)} placeholder="Test string..." className={textareaClasses} rows={3} />
       </div>
@@ -2070,7 +2052,7 @@ function UnixPermTool() {
 
   return (
     <ToolCard icon={Lock} color="purple" title="Unix Permission Calculator" description="Convert between octal (755) and symbolic (rwxr-xr-x)">
-      <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="755 or rwxr-xr-x" className={inputClasses} />
+      <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="755 or rwxr-xr-x" />
       <div className="flex flex-wrap gap-1.5 mt-2">
         {['755', '644', '700', '777', '600', '444'].map(p => (
           <button key={p} onClick={() => setInput(p)} className="px-2 py-0.5 text-[10px] rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] transition-colors font-mono">

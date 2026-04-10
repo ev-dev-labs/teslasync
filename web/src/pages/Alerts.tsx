@@ -6,7 +6,7 @@ import {
 } from '../api'
 import { formatDateTime } from '../lib/dateFormat'
 import { CHART_COLORS } from '../lib/colors'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard, Button } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
@@ -134,9 +134,7 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
           </Badge>
           <span className="text-[10px] text-gray-600">{alert.type.replace(/_/g, ' ')}</span>
           {!alert.is_read && (
-            <button onClick={onMarkRead}className="ml-auto flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors opacity-0 group-hover:opacity-100">
-              <Eye className="h-3 w-3" /> Mark read
-            </button>
+            <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">Mark read</Button>
           )}
         </div>
       </div>

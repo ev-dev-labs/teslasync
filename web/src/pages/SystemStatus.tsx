@@ -229,16 +229,16 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
                   <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Signals ({info.details.supported_signals.length})</p>
-                      <button onClick={() => setShowSignalsModal(true)} className="text-[10px] text-neon-cyan hover:underline">View All</button>
+                      <Button variant="ghost" size="sm" onClick={() => setShowSignalsModal(true)}>View All</Button>
                     </div>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {info.details.supported_signals.slice(0, 12).map(s => (
                         <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-neon-cyan/10 text-neon-cyan">{s}</span>
                       ))}
                       {info.details.supported_signals.length > 12 && (
-                        <button onClick={() => setShowSignalsModal(true)} className="px-1.5 py-0.5 text-[10px] rounded bg-white/5 text-[var(--text-muted)] hover:text-neon-cyan transition-colors">
+                         <Button variant="ghost" size="sm" onClick={() => setShowSignalsModal(true)}>
                           +{info.details.supported_signals.length - 12} more
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
