@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Cpu } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, DataTable, type Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
@@ -85,6 +85,39 @@ export default function StateMachineDebugger() {
 
   const totalDuration = Object.values(durationByState).reduce((a, b) => a + b, 0)
 
+  const stateCountRows = Object.entries(countByState)
+    .sort((a, b) => (durationByState[b[0]] ?? 0) - (durationByState[a[0]] ?? 0))
+    .map(([state, count]) => ({
+      state,
+      count,
+      duration: durationByState[state] ?? 0,
+      pct: totalDuration > 0 ? ((durationByState[state] ?? 0) / totalDuration) * 100 : 0,
+    }))
+
+  type StateCountRow = (typeof stateCountRows)[number]
+
+  const stateCountColumns: Column<StateCountRow>[] = [
+    { key: 'state', header: 'State', render: (row) => (
+      <Badge color={row.state === 'driving' ? 'green' : row.state === 'charging' ? 'amber' : row.state === 'parked' ? 'cyan' : row.state === 'asleep' ? 'purple' : 'neutral'} dot>
+        {row.state}
+      </Badge>
+    )},
+    { key: 'transitions', header: 'Transitions', className: 'text-right', render: (row) => <span className="text-[var(--text-primary)] font-mono">{row.count}</span> },
+    { key: 'totalDuration', header: 'Total Duration', className: 'text-right', render: (row) => <span className="text-[var(--text-secondary)] font-mono">{formatDuration(row.duration)}</span> },
+    { key: 'pctTime', header: '% of Time', className: 'text-right', render: (row) => <span className="text-[var(--text-muted)] font-mono">{fmtNumber(row.pct, 1)}%</span> },
+  ]
+
+  const timelineColumns: Column<StateTransition>[] = [
+    { key: 'state', header: 'State', render: (t) => (
+      <Badge color={t.state?.toLowerCase() === 'driving' ? 'green' : t.state?.toLowerCase() === 'charging' ? 'amber' : t.state?.toLowerCase() === 'parked' ? 'cyan' : t.state?.toLowerCase() === 'asleep' ? 'purple' : 'neutral'} dot>
+        {t.state}
+      </Badge>
+    )},
+    { key: 'started', header: 'Started', render: (t) => <span className="text-[var(--text-secondary)] font-mono whitespace-nowrap">{formatDateTime(t.started_at)}</span> },
+    { key: 'ended', header: 'Ended', render: (t) => <span className="text-[var(--text-secondary)] font-mono whitespace-nowrap">{t.ended_at ? formatDateTime(t.ended_at) : <span className="text-neon-green">ongoing</span>}</span> },
+    { key: 'duration', header: 'Duration', className: 'text-right', render: (t) => <span className="text-[var(--text-primary)] font-mono whitespace-nowrap">{formatDuration(t.duration_seconds)}</span> },
+  ]
+
   const style = currentState ? getStateStyle(currentState.state) : getStateStyle('offline')
 
   return (
@@ -167,46 +200,11 @@ export default function StateMachineDebugger() {
             {timelineLoading ? (
               <Skeleton className="h-64" />
             ) : Object.keys(countByState).length > 0 ? (
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium text-xs">State</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium text-xs">Transitions</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium text-xs">Total Duration</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium text-xs">% of Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(countByState)
-                      .sort((a, b) => (durationByState[b[0]] ?? 0) - (durationByState[a[0]] ?? 0))
-                      .map(([state, count]) => {
-                        const dur = durationByState[state] ?? 0
-                        const pct = totalDuration > 0 ? (dur / totalDuration) * 100 : 0
-                        return (
-                          <tr key={state} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
-                            <td className="px-3 py-2.5">
-                              <div className="flex items-center gap-2">
-                                <Badge color={
-                                  state === 'driving' ? 'green' :
-                                  state === 'charging' ? 'amber' :
-                                  state === 'parked' ? 'cyan' :
-                                  state === 'asleep' ? 'purple' :
-                                  'neutral'
-                                } dot>
-                                  {state}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5 text-right text-[var(--text-primary)] font-mono">{count}</td>
-                            <td className="px-3 py-2.5 text-right text-[var(--text-secondary)] font-mono">{formatDuration(dur)}</td>
-                            <td className="px-3 py-2.5 text-right text-[var(--text-muted)] font-mono">{fmtNumber(pct, 1)}%</td>
-                          </tr>
-                        )
-                      })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={stateCountColumns}
+                data={stateCountRows}
+                keyExtractor={(row) => row.state}
+              />
             ) : (
               <p className="text-center py-12 text-[var(--text-muted)]">No transitions recorded</p>
             )}
@@ -228,44 +226,13 @@ export default function StateMachineDebugger() {
               {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12" />)}
             </div>
           ) : transitions.length > 0 ? (
-            <div className="overflow-auto max-h-[50vh]">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-[var(--surface)] z-10">
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">State</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Started</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Ended</th>
-                    <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Duration</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transitions.map((t, i) => {
-                    return (
-                      <tr key={i} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
-                        <td className="px-3 py-2.5">
-                          <Badge color={
-                            t.state?.toLowerCase() === 'driving' ? 'green' :
-                            t.state?.toLowerCase() === 'charging' ? 'amber' :
-                            t.state?.toLowerCase() === 'parked' ? 'cyan' :
-                            t.state?.toLowerCase() === 'asleep' ? 'purple' :
-                            'neutral'
-                          } dot>
-                            {t.state}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5 text-[var(--text-secondary)] font-mono whitespace-nowrap">{formatDateTime(t.started_at)}</td>
-                        <td className="px-3 py-2.5 text-[var(--text-secondary)] font-mono whitespace-nowrap">
-                          {t.ended_at ? formatDateTime(t.ended_at) : <span className="text-neon-green">ongoing</span>}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-[var(--text-primary)] font-mono whitespace-nowrap">
-                          {formatDuration(t.duration_seconds)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={timelineColumns}
+              data={transitions}
+              keyExtractor={(t) => t.started_at}
+              compact
+              className="max-h-[50vh] overflow-auto"
+            />
           ) : (
             <p className="text-center py-12 text-[var(--text-muted)]">No transitions in the last 24h</p>
           )}

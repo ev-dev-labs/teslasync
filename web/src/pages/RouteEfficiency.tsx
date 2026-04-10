@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getRouteEfficiency, getRouteEfficiencyDetail, Vehicle, RouteSummary, RouteDriveDetail } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, IconBox, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, IconBox, Select, DataTable } from '../components/ui'
 import { MapPin, ArrowRight, TrendingUp, Clock, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
@@ -155,43 +155,19 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
       )}
 
       {/* Trip table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-              <th className="text-left py-1.5 px-2 font-medium" style={{ color: 'var(--text-muted)' }}>Date</th>
-              <th className="text-right py-1.5 px-2 font-medium" style={{ color: 'var(--text-muted)' }}>Dist</th>
-              <th className="text-right py-1.5 px-2 font-medium" style={{ color: 'var(--text-muted)' }}>Duration</th>
-              <th className="text-right py-1.5 px-2 font-medium" style={{ color: 'var(--text-muted)' }}>Speed</th>
-              <th className="text-right py-1.5 px-2 font-medium" style={{ color: 'var(--text-muted)' }}>Temp</th>
-              <th className="text-right py-1.5 px-2 font-medium" style={{ color: 'var(--text-muted)' }}>Efficiency</th>
-            </tr>
-          </thead>
-          <tbody>
-            {drives.map((d: RouteDriveDetail) => {
-              const isBest = d.id === bestTrip.id
-              return (
-                <tr key={d.id} className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                  <td className="py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>
-                    {formatDate(d.start_date)}
-                  </td>
-                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{fmtWithUnit(d.distance, 'km', 1)}</td>
-                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>{fmtInt(d.duration_min)} min</td>
-                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>
-                    {d.speed_avg > 0 ? `${d.speed_avg} km/h` : '-'}
-                  </td>
-                  <td className="text-right py-1.5 px-2" style={{ color: 'var(--text-secondary)' }}>
-                    {d.outside_temp_avg > 0 ? `${d.outside_temp_avg}°C` : '-'}
-                  </td>
-                  <td className={`text-right py-1.5 px-2 font-bold ${isBest ? 'text-neon-green' : 'text-neon-cyan'}`}>
-                    {fmtNumber(d.efficiency, 1)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable<RouteDriveDetail>
+        columns={[
+          { key: 'date', header: 'Date', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{formatDate(d.start_date)}</span> },
+          { key: 'dist', header: 'Dist', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{fmtWithUnit(d.distance, 'km', 1)}</span> },
+          { key: 'duration', header: 'Duration', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{fmtInt(d.duration_min)} min</span> },
+          { key: 'speed', header: 'Speed', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{d.speed_avg > 0 ? `${d.speed_avg} km/h` : '-'}</span> },
+          { key: 'temp', header: 'Temp', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{d.outside_temp_avg > 0 ? `${d.outside_temp_avg}°C` : '-'}</span> },
+          { key: 'efficiency', header: 'Efficiency', className: 'text-right', render: (d) => <span className={`font-bold ${d.id === bestTrip.id ? 'text-neon-green' : 'text-neon-cyan'}`}>{fmtNumber(d.efficiency, 1)}</span> },
+        ]}
+        data={drives}
+        keyExtractor={(d) => d.id}
+        compact
+      />
     </GlassPanel>
   )
 }

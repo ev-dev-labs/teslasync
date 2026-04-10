@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn, Badge, Button, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button, Select, DataTable, type Column } from '../components/ui'
 import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
@@ -13,6 +13,8 @@ interface SignalLogEntry {
   value_str?: string
   value_bool?: boolean
 }
+
+type NumberedLogEntry = SignalLogEntry & { _rowNum: number }
 
 interface SignalHistoryResponse {
   vehicle_id: number
@@ -108,6 +110,28 @@ export default function SignalLogViewer() {
 
   const totalRecords = history?.count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
+
+  const logData: NumberedLogEntry[] = (history?.data ?? []).map((entry, idx) => ({
+    ...entry,
+    _rowNum: (page - 1) * pageSize + idx + 1,
+  }))
+
+  const logColumns: Column<NumberedLogEntry>[] = [
+    { key: 'rowNum', header: '#', render: (row) => <span className="text-[var(--text-muted)] font-mono">{row._rowNum}</span> },
+    { key: 'timestamp', header: 'Timestamp', render: (row) => <span className="font-mono text-[var(--text-secondary)]">{formatDateTime(row.timestamp)}</span> },
+    { key: 'value', header: 'Value', render: (row) => {
+      const valType = getValueType(row)
+      return <span className={clsx('font-mono font-semibold', typeColor[valType])}>{formatValue(row)}</span>
+    }},
+    { key: 'type', header: 'Type', render: (row) => {
+      const valType = getValueType(row)
+      return (
+        <Badge color={valType === 'number' ? 'cyan' : valType === 'string' ? 'green' : valType === 'boolean' ? 'amber' : 'neutral'}>
+          {valType}
+        </Badge>
+      )
+    }},
+  ]
 
   return (
     <FadeIn>
@@ -233,40 +257,14 @@ export default function SignalLogViewer() {
             <GlassPanel className="overflow-hidden">
               {isLoading || isFetching ? (
                 <div className="p-8 text-center text-[var(--text-muted)]">Loading...</div>
-              ) : history && history.data.length > 0 ? (
+              ) : logData.length > 0 ? (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-white/[0.02]">
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">#</th>
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">Timestamp</th>
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">Value</th>
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.data.map((entry, idx) => {
-                          const valType = getValueType(entry)
-                          return (
-                            <tr key={idx} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                              <td className="px-4 py-2 text-[var(--text-muted)] font-mono">{(page - 1) * pageSize + idx + 1}</td>
-                              <td className="px-4 py-2 font-mono text-[var(--text-secondary)]">{formatDateTime(entry.timestamp)}</td>
-                              <td className={clsx('px-4 py-2 font-mono font-semibold', typeColor[valType])}>{formatValue(entry)}</td>
-                              <td className="px-4 py-2">
-                                <Badge color={
-                                  valType === 'number' ? 'cyan' :
-                                  valType === 'string' ? 'green' :
-                                  valType === 'boolean' ? 'amber' :
-                                  'neutral'
-                                }>{valType}</Badge>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <DataTable
+                    columns={logColumns}
+                    data={logData}
+                    keyExtractor={(row) => row._rowNum}
+                    compact
+                  />
                   {/* Pagination */}
                   <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
                     <span className="text-[10px] text-[var(--text-muted)]">

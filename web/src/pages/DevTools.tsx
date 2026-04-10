@@ -9,7 +9,7 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
   MapPin, FileText,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, Badge, Button, Input, Select } from '../components/ui'
+import { PageHeader, GlassPanel, Badge, Button, Input, Select, DataTable, type Column } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
@@ -742,6 +742,36 @@ function FleetTelemetryConfigTool() {
     return []
   })()
 
+  const errorColumns: Column<Record<string, unknown>>[] = [
+    {
+      key: 'time',
+      header: 'Time',
+      render: (err) => (
+        <span className="text-[var(--text-secondary)] whitespace-nowrap font-mono">
+          {err.created_at ? formatDateTime(err.created_at as string) : err.timestamp ? formatDateTime(err.timestamp as string) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'error',
+      header: 'Error',
+      render: (err) => (
+        <span className="text-neon-red font-medium">
+          {(err.name || err.error || err.code || '—') as string}
+        </span>
+      ),
+    },
+    {
+      key: 'details',
+      header: 'Details',
+      render: (err) => (
+        <span className="text-[var(--text-muted)] max-w-xs truncate block">
+          {(err.body || err.message || err.description || JSON.stringify(err)) as string}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <ToolCard icon={Eye} color="green" title="Fleet Telemetry Status" description="View, manage, and debug fleet telemetry configuration per vehicle">
       <div className="mb-3">
@@ -783,26 +813,12 @@ function FleetTelemetryConfigTool() {
           </div>
           {errorsList.length > 0 ? (
             <div className="glass-panel rounded-lg overflow-hidden max-h-64 overflow-y-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-[var(--glass-border)]">
-                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Time</th>
-                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Error</th>
-                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {errorsList.map((err, i) => (
-                    <tr key={i} className="border-b border-[var(--glass-border)] last:border-0">
-                      <td className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap font-mono">
-                        {err.created_at ? formatDateTime(err.created_at as string) : err.timestamp ? formatDateTime(err.timestamp as string) : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-neon-red font-medium">{(err.name || err.error || err.code || '—') as string}</td>
-                      <td className="px-3 py-2 text-[var(--text-muted)] max-w-xs truncate">{(err.body || err.message || err.description || JSON.stringify(err)) as string}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable<Record<string, unknown>>
+                columns={errorColumns}
+                data={errorsList}
+                keyExtractor={(err) => `${String(err.created_at ?? err.timestamp ?? '')}-${String(err.name ?? err.error ?? '')}`}
+                compact
+              />
             </div>
           ) : (
             <div className="glass-panel rounded-lg p-4 text-center">

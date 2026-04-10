@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getLocationSnapshots, getLocationSnapshotLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, Badge } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, Badge, DataTable, type Column } from '../components/ui'
 import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone, Satellite, Map, CircleDot, LocateFixed } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -157,6 +157,54 @@ export default function NavigationRoute() {
         delay: s.route_traffic_delay_min,
       }))
   }, [history])
+
+  const destColumns: Column<(typeof recentDestinations)[number]>[] = [
+    {
+      key: 'time',
+      header: 'Time',
+      render: (row) => (
+        <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+          {row.time}
+        </span>
+      ),
+    },
+    {
+      key: 'destination',
+      header: 'Destination',
+      render: (row) => (
+        <div className="flex items-center gap-1.5 max-w-[200px]">
+          <MapPin className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
+          <span className="truncate font-medium" style={{ color: 'var(--text-primary)' }}>{row.destination}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'distance',
+      header: 'Distance',
+      className: 'text-right',
+      render: (row) => (
+        <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+          {row.miles != null ? `${fmtNumber(convertDistance(row.miles * 1.60934))} ${distanceUnit}` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'eta',
+      header: 'ETA',
+      className: 'text-right',
+      render: (row) => (
+        <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+          {row.minutes != null ? `${Math.round(row.minutes)} min` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'delay',
+      header: 'Delay',
+      className: 'text-right',
+      render: (row) => <TrafficDelayBadge minutes={row.delay} />,
+    },
+  ]
 
   /* ---- Navigation stats ---- */
   const stats = useMemo(() => {
@@ -551,47 +599,15 @@ export default function NavigationRoute() {
 
         {loadingHistory ? (
           <Skeleton className="h-48 rounded-xl" />
-        ) : recentDestinations.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-[var(--text-muted)] text-sm">
-            No destination history available
-          </div>
         ) : (
           <div className="overflow-x-auto max-h-72 overflow-y-auto scrollbar-thin">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Time</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Destination</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Distance</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>ETA</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Delay</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentDestinations.map((row, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.time}
-                    </td>
-                    <td className="py-2 px-3 font-medium max-w-[200px] truncate" style={{ color: 'var(--text-primary)' }}>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
-                        <span className="truncate">{row.destination}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3 text-right whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.miles != null ? `${fmtNumber(convertDistance(row.miles * 1.60934))} ${distanceUnit}` : '—'}
-                    </td>
-                    <td className="py-2 px-3 text-right whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.minutes != null ? `${Math.round(row.minutes)} min` : '—'}
-                    </td>
-                    <td className="py-2 px-3 text-right">
-                      <TrafficDelayBadge minutes={row.delay} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              columns={destColumns}
+              data={recentDestinations}
+              keyExtractor={(row) => `${row.time}-${row.destination}`}
+              compact
+              emptyMessage="No destination history available"
+            />
           </div>
         )}
       </GlassPanel>

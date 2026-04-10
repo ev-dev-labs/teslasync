@@ -13,6 +13,8 @@ import {
   EmptyState,
   AlertBanner,
   Select,
+  DataTable,
+  type Column,
 } from '../components/ui'
 import {
   CalendarDays,
@@ -48,6 +50,62 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDate, formatDateWithDay } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+
+// ── WeeklyDigest types ──────────────────────────────────────────────────────
+
+interface ComparisonRow {
+  metric: string
+  current: number
+  previous: number
+  fmt: (v: number) => string
+}
+
+const comparisonColumns: Column<ComparisonRow>[] = [
+  {
+    key: 'metric',
+    header: 'Metric',
+    render: (row) => (
+      <span style={{ color: 'var(--text-secondary)' }}>{row.metric}</span>
+    ),
+  },
+  {
+    key: 'thisWeek',
+    header: 'This Week',
+    className: 'text-right',
+    render: (row) => (
+      <span className="tabular-nums font-medium" style={{ color: 'var(--text-primary)' }}>
+        {row.fmt(row.current)}
+      </span>
+    ),
+  },
+  {
+    key: 'lastWeek',
+    header: 'Last Week',
+    className: 'text-right',
+    render: (row) => (
+      <span className="tabular-nums" style={{ color: 'var(--text-muted)' }}>
+        {row.fmt(row.previous)}
+      </span>
+    ),
+  },
+  {
+    key: 'change',
+    header: 'Change',
+    className: 'text-right',
+    render: (row) => {
+      const diff = row.current - row.previous
+      const isUp = diff > 0
+      const isEqual = diff === 0
+      if (isEqual) return <span style={{ color: 'var(--text-muted)' }}>—</span>
+      return (
+        <span className={clsx('inline-flex items-center gap-0.5 text-xs font-medium', isUp ? 'text-neon-green' : 'text-neon-red')}>
+          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          {fmtNumber(Math.abs(diff), row.metric.includes('Cost') ? 2 : 1)}
+        </span>
+      )
+    },
+  },
+]
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -820,65 +878,12 @@ export default function WeeklyDigest() {
                 Week-over-Week Comparison
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ color: 'var(--text-muted)' }}>
-                      <th className="text-left pb-3 font-medium">Metric</th>
-                      <th className="text-right pb-3 font-medium">This Week</th>
-                      <th className="text-right pb-3 font-medium">Last Week</th>
-                      <th className="text-right pb-3 font-medium">Change</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparison.map((row) => {
-                      const diff = row.current - row.previous
-                      const isUp = diff > 0
-                      const isEqual = diff === 0
-                      return (
-                        <tr
-                          key={row.metric}
-                          className="border-t"
-                          style={{ borderColor: 'var(--glass-border)' }}
-                        >
-                          <td className="py-2.5" style={{ color: 'var(--text-secondary)' }}>
-                            {row.metric}
-                          </td>
-                          <td
-                            className="py-2.5 text-right tabular-nums font-medium"
-                            style={{ color: 'var(--text-primary)' }}
-                          >
-                            {row.fmt(row.current)}
-                          </td>
-                          <td
-                            className="py-2.5 text-right tabular-nums"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
-                            {row.fmt(row.previous)}
-                          </td>
-                          <td className="py-2.5 text-right">
-                            {isEqual ? (
-                              <span style={{ color: 'var(--text-muted)' }}>—</span>
-                            ) : (
-                              <span
-                                className={clsx(
-                                  'inline-flex items-center gap-0.5 text-xs font-medium',
-                                  isUp ? 'text-neon-green' : 'text-neon-red',
-                                )}
-                              >
-                                {isUp ? (
-                                  <TrendingUp className="h-3 w-3" />
-                                ) : (
-                                  <TrendingDown className="h-3 w-3" />
-                                )}
-                                {fmtNumber(Math.abs(diff), row.metric.includes('Cost') ? 2 : 1)}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <DataTable<ComparisonRow>
+                  columns={comparisonColumns}
+                  data={comparison}
+                  keyExtractor={(row) => row.metric}
+                  compact
+                />
               </div>
             </GlassPanel>
           </>

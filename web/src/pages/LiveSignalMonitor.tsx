@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Activity, Pause, Play, Trash2, ArrowDown, ArrowDownUp } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StatCard, Badge, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, Badge, Button, DataTable, type Column } from '../components/ui'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { formatTime } from '../lib/dateFormat'
 import clsx from 'clsx'
@@ -20,6 +20,45 @@ const typeColor: Record<string, string> = {
   string: 'text-neon-green',
   boolean: 'text-neon-amber',
 }
+
+const signalColumns: Column<SignalEntry>[] = [
+  {
+    key: 'time',
+    header: 'Time',
+    render: (entry) => (
+      <span className="font-mono text-[var(--text-muted)] whitespace-nowrap">
+        {formatTime(entry.timestamp)}
+      </span>
+    ),
+  },
+  {
+    key: 'signal',
+    header: 'Signal',
+    render: (entry) => (
+      <span className="font-mono text-[var(--text-primary)] whitespace-nowrap">
+        {entry.name}
+      </span>
+    ),
+  },
+  {
+    key: 'value',
+    header: 'Value',
+    render: (entry) => (
+      <span className={clsx('font-mono whitespace-nowrap', typeColor[entry.type])}>
+        {entry.value}
+      </span>
+    ),
+  },
+  {
+    key: 'type',
+    header: 'Type',
+    render: (entry) => (
+      <Badge color={entry.type === 'number' ? 'cyan' : entry.type === 'boolean' ? 'amber' : 'green'} size="sm">
+        {entry.type}
+      </Badge>
+    ),
+  },
+]
 
 function detectType(value: unknown): 'number' | 'string' | 'boolean' {
   if (typeof value === 'boolean') return 'boolean'
@@ -159,44 +198,13 @@ export default function LiveSignalMonitor() {
 
           {/* Table */}
           <div ref={tableRef} className="overflow-auto max-h-[65vh] rounded-lg border border-[var(--border)]">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-[var(--surface)] z-10">
-                <tr className="border-b border-[var(--border)]">
-                  <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Time</th>
-                  <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Signal</th>
-                  <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Value</th>
-                  <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEntries.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-12 text-[var(--text-muted)]">
-                      {entries.length === 0 ? 'Waiting for signals…' : 'No signals match filter'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredEntries.map(entry => (
-                    <tr key={entry.id} className="border-b border-[var(--border)] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-3 py-2 font-mono text-[var(--text-muted)] whitespace-nowrap">
-                        {formatTime(entry.timestamp)}
-                      </td>
-                      <td className="px-3 py-2 font-mono text-[var(--text-primary)] whitespace-nowrap">
-                        {entry.name}
-                      </td>
-                      <td className={clsx('px-3 py-2 font-mono whitespace-nowrap', typeColor[entry.type])}>
-                        {entry.value}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge color={entry.type === 'number' ? 'cyan' : entry.type === 'boolean' ? 'amber' : 'green'} size="sm">
-                          {entry.type}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DataTable<SignalEntry>
+              columns={signalColumns}
+              data={filteredEntries}
+              keyExtractor={(entry) => entry.id}
+              compact
+              emptyMessage={entries.length === 0 ? 'Waiting for signals…' : 'No signals match filter'}
+            />
           </div>
         </GlassPanel>
       </FadeIn>

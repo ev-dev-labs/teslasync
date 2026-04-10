@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getSafetyData, getSafetyLatest } from '../api'
+import { getVehicles, getSafetyData, getSafetyLatest, type SafetySnapshot } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Select, DataTable, type Column } from '../components/ui'
 import {
   Shield, ShieldCheck, ShieldAlert, Eye, AlertTriangle, Car, Gauge, Lock,
   Milestone, CheckCircle, XCircle, Activity, User, Bell,
@@ -171,6 +171,66 @@ function StatusDot({ enabled }: { enabled: boolean }) {
     )} />
   )
 }
+
+const safetyColumns: Column<SafetySnapshot>[] = [
+  {
+    key: 'time',
+    header: 'Time',
+    render: (s) => (
+      <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+        {formatDateTime(s.created_at)}
+      </span>
+    ),
+  },
+  {
+    key: 'aeb',
+    header: 'AEB',
+    className: 'text-center',
+    render: (s) => <StatusDot enabled={s.automatic_emergency_braking_off === false} />,
+  },
+  {
+    key: 'blindSpot',
+    header: 'Blind Spot',
+    className: 'text-center',
+    render: (s) => <StatusDot enabled={!!s.automatic_blind_spot_camera} />,
+  },
+  {
+    key: 'fcw',
+    header: 'FCW',
+    className: 'text-center',
+    render: (s) => (
+      <Badge color={s.forward_collision_warning && s.forward_collision_warning.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
+        {s.forward_collision_warning
+          ? s.forward_collision_warning.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : '--'}
+      </Badge>
+    ),
+  },
+  {
+    key: 'laneDept',
+    header: 'Lane Dept.',
+    className: 'text-center',
+    render: (s) => (
+      <Badge color={s.lane_departure_avoidance && s.lane_departure_avoidance.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
+        {s.lane_departure_avoidance
+          ? s.lane_departure_avoidance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : '--'}
+      </Badge>
+    ),
+  },
+  {
+    key: 'cruiseDist',
+    header: 'Cruise Dist.',
+    className: 'text-center',
+    render: (s) => (
+      <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+        {s.cruise_follow_distance
+          ? s.cruise_follow_distance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : '--'}
+      </span>
+    ),
+  },
+]
 
 /* ------------------------------------------------------------------ */
 /*  Main Component                                                     */
@@ -411,58 +471,15 @@ export default function SafetySettings() {
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Safety Configuration History</h3>
         {loadingHistory ? (
           <Skeleton className="h-64 rounded-xl" />
-        ) : !history || history.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-[var(--text-muted)] text-sm">
-            No safety history data available
-          </div>
         ) : (
           <div className="overflow-x-auto max-h-80 overflow-y-auto">
-            <table className="w-full text-xs" style={{ color: 'var(--text-primary)' }}>
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                  <th className="text-left py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Time</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>AEB</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Blind Spot</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>FCW</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Lane Dept.</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Cruise Dist.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map(s => (
-                  <tr key={s.id} className="border-b last:border-b-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                    <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {formatDateTime(s.created_at)}
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <StatusDot enabled={s.automatic_emergency_braking_off === false} />
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <StatusDot enabled={!!s.automatic_blind_spot_camera} />
-                    </td>
-                    <td className="py-2 px-3 text-center whitespace-nowrap">
-                      <Badge color={s.forward_collision_warning && s.forward_collision_warning.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
-                        {s.forward_collision_warning
-                          ? s.forward_collision_warning.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                          : '--'}
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-3 text-center whitespace-nowrap">
-                      <Badge color={s.lane_departure_avoidance && s.lane_departure_avoidance.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
-                        {s.lane_departure_avoidance
-                          ? s.lane_departure_avoidance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                          : '--'}
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-3 text-center whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {s.cruise_follow_distance
-                        ? s.cruise_follow_distance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                        : '--'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<SafetySnapshot>
+              columns={safetyColumns}
+              data={history ?? []}
+              keyExtractor={(s) => s.id}
+              compact
+              emptyMessage="No safety history data available"
+            />
           </div>
         )}
       </GlassPanel>

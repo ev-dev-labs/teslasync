@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getSleepAnalytics, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, Select } from '../components/ui'
+import { getVehicles, getSleepAnalytics, Vehicle, SleepAnalytics } from '../api'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, Select, DataTable, type Column } from '../components/ui'
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -11,6 +11,41 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
 import { formatDateShort, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+
+type SleepDrainEvent = SleepAnalytics['recent_events'][number]
+
+const sleepDrainColumns: Column<SleepDrainEvent>[] = [
+  { key: 'date', header: 'Date', render: (event) => (
+    <span className="text-xs">
+      {formatDateShort(event.start_date)}
+      <span className="text-[var(--text-muted)] ml-1">{formatTime(event.start_date)}</span>
+    </span>
+  )},
+  { key: 'duration', header: 'Duration', render: (event) => <>{fmtNumber(event.duration_hours)}h</> },
+  { key: 'batteryLost', header: 'Battery Lost', render: (event) => <span className="text-neon-red">{fmtNumber(event.battery_lost)}%</span> },
+  { key: 'drainRate', header: 'Drain Rate', render: (event) => (
+    <span className={event.drain_rate > 1.5 ? 'text-neon-red' : 'text-neon-green'}>
+      {fmtNumber(event.drain_rate)}%/hr
+    </span>
+  )},
+  { key: 'sentry', header: 'Sentry', render: (event) => event.sentry_mode ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400 ring-1 ring-amber-500/20">
+      <Eye className="h-3 w-3" /> On
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-xs text-purple-400 ring-1 ring-purple-500/20">
+      <Moon className="h-3 w-3" /> Off
+    </span>
+  )},
+  { key: 'temp', header: 'Temp', render: (event) => event.outside_temp != null ? (
+    <span className="flex items-center gap-1">
+      <Thermometer className="h-3 w-3 text-[var(--text-muted)]" />
+      {fmtNumber(event.outside_temp)}°C
+    </span>
+  ) : (
+    <span className="text-[var(--text-muted)]">—</span>
+  )},
+]
 
 const STATE_COLORS: Record<string, string> = {
   asleep: '#a855f7',
@@ -220,69 +255,12 @@ export default function SleepEfficiency() {
               <h3 className="section-title mb-6 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-neon-cyan" /> Recent Drain Events
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="pb-3 pr-4">Date</th>
-                      <th className="pb-3 pr-4">Duration</th>
-                      <th className="pb-3 pr-4">Battery Lost</th>
-                      <th className="pb-3 pr-4">Drain Rate</th>
-                      <th className="pb-3 pr-4">Sentry</th>
-                      <th className="pb-3 pr-4">Temp</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.03]">
-                    {sleep.recent_events.map(event => (
-                      <tr key={event.id} className="text-gray-300 hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 pr-4 text-xs">
-                          {formatDateShort(event.start_date)}
-                          <span className="text-[var(--text-muted)] ml-1">
-                            {formatTime(event.start_date)}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4">{fmtNumber(event.duration_hours)}h</td>
-                        <td className="py-3 pr-4">
-                          <span className="text-neon-red">{fmtNumber(event.battery_lost)}%</span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span className={event.drain_rate > 1.5 ? 'text-neon-red' : 'text-neon-green'}>
-                            {fmtNumber(event.drain_rate)}%/hr
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          {event.sentry_mode ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400 ring-1 ring-amber-500/20">
-                              <Eye className="h-3 w-3" /> On
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-xs text-purple-400 ring-1 ring-purple-500/20">
-                              <Moon className="h-3 w-3" /> Off
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {event.outside_temp != null ? (
-                            <span className="flex items-center gap-1">
-                              <Thermometer className="h-3 w-3 text-[var(--text-muted)]" />
-                              {fmtNumber(event.outside_temp)}°C
-                            </span>
-                          ) : (
-                            <span className="text-[var(--text-muted)]">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {sleep.recent_events.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-[var(--text-muted)]">
-                          No drain events recorded yet
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={sleepDrainColumns}
+                data={sleep.recent_events}
+                keyExtractor={(event) => event.id}
+                emptyMessage="No drain events recorded yet"
+              />
             </GlassPanel>
           </FadeIn>
         </>

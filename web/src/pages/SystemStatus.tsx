@@ -9,7 +9,7 @@ import {
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
   Satellite, Link, Globe, Rss, ChevronDown, Bell, Package, Download, Send,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge, DataTable, Modal, MetricCard, Button, IconBox } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge, DataTable, Modal, MetricCard, Button, IconBox, type Column } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
 import PollingEnginePanel from '../components/PollingEngine'
 import { motion } from 'framer-motion'
@@ -324,6 +324,51 @@ function ComponentHealthPanel() {
     return `${hrs}h ago`
   }
 
+  type HealthRow = { name: string; status: string; latency_ms?: number; consecutive_failures?: number; last_check?: string }
+  const healthRows: HealthRow[] = componentEntries.map(([name, comp]) => ({ name, ...comp }))
+  const healthColumns: Column<HealthRow>[] = [
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => statusDot(row.status ?? 'unknown'),
+    },
+    {
+      key: 'component',
+      header: 'Component',
+      render: (row) => (
+        <>
+          <span className="font-medium text-[var(--text-primary)]">{getComponentLabel(row.name)}</span>
+          <span className="text-[10px] text-[var(--text-muted)] ml-2">{row.name}</span>
+        </>
+      ),
+    },
+    {
+      key: 'latency',
+      header: 'Latency',
+      render: (row) => (
+        <span className="font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
+          {row.latency_ms != null ? `${row.latency_ms}ms` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'failures',
+      header: 'Failures',
+      render: (row) => (row.consecutive_failures ?? 0) > 0
+        ? <span className="text-xs font-semibold text-neon-red">{row.consecutive_failures}</span>
+        : <span className="text-xs text-[var(--text-muted)]">0</span>,
+    },
+    {
+      key: 'lastCheck',
+      header: 'Last Check',
+      render: (row) => (
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          {formatLastCheck(row.last_check)}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <FadeIn delay={0.12}>
       <GlassPanel className="p-5">
@@ -333,39 +378,12 @@ function ComponentHealthPanel() {
 
         {/* Component table */}
         <div className="overflow-x-auto mb-5">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                {['Status', 'Component', 'Latency', 'Failures', 'Last Check'].map(h => (
-                  <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {componentEntries.map(([name, comp]) => (
-                <tr key={name} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                  <td className="px-4 py-3">{statusDot(comp.status ?? 'unknown')}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-medium text-[var(--text-primary)]">{getComponentLabel(name)}</span>
-                    <span className="text-[10px] text-[var(--text-muted)] ml-2">{name}</span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {comp.latency_ms != null ? `${comp.latency_ms}ms` : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {(comp.consecutive_failures ?? 0) > 0 ? (
-                      <span className="text-xs font-semibold text-neon-red">{comp.consecutive_failures}</span>
-                    ) : (
-                      <span className="text-xs text-[var(--text-muted)]">0</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    {formatLastCheck(comp.last_check)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable<HealthRow>
+            columns={healthColumns}
+            data={healthRows}
+            keyExtractor={(row) => row.name}
+            compact
+          />
         </div>
 
         {/* Pool & System stats row */}

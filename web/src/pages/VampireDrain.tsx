@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getVampireDrainEvents, getVampireDrainStats } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter, MetricCard, ChartContainer, Select } from '../components/ui'
+import { getVehicles, getVampireDrainEvents, getVampireDrainStats, VampireDrainEvent } from '../api'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter, MetricCard, ChartContainer, Select, DataTable } from '../components/ui'
 import { Moon, BatteryWarning, Shield, TrendingDown, Clock, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -173,30 +173,19 @@ export default function VampireDrain() {
           <p className="text-sm text-[var(--text-muted)] py-8 text-center">No drain events recorded</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] border-b border-white/5">
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="text-right pr-4">Duration</th>
-                  <th className="text-right pr-4">Battery Lost</th>
-                  <th className="text-right pr-4">Drain Rate</th>
-                  <th className="text-right pr-4">Temp</th>
-                  <th className="text-center">Sentry</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map(e => (
-                  <tr key={e.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="py-2.5 pr-4" style={{ color: 'var(--text-primary)' }}>{formatDate(e.start_date)}</td>
-                    <td className="text-right pr-4 text-[var(--text-secondary)]">{fmtNumber(e.duration_hours)}h</td>
-                    <td className="text-right pr-4 text-neon-red">{e.battery_lost}%</td>
-                    <td className="text-right pr-4 text-neon-purple">{fmtNumber(e.drain_rate_pct_per_hour)}%/hr</td>
-                    <td className="text-right pr-4 text-[var(--text-secondary)]">{e.outside_temp_avg !== null ? `${fmtInt(convertTemp(e.outside_temp_avg))}${tempUnit}` : '--'}</td>
-                    <td className="text-center">{e.sentry_mode ? <Shield className="h-3.5 w-3.5 text-neon-amber inline" /> : <span className="text-gray-600">--</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<VampireDrainEvent>
+              columns={[
+                { key: 'date', header: 'Date', render: (e) => <span style={{ color: 'var(--text-primary)' }}>{formatDate(e.start_date)}</span> },
+                { key: 'duration', header: 'Duration', className: 'text-right', render: (e) => <span className="text-[var(--text-secondary)]">{fmtNumber(e.duration_hours)}h</span> },
+                { key: 'batteryLost', header: 'Battery Lost', className: 'text-right', render: (e) => <span className="text-neon-red">{e.battery_lost}%</span> },
+                { key: 'drainRate', header: 'Drain Rate', className: 'text-right', render: (e) => <span className="text-neon-purple">{fmtNumber(e.drain_rate_pct_per_hour)}%/hr</span> },
+                { key: 'temp', header: 'Temp', className: 'text-right', render: (e) => <span className="text-[var(--text-secondary)]">{e.outside_temp_avg !== null ? `${fmtInt(convertTemp(e.outside_temp_avg))}${tempUnit}` : '--'}</span> },
+                { key: 'sentry', header: 'Sentry', className: 'text-center', render: (e) => e.sentry_mode ? <Shield className="h-3.5 w-3.5 text-neon-amber inline" /> : <span className="text-gray-600">--</span> },
+              ]}
+              data={events}
+              keyExtractor={(e) => e.id}
+              compact
+            />
             <Pagination page={page} pageSize={pageSize} total={events.length < pageSize ? (page - 1) * pageSize + events.length : page * pageSize + 1} onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1) }} />
           </div>
         )}

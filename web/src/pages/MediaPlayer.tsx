@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getMediaData, getMediaLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Button, Select } from '../components/ui'
+import { getVehicles, getMediaData, getMediaLatest, type MediaSnapshot } from '../api'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Button, Select, DataTable, type Column } from '../components/ui'
 import { Music, Volume2, Play, Pause, Square, Radio, Headphones, BarChart3, Clock } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
@@ -151,6 +151,53 @@ import { cleanNil } from '../lib/cleanNil'
 /* ── Pie chart colors ─────────────────────────────────────────────────────── */
 
 const PIE_COLORS = ['#00f0ff', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6']
+
+const playbackColumns: Column<MediaSnapshot>[] = [
+  {
+    key: 'time',
+    header: 'Time',
+    render: (row) => (
+      <span className="whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+        {formatDateTime(row.created_at)}
+      </span>
+    ),
+  },
+  {
+    key: 'title',
+    header: 'Title',
+    render: (row) => (
+      <span className="max-w-[180px] truncate block" style={{ color: 'var(--text-primary)' }}>
+        {cleanNil(row.now_playing_title) || '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'artist',
+    header: 'Artist',
+    className: 'hidden sm:table-cell',
+    render: (row) => (
+      <span className="max-w-[140px] truncate block" style={{ color: 'var(--text-secondary)' }}>
+        {cleanNil(row.now_playing_artist) || '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'source',
+    header: 'Source',
+    className: 'hidden md:table-cell',
+    render: (row) => (
+      <span className="inline-flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+        <SourceIcon source={row.playback_source} className="h-3 w-3 text-neon-cyan" />
+        {cleanNil(row.playback_source) || '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    render: (row) => <PlaybackStatusBadge status={cleanNil(row.playback_status)} />,
+  },
+]
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 
@@ -366,45 +413,15 @@ export default function MediaPlayer() {
         </h3>
         {loadingHistory ? (
           <Skeleton className="h-64 rounded-xl" />
-        ) : !history || history.length === 0 ? (
-          <div className="flex items-center justify-center h-48 text-[var(--text-muted)] text-sm">No playback history available</div>
         ) : (
           <div className="overflow-x-auto max-h-80 overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                  <th className="py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Time</th>
-                  <th className="py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Title</th>
-                  <th className="py-2 px-3 font-medium hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>Artist</th>
-                  <th className="py-2 px-3 font-medium hidden md:table-cell" style={{ color: 'var(--text-secondary)' }}>Source</th>
-                  <th className="py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map(row => (
-                  <tr key={row.id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                    <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                      {formatDateTime(row.created_at)}
-                    </td>
-                    <td className="py-2 px-3 max-w-[180px] truncate" style={{ color: 'var(--text-primary)' }}>
-                      {cleanNil(row.now_playing_title) || '—'}
-                    </td>
-                    <td className="py-2 px-3 max-w-[140px] truncate hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>
-                      {cleanNil(row.now_playing_artist) || '—'}
-                    </td>
-                    <td className="py-2 px-3 hidden md:table-cell">
-                      <span className="inline-flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
-                        <SourceIcon source={row.playback_source} className="h-3 w-3 text-neon-cyan" />
-                        {cleanNil(row.playback_source) || '—'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3">
-                      <PlaybackStatusBadge status={cleanNil(row.playback_status)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<MediaSnapshot>
+              columns={playbackColumns}
+              data={history}
+              keyExtractor={(row) => row.id}
+              compact
+              emptyMessage="No playback history available"
+            />
           </div>
         )}
       </GlassPanel>

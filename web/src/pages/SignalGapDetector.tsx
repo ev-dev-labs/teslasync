@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowUpDown, Filter, RefreshCw } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, DataTable, type Column } from '../components/ui'
 import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import clsx from 'clsx'
@@ -35,6 +35,24 @@ function formatStaleness(seconds: number): string {
   const m = Math.round((seconds % 3600) / 60)
   return `${h}h ${m}m ago`
 }
+
+const gapColumns: Column<SignalRow>[] = [
+  { key: 'status', header: 'Status', render: (signal) => {
+    const style = getStalenessColor(signal.staleness, !!signal.timestamp)
+    return (
+      <Badge color={!signal.timestamp ? 'neutral' : signal.staleness < 30 ? 'green' : signal.staleness < 300 ? 'amber' : 'red'} dot>
+        {style.label}
+      </Badge>
+    )
+  }},
+  { key: 'signal', header: 'Signal', render: (signal) => <span className="font-mono text-[var(--text-primary)]">{signal.name}</span> },
+  { key: 'value', header: 'Last Value', render: (signal) => <span className="font-mono text-[var(--text-secondary)] max-w-[200px] truncate block">{signal.value}</span> },
+  { key: 'lastUpdated', header: 'Last Updated', render: (signal) => <span className="text-[var(--text-secondary)] whitespace-nowrap">{signal.timestamp ? formatDateTime(signal.timestamp) : '—'}</span> },
+  { key: 'timeSince', header: 'Time Since', className: 'text-right', render: (signal) => {
+    const style = getStalenessColor(signal.staleness, !!signal.timestamp)
+    return <span className={clsx('font-mono whitespace-nowrap', style.text)}>{signal.timestamp ? formatStaleness(signal.staleness) : '—'}</span>
+  }},
+]
 
 export default function SignalGapDetector() {
   const vehicleId = 1
@@ -173,41 +191,14 @@ export default function SignalGapDetector() {
               {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12" />)}
             </div>
           ) : filtered.length > 0 ? (
-            <div className="overflow-auto max-h-[65vh] rounded-lg border border-[var(--border)]">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-[var(--surface)] z-10">
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Status</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Signal</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Last Value</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Last Updated</th>
-                    <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Time Since</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(signal => {
-                    const style = getStalenessColor(signal.staleness, !!signal.timestamp)
-                    return (
-                      <tr key={signal.name} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
-                        <td className="px-3 py-2.5">
-                          <Badge color={!signal.timestamp ? 'neutral' : signal.staleness < 30 ? 'green' : signal.staleness < 300 ? 'amber' : 'red'} dot>
-                            {style.label}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5 font-mono text-[var(--text-primary)]">{signal.name}</td>
-                        <td className="px-3 py-2.5 font-mono text-[var(--text-secondary)] max-w-[200px] truncate">{signal.value}</td>
-                        <td className="px-3 py-2.5 text-[var(--text-secondary)] whitespace-nowrap">
-                          {signal.timestamp ? formatDateTime(signal.timestamp) : '—'}
-                        </td>
-                        <td className={clsx('px-3 py-2.5 text-right font-mono whitespace-nowrap', style.text)}>
-                          {signal.timestamp ? formatStaleness(signal.staleness) : '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={gapColumns}
+              data={filtered}
+              keyExtractor={(signal) => signal.name}
+              compact
+              className="max-h-[65vh] overflow-auto border border-[var(--border)]"
+              emptyMessage="No signals match current filters"
+            />
           ) : (
             <p className="text-center py-12 text-[var(--text-muted)]">
               {signals.length === 0 ? 'No signal data available' : 'No signals match current filters'}

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getRegenStats, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, Select } from '../components/ui'
+import { getVehicles, getRegenStats, Vehicle, RegenData } from '../api'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, Select, DataTable, type Column } from '../components/ui'
 import { Zap, Activity, Calendar } from 'lucide-react'
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -10,6 +10,19 @@ import {
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+
+type RegenDrive = RegenData['drives'][number]
+
+const regenDriveColumns: Column<RegenDrive>[] = [
+  { key: 'date', header: 'Date', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{formatDateShort(d.start_date)}</span> },
+  { key: 'distance', header: 'Distance', className: 'text-right', render: (d) => <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{fmtWithUnit(d.distance, 'km', 1)}</span> },
+  { key: 'maxRegen', header: 'Max Regen', className: 'text-right', render: (d) => <span className="font-mono text-neon-cyan">{d.power_min != null ? fmtWithUnit(Math.abs(d.power_min), 'kW', 0) : '—'}</span> },
+  { key: 'efficiency', header: 'Efficiency', className: 'text-right', render: (d) => <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtPercent(d.efficiency, 1)}</span> },
+  { key: 'score', header: 'Score', className: 'text-right', render: (d) => {
+    const scoreColor = d.regen_score >= 30 ? 'text-neon-green' : d.regen_score >= 15 ? 'text-neon-amber' : 'text-neon-red'
+    return <span className={`font-bold ${scoreColor}`}>{fmtNumber(d.regen_score, 1)}</span>
+  }},
+]
 
 function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
   const clamped = Math.min(Math.max(value, 0), 100)
@@ -190,43 +203,12 @@ export default function RegenEfficiency() {
                 <h3 className="section-title mb-4 flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-neon-purple" /> Per-Drive Regen Details
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                        <th className="text-left py-2 px-3 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Date</th>
-                        <th className="text-right py-2 px-3 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Distance</th>
-                        <th className="text-right py-2 px-3 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Max Regen</th>
-                        <th className="text-right py-2 px-3 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Efficiency</th>
-                        <th className="text-right py-2 px-3 text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Score</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.drives.slice(0, 30).map(d => {
-                        const scoreColor = d.regen_score >= 30 ? 'text-neon-green' : d.regen_score >= 15 ? 'text-neon-amber' : 'text-neon-red'
-                        return (
-                          <tr key={d.id} className="border-b hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                            <td className="py-2.5 px-3" style={{ color: 'var(--text-secondary)' }}>
-                              {formatDateShort(d.start_date)}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-mono" style={{ color: 'var(--text-primary)' }}>
-                              {fmtWithUnit(d.distance, 'km', 1)}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-mono text-neon-cyan">
-                              {d.power_min != null ? fmtWithUnit(Math.abs(d.power_min), 'kW', 0) : '—'}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-mono" style={{ color: 'var(--text-secondary)' }}>
-                              {fmtPercent(d.efficiency, 1)}
-                            </td>
-                            <td className={`py-2.5 px-3 text-right font-bold ${scoreColor}`}>
-                              {fmtNumber(d.regen_score, 1)}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable<RegenDrive>
+                  columns={regenDriveColumns}
+                  data={data.drives.slice(0, 30)}
+                  keyExtractor={(d) => d.id}
+                  compact
+                />
               </GlassPanel>
             </FadeIn>
           )}
