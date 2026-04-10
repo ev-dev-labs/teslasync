@@ -451,10 +451,10 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
+                    <GlassPanel className="mt-6 p-4 text-center">
                       <p className="text-sm text-[var(--text-secondary)]">Vehicle asleep — wake to see live data</p>
                       <Link to="/commands"><Button variant="primary" size="sm" className="mt-3">Wake Up</Button></Link>
-                    </div>
+                    </GlassPanel>
                   )}
                 </div>
 
@@ -1034,10 +1034,10 @@ export default function Dashboard() {
                   { icon: BatteryCharging, label: 'Charge Analytics', color: '#10b981' },
                   { icon: Shield, label: 'Vehicle Control', color: '#ef4444' },
                 ].map(f => (
-                  <div key={f.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
+                  <GlassPanel key={f.label} className="p-3 text-center">
                     <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
                     <p className="text-xs font-medium text-gray-300">{f.label}</p>
-                  </div>
+                  </GlassPanel>
                 ))}
               </div>
             </div>
