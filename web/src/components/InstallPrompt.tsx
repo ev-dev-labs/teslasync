@@ -58,7 +58,8 @@ export default function InstallPrompt() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9998] w-[calc(100%-2rem)] max-w-md"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9998] w-[calc(100%-2rem)] max-w-md pb-safe"
+          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <div
             className="flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl"
@@ -71,11 +72,11 @@ export default function InstallPrompt() {
               <Download className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary, #fff)' }}>
+              <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--text-primary, #fff)' }}>
                 Install TeslaSync
               </p>
-              <p className="text-xs" style={{ color: 'var(--text-muted, rgba(255,255,255,0.5))' }}>
-                Add to home screen for a native experience
+              <p className="text-xs leading-tight mt-0.5" style={{ color: 'var(--text-muted, rgba(255,255,255,0.5))' }}>
+                Add to home screen for native experience
               </p>
             </div>
             <button
