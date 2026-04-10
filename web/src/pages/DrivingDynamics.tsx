@@ -40,7 +40,7 @@ function CircularGauge({ value, min, max, label, unit, color }: {
   const hasData = value !== undefined && value !== null
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -55,7 +55,7 @@ function CircularGauge({ value, min, max, label, unit, color }: {
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', `${color.replace('text-', 'bg-')}/20`, color)}>
         {hasData ? `${fmtNumber(v)} ${unit}` : 'N/A'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -223,7 +223,7 @@ export default function DrivingDynamics() {
           <select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
             style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
           >
             {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
@@ -272,7 +272,7 @@ export default function DrivingDynamics() {
             color="text-neon-amber"
           />
           {/* Motor State card */}
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Motor State</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <Zap className={clsx('h-10 w-10', badge.color)} />
@@ -280,7 +280,7 @@ export default function DrivingDynamics() {
             <span className={clsx('text-sm px-3 py-1 rounded-full font-semibold', badge.bg, badge.color)}>
               {badge.text}
             </span>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
@@ -290,7 +290,7 @@ export default function DrivingDynamics() {
       </h3>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {/* Lateral & Longitudinal G stats */}
-        <div className="glass-card p-4 sm:p-5 flex flex-col gap-4">
+        <GlassPanel className="p-4 sm:p-5 flex flex-col gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Lateral G</p>
             <p className="text-3xl font-bold text-neon-amber">
@@ -317,7 +317,7 @@ export default function DrivingDynamics() {
               </div>
             )}
           </div>
-        </div>
+        </GlassPanel>
         {/* G-Force Dot visualization */}
         <GlassPanel className="p-4 sm:p-5 flex flex-col items-center justify-center">
           <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>G-Force Vector</p>
@@ -327,7 +327,7 @@ export default function DrivingDynamics() {
           />
         </GlassPanel>
         {/* Peak G summary */}
-        <div className="glass-card p-4 sm:p-5 flex flex-col gap-3">
+        <GlassPanel className="p-4 sm:p-5 flex flex-col gap-3">
           <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Peak G-Forces</p>
           {stats ? (
             <div className="space-y-3 flex-1 flex flex-col justify-center">
@@ -355,7 +355,7 @@ export default function DrivingDynamics() {
           ) : (
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No data</p>
           )}
-        </div>
+        </GlassPanel>
       </div>
 
       {/* ===== Section 3: Pedal Usage ===== */}
@@ -375,7 +375,7 @@ export default function DrivingDynamics() {
             unit="%"
             color="text-neon-green"
           />
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brake Pedal</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               {latest?.brake_pedal ? (
@@ -394,7 +394,7 @@ export default function DrivingDynamics() {
             )}>
               {latest?.brake_pedal ? 'Active' : 'Inactive'}
             </span>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
@@ -404,15 +404,15 @@ export default function DrivingDynamics() {
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {/* Current speed */}
-        <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+        <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
           <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Current Speed</p>
           <p className="text-5xl font-bold text-neon-cyan">
             {latest?.vehicle_speed !== undefined ? fmtInt(convertSpeed(latest.vehicle_speed)) : '--'}
           </p>
           <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{speedUnit}</span>
-        </div>
+        </GlassPanel>
         {/* Current gear */}
-        <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+        <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
           <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Current Gear</p>
           <div className="flex gap-2 mt-2">
             {['P', 'R', 'N', 'D'].map(g => {
@@ -432,9 +432,9 @@ export default function DrivingDynamics() {
             })}
           </div>
           <span className={clsx('text-sm font-semibold', gear.color)}>{gear.text === '--' ? 'No data' : gear.text}</span>
-        </div>
+        </GlassPanel>
         {/* Speed stats */}
-        <div className="glass-card p-4 sm:p-5 flex flex-col gap-3">
+        <GlassPanel className="p-4 sm:p-5 flex flex-col gap-3">
           <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Speed Stats</p>
           {stats ? (
             <div className="space-y-2 flex-1 flex flex-col justify-center">
@@ -459,7 +459,7 @@ export default function DrivingDynamics() {
           ) : (
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No data</p>
           )}
-        </div>
+        </GlassPanel>
       </div>
 
       {/* ===== Speed Over Time Chart ===== */}
@@ -528,7 +528,7 @@ export default function DrivingDynamics() {
       </h3>
       {stats ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="glass-card p-4 sm:p-5">
+          <GlassPanel className="p-4 sm:p-5">
             <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Torque Distribution</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -544,8 +544,8 @@ export default function DrivingDynamics() {
                 <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.minTorque)} Nm</span>
               </div>
             </div>
-          </div>
-          <div className="glass-card p-4 sm:p-5">
+          </GlassPanel>
+          <GlassPanel className="p-4 sm:p-5">
             <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Throttle Behavior</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -560,8 +560,8 @@ export default function DrivingDynamics() {
                   stats.avgPedal < 50 ? 'Moderate driving style' : 'Aggressive driving style'}
               </p>
             </div>
-          </div>
-          <div className="glass-card p-4 sm:p-5">
+          </GlassPanel>
+          <GlassPanel className="p-4 sm:p-5">
             <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Motor Thermal</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -582,7 +582,7 @@ export default function DrivingDynamics() {
                 {stats.maxTemp > 150 ? 'High thermal load detected' : stats.maxTemp > 100 ? 'Normal operating range' : 'Cool running'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
         </div>
       ) : loadingHistory ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">

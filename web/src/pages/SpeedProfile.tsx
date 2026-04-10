@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSpeedProfile, Vehicle, EfficiencyCategory } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, ChartContainer, Select } from '../components/ui'
 import { Gauge, Zap, TrendingUp, AlertTriangle, Car } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -82,15 +82,12 @@ export default function SpeedProfile() {
         icon={<Gauge className="h-5 w-5" />}
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
-              className="glass-input text-sm px-3 py-2"
+            <Select
+              className="text-sm px-3 py-2"
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           ) : undefined
         }
       />

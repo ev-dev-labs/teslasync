@@ -9,7 +9,7 @@ import {
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
   Satellite, Link, Globe, Rss, ChevronDown, Bell, Package, Download, Send,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge, DataTable, Modal } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge, DataTable, Modal, MetricCard, Button, IconBox } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
 import PollingEnginePanel from '../components/PollingEngine'
 import { motion } from 'framer-motion'
@@ -465,16 +465,13 @@ function APIUsageDashboard() {
         {/* Top stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {/* Request counter */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className="h-3.5 w-3.5 text-neon-cyan" />
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Requests</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              <AnimatedNumber value={usage.total_requests} />
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">this session</p>
-          </div>
+          <MetricCard
+            label="Requests"
+            value={usage.total_requests}
+            icon={<Zap className="h-3.5 w-3.5" />}
+            color="cyan"
+            subtitle="this session"
+          />
 
           {/* Estimated monthly cost */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
@@ -501,16 +498,13 @@ function APIUsageDashboard() {
           </div>
 
           {/* Skipped polls */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-1">
-              <Activity className="h-3.5 w-3.5 text-neon-purple" />
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Skipped</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              <AnimatedNumber value={usage.skipped_polls} />
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">adaptive polling saves</p>
-          </div>
+          <MetricCard
+            label="Skipped"
+            value={usage.skipped_polls}
+            icon={<Activity className="h-3.5 w-3.5" />}
+            color="purple"
+            subtitle="adaptive polling saves"
+          />
         </div>
 
         {/* Rate limit gauge */}
@@ -618,13 +612,11 @@ function CompressionStatsPanel() {
             <p className="text-lg font-bold text-neon-green">~{formatBytes(stats.estimated_saved_bytes)}</p>
             <p className="text-[10px] text-[var(--text-muted)]">~{savingsPct}% reduction</p>
           </div>
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Rows Saved</p>
-            <p className="text-lg font-bold text-[var(--text-primary)]">
-              <AnimatedNumber value={stats.estimated_saved_rows} />
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">hourly aggregation (&gt;30 days)</p>
-          </div>
+          <MetricCard
+            label="Rows Saved"
+            value={stats.estimated_saved_rows}
+            subtitle="hourly aggregation (>30 days)"
+          />
         </div>
       </GlassPanel>
     </FadeIn>
@@ -644,9 +636,9 @@ function RateLimitsPanel() {
     <FadeIn delay={0.12}>
       <GlassPanel className="p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-amber/10 text-neon-amber ring-1 ring-neon-amber/20">
+          <IconBox color="amber" size="sm">
             <Gauge className="h-4.5 w-4.5" />
-          </div>
+          </IconBox>
           <div>
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">Rate Limits</h3>
             <p className="text-[11px] text-[var(--text-muted)]">Request throttling configured per route</p>
@@ -1413,10 +1405,9 @@ export default function SystemStatus() {
             <span className="text-[10px] text-[var(--text-muted)]">
               Checked {formatTimeAgo(lastChecked)}
             </span>
-            <button onClick={handleRefresh} className="glass-button text-xs flex items-center gap-1.5">
-              <RefreshCw className={clsx('h-3.5 w-3.5 transition-transform', refreshing && 'animate-spin')} />
+            <Button variant="secondary" size="sm" onClick={handleRefresh} icon={<RefreshCw className={clsx('h-3.5 w-3.5 transition-transform', refreshing && 'animate-spin')} />}>
               Refresh
-            </button>
+            </Button>
           </div>
         }
       />
@@ -1518,18 +1509,12 @@ export default function SystemStatus() {
           <GlassPanel className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {[
-                { label: 'Version', value: `v${version.chart_version}`, icon: Shield },
-                { label: 'Runtime', value: `${version.go_version} · ${version.os}/${version.arch}`, icon: Cpu },
-                { label: 'Uptime', value: version.uptime_seconds < 3600 ? `${Math.floor(version.uptime_seconds / 60)}m` : `${Math.floor(version.uptime_seconds / 3600)}h ${Math.floor((version.uptime_seconds % 3600) / 60)}m`, icon: Clock },
-                { label: 'Goroutines', value: String(version.goroutines), icon: Activity },
+                { label: 'Version', value: `v${version.chart_version}`, icon: <Shield className="h-4 w-4" /> },
+                { label: 'Runtime', value: `${version.go_version} · ${version.os}/${version.arch}`, icon: <Cpu className="h-4 w-4" /> },
+                { label: 'Uptime', value: version.uptime_seconds < 3600 ? `${Math.floor(version.uptime_seconds / 60)}m` : `${Math.floor(version.uptime_seconds / 3600)}h ${Math.floor((version.uptime_seconds % 3600) / 60)}m`, icon: <Clock className="h-4 w-4" /> },
+                { label: 'Goroutines', value: String(version.goroutines), icon: <Activity className="h-4 w-4" /> },
               ].map(item => (
-                <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
-                  </div>
-                </div>
+                <MetricCard key={item.label} label={item.label} value={item.value} icon={item.icon} />
               ))}
             </div>
 

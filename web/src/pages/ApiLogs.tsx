@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAPICallLogs, getAPICallLogStats } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, Button, Select, Input } from '../components/ui'
 import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { fmtNumber } from '../lib/numberFormat'
@@ -123,32 +123,20 @@ export default function ApiLogs() {
             )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <select value={method} onChange={e => { setMethod(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm">
-              <option value="">All Methods</option>
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-            </select>
-            <select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm">
-              <option value="">All Status</option>
-              <option value="2xx">2xx Success</option>
-              <option value="3xx">3xx Redirect</option>
-              <option value="4xx">4xx Client Error</option>
-              <option value="5xx">5xx Server Error</option>
-            </select>
+            <Select value={method} onChange={e => { setMethod(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" options={[{ value: '', label: 'All Methods' }, { value: 'GET', label: 'GET' }, { value: 'POST', label: 'POST' }, { value: 'PUT', label: 'PUT' }, { value: 'DELETE', label: 'DELETE' }]} />
+            <Select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" options={[{ value: '', label: 'All Status' }, { value: '2xx', label: '2xx Success' }, { value: '3xx', label: '3xx Redirect' }, { value: '4xx', label: '4xx Client Error' }, { value: '5xx', label: '5xx Server Error' }]} />
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
+              <Input
                 type="text"
                 placeholder="Filter by endpoint..."
                 value={endpoint}
                 onChange={e => { setEndpoint(e.target.value); setPage(0) }}
-                className="glass-input pl-8 pr-3 py-2 text-sm"
+                className="pl-8 pr-3 py-2 text-sm"
               />
             </div>
-            <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm" placeholder="Start date" />
-            <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm" placeholder="End date" />
+            <Input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" placeholder="Start date" />
+            <Input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" placeholder="End date" />
           </div>
         </GlassPanel>
       </FadeIn>

@@ -16,7 +16,7 @@ import {
   AlertRule,
   RuleConditionTree,
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button, Input, Select } from '../components/ui'
 import RuleBuilder from '../components/RuleBuilder'
 import { useToast } from '../components/Toast'
 import {
@@ -295,8 +295,8 @@ export default function AlertStudio() {
               <p className="text-sm font-semibold text-[var(--text-primary)]">Rule Templates — {ruleTemplates.length} pre-built rules</p>
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <input
-                  className="glass-input w-full pl-8 text-xs py-1.5"
+                <Input
+                  className="w-full pl-8 text-xs py-1.5"
                   placeholder="Search templates…"
                   value={templateSearch}
                   onChange={e => setTemplateSearch(e.target.value)}
@@ -445,8 +445,8 @@ export default function AlertStudio() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Name</label>
-                <input
-                  className="glass-input w-full"
+                <Input
+                  className="w-full"
                   placeholder="My alert rule"
                   value={editor.name}
                   onChange={e => setEditor(s => ({ ...s, name: e.target.value }))}
@@ -456,15 +456,12 @@ export default function AlertStudio() {
               {/* Severity */}
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Severity</label>
-                <select
-                  className="glass-input w-full"
+                <Select
+                  className="w-full"
                   value={editor.severity}
                   onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
-                >
-                  <option value="info">Info</option>
-                  <option value="warning">Warning</option>
-                  <option value="critical">Critical</option>
-                </select>
+                  options={[{ value: 'info', label: 'Info' }, { value: 'warning', label: 'Warning' }, { value: 'critical', label: 'Critical' }]}
+                />
               </div>
             </div>
 
@@ -472,10 +469,10 @@ export default function AlertStudio() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Cooldown (minutes)</label>
-                <input
+                <Input
                   type="number"
                   min={0}
-                  className="glass-input w-full"
+                  className="w-full"
                   value={editor.cooldown_min}
                   onChange={e => setEditor(s => ({ ...s, cooldown_min: Number(e.target.value) || 0 }))}
                 />
@@ -485,8 +482,8 @@ export default function AlertStudio() {
                   Message Template
                   <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">{'Use {{SignalName}}'}</span>
                 </label>
-                <input
-                  className="glass-input w-full"
+                <Input
+                  className="w-full"
                   placeholder="Battery at {{BatteryLevel}}%"
                   value={editor.msg_template}
                   onChange={e => setEditor(s => ({ ...s, msg_template: e.target.value }))}

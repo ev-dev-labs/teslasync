@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getChargingHeatmap, Vehicle, ChargingHeatmapCell } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, Select } from '../components/ui'
 import { BatteryCharging, Clock, Zap, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
@@ -63,15 +63,12 @@ export default function ChargingHeatmap() {
         icon={<BatteryCharging className="h-5 w-5" />}
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
-              className="glass-input text-sm px-3 py-2"
+            <Select
+              className="text-sm px-3 py-2"
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           ) : undefined
         }
       />

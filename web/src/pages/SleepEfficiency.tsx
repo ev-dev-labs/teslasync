@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSleepAnalytics, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, Select } from '../components/ui'
 import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -74,26 +74,19 @@ export default function SleepEfficiency() {
         icon={<Moon className="h-5 w-5 text-neon-purple" />}
         actions={
           <div className="flex items-center gap-3">
-            <select
+            <Select
               value={days}
               onChange={e => setDays(Number(e.target.value))}
-              className="glass-input text-sm px-3 py-2"
-            >
-              <option value={7}>7 days</option>
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
-              <option value={180}>180 days</option>
-            </select>
+              className="text-sm px-3 py-2"
+              options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }, { value: '180', label: '180 days' }]}
+            />
             {vehicles && vehicles.length > 1 && (
-              <select
+              <Select
                 value={vehicleId ?? ''}
                 onChange={e => setSelectedVehicle(Number(e.target.value))}
-                className="glass-input text-sm px-3 py-2"
-              >
-                {vehicles.map((v: Vehicle) => (
-                  <option key={v.id} value={v.id}>{v.display_name}</option>
-                ))}
-              </select>
+                className="text-sm px-3 py-2"
+                options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name }))}
+              />
             )}
           </div>
         }

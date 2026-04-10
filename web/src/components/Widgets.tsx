@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
+import { fmtNumber } from '../lib/numberFormat'
 
 interface AnimatedNumberProps {
   value: number
@@ -49,7 +50,7 @@ export function MetricBar({ value, max, color, label, sublabel }: {
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs font-medium text-gray-300">{label}</span>
-        <span className="text-xs font-mono" style={{ color }}>{value.toFixed(1)}{sublabel && <span className="text-[var(--text-muted)] ml-0.5">{sublabel}</span>}</span>
+        <span className="text-xs font-mono" style={{ color }}>{sublabel || fmtNumber(value)}</span>
       </div>
       <div className="h-2 rounded-full bg-white/5 overflow-hidden">
         <motion.div

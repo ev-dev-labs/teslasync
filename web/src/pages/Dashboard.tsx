@@ -294,8 +294,8 @@ export default function Dashboard() {
                 Connect your account in <Link to="/settings" className="text-neon-cyan hover:underline">Settings</Link> to start tracking.
               </p>
             </div>
-            <Link to="/settings" className="neon-button text-xs px-3 py-1.5">
-              Connect <ArrowUpRight className="h-3 w-3 ml-1 inline-block" />
+            <Link to="/settings">
+              <Button variant="primary" size="sm">Connect <ArrowUpRight className="h-3 w-3 ml-1 inline-block" /></Button>
             </Link>
           </GlassPanel>
         </FadeIn>
@@ -439,21 +439,21 @@ export default function Dashboard() {
 
                       {/* Quick actions */}
                       <div className="flex gap-2 mt-4">
-                        <Link to={`/vehicles/${primaryVehicle!.id}`} className="glass-button text-xs flex items-center gap-1.5">
-                          <Eye className="h-3.5 w-3.5" /> Details
+                        <Link to={`/vehicles/${primaryVehicle!.id}`}>
+                          <Button variant="secondary" size="sm" icon={<Eye className="h-3.5 w-3.5" />}>Details</Button>
                         </Link>
-                        <Link to="/commands" className="glass-button text-xs flex items-center gap-1.5">
-                          <Zap className="h-3.5 w-3.5" /> Commands
+                        <Link to="/commands">
+                          <Button variant="secondary" size="sm" icon={<Zap className="h-3.5 w-3.5" />}>Commands</Button>
                         </Link>
-                        <Link to="/live" className="glass-button text-xs flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5" /> Live Map
+                        <Link to="/live">
+                          <Button variant="secondary" size="sm" icon={<MapPin className="h-3.5 w-3.5" />}>Live Map</Button>
                         </Link>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
                       <p className="text-sm text-[var(--text-secondary)]">Vehicle asleep — wake to see live data</p>
-                      <Link to="/commands" className="neon-button text-xs mt-3 inline-flex">Wake Up</Link>
+                      <Link to="/commands"><Button variant="primary" size="sm" className="mt-3">Wake Up</Button></Link>
                     </div>
                   )}
                 </div>
@@ -1022,8 +1022,8 @@ export default function Dashboard() {
                     Sync Vehicles
                   </Button>
                 ) : (
-                  <Link to="/settings" className="neon-button">
-                    Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
+                  <Link to="/settings">
+                    <Button variant="primary">Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" /></Button>
                   </Link>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, Select } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Activity, Gauge, Heart, Zap, AlertTriangle, CheckCircle, Info, Target } from 'lucide-react'
@@ -165,11 +165,7 @@ export default function BatteryHealth() {
         subtitle="Degradation tracking, prediction, charging habit analysis, and longevity insights"
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select value={vehicleId ?? ''} onChange={e => setSelectedVehicle(Number(e.target.value))} className="glass-input text-sm px-3 py-2">
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+            <Select value={vehicleId ?? ''} onChange={e => setSelectedVehicle(Number(e.target.value))} className="text-sm px-3 py-2" options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))} />
           ) : undefined
         }
       />

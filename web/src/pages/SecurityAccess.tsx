@@ -459,7 +459,7 @@ export default function SecurityAccess() {
           <select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
             style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
           >
             {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
@@ -478,26 +478,26 @@ export default function SecurityAccess() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {loadingLatest ? [1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />) : (
           <>
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               {isSecure ? <CheckCircle className="h-6 w-6 text-neon-green" /> : <AlertTriangle className="h-6 w-6 text-neon-red" />}
               <span className={clsx('text-lg font-bold', isSecure ? 'text-neon-green' : 'text-neon-red')}>{isSecure ? 'Secure' : 'Unsecure'}</span>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Current Status</span>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <Clock className="h-6 w-6 text-neon-cyan" />
               <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{lastLockChangeTime ? timeSince(lastLockChangeTime) : '--'}</span>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Last Lock Change</span>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <Eye className="h-6 w-6 text-neon-blue" />
               <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{stats.sentryPct}%</span>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Sentry Uptime</span>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <Hash className="h-6 w-6 text-neon-purple" />
               <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{stats.total}</span>
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Events</span>
-            </div>
+            </GlassPanel>
           </>
         )}
       </div>
@@ -531,7 +531,7 @@ export default function SecurityAccess() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {/* Lock Status */}
-          <div className="glass-card p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-5 flex flex-col items-center gap-3">
             <div className={clsx('p-3 rounded-full', latest?.locked ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
               {latest?.locked ? <Lock className="h-7 w-7 text-neon-green" /> : <Unlock className="h-7 w-7 text-neon-red" />}
             </div>
@@ -539,10 +539,10 @@ export default function SecurityAccess() {
               {latest?.locked ? 'Locked' : 'Unlocked'}
             </span>
             <Badge color={latest?.locked ? 'green' : 'red'} size="sm">Lock Status</Badge>
-          </div>
+          </GlassPanel>
 
           {/* Sentry Mode */}
-          <div className={clsx('glass-card p-5 flex flex-col items-center gap-3 transition-shadow', latest?.sentry_mode && 'shadow-[0_0_20px_rgba(59,130,246,0.15)]')}>
+          <GlassPanel className={clsx('p-5 flex flex-col items-center gap-3 transition-shadow', latest?.sentry_mode && 'shadow-[0_0_20px_rgba(59,130,246,0.15)]')}>
             <div className={clsx('p-3 rounded-full', latest?.sentry_mode ? 'bg-blue-500/10' : 'bg-white/5')}>
               {latest?.sentry_mode ? <ShieldCheck className="h-7 w-7 text-blue-400" /> : <ShieldAlert className="h-7 w-7 text-[var(--text-muted)]" />}
             </div>
@@ -550,10 +550,10 @@ export default function SecurityAccess() {
               {latest?.sentry_mode ? 'Active' : 'Inactive'}
             </span>
             <Badge color={latest?.sentry_mode ? 'cyan' : 'neutral'} size="sm">Sentry Mode</Badge>
-          </div>
+          </GlassPanel>
 
           {/* Doors */}
-          <div className="glass-card p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-5 flex flex-col items-center gap-3">
             <div className={clsx('p-3 rounded-full', doorClosed(latest?.door_state) ? 'bg-neon-green/10' : 'bg-neon-amber/10')}>
               {doorClosed(latest?.door_state) ? <DoorClosed className="h-7 w-7 text-neon-green" /> : <DoorOpen className="h-7 w-7 text-neon-amber" />}
             </div>
@@ -561,10 +561,10 @@ export default function SecurityAccess() {
               {doorClosed(latest?.door_state) ? 'Closed' : latest?.door_state ?? 'Unknown'}
             </span>
             <Badge color={doorClosed(latest?.door_state) ? 'green' : 'amber'} size="sm">Doors</Badge>
-          </div>
+          </GlassPanel>
 
           {/* Windows */}
-          <div className="glass-card p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-5 flex flex-col items-center gap-3">
             <div className={clsx('p-3 rounded-full', windowSummary === 'All Closed' ? 'bg-neon-green/10' : 'bg-neon-amber/10')}>
               <Car className={clsx('h-7 w-7', windowSummary === 'All Closed' ? 'text-neon-green' : 'text-neon-amber')} />
             </div>
@@ -572,10 +572,10 @@ export default function SecurityAccess() {
               {windowSummary}
             </span>
             <Badge color={windowSummary === 'All Closed' ? 'green' : 'amber'} size="sm">Windows</Badge>
-          </div>
+          </GlassPanel>
 
           {/* HomeLink */}
-          <div className="glass-card p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-5 flex flex-col items-center gap-3">
             <div className={clsx('p-3 rounded-full', latest?.homelink_nearby ? 'bg-purple-500/10' : 'bg-white/5')}>
               <Home className={clsx('h-7 w-7', latest?.homelink_nearby ? 'text-purple-400' : 'text-[var(--text-muted)]')} />
             </div>
@@ -583,10 +583,10 @@ export default function SecurityAccess() {
               {latest?.homelink_nearby ? 'Nearby' : 'Not Detected'}
             </span>
             <Badge color={latest?.homelink_nearby ? 'purple' : 'neutral'} size="sm">HomeLink</Badge>
-          </div>
+          </GlassPanel>
 
           {/* Guest Mode */}
-          <div className="glass-card p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-5 flex flex-col items-center gap-3">
             <div className={clsx('p-3 rounded-full', latest?.guest_mode ? 'bg-neon-amber/10' : 'bg-white/5')}>
               <UserCheck className={clsx('h-7 w-7', latest?.guest_mode ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
             </div>
@@ -594,7 +594,7 @@ export default function SecurityAccess() {
               {latest?.guest_mode ? 'Enabled' : 'Disabled'}
             </span>
             <Badge color={latest?.guest_mode ? 'amber' : 'neutral'} size="sm">Guest Mode</Badge>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
@@ -611,7 +611,7 @@ export default function SecurityAccess() {
             ].map(w => {
               const state = parseWindowState(w.val)
               return (
-                <div key={w.label} className="glass-card p-4 flex items-center gap-3">
+                <GlassPanel key={w.label} className="p-4 flex items-center gap-3">
                   <div className={clsx('p-2 rounded-lg', state === 'Closed' ? 'bg-neon-green/10' : state === 'Venting' ? 'bg-neon-amber/10' : state === 'Open' ? 'bg-neon-red/10' : 'bg-white/5')}>
                     <Car className={clsx('h-5 w-5', windowTextClass(state))} />
                   </div>
@@ -619,7 +619,7 @@ export default function SecurityAccess() {
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{w.label}</span>
                     <span className={clsx('text-sm font-semibold', windowTextClass(state))}>{state}</span>
                   </div>
-                </div>
+                </GlassPanel>
               )
             })}
           </div>
@@ -639,7 +639,7 @@ export default function SecurityAccess() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {/* Lights */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.lightsHazards ? 'bg-neon-red/10' : 'bg-white/5')}>
               <AlertTriangle className={clsx('h-4 w-4', live.lightsHazards ? 'text-neon-red' : 'text-[var(--text-muted)]')} />
             </div>
@@ -649,9 +649,9 @@ export default function SecurityAccess() {
                 {live.lightsHazards ? 'Active' : 'Off'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.lightsHighBeams ? 'bg-neon-cyan/10' : 'bg-white/5')}>
               <Lightbulb className={clsx('h-4 w-4', live.lightsHighBeams ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
             </div>
@@ -661,9 +661,9 @@ export default function SecurityAccess() {
                 {live.lightsHighBeams ? 'On' : 'Off'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'bg-neon-amber/10' : 'bg-white/5')}>
               <Car className={clsx('h-4 w-4', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
             </div>
@@ -673,10 +673,10 @@ export default function SecurityAccess() {
                 {live.lightsTurnSignal || 'Off'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Driver & Keys */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.driverSeatOccupied ? 'bg-neon-green/10' : 'bg-white/5')}>
               <User className={clsx('h-4 w-4', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
             </div>
@@ -686,9 +686,9 @@ export default function SecurityAccess() {
                 {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Key className="h-4 w-4 text-neon-cyan" />
             </div>
@@ -698,10 +698,10 @@ export default function SecurityAccess() {
                 {live.pairedKeyCount || '--'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Access Modes */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.valetMode ? 'bg-neon-purple/10' : 'bg-white/5')}>
               <Car className={clsx('h-4 w-4', live.valetMode ? 'text-neon-purple' : 'text-[var(--text-muted)]')} />
             </div>
@@ -711,9 +711,9 @@ export default function SecurityAccess() {
                 {live.valetMode ? 'Enabled' : 'Off'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.serviceMode ? 'bg-neon-amber/10' : 'bg-white/5')}>
               <Settings className={clsx('h-4 w-4', live.serviceMode ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
             </div>
@@ -723,9 +723,9 @@ export default function SecurityAccess() {
                 {live.serviceMode ? 'Active' : 'Off'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', live.speedLimitMode ? 'bg-neon-cyan/10' : 'bg-white/5')}>
               <Gauge className={clsx('h-4 w-4', live.speedLimitMode ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
             </div>
@@ -735,10 +735,10 @@ export default function SecurityAccess() {
                 {live.speedLimitMode ? `${Math.round(live.currentSpeedLimit)} mph` : 'Off'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Homelink Device Count */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-purple-500/10">
               <Home className="h-4 w-4 text-purple-400" />
             </div>
@@ -748,10 +748,10 @@ export default function SecurityAccess() {
                 {live.homelinkDeviceCount || '--'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Center Display */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Monitor className="h-4 w-4 text-neon-cyan" />
             </div>
@@ -761,7 +761,7 @@ export default function SecurityAccess() {
                 {live.centerDisplay || '--'}
               </span>
             </div>
-          </div>
+          </GlassPanel>
         </div>
       </GlassPanel>
 
@@ -779,11 +779,11 @@ export default function SecurityAccess() {
               { label: 'Guest Mode Usage', value: stats.guestCount, icon: <UserCheck className="h-4 w-4" />, color: 'text-neon-amber' },
               { label: 'Total Events', value: stats.total, icon: <Activity className="h-4 w-4" />, color: 'text-neon-cyan' },
             ].map(s => (
-              <div key={s.label} className="glass-card p-3 sm:p-4 flex flex-col items-center gap-2">
+              <GlassPanel key={s.label} className="p-3 sm:p-4 flex flex-col items-center gap-2">
                 <div className={clsx(s.color)}>{s.icon}</div>
                 <span className={clsx('text-xl font-bold', s.color)}>{s.value}</span>
                 <span className="text-[10px] text-center uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
-              </div>
+              </GlassPanel>
             ))}
           </div>
         )}
@@ -820,7 +820,7 @@ export default function SecurityAccess() {
               const prev = sortedHistory[idx + 1]
               const changes = describeEvent(event, prev)
               return (
-                <div key={event.id} className="glass-card p-3 flex items-start gap-3 transition-colors hover:bg-white/[0.02]">
+                <GlassPanel key={event.id} className="p-3 flex items-start gap-3 transition-colors hover:bg-white/[0.02]">
                   <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
                     {changes.slice(0, 1).map((c, ci) => (
                       <div key={ci} className="p-1.5 rounded-lg" style={{ backgroundColor: `${c.color}15` }}>
@@ -839,7 +839,7 @@ export default function SecurityAccess() {
                     {event.sentry_mode && <Eye className="h-3 w-3 text-blue-400" />}
                     {!doorClosed(event.door_state) && <DoorOpen className="h-3 w-3 text-neon-amber" />}
                   </div>
-                </div>
+                </GlassPanel>
               )
             })}
           </div>

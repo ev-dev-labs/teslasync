@@ -308,12 +308,12 @@ export default function Settings() {
               <SettingField label="Electricity Cost (per kWh)">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
-                  <input
+                  <Input
                     type="number"
                     step="0.01"
                     value={form.base_cost_per_kwh}
                     onChange={e => setForm({ ...form, base_cost_per_kwh: parseFloat(e.target.value) || 0 })}
-                    className="glass-input w-full pl-7 pr-3 py-2.5 text-sm"
+                    className="w-full pl-7 pr-3 py-2.5 text-sm"
                   />
                 </div>
               </SettingField>
@@ -322,12 +322,12 @@ export default function Settings() {
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">$</span>
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       value={form.gas_price_per_unit}
                       onChange={e => setForm({ ...form, gas_price_per_unit: parseFloat(e.target.value) || 0 })}
-                      className="glass-input w-full pl-7 pr-3 py-2.5 text-sm"
+                      className="w-full pl-7 pr-3 py-2.5 text-sm"
                     />
                   </div>
                   <Select value={form.gas_unit} onChange={e => setForm({ ...form, gas_unit: e.target.value })} options={[{ value: 'gallon', label: '/ gallon' }, { value: 'liter', label: '/ liter' }]} className="w-28" />
@@ -335,22 +335,22 @@ export default function Settings() {
               </SettingField>
 
               <SettingField label="Comparison Vehicle MPG">
-                <input
+                <Input
                   type="number"
                   step="0.5"
                   value={form.gas_efficiency_mpg}
                   onChange={e => setForm({ ...form, gas_efficiency_mpg: parseFloat(e.target.value) || 0 })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
+                  className="w-full px-3 py-2.5 text-sm"
                   placeholder="Average MPG of equivalent gas car"
                 />
               </SettingField>
 
               <SettingField label="Google Maps API Key">
-                <input
+                <Input
                   type="password"
                   value={form.google_maps_api_key || ''}
                   onChange={e => setForm({ ...form, google_maps_api_key: e.target.value })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
+                  className="w-full px-3 py-2.5 text-sm"
                   placeholder="Enter your Google Maps API key"
                 />
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">

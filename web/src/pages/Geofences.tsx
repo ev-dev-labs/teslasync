@@ -167,12 +167,12 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
                   : <Navigation className="h-3.5 w-3.5" />}
               </button>
             </div>
-            <input
+            <Input
               type="number"
               step="any"
               value={form.latitude}
               onChange={e => setForm({ ...form, latitude: e.target.value })}
-              className="glass-input w-full px-3 py-2 text-sm font-mono"
+              className="w-full px-3 py-2 text-sm font-mono"
               placeholder="37.7749"
             />
           </div>

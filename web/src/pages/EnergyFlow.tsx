@@ -40,7 +40,7 @@ function StatusGauge({ label, value, unit, min, max, color = 'text-neon-cyan', f
   const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100))
   const fmt = formatValue ?? ((v: number) => fmtNumber(v))
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -53,7 +53,7 @@ function StatusGauge({ label, value, unit, min, max, color = 'text-neon-cyan', f
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', color)}>
         {value != null ? `${fmt(val)} ${unit}` : 'N/A'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -61,7 +61,7 @@ function StatusGauge({ label, value, unit, min, max, color = 'text-neon-cyan', f
 function BmsIndicator({ label, active, icon: Icon }: { label: string; active: boolean | undefined; icon: React.ElementType }) {
   const isOn = active === true
   return (
-    <div className={clsx('glass-card p-4 flex items-center gap-3', isOn ? 'border-neon-green/20' : 'border-white/5')}>
+    <GlassPanel className={clsx('p-4 flex items-center gap-3', isOn ? 'border-neon-green/20' : 'border-white/5')}>
       <div className={clsx('p-2 rounded-lg', isOn ? 'bg-neon-green/10' : 'bg-white/5')}>
         <Icon className={clsx('h-5 w-5', isOn ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
       </div>
@@ -71,7 +71,7 @@ function BmsIndicator({ label, active, icon: Icon }: { label: string; active: bo
           {isOn ? 'Active' : 'Inactive'}
         </p>
       </div>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -119,11 +119,11 @@ function PowerFlowArrow({ dcPower, acPower, energyRemaining }: { dcPower?: numbe
 /* ─── Stat card for summary section ─── */
 function StatCard({ label, value, unit, color = 'text-neon-cyan' }: { label: string; value: number | null; unit: string; color?: string }) {
   return (
-    <div className="glass-card p-4 sm:p-5">
+    <GlassPanel className="p-4 sm:p-5">
       <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <p className={clsx('text-2xl font-bold', color)}>{value != null ? fmtNumber(value) : '--'}</p>
       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{unit}</p>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -373,22 +373,22 @@ export default function EnergyFlow() {
           </div>
           {/* Charging info row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="glass-card p-3 text-center">
+            <GlassPanel className="p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>DC Power</p>
               <p className="text-lg font-bold text-neon-cyan">{latest?.dc_charging_power != null ? `${fmtWithUnit(latest.dc_charging_power, 'kW')}` : '--'}</p>
-            </div>
-            <div className="glass-card p-3 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>AC Power</p>
               <p className="text-lg font-bold text-purple-400">{latest?.ac_charging_power != null ? `${fmtWithUnit(latest.ac_charging_power, 'kW')}` : '--'}</p>
-            </div>
-            <div className="glass-card p-3 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Charger Voltage</p>
               <p className="text-lg font-bold text-yellow-400">{latest?.charger_voltage != null ? `${fmtWithUnit(latest.charger_voltage, 'V')}` : '--'}</p>
-            </div>
-            <div className="glass-card p-3 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Charge Amps</p>
               <p className="text-lg font-bold text-neon-green">{latest?.charge_amps != null ? `${fmtWithUnit(latest.charge_amps, 'A')}` : '--'}</p>
-            </div>
+            </GlassPanel>
           </div>
           {/* Power flow chart */}
           {powerFlowData.length > 0 && (
@@ -416,7 +416,7 @@ export default function EnergyFlow() {
             <Battery className="inline h-4 w-4 mr-1.5 text-yellow-400" />Cell Voltage Spread
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="glass-card p-4 text-center">
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Max</p>
               <p className="text-2xl font-bold text-neon-cyan">
                 {latest?.brick_voltage_max != null ? `${fmtWithUnit(latest.brick_voltage_max, 'V', 3)}` : '--'}
@@ -424,8 +424,8 @@ export default function EnergyFlow() {
               {latest?.num_brick_voltage_max != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_max}</p>
               )}
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Min</p>
               <p className="text-2xl font-bold text-purple-400">
                 {latest?.brick_voltage_min != null ? `${fmtWithUnit(latest.brick_voltage_min, 'V', 3)}` : '--'}
@@ -433,8 +433,8 @@ export default function EnergyFlow() {
               {latest?.num_brick_voltage_min != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_min}</p>
               )}
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Spread</p>
               <p className={clsx('text-2xl font-bold', cellHealthy ? 'text-neon-green' : cellSpread != null ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
                 {cellSpread != null ? `${fmtWithUnit(cellSpread, 'mV')}` : '--'}
@@ -448,7 +448,7 @@ export default function EnergyFlow() {
                   <span className="text-xs text-[var(--text-muted)]">No data</span>
                 )}
               </div>
-            </div>
+            </GlassPanel>
           </div>
           {cellVoltageData.length > 0 && (
             <ResponsiveContainer width="100%" height={260}>
@@ -475,7 +475,7 @@ export default function EnergyFlow() {
             <Thermometer className="inline h-4 w-4 mr-1.5 text-red-400" />Module Temperature
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div className="glass-card p-4 text-center">
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Max Module Temp</p>
               <p className="text-2xl font-bold text-red-400">
                 {latest?.module_temp_max != null ? `${fmtNumber(convertTemp(latest.module_temp_max))} ${tempUnit}` : '--'}
@@ -483,8 +483,8 @@ export default function EnergyFlow() {
               {latest?.num_module_temp_max != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Module #{latest.num_module_temp_max}</p>
               )}
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Min Module Temp</p>
               <p className="text-2xl font-bold text-blue-400">
                 {latest?.module_temp_min != null ? `${fmtNumber(convertTemp(latest.module_temp_min))} ${tempUnit}` : '--'}
@@ -492,7 +492,7 @@ export default function EnergyFlow() {
               {latest?.num_module_temp_min != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Module #{latest.num_module_temp_min}</p>
               )}
-            </div>
+            </GlassPanel>
           </div>
           {moduleTempData.length > 0 && (
             <ResponsiveContainer width="100%" height={260}>
@@ -518,7 +518,7 @@ export default function EnergyFlow() {
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* BMS State */}
-            <div className="glass-card p-4 flex items-center gap-3">
+            <GlassPanel className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-neon-cyan/10">
                 <Activity className="h-5 w-5 text-neon-cyan" />
               </div>
@@ -526,12 +526,12 @@ export default function EnergyFlow() {
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>BMS State</p>
                 <p className="text-sm font-semibold text-neon-cyan">{latest?.bms_state ?? 'Unknown'}</p>
               </div>
-            </div>
+            </GlassPanel>
             <BmsIndicator label="Full Charge Complete" active={latest?.bms_fullcharge_complete} icon={CheckCircle} />
             <BmsIndicator label="Battery Heater" active={latest?.battery_heater_on} icon={Thermometer} />
             <BmsIndicator label="DCDC Enable" active={latest?.dcdc_enable} icon={Zap} />
             {/* Isolation resistance */}
-            <div className="glass-card p-4 flex items-center gap-3">
+            <GlassPanel className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-yellow-400/10">
                 <Shield className="h-5 w-5 text-yellow-400" />
               </div>
@@ -541,7 +541,7 @@ export default function EnergyFlow() {
                   {latest?.isolation_resistance != null ? `${latest.isolation_resistance.toLocaleString()} kΩ` : '--'}
                 </p>
               </div>
-            </div>
+            </GlassPanel>
           </div>
         </div>
       )}
@@ -553,26 +553,26 @@ export default function EnergyFlow() {
             <BatteryCharging className="inline h-4 w-4 mr-1.5 text-emerald-400" />Powershare
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="glass-card p-4 text-center">
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Status</p>
               <p className="text-lg font-bold text-emerald-400">{latest?.powershare_status}</p>
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Type</p>
               <p className="text-lg font-bold text-neon-cyan">{latest?.powershare_type ?? '--'}</p>
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Hours Left</p>
               <p className="text-lg font-bold text-yellow-400">
                 {latest?.powershare_hours_left != null ? `${fmtWithUnit(latest.powershare_hours_left, 'h')}` : '--'}
               </p>
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Power</p>
               <p className="text-lg font-bold text-purple-400">
                 {latest?.powershare_power_kw != null ? `${fmtWithUnit(latest.powershare_power_kw, 'kW')}` : '--'}
               </p>
-            </div>
+            </GlassPanel>
           </div>
           {latest?.powershare_stop_reason && (
             <div className="mt-4 flex items-center gap-2 rounded-lg border border-neon-amber/30 bg-neon-amber/5 p-3">

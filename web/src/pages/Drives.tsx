@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getDrives, Drive, Vehicle } from '../api'
 import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, Zap, ArrowUpDown, MapPin, Download } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, Pagination, DateRangeFilter, Badge, InlineMetric, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, Pagination, DateRangeFilter, Badge, InlineMetric, ChartContainer, Button, Select } from '../components/ui'
 import { RadialGauge, MetricBar, AnimatedNumber } from '../components/Widgets'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -203,9 +203,7 @@ export default function Drives() {
         subtitle="Trip scoring, efficiency analysis, distance patterns, and performance data"
         actions={
           vehicles && vehicles.length > 0 ? (
-            <select value={vehicleId ?? ''} onChange={e => setSelectedVehicle(Number(e.target.value))} className="glass-input text-sm px-3 py-2">
-              {vehicles.map((v: Vehicle) => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-            </select>
+            <Select value={vehicleId ?? ''} onChange={e => setSelectedVehicle(Number(e.target.value))} className="text-sm px-3 py-2" options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))} />
           ) : undefined
         }
       />
@@ -352,16 +350,14 @@ export default function Drives() {
               <a
                 href={`/api/v1/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
                 download="teslasync-drives.csv"
-                className="glass-button text-xs flex items-center gap-1.5 px-2.5 py-1"
               >
-                <Download className="h-3.5 w-3.5" /> CSV
+                <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
               </a>
               <a
                 href={`/api/v1/export/drives?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`}
                 download="teslasync-drives.json"
-                className="glass-button text-xs flex items-center gap-1.5 px-2.5 py-1"
               >
-                <Download className="h-3.5 w-3.5" /> JSON
+                <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
               </a>
             </div>
           </div>
