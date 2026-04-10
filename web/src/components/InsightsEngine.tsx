@@ -4,6 +4,7 @@ import {
   Battery, BatteryCharging, Zap, Shield, Car, Clock, Leaf,
 } from 'lucide-react'
 import { GlassPanel, FadeIn } from './ui'
+import { fmtNumber } from '../lib/numberFormat'
 import type {
   Drive, ChargingSession, EnergyStats, BatteryReport,
   MileageStats, VampireDrainStats,
@@ -67,14 +68,14 @@ function analyzeChargingCost(sessions: ChargingSession[]): Insight | null {
   const homeCost = home.length > 0 ? avgCost(home) : null
   const scCost = supercharger.length > 0 ? avgCost(supercharger) : null
 
-  let description = `Your average charging cost is $${overall.toFixed(2)}/kWh.`
+  let description = `Your average charging cost is $${fmtNumber(overall, 2)}/kWh.`
   let trend: Trend = 'neutral'
   let trendGood = true
 
   if (homeCost != null && scCost != null && scCost > 0) {
     const savings = ((scCost - homeCost) / scCost) * 100
     if (savings > 0) {
-      description += ` Home charging saves you ${savings.toFixed(0)}% compared to Supercharging.`
+      description += ` Home charging saves you ${fmtNumber(savings, 0)}% compared to Supercharging.`
       trend = 'up'
     } else {
       description += ` Your home electricity rate is higher than Supercharger rates — consider off-peak charging.`
@@ -113,7 +114,7 @@ function analyzeEfficiencyTrend(drives: Drive[]): Insight | null {
   const changePct = ((older - recent) / older) * 100
 
   const improved = changePct > 0
-  const magnitude = Math.abs(changePct).toFixed(1)
+  const magnitude = fmtNumber(Math.abs(changePct), 1)
 
   return {
     id: 'efficiency-trend',
@@ -156,7 +157,7 @@ function analyzeBatteryHealth(report: BatteryReport): Insight | null {
     id: 'battery-health',
     icon: Battery,
     title: 'Battery Health',
-    description: `Battery health is at ${healthPct.toFixed(1)}%. Degradation rate is ${yearlyRate.toFixed(1)}% per year — your battery is aging ${agingQuality}.`,
+    description: `Battery health is at ${fmtNumber(healthPct, 1)}%. Degradation rate is ${fmtNumber(yearlyRate, 1)}% per year — your battery is aging ${agingQuality}.`,
     trend: degradation > 8 ? 'down' : 'up',
     trendGood: degradation <= 8,
     severity,
@@ -171,12 +172,12 @@ function analyzeOptimalCharging(sessions: ChargingSession[]): Insight | null {
   const above80 = withEnd.filter(s => s.end_battery_level! > 80).length
   const above80Pct = (above80 / withEnd.length) * 100
 
-  let description = `You charge most often to ${avgEndLevel.toFixed(0)}%.`
+  let description = `You charge most often to ${fmtNumber(avgEndLevel, 0)}%.`
   let severity: Severity = 'info'
   let trendGood = true
 
   if (above80Pct > 50) {
-    description += ` ${above80Pct.toFixed(0)}% of your charges exceed 80%. For battery longevity, consider keeping charges between 20–80%.`
+    description += ` ${fmtNumber(above80Pct, 0)}% of your charges exceed 80%. For battery longevity, consider keeping charges between 20–80%.`
     severity = 'warning'
     trendGood = false
   } else {
@@ -211,10 +212,10 @@ function analyzeVampireDrain(stats: VampireDrainStats): Insight | null {
   let severity: Severity = 'info'
 
   if (diffPct > 20) {
-    description = `Sentry Mode increases battery drain by ${diffPct.toFixed(0)}%. Consider disabling it at home to save ~${dailyRangeLoss.toFixed(1)} km of range daily.`
+    description = `Sentry Mode increases battery drain by ${fmtNumber(diffPct, 0)}%. Consider disabling it at home to save ~${fmtNumber(dailyRangeLoss, 1)} km of range daily.`
     severity = 'warning'
   } else {
-    description = `Average vampire drain is ${stats.avg_drain_rate.toFixed(2)} %/hr. Total range lost to idle drain: ${stats.total_range_lost.toFixed(1)} km across ${stats.event_count} events.`
+    description = `Average vampire drain is ${fmtNumber(stats.avg_drain_rate, 2)} %/hr. Total range lost to idle drain: ${fmtNumber(stats.total_range_lost, 1)} km across ${stats.event_count} events.`
   }
 
   return {
@@ -256,7 +257,7 @@ function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
     id: 'driving-patterns',
     icon: Car,
     title: 'Driving Patterns',
-    description: `You drive an average of ${avgDaily.toFixed(1)} km/day. Your most active day is ${busiestDay}. Peak driving time: ${peakHour}:00–${peakEnd}:00.`,
+    description: `You drive an average of ${fmtNumber(avgDaily, 1)} km/day. Your most active day is ${busiestDay}. Peak driving time: ${peakHour}:00–${peakEnd}:00.`,
     trend: 'neutral',
     trendGood: true,
     severity: 'info',
@@ -277,7 +278,7 @@ function analyzeCostSavings(energy: EnergyStats): Insight | null {
     id: 'cost-savings',
     icon: Leaf,
     title: 'EV Cost Savings',
-    description: `You've saved approximately $${savings.toFixed(0)} vs. gasoline based on ${energy.total_energy_used_kwh.toFixed(0)} kWh consumed over ${energy.total_distance_km.toFixed(0)} km. That's also ${energy.co2_saved_kg.toFixed(0)} kg of CO₂ saved!`,
+    description: `You've saved approximately $${fmtNumber(savings, 0)} vs. gasoline based on ${fmtNumber(energy.total_energy_used_kwh, 0)} kWh consumed over ${fmtNumber(energy.total_distance_km, 0)} km. That's also ${fmtNumber(energy.co2_saved_kg, 0)} kg of CO₂ saved!`,
     trend: 'up',
     trendGood: true,
     severity: 'success',
@@ -300,7 +301,7 @@ function analyzeRangeOptimization(energy: EnergyStats, battery?: BatteryReport):
     id: 'range-optimization',
     icon: Clock,
     title: 'Range Optimization',
-    description: `At your average efficiency of ${effWhKm.toFixed(0)} Wh/km, your effective range is ~${effectiveRange.toFixed(0)} km (${rangePct.toFixed(0)}% of rated range). ${
+    description: `At your average efficiency of ${fmtNumber(effWhKm, 0)} Wh/km, your effective range is ~${fmtNumber(effectiveRange, 0)} km (${fmtNumber(rangePct, 0)}% of rated range). ${
       rangePct < 85
         ? 'Consider preconditioning and reducing highway speed for better range.'
         : 'Your driving style is range-efficient — great work!'

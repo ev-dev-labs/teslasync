@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, Select } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Activity, Gauge, Heart, Zap, AlertTriangle, CheckCircle, Info, Target } from 'lucide-react'
@@ -13,8 +13,10 @@ import {
 import clsx from 'clsx'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function InsightCard({ icon, title, description, status }: { icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }) {
+  usePageTitle('Battery Health')
   const colors = { good: 'border-neon-green/20 bg-neon-green/5', warning: 'border-neon-amber/20 bg-neon-amber/5', critical: 'border-neon-red/20 bg-neon-red/5' }
   const iconColors = { good: 'text-neon-green', warning: 'text-neon-amber', critical: 'text-neon-red' }
   return (
@@ -165,11 +167,7 @@ export default function BatteryHealth() {
         subtitle="Degradation tracking, prediction, charging habit analysis, and longevity insights"
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select value={vehicleId ?? ''} onChange={e => setSelectedVehicle(Number(e.target.value))} className="glass-input text-sm px-3 py-2">
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+            <Select value={vehicleId ?? ''} onChange={e => setSelectedVehicle(Number(e.target.value))} className="text-sm px-3 py-2" options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))} />
           ) : undefined
         }
       />
@@ -237,61 +235,50 @@ export default function BatteryHealth() {
 
           {/* Capacity Trend with Prediction */}
           <FadeIn delay={0.15}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title mb-6 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-neon-cyan" /> Capacity Trend & Prediction
-                <span className="text-xs text-[var(--text-muted)] font-normal ml-2">Dashed = projected</span>
-              </h3>
-              <div className="h-48 sm:h-64 lg:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={predictionData}>
-                    <defs>
-                      <linearGradient id="healthGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    {chartGrid}
-                    <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="left" domain={[70, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
-                    <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} unit={` ${distanceUnit}`} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <ReferenceLine yAxisId="left" y={70} stroke="#ef4444" strokeDasharray="8 4" label={{ value: '70% warranty', fill: '#ef4444', fontSize: 10, position: 'insideTopLeft' }} />
-                    <ReferenceLine yAxisId="left" y={80} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: '80% threshold', fill: '#f59e0b', fontSize: 10, position: 'insideTopLeft' }} />
-                    <ReferenceLine yAxisId="left" y={90} stroke="var(--glass-border)" strokeDasharray="2 6" />
-                    <Area yAxisId="left" type="monotone" dataKey="actual" name="Actual %" stroke="transparent" fill="url(#healthGrad)" animationDuration={800} />
-                    <Line yAxisId="left" type="monotone" dataKey="actual" name="Actual %" stroke="#00f0ff" strokeWidth={2} dot={{ fill: '#00f0ff', r: 3 }} connectNulls={false} animationDuration={800} />
-                    <Line yAxisId="left" type="monotone" dataKey="predicted" name="Predicted %" stroke="#00f0ff" strokeWidth={2} strokeDasharray="6 4" dot={false} opacity={0.5} animationDuration={800} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </GlassPanel>
+            <ChartContainer title="Capacity Trend & Prediction" subtitle="Dashed = projected" height="clamp(192px, 30vw, 288px)">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={predictionData}>
+                  <defs>
+                    <linearGradient id="healthGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00f0ff" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#00f0ff" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  {chartGrid}
+                  <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" domain={[70, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
+                  <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} unit={` ${distanceUnit}`} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <ReferenceLine yAxisId="left" y={70} stroke="#ef4444" strokeDasharray="8 4" label={{ value: '70% warranty', fill: '#ef4444', fontSize: 10, position: 'insideTopLeft' }} />
+                  <ReferenceLine yAxisId="left" y={80} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: '80% threshold', fill: '#f59e0b', fontSize: 10, position: 'insideTopLeft' }} />
+                  <ReferenceLine yAxisId="left" y={90} stroke="var(--glass-border)" strokeDasharray="2 6" />
+                  <Area yAxisId="left" type="monotone" dataKey="actual" name="Actual %" stroke="transparent" fill="url(#healthGrad)" animationDuration={800} />
+                  <Line yAxisId="left" type="monotone" dataKey="actual" name="Actual %" stroke="#00f0ff" strokeWidth={2} dot={{ fill: '#00f0ff', r: 3 }} connectNulls={false} animationDuration={800} />
+                  <Line yAxisId="left" type="monotone" dataKey="predicted" name="Predicted %" stroke="#00f0ff" strokeWidth={2} strokeDasharray="6 4" dot={false} opacity={0.5} animationDuration={800} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </FadeIn>
 
           {/* Range Trend */}
           <FadeIn delay={0.2}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title mb-6 flex items-center gap-2">
-                <Gauge className="h-4 w-4 text-neon-green" /> Estimated Range Over Time
-              </h3>
-              <div className="h-44 sm:h-56 lg:h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="rangeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    {chartGrid}
-                    <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
-                    <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Area type="monotone" dataKey="range_km" name={`Range (${distanceUnit})`} stroke="#10b981" fill="url(#rangeGrad)" strokeWidth={2} animationDuration={800} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </GlassPanel>
+            <ChartContainer title="Estimated Range Over Time" height="clamp(176px, 28vw, 256px)">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="rangeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  {chartGrid}
+                  <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
+                  <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="range_km" name={`Range (${distanceUnit})`} stroke="#10b981" fill="url(#rangeGrad)" strokeWidth={2} animationDuration={800} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </FadeIn>
 
           {/* Charging Habits Distribution */}
@@ -373,32 +360,27 @@ export default function BatteryHealth() {
           {energyBreakdown && (
             <FadeIn delay={0.35}>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <GlassPanel className="p-6">
-                  <h3 className="section-title mb-6 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-neon-amber" /> AC / DC Energy Breakdown
-                  </h3>
-                  <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={energyBreakdown.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} strokeWidth={2} stroke="rgba(0,0,0,0.3)">
-                          {energyBreakdown.pieData.map(entry => (
-                            <Cell key={entry.name} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Legend verticalAlign="bottom" formatter={(v: string) => <span style={{ color: 'var(--text-primary)', fontSize: 12 }}>{v}</span>} />
-                        <Tooltip content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null
-                          const p = payload[0]
-                          return (
-                            <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)' }}>
-                              <p style={{ color: String(p.payload?.fill ?? '#fff') }}>● {p.name}: {fmtWithUnit(Number(p.value), 'kWh')}</p>
-                            </div>
-                          )
-                        }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </GlassPanel>
+                <ChartContainer title="AC / DC Energy Breakdown" height={208}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={energyBreakdown.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} strokeWidth={2} stroke="rgba(0,0,0,0.3)">
+                        {energyBreakdown.pieData.map(entry => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Legend verticalAlign="bottom" formatter={(v: string) => <span style={{ color: 'var(--text-primary)', fontSize: 12 }}>{v}</span>} />
+                      <Tooltip content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null
+                        const p = payload[0]
+                        return (
+                          <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)' }}>
+                            <p style={{ color: String(p.payload?.fill ?? '#fff') }}>● {p.name}: {fmtWithUnit(Number(p.value), 'kWh')}</p>
+                          </div>
+                        )
+                      }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
 
                 <GlassPanel className="p-6">
                   <h3 className="section-title mb-6 flex items-center gap-2">

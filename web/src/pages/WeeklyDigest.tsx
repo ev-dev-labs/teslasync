@@ -5,12 +5,16 @@ import type { Alert } from '../api'
 import {
   PageHeader,
   GlassPanel,
-  StatCard,
+  MetricCard,
   FadeIn,
   StaggerContainer,
   StaggerItem,
   Skeleton,
   EmptyState,
+  AlertBanner,
+  Select,
+  DataTable,
+  type Column,
 } from '../components/ui'
 import {
   CalendarDays,
@@ -46,10 +50,68 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDate, formatDateWithDay } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
+
+// ── WeeklyDigest types ──────────────────────────────────────────────────────
+
+interface ComparisonRow {
+  metric: string
+  current: number
+  previous: number
+  fmt: (v: number) => string
+}
+
+const comparisonColumns: Column<ComparisonRow>[] = [
+  {
+    key: 'metric',
+    header: 'Metric',
+    render: (row) => (
+      <span style={{ color: 'var(--text-secondary)' }}>{row.metric}</span>
+    ),
+  },
+  {
+    key: 'thisWeek',
+    header: 'This Week',
+    className: 'text-right',
+    render: (row) => (
+      <span className="tabular-nums font-medium" style={{ color: 'var(--text-primary)' }}>
+        {row.fmt(row.current)}
+      </span>
+    ),
+  },
+  {
+    key: 'lastWeek',
+    header: 'Last Week',
+    className: 'text-right',
+    render: (row) => (
+      <span className="tabular-nums" style={{ color: 'var(--text-muted)' }}>
+        {row.fmt(row.previous)}
+      </span>
+    ),
+  },
+  {
+    key: 'change',
+    header: 'Change',
+    className: 'text-right',
+    render: (row) => {
+      const diff = row.current - row.previous
+      const isUp = diff > 0
+      const isEqual = diff === 0
+      if (isEqual) return <span style={{ color: 'var(--text-muted)' }}>—</span>
+      return (
+        <span className={clsx('inline-flex items-center gap-0.5 text-xs font-medium', isUp ? 'text-neon-green' : 'text-neon-red')}>
+          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          {fmtNumber(Math.abs(diff), row.metric.includes('Cost') ? 2 : 1)}
+        </span>
+      )
+    },
+  },
+]
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function getWeekRange(offset: number): [Date, Date] {
+  usePageTitle('Weekly Digest')
   const now = new Date()
   const dayOfWeek = now.getDay()
   const monday = new Date(now)
@@ -154,37 +216,13 @@ function dayIndex(dateStr: string): number {
   return day === 0 ? 6 : day - 1
 }
 
-// ── severity helpers ─────────────────────────────────────────────────────────
-
-function severityColor(severity: Alert['severity']): string {
-  switch (severity) {
-    case 'critical':
-      return 'text-neon-red'
-    case 'warning':
-      return 'text-neon-amber'
-    default:
-      return 'text-neon-cyan'
-  }
-}
-
-function severityBg(severity: Alert['severity']): string {
-  switch (severity) {
-    case 'critical':
-      return 'bg-neon-red/20 text-neon-red'
-    case 'warning':
-      return 'bg-neon-amber/20 text-neon-amber'
-    default:
-      return 'bg-neon-cyan/20 text-neon-cyan'
-  }
-}
-
 // ── chart tooltip ────────────────────────────────────────────────────────────
 
 function DigestTooltip({ active, payload, label, unit }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div
-      className="glass-card rounded-lg px-3 py-2 text-xs shadow-lg"
+    <GlassPanel
+      className="px-3 py-2 text-xs shadow-lg"
       style={{ background: 'var(--surface-2)', border: '1px solid var(--glass-border)' }}
     >
       <p style={{ color: 'var(--text-primary)' }} className="font-medium mb-1">
@@ -195,11 +233,11 @@ function DigestTooltip({ active, payload, label, unit }: any) {
           {fmtNumber(entry.value, 1)} {unit}
         </p>
       ))}
-    </div>
+    </GlassPanel>
   )
 }
 
-// ── main component ───────────────────────────────────────────────────────────
+// ── main component───────────────────────────────────────────────────────────
 
 export default function WeeklyDigest() {
   const [weekOffset, setWeekOffset] = useState(0)
@@ -433,25 +471,25 @@ export default function WeeklyDigest() {
         metric: `Distance (${distanceUnit})`,
         current: convertDistance(stats.totalDist),
         previous: convertDistance(stats.prevDist),
-        fmt: (v: number) => v.toFixed(1),
+        fmt: (v: number) => fmtNumber(v),
       },
       {
         metric: 'Energy (kWh)',
         current: stats.totalEnergy,
         previous: stats.prevEnergy,
-        fmt: (v: number) => v.toFixed(1),
+        fmt: (v: number) => fmtNumber(v),
       },
       {
         metric: 'Cost ($)',
         current: stats.totalCost,
         previous: stats.prevCost,
-        fmt: (v: number) => `$${v.toFixed(2)}`,
+        fmt: (v: number) => `$${fmtNumber(v, 2)}`,
       },
       {
         metric: `Avg Top Speed (${speedUnit})`,
         current: convertSpeed(avgSpeed),
         previous: convertSpeed(prevAvgSpeed),
-        fmt: (v: number) => v.toFixed(0),
+        fmt: (v: number) => fmtInt(v),
       },
     ]
   }, [stats, weekDrives, prevDrives, convertDistance, convertSpeed, distanceUnit, speedUnit])
@@ -468,18 +506,11 @@ export default function WeeklyDigest() {
           icon={<CalendarDays className="h-7 w-7 text-neon-cyan" />}
           actions={
             vehicles && vehicles.length > 1 ? (
-              <select
+              <Select
                 value={vehicleId ?? ''}
                 onChange={(e) => setSelectedVehicle(Number(e.target.value))}
-                className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-              >
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.display_name || v.vin}
-                  </option>
-                ))}
-              </select>
+                options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+              />
             ) : undefined
           }
         />
@@ -531,7 +562,7 @@ export default function WeeklyDigest() {
             {/* ── 3. Week-at-a-Glance Summary ────────────────────────── */}
             <StaggerContainer className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Total Drives"
                   value={stats.driveCount}
                   icon={<Car className="h-5 w-5" />}
@@ -540,7 +571,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label={`Total Distance`}
                   value={fmtDistance(stats.totalDist, 1)}
                   icon={<Route className="h-5 w-5" />}
@@ -549,7 +580,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Energy Used"
                   value={fmtWithUnit(stats.totalEnergy, 'kWh', 1)}
                   icon={<Zap className="h-5 w-5" />}
@@ -558,7 +589,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Charging Cost"
                   value={`$${fmtNumber(stats.totalCost, 2)}`}
                   icon={<DollarSign className="h-5 w-5" />}
@@ -567,7 +598,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Gas Savings"
                   value={`$${fmtNumber(stats.gasSavings, 2)}`}
                   icon={<Leaf className="h-5 w-5" />}
@@ -577,7 +608,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Drive Time"
                   value={`${Math.floor(stats.totalDuration / 60)}h ${Math.round(stats.totalDuration % 60)}m`}
                   icon={<Timer className="h-5 w-5" />}
@@ -789,37 +820,26 @@ export default function WeeklyDigest() {
               {weekAlerts.length > 0 ? (
                 <div className="space-y-3">
                   {weekAlerts.map((alert) => (
-                    <div
+                    <AlertBanner
                       key={alert.id}
-                      className="glass-card rounded-lg p-3 flex items-start gap-3"
+                      variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'}
+                      title={alert.title}
+                      icon={<AlertTriangle className="h-4 w-4" />}
                     >
-                      <AlertTriangle className={clsx('h-4 w-4 mt-0.5 shrink-0', severityColor(alert.severity))} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', severityBg(alert.severity))}
-                          >
-                            {alert.severity}
-                          </span>
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {alert.title}
-                          </span>
-                        </div>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                          {alert.message}
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                          <Clock className="inline h-3 w-3 mr-1" />
-                          {new Date(alert.created_at).toLocaleString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {alert.message}
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                        <Clock className="inline h-3 w-3 mr-1" />
+                        {new Date(alert.created_at).toLocaleString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </AlertBanner>
                   ))}
                 </div>
               ) : (
@@ -860,65 +880,12 @@ export default function WeeklyDigest() {
                 Week-over-Week Comparison
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr style={{ color: 'var(--text-muted)' }}>
-                      <th className="text-left pb-3 font-medium">Metric</th>
-                      <th className="text-right pb-3 font-medium">This Week</th>
-                      <th className="text-right pb-3 font-medium">Last Week</th>
-                      <th className="text-right pb-3 font-medium">Change</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparison.map((row) => {
-                      const diff = row.current - row.previous
-                      const isUp = diff > 0
-                      const isEqual = diff === 0
-                      return (
-                        <tr
-                          key={row.metric}
-                          className="border-t"
-                          style={{ borderColor: 'var(--glass-border)' }}
-                        >
-                          <td className="py-2.5" style={{ color: 'var(--text-secondary)' }}>
-                            {row.metric}
-                          </td>
-                          <td
-                            className="py-2.5 text-right tabular-nums font-medium"
-                            style={{ color: 'var(--text-primary)' }}
-                          >
-                            {row.fmt(row.current)}
-                          </td>
-                          <td
-                            className="py-2.5 text-right tabular-nums"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
-                            {row.fmt(row.previous)}
-                          </td>
-                          <td className="py-2.5 text-right">
-                            {isEqual ? (
-                              <span style={{ color: 'var(--text-muted)' }}>—</span>
-                            ) : (
-                              <span
-                                className={clsx(
-                                  'inline-flex items-center gap-0.5 text-xs font-medium',
-                                  isUp ? 'text-neon-green' : 'text-neon-red',
-                                )}
-                              >
-                                {isUp ? (
-                                  <TrendingUp className="h-3 w-3" />
-                                ) : (
-                                  <TrendingDown className="h-3 w-3" />
-                                )}
-                                {fmtNumber(Math.abs(diff), row.metric.includes('Cost') ? 2 : 1)}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <DataTable<ComparisonRow>
+                  columns={comparisonColumns}
+                  data={comparison}
+                  keyExtractor={(row) => row.metric}
+                  compact
+                />
               </div>
             </GlassPanel>
           </>
@@ -942,7 +909,7 @@ function HighlightCard({
   detail: string
 }) {
   return (
-    <div className="glass-card rounded-xl p-4 flex flex-col gap-2">
+    <GlassPanel className="p-4 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
@@ -955,7 +922,7 @@ function HighlightCard({
       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
         {detail}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -991,9 +958,9 @@ function BatteryPill({
       <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>
         {label}
       </p>
-      <div className={clsx('glass-card rounded-xl px-4 py-3 inline-block', bg)}>
+      <GlassPanel className={clsx('px-4 py-3 inline-block', bg)}>
         <span className={clsx('text-2xl font-bold tabular-nums', color)}>{level}%</span>
-      </div>
+      </GlassPanel>
       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
         {formatDateWithDay(date)}
       </p>

@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { GitCompare, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Button, Input, Select, DataTable, type Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalPoint {
   timestamp: string
@@ -32,6 +33,7 @@ interface RangeStats {
 }
 
 function computeStats(data: SignalPoint[]): RangeStats {
+  usePageTitle('Signal Diff')
   const nums = data.map(d => d.value_num).filter((v): v is number => v != null)
   if (nums.length === 0) return { min: 0, max: 0, avg: 0, count: 0 }
   const min = Math.min(...nums)
@@ -140,6 +142,22 @@ export default function SignalDiff() {
     )
   }
 
+  interface ComparisonRow { label: string; a: number; b: number }
+
+  const comparisonRows: ComparisonRow[] = [
+    { label: 'Min', a: statsA.min, b: statsB.min },
+    { label: 'Max', a: statsA.max, b: statsB.max },
+    { label: 'Average', a: statsA.avg, b: statsB.avg },
+    { label: 'Data Points', a: statsA.count, b: statsB.count },
+  ]
+
+  const comparisonColumns: Column<ComparisonRow>[] = [
+    { key: 'metric', header: 'Metric', render: (row) => <span className="text-[var(--text-secondary)]">{row.label}</span> },
+    { key: 'rangeA', header: 'Range A', className: 'text-right', render: (row) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(row.a, 2)}</span> },
+    { key: 'rangeB', header: 'Range B', className: 'text-right', render: (row) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(row.b, 2)}</span> },
+    { key: 'diff', header: 'Diff', className: 'text-right', render: (row) => <DiffIndicator label="" a={row.a} b={row.b} /> },
+  ]
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -155,26 +173,21 @@ export default function SignalDiff() {
             {/* Signal Selector */}
             <div>
               <label className="block text-xs text-[var(--text-muted)] mb-1.5">Signal</label>
-              <select
+              <Select
                 value={selectedSignal}
                 onChange={e => setSelectedSignal(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] outline-none focus:border-neon-cyan/50"
-              >
-                <option value="">Select a signal…</option>
-                {(availableSignals?.signals ?? []).map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                options={[{ value: '', label: 'Select a signal…' }, ...(availableSignals?.signals ?? []).map(s => ({ value: s, label: s }))]}
+              />
             </div>
 
             {/* Range A */}
             <div>
               <label className="block text-xs text-neon-cyan mb-1.5">Range A</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={rangeAFrom} onChange={e => setRangeAFrom(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
-                <input type="datetime-local" value={rangeATo} onChange={e => setRangeATo(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
+                <Input type="datetime-local" value={rangeAFrom} onChange={e => setRangeAFrom(e.target.value)}
+                  className="flex-1" />
+                <Input type="datetime-local" value={rangeATo} onChange={e => setRangeATo(e.target.value)}
+                  className="flex-1" />
               </div>
             </div>
 
@@ -182,24 +195,22 @@ export default function SignalDiff() {
             <div>
               <label className="block text-xs text-neon-amber mb-1.5">Range B</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={rangeBFrom} onChange={e => setRangeBFrom(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
-                <input type="datetime-local" value={rangeBTo} onChange={e => setRangeBTo(e.target.value)}
-                  className="flex-1 px-2 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50" />
+                <Input type="datetime-local" value={rangeBFrom} onChange={e => setRangeBFrom(e.target.value)}
+                  className="flex-1" />
+                <Input type="datetime-local" value={rangeBTo} onChange={e => setRangeBTo(e.target.value)}
+                  className="flex-1" />
               </div>
             </div>
           </div>
 
           {/* Presets */}
           <div className="flex gap-2 mt-4">
-            <button onClick={() => applyPreset('today-yesterday')}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-neon-cyan/30 hover:text-neon-cyan transition-colors">
+            <Button variant="secondary" size="sm" onClick={() => applyPreset('today-yesterday')}>
               Today vs Yesterday
-            </button>
-            <button onClick={() => applyPreset('week')}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-neon-cyan/30 hover:text-neon-cyan transition-colors">
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => applyPreset('week')}>
               This Week vs Last Week
-            </button>
+            </Button>
           </div>
         </GlassPanel>
       </FadeIn>
@@ -255,35 +266,11 @@ export default function SignalDiff() {
           <FadeIn delay={0.3}>
             <GlassPanel className="p-5">
               <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Comparison Summary</h3>
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium text-xs">Metric</th>
-                      <th className="text-right px-3 py-2.5 text-neon-cyan font-medium text-xs">Range A</th>
-                      <th className="text-right px-3 py-2.5 text-neon-amber font-medium text-xs">Range B</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium text-xs">Diff</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { label: 'Min', a: statsA.min, b: statsB.min },
-                      { label: 'Max', a: statsA.max, b: statsB.max },
-                      { label: 'Average', a: statsA.avg, b: statsB.avg },
-                      { label: 'Data Points', a: statsA.count, b: statsB.count },
-                    ].map(row => (
-                      <tr key={row.label} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
-                        <td className="px-3 py-2.5 text-[var(--text-secondary)]">{row.label}</td>
-                        <td className="px-3 py-2.5 text-right font-mono text-[var(--text-primary)]">{fmtNumber(row.a, 2)}</td>
-                        <td className="px-3 py-2.5 text-right font-mono text-[var(--text-primary)]">{fmtNumber(row.b, 2)}</td>
-                        <td className="px-3 py-2.5 text-right">
-                          <DiffIndicator label="" a={row.a} b={row.b} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={comparisonColumns}
+                data={comparisonRows}
+                keyExtractor={(row) => row.label}
+              />
             </GlassPanel>
           </FadeIn>
         </>

@@ -4,7 +4,7 @@ import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
   Activity, Clock, ChevronDown,
 } from 'lucide-react'
-import { GlassPanel } from './ui'
+import { GlassPanel, Button } from './ui'
 import { AnimatedNumber } from './Widgets'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
@@ -66,7 +66,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
 
   return (
     <div className="border border-white/5 rounded-lg p-3 space-y-2">
-      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between">
+      <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)} className="!w-full !justify-between !rounded-lg !px-0 !py-0">
         <div className="flex items-center gap-2">
           <motion.div
             animate={{ scale: status.activity === 'active' ? [1, 1.2, 1] : 1 }}
@@ -87,7 +87,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
           </span>
           <ChevronDown size={14} className={clsx('transition-transform', expanded && 'rotate-180')} />
         </div>
-      </button>
+      </Button>
 
       {expanded && status.last_decision && (
         <div className="ml-6 space-y-1 text-xs text-white/60 border-t border-white/5 pt-2">

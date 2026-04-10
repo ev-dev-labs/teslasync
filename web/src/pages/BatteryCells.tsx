@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError, AlertBanner, Select } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { BATTERY_COLORS } from '../lib/colors'
@@ -15,6 +15,7 @@ import {
 } from 'recharts'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid } from '../components/Charts'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -25,6 +26,7 @@ const TOTAL_CELLS = MODULES * BRICKS_PER_MODULE
 /* ─────────────────────── Helpers ─────────────────────── */
 
 function gradeFromScore(score: number): { grade: string; color: string } {
+  usePageTitle('Battery Cells')
   if (score >= 95) return { grade: 'A+', color: '#10b981' }
   if (score >= 90) return { grade: 'A', color: '#10b981' }
   if (score >= 80) return { grade: 'B', color: '#00f0ff' }
@@ -476,14 +478,11 @@ export default function BatteryCells() {
           icon={<Battery className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -491,10 +490,9 @@ export default function BatteryCells() {
 
       {/* ── Warning banner ── */}
       {!isLoading && voltageStatus === 'warning' && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
-          <p className="text-sm text-neon-red">Cell voltage spread exceeds safe threshold. Battery conditioning or service may be required.</p>
-        </div>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />} className="mb-6">
+          Cell voltage spread exceeds safe threshold. Battery conditioning or service may be required.
+        </AlertBanner>
       )}
 
       {isLoading ? (
@@ -647,34 +645,34 @@ export default function BatteryCells() {
 
           {/* ═══ Section 11: Summary Stats ═══ */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Health Score</p>
               <p className="text-2xl font-bold text-neon-cyan">{fmtInt(healthScore)}<span className="text-sm">%</span></p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cell V Spread</p>
               <p className={clsx('text-2xl font-bold', statusColors[voltageStatus].text)}>{fmtNumber(cellSpread, 3)}<span className="text-sm">V</span></p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Temp Spread</p>
               <p className={clsx('text-2xl font-bold', statusColors[tempStatus].text)}>
                 {fmtNumber(convertTemp(moduleTempDelta) - convertTemp(0), 1)}<span className="text-sm">{tempUnit}</span>
               </p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Charge Cycles</p>
               <p className="text-2xl font-bold text-neon-purple">{cycles}</p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Capacity</p>
               <p className="text-2xl font-bold text-neon-green">{fmtNumber(currentCapacityKwh, 1)}<span className="text-sm">kWh</span></p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Deg. Rate</p>
               <p className={clsx('text-2xl font-bold', degradationRatePerYear > 3 ? 'text-neon-red' : degradationRatePerYear > 1.5 ? 'text-neon-amber' : 'text-neon-green')}>
                 {fmtNumber(degradationRatePerYear, 1)}<span className="text-sm">%/yr</span>
               </p>
-            </div>
+            </GlassPanel>
           </div>
         </>
       )}

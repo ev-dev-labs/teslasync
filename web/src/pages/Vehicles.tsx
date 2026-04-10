@@ -3,14 +3,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, syncVehicles, deleteVehicle, getVehicleState, Vehicle, getVehicleStatus } from '../api'
 import { Car, RefreshCw, Trash2, ExternalLink, Gauge, Lock, Shield, Battery, Zap, Activity } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge, ProgressRing, Skeleton, EmptyState, ConfirmModal } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge, ProgressRing, Skeleton, EmptyState, ConfirmModal, Button, AlertBanner } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
 import { TeslaCarViz } from '../components/TeslaCarViz'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import clsx from 'clsx'
+import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Vehicle) => void }) {
+  usePageTitle('Vehicles')
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { data: stateData } = useQuery({
     queryKey: ['vehicle-state', vehicle.id],
@@ -71,7 +73,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{convertTemp(state.inside_temp).toFixed(1)} {tempUnit}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{fmtNumber(convertTemp(state.inside_temp))} {tempUnit}</p>
                   <p className="text-[10px] text-[var(--text-muted)]">Interior</p>
                 </div>
                 <div className="text-center">
@@ -261,32 +263,28 @@ export default function Vehicles() {
         title="Fleet Management"
         subtitle={live.vehicleName ? `${live.vehicleName} · View, manage, and sync your Tesla vehicles` : "View, manage, and sync your Tesla vehicles"}
         actions={
-          <button
+          <Button
             onClick={() => syncMut.mutate()}
-            disabled={syncMut.isPending}
-            className="neon-button flex items-center gap-2 text-sm"
+            loading={syncMut.isPending}
+            icon={<RefreshCw className="h-4 w-4" />}
           >
-            <RefreshCw className={clsx('h-4 w-4', syncMut.isPending && 'animate-spin')} />
             Sync from Tesla
-          </button>
+          </Button>
         }
       />
 
       {syncMut.isSuccess && (
         <FadeIn>
-          <GlassPanel className="p-3 border-neon-green/20 bg-neon-green/5">
-            <p className="text-sm text-neon-green flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-neon-green" />
-              Synced {syncMut.data.synced} vehicle(s) successfully.
-            </p>
-          </GlassPanel>
+          <AlertBanner variant="success">
+            Synced {syncMut.data.synced} vehicle(s) successfully.
+          </AlertBanner>
         </FadeIn>
       )}
       {syncMut.isError && (
         <FadeIn>
-          <GlassPanel className="p-3 border-neon-red/20 bg-neon-red/5">
-            <p className="text-sm text-neon-red">Sync failed: {(syncMut.error as Error).message}</p>
-          </GlassPanel>
+          <AlertBanner variant="danger" title="Sync failed">
+            {(syncMut.error as Error).message}
+          </AlertBanner>
         </FadeIn>
       )}
 

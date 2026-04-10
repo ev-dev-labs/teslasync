@@ -14,6 +14,12 @@ import {
   Skeleton,
   DateRangeFilter,
   EmptyState,
+  MetricCard,
+  ChartContainer,
+  Select,
+  Input,
+  DataTable,
+  type Column,
 } from '../components/ui'
 import {
   DollarSign,
@@ -26,8 +32,6 @@ import {
   Calculator,
   TreePine,
   PiggyBank,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -50,6 +54,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { CHARGER_COLORS } from '../lib/colors'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ── constants ───────────────────────────────────────────────── */
 
@@ -148,6 +153,7 @@ function daysForRange(range: string): number | null {
 /* ── component ───────────────────────────────────────────────── */
 
 export default function CostAnalysis() {
+  usePageTitle('Cost Analysis')
   const { convertDistance, distanceUnit, settings } = useSettings()
 
   /* ── state ────────────────────────────────────── */
@@ -420,15 +426,10 @@ export default function CostAnalysis() {
     setEndDate(new Date().toISOString().split('T')[0])
   }
 
-  function toggleSort(col: typeof sortCol) {
+  function toggleSort(col: string) {
     if (sortCol === col) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    else { setSortCol(col); setSortDir('desc') }
+    else { setSortCol(col as typeof sortCol); setSortDir('desc') }
   }
-
-  const SortIcon = ({ col }: { col: typeof sortCol }) =>
-    sortCol === col
-      ? sortDir === 'asc' ? <ChevronUp className="inline h-3 w-3" /> : <ChevronDown className="inline h-3 w-3" />
-      : null
 
   /* ── render ─────────────────────────────────────── */
 
@@ -464,16 +465,11 @@ export default function CostAnalysis() {
       <FadeIn delay={0.05}>
         <div className="flex flex-wrap items-center gap-3">
           {vehicles && vehicles.length > 1 && (
-            <select
-              value={vehicleId ?? ''}
+            <Select
+              value={String(vehicleId ?? '')}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
 
           <div className="flex gap-1">
@@ -519,81 +515,71 @@ export default function CostAnalysis() {
           {/* ── 3. Cost summary cards ────────────────── */}
           <FadeIn delay={0.1}>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {[
+              {([
                 {
                   label: 'Total Charging Cost',
                   value: `$${fmtNumber(totalCost, 2)}`,
                   icon: DollarSign,
-                  color: '#00f0ff',
-                  sub: `${(sessions ?? []).length} sessions`,
+                  color: 'cyan' as const,
+                  subtitle: `${(sessions ?? []).length} sessions`,
                 },
                 {
                   label: `Cost per ${distanceUnit}`,
                   value: `$${fmtNumber(costPerUnit, 3)}`,
                   icon: TrendingDown,
-                  color: '#10b981',
-                  sub: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit} driven`,
+                  color: 'green' as const,
+                  subtitle: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit} driven`,
                 },
                 {
                   label: 'Avg Cost per kWh',
                   value: `$${fmtNumber(costPerKwh, 3)}`,
                   icon: Zap,
-                  color: '#f59e0b',
-                  sub: `${fmtWithUnit(totalEnergy, 'kWh')} total`,
+                  color: 'amber' as const,
+                  subtitle: `${fmtWithUnit(totalEnergy, 'kWh')} total`,
                 },
                 {
                   label: 'Gas Equivalent',
                   value: `$${fmtNumber(gasEquiv, 2)}`,
                   icon: Fuel,
-                  color: '#ef4444',
-                  sub: `at $${fmtNumber(gasPrice, 2)}/gal, ${mpg} mpg`,
+                  color: 'red' as const,
+                  subtitle: `at $${fmtNumber(gasPrice, 2)}/gal, ${mpg} mpg`,
                 },
                 {
                   label: 'Total Savings',
                   value: `$${fmtNumber(totalSavings, 2)}`,
                   icon: PiggyBank,
-                  color: totalSavings >= 0 ? '#10b981' : '#ef4444',
-                  sub: `vs gasoline`,
+                  color: totalSavings >= 0 ? 'green' as const : 'red' as const,
+                  subtitle: `vs gasoline`,
                 },
                 {
                   label: 'Savings %',
                   value: `${fmtPercent(savingsPct, 1)}`,
                   icon: TrendingUp,
-                  color: savingsPct >= 0 ? '#10b981' : '#ef4444',
-                  sub: `cheaper than gas`,
+                  color: savingsPct >= 0 ? 'green' as const : 'red' as const,
+                  subtitle: `cheaper than gas`,
                 },
-              ].map(card => (
-                <GlassPanel key={card.label} className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <card.icon className="h-4 w-4" style={{ color: card.color }} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                      {card.label}
-                    </span>
-                  </div>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                    {card.value}
-                  </p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {card.sub}
-                  </p>
-                </GlassPanel>
+              ]).map(card => (
+                <MetricCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  icon={<card.icon className="h-4 w-4" />}
+                  color={card.color}
+                  subtitle={card.subtitle}
+                />
               ))}
             </div>
           </FadeIn>
 
           {/* ── 4. Monthly cost trend chart ─────────── */}
           <FadeIn delay={0.15}>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                <BarChart3 className="inline h-4 w-4 mr-2" style={{ color: '#10b981' }} />
-                Monthly Cost Trend
-              </h3>
+            <ChartContainer title="Monthly Cost Trend" height={300}>
               {monthlyData.length === 0 ? (
                 <p className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
                   No monthly data available for this period.
                 </p>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyData}>
                     <defs>
                       <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
@@ -629,22 +615,18 @@ export default function CostAnalysis() {
                   </AreaChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* ── 5. Cost per mile/km trend ───────────── */}
           <FadeIn delay={0.2}>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                <TrendingDown className="inline h-4 w-4 mr-2" style={{ color: '#00f0ff' }} />
-                Cost per {distanceUnit} Over Time
-              </h3>
+            <ChartContainer title={`Cost per ${distanceUnit} Over Time`} height={280}>
               {costPerUnitTrend.length === 0 ? (
                 <p className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
                   Not enough data to show cost per {distanceUnit} trend.
                 </p>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={costPerUnitTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                     <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -674,24 +656,20 @@ export default function CostAnalysis() {
                   </LineChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* ── 6. Cost by charger type ─────────────── */}
           <FadeIn delay={0.25}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* donut chart */}
-              <GlassPanel className="p-4 sm:p-6">
-                <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                  <Zap className="inline h-4 w-4 mr-2" style={{ color: '#a855f7' }} />
-                  Cost by Charger Type
-                </h3>
+              <ChartContainer title="Cost by Charger Type" height={280}>
                 {chargerBreakdown.length === 0 ? (
                   <p className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
                     No charging session data available.
                   </p>
                 ) : (
-                  <ResponsiveContainer width="100%" height={280}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={chargerBreakdown}
@@ -714,7 +692,7 @@ export default function CostAnalysis() {
                     </PieChart>
                   </ResponsiveContainer>
                 )}
-              </GlassPanel>
+              </ChartContainer>
 
               {/* detail bars */}
               <GlassPanel className="p-4 sm:p-6">
@@ -773,42 +751,39 @@ export default function CostAnalysis() {
                     <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                       Gas Price ($/gallon)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       step="0.10"
                       min="0"
                       value={gasPrice}
                       onChange={e => setGasPrice(Number(e.target.value) || DEFAULT_GAS_PRICE)}
-                      className="glass-card w-full px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      className="w-full"
                     />
                   </div>
                   <div>
                     <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                       Vehicle MPG Equivalent
                     </label>
-                    <input
+                    <Input
                       type="number"
                       step="1"
                       min="1"
                       value={mpg}
                       onChange={e => setMpg(Number(e.target.value) || DEFAULT_MPG)}
-                      className="glass-card w-full px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      className="w-full"
                     />
                   </div>
                   <div>
                     <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
                       Electricity Rate ($/kWh)
                     </label>
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       min="0"
                       value={effectiveElecRate}
                       onChange={e => setElecRate(Number(e.target.value) || null)}
-                      className="glass-card w-full px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                      className="w-full"
                     />
                     <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                       Default from settings: ${fmtNumber(settings.base_cost_per_kwh, 2)}/kWh
@@ -818,8 +793,8 @@ export default function CostAnalysis() {
 
                 {/* results */}
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
-                  <div
-                    className="glass-card rounded-2xl p-6 w-full"
+                  <GlassPanel
+                    className="rounded-2xl p-6 w-full"
                     style={{
                       background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(0,240,255,0.05))',
                       borderColor: 'var(--glass-border)',
@@ -842,26 +817,26 @@ export default function CostAnalysis() {
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       {totalSavings >= 0 ? 'compared to gasoline' : 'more than gasoline (check your rates!)'}
                     </p>
-                  </div>
+                  </GlassPanel>
                   <div className="grid grid-cols-3 gap-3 w-full">
-                    <div className="glass-card rounded-lg p-3">
+                    <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Monthly</p>
                       <p className="text-sm font-bold" style={{ color: '#00f0ff' }}>
                         ${fmtNumber(monthlySavings, 2)}
                       </p>
-                    </div>
-                    <div className="glass-card rounded-lg p-3">
+                    </GlassPanel>
+                    <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Annual (est.)</p>
                       <p className="text-sm font-bold" style={{ color: '#10b981' }}>
                         ${fmtNumber(annualSavings, 2)}
                       </p>
-                    </div>
-                    <div className="glass-card rounded-lg p-3">
+                    </GlassPanel>
+                    <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Lifetime</p>
                       <p className="text-sm font-bold" style={{ color: '#a855f7' }}>
                         ${fmtNumber(lifetimeSavings, 2)}
                       </p>
-                    </div>
+                    </GlassPanel>
                   </div>
                 </div>
               </div>
@@ -880,84 +855,34 @@ export default function CostAnalysis() {
                   No monthly data to display.
                 </p>
               ) : (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--glass-border)' }}>
-                      {([
-                        ['month', 'Month'],
-                        ['energy', 'Energy (kWh)'],
-                        ['distance', `Distance (${distanceUnit})`],
-                        ['cost', 'Cost ($)'],
-                        ['perUnit', `$/${distanceUnit}`],
-                        ['gasCost', 'Gas Would Be'],
-                        ['saved', 'Saved'],
-                      ] as [typeof sortCol, string][]).map(([col, label]) => (
-                        <th
-                          key={col}
-                          className="py-2 px-2 text-left cursor-pointer hover:text-neon-cyan select-none"
-                          onClick={() => toggleSort(col)}
-                        >
-                          {label} <SortIcon col={col} />
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableData.map(row => {
+                <DataTable
+                  columns={[
+                    { key: 'month', header: 'Month', sortable: true, render: (row) => {
                       const isBest = bestMonth?.month === row.month && row.perUnit > 0
                       const isWorst = worstMonth?.month === row.month && row.perUnit > 0
-                      return (
-                        <tr
-                          key={row.month}
-                          className={clsx(
-                            'transition-colors',
-                            isBest && 'bg-neon-green/5',
-                            isWorst && 'bg-neon-red/5',
-                          )}
-                          style={{ borderBottom: '1px solid var(--glass-border)' }}
-                        >
-                          <td className="py-2 px-2 font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {row.label}
-                            {isBest && <span className="ml-1 text-neon-green text-[9px]">★ Best</span>}
-                            {isWorst && <span className="ml-1 text-neon-red text-[9px]">▼ Worst</span>}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            {fmtNumber(row.energy)}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            {fmtNumber(row.distance)}
-                          </td>
-                          <td className="py-2 px-2 font-medium" style={{ color: '#00f0ff' }}>
-                            ${fmtNumber(row.cost, 2)}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            ${fmtNumber(row.perUnit, 3)}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: '#f59e0b' }}>
-                            ${fmtNumber(row.gasCost, 2)}
-                          </td>
-                          <td
-                            className="py-2 px-2 font-medium"
-                            style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}
-                          >
-                            {row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved, 2)}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      return <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{row.label}{isBest && <span className="ml-1 text-neon-green text-[9px]">★ Best</span>}{isWorst && <span className="ml-1 text-neon-red text-[9px]">▼ Worst</span>}</span>
+                    }},
+                    { key: 'energy', header: 'Energy (kWh)', sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>{fmtNumber(row.energy)}</span> },
+                    { key: 'distance', header: `Distance (${distanceUnit})`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>{fmtNumber(row.distance)}</span> },
+                    { key: 'cost', header: 'Cost ($)', sortable: true, render: (row) => <span className="font-medium" style={{ color: '#00f0ff' }}>${fmtNumber(row.cost, 2)}</span> },
+                    { key: 'perUnit', header: `$/${distanceUnit}`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>${fmtNumber(row.perUnit, 3)}</span> },
+                    { key: 'gasCost', header: 'Gas Would Be', sortable: true, render: (row) => <span style={{ color: '#f59e0b' }}>${fmtNumber(row.gasCost, 2)}</span> },
+                    { key: 'saved', header: 'Saved', sortable: true, render: (row) => <span className="font-medium" style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}>{row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved, 2)}</span> },
+                  ] as Column<(typeof tableData)[number]>[]}
+                  data={tableData}
+                  keyExtractor={(row) => row.month}
+                  sortKey={sortCol}
+                  sortDir={sortDir}
+                  onSort={toggleSort}
+                  compact
+                />
               )}
             </GlassPanel>
           </FadeIn>
 
           {/* ── 9. Electricity rate analysis ────────── */}
           <FadeIn delay={0.4}>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                <Zap className="inline h-4 w-4 mr-2" style={{ color: '#f59e0b' }} />
-                Electricity Rate Analysis
-              </h3>
+            <ChartContainer title="Electricity Rate Analysis" height="auto">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* hourly rate chart */}
                 <div className="lg:col-span-2">
@@ -1003,8 +928,8 @@ export default function CostAnalysis() {
                 {/* insights */}
                 <div className="space-y-3">
                   {cheapestHour && cheapestHour.avgRate > 0 && (
-                    <div
-                      className="glass-card rounded-lg p-3"
+                    <GlassPanel
+                      className="rounded-lg p-3"
                       style={{ borderLeft: '3px solid #10b981' }}
                     >
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1016,11 +941,11 @@ export default function CostAnalysis() {
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {cheapestHour.sessions} sessions
                       </p>
-                    </div>
+                    </GlassPanel>
                   )}
                   {mostExpensiveHour && mostExpensiveHour.avgRate > 0 && (
-                    <div
-                      className="glass-card rounded-lg p-3"
+                    <GlassPanel
+                      className="rounded-lg p-3"
                       style={{ borderLeft: '3px solid #ef4444' }}
                     >
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1032,11 +957,11 @@ export default function CostAnalysis() {
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {mostExpensiveHour.sessions} sessions
                       </p>
-                    </div>
+                    </GlassPanel>
                   )}
                   {cheapestChargerType && (
-                    <div
-                      className="glass-card rounded-lg p-3"
+                    <GlassPanel
+                      className="rounded-lg p-3"
                       style={{ borderLeft: `3px solid ${cheapestChargerType.fill}` }}
                     >
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1045,10 +970,10 @@ export default function CostAnalysis() {
                       <p className="text-sm font-bold" style={{ color: cheapestChargerType.fill }}>
                         {cheapestChargerType.type} — ${fmtNumber(cheapestChargerType.avgCostKwh, 3)}/kWh
                       </p>
-                    </div>
+                    </GlassPanel>
                   )}
-                  <div
-                    className="glass-card rounded-lg p-3"
+                  <GlassPanel
+                    className="rounded-lg p-3"
                     style={{ borderLeft: '3px solid #00f0ff' }}
                   >
                     <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1059,10 +984,10 @@ export default function CostAnalysis() {
                         ? `You save the most charging via ${cheapestChargerType.type} around ${cheapestHour.hour}.`
                         : 'Charge during off-peak hours at home for maximum savings.'}
                     </p>
-                  </div>
+                  </GlassPanel>
                 </div>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* ── 10. Lifetime summary ───────────────── */}
@@ -1119,7 +1044,7 @@ export default function CostAnalysis() {
                     icon: TreePine,
                   },
                 ].map(item => (
-                  <div key={item.label} className="glass-card rounded-xl p-4 text-center">
+                  <GlassPanel key={item.label} className="p-4 text-center">
                     <item.icon className="h-5 w-5 mx-auto mb-2" style={{ color: item.color }} />
                     <p className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>
                       {item.label}
@@ -1127,13 +1052,13 @@ export default function CostAnalysis() {
                     <p className="text-lg font-bold" style={{ color: item.color }}>
                       {item.value}
                     </p>
-                  </div>
+                  </GlassPanel>
                 ))}
               </div>
 
               {/* environmental impact emphasis */}
-              <div
-                className="mt-6 glass-card rounded-xl p-4 text-center"
+              <GlassPanel
+                className="mt-6 p-4 text-center"
                 style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(0,240,255,0.04))',
                   borderColor: 'var(--glass-border)',
@@ -1155,7 +1080,7 @@ export default function CostAnalysis() {
                   </span>{' '}
                   for a year.
                 </p>
-              </div>
+              </GlassPanel>
             </GlassPanel>
           </FadeIn>
         </>

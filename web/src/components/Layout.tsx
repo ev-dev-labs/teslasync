@@ -63,6 +63,7 @@ import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdate
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useToast } from './Toast'
 import { useSettings } from '../hooks/useSettings'
+import { GlassPanel } from './ui'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',
@@ -423,17 +424,17 @@ export default function Layout() {
         <div className="border-t px-4 py-3 space-y-2 shrink-0 safe-bottom" style={{ borderColor: 'var(--glass-border)' }}>
           {/* Update available banner */}
           {updateCheck?.update_available && (
-            <div className="glass-card !p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <GlassPanel className="!p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
               <Download className="h-3.5 w-3.5 text-amber-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-medium text-amber-300">Update available</p>
                 <p className="text-[10px] text-amber-400/70">v{updateCheck.latest}</p>
               </div>
-            </div>
+            </GlassPanel>
           )}
           {/* Live vehicle mini-status */}
           {primaryVehicle && primaryState?.state && (
-            <div className="glass-card !p-2.5 flex items-center gap-2.5">
+            <GlassPanel className="!p-2.5 flex items-center gap-2.5">
               <div className={clsx('h-2 w-2 rounded-full', primaryState.state.battery_level > 20 ? 'bg-neon-green' : 'bg-neon-red')}
                 style={{ boxShadow: `0 0 6px ${primaryState.state.battery_level > 20 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}` }} />
               <div className="flex-1 min-w-0">
@@ -441,9 +442,9 @@ export default function Layout() {
                 <p className="text-[10px] text-[var(--text-muted)]">{primaryState.state.battery_level}% · {Math.round(convertDistance(primaryState.state.rated_range))} {distanceUnit}</p>
               </div>
               <Zap className="h-3 w-3 text-neon-cyan/50" />
-            </div>
+            </GlassPanel>
           )}
-          <div className="glass-card flex items-center gap-3 !p-2.5">
+          <GlassPanel className="flex items-center gap-3 !p-2.5">
             {isConnected ? (
               <Wifi className="h-3.5 w-3.5 text-neon-green" />
             ) : (
@@ -455,7 +456,7 @@ export default function Layout() {
             </div>
             <SystemHealthDot />
             <SSEStatusDot state={sseState} />
-          </div>
+          </GlassPanel>
         </div>
       </aside>
 

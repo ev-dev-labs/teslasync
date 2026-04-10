@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getLocationSnapshots, getLocationSnapshotLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, Badge, DataTable, type Column } from '../components/ui'
 import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone, Satellite, Map, CircleDot, LocateFixed } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDateTime } from '../lib/dateFormat'
+import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
 /*  Chart tooltip                                                      */
@@ -15,6 +17,7 @@ import { formatDateTime } from '../lib/dateFormat'
 
 interface NavTooltipPayload { name: string; value: number; color?: string }
 function NavTooltip({ active, payload, label }: { active?: boolean; payload?: NavTooltipPayload[]; label?: string }) {
+  usePageTitle('Navigation')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -44,7 +47,7 @@ function LocationStatusCard({
   loading: boolean
 }) {
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       {loading ? (
         <Skeleton className="h-20 w-full rounded-lg" />
       ) : (
@@ -72,7 +75,7 @@ function LocationStatusCard({
           </div>
         </>
       )}
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -82,55 +85,20 @@ function LocationStatusCard({
 
 function TrafficDelayBadge({ minutes }: { minutes: number | null | undefined }) {
   const val = minutes ?? 0
-  const severity = val === 0 ? 'green' : val <= 5 ? 'amber' : 'red'
-  const colorMap = {
-    green: { text: 'text-neon-green', bg: 'bg-neon-green/20', border: 'border-neon-green/30' },
-    amber: { text: 'text-neon-amber', bg: 'bg-neon-amber/20', border: 'border-neon-amber/30' },
-    red: { text: 'text-neon-red', bg: 'bg-neon-red/20', border: 'border-neon-red/30' },
-  } as const
-  const c = colorMap[severity]
+  const color = val === 0 ? 'green' : val <= 5 ? 'amber' : 'red'
   const label = val === 0 ? 'No delay' : `${val} min delay`
 
   return (
-    <span className={clsx('inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border', c.bg, c.text, c.border)}>
+    <Badge color={color}>
       <TrafficCone className="h-3 w-3" />
       {label}
-    </span>
+    </Badge>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/*  Stat card                                                          */
+/*  (Removed local StatCard — using MetricCard from ui)                */
 /* ------------------------------------------------------------------ */
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  color = 'text-neon-cyan',
-}: {
-  icon: React.ElementType
-  label: string
-  value: string | number
-  sub?: string
-  color?: string
-}) {
-  return (
-    <div className="glass-card p-4 sm:p-5">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className={clsx('h-4 w-4', color)} />
-        <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-          {label}
-        </p>
-      </div>
-      <p className={clsx('text-2xl font-bold', color)}>{value}</p>
-      {sub && (
-        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{sub}</p>
-      )}
-    </div>
-  )
-}
 
 /* ------------------------------------------------------------------ */
 /*  Main page component                                                */
@@ -191,6 +159,54 @@ export default function NavigationRoute() {
         delay: s.route_traffic_delay_min,
       }))
   }, [history])
+
+  const destColumns: Column<(typeof recentDestinations)[number]>[] = [
+    {
+      key: 'time',
+      header: 'Time',
+      render: (row) => (
+        <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+          {row.time}
+        </span>
+      ),
+    },
+    {
+      key: 'destination',
+      header: 'Destination',
+      render: (row) => (
+        <div className="flex items-center gap-1.5 max-w-[200px]">
+          <MapPin className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
+          <span className="truncate font-medium" style={{ color: 'var(--text-primary)' }}>{row.destination}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'distance',
+      header: 'Distance',
+      className: 'text-right',
+      render: (row) => (
+        <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+          {row.miles != null ? `${fmtNumber(convertDistance(row.miles * 1.60934))} ${distanceUnit}` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'eta',
+      header: 'ETA',
+      className: 'text-right',
+      render: (row) => (
+        <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+          {row.minutes != null ? `${Math.round(row.minutes)} min` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'delay',
+      header: 'Delay',
+      className: 'text-right',
+      render: (row) => <TrafficDelayBadge minutes={row.delay} />,
+    },
+  ]
 
   /* ---- Navigation stats ---- */
   const stats = useMemo(() => {
@@ -262,7 +278,7 @@ export default function NavigationRoute() {
           <select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
             style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
           >
             {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
@@ -297,7 +313,7 @@ export default function NavigationRoute() {
                   <div className="flex items-center gap-1.5">
                     <Route className="h-4 w-4 text-neon-cyan" />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {convertDistance(latest!.miles_to_arrival * 1.60934).toFixed(1)} {distanceUnit}
+                      {fmtNumber(convertDistance(latest!.miles_to_arrival * 1.60934))} {distanceUnit}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>remaining</span>
                   </div>
@@ -379,17 +395,14 @@ export default function NavigationRoute() {
             <Satellite className="h-5 w-5 text-neon-purple" />
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Live Location Signals</h3>
           </div>
-          <span className={clsx(
-            'text-[10px] px-2 py-0.5 rounded-full font-medium',
-            sseConnected ? 'bg-neon-green/20 text-neon-green' : 'bg-white/10 text-[var(--text-muted)]',
-          )}>
+          <Badge color={sseConnected ? 'green' : 'neutral'} size="sm">
             {sseConnected ? '● LIVE' : '○ POLLING'}
-          </span>
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* GPS State */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', liveState.gpsState ? 'bg-neon-green/10' : 'bg-white/5')}>
               <Satellite className={clsx('h-4 w-4', liveState.gpsState ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
             </div>
@@ -399,10 +412,10 @@ export default function NavigationRoute() {
                 {liveState.gpsState ? 'Lock Acquired' : 'No Lock'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Current Position */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <LocateFixed className="h-4 w-4 text-neon-cyan" />
             </div>
@@ -412,10 +425,10 @@ export default function NavigationRoute() {
                 {liveState.latitude !== 0 ? `${liveState.latitude.toFixed(5)}, ${liveState.longitude.toFixed(5)}` : '—'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Heading */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-blue/10">
               <Compass className="h-4 w-4 text-neon-blue" style={{ transform: `rotate(${liveState.heading}deg)` }} />
             </div>
@@ -425,10 +438,10 @@ export default function NavigationRoute() {
                 {liveState.heading > 0 ? `${Math.round(liveState.heading)}°` : '—'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Destination */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', liveState.destinationName ? 'bg-neon-cyan/10' : 'bg-white/5')}>
               <MapPin className={clsx('h-4 w-4', liveState.destinationName ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
             </div>
@@ -438,10 +451,10 @@ export default function NavigationRoute() {
                 {liveState.destinationName || 'None'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Destination Location */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-white/5">
               <Map className="h-4 w-4 text-[var(--text-secondary)]" />
             </div>
@@ -451,23 +464,23 @@ export default function NavigationRoute() {
                 {liveState.destinationLatitude !== 0 ? `${liveState.destinationLatitude.toFixed(5)}, ${liveState.destinationLongitude.toFixed(5)}` : '—'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Distance to Arrival */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', liveState.distanceToArrival > 0 ? 'bg-neon-amber/10' : 'bg-white/5')}>
               <Route className={clsx('h-4 w-4', liveState.distanceToArrival > 0 ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Distance to Arrival</p>
               <p className={clsx('text-sm font-semibold', liveState.distanceToArrival > 0 ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
-                {liveState.distanceToArrival > 0 ? `${convertDistance(liveState.distanceToArrival).toFixed(1)} ${distanceUnit}` : '—'}
+                {liveState.distanceToArrival > 0 ? `${fmtNumber(convertDistance(liveState.distanceToArrival))} ${distanceUnit}` : '—'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Minutes to Arrival */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', liveState.minutesToArrival > 0 ? 'bg-neon-purple/10' : 'bg-white/5')}>
               <Timer className={clsx('h-4 w-4', liveState.minutesToArrival > 0 ? 'text-neon-purple' : 'text-[var(--text-muted)]')} />
             </div>
@@ -477,10 +490,10 @@ export default function NavigationRoute() {
                 {liveState.minutesToArrival > 0 ? `${Math.round(liveState.minutesToArrival)} min` : '—'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Origin Location */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-white/5">
               <CircleDot className="h-4 w-4 text-[var(--text-secondary)]" />
             </div>
@@ -490,10 +503,10 @@ export default function NavigationRoute() {
                 {liveState.originLatitude !== 0 ? `${liveState.originLatitude.toFixed(5)}, ${liveState.originLongitude.toFixed(5)}` : '—'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Route Line */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', liveState.routeLine ? 'bg-neon-cyan/10' : 'bg-white/5')}>
               <Route className={clsx('h-4 w-4', liveState.routeLine ? 'text-neon-cyan' : 'text-[var(--text-muted)]')} />
             </div>
@@ -503,10 +516,10 @@ export default function NavigationRoute() {
                 {liveState.routeLine ? `${liveState.routeLine.length} chars (encoded)` : 'No route'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Located At Home */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', isAtHome ? 'bg-neon-green/10' : 'bg-white/5')}>
               <Home className={clsx('h-4 w-4', isAtHome ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
             </div>
@@ -516,10 +529,10 @@ export default function NavigationRoute() {
                 {isAtHome ? 'Yes' : 'No'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Located At Work */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', isAtWork ? 'bg-neon-blue/10' : 'bg-white/5')}>
               <Building className={clsx('h-4 w-4', isAtWork ? 'text-neon-blue' : 'text-[var(--text-muted)]')} />
             </div>
@@ -529,10 +542,10 @@ export default function NavigationRoute() {
                 {isAtWork ? 'Yes' : 'No'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Located At Favorite */}
-          <div className="glass-card p-3 flex items-center gap-3">
+          <GlassPanel className="p-3 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', isAtFavorite ? 'bg-neon-amber/10' : 'bg-white/5')}>
               <Star className={clsx('h-4 w-4', isAtFavorite ? 'text-neon-amber' : 'text-[var(--text-muted)]')} />
             </div>
@@ -542,7 +555,7 @@ export default function NavigationRoute() {
                 {isAtFavorite ? 'Yes' : 'No'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
         </div>
       </GlassPanel>
 
@@ -588,47 +601,15 @@ export default function NavigationRoute() {
 
         {loadingHistory ? (
           <Skeleton className="h-48 rounded-xl" />
-        ) : recentDestinations.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-[var(--text-muted)] text-sm">
-            No destination history available
-          </div>
         ) : (
           <div className="overflow-x-auto max-h-72 overflow-y-auto scrollbar-thin">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Time</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Destination</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Distance</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>ETA</th>
-                  <th className="text-right py-2 px-3 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Delay</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentDestinations.map((row, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.time}
-                    </td>
-                    <td className="py-2 px-3 font-medium max-w-[200px] truncate" style={{ color: 'var(--text-primary)' }}>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-neon-cyan shrink-0" />
-                        <span className="truncate">{row.destination}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3 text-right whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.miles != null ? `${convertDistance(row.miles * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
-                    </td>
-                    <td className="py-2 px-3 text-right whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {row.minutes != null ? `${Math.round(row.minutes)} min` : '—'}
-                    </td>
-                    <td className="py-2 px-3 text-right">
-                      <TrafficDelayBadge minutes={row.delay} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              columns={destColumns}
+              data={recentDestinations}
+              keyExtractor={(row) => `${row.time}-${row.destination}`}
+              compact
+              emptyMessage="No destination history available"
+            />
           </div>
         )}
       </GlassPanel>
@@ -677,33 +658,33 @@ export default function NavigationRoute() {
           [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)
         ) : (
           <>
-            <StatCard
-              icon={MapPin}
+            <MetricCard
+              icon={<MapPin className="h-4 w-4" />}
               label="Unique Destinations"
               value={stats.uniqueDestinations}
-              sub="distinct locations"
-              color="text-neon-cyan"
+              subtitle="distinct locations"
+              color="cyan"
             />
-            <StatCard
-              icon={Route}
+            <MetricCard
+              icon={<Route className="h-4 w-4" />}
               label="Avg Trip Distance"
-              value={stats.avgDistance > 0 ? `${convertDistance(stats.avgDistance * 1.60934).toFixed(1)} ${distanceUnit}` : '—'}
-              sub={`${distanceUnit} to arrival average`}
-              color="text-neon-green"
+              value={stats.avgDistance > 0 ? `${fmtNumber(convertDistance(stats.avgDistance * 1.60934))} ${distanceUnit}` : '—'}
+              subtitle={`${distanceUnit} to arrival average`}
+              color="green"
             />
-            <StatCard
-              icon={Star}
+            <MetricCard
+              icon={<Star className="h-4 w-4" />}
               label="Most Common Dest"
               value={stats.mostCommon}
-              sub="most frequent destination"
-              color="text-neon-amber"
+              subtitle="most frequent destination"
+              color="amber"
             />
-            <StatCard
-              icon={TrafficCone}
+            <MetricCard
+              icon={<TrafficCone className="h-4 w-4" />}
               label="Total Traffic Delay"
               value={`${stats.totalDelay} min`}
-              sub="cumulative delay"
-              color="text-neon-red"
+              subtitle="cumulative delay"
+              color="red"
             />
           </>
         )}

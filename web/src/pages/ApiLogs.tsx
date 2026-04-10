@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAPICallLogs, getAPICallLogStats } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, Button, Select, Input } from '../components/ui'
 import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { fmtNumber } from '../lib/numberFormat'
+import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatusBadge({ code }: { code: number | null }) {
+  usePageTitle('API Logs')
   if (!code) return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-400">N/A</span>
   const color = code < 300 ? 'text-emerald-400 bg-emerald-400/10' : code < 400 ? 'text-blue-400 bg-blue-400/10' : code < 500 ? 'text-amber-400 bg-amber-400/10' : 'text-red-400 bg-red-400/10'
   return <span className={clsx('text-xs font-mono px-2 py-0.5 rounded-full', color)}>{code}</span>
@@ -105,7 +109,7 @@ export default function ApiLogs() {
       <FadeIn>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard icon={<FileText className="h-5 w-5" />} label="Total Calls" value={stats?.total_calls?.toLocaleString() ?? '—'} color="cyan" />
-          <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Error Rate" value={stats ? `${stats.error_rate.toFixed(1)}%` : '—'} color="amber" change={stats && stats.error_rate > 5 ? { value: String(stats.error_count), positive: false } : undefined} />
+          <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Error Rate" value={stats ? `${fmtNumber(stats.error_rate)}%` : '—'} color="amber" change={stats && stats.error_rate > 5 ? { value: String(stats.error_count), positive: false } : undefined} />
           <StatCard icon={<Clock className="h-5 w-5" />} label="Avg Duration" value={stats ? `${Math.round(stats.avg_duration_ms)}ms` : '—'} color="green" />
           <StatCard icon={<Activity className="h-5 w-5" />} label="Last 24h" value={stats?.last_24h?.toLocaleString() ?? '—'} color="purple" />
         </div>
@@ -118,38 +122,24 @@ export default function ApiLogs() {
             <Filter className="h-4 w-4 text-[var(--text-muted)]" />
             <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Filters</span>
             {hasFilters && (
-              <button onClick={clearFilters} className="ml-auto text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] flex items-center gap-1 transition-colors">
-                <X className="h-3 w-3" /> Clear
-              </button>
+              <Button variant="ghost" size="sm" icon={<X className="h-3 w-3" />} onClick={clearFilters} className="ml-auto">Clear</Button>
             )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <select value={method} onChange={e => { setMethod(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm">
-              <option value="">All Methods</option>
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-            </select>
-            <select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm">
-              <option value="">All Status</option>
-              <option value="2xx">2xx Success</option>
-              <option value="3xx">3xx Redirect</option>
-              <option value="4xx">4xx Client Error</option>
-              <option value="5xx">5xx Server Error</option>
-            </select>
+            <Select value={method} onChange={e => { setMethod(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" options={[{ value: '', label: 'All Methods' }, { value: 'GET', label: 'GET' }, { value: 'POST', label: 'POST' }, { value: 'PUT', label: 'PUT' }, { value: 'DELETE', label: 'DELETE' }]} />
+            <Select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" options={[{ value: '', label: 'All Status' }, { value: '2xx', label: '2xx Success' }, { value: '3xx', label: '3xx Redirect' }, { value: '4xx', label: '4xx Client Error' }, { value: '5xx', label: '5xx Server Error' }]} />
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
+              <Input
                 type="text"
                 placeholder="Filter by endpoint..."
                 value={endpoint}
                 onChange={e => { setEndpoint(e.target.value); setPage(0) }}
-                className="glass-input pl-8 pr-3 py-2 text-sm"
+                className="pl-8 pr-3 py-2 text-sm"
               />
             </div>
-            <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm" placeholder="Start date" />
-            <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} className="glass-input px-3 py-2 text-sm" placeholder="End date" />
+            <Input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" placeholder="Start date" />
+            <Input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} className="px-3 py-2 text-sm" placeholder="End date" />
           </div>
         </GlassPanel>
       </FadeIn>
@@ -162,9 +152,7 @@ export default function ApiLogs() {
             <p className="text-sm text-[var(--text-secondary)]">
               {total > 0 ? `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${total.toLocaleString()}` : 'No logs found'}
             </p>
-            <button onClick={handleExport} disabled={logs.length === 0} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
-              <Download className="h-3.5 w-3.5" /> Export JSON
-            </button>
+            <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={logs.length === 0}>Export JSON</Button>
           </div>
 
           {isLoading ? (
@@ -182,38 +170,37 @@ export default function ApiLogs() {
             <>
               {/* Desktop table */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className={tableTokens.wrapper}>
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-wider text-[var(--text-muted)]" style={{ background: 'var(--surface-2)' }}>
-                      <th className="px-4 py-3 font-medium">Time</th>
-                      <th className="px-4 py-3 font-medium">Method</th>
-                      <th className="px-4 py-3 font-medium">Endpoint</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium text-right">Duration</th>
-                      <th className="px-4 py-3 font-medium">Error</th>
-                      <th className="px-4 py-3 font-medium w-8"></th>
+                    <tr className={tableTokens.head} style={{ background: 'var(--surface-2)' }}>
+                      <th className={tableTokens.headCell}>Time</th>
+                      <th className={tableTokens.headCell}>Method</th>
+                      <th className={tableTokens.headCell}>Endpoint</th>
+                      <th className={tableTokens.headCell}>Status</th>
+                      <th className={clsx(tableTokens.headCell, 'text-right')}>Duration</th>
+                      <th className={tableTokens.headCell}>Error</th>
+                      <th className={clsx(tableTokens.headCell, 'w-8')}></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--glass-border)' }}>
+                  <tbody className={tableTokens.body}>
                     {logs.map((log) => (
                       <>
                         <tr
                           key={log.id}
                           onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                          className="cursor-pointer transition-colors hover:bg-white/[0.02]"
-                          style={{ borderColor: 'var(--glass-border)' }}
+                          className={clsx(tableTokens.row, 'cursor-pointer')}
                         >
-                          <td className="px-4 py-3 text-xs font-mono text-[var(--text-muted)] whitespace-nowrap">
+                          <td className={clsx(tableTokens.cell, 'text-xs font-mono text-[var(--text-muted)] whitespace-nowrap')}>
                             {formatDateTime(log.created_at)}
                           </td>
-                          <td className="px-4 py-3"><MethodBadge method={log.method} /></td>
-                          <td className="px-4 py-3 text-xs font-mono text-[var(--text-secondary)] max-w-[300px] truncate" title={log.url}>
+                          <td className={tableTokens.cell}><MethodBadge method={log.method} /></td>
+                          <td className={clsx(tableTokens.cell, 'text-xs font-mono text-[var(--text-secondary)] max-w-[300px] truncate')} title={log.url}>
                             {log.url.replace(/^https?:\/\/[^/]+/, '')}
                           </td>
-                          <td className="px-4 py-3"><StatusBadge code={log.status_code} /></td>
-                          <td className="px-4 py-3 text-xs font-mono text-right text-[var(--text-secondary)]">{log.duration_ms}ms</td>
-                          <td className="px-4 py-3 text-xs text-red-400 max-w-[200px] truncate">{log.error || '—'}</td>
-                          <td className="px-4 py-3">
+                          <td className={tableTokens.cell}><StatusBadge code={log.status_code} /></td>
+                          <td className={clsx(tableTokens.cell, 'text-xs font-mono text-right text-[var(--text-secondary)]')}>{log.duration_ms}ms</td>
+                          <td className={clsx(tableTokens.cell, 'text-xs text-red-400 max-w-[200px] truncate')}>{log.error || '—'}</td>
+                          <td className={tableTokens.cell}>
                             {expandedId === log.id ? <ChevronUp className="h-3.5 w-3.5 text-[var(--text-muted)]" /> : <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
                           </td>
                         </tr>
@@ -265,23 +252,11 @@ export default function ApiLogs() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="glass-button text-xs flex items-center gap-1 disabled:opacity-30"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" /> Previous
-              </button>
+              <Button variant="secondary" size="sm" icon={<ChevronLeft className="h-3.5 w-3.5" />} onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>Previous</Button>
               <span className="text-xs text-[var(--text-muted)]">
                 Page {page + 1} of {totalPages}
               </span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="glass-button text-xs flex items-center gap-1 disabled:opacity-30"
-              >
-                Next <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+              <Button variant="secondary" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>Next <ChevronRight className="h-3.5 w-3.5" /></Button>
             </div>
           )}
         </GlassPanel>

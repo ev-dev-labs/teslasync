@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { Activity, Search, Clock, Database } from 'lucide-react'
+import { Badge, Button } from '../components/ui'
 import { request } from '../api/client'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalPoint {
   timestamp: string
@@ -38,6 +40,7 @@ const TIME_RANGES = [
 ]
 
 export default function SignalExplorer() {
+  usePageTitle('Signal Explorer')
   const [selectedSignal, setSelectedSignal] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [timeRange, setTimeRange] = useState(24)
@@ -92,10 +95,10 @@ export default function SignalExplorer() {
         <Activity className="h-6 w-6 text-neon-cyan" />
         <h1 className="text-2xl font-bold">Signal Explorer</h1>
         {stats && (
-          <span className="text-xs text-[var(--text-muted)] bg-[var(--surface)] px-2 py-1 rounded">
+          <Badge color="neutral">
             <Database className="inline h-3 w-3 mr-1" />
             {(stats.count || 0).toLocaleString()} records
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -179,17 +182,14 @@ export default function SignalExplorer() {
           {/* Time Range Selector */}
           <div className="flex gap-2">
             {TIME_RANGES.map(tr => (
-              <button
+              <Button
                 key={tr.label}
                 onClick={() => setTimeRange(tr.hours)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  timeRange === tr.hours
-                    ? 'bg-[var(--neon-cyan)] bg-opacity-20 text-[var(--neon-cyan)] border border-[var(--neon-cyan)] border-opacity-30'
-                    : 'bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border)]'
-                }`}
+                variant={timeRange === tr.hours ? 'primary' : 'secondary'}
+                size="sm"
               >
                 {tr.label}
-              </button>
+              </Button>
             ))}
             {history && (
               <span className="ml-auto text-xs text-[var(--text-muted)] self-center">

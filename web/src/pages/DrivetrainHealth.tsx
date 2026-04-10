@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getMotorData, getMotorLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, ChartContainer, AlertBanner } from '../components/ui'
 import { Cog, Thermometer, Activity, Gauge, AlertTriangle, CheckCircle, TrendingUp, Zap, Shield } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -10,10 +10,12 @@ import { useVehicleLive } from '../hooks/useVehicleLive'
 import { cleanNil } from '../lib/cleanNil'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface DrivetrainTooltipPayload { name: string; value: number; color?: string }
 function DrivetrainTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: DrivetrainTooltipPayload[]; label?: string; unit?: string }) {
+  usePageTitle('Drivetrain Health')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -74,7 +76,7 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, axle
   const overallBg = tempBg(peakCelsius)
 
   return (
-    <div className={clsx('glass-card p-4 sm:p-5 relative overflow-hidden')}>
+    <GlassPanel className={clsx('p-4 sm:p-5 relative overflow-hidden')}>
       {/* Top accent bar */}
       <div className={clsx('absolute top-0 left-0 right-0 h-1', overallBg)} />
       <div className="flex items-center gap-2 mb-4">
@@ -148,14 +150,14 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, axle
           </div>
         </div>
       )}
-    </div>
+    </GlassPanel>
   )
 }
 
 /* ─── Status badge ─── */
 function StatusBadge({ label, value, color = 'text-neon-cyan' }: { label: string; value: string | undefined | null; color?: string }) {
   return (
-    <div className="glass-card p-4 flex items-center gap-3">
+    <GlassPanel className="p-4 flex items-center gap-3">
       <div className={clsx('px-3 py-1 rounded-full text-xs font-semibold', color,
         color === 'text-neon-green' ? 'bg-neon-green/10' :
         color === 'text-neon-red' ? 'bg-neon-red/10' :
@@ -164,18 +166,7 @@ function StatusBadge({ label, value, color = 'text-neon-cyan' }: { label: string
         {value ?? 'Unknown'}
       </div>
       <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-    </div>
-  )
-}
-
-/* ─── Summary stat card ─── */
-function StatCard({ label, value, unit, color = 'text-neon-cyan' }: { label: string; value: number | null; unit: string; color?: string }) {
-  return (
-    <div className="glass-card p-4 sm:p-5">
-      <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>{label}</p>
-      <p className={clsx('text-2xl font-bold', color)}>{value != null ? fmtNumber(value, 1) : '--'}</p>
-      <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{unit}</p>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -323,7 +314,7 @@ export default function DrivetrainHealth() {
           <select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
             style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
           >
             {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
@@ -373,7 +364,7 @@ export default function DrivetrainHealth() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
           <StatusBadge label="Drive Inverter State" value={cleanNil(latest.di_state)} color={diStateColor} />
           <StatusBadge label="Gear" value={gearValue} color={gearColor} />
-          <div className="glass-card p-4 flex items-center gap-3">
+          <GlassPanel className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Activity className="h-5 w-5 text-neon-cyan" />
             </div>
@@ -383,8 +374,8 @@ export default function DrivetrainHealth() {
                 {live.speed || latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(live.speed || latest.vehicle_speed!), 1)} ${speedUnit}` : '--'}
               </p>
             </div>
-          </div>
-          <div className="glass-card p-4 flex items-center gap-3">
+          </GlassPanel>
+          <GlassPanel className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-yellow-400/10">
               <TrendingUp className="h-5 w-5 text-yellow-400" />
             </div>
@@ -394,14 +385,14 @@ export default function DrivetrainHealth() {
                 {latest.di_axle_speed != null ? `${fmtInt(latest.di_axle_speed)} RPM` : '--'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
       {/* ── Powertrain command signals ── */}
       {!noData && latest && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
-          <div className="glass-card p-4 flex items-center gap-3">
+          <GlassPanel className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-purple/10">
               <Cog className="h-5 w-5 text-neon-purple" />
             </div>
@@ -411,8 +402,8 @@ export default function DrivetrainHealth() {
                 {latest.di_torque != null ? `${fmtNumber(latest.di_torque, 1)} Nm` : '--'}
               </p>
             </div>
-          </div>
-          <div className="glass-card p-4 flex items-center gap-3">
+          </GlassPanel>
+          <GlassPanel className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-amber/10">
               <Cog className="h-5 w-5 text-neon-amber" />
             </div>
@@ -422,8 +413,8 @@ export default function DrivetrainHealth() {
                 {latest.di_slave_torque_cmd != null ? `${fmtNumber(latest.di_slave_torque_cmd, 1)} Nm` : '--'}
               </p>
             </div>
-          </div>
-          <div className="glass-card p-4 flex items-center gap-3">
+          </GlassPanel>
+          <GlassPanel className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-neon-cyan/10">
               <Gauge className="h-5 w-5 text-neon-cyan" />
             </div>
@@ -433,8 +424,8 @@ export default function DrivetrainHealth() {
                 {latest.brake_pedal_pos != null ? `${fmtPercent(latest.brake_pedal_pos * 100)}` : '--'}
               </p>
             </div>
-          </div>
-          <div className="glass-card p-4 flex items-center gap-3">
+          </GlassPanel>
+          <GlassPanel className="p-4 flex items-center gap-3">
             <div className={clsx('p-2 rounded-lg', cleanNil(latest.hvil) === 'Fault' ? 'bg-neon-red/10' : 'bg-neon-green/10')}>
               <Shield className={clsx('h-5 w-5', cleanNil(latest.hvil) === 'Fault' ? 'text-neon-red' : 'text-neon-green')} />
             </div>
@@ -444,20 +435,14 @@ export default function DrivetrainHealth() {
                 {cleanNil(latest.hvil) ?? '--'}
               </p>
             </div>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
       {/* ── 4. Torque Over Time ── */}
       {!noData && torqueData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Cog className="inline h-4 w-4 mr-1.5 text-neon-cyan" />Motor Torque
-          </h3>
-          <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-            Drive inverter torque output over time. Per-motor breakdown (Front/Rear/REL/RER) will display when available from the vehicle.
-          </p>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Motor Torque" subtitle="Drive inverter torque output over time. Per-motor breakdown (Front/Rear/REL/RER) will display when available from the vehicle." className="mb-6 sm:mb-8" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={torqueData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -467,15 +452,12 @@ export default function DrivetrainHealth() {
               <Line type="monotone" dataKey="torque" name="Torque" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── 5. Stator Temperature Over Time ── */}
       {!noData && statorTempData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Thermometer className="inline h-4 w-4 mr-1.5 text-red-400" />Stator Temperature
-          </h3>
+        <ChartContainer title="Stator Temperature" className="mb-6 sm:mb-8" height={280}>
           <div className="flex items-center gap-4 mb-4">
             {latest?.di_stator_temp != null && (
               <div className="flex items-center gap-2">
@@ -489,8 +471,7 @@ export default function DrivetrainHealth() {
               </div>
             )}
           </div>
-          {/* Threshold reference lines */}
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={statorTempData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -505,7 +486,7 @@ export default function DrivetrainHealth() {
             <span><span className="inline-block w-2 h-2 rounded-full bg-neon-amber mr-1" /> {fmtInt(convertTemp(60))}–{fmtInt(convertTemp(80))}{tempUnit} Warm</span>
             <span><span className="inline-block w-2 h-2 rounded-full bg-neon-red mr-1" /> &gt; {fmtInt(convertTemp(80))}{tempUnit} Hot</span>
           </div>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── 6. Heatsink Temperature ── */}
@@ -555,11 +536,8 @@ export default function DrivetrainHealth() {
 
       {/* ── Vehicle Speed & Axle Speed ── */}
       {!noData && speedData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Gauge className="inline h-4 w-4 mr-1.5 text-emerald-400" />Speed &amp; Axle RPM
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Speed &amp; Axle RPM" className="mb-6 sm:mb-8" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={speedData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -571,16 +549,13 @@ export default function DrivetrainHealth() {
               <Line yAxisId="rpm" type="monotone" dataKey="axle" name="Axle Speed (RPM)" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── Acceleration ── */}
       {!noData && accelData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <TrendingUp className="inline h-4 w-4 mr-1.5 text-violet-400" />Acceleration
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Acceleration" className="mb-6 sm:mb-8" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={accelData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -591,16 +566,13 @@ export default function DrivetrainHealth() {
               <Line type="monotone" dataKey="longitudinal" name="Longitudinal" stroke="#00f0ff" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── Pedal Position & Brake ── */}
       {!noData && pedalData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Gauge className="inline h-4 w-4 mr-1.5 text-neon-green" />Pedal &amp; Brake
-          </h3>
-          <ResponsiveContainer width="100%" height={240}>
+        <ChartContainer title="Pedal &amp; Brake" className="mb-6 sm:mb-8" height={240}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={pedalData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -611,7 +583,7 @@ export default function DrivetrainHealth() {
               <Line type="stepAfter" dataKey="brake" name="Brake" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── 10. HVIL / Drive State Status ── */}
@@ -621,43 +593,40 @@ export default function DrivetrainHealth() {
             <Shield className="inline h-4 w-4 mr-1.5 text-emerald-400" />Drive Inverter Status
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="glass-card p-4 text-center">
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>DI State</p>
               <p className={clsx('text-lg font-bold', diStateColor)}>{cleanNil(latest.di_state) ?? '--'}</p>
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Gear</p>
               <p className={clsx('text-lg font-bold', gearColor)}>{cleanNil(latest.gear) ?? '--'}</p>
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Stator Temp</p>
               <p className={clsx('text-lg font-bold', tempColor(latest.di_stator_temp))}>
                 {latest.di_stator_temp != null ? `${fmtNumber(convertTemp(latest.di_stator_temp), 1)} ${tempUnit}` : '--'}
               </p>
-            </div>
-            <div className="glass-card p-4 text-center">
+            </GlassPanel>
+            <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Torque</p>
               <p className="text-lg font-bold text-neon-cyan">{latest.di_torque != null ? `${fmtNumber(latest.di_torque, 1)} Nm` : '--'}</p>
-            </div>
+            </GlassPanel>
           </div>
           {/* Brake pedal status */}
           <div className="mt-4 flex items-center gap-3">
             {latest.brake_pedal ? (
-              <div className="flex items-center gap-2 rounded-lg border border-neon-red/30 bg-neon-red/5 px-3 py-2">
-                <AlertTriangle className="h-4 w-4 text-neon-red" />
-                <span className="text-xs text-neon-red font-medium">Brake Engaged</span>
-              </div>
+              <AlertBanner variant="danger" icon={<AlertTriangle className="h-4 w-4" />}>
+                Brake Engaged
+              </AlertBanner>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg border border-neon-green/30 bg-neon-green/5 px-3 py-2">
-                <CheckCircle className="h-4 w-4 text-neon-green" />
-                <span className="text-xs text-neon-green font-medium">Brake Released</span>
-              </div>
+              <AlertBanner variant="success" icon={<CheckCircle className="h-4 w-4" />}>
+                Brake Released
+              </AlertBanner>
             )}
             {latest.pedal_position != null && (
-              <div className="flex items-center gap-2 rounded-lg border border-neon-cyan/20 bg-neon-cyan/5 px-3 py-2">
-                <Gauge className="h-4 w-4 text-neon-cyan" />
-                <span className="text-xs text-neon-cyan font-medium">Pedal: {fmtPercent(latest.pedal_position)}</span>
-              </div>
+              <AlertBanner variant="info" icon={<Gauge className="h-4 w-4" />}>
+                Pedal: {fmtPercent(latest.pedal_position)}
+              </AlertBanner>
             )}
           </div>
         </GlassPanel>
@@ -670,12 +639,12 @@ export default function DrivetrainHealth() {
             <Gauge className="inline h-4 w-4 mr-1.5 text-purple-400" />Summary
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            <StatCard label="Peak Torque" value={stats.peakTorque} unit="Nm" color="text-neon-cyan" />
-            <StatCard label="Avg Torque" value={stats.avgTorque} unit="Nm" color="text-blue-400" />
-            <StatCard label="Peak Stator" value={stats.peakStatorTemp != null ? convertTemp(stats.peakStatorTemp) : null} unit={tempUnit} color="text-red-400" />
-            <StatCard label="Avg Stator" value={stats.avgStatorTemp != null ? convertTemp(stats.avgStatorTemp) : null} unit={tempUnit} color="text-orange-400" />
-            <StatCard label="Peak Speed" value={stats.peakSpeed != null ? convertSpeed(stats.peakSpeed) : null} unit={speedUnit} color="text-emerald-400" />
-            <StatCard label="Peak Lat-G" value={stats.peakLatAccel} unit="g" color="text-purple-400" />
+            <MetricCard label="Peak Torque" value={stats.peakTorque != null ? `${fmtNumber(stats.peakTorque, 1)} Nm` : '--'} color="cyan" />
+            <MetricCard label="Avg Torque" value={stats.avgTorque != null ? `${fmtNumber(stats.avgTorque, 1)} Nm` : '--'} color="blue" />
+            <MetricCard label="Peak Stator" value={stats.peakStatorTemp != null ? `${fmtNumber(convertTemp(stats.peakStatorTemp), 1)} ${tempUnit}` : '--'} color="red" />
+            <MetricCard label="Avg Stator" value={stats.avgStatorTemp != null ? `${fmtNumber(convertTemp(stats.avgStatorTemp), 1)} ${tempUnit}` : '--'} color="amber" />
+            <MetricCard label="Peak Speed" value={stats.peakSpeed != null ? `${fmtNumber(convertSpeed(stats.peakSpeed), 1)} ${speedUnit}` : '--'} color="green" />
+            <MetricCard label="Peak Lat-G" value={stats.peakLatAccel != null ? `${fmtNumber(stats.peakLatAccel, 1)} g` : '--'} color="purple" />
           </div>
 
           {/* Thermal efficiency insights */}
@@ -685,7 +654,7 @@ export default function DrivetrainHealth() {
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Stator thermal range */}
-              <div className="glass-card p-4">
+              <GlassPanel className="p-4">
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Stator Thermal Range</p>
                 {stats.peakStatorTemp != null && stats.minStatorTemp != null ? (
                   <>
@@ -699,9 +668,9 @@ export default function DrivetrainHealth() {
                 ) : (
                   <p className="text-sm text-[var(--text-muted)]">--</p>
                 )}
-              </div>
+              </GlassPanel>
               {/* Operating efficiency */}
-              <div className="glass-card p-4">
+              <GlassPanel className="p-4">
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Thermal Status</p>
                 {stats.peakStatorTemp != null ? (
                   <>
@@ -721,15 +690,15 @@ export default function DrivetrainHealth() {
                 ) : (
                   <p className="text-sm text-[var(--text-muted)]">--</p>
                 )}
-              </div>
+              </GlassPanel>
               {/* Data coverage */}
-              <div className="glass-card p-4">
+              <GlassPanel className="p-4">
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Data Points</p>
                 <p className="text-sm font-semibold text-neon-cyan">{stats.totalSnapshots.toLocaleString()} snapshots</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                   {stats.avgSpeed != null ? `Avg speed: ${fmtNumber(convertSpeed(stats.avgSpeed), 1)} ${speedUnit}` : 'Collecting data...'}
                 </p>
-              </div>
+              </GlassPanel>
             </div>
           </GlassPanel>
         </div>

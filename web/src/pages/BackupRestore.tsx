@@ -12,8 +12,8 @@ import {
   verifyBackup,
   previewRestore,
 } from '../api'
-import type { BackupConfig } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal } from '../components/ui'
+import type { BackupConfig, BackupRun } from '../api'
+import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal, DataTable, type Column, Input, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
   DatabaseBackup,
@@ -28,22 +28,19 @@ import {
   HardDrive,
   Cloud,
   FolderOpen,
-  ToggleLeft,
-  ToggleRight,
-  X,
   Zap,
   Archive,
   Shield,
-  ChevronDown,
   RefreshCw,
   AlertCircle,
   Download,
   Lock,
   Eye,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -75,17 +72,12 @@ const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
   queued: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-500/15', label: 'Queued' },
 }
 
-const RUN_TYPE_COLORS: Record<string, string> = {
-  backup: 'bg-neon-cyan/15 text-neon-cyan border-neon-cyan/30',
-  restore: 'bg-neon-purple/15 text-neon-purple border-neon-purple/30',
-  quick: 'bg-neon-amber/15 text-neon-amber border-neon-amber/30',
-}
-
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 function formatFileSize(bytes: number): string {
+  usePageTitle('Backup & Restore')
   if (!bytes || bytes === 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -359,13 +351,9 @@ export default function BackupRestore() {
         subtitle="Manage automated backups and restore points"
         icon={<DatabaseBackup className="h-7 w-7 text-neon-cyan" />}
         actions={
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-neon-cyan/10 px-4 py-2.5 text-sm font-medium text-neon-cyan ring-1 ring-neon-cyan/20 hover:bg-neon-cyan/20 transition-all"
-          >
-            <Plus className="h-4 w-4" />
+          <Button variant="secondary" onClick={openCreateModal} icon={<Plus className="h-4 w-4" />}>
             New Config
-          </button>
+          </Button>
         }
       />
 
@@ -374,14 +362,9 @@ export default function BackupRestore() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {/* Quick Backup Card */}
           <GlassPanel className="p-4 sm:p-5 flex flex-col items-center justify-center gap-3" hover glow="cyan">
-            <button
-              onClick={() => quickBackupMutation.mutate()}
-              disabled={quickBackupMutation.isPending}
-              className="flex items-center gap-2 rounded-xl bg-neon-green/10 px-5 py-3 text-sm font-medium text-neon-green ring-1 ring-neon-green/20 hover:bg-neon-green/20 transition-all disabled:opacity-50"
-            >
-              {quickBackupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            <Button variant="secondary" onClick={() => quickBackupMutation.mutate()} loading={quickBackupMutation.isPending} icon={<Zap className="h-4 w-4" />}>
               Quick Backup
-            </button>
+            </Button>
             <p className="text-[10px] text-[var(--text-muted)] text-center">Full backup with default settings</p>
           </GlassPanel>
 
@@ -439,37 +422,26 @@ export default function BackupRestore() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">{cfg.name}</h3>
-                        <span className={clsx(
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                          cfg.enabled
-                            ? 'bg-neon-green/15 text-neon-green ring-neon-green/30'
-                            : 'bg-gray-500/15 text-gray-400 ring-gray-500/30',
-                        )}>
+                        <Badge color={cfg.enabled ? 'green' : 'neutral'}>
                           {cfg.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   </div>
 
                   {/* Badges */}
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                    <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                      cfg.backup_type === 'full' ? 'bg-neon-cyan/15 text-neon-cyan ring-neon-cyan/30' : 'bg-neon-amber/15 text-neon-amber ring-neon-amber/30'
-                    )}>
+                    <Badge color={cfg.backup_type === 'full' ? 'cyan' : 'amber'}>
                       {cfg.backup_type === 'full' ? 'Full' : 'Incremental'}
-                    </span>
-                    <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                      PROVIDER_MAP[cfg.provider]?.color ?? 'bg-gray-500/15 text-gray-400 border-gray-500/30'
-                    )}>
+                    </Badge>
+                    <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[cfg.provider] ?? 'neutral'}>
                       {cfg.provider === 'local' && <FolderOpen className="h-3 w-3 mr-1" />}
                       {cfg.provider === 's3' && <Cloud className="h-3 w-3 mr-1" />}
                       {cfg.provider === 'azure' && <Cloud className="h-3 w-3 mr-1" />}
                       {cfg.provider === 'gcs' && <Cloud className="h-3 w-3 mr-1" />}
                       {PROVIDER_MAP[cfg.provider]?.label ?? cfg.provider}
-                    </span>
-                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 bg-white/5 text-[var(--text-secondary)] ring-white/10">
-                      Every {cfg.frequency_days}d
-                    </span>
+                    </Badge>
+                    <Badge color="neutral">Every {cfg.frequency_days}d</Badge>
                   </div>
 
                   {/* Times */}
@@ -480,25 +452,13 @@ export default function BackupRestore() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-3 border-t border-white/[0.06]">
-                    <button
-                      onClick={() => openEditModal(cfg)}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-all"
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => triggerMutation.mutate(cfg.id)}
-                      disabled={triggerMutation.isPending}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-neon-cyan hover:bg-neon-cyan/10 transition-all disabled:opacity-50"
-                    >
-                      <Play className="h-3.5 w-3.5" /> Trigger Now
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm({ open: true, id: cfg.id, name: cfg.name })}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-neon-red hover:bg-neon-red/10 transition-all ml-auto"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <Button variant="ghost" size="sm" onClick={() => openEditModal(cfg)} icon={<Pencil className="h-3.5 w-3.5" />}>
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => triggerMutation.mutate(cfg.id)} disabled={triggerMutation.isPending} icon={<Play className="h-3.5 w-3.5" />}>
+                      Trigger Now
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => setDeleteConfirm({ open: true, id: cfg.id, name: cfg.name })} icon={<Trash2 className="h-3.5 w-3.5" />} className="ml-auto" />
                   </div>
                 </GlassPanel>
               ))}
@@ -515,12 +475,9 @@ export default function BackupRestore() {
               <Clock className="h-5 w-5 text-neon-cyan/70" />
               Backup History
             </h2>
-            <button
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['backup-runs'] })}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-all"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </button>
+            <Button variant="ghost" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['backup-runs'] })} icon={<RefreshCw className="h-3.5 w-3.5" />}>
+              Refresh
+            </Button>
           </div>
 
           <GlassPanel className="overflow-hidden">
@@ -537,117 +494,36 @@ export default function BackupRestore() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.06]">
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Status</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Type</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Provider</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">File</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Size</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Records</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Duration</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Created</th>
-                      <th className="text-center px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.map(run => {
+                <DataTable
+                  columns={[
+                    { key: 'status', header: 'Status', render: (run) => {
                       const sc = STATUS_CONFIG[run.status] ?? STATUS_CONFIG.queued
                       const StatusIcon = sc.icon
-                      return (
-                        <tr key={run.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                          {/* Status */}
-                          <td className="px-4 py-3">
-                            <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium', sc.bg, sc.color)}>
-                              <StatusIcon className={clsx('h-3 w-3', run.status === 'running' && 'animate-spin')} />
-                              {sc.label}
-                            </span>
-                          </td>
-                          {/* Type */}
-                          <td className="px-4 py-3">
-                            <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                              RUN_TYPE_COLORS[run.run_type] ?? 'bg-white/5 text-[var(--text-secondary)] ring-white/10'
-                            )}>
-                              {run.run_type}
-                            </span>
-                          </td>
-                          {/* Provider */}
-                          <td className="px-4 py-3">
-                            <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                              PROVIDER_MAP[run.provider]?.color ?? 'bg-gray-500/15 text-gray-400 ring-gray-500/30'
-                            )}>
-                              {PROVIDER_MAP[run.provider]?.label ?? run.provider}
-                            </span>
-                          </td>
-                          {/* File */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] max-w-[200px] truncate font-mono">
-                            {run.file_name || '—'}
-                          </td>
-                          {/* Size */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] text-right font-mono">
-                            {formatFileSize(run.file_size)}
-                          </td>
-                          {/* Records */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] text-right font-mono">
-                            {run.record_count > 0 ? run.record_count.toLocaleString() : '—'}
-                          </td>
-                          {/* Duration */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] text-right font-mono">
-                            {formatDuration(run.duration_ms)}
-                          </td>
-                          {/* Created */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-muted)] whitespace-nowrap">
-                            {formatDateTime(run.created_at)}
-                          </td>
-                          {/* Actions */}
-                          <td className="px-4 py-3">
-                            {run.status === 'completed' ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => downloadBackup(run.id)}
-                                  title="Download backup"
-                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-cyan hover:bg-neon-cyan/10 transition-all"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleVerify(run.id)}
-                                  disabled={verifyResults[run.id] === 'loading'}
-                                  title="Verify backup integrity"
-                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-amber hover:bg-neon-amber/10 transition-all disabled:opacity-50 relative"
-                                >
-                                  {verifyResults[run.id] === 'loading' ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : (
-                                    <Lock className="h-3.5 w-3.5" />
-                                  )}
-                                  {verifyResults[run.id] && verifyResults[run.id] !== 'loading' && (
-                                    <span className={clsx(
-                                      'absolute -top-1 -right-1 text-[9px] leading-none',
-                                      (verifyResults[run.id] as { verified: boolean }).verified ? 'text-neon-green' : 'text-neon-red'
-                                    )}>
-                                      {(verifyResults[run.id] as { verified: boolean }).verified ? '✅' : '❌'}
-                                    </span>
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => handlePreview(run.id)}
-                                  title="Preview / Restore"
-                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-purple hover:bg-neon-purple/10 transition-all"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[var(--text-muted)] text-xs">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      return <Badge color={({ completed: 'green', failed: 'red', running: 'cyan', queued: 'neutral' } as Record<string, 'green' | 'red' | 'cyan' | 'neutral'>)[run.status] ?? 'neutral'}><StatusIcon className={clsx('h-3 w-3', run.status === 'running' && 'animate-spin')} />{sc.label}</Badge>
+                    }},
+                    { key: 'type', header: 'Type', render: (run) => <Badge color={({ backup: 'cyan', restore: 'purple', quick: 'amber' } as Record<string, 'cyan' | 'purple' | 'amber'>)[run.run_type] ?? 'neutral'}>{run.run_type}</Badge> },
+                    { key: 'provider', header: 'Provider', render: (run) => <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[run.provider] ?? 'neutral'}>{PROVIDER_MAP[run.provider]?.label ?? run.provider}</Badge> },
+                    { key: 'file', header: 'File', render: (run) => <span className="text-xs text-[var(--text-secondary)] max-w-[200px] truncate block font-mono">{run.file_name || '—'}</span> },
+                    { key: 'size', header: 'Size', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{formatFileSize(run.file_size)}</span>, className: 'text-right' },
+                    { key: 'records', header: 'Records', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{run.record_count > 0 ? run.record_count.toLocaleString() : '—'}</span>, className: 'text-right' },
+                    { key: 'duration', header: 'Duration', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{formatDuration(run.duration_ms)}</span>, className: 'text-right' },
+                    { key: 'created', header: 'Created', render: (run) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(run.created_at)}</span> },
+                    { key: 'actions', header: 'Actions', className: 'text-center', render: (run) => run.status === 'completed' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => downloadBackup(run.id)} title="Download backup" aria-label="Download backup" className="!p-1.5 !rounded-lg hover:!text-neon-cyan hover:!bg-neon-cyan/10"><Download className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleVerify(run.id)} disabled={verifyResults[run.id] === 'loading'} title="Verify backup integrity" className="!p-1.5 !rounded-lg hover:!text-neon-amber hover:!bg-neon-amber/10 !relative">
+                          {verifyResults[run.id] === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
+                          {verifyResults[run.id] && verifyResults[run.id] !== 'loading' && (
+                            <span className={clsx('absolute -top-1 -right-1 text-[9px] leading-none', (verifyResults[run.id] as { verified: boolean }).verified ? 'text-neon-green' : 'text-neon-red')}>{(verifyResults[run.id] as { verified: boolean }).verified ? '✅' : '❌'}</span>
+                          )}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handlePreview(run.id)} title="Preview / Restore" aria-label="Preview backup" className="!p-1.5 !rounded-lg hover:!text-neon-purple hover:!bg-neon-purple/10"><Eye className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    ) : <span className="text-[var(--text-muted)] text-xs">—</span> },
+                  ] as Column<BackupRun>[]}
+                  data={runs}
+                  keyExtractor={(run) => run.id}
+                />
 
                 {/* Error messages for failed runs */}
                 {runs.filter(r => r.status === 'failed' && r.error_message).length > 0 && (
@@ -684,121 +560,74 @@ export default function BackupRestore() {
       />
 
       {/* Create/Edit Config Modal */}
-      <AnimatePresence>
-        {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={closeModal}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative glass-panel p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto scrollbar-thin"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                  {editingId !== null ? 'Edit Configuration' : 'New Backup Configuration'}
-                </h3>
-                <button onClick={closeModal} className="rounded-lg p-1.5 hover:bg-white/5 transition-colors">
-                  <X className="h-5 w-5 text-[var(--text-muted)]" />
-                </button>
-              </div>
-
+      <Modal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Edit Configuration' : 'New Backup Configuration'}>
               <div className="space-y-5">
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Name</label>
-                  <input
+                  <label htmlFor="backup-name" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Name</label>
+                  <Input
+                    id="backup-name"
                     type="text"
                     value={form.name}
                     onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Daily full backup"
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all"
                   />
                 </div>
 
                 {/* Enabled Toggle */}
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-[var(--text-secondary)]">Enabled</label>
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, enabled: !prev.enabled }))}
-                    className="transition-colors"
-                  >
-                    {form.enabled
-                      ? <ToggleRight className="h-7 w-7 text-neon-green" />
-                      : <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />}
-                  </button>
-                </div>
+                <Toggle
+                  checked={form.enabled}
+                  onChange={(v) => setForm(prev => ({ ...prev, enabled: v }))}
+                  label="Enabled"
+                />
 
                 {/* Backup Type */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Backup Type</label>
-                  <div className="relative">
-                    <select
-                      value={form.backup_type}
-                      onChange={e => setForm(prev => ({ ...prev, backup_type: e.target.value }))}
-                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
-                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
-                    >
-                      {BACKUP_TYPES.map(bt => <option key={bt.value} value={bt.value}>{bt.label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  </div>
+                  <label htmlFor="backup-type" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Backup Type</label>
+                  <Select
+                    id="backup-type"
+                    value={form.backup_type}
+                    onChange={e => setForm(prev => ({ ...prev, backup_type: e.target.value }))}
+                    options={BACKUP_TYPES.map(bt => ({ value: bt.value, label: bt.label }))}
+                  />
                 </div>
 
                 {/* Frequency */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Frequency</label>
-                  <div className="relative">
-                    <select
-                      value={form.frequency_days}
-                      onChange={e => setForm(prev => ({ ...prev, frequency_days: Number(e.target.value) }))}
-                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
-                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
-                    >
-                      {FREQUENCY_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  </div>
+                  <label htmlFor="backup-frequency" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Frequency</label>
+                  <Select
+                    id="backup-frequency"
+                    value={String(form.frequency_days)}
+                    onChange={e => setForm(prev => ({ ...prev, frequency_days: Number(e.target.value) }))}
+                    options={FREQUENCY_OPTIONS.map(f => ({ value: String(f.value), label: f.label }))}
+                  />
                 </div>
 
                 {/* Max Retention */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Max Retention (backups to keep)</label>
-                  <input
+                  <label htmlFor="backup-retention" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Max Retention (backups to keep)</label>
+                  <Input
+                    id="backup-retention"
                     type="number"
                     min={1}
                     max={100}
                     value={form.max_retention}
                     onChange={e => setForm(prev => ({ ...prev, max_retention: Math.max(1, Math.min(100, Number(e.target.value) || 1)) }))}
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all"
                   />
                 </div>
 
                 {/* Provider */}
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Provider</label>
-                  <div className="relative">
-                    <select
-                      value={form.provider}
-                      onChange={e => {
-                        const newProvider = e.target.value
-                        setForm(prev => ({ ...prev, provider: newProvider, provider_config: {} }))
-                      }}
-                      className="w-full appearance-none rounded-lg border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all pr-8"
-                      style={{ background: 'var(--surface-2, #0f1020)', colorScheme: 'dark' }}
-                    >
-                      {PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  </div>
+                  <label htmlFor="backup-provider" className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Provider</label>
+                  <Select
+                    id="backup-provider"
+                    value={form.provider}
+                    onChange={e => {
+                      const newProvider = e.target.value
+                      setForm(prev => ({ ...prev, provider: newProvider, provider_config: {} }))
+                    }}
+                    options={PROVIDERS.map(p => ({ value: p.value, label: p.label }))}
+                  />
                 </div>
 
                 {/* Provider Config Fields */}
@@ -817,105 +646,45 @@ export default function BackupRestore() {
                         className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all font-mono resize-none"
                       />
                     ) : (
-                      <input
+                      <Input
                         type={field.type ?? 'text'}
                         value={form.provider_config[field.key] ?? ''}
                         onChange={e => setProviderConfigField(field.key, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full rounded-lg bg-white/[0.03] border border-white/[0.08] px-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 transition-all"
                       />
                     )}
                   </div>
                 ))}
 
                 {/* Compress Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">Compress</label>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Gzip compression for smaller file size</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, compress: !prev.compress }))}
-                    className="transition-colors"
-                  >
-                    {form.compress
-                      ? <ToggleRight className="h-7 w-7 text-neon-green" />
-                      : <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />}
-                  </button>
-                </div>
+                <Toggle
+                  checked={form.compress}
+                  onChange={(v) => setForm(prev => ({ ...prev, compress: v }))}
+                  label="Compress"
+                  description="Gzip compression for smaller file size"
+                />
 
                 {/* Encrypt Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">Encrypt</label>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">AES-256 encryption for sensitive data</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, encrypt: !prev.encrypt }))}
-                    className="transition-colors"
-                  >
-                    {form.encrypt
-                      ? <ToggleRight className="h-7 w-7 text-neon-green" />
-                      : <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />}
-                  </button>
-                </div>
+                <Toggle
+                  checked={form.encrypt}
+                  onChange={(v) => setForm(prev => ({ ...prev, encrypt: v }))}
+                  label="Encrypt"
+                  description="AES-256 encryption for sensitive data"
+                />
               </div>
 
               {/* Modal Footer */}
               <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-white/[0.06]">
-                <button
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all"
-                >
+                <Button variant="ghost" onClick={closeModal}>
                   Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 rounded-lg bg-neon-cyan/20 px-4 py-2 text-sm font-medium text-neon-cyan ring-1 ring-neon-cyan/30 hover:bg-neon-cyan/30 transition-all disabled:opacity-50"
-                >
-                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                </Button>
+                <Button variant="secondary" onClick={handleSubmit} loading={isSaving}>
                   {editingId !== null ? 'Save Changes' : 'Create Configuration'}
-                </button>
+                </Button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
+      </Modal>
       {/* Restore Preview Modal */}
-      <AnimatePresence>
-        {previewModal.open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative glass-panel p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto scrollbar-thin"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                  <Eye className="h-5 w-5 text-neon-purple" />
-                  Restore Preview
-                </h3>
-                <button
-                  onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
-                  className="rounded-lg p-1.5 hover:bg-white/5 transition-colors"
-                >
-                  <X className="h-5 w-5 text-[var(--text-muted)]" />
-                </button>
-              </div>
-
+      <Modal open={previewModal.open} onClose={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })} title="Restore Preview">
               {previewModal.loading ? (
                 <div className="py-12 text-center">
                   <Loader2 className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
@@ -959,22 +728,15 @@ export default function BackupRestore() {
                       Tables ({previewModal.data.tables.length})
                     </p>
                     <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-white/[0.06]">
-                            <th className="text-left px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Table</th>
-                            <th className="text-right px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Rows</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {previewModal.data.tables.map(t => (
-                            <tr key={t.name} className="border-b border-white/[0.03]">
-                              <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">{t.name}</td>
-                              <td className="px-3 py-2 text-xs text-[var(--text-secondary)] text-right font-mono">{t.rows.toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <DataTable
+                        columns={[
+                          { key: 'name', header: 'Table', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{t.name}</span> },
+                          { key: 'rows', header: 'Rows', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{t.rows.toLocaleString()}</span>, className: 'text-right' },
+                        ] as Column<{ name: string; rows: number }>[]}
+                        data={previewModal.data.tables}
+                        keyExtractor={(t) => t.name}
+                        compact
+                      />
                     </div>
                   </div>
                 </div>
@@ -982,17 +744,11 @@ export default function BackupRestore() {
 
               {/* Modal Footer */}
               <div className="flex items-center justify-end mt-6 pt-4 border-t border-white/[0.06]">
-                <button
-                  onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
-                  className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all"
-                >
+                <Button variant="ghost" onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}>
                   Close
-                </button>
+                </Button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </>
   )
 }

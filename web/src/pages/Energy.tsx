@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getChargingSessions, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError, ChartContainer, Select, DataTable, type Column } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
-import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight } from 'lucide-react'
+import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ComposedChart, Line, PieChart, Pie, Cell, Brush
@@ -13,8 +13,10 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
+  usePageTitle('Energy')
   const savings = (gasCost ?? 0) - (evCost ?? 0)
   const savingsPct = gasCost > 0 ? (savings / gasCost * 100) : 0
   return (
@@ -119,15 +121,12 @@ export default function Energy() {
         actions={
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {vehicles && vehicles.length > 1 && (
-              <select
-                value={vehicleId ?? ''}
+              <Select
+                value={String(vehicleId ?? '')}
                 onChange={e => setSelectedVehicle(Number(e.target.value))}
-                className="glass-input text-sm px-3 py-2"
-              >
-                {vehicles.map((v: Vehicle) => (
-                  <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-                ))}
-              </select>
+                options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+                className="text-sm"
+              />
             )}
             <DateRangeFilter
               startDate={startDate}
@@ -199,10 +198,7 @@ export default function Energy() {
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-neon-cyan" /> Energy & Cost Daily
-                </h3>
+              <ChartContainer title="Energy & Cost Daily" height="auto">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -227,14 +223,11 @@ export default function Energy() {
                     <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">Connect vehicle to see energy data</div>
                   )}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             <FadeIn delay={0.15}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-neon-green" /> Efficiency Trend
-                </h3>
+              <ChartContainer title="Efficiency Trend" height="auto">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -261,7 +254,7 @@ export default function Energy() {
                     <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No efficiency data yet</div>
                   )}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
@@ -269,10 +262,7 @@ export default function Energy() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {timeOfDayData.length > 0 && (
               <FadeIn delay={0.2}>
-                <GlassPanel className="p-6">
-                  <h3 className="section-title mb-6 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-neon-amber" /> Charging by Time of Day
-                  </h3>
+                <ChartContainer title="Charging by Time of Day" height="auto">
                   <div className="h-44 sm:h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={timeOfDayData}>
@@ -289,16 +279,13 @@ export default function Energy() {
                     <span className="flex items-center gap-1"><Moon className="h-3 w-3" /> Off-peak charging saves money</span>
                     <span className="flex items-center gap-1"><Sun className="h-3 w-3" /> Solar-optimal: 10am–3pm</span>
                   </div>
-                </GlassPanel>
+                </ChartContainer>
               </FadeIn>
             )}
 
             {chargerBreakdown.length > 0 && (
               <FadeIn delay={0.25}>
-                <GlassPanel className="p-6">
-                  <h3 className="section-title mb-6 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-neon-cyan" /> Charger Type Breakdown
-                  </h3>
+                <ChartContainer title="Charger Type Breakdown" height="auto">
                   <div className="flex items-center gap-6">
                     <div className="h-48 w-48">
                       <ResponsiveContainer width="100%" height="100%">
@@ -331,7 +318,7 @@ export default function Energy() {
                       ))}
                     </div>
                   </div>
-                </GlassPanel>
+                </ChartContainer>
               </FadeIn>
             )}
           </div>
@@ -343,50 +330,19 @@ export default function Energy() {
                 <h3 className="section-title mb-4 flex items-center gap-2">
                   <Zap className="h-4 w-4 text-neon-amber" /> Recent Charging Sessions
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="pb-3 pr-4">Date</th>
-                        <th className="pb-3 pr-4">Energy</th>
-                        <th className="pb-3 pr-4">Battery</th>
-                        <th className="pb-3 pr-4">Power</th>
-                        <th className="pb-3 pr-4">Type</th>
-                        <th className="pb-3 pr-4">Cost</th>
-                        <th className="pb-3">$/kWh</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.03]">
-                      {sessions.slice(0, 15).map(s => (
-                        <tr key={s.id} className="text-gray-300 hover:bg-white/[0.02] transition-colors cursor-pointer">
-                          <td className="py-3 pr-4">
-                            <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">
-                              {formatDateShort(s.start_date)}
-                            </Link>
-                          </td>
-                          <td className="py-3 pr-4 text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0, 1)} kWh</td>
-                          <td className="py-3 pr-4">
-                            <span className="text-[var(--text-muted)]">{s.start_battery_level}%</span>
-                            <span className="text-gray-700 mx-1">→</span>
-                            <span className="text-neon-green">{s.end_battery_level ?? '—'}%</span>
-                          </td>
-                          <td className="py-3 pr-4">{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</td>
-                          <td className="py-3 pr-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
-                              s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' :
-                              s.fast_charger_type ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' :
-                              'bg-neon-green/10 text-neon-green ring-neon-green/20'
-                            }`}>
-                              {s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4">{typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : '—'}</td>
-                          <td className="py-3 text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added, 3)}` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  columns={[
+                    { key: 'date', header: 'Date', render: (s) => <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">{formatDateShort(s.start_date)}</Link> },
+                    { key: 'energy', header: 'Energy', render: (s) => <span className="text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0, 1)} kWh</span> },
+                    { key: 'battery', header: 'Battery', render: (s) => <><span className="text-[var(--text-muted)]">{s.start_battery_level}%</span><span className="text-gray-700 mx-1">→</span><span className="text-neon-green">{s.end_battery_level ?? '—'}%</span></> },
+                    { key: 'power', header: 'Power', render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</> },
+                    { key: 'type', header: 'Type', render: (s) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' : s.fast_charger_type ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' : 'bg-neon-green/10 text-neon-green ring-neon-green/20'}`}>{s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}</span> },
+                    { key: 'cost', header: 'Cost', render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : '—'}</> },
+                    { key: 'perKwh', header: '$/kWh', render: (s) => <span className="text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added, 3)}` : '—'}</span> },
+                  ] satisfies Column<(typeof sessions)[number]>[]}
+                  data={sessions.slice(0, 15)}
+                  keyExtractor={(s) => s.id}
+                />
               </GlassPanel>
             </FadeIn>
           )}

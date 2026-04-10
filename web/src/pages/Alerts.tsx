@@ -6,7 +6,7 @@ import {
 } from '../api'
 import { formatDateTime } from '../lib/dateFormat'
 import { CHART_COLORS } from '../lib/colors'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard, Button, DataTable, type Column, Toggle, Input } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
@@ -19,6 +19,7 @@ import { useToast } from '../components/Toast'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
 import { ChartTooltip } from '../components/Charts'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ const typeIcons: Record<string, React.ElementType> = {
 // ─── Time helper ─────────────────────────────────────────────────────────────
 
 function getTimeAgo(dateStr: string): string {
+  usePageTitle('Alerts')
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 60) return `${mins}m ago`
@@ -129,14 +131,12 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
         </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[10px] text-gray-600 flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{timeAgo}</span>
-          <span className={clsx('text-[10px] px-1.5 py-0.5 rounded-full font-medium', sev.bg, sev.color)}>
+          <Badge color={alert.severity === 'critical' ? 'red' : alert.severity === 'warning' ? 'amber' : 'cyan'} size="sm">
             {alert.severity}
-          </span>
+          </Badge>
           <span className="text-[10px] text-gray-600">{alert.type.replace(/_/g, ' ')}</span>
           {!alert.is_read && (
-            <button onClick={onMarkRead}className="ml-auto flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors opacity-0 group-hover:opacity-100">
-              <Eye className="h-3 w-3" /> Mark read
-            </button>
+            <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">Mark read</Button>
           )}
         </div>
       </div>
@@ -193,22 +193,10 @@ function NotificationHistory() {
     <div className="space-y-6">
       {/* Analytics cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Total Sent</p>
-          <p className="text-sm font-bold text-neon-cyan"><AnimatedNumber value={totalSent} /></p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Failed</p>
-          <p className="text-sm font-bold text-neon-red"><AnimatedNumber value={totalFailed} /></p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Success Rate</p>
-          <p className="text-sm font-bold text-neon-green">{successRate}%</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Channels</p>
-          <p className="text-sm font-bold text-neon-purple"><AnimatedNumber value={stats?.enabled_channels ?? 0} /> / <AnimatedNumber value={stats?.total_channels ?? 0} /></p>
-        </div>
+        <MetricCard label="Total Sent" value={totalSent} icon={<Send className="h-4 w-4" />} color="cyan" />
+        <MetricCard label="Failed" value={totalFailed} icon={<AlertCircle className="h-4 w-4" />} color="red" />
+        <MetricCard label="Success Rate" value={`${successRate}%`} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+        <MetricCard label="Channels" value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
       </div>
 
       {/* Delivery status pie */}
@@ -249,40 +237,17 @@ function NotificationHistory() {
         ) : logs && logs.length > 0 ? (
           <>
             <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Time</th>
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Title</th>
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Channel</th>
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map(log => (
-                    <tr key={log.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                      <td className="py-2 px-3 text-[var(--text-muted)] whitespace-nowrap">
-                        {formatDateTime(log.created_at)}
-                      </td>
-                      <td className="py-2 px-3 text-[var(--text-primary)] max-w-[200px] truncate">{log.title}</td>
-                      <td className="py-2 px-3 text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</td>
-                      <td className="py-2 px-3">
-                        <span className={clsx(
-                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
-                          log.status === 'sent' && 'bg-neon-green/10 text-neon-green',
-                          log.status === 'failed' && 'bg-neon-red/10 text-neon-red',
-                          log.status === 'pending' && 'bg-neon-amber/10 text-neon-amber',
-                        )}>
-                          {log.status === 'sent' && <CheckCircle className="h-2.5 w-2.5" />}
-                          {log.status === 'failed' && <AlertCircle className="h-2.5 w-2.5" />}
-                          {log.status === 'pending' && <Clock className="h-2.5 w-2.5" />}
-                          {log.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                columns={[
+                  { key: 'time', header: 'Time', render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span> },
+                  { key: 'title', header: 'Title', render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span> },
+                  { key: 'channel', header: 'Channel', render: (log) => <span className="text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</span> },
+                  { key: 'status', header: 'Status', render: (log) => <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">{log.status}</Badge> },
+                ] satisfies Column<(typeof logs)[number]>[]}
+                data={logs}
+                keyExtractor={(log) => log.id}
+                compact
+              />
             </div>
             <Pagination
               page={logPage}
@@ -344,43 +309,35 @@ function PreferencesSection() {
           <p className="text-xs text-[var(--text-muted)] mb-3">During quiet hours, only critical alerts send notifications.</p>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-[var(--text-secondary)]">Enable quiet hours</span>
-            <button
-              onClick={() => {
-                saveQuietHours({ ...quietHours, enabled: !quietHours.enabled })
-                toast.info(quietHours.enabled ? 'Quiet hours disabled' : 'Quiet hours enabled')
+            <Toggle
+              checked={quietHours.enabled}
+              onChange={(v) => {
+                saveQuietHours({ ...quietHours, enabled: v })
+                toast.info(v ? 'Quiet hours enabled' : 'Quiet hours disabled')
               }}
-              className={clsx(
-                'relative h-7 w-12 rounded-full transition-colors duration-200',
-                quietHours.enabled ? 'bg-neon-purple/30' : 'bg-white/10'
-              )}
-            >
-              <span className={clsx(
-                'absolute top-0.5 h-6 w-6 rounded-full transition-all duration-200',
-                quietHours.enabled ? 'left-[22px] bg-neon-purple shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'left-0.5 bg-gray-500'
-              )} />
-            </button>
+            />
           </div>
           {quietHours.enabled && (
             <div className="flex items-center gap-3">
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Start</label>
-                <input
+                <label htmlFor="quiet-start" className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Start</label>
+                <Input
+                  id="quiet-start"
                   type="time"
                   value={quietHours.start}
                   onChange={e => saveQuietHours({ ...quietHours, start: e.target.value })}
-                  className="mt-1 block w-full rounded-lg border px-3 py-1.5 text-sm outline-none focus:border-neon-purple/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                  className="mt-1"
                 />
               </div>
               <span className="text-[var(--text-muted)] mt-4">—</span>
               <div>
-                <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">End</label>
-                <input
+                <label htmlFor="quiet-end" className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">End</label>
+                <Input
+                  id="quiet-end"
                   type="time"
                   value={quietHours.end}
                   onChange={e => saveQuietHours({ ...quietHours, end: e.target.value })}
-                  className="mt-1 block w-full rounded-lg border px-3 py-1.5 text-sm outline-none focus:border-neon-purple/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                  className="mt-1"
                 />
               </div>
             </div>
@@ -542,22 +499,13 @@ export default function Alerts() {
         actions={
           <div className="flex items-center gap-3">
             {quietActive && (
-              <span className="flex items-center gap-1.5 rounded-full bg-neon-purple/10 px-3 py-1 text-xs font-medium text-neon-purple">
-                <Moon className="h-3 w-3" />
-                🌙 Quiet hours
-              </span>
+              <Badge color="purple" size="md" dot>🌙 Quiet hours</Badge>
             )}
             {unreadCount > 0 && (
-              <span className="flex items-center gap-1.5 rounded-full bg-neon-cyan/10 px-3 py-1 text-xs font-medium text-neon-cyan">
-                <span className="h-1.5 w-1.5 rounded-full bg-neon-cyan animate-pulse" />
-                {unreadCount} unread
-              </span>
+              <Badge color="cyan" size="md" dot>{unreadCount} unread</Badge>
             )}
             {criticalCount > 0 && (
-              <span className="flex items-center gap-1.5 rounded-full bg-neon-red/10 px-3 py-1 text-xs font-medium text-neon-red">
-                <AlertCircle className="h-3 w-3" />
-                {criticalCount} critical
-              </span>
+              <Badge color="red" size="md" dot>{criticalCount} critical</Badge>
             )}
           </div>
         }

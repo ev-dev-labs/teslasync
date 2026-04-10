@@ -16,10 +16,10 @@
   --surface-1: #0f1019;
   --surface-2: #151621;
   --surface-3: #1a1b2e;
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.12);
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-muted: #8a95a6;
   /* Dynamic color theme vars — overridden by ThemeProvider */
   --theme-primary: #00f0ff;
   --theme-primary-rgb: 0, 240, 255;
@@ -34,6 +34,15 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   overflow: hidden;
+}
+
+/* Force dark dropdown options in all selects */
+select option {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+select option:checked {
+  background: var(--surface-3);
 }
 
 /* === SCROLLBAR === */
@@ -83,6 +92,10 @@ body {
     background: var(--surface-1);
     color: var(--text-primary);
   }
+  .glass-input:focus-visible {
+    outline: 2px solid var(--theme-primary);
+    outline-offset: 2px;
+  }
   .glass-input::placeholder {
     color: var(--text-muted);
   }
@@ -101,6 +114,10 @@ body {
   .glass-button:hover {
     background: var(--surface-3);
     border-color: var(--theme-primary);
+  }
+  .glass-button:focus-visible {
+    outline: 2px solid var(--theme-primary);
+    outline-offset: 2px;
   }
 
   .neon-button {
@@ -289,6 +306,68 @@ body {
 :root.light-mode .text-white\/60 {
   color: #1e293b !important;
 }
+:root.light-mode .text-white\/50,
+:root.light-mode .text-white\/40 {
+  color: #64748b !important;
+}
+:root.light-mode .text-white\/30,
+:root.light-mode .text-white\/20 {
+  color: #475569 !important;
+}
+:root.light-mode .text-white\/10,
+:root.light-mode .text-white\/5 {
+  color: #cbd5e1 !important;
+}
+
+/* Neon accent colors — darken for white-background readability */
+:root.light-mode .text-neon-cyan { color: #0891b2 !important; }
+:root.light-mode .text-neon-green { color: #15803d !important; }
+:root.light-mode .text-neon-purple { color: #7c3aed !important; }
+:root.light-mode .text-neon-red,
+:root.light-mode .text-tesla-red { color: #dc2626 !important; }
+:root.light-mode .text-neon-amber { color: #b45309 !important; }
+:root.light-mode .text-neon-blue { color: #1e40af !important; }
+
+:root.light-mode .bg-neon-cyan\/5,
+:root.light-mode .bg-neon-cyan\/10 { background-color: rgba(8, 145, 178, 0.1) !important; }
+:root.light-mode .bg-neon-green\/5,
+:root.light-mode .bg-neon-green\/10 { background-color: rgba(21, 128, 61, 0.1) !important; }
+:root.light-mode .bg-neon-purple\/5,
+:root.light-mode .bg-neon-purple\/10 { background-color: rgba(124, 58, 237, 0.1) !important; }
+:root.light-mode .bg-neon-red\/5,
+:root.light-mode .bg-neon-red\/10,
+:root.light-mode .bg-tesla-red\/5,
+:root.light-mode .bg-tesla-red\/10 { background-color: rgba(220, 38, 38, 0.1) !important; }
+:root.light-mode .bg-neon-amber\/5,
+:root.light-mode .bg-neon-amber\/10 { background-color: rgba(180, 83, 9, 0.1) !important; }
+:root.light-mode .bg-neon-blue\/5,
+:root.light-mode .bg-neon-blue\/10 { background-color: rgba(30, 64, 175, 0.1) !important; }
+
+:root.light-mode .bg-neon-cyan\/20 { background-color: rgba(8, 145, 178, 0.15) !important; }
+:root.light-mode .bg-neon-green\/20 { background-color: rgba(21, 128, 61, 0.15) !important; }
+:root.light-mode .bg-neon-purple\/20 { background-color: rgba(124, 58, 237, 0.15) !important; }
+:root.light-mode .bg-neon-red\/20,
+:root.light-mode .bg-tesla-red\/20 { background-color: rgba(220, 38, 38, 0.15) !important; }
+:root.light-mode .bg-neon-amber\/20 { background-color: rgba(180, 83, 9, 0.15) !important; }
+
+:root.light-mode .border-neon-cyan\/20,
+:root.light-mode .border-neon-cyan\/30 { border-color: rgba(8, 145, 178, 0.25) !important; }
+:root.light-mode .border-neon-green\/20,
+:root.light-mode .border-neon-green\/30 { border-color: rgba(21, 128, 61, 0.25) !important; }
+:root.light-mode .border-neon-purple\/20,
+:root.light-mode .border-neon-purple\/30 { border-color: rgba(124, 58, 237, 0.25) !important; }
+:root.light-mode .border-neon-red\/20,
+:root.light-mode .border-tesla-red\/20 { border-color: rgba(220, 38, 38, 0.25) !important; }
+:root.light-mode .border-neon-amber\/20,
+:root.light-mode .border-neon-amber\/30 { border-color: rgba(180, 83, 9, 0.25) !important; }
+
+:root.light-mode .ring-neon-cyan\/20,
+:root.light-mode .ring-neon-cyan\/40 { --tw-ring-color: rgba(8, 145, 178, 0.3) !important; }
+:root.light-mode .ring-neon-green\/20 { --tw-ring-color: rgba(21, 128, 61, 0.3) !important; }
+:root.light-mode .ring-neon-purple\/20 { --tw-ring-color: rgba(124, 58, 237, 0.3) !important; }
+
+:root.light-mode .shadow-neon-cyan\/10,
+:root.light-mode .shadow-neon-cyan\/20 { --tw-shadow-color: rgba(8, 145, 178, 0.12) !important; }
 
 /* Override gray text shades for light mode readability */
 :root.light-mode .text-gray-300 {
@@ -305,20 +384,27 @@ body {
 }
 
 /* Override white bg translucent panels */
+:root.light-mode .bg-white\/\[0\.01\],
 :root.light-mode .bg-white\/\[0\.02\],
 :root.light-mode .bg-white\/\[0\.03\],
 :root.light-mode .bg-white\/\[0\.04\],
+:root.light-mode .bg-white\/\[0\.05\],
 :root.light-mode .bg-white\/\[0\.06\],
-:root.light-mode .bg-white\/\[0\.08\] {
+:root.light-mode .bg-white\/\[0\.08\],
+:root.light-mode .bg-white\/\[0\.1\] {
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
 /* Override white border translucent */
 :root.light-mode .border-white\/5,
+:root.light-mode .border-white\/\[0\.03\],
+:root.light-mode .border-white\/\[0\.04\],
 :root.light-mode .border-white\/\[0\.05\],
 :root.light-mode .border-white\/\[0\.06\],
 :root.light-mode .border-white\/\[0\.08\],
 :root.light-mode .border-white\/10,
+:root.light-mode .border-white\/\[0\.1\],
+:root.light-mode .border-white\/\[0\.12\],
 :root.light-mode .border-white\/20 {
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
@@ -329,18 +415,33 @@ body {
   --tw-ring-color: rgba(0, 0, 0, 0.06) !important;
 }
 
+/* Override divide colors */
+:root.light-mode .divide-white\/\[0\.03\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
 /* Override hover bg */
 :root.light-mode .hover\:bg-white\/5:hover,
+:root.light-mode .hover\:bg-white\/\[0\.02\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.03\]:hover,
 :root.light-mode .hover\:bg-white\/\[0\.04\]:hover,
-:root.light-mode .hover\:bg-white\/\[0\.06\]:hover {
+:root.light-mode .hover\:bg-white\/\[0\.05\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.06\]:hover,
+:root.light-mode .hover\:bg-white\/\[0\.08\]:hover {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Override hover border */
 :root.light-mode .hover\:border-white\/10:hover,
+:root.light-mode .hover\:border-white\/\[0\.08\]:hover,
 :root.light-mode .hover\:border-white\/15:hover,
 :root.light-mode .hover\:border-white\/20:hover {
   border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Toggle off-state in light mode */
+:root.light-mode .bg-gray-400 {
+  background-color: #94a3b8 !important;
 }
 
 /* Glass panels in light mode - subtle shadow instead of dark glass */
@@ -348,6 +449,14 @@ body {
   background: rgba(255, 255, 255, 0.7);
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* Gradient text headers: white→gray gradient invisible in light mode */
+:root.light-mode .bg-gradient-to-r.from-white.bg-clip-text,
+:root.light-mode .bg-gradient-to-r.from-white.via-white.bg-clip-text {
+  -webkit-text-fill-color: initial;
+  background: none !important;
+  color: #0f172a !important;
 }
 
 :root.light-mode .glass-card {

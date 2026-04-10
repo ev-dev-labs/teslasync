@@ -82,14 +82,14 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Retry')).toBeInTheDocument()
   })
 
-  it('has a "Go Home" link', () => {
+  it('has a "Go Home" button', () => {
     render(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow />
       </ErrorBoundary>
     )
-    const homeLink = screen.getByText('Go Home')
-    expect(homeLink).toBeInTheDocument()
-    expect(homeLink.closest('a')).toHaveAttribute('href', '/')
+    const homeButton = screen.getByText('Go Home')
+    expect(homeButton).toBeInTheDocument()
+    expect(homeButton.closest('button')).toBeInTheDocument()
   })
 })

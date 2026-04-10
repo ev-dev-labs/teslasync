@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, getTelemetryStatus, getWorkersHealth, getNotificationStats, getNotificationLogs, getExportJobs, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse, TelemetryStatus, WorkersHealth, NotificationStats, NotificationLog, ExportJobSummary } from '../api'
 import { getApiBase } from '../lib/resilience'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
@@ -10,13 +9,15 @@ import {
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
   Satellite, Link, Globe, Rss, ChevronDown, Bell, Package, Download, Send,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge, DataTable, Modal, MetricCard, Button, IconBox, type Column } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
 import PollingEnginePanel from '../components/PollingEngine'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { formatDateTime, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { tableTokens } from '../lib/tokens'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface ComponentInfo {
   status: string
@@ -40,6 +41,7 @@ interface SystemStatus {
 }
 
 function getStatusColor(status: string): string {
+  usePageTitle('System Status')
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': case 'authenticated': case 'connected': case 'enabled': return '#10b981'
     case 'degraded': case 'disconnected': return '#f59e0b'
@@ -107,17 +109,8 @@ function AccordionSection({ icon, title, description, badges, defaultOpen = fals
 
 /** Small colored dot with optional label for accordion summary badges. */
 function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray'; label: string }) {
-  const colors = {
-    green: 'bg-green-500/20 text-green-400 border-green-500/30',
-    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    red: 'bg-red-500/20 text-red-400 border-red-500/30',
-    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  }
-  return (
-    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
-      {label}
-    </span>
-  )
+  const badgeColor = color === 'gray' ? 'neutral' as const : color
+  return <Badge color={badgeColor} size="sm">{label}</Badge>
 }
 
 function getStatusLabel(status: string): string {
@@ -239,16 +232,16 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
                   <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Signals ({info.details.supported_signals.length})</p>
-                      <button onClick={() => setShowSignalsModal(true)} className="text-[10px] text-neon-cyan hover:underline">View All</button>
+                      <Button variant="ghost" size="sm" onClick={() => setShowSignalsModal(true)}>View All</Button>
                     </div>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {info.details.supported_signals.slice(0, 12).map(s => (
                         <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-neon-cyan/10 text-neon-cyan">{s}</span>
                       ))}
                       {info.details.supported_signals.length > 12 && (
-                        <button onClick={() => setShowSignalsModal(true)} className="px-1.5 py-0.5 text-[10px] rounded bg-white/5 text-[var(--text-muted)] hover:text-neon-cyan transition-colors">
+                         <Button variant="ghost" size="sm" onClick={() => setShowSignalsModal(true)}>
                           +{info.details.supported_signals.length - 12} more
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -267,37 +260,22 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
       </div>
 
       {/* Signals Modal — full screen via portal */}
-      {showSignalsModal && info.details?.supported_signals && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="relative w-full max-w-5xl max-h-[90vh] rounded-2xl border border-white/10 p-6 overflow-y-auto shadow-2xl"
-            style={{ background: 'var(--surface-1, #0a0b1a)' }}
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between mb-4 pb-3 border-b border-white/10" style={{ background: 'var(--surface-1, #0a0b1a)' }}>
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">Subscribed Signals ({info.details.supported_signals.length})</h3>
-              <button onClick={() => setShowSignalsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-lg">✕</button>
+      <Modal open={showSignalsModal && !!info.details?.supported_signals} onClose={() => setShowSignalsModal(false)} title={`Subscribed Signals (${info.details?.supported_signals?.length ?? 0})`} size="lg">
+        {info.details?.supported_signals && SIGNAL_GROUPS.map(group => {
+          const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
+          if (matched.length === 0) return null
+          return (
+            <div key={group.label} className="mb-3">
+              <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: group.color }}>{group.label} ({matched.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {matched.map((s: string) => (
+                  <span key={s} className="px-2 py-0.5 text-[10px] rounded-full" style={{ backgroundColor: `${group.color}15`, color: group.color }}>{s}</span>
+                ))}
+              </div>
             </div>
-            {SIGNAL_GROUPS.map(group => {
-              const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
-              if (matched.length === 0) return null
-              return (
-                <div key={group.label} className="mb-3">
-                  <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: group.color }}>{group.label} ({matched.length})</p>
-                  <div className="flex flex-wrap gap-1">
-                    {matched.map((s: string) => (
-                      <span key={s} className="px-2 py-0.5 text-[10px] rounded-full" style={{ backgroundColor: `${group.color}15`, color: group.color }}>{s}</span>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </motion.div>
-        </div>,
-        document.body
-      )}
+          )
+        })}
+      </Modal>
     </GlassPanel>
   )
 }
@@ -349,6 +327,51 @@ function ComponentHealthPanel() {
     return `${hrs}h ago`
   }
 
+  type HealthRow = { name: string; status: string; latency_ms?: number; consecutive_failures?: number; last_check?: string }
+  const healthRows: HealthRow[] = componentEntries.map(([name, comp]) => ({ name, ...comp }))
+  const healthColumns: Column<HealthRow>[] = [
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => statusDot(row.status ?? 'unknown'),
+    },
+    {
+      key: 'component',
+      header: 'Component',
+      render: (row) => (
+        <>
+          <span className="font-medium text-[var(--text-primary)]">{getComponentLabel(row.name)}</span>
+          <span className="text-[10px] text-[var(--text-muted)] ml-2">{row.name}</span>
+        </>
+      ),
+    },
+    {
+      key: 'latency',
+      header: 'Latency',
+      render: (row) => (
+        <span className="font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
+          {row.latency_ms != null ? `${row.latency_ms}ms` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'failures',
+      header: 'Failures',
+      render: (row) => (row.consecutive_failures ?? 0) > 0
+        ? <span className="text-xs font-semibold text-neon-red">{row.consecutive_failures}</span>
+        : <span className="text-xs text-[var(--text-muted)]">0</span>,
+    },
+    {
+      key: 'lastCheck',
+      header: 'Last Check',
+      render: (row) => (
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          {formatLastCheck(row.last_check)}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <FadeIn delay={0.12}>
       <GlassPanel className="p-5">
@@ -358,39 +381,12 @@ function ComponentHealthPanel() {
 
         {/* Component table */}
         <div className="overflow-x-auto mb-5">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                {['Status', 'Component', 'Latency', 'Failures', 'Last Check'].map(h => (
-                  <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {componentEntries.map(([name, comp]) => (
-                <tr key={name} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                  <td className="px-4 py-3">{statusDot(comp.status ?? 'unknown')}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-medium text-[var(--text-primary)]">{getComponentLabel(name)}</span>
-                    <span className="text-[10px] text-[var(--text-muted)] ml-2">{name}</span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {comp.latency_ms != null ? `${comp.latency_ms}ms` : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {(comp.consecutive_failures ?? 0) > 0 ? (
-                      <span className="text-xs font-semibold text-neon-red">{comp.consecutive_failures}</span>
-                    ) : (
-                      <span className="text-xs text-[var(--text-muted)]">0</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    {formatLastCheck(comp.last_check)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable<HealthRow>
+            columns={healthColumns}
+            data={healthRows}
+            keyExtractor={(row) => row.name}
+            compact
+          />
         </div>
 
         {/* Pool & System stats row */}
@@ -490,16 +486,13 @@ function APIUsageDashboard() {
         {/* Top stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {/* Request counter */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className="h-3.5 w-3.5 text-neon-cyan" />
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Requests</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              <AnimatedNumber value={usage.total_requests} />
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">this session</p>
-          </div>
+          <MetricCard
+            label="Requests"
+            value={usage.total_requests}
+            icon={<Zap className="h-3.5 w-3.5" />}
+            color="cyan"
+            subtitle="this session"
+          />
 
           {/* Estimated monthly cost */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
@@ -526,16 +519,13 @@ function APIUsageDashboard() {
           </div>
 
           {/* Skipped polls */}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <div className="flex items-center gap-2 mb-1">
-              <Activity className="h-3.5 w-3.5 text-neon-purple" />
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Skipped</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              <AnimatedNumber value={usage.skipped_polls} />
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">adaptive polling saves</p>
-          </div>
+          <MetricCard
+            label="Skipped"
+            value={usage.skipped_polls}
+            icon={<Activity className="h-3.5 w-3.5" />}
+            color="purple"
+            subtitle="adaptive polling saves"
+          />
         </div>
 
         {/* Rate limit gauge */}
@@ -643,13 +633,11 @@ function CompressionStatsPanel() {
             <p className="text-lg font-bold text-neon-green">~{formatBytes(stats.estimated_saved_bytes)}</p>
             <p className="text-[10px] text-[var(--text-muted)]">~{savingsPct}% reduction</p>
           </div>
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Rows Saved</p>
-            <p className="text-lg font-bold text-[var(--text-primary)]">
-              <AnimatedNumber value={stats.estimated_saved_rows} />
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">hourly aggregation (&gt;30 days)</p>
-          </div>
+          <MetricCard
+            label="Rows Saved"
+            value={stats.estimated_saved_rows}
+            subtitle="hourly aggregation (>30 days)"
+          />
         </div>
       </GlassPanel>
     </FadeIn>
@@ -669,34 +657,24 @@ function RateLimitsPanel() {
     <FadeIn delay={0.12}>
       <GlassPanel className="p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-amber/10 text-neon-amber ring-1 ring-neon-amber/20">
+          <IconBox color="amber" size="sm">
             <Gauge className="h-4.5 w-4.5" />
-          </div>
+          </IconBox>
           <div>
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">Rate Limits</h3>
             <p className="text-[11px] text-[var(--text-muted)]">Request throttling configured per route</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Route</th>
-                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Limit</th>
-                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {limits.map(l => (
-                <tr key={l.route} className="border-b border-white/[0.03] last:border-0">
-                  <td className="py-2.5 px-3 text-[var(--text-primary)] font-medium">{l.route}</td>
-                  <td className="py-2.5 px-3"><span className="font-mono text-neon-cyan">{l.limit}</span></td>
-                  <td className="py-2.5 px-3 text-[var(--text-muted)]">{l.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { key: 'route', header: 'Route', render: (l) => <span className="text-[var(--text-primary)] font-medium">{l.route}</span> },
+            { key: 'limit', header: 'Limit', render: (l) => <span className="font-mono text-neon-cyan">{l.limit}</span> },
+            { key: 'description', header: 'Description', render: (l) => <span className="text-[var(--text-muted)]">{l.description}</span> },
+          ]}
+          data={limits}
+          keyExtractor={(l) => l.route}
+          compact
+        />
       </GlassPanel>
     </FadeIn>
   )
@@ -723,35 +701,18 @@ function AuditLogTable() {
             {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
           </div>
         ) : logs && logs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider border-b border-white/[0.06]">
-                  <th className="py-2 text-left">Time</th>
-                  <th className="py-2 text-left">Action</th>
-                  <th className="py-2 text-left">Resource</th>
-                  <th className="py-2 text-left">Details</th>
-                  <th className="py-2 text-left">IP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((l: AuditLog) => (
-                  <tr key={l.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</td>
-                    <td className="py-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                        style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>
-                        {l.action}
-                      </span>
-                    </td>
-                    <td className="py-2 text-[var(--text-secondary)]">{l.resource}</td>
-                    <td className="py-2 text-[var(--text-muted)] max-w-xs truncate">{l.details}</td>
-                    <td className="py-2 text-[var(--text-muted)] font-mono">{l.ip}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              { key: 'time', header: 'Time', render: (l: AuditLog) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</span> },
+              { key: 'action', header: 'Action', render: (l: AuditLog) => <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>{l.action}</span> },
+              { key: 'resource', header: 'Resource', render: (l: AuditLog) => <span className="text-[var(--text-secondary)]">{l.resource}</span> },
+              { key: 'details', header: 'Details', render: (l: AuditLog) => <span className="text-[var(--text-muted)] max-w-xs truncate">{l.details}</span> },
+              { key: 'ip', header: 'IP', render: (l: AuditLog) => <span className="text-[var(--text-muted)] font-mono">{l.ip}</span> },
+            ]}
+            data={logs}
+            keyExtractor={(l: AuditLog) => String(l.id)}
+            compact
+          />
         ) : (
           <p className="text-xs text-[var(--text-muted)] text-center py-4">No audit log entries yet</p>
         )}
@@ -930,15 +891,15 @@ function TelemetryLivePanel() {
         {/* Per-vehicle streaming table */}
         {vehicles.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
-            <table className="w-full text-sm">
+            <table className={tableTokens.wrapper}>
               <thead>
-                <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Status</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">VIN</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Source</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Signals/s</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Latency</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Total</th>
+                <tr className={clsx(tableTokens.head, 'bg-white/[0.02]')}>
+                  <th className={tableTokens.headCell}>Status</th>
+                  <th className={tableTokens.headCell}>VIN</th>
+                  <th className={tableTokens.headCell}>Source</th>
+                  <th className={clsx(tableTokens.headCell, 'text-right')}>Signals/s</th>
+                  <th className={clsx(tableTokens.headCell, 'text-right')}>Latency</th>
+                  <th className={clsx(tableTokens.headCell, 'text-right')}>Total</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -1465,10 +1426,9 @@ export default function SystemStatus() {
             <span className="text-[10px] text-[var(--text-muted)]">
               Checked {formatTimeAgo(lastChecked)}
             </span>
-            <button onClick={handleRefresh} className="glass-button text-xs flex items-center gap-1.5">
-              <RefreshCw className={clsx('h-3.5 w-3.5 transition-transform', refreshing && 'animate-spin')} />
+            <Button variant="secondary" size="sm" onClick={handleRefresh} icon={<RefreshCw className={clsx('h-3.5 w-3.5 transition-transform', refreshing && 'animate-spin')} />}>
               Refresh
-            </button>
+            </Button>
           </div>
         }
       />
@@ -1570,18 +1530,12 @@ export default function SystemStatus() {
           <GlassPanel className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {[
-                { label: 'Version', value: `v${version.chart_version}`, icon: Shield },
-                { label: 'Runtime', value: `${version.go_version} · ${version.os}/${version.arch}`, icon: Cpu },
-                { label: 'Uptime', value: version.uptime_seconds < 3600 ? `${Math.floor(version.uptime_seconds / 60)}m` : `${Math.floor(version.uptime_seconds / 3600)}h ${Math.floor((version.uptime_seconds % 3600) / 60)}m`, icon: Clock },
-                { label: 'Goroutines', value: String(version.goroutines), icon: Activity },
+                { label: 'Version', value: `v${version.chart_version}`, icon: <Shield className="h-4 w-4" /> },
+                { label: 'Runtime', value: `${version.go_version} · ${version.os}/${version.arch}`, icon: <Cpu className="h-4 w-4" /> },
+                { label: 'Uptime', value: version.uptime_seconds < 3600 ? `${Math.floor(version.uptime_seconds / 60)}m` : `${Math.floor(version.uptime_seconds / 3600)}h ${Math.floor((version.uptime_seconds % 3600) / 60)}m`, icon: <Clock className="h-4 w-4" /> },
+                { label: 'Goroutines', value: String(version.goroutines), icon: <Activity className="h-4 w-4" /> },
               ].map(item => (
-                <div key={item.label} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <item.icon className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value}</p>
-                  </div>
-                </div>
+                <MetricCard key={item.label} label={item.label} value={item.value} icon={item.icon} />
               ))}
             </div>
 

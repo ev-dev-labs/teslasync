@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTirePressure } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, AlertBanner, ChartContainer, Select } from '../components/ui'
 import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Clock, Zap, ShieldAlert } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -10,9 +10,11 @@ import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { STATUS_COLORS } from '../lib/colors'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface PressureTooltipPayload { name: string; value: number; color?: string }
 function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: PressureTooltipPayload[]; label?: string; unit?: string }) {
+  usePageTitle('Tire Pressure')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -36,7 +38,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
   const bg = isLow ? 'bg-neon-red/20' : isHigh ? 'bg-neon-amber/20' : 'bg-neon-green/20'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center justify-center gap-3 h-full">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center justify-center gap-3 h-full">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -57,7 +59,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
         )}
       </div>
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${fmtNumber(psi)} ${unit}` : 'N/A'}</span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -352,43 +354,31 @@ export default function TirePressure() {
             ))}
           </div>
           {vehicles && vehicles.length > 1 && (
-            <select
+            <Select
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
         </div>
       </div>
 
       {anyLow && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
-          <p className="text-sm text-neon-red">One or more tires have low pressure. Check and inflate to recommended levels.</p>
-        </div>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />} className="mb-6">
+          One or more tires have low pressure. Check and inflate to recommended levels.
+        </AlertBanner>
       )}
 
       {/* TPMS Warning Alerts */}
       {hasHardWarning && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <ShieldAlert className="h-5 w-5 text-neon-red shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-neon-red">TPMS Hard Warning</p>
-            <p className="text-xs text-neon-red/80">Tire pressure severely out of range — inspect immediately. {live.tpmsHardWarnings}</p>
-          </div>
-        </div>
+        <AlertBanner variant="danger" icon={<ShieldAlert className="h-5 w-5" />} title="TPMS Hard Warning" className="mb-4">
+          Tire pressure severely out of range — inspect immediately. {live.tpmsHardWarnings}
+        </AlertBanner>
       )}
       {hasSoftWarning && !hasHardWarning && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-neon-amber/30 bg-neon-amber/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-amber shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-neon-amber">TPMS Soft Warning</p>
-            <p className="text-xs text-neon-amber/80">Tire pressure slightly out of range. {live.tpmsSoftWarnings}</p>
-          </div>
-        </div>
+        <AlertBanner variant="warning" icon={<AlertTriangle className="h-5 w-5" />} title="TPMS Soft Warning" className="mb-4">
+          Tire pressure slightly out of range. {live.tpmsSoftWarnings}
+        </AlertBanner>
       )}
 
       {/* Service Signals — Last Seen Times & Isolation Resistance */}
@@ -401,13 +391,13 @@ export default function TirePressure() {
           { label: 'Hard Warnings', value: hasHardWarning ? live.tpmsHardWarnings : 'None', icon: <ShieldAlert className={clsx('h-3.5 w-3.5', hasHardWarning ? 'text-neon-red' : 'text-[var(--text-muted)]')} /> },
           { label: 'HV Isolation', value: live.isolationResistance > 0 ? `${Math.round(live.isolationResistance)} Ω` : '—', icon: <Zap className="h-3.5 w-3.5 text-neon-cyan" /> },
         ].map(item => (
-          <div key={item.label} className="glass-card p-3 flex flex-col gap-1.5">
+          <GlassPanel key={item.label} className="p-3 flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               {item.icon}
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
             </div>
             <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
-          </div>
+          </GlassPanel>
         ))}
       </div>
 
@@ -446,12 +436,11 @@ export default function TirePressure() {
       )}
 
       {/* History Chart */}
-      <GlassPanel className="p-4 sm:p-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Pressure History</h3>
+      <ChartContainer title="Pressure History" height={300}>
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : chartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No pressure history data available</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No pressure history data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -465,7 +454,7 @@ export default function TirePressure() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
     </FadeIn>
   )
 }

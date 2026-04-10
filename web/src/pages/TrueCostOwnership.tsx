@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTCOAnalytics, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
-import { DollarSign, Fuel, Zap, TrendingUp, Leaf, BarChart3, Calendar } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, ChartContainer, Select } from '../components/ui'
+import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Legend,
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid, ChartGradient } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function TrueCostOwnership() {
+  usePageTitle('Total Cost of Ownership')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -20,8 +23,7 @@ export default function TrueCostOwnership() {
     enabled: vehicleId !== null,
   })
 
-  const fmt = (v: number, decimals = 2) => v.toFixed(decimals)
-  const fmtCurrency = (v: number) => `$${v.toFixed(2)}`
+  const fmtCurrency = (v: number) => `$${fmtNumber(v, 2)}`
 
   return (
     <div className="space-y-8">
@@ -31,15 +33,11 @@ export default function TrueCostOwnership() {
         icon={<DollarSign className="h-5 w-5 text-neon-green" />}
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
-              value={vehicleId ?? ''}
+            <Select
+              value={String(vehicleId ?? '')}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-input text-sm px-3 py-2"
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name}</option>
-              ))}
-            </select>
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name }))}
+            />
           ) : undefined
         }
       />
@@ -57,7 +55,7 @@ export default function TrueCostOwnership() {
                   <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Total EV Cost</span>
                 </div>
                 <p className="text-2xl font-bold text-neon-cyan">{fmtCurrency(tco.total_charging_cost)}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">{fmt(tco.total_kwh, 1)} kWh over {tco.total_sessions} sessions</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">{fmtNumber(tco.total_kwh)} kWh over {tco.total_sessions} sessions</p>
               </GlassPanel>
             </StaggerItem>
 
@@ -79,7 +77,7 @@ export default function TrueCostOwnership() {
                   <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Total Savings</span>
                 </div>
                 <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">Over {fmt(tco.months_of_ownership, 1)} months</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Over {fmtNumber(tco.months_of_ownership)} months</p>
               </GlassPanel>
             </StaggerItem>
 
@@ -97,10 +95,7 @@ export default function TrueCostOwnership() {
 
           {/* Cumulative savings chart */}
           <FadeIn>
-            <GlassPanel className="p-6">
-              <h3 className="section-title mb-6 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-neon-green" /> Cumulative Savings Over Time
-              </h3>
+            <ChartContainer title="Cumulative Savings Over Time" height="auto">
               <div className="h-64 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={tco.monthly_breakdown}>
@@ -123,16 +118,13 @@ export default function TrueCostOwnership() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* Cost per km comparison + Monthly EV vs Gas */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-neon-cyan" /> Cost per Kilometer
-                </h3>
+              <ChartContainer title="Cost per Kilometer" height="auto">
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
@@ -150,22 +142,19 @@ export default function TrueCostOwnership() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                   <div className="rounded-xl bg-neon-cyan/10 p-3 border border-neon-cyan/20">
-                    <p className="text-lg font-bold text-neon-cyan">${fmt(tco.cost_per_km_ev, 4)}</p>
+                    <p className="text-lg font-bold text-neon-cyan">${fmtNumber(tco.cost_per_km_ev, 4)}</p>
                     <p className="text-xs text-[var(--text-muted)]">per km (EV)</p>
                   </div>
                   <div className="rounded-xl bg-neon-red/10 p-3 border border-neon-red/20">
-                    <p className="text-lg font-bold text-neon-red">${fmt(tco.cost_per_km_ice, 4)}</p>
+                    <p className="text-lg font-bold text-neon-red">${fmtNumber(tco.cost_per_km_ice, 4)}</p>
                     <p className="text-xs text-[var(--text-muted)]">per km (Gas)</p>
                   </div>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             <FadeIn delay={0.2}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-neon-purple" /> Monthly EV vs Gas Cost
-                </h3>
+              <ChartContainer title="Monthly EV vs Gas Cost" height="auto">
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={tco.monthly_breakdown}>
@@ -179,7 +168,7 @@ export default function TrueCostOwnership() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
@@ -203,7 +192,7 @@ export default function TrueCostOwnership() {
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
                   <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">Total Estimated Savings</p>
                   <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.total_savings + tco.maintenance_savings_estimate)}</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">{fmt(tco.total_km, 0)} km driven · {tco.first_date} → {tco.last_date}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{fmtInt(tco.total_km)} km driven · {tco.first_date} → {tco.last_date}</p>
                 </div>
               </div>
             </GlassPanel>

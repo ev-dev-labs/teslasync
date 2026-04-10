@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSettings } from '../hooks/useSettings'
 import { getVehicles, getFleetAnalytics } from '../api'
-import { GlassPanel } from '../components/ui'
+import { GlassPanel, MetricCard } from '../components/ui'
 import { Car } from 'lucide-react'
+import { fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function QuickStats() {
+  usePageTitle('Quick Stats')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { data: analytics } = useQuery({ queryKey: ['fleet-analytics'], queryFn: () => getFleetAnalytics(30) })
   const { convertDistance, distanceUnit } = useSettings()
@@ -29,22 +32,10 @@ export default function QuickStats() {
 
         {/* Key metrics */}
         <div className="grid grid-cols-2 gap-3">
-          <GlassPanel className="p-4 text-center">
-            <p className="text-2xl font-bold text-neon-cyan">{convertDistance(analytics?.total_distance_km ?? 0).toFixed(0)}</p>
-            <p className="text-[10px] text-[var(--text-muted)]">{distanceUnit} Driven</p>
-          </GlassPanel>
-          <GlassPanel className="p-4 text-center">
-            <p className="text-2xl font-bold text-neon-green">{analytics?.total_drives || 0}</p>
-            <p className="text-[10px] text-[var(--text-muted)]">Drives</p>
-          </GlassPanel>
-          <GlassPanel className="p-4 text-center">
-            <p className="text-2xl font-bold text-neon-amber">{analytics?.total_energy_kwh?.toFixed(0) || '0'}</p>
-            <p className="text-[10px] text-[var(--text-muted)]">kWh Used</p>
-          </GlassPanel>
-          <GlassPanel className="p-4 text-center">
-            <p className="text-2xl font-bold text-neon-purple">${analytics?.total_cost?.toFixed(0) || '0'}</p>
-            <p className="text-[10px] text-[var(--text-muted)]">Total Cost</p>
-          </GlassPanel>
+          <MetricCard label={`${distanceUnit} Driven`} value={fmtInt(convertDistance(analytics?.total_distance_km ?? 0))} color="cyan" />
+          <MetricCard label="Drives" value={analytics?.total_drives || 0} color="green" />
+          <MetricCard label="kWh Used" value={fmtInt(analytics?.total_energy_kwh)} color="amber" />
+          <MetricCard label="Total Cost" value={`$${fmtInt(analytics?.total_cost)}`} color="purple" />
         </div>
 
         {/* Footer */}

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSpeedProfile, Vehicle, EfficiencyCategory } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, ChartContainer, Select } from '../components/ui'
 import { Gauge, Zap, TrendingUp, AlertTriangle, Car } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -9,8 +9,11 @@ import {
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useUnits } from '../hooks/useUnits'
+import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function bucketColor(bucket: string): string {
+  usePageTitle('Speed Profile')
   if (bucket.startsWith('0') || bucket.startsWith('15')) return '#10b981'
   if (bucket.startsWith('30') || bucket.startsWith('45')) return '#00f0ff'
   if (bucket.startsWith('60') || bucket.startsWith('75')) return '#f59e0b'
@@ -81,15 +84,12 @@ export default function SpeedProfile() {
         icon={<Gauge className="h-5 w-5" />}
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
-              className="glass-input text-sm px-3 py-2"
+            <Select
+              className="text-sm px-3 py-2"
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           ) : undefined
         }
       />
@@ -117,12 +117,9 @@ export default function SpeedProfile() {
 
           {/* Speed Distribution Bar Chart */}
           <FadeIn>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="section-title mb-4 flex items-center gap-2">
-                <Gauge className="h-4 w-4 text-neon-cyan" /> Speed Distribution (Last 30 Days)
-              </h3>
+            <ChartContainer title="Speed Distribution (Last 30 Days)" height={300}>
               {distData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={distData} margin={{ bottom: 5 }}>
                     {chartGrid}
                     <XAxis dataKey="speed_bucket" tick={axisTickSm} tickLine={false} axisLine={false} label={{ value: `Speed (${u.speedUnit})`, position: 'insideBottom', offset: -2, style: { fill: 'var(--text-muted)', fontSize: 10 } }} />
@@ -138,17 +135,14 @@ export default function SpeedProfile() {
               ) : (
                 <p className="text-center py-8" style={{ color: 'var(--text-muted)' }}>No telemetry data available</p>
               )}
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* Efficiency vs Speed Scatter */}
           {points.length > 0 && (
             <FadeIn>
-              <GlassPanel className="p-4 sm:p-6">
-                <h3 className="section-title mb-4 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-neon-green" /> Efficiency vs Speed
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
+              <ChartContainer title="Efficiency vs Speed" height={300}>
+                <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ bottom: 5 }}>
                     {chartGrid}
                     <XAxis type="number" dataKey="speed_avg" name="Avg Speed" unit={` ${u.speedUnit}`} tick={axisTickSm} tickLine={false} axisLine={false} />
@@ -173,7 +167,7 @@ export default function SpeedProfile() {
                     <span className="inline-block w-2 h-2 rounded-full bg-neon-red" /> High consumption
                   </span>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           )}
 
@@ -201,7 +195,7 @@ export default function SpeedProfile() {
                       <div className="flex justify-between">
                         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Battery %/100km</span>
                         <span className={`text-sm font-bold ${c.battery_pct_per_100km < 8 ? 'text-neon-green' : c.battery_pct_per_100km < 15 ? 'text-neon-amber' : 'text-neon-red'}`}>
-                          {c.battery_pct_per_100km.toFixed(1)}%
+                          {fmtNumber(c.battery_pct_per_100km)}%
                         </span>
                       </div>
                     </div>

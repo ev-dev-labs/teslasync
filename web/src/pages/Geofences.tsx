@@ -2,11 +2,12 @@ import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getGeofences, createGeofence, updateGeofence, deleteGeofence, Geofence } from '../api'
 import { MapPin, Plus, Pencil, Trash2, X, Check, Globe, Ruler, Map as MapIcon, List, Zap, Navigation, RefreshCw } from 'lucide-react'
-import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn } from '../components/ui'
+import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, Skeleton, EmptyState, TabNav, FadeIn, Button, Input } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
 import { CHART_COLORS } from '../lib/colors'
+import { fmtNumber } from '../lib/numberFormat'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapContainer, Circle, Marker, Popup, useMapEvents } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
@@ -14,6 +15,7 @@ import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import L from 'leaflet'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface FormData {
   name: string
@@ -51,11 +53,11 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
               <Globe className="h-3 w-3" /> {geofence.latitude.toFixed(6)}, {geofence.longitude.toFixed(6)}
             </span>
             <span className="flex items-center gap-1">
-              <Ruler className="h-3 w-3" /> {convertDistance(geofence.radius / 1000).toFixed(geofence.radius >= 1000 ? 1 : 2)} {distanceUnit}
+              <Ruler className="h-3 w-3" /> {fmtNumber(convertDistance(geofence.radius / 1000), geofence.radius >= 1000 ? 1 : 2)} {distanceUnit}
             </span>
             {geofence.cost_per_kwh != null && (
               <span className="flex items-center gap-1 text-neon-green">
-                <Zap className="h-3 w-3" /> ${geofence.cost_per_kwh.toFixed(2)}/kWh
+                <Zap className="h-3 w-3" /> ${fmtNumber(geofence.cost_per_kwh, 2)}/kWh
               </span>
             )}
           </div>
@@ -122,12 +124,10 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Name</label>
-            <input
-              type="text"
+            <Input
+              label="Name"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
-              className="glass-input w-full px-3 py-2 text-sm"
               placeholder="Home"
             />
           </div>
@@ -169,46 +169,45 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
                   : <Navigation className="h-3.5 w-3.5" />}
               </button>
             </div>
-            <input
+            <Input
               type="number"
               step="any"
               value={form.latitude}
               onChange={e => setForm({ ...form, latitude: e.target.value })}
-              className="glass-input w-full px-3 py-2 text-sm font-mono"
+              className="w-full px-3 py-2 text-sm font-mono"
               placeholder="37.7749"
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Longitude</label>
-            <input
+            <Input
+              label="Longitude"
               type="number"
               step="any"
               value={form.longitude}
               onChange={e => setForm({ ...form, longitude: e.target.value })}
-              className="glass-input w-full px-3 py-2 text-sm font-mono"
+              className="font-mono"
               placeholder="-122.4194"
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Radius (m)</label>
-            <input
+            <Input
+              label="Radius (m)"
               type="number"
               value={form.radius}
               onChange={e => setForm({ ...form, radius: e.target.value })}
-              className="glass-input w-full px-3 py-2 text-sm"
               placeholder="50"
               min={10}
               max={50000}
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">Cost per kWh ($)</label>
-            <input
+            <Input
+              label="Cost per kWh ($)"
               type="number"
               step="0.01"
               value={form.cost_per_kwh}
               onChange={e => setForm({ ...form, cost_per_kwh: e.target.value })}
-              className="glass-input w-full px-3 py-2 text-sm font-mono"
+              className="font-mono"
               placeholder="0.12 (optional)"
               min={0}
             />
@@ -217,19 +216,18 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
         </div>
 
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="primary"
+            icon={<Check className="h-4 w-4" />}
             onClick={onSubmit}
             disabled={isSaving || !form.name || !form.latitude || !form.longitude}
-            className="neon-button flex items-center gap-2 px-5 py-2 text-sm font-medium disabled:opacity-40"
+            loading={isSaving}
           >
-            <Check className="h-4 w-4" /> {isSaving ? 'Saving...' : 'Save'}
-          </button>
-          <button
-            onClick={onCancel}
-            className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-white/5 transition-colors"
-          >
-            <X className="h-4 w-4" /> Cancel
-          </button>
+            Save
+          </Button>
+          <Button variant="secondary" icon={<X className="h-4 w-4" />} onClick={onCancel}>
+            Cancel
+          </Button>
         </div>
       </GlassPanel>
     </motion.div>
@@ -244,6 +242,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void
 }
 
 export default function Geofences() {
+  usePageTitle('Geofences')
   const queryClient = useQueryClient()
   const toast = useToast()
   const { convertDistance, distanceUnit } = useSettings()
@@ -341,9 +340,9 @@ export default function Geofences() {
               active={view}
               onChange={k => setView(k as 'map' | 'list')}
             />
-            <button onClick={startCreate} className="neon-button flex items-center gap-2 px-4 py-2 text-sm font-medium">
-              <Plus className="h-4 w-4" /> Add
-            </button>
+            <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={startCreate}>
+              Add
+            </Button>
           </div>
         }
       />
@@ -359,7 +358,7 @@ export default function Geofences() {
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Avg Radius</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-[var(--text-primary)]">{(totalArea * convertDistance(1) ** 2).toFixed(2)} {distanceUnit}²</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(totalArea * convertDistance(1) ** 2, 2)} {distanceUnit}²</p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Area</p>
               </div>
               <div className="text-center">

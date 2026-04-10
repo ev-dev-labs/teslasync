@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getDailyMileage, getMonthlyMileage, getMileageStats } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
-import { AnimatedNumber } from '../components/Widgets'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, ChartContainer, Select } from '../components/ui'
 import { Milestone, TrendingUp, Calendar, MapPin, ArrowUp, ArrowDown } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -10,8 +9,11 @@ import {
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function Mileage() {
+  usePageTitle('Mileage')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -72,9 +74,9 @@ export default function Mileage() {
   }, [monthly])
 
   const statCards = stats ? [
-    { label: 'Total Distance', value: convertDistance(stats.total_distance).toFixed(0), unit: distanceUnit, icon: MapPin, color: '#00f0ff' },
-    { label: 'Daily Average', value: convertDistance(stats.avg_daily).toFixed(1), unit: `${distanceUnit}/day`, icon: TrendingUp, color: '#10b981' },
-    { label: 'Best Day', value: convertDistance(stats.max_daily).toFixed(0), unit: distanceUnit, icon: Milestone, color: '#f59e0b' },
+    { label: 'Total Distance', value: fmtInt(convertDistance(stats.total_distance)), unit: distanceUnit, icon: MapPin, color: '#00f0ff' },
+    { label: 'Daily Average', value: fmtNumber(convertDistance(stats.avg_daily)), unit: `${distanceUnit}/day`, icon: TrendingUp, color: '#10b981' },
+    { label: 'Best Day', value: fmtInt(convertDistance(stats.max_daily)), unit: distanceUnit, icon: Milestone, color: '#f59e0b' },
     { label: 'Tracked Days', value: `${stats.days_tracked}`, unit: 'days', icon: Calendar, color: '#8b5cf6' },
   ] : []
 
@@ -83,14 +85,11 @@ export default function Mileage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
         <PageHeader title="Mileage" subtitle="Daily and monthly distance tracking" icon={<Milestone className="h-7 w-7 text-neon-blue" />} />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -102,16 +101,14 @@ export default function Mileage() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 sm:mb-8">
           {statCards.map(card => (
-            <GlassPanel key={card.label} className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className="h-4 w-4" style={{ color: card.color }} />
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
-              </div>
-              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                <AnimatedNumber value={Number(card.value)} decimals={card.label === 'Daily Average' ? 1 : 0} />
-              </p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">{card.unit}</p>
-            </GlassPanel>
+            <MetricCard
+              key={card.label}
+              label={card.label}
+              value={card.value}
+              icon={<card.icon className="h-4 w-4" />}
+              color={card.color === '#00f0ff' ? 'cyan' : card.color === '#10b981' ? 'green' : card.color === '#f59e0b' ? 'amber' : 'purple'}
+              subtitle={card.unit}
+            />
           ))}
         </div>
       )}
@@ -125,7 +122,7 @@ export default function Mileage() {
               <div>
                 <p className="text-xs text-[var(--text-secondary)]">Most Active Month</p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">{mostActiveMonth.month}</p>
-                <p className="text-[10px] text-neon-green">{convertDistance(mostActiveMonth.distance).toFixed(0)} {distanceUnit} · {mostActiveMonth.drives} drives</p>
+                <p className="text-[10px] text-neon-green">{fmtInt(convertDistance(mostActiveMonth.distance))} {distanceUnit} · {mostActiveMonth.drives} drives</p>
               </div>
             </GlassPanel>
           )}
@@ -135,7 +132,7 @@ export default function Mileage() {
               <div>
                 <p className="text-xs text-[var(--text-secondary)]">Least Active Month</p>
                 <p className="text-sm font-bold text-[var(--text-primary)]">{leastActiveMonth.month}</p>
-                <p className="text-[10px] text-neon-amber">{convertDistance(leastActiveMonth.distance).toFixed(0)} {distanceUnit} · {leastActiveMonth.drives} drives</p>
+                <p className="text-[10px] text-neon-amber">{fmtInt(convertDistance(leastActiveMonth.distance))} {distanceUnit} · {leastActiveMonth.drives} drives</p>
               </div>
             </GlassPanel>
           )}
@@ -144,9 +141,8 @@ export default function Mileage() {
 
       {/* Cumulative Mileage Area Chart */}
       {cumulativeChart.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Cumulative Mileage ({distanceUnit})</h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title={`Cumulative Mileage (${distanceUnit})`} height={280} className="mb-6">
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cumulativeChart}>
               <defs>
                 <linearGradient id="cumulGrad" x1="0" y1="0" x2="0" y2="1">
@@ -161,16 +157,15 @@ export default function Mileage() {
               <Area type="monotone" dataKey="cumulative" stroke="#a855f7" fill="url(#cumulGrad)" name={`Cumulative (${distanceUnit})`} strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* Daily Mileage Area Chart */}
-      <GlassPanel className="p-4 sm:p-6 mb-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Distance</h3>
+      <ChartContainer title="Daily Distance" height={280} className="mb-6">
         {dailyChart.length === 0 ? (
-          <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No daily data</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No daily data</div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dailyChart}>
               <defs>
                 <linearGradient id="mileageGrad" x1="0" y1="0" x2="0" y2="1">
@@ -186,15 +181,14 @@ export default function Mileage() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* Monthly Bar Chart */}
-      <GlassPanel className="p-4 sm:p-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Monthly Mileage</h3>
+      <ChartContainer title="Monthly Mileage" height={280}>
         {monthlyChart.length === 0 ? (
-          <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No monthly data</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No monthly data</div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyChart}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -204,7 +198,7 @@ export default function Mileage() {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
     </FadeIn>
   )
 }

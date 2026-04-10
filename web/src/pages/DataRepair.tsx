@@ -10,15 +10,18 @@ import {
   deleteDrive,
 } from '../api'
 import type { ChargingSession, Drive } from '../api'
-import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
 import { Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle, X, Save, Clock, Trash2 } from 'lucide-react'
+import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type Tab = 'charging' | 'drives'
 
 function hoursOpen(startDate: string): string {
+  usePageTitle('Data Repair')
   const h = Math.round((Date.now() - new Date(startDate).getTime()) / 3600000)
   if (h < 24) return `${h}h`
   const d = Math.floor(h / 24)
@@ -95,18 +98,18 @@ function ChargingEditForm({
         <Field label="Cost ($)" value={form.cost} onChange={v => setForm(f => ({ ...f, cost: v }))} type="number" />
       </div>
       <div className="flex items-center gap-2 pt-2">
-        <button onClick={() => update.mutate()} disabled={update.isPending} className="btn-primary flex items-center gap-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3 py-1.5 text-xs font-medium ring-1 ring-amber-500/30 transition-colors">
-          <Save className="h-3.5 w-3.5" /> Save
-        </button>
-        <button onClick={() => close.mutate()} disabled={close.isPending} className="flex items-center gap-1.5 rounded-lg bg-neon-green/10 hover:bg-neon-green/20 text-neon-green px-3 py-1.5 text-xs font-medium ring-1 ring-neon-green/20 transition-colors">
-          <Clock className="h-3.5 w-3.5" /> Close Session
-        </button>
-        <button onClick={() => { if (confirm('Delete this session permanently?')) discard.mutate() }} disabled={discard.isPending} className="flex items-center gap-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 text-xs font-medium ring-1 ring-red-500/20 transition-colors">
-          <Trash2 className="h-3.5 w-3.5" /> Discard
-        </button>
-        <button onClick={onClose} className="ml-auto flex items-center gap-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[var(--text-secondary)] px-3 py-1.5 text-xs font-medium transition-colors">
-          <X className="h-3.5 w-3.5" /> Cancel
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => update.mutate()} disabled={update.isPending} icon={<Save className="h-3.5 w-3.5" />}>
+          Save
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => close.mutate()} disabled={close.isPending} icon={<Clock className="h-3.5 w-3.5" />}>
+          Close Session
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => { if (confirm('Delete this session permanently?')) discard.mutate() }} disabled={discard.isPending} icon={<Trash2 className="h-3.5 w-3.5" />}>
+          Discard
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onClose} icon={<X className="h-3.5 w-3.5" />} className="ml-auto">
+          Cancel
+        </Button>
       </div>
     </div>
   )
@@ -182,18 +185,18 @@ function DriveEditForm({
         <Field label="End Range (km)" value={form.end_range_km} onChange={v => setForm(f => ({ ...f, end_range_km: v }))} type="number" />
       </div>
       <div className="flex items-center gap-2 pt-2">
-        <button onClick={() => update.mutate()} disabled={update.isPending} className="flex items-center gap-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3 py-1.5 text-xs font-medium ring-1 ring-amber-500/30 transition-colors">
-          <Save className="h-3.5 w-3.5" /> Save
-        </button>
-        <button onClick={() => close.mutate()} disabled={close.isPending} className="flex items-center gap-1.5 rounded-lg bg-neon-green/10 hover:bg-neon-green/20 text-neon-green px-3 py-1.5 text-xs font-medium ring-1 ring-neon-green/20 transition-colors">
-          <Clock className="h-3.5 w-3.5" /> Close Drive
-        </button>
-        <button onClick={() => { if (confirm('Delete this drive permanently?')) discard.mutate() }} disabled={discard.isPending} className="flex items-center gap-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 text-xs font-medium ring-1 ring-red-500/20 transition-colors">
-          <Trash2 className="h-3.5 w-3.5" /> Discard
-        </button>
-        <button onClick={onClose} className="ml-auto flex items-center gap-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[var(--text-secondary)] px-3 py-1.5 text-xs font-medium transition-colors">
-          <X className="h-3.5 w-3.5" /> Cancel
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => update.mutate()} disabled={update.isPending} icon={<Save className="h-3.5 w-3.5" />}>
+          Save
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => close.mutate()} disabled={close.isPending} icon={<Clock className="h-3.5 w-3.5" />}>
+          Close Drive
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => { if (confirm('Delete this drive permanently?')) discard.mutate() }} disabled={discard.isPending} icon={<Trash2 className="h-3.5 w-3.5" />}>
+          Discard
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onClose} icon={<X className="h-3.5 w-3.5" />} className="ml-auto">
+          Cancel
+        </Button>
       </div>
     </div>
   )
@@ -274,9 +277,9 @@ export default function DataRepair() {
             <EmptyState icon={<CheckCircle className="h-10 w-10" />} title="All sessions are complete ✓" description="No stale charging sessions found." />
           ) : (
             <GlassPanel className="overflow-hidden">
-              <table className="w-full text-left">
+              <table className={tableTokens.wrapper}>
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
+                  <tr className={tableTokens.head}>
                     <Th>ID</Th>
                     <Th>Start Date</Th>
                     <Th>Start Battery</Th>
@@ -285,7 +288,7 @@ export default function DataRepair() {
                     <Th>Status</Th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className={tableTokens.body}>
                   {staleCharging.map(s => (
                     <ChargingRow key={s.id} session={s} expanded={expandedId === s.id} onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)} />
                   ))}
@@ -298,9 +301,9 @@ export default function DataRepair() {
             <EmptyState icon={<CheckCircle className="h-10 w-10" />} title="All sessions are complete ✓" description="No stale drives found." />
           ) : (
             <GlassPanel className="overflow-hidden">
-              <table className="w-full text-left">
+              <table className={tableTokens.wrapper}>
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
+                  <tr className={tableTokens.head}>
                     <Th>ID</Th>
                     <Th>Start Date</Th>
                     <Th>Start Battery</Th>
@@ -309,7 +312,7 @@ export default function DataRepair() {
                     <Th>Status</Th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className={tableTokens.body}>
                   {staleDrives.map(d => (
                     <DriveRow key={d.id} drive={d} expanded={expandedId === d.id} onToggle={() => setExpandedId(expandedId === d.id ? null : d.id)} />
                   ))}
@@ -328,7 +331,7 @@ export default function DataRepair() {
 function ChargingRow({ session, expanded, onToggle }: { session: ChargingSession; expanded: boolean; onToggle: () => void }) {
   return (
     <>
-      <tr onClick={onToggle} className={clsx('border-b border-white/[0.04] cursor-pointer transition-colors', expanded ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]')}>
+      <tr onClick={onToggle} className={clsx(tableTokens.row, 'border-b border-white/[0.04] cursor-pointer', expanded && 'bg-amber-500/[0.06]')}>
         <Td>{session.id}</Td>
         <Td>{formatDateTime(session.start_date)}</Td>
         <Td>{session.start_battery_level}%</Td>
@@ -348,7 +351,7 @@ function ChargingRow({ session, expanded, onToggle }: { session: ChargingSession
 function DriveRow({ drive, expanded, onToggle }: { drive: Drive; expanded: boolean; onToggle: () => void }) {
   return (
     <>
-      <tr onClick={onToggle} className={clsx('border-b border-white/[0.04] cursor-pointer transition-colors', expanded ? 'bg-amber-500/[0.06]' : 'hover:bg-white/[0.02]')}>
+      <tr onClick={onToggle} className={clsx(tableTokens.row, 'border-b border-white/[0.04] cursor-pointer', expanded && 'bg-amber-500/[0.06]')}>
         <Td>{drive.id}</Td>
         <Td>{formatDateTime(drive.start_date)}</Td>
         <Td>{drive.start_battery_level != null ? `${drive.start_battery_level}%` : '—'}</Td>
@@ -369,9 +372,9 @@ function DriveRow({ drive, expanded, onToggle }: { drive: Drive; expanded: boole
 
 function StatusBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-400 ring-1 ring-amber-500/20">
+    <Badge color="amber">
       <AlertTriangle className="h-3 w-3" /> Open
-    </span>
+    </Badge>
   )
 }
 
@@ -394,9 +397,9 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean; o
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{children}</th>
+  return <th className={tableTokens.headCell}>{children}</th>
 }
 
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">{children}</td>
+  return <td className={clsx(tableTokens.cell, 'text-[var(--text-secondary)]')}>{children}</td>
 }

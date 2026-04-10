@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getSafetyData, getSafetyLatest } from '../api'
+import { getVehicles, getSafetyData, getSafetyLatest, type SafetySnapshot } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Select, DataTable, type Column } from '../components/ui'
 import {
   Shield, ShieldCheck, ShieldAlert, Eye, AlertTriangle, Car, Gauge, Lock,
   Milestone, CheckCircle, XCircle, Activity, User, Bell,
@@ -10,6 +10,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
 /*  Chart Tooltip                                                      */
@@ -17,6 +18,7 @@ import { formatDateTime } from '../lib/dateFormat'
 
 interface SafetyTooltipPayload { name: string; value: number; color?: string }
 function SafetyTooltip({ active, payload, label }: { active?: boolean; payload?: SafetyTooltipPayload[]; label?: string }) {
+  usePageTitle('Safety Settings')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -46,11 +48,10 @@ function SafetyCard({
   description?: string
 }) {
   const isEnabled = value?.enabled ?? false
-  const statusColor = isEnabled ? 'text-neon-green' : 'text-neon-red'
   const statusBg = isEnabled ? 'bg-neon-green/20' : 'bg-neon-red/20'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className={clsx('p-2 rounded-lg', statusBg)}>
@@ -74,18 +75,16 @@ function SafetyCard({
             ) : (
               <XCircle className="h-3.5 w-3.5 text-neon-red" />
             )}
-            <span className={clsx('text-[11px] px-2.5 py-1 rounded-full font-medium', statusBg, statusColor)}>
-              {value.text}
-            </span>
+            <Badge color={isEnabled ? 'green' : 'red'} size="sm">{value.text}</Badge>
           </>
         )}
       </div>
-    </div>
+    </GlassPanel>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/*  Stats Card                                                         */
+/*  Stats Card*/
 /* ------------------------------------------------------------------ */
 
 function StatsCard({
@@ -101,29 +100,28 @@ function StatsCard({
 }) {
   const formatted = value != null ? value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '--'
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3 text-center">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3 text-center">
       <div className="p-2.5 rounded-lg bg-neon-cyan/10">
         {icon}
       </div>
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatted}</p>
-      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/10 text-neon-cyan">{unit}</span>
-    </div>
+      <Badge color="cyan" size="sm">{unit}</Badge>
+    </GlassPanel>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/*  Safety Score Badge                                                 */
+/*  Safety Score Badge*/
 /* ------------------------------------------------------------------ */
 
 function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0
   const color = pct >= 80 ? 'text-neon-green' : pct >= 50 ? 'text-neon-amber' : 'text-neon-red'
-  const bg = pct >= 80 ? 'bg-neon-green/20' : pct >= 50 ? 'bg-neon-amber/20' : 'bg-neon-red/20'
-  const assessment = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Fair' : 'Needs Attention'
+  const assessment= pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Fair' : 'Needs Attention'
 
   return (
-    <div className="glass-card p-5 sm:p-6 flex flex-col items-center gap-4 text-center">
+    <GlassPanel className="p-5 sm:p-6 flex flex-col items-center gap-4 text-center">
       <div className="relative w-28 h-28 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/5" />
@@ -140,8 +138,8 @@ function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
           {score} of {total} features enabled
         </p>
       </div>
-      <span className={clsx('text-xs px-3 py-1 rounded-full font-medium', bg, color)}>{assessment}</span>
-    </div>
+      <Badge color={pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'red'} size="md">{assessment}</Badge>
+    </GlassPanel>
   )
 }
 
@@ -175,6 +173,66 @@ function StatusDot({ enabled }: { enabled: boolean }) {
     )} />
   )
 }
+
+const safetyColumns: Column<SafetySnapshot>[] = [
+  {
+    key: 'time',
+    header: 'Time',
+    render: (s) => (
+      <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+        {formatDateTime(s.created_at)}
+      </span>
+    ),
+  },
+  {
+    key: 'aeb',
+    header: 'AEB',
+    className: 'text-center',
+    render: (s) => <StatusDot enabled={s.automatic_emergency_braking_off === false} />,
+  },
+  {
+    key: 'blindSpot',
+    header: 'Blind Spot',
+    className: 'text-center',
+    render: (s) => <StatusDot enabled={!!s.automatic_blind_spot_camera} />,
+  },
+  {
+    key: 'fcw',
+    header: 'FCW',
+    className: 'text-center',
+    render: (s) => (
+      <Badge color={s.forward_collision_warning && s.forward_collision_warning.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
+        {s.forward_collision_warning
+          ? s.forward_collision_warning.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : '--'}
+      </Badge>
+    ),
+  },
+  {
+    key: 'laneDept',
+    header: 'Lane Dept.',
+    className: 'text-center',
+    render: (s) => (
+      <Badge color={s.lane_departure_avoidance && s.lane_departure_avoidance.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
+        {s.lane_departure_avoidance
+          ? s.lane_departure_avoidance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : '--'}
+      </Badge>
+    ),
+  },
+  {
+    key: 'cruiseDist',
+    header: 'Cruise Dist.',
+    className: 'text-center',
+    render: (s) => (
+      <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+        {s.cruise_follow_distance
+          ? s.cruise_follow_distance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          : '--'}
+      </span>
+    ),
+  },
+]
 
 /* ------------------------------------------------------------------ */
 /*  Main Component                                                     */
@@ -273,14 +331,11 @@ export default function SafetySettings() {
           icon={<Shield className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -351,7 +406,7 @@ export default function SafetySettings() {
       {/* ---- Live Seat Belt Status ---- */}
       <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Live Safety Signals</h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.driverSeatBelt ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
             <User className={clsx('h-5 w-5', live.driverSeatBelt ? 'text-neon-green' : 'text-neon-red')} />
           </div>
@@ -359,8 +414,8 @@ export default function SafetySettings() {
             {live.driverSeatBelt ? 'Buckled' : 'Unbuckled'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Belt</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.passengerSeatBelt ? 'bg-neon-green/10' : 'bg-white/5')}>
             <User className={clsx('h-5 w-5', live.passengerSeatBelt ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
           </div>
@@ -368,8 +423,8 @@ export default function SafetySettings() {
             {live.passengerSeatBelt ? 'Buckled' : 'Unbuckled'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Passenger Belt</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.driverSeatOccupied ? 'bg-neon-green/10' : 'bg-white/5')}>
             <Car className={clsx('h-5 w-5', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
           </div>
@@ -377,8 +432,8 @@ export default function SafetySettings() {
             {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Seat</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.locked ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
             <Lock className={clsx('h-5 w-5', live.locked ? 'text-neon-green' : 'text-neon-red')} />
           </div>
@@ -386,7 +441,7 @@ export default function SafetySettings() {
             {live.locked ? 'Locked' : 'Unlocked'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vehicle Lock</span>
-        </div>
+        </GlassPanel>
       </div>
 
       {/* ---- Self-Driving Stats ---- */}
@@ -418,68 +473,15 @@ export default function SafetySettings() {
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Safety Configuration History</h3>
         {loadingHistory ? (
           <Skeleton className="h-64 rounded-xl" />
-        ) : !history || history.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-[var(--text-muted)] text-sm">
-            No safety history data available
-          </div>
         ) : (
           <div className="overflow-x-auto max-h-80 overflow-y-auto">
-            <table className="w-full text-xs" style={{ color: 'var(--text-primary)' }}>
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                  <th className="text-left py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Time</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>AEB</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Blind Spot</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>FCW</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Lane Dept.</th>
-                  <th className="text-center py-2 px-3 font-medium sticky top-0" style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}>Cruise Dist.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map(s => (
-                  <tr key={s.id} className="border-b last:border-b-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                    <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {formatDateTime(s.created_at)}
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <StatusDot enabled={s.automatic_emergency_braking_off === false} />
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <StatusDot enabled={!!s.automatic_blind_spot_camera} />
-                    </td>
-                    <td className="py-2 px-3 text-center whitespace-nowrap">
-                      <span className={clsx(
-                        'text-[10px] px-1.5 py-0.5 rounded-full',
-                        s.forward_collision_warning && s.forward_collision_warning.toLowerCase() !== 'off'
-                          ? 'bg-neon-green/10 text-neon-green'
-                          : 'bg-neon-red/10 text-neon-red',
-                      )}>
-                        {s.forward_collision_warning
-                          ? s.forward_collision_warning.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                          : '--'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-center whitespace-nowrap">
-                      <span className={clsx(
-                        'text-[10px] px-1.5 py-0.5 rounded-full',
-                        s.lane_departure_avoidance && s.lane_departure_avoidance.toLowerCase() !== 'off'
-                          ? 'bg-neon-green/10 text-neon-green'
-                          : 'bg-neon-red/10 text-neon-red',
-                      )}>
-                        {s.lane_departure_avoidance
-                          ? s.lane_departure_avoidance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                          : '--'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-center whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {s.cruise_follow_distance
-                        ? s.cruise_follow_distance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                        : '--'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<SafetySnapshot>
+              columns={safetyColumns}
+              data={history ?? []}
+              keyExtractor={(s) => s.id}
+              compact
+              emptyMessage="No safety history data available"
+            />
           </div>
         )}
       </GlassPanel>

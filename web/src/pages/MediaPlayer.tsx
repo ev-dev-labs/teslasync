@@ -1,24 +1,26 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getVehicles, getMediaData, getMediaLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { getVehicles, getMediaData, getMediaLatest, type MediaSnapshot } from '../api'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Button, Select, DataTable, type Column } from '../components/ui'
 import { Music, Volume2, Play, Pause, Square, Radio, Headphones, BarChart3, Clock } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { fmtNumber } from '../lib/numberFormat'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
 interface MediaTooltipPayload { name: string; value: number; color?: string }
 function MediaTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: MediaTooltipPayload[]; label?: string; unit?: string }) {
+  usePageTitle('Media Player')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -37,7 +39,7 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
   const statusLabel = vol === 0 ? 'Muted' : isHigh ? 'Loud' : isLow ? 'Quiet' : 'Normal'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Volume</p>
       <div className="relative w-28 h-28 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -62,35 +64,23 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>
         {vol > 0 ? `${vol} / ${max}` : 'N/A'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
-/* ── Playback status badge ────────────────────────────────────────────────── */
+/* ── Playback status badge────────────────────────────────────────────────── */
 
-function StatusBadge({ status }: { status?: string }) {
+function PlaybackStatusBadge({ status }: { status?: string }) {
   // Normalize protobuf enum values (MediaStatusPlaying → playing)
   const raw = cleanNil(status) ?? ''
   const s = raw.toLowerCase().replace('mediastatus', '')
   if (s === 'playing') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">
-        <Play className="h-3 w-3" /> Playing
-      </span>
-    )
+    return <Badge color="green"><Play className="h-3 w-3" /> Playing</Badge>
   }
   if (s === 'paused') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-amber/20 text-neon-amber">
-        <Pause className="h-3 w-3" /> Paused
-      </span>
-    )
+    return <Badge color="amber"><Pause className="h-3 w-3" /> Paused</Badge>
   }
-  return (
-    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-white/10 text-[var(--text-muted)]">
-      <Square className="h-3 w-3" /> {s || 'Stopped'}
-    </span>
-  )
+  return <Badge color="neutral"><Square className="h-3 w-3" /> {s || 'Stopped'}</Badge>
 }
 
 /* ── Progress bar for elapsed / duration ──────────────────────────────────── */
@@ -158,10 +148,58 @@ function SourceIcon({ source, className }: { source?: string; className?: string
 
 /** Filter out Go nil string representations */
 import { cleanNil } from '../lib/cleanNil'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ── Pie chart colors ─────────────────────────────────────────────────────── */
 
 const PIE_COLORS = ['#00f0ff', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6']
+
+const playbackColumns: Column<MediaSnapshot>[] = [
+  {
+    key: 'time',
+    header: 'Time',
+    render: (row) => (
+      <span className="whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+        {formatDateTime(row.created_at)}
+      </span>
+    ),
+  },
+  {
+    key: 'title',
+    header: 'Title',
+    render: (row) => (
+      <span className="max-w-[180px] truncate block" style={{ color: 'var(--text-primary)' }}>
+        {cleanNil(row.now_playing_title) || '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'artist',
+    header: 'Artist',
+    className: 'hidden sm:table-cell',
+    render: (row) => (
+      <span className="max-w-[140px] truncate block" style={{ color: 'var(--text-secondary)' }}>
+        {cleanNil(row.now_playing_artist) || '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'source',
+    header: 'Source',
+    className: 'hidden md:table-cell',
+    render: (row) => (
+      <span className="inline-flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+        <SourceIcon source={row.playback_source} className="h-3 w-3 text-neon-cyan" />
+        {cleanNil(row.playback_source) || '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    render: (row) => <PlaybackStatusBadge status={cleanNil(row.playback_status)} />,
+  },
+]
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 
@@ -260,25 +298,20 @@ export default function MediaPlayer() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {TIME_RANGES.map(tr => (
-              <button key={tr.label} onClick={() => setTimeRange(tr)}
-                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
-                  timeRange.label === tr.label
-                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                    : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                )}>
+              <Button key={tr.label} onClick={() => setTimeRange(tr)}
+                variant={timeRange.label === tr.label ? 'primary' : 'secondary'}
+                size="sm"
+              >
                 {tr.label}
-              </button>
+              </Button>
             ))}
           </div>
           {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
         </div>
       </div>
@@ -310,7 +343,7 @@ export default function MediaPlayer() {
                     </p>
                   )}
                 </div>
-                <StatusBadge status={cleanNil(latest.playback_status)} />
+                <PlaybackStatusBadge status={cleanNil(latest.playback_status)} />
               </div>
 
               {cleanNil(latest.now_playing_station) && (
@@ -346,32 +379,32 @@ export default function MediaPlayer() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <VolumeGauge value={latest?.audio_volume ?? null} max={volumeMax} />
 
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Unique Tracks</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <Music className="absolute h-10 w-10 text-neon-cyan/10" />
               <span className="text-3xl font-bold text-neon-cyan">{listeningStats.uniqueTracks}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/20 text-neon-cyan">tracks seen</span>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Top Source</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <SourceIcon source={listeningStats.topSource} className="absolute h-10 w-10 text-neon-purple/10" />
               <span className="text-lg font-bold text-neon-purple text-center leading-tight">{listeningStats.topSource}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-purple/20 text-neon-purple">most used</span>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Volume</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <Volume2 className="absolute h-10 w-10 text-neon-green/10" />
-              <span className="text-3xl font-bold text-neon-green">{listeningStats.avgVolume.toFixed(1)}</span>
+              <span className="text-3xl font-bold text-neon-green">{fmtNumber(listeningStats.avgVolume)}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">average level</span>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
@@ -382,45 +415,15 @@ export default function MediaPlayer() {
         </h3>
         {loadingHistory ? (
           <Skeleton className="h-64 rounded-xl" />
-        ) : !history || history.length === 0 ? (
-          <div className="flex items-center justify-center h-48 text-[var(--text-muted)] text-sm">No playback history available</div>
         ) : (
           <div className="overflow-x-auto max-h-80 overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                  <th className="py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Time</th>
-                  <th className="py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Title</th>
-                  <th className="py-2 px-3 font-medium hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>Artist</th>
-                  <th className="py-2 px-3 font-medium hidden md:table-cell" style={{ color: 'var(--text-secondary)' }}>Source</th>
-                  <th className="py-2 px-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map(row => (
-                  <tr key={row.id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                    <td className="py-2 px-3 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                      {formatDateTime(row.created_at)}
-                    </td>
-                    <td className="py-2 px-3 max-w-[180px] truncate" style={{ color: 'var(--text-primary)' }}>
-                      {cleanNil(row.now_playing_title) || '—'}
-                    </td>
-                    <td className="py-2 px-3 max-w-[140px] truncate hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>
-                      {cleanNil(row.now_playing_artist) || '—'}
-                    </td>
-                    <td className="py-2 px-3 hidden md:table-cell">
-                      <span className="inline-flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
-                        <SourceIcon source={row.playback_source} className="h-3 w-3 text-neon-cyan" />
-                        {cleanNil(row.playback_source) || '—'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3">
-                      <StatusBadge status={cleanNil(row.playback_status)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<MediaSnapshot>
+              columns={playbackColumns}
+              data={history}
+              keyExtractor={(row) => row.id}
+              compact
+              emptyMessage="No playback history available"
+            />
           </div>
         )}
       </GlassPanel>
@@ -501,7 +504,7 @@ export default function MediaPlayer() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="glass-card p-4 flex items-center gap-4">
+            <GlassPanel className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neon-cyan/10 flex items-center justify-center">
                 <Music className="h-5 w-5 text-neon-cyan" />
               </div>
@@ -509,9 +512,9 @@ export default function MediaPlayer() {
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Unique Tracks</p>
                 <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{listeningStats.uniqueTracks}</p>
               </div>
-            </div>
+            </GlassPanel>
 
-            <div className="glass-card p-4 flex items-center gap-4">
+            <GlassPanel className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neon-purple/10 flex items-center justify-center">
                 <Headphones className="h-5 w-5 text-neon-purple" />
               </div>
@@ -519,17 +522,17 @@ export default function MediaPlayer() {
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Most Played Source</p>
                 <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{listeningStats.topSource}</p>
               </div>
-            </div>
+            </GlassPanel>
 
-            <div className="glass-card p-4 flex items-center gap-4">
+            <GlassPanel className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neon-green/10 flex items-center justify-center">
                 <Volume2 className="h-5 w-5 text-neon-green" />
               </div>
               <div>
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Average Volume</p>
-                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{listeningStats.avgVolume.toFixed(1)}<span className="text-sm font-normal" style={{ color: 'var(--text-muted)' }}> / {volumeMax}</span></p>
+                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{fmtNumber(listeningStats.avgVolume)}<span className="text-sm font-normal" style={{ color: 'var(--text-muted)' }}> / {volumeMax}</span></p>
               </div>
-            </div>
+            </GlassPanel>
           </div>
         )}
       </GlassPanel>

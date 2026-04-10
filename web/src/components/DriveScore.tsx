@@ -62,7 +62,7 @@ export function DriveScore({ drive }: { drive: any }) {
             {/* Background circle */}
             <circle
               cx="65" cy="65" r={radius}
-              fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10"
+              fill="none" stroke="var(--glass-border)" strokeWidth="10"
             />
             {/* Animated score arc */}
             <motion.circle

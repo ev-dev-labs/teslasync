@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.svg', 'icons/*.png'],
       manifest: {
         name: 'TeslaSync',

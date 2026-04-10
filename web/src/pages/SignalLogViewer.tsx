@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button, Select, DataTable, type Column } from '../components/ui'
 import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SignalLogEntry {
   timestamp: string
@@ -13,6 +14,8 @@ interface SignalLogEntry {
   value_str?: string
   value_bool?: boolean
 }
+
+type NumberedLogEntry = SignalLogEntry & { _rowNum: number }
 
 interface SignalHistoryResponse {
   vehicle_id: number
@@ -35,6 +38,7 @@ const TIME_RANGES = [
 ]
 
 export default function SignalLogViewer() {
+  usePageTitle('Signal Log')
   const vehicleId = 1
   const [selectedSignal, setSelectedSignal] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -108,6 +112,28 @@ export default function SignalLogViewer() {
 
   const totalRecords = history?.count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
+
+  const logData: NumberedLogEntry[] = (history?.data ?? []).map((entry, idx) => ({
+    ...entry,
+    _rowNum: (page - 1) * pageSize + idx + 1,
+  }))
+
+  const logColumns: Column<NumberedLogEntry>[] = [
+    { key: 'rowNum', header: '#', render: (row) => <span className="text-[var(--text-muted)] font-mono">{row._rowNum}</span> },
+    { key: 'timestamp', header: 'Timestamp', render: (row) => <span className="font-mono text-[var(--text-secondary)]">{formatDateTime(row.timestamp)}</span> },
+    { key: 'value', header: 'Value', render: (row) => {
+      const valType = getValueType(row)
+      return <span className={clsx('font-mono font-semibold', typeColor[valType])}>{formatValue(row)}</span>
+    }},
+    { key: 'type', header: 'Type', render: (row) => {
+      const valType = getValueType(row)
+      return (
+        <Badge color={valType === 'number' ? 'cyan' : valType === 'string' ? 'green' : valType === 'boolean' ? 'amber' : 'neutral'}>
+          {valType}
+        </Badge>
+      )
+    }},
+  ]
 
   return (
     <FadeIn>
@@ -199,10 +225,8 @@ export default function SignalLogViewer() {
               {/* Page size */}
               <div className="flex items-center gap-1 ml-auto">
                 <span className="text-[10px] text-[var(--text-muted)]">Rows:</span>
-                <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                  className="bg-[var(--bg)] border border-[var(--border)] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-primary)] outline-none">
-                  {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <Select value={String(pageSize)} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+                  options={PAGE_SIZES.map(s => ({ value: String(s), label: String(s) }))} />
               </div>
 
               {/* Record count */}
@@ -235,55 +259,25 @@ export default function SignalLogViewer() {
             <GlassPanel className="overflow-hidden">
               {isLoading || isFetching ? (
                 <div className="p-8 text-center text-[var(--text-muted)]">Loading...</div>
-              ) : history && history.data.length > 0 ? (
+              ) : logData.length > 0 ? (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-white/[0.02]">
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">#</th>
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">Timestamp</th>
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">Value</th>
-                          <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)]">Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.data.map((entry, idx) => {
-                          const valType = getValueType(entry)
-                          return (
-                            <tr key={idx} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                              <td className="px-4 py-2 text-[var(--text-muted)] font-mono">{(page - 1) * pageSize + idx + 1}</td>
-                              <td className="px-4 py-2 font-mono text-[var(--text-secondary)]">{formatDateTime(entry.timestamp)}</td>
-                              <td className={clsx('px-4 py-2 font-mono font-semibold', typeColor[valType])}>{formatValue(entry)}</td>
-                              <td className="px-4 py-2">
-                                <span className={clsx('inline-block px-1.5 py-0.5 rounded text-[9px] font-medium',
-                                  valType === 'number' ? 'bg-neon-cyan/10 text-neon-cyan' :
-                                  valType === 'string' ? 'bg-neon-green/10 text-neon-green' :
-                                  valType === 'boolean' ? 'bg-neon-amber/10 text-neon-amber' :
-                                  'bg-gray-500/10 text-gray-500'
-                                )}>{valType}</span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                  <DataTable
+                    columns={logColumns}
+                    data={logData}
+                    keyExtractor={(row) => row._rowNum}
+                    compact
+                  />
                   {/* Pagination */}
                   <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
                     <span className="text-[10px] text-[var(--text-muted)]">
                       Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalRecords)} of {totalRecords.toLocaleString()}
                     </span>
                     <div className="flex gap-1">
-                      <button onClick={() => setPage(1)} disabled={page <= 1}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">First</button>
-                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">Prev</button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(1)} disabled={page <= 1}>First</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
                       <span className="px-3 py-1 text-[10px] text-[var(--text-primary)]">{page} / {totalPages}</span>
-                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">Next</button>
-                      <button onClick={() => setPage(totalPages)} disabled={page >= totalPages}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">Last</button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>Last</Button>
                     </div>
                   </div>
                 </>

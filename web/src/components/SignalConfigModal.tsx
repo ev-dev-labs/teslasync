@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
 import clsx from 'clsx'
+import { Input, Select } from './ui'
 
 const INTERVAL_OPTIONS = [
   { value: 0, label: '500ms', color: 'text-neon-cyan', desc: 'Real-time' },
@@ -140,7 +141,8 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={onClose}
+      onKeyDown={e => { if (e.key === 'Escape') onClose() }}>
       <div className="bg-[var(--bg)] border border-[var(--border)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
@@ -151,7 +153,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             </h2>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">{selectedCount} / {totalCount} signals selected</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -182,18 +184,16 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
 
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Master Interval:</span>
-              <select value={masterInterval} onChange={e => setMasterIntervalAll(Number(e.target.value))}
-                className="bg-[var(--bg)] border border-white/[0.1] rounded-lg px-2 py-1 text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50">
-                {INTERVAL_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label} ({o.desc})</option>
-                ))}
-              </select>
+              <Select value={String(masterInterval)} onChange={e => setMasterIntervalAll(Number(e.target.value))}
+                className="px-2 py-1 text-xs"
+                options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))}
+              />
             </div>
 
             <div className="relative ml-auto flex-1 max-w-xs">
-              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search signals..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg)] border border-white/[0.1] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50"
+              <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search signals..."
+                icon={<Search className="h-3.5 w-3.5" />}
+                className="w-full text-xs"
               />
             </div>
           </div>
@@ -228,13 +228,13 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                   <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">{category}</span>
                   <span className="text-[10px] text-[var(--text-muted)]">({catSignals.filter(s => s.selected).length}/{catSignals.length})</span>
                   <div className="ml-auto flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                    <select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)); e.target.value = '' }}
-                      className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-muted)] outline-none">
-                      <option value="">Set all...</option>
-                      {INTERVAL_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                    <Select value="" onChange={e => { if (e.target.value) setCategoryInterval(category, Number(e.target.value)); e.target.value = '' }}
+                      className="bg-transparent border border-white/[0.08] rounded px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]"
+                      options={[
+                        { value: '', label: 'Set all...' },
+                        ...INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label })),
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -255,16 +255,14 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                             {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
                           </button>
                           <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
-                          <select value={sig.interval}
+                          <Select value={String(sig.interval)}
                             onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
                             className={clsx(
-                              'bg-[var(--bg)] border border-white/[0.1] rounded px-2 py-0.5 text-xs outline-none focus:border-neon-cyan/50 min-w-[80px]',
+                              'border border-white/[0.1] rounded px-2 py-0.5 text-xs min-w-[80px]',
                               intervalOpt.color
-                            )}>
-                            {INTERVAL_OPTIONS.map(o => (
-                              <option key={o.value} value={o.value}>{o.label}</option>
-                            ))}
-                          </select>
+                            )}
+                            options={INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))}
+                          />
                         </div>
                       )
                     })}

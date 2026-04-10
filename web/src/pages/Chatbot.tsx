@@ -2,9 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Send, User, Sparkles, MessageSquare, Clock, Loader2 } from 'lucide-react'
+import { Button, GlassPanel } from '../components/ui'
 import clsx from 'clsx'
 import { sendChatMessage, getChatHistory, getChatSessions, ChatMessage } from '../api'
 import { formatTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const SUGGESTED_QUERIES = [
   'How many vehicles do I have?',
@@ -20,6 +22,7 @@ const SUGGESTED_QUERIES = [
 ]
 
 export default function Chatbot() {
+  usePageTitle('Chatbot')
   const [sessionId, setSessionId] = useState<string>('')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -114,19 +117,22 @@ export default function Chatbot() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             onClick={() => setShowSessions(!showSessions)}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium bg-white/5 hover:bg-white/10 transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
+            variant="ghost"
+            size="sm"
+            icon={<Clock className="h-4 w-4" />}
           >
-            <Clock className="h-4 w-4" /> History
-          </button>
-          <button
+            History
+          </Button>
+          <Button
             onClick={startNewSession}
-            className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20 border border-neon-purple/20 transition-colors"
+            variant="secondary"
+            size="sm"
+            icon={<Sparkles className="h-4 w-4" />}
           >
-            <Sparkles className="h-4 w-4" /> New Chat
-          </button>
+            New Chat
+          </Button>
         </div>
       </div>
 
@@ -163,7 +169,7 @@ export default function Chatbot() {
         </AnimatePresence>
 
         {/* Chat area */}
-        <div className="flex flex-col flex-1 glass-card !p-0 overflow-hidden">
+        <GlassPanel className="flex flex-col flex-1 !p-0 overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
@@ -236,10 +242,10 @@ export default function Chatbot() {
                 <div className="rounded-lg bg-gradient-to-br from-neon-purple/20 to-neon-blue/20 p-1.5">
                   <Bot className="h-4 w-4 text-neon-purple" />
                 </div>
-                <div className="glass-card !p-3 flex items-center gap-2">
+                <GlassPanel className="!p-3 flex items-center gap-2">
                   <Loader2 className="h-4 w-4 text-neon-purple animate-spin" />
                   <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Thinking...</span>
-                </div>
+                </GlassPanel>
               </motion.div>
             )}
 
@@ -258,16 +264,15 @@ export default function Chatbot() {
                 className="flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition-colors focus:border-neon-purple/50"
                 style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
               />
-              <button
+              <Button
                 onClick={handleSend}
                 disabled={!input.trim() || sendMut.isPending}
-                className="rounded-xl p-3 bg-gradient-to-r from-neon-purple/80 to-neon-blue/80 text-[var(--text-primary)] hover:from-neon-purple hover:to-neon-blue transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <Send className="h-5 w-5" />
-              </button>
+                variant="primary"
+                icon={<Send className="h-5 w-5" />}
+              />
             </div>
           </div>
-        </div>
+        </GlassPanel>
       </div>
     </div>
   )

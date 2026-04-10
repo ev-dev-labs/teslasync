@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getClimateData, getClimateLatest } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer } from '../components/ui'
 import { Thermometer, Wind, Snowflake, Sun, Fan, Flame, Shield, Zap, Activity, Car } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,6 +13,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
@@ -54,7 +55,7 @@ function CircularGauge({ label, value, displayValue, unit, min, max, icon, color
   const hasData = value !== null && value !== undefined
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <div className="flex items-center gap-2">
         {icon}
         <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
@@ -72,7 +73,7 @@ function CircularGauge({ label, value, displayValue, unit, min, max, icon, color
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bgClass, colorClass)}>
         {hasData ? `${displayValue ?? fmtNumber(v, 1)} ${unit ?? ''}` : 'N/A'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -85,7 +86,7 @@ function FanIndicator({ speed }: { speed: number | null }) {
   const pct = Math.min(100, (s / 6) * 100)
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <div className="flex items-center gap-2">
         <Fan className="h-4 w-4 text-neon-cyan" />
         <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Fan Speed</p>
@@ -108,7 +109,7 @@ function FanIndicator({ speed }: { speed: number | null }) {
         isActive ? 'bg-neon-cyan/20 text-neon-cyan' : 'bg-white/5 text-[var(--text-muted)]')}>
         {isActive ? `Level ${s}/6` : 'N/A'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -121,7 +122,7 @@ function StatusBadge({ label, active, icon, activeColor = 'text-neon-green', act
 }) {
   const isOn = !!active
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <div className="flex items-center gap-2">
         {icon}
         <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
@@ -134,7 +135,7 @@ function StatusBadge({ label, active, icon, activeColor = 'text-neon-green', act
         isOn ? `${activeBg} ${activeColor}` : 'bg-white/5 text-[var(--text-muted)]')}>
         {isOn ? 'ACTIVE' : 'INACTIVE'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -170,6 +171,7 @@ function comfortLabel(score: number | null): { text: string; cls: string; bg: st
 // Main page
 // ---------------------------------------------------------------------------
 export default function ClimateControl() {
+  usePageTitle('Climate Control')
   const { convertTemp, tempUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -264,7 +266,7 @@ export default function ClimateControl() {
           <select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
+            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
             style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
           >
             {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
@@ -359,7 +361,7 @@ export default function ClimateControl() {
         {loadingLatest ? <Skeleton className="h-28 rounded-xl" /> : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Comfort Score */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Comfort Score</p>
               <div className={clsx('w-20 h-20 rounded-full flex items-center justify-center', comfort.bg)}>
                 <span className={clsx('text-2xl font-bold', comfort.cls)}>{score != null ? score : '--'}</span>
@@ -367,10 +369,10 @@ export default function ClimateControl() {
               <span className={clsx('text-[10px] px-3 py-1 rounded-full font-semibold', comfort.bg, comfort.cls)}>
                 {comfort.text}
               </span>
-            </div>
+            </GlassPanel>
 
             {/* Temperature Delta */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Temp Delta</p>
               <div className={clsx('w-20 h-20 rounded-full flex items-center justify-center',
                 tempDelta == null ? 'bg-white/5' : tempDelta > 2 ? 'bg-neon-red/20' : tempDelta < -2 ? 'bg-neon-cyan/20' : 'bg-neon-green/20')}>
@@ -384,10 +386,10 @@ export default function ClimateControl() {
                   ? tempDelta > 2 ? 'Above Target' : tempDelta < -2 ? 'Below Target' : 'Near Target'
                   : 'N/A'}
               </span>
-            </div>
+            </GlassPanel>
 
             {/* Comfort Status */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Status</p>
               <div className={clsx('w-20 h-20 rounded-full flex items-center justify-center', comfort.bg)}>
                 {score != null && score >= 80
@@ -401,7 +403,7 @@ export default function ClimateControl() {
                   ? (latest.inside_temp > targetTemp ? 'Too Warm' : latest.inside_temp < targetTemp - 2 ? 'Too Cold' : 'Comfortable')
                   : 'Unknown'}
               </span>
-            </div>
+            </GlassPanel>
           </div>
         )}
       </GlassPanel>
@@ -436,12 +438,11 @@ export default function ClimateControl() {
       {/* ================================================================ */}
       {/* Section 4 — Temperature History Chart                           */}
       {/* ================================================================ */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Temperature History</h3>
+      <ChartContainer title="Temperature History" className="mb-6 sm:mb-8" height={300}>
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : tempChartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No temperature history data available</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No temperature history data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={tempChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -455,17 +456,16 @@ export default function ClimateControl() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ================================================================ */}
       {/* Section 5 — HVAC Power & Fan Speed History                      */}
       {/* ================================================================ */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>HVAC Power &amp; Fan Speed</h3>
+      <ChartContainer title="HVAC Power &amp; Fan Speed" className="mb-6 sm:mb-8" height={300}>
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : hvacChartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No HVAC history data available</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No HVAC history data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={hvacChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -478,7 +478,7 @@ export default function ClimateControl() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ================================================================ */}
       {/* Section 6 — Climate Efficiency Panel                            */}
@@ -495,29 +495,29 @@ export default function ClimateControl() {
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Average HVAC Power */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Power</p>
               <span className="text-2xl font-bold text-neon-cyan">{avgPower != null ? fmtNumber(avgPower, 2) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/20 text-neon-cyan">kW</span>
-            </div>
+            </GlassPanel>
             {/* Peak HVAC Power */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Peak Power</p>
               <span className="text-2xl font-bold text-neon-purple">{peakPower != null ? fmtNumber(peakPower, 2) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-purple/20 text-neon-purple">kW</span>
-            </div>
+            </GlassPanel>
             {/* Total Energy */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Est. Energy Used</p>
               <span className="text-2xl font-bold text-neon-amber">{totalEnergy != null ? fmtNumber(totalEnergy, 2) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-amber/20 text-neon-amber">kWh</span>
-            </div>
+            </GlassPanel>
             {/* Temp Differential Efficiency */}
-            <div className="glass-card p-4 flex flex-col items-center gap-2">
+            <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Comfort Score</p>
               <span className={clsx('text-2xl font-bold', comfort.cls)}>{score != null ? `${score}%` : '--'}</span>
               <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', comfort.bg, comfort.cls)}>{comfort.text}</span>
-            </div>
+            </GlassPanel>
           </div>
         )}
       </GlassPanel>
@@ -526,49 +526,49 @@ export default function ClimateControl() {
       {/* Section 7 — Summary Stats Row                                   */}
       {/* ================================================================ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Cabin</p>
           <span className="text-lg font-bold text-neon-cyan">
             {avgInside != null ? fmtNumber(convertTemp(avgInside), 1) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{tempUnit}</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Outside</p>
           <span className="text-lg font-bold text-neon-green">
             {avgOutside != null ? fmtNumber(convertTemp(avgOutside), 1) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{tempUnit}</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg HVAC</p>
           <span className="text-lg font-bold text-neon-purple">
             {avgPower != null ? fmtNumber(avgPower, 2) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>kW</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Max HVAC</p>
           <span className="text-lg font-bold text-neon-amber">
             {maxPower != null ? fmtNumber(maxPower, 2) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>kW</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Defrost Count</p>
           <span className="text-lg font-bold text-neon-cyan">{defrostCount}</span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>activations</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Heater Count</p>
           <span className="text-lg font-bold text-neon-red">{heaterCount}</span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>activations</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-1">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Total Readings</p>
           <span className="text-lg font-bold text-neon-green">{history.length}</span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>snapshots</span>
-        </div>
+        </GlassPanel>
       </div>
 
       {/* ================================================================ */}
@@ -590,7 +590,7 @@ export default function ClimateControl() {
             { label: 'Rear Center', level: live.seatHeaterRearCenter },
             { label: 'Rear Right', level: live.seatHeaterRearRight },
           ].map(seat => (
-            <div key={seat.label} className="glass-card p-3 text-center">
+            <GlassPanel key={seat.label} className="p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{seat.label}</p>
               <div className="flex items-center justify-center gap-1 mb-1">
                 {[1, 2, 3].map(lvl => (
@@ -600,90 +600,90 @@ export default function ClimateControl() {
               <span className={clsx('text-xs font-medium', seat.level > 0 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
                 {seat.level > 0 ? `Level ${seat.level}` : 'Off'}
               </span>
-            </div>
+            </GlassPanel>
           ))}
         </div>
 
         {/* Seat Cooling & Ventilation */}
         <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Seat Cooling & Ventilation</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          <div className="glass-card p-3 text-center">
+          <GlassPanel className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Front Left Cool</p>
             <span className={clsx('text-sm font-semibold', live.seatCoolingFrontLeft > 0 ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
               {live.seatCoolingFrontLeft > 0 ? `Level ${live.seatCoolingFrontLeft}` : 'Off'}
             </span>
-          </div>
-          <div className="glass-card p-3 text-center">
+          </GlassPanel>
+          <GlassPanel className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Front Right Cool</p>
             <span className={clsx('text-sm font-semibold', live.seatCoolingFrontRight > 0 ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
               {live.seatCoolingFrontRight > 0 ? `Level ${live.seatCoolingFrontRight}` : 'Off'}
             </span>
-          </div>
-          <div className="glass-card p-3 text-center">
+          </GlassPanel>
+          <GlassPanel className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Seat Vent</p>
             <span className={clsx('text-sm font-semibold', live.seatVentEnabled ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
               {live.seatVentEnabled ? 'On' : 'Off'}
             </span>
-          </div>
-          <div className="glass-card p-3 text-center">
+          </GlassPanel>
+          <GlassPanel className="p-3 text-center">
             <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Auto Climate</p>
             <span className={clsx('text-sm font-semibold', live.autoSeatClimateLeft || live.autoSeatClimateRight ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
               {live.autoSeatClimateLeft && live.autoSeatClimateRight ? 'Both' : live.autoSeatClimateLeft ? 'Left' : live.autoSeatClimateRight ? 'Right' : 'Off'}
             </span>
-          </div>
+          </GlassPanel>
         </div>
 
         {/* HVAC System Details */}
         <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>HVAC System</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>AC</span>
             <span className={clsx('text-sm font-semibold', live.hvacACEnabled ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>{live.hvacACEnabled ? 'On' : 'Off'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Auto Mode</span>
             <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.hvacAutoMode || 'Off'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Climate Keeper</span>
             <span className={clsx('text-sm font-semibold', live.climateKeeperMode && live.climateKeeperMode !== 'Off' ? 'text-neon-green' : 'text-[var(--text-muted)]')}>{live.climateKeeperMode || 'Off'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Overheat Limit</span>
             <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.cabinOverheatTempLimit || '—'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Fan Status</span>
             <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{live.hvacFanStatus || '—'}</span>
-          </div>
+          </GlassPanel>
         </div>
 
         {/* Heating & Defrost */}
         <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Heating & Defrost</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Steering Wheel</span>
             <span className={clsx('text-sm font-semibold', live.steeringWheelHeatLevel > 0 ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
               {live.steeringWheelHeatLevel > 0 ? `Level ${live.steeringWheelHeatLevel}` : 'Off'}
             </span>
             {live.steeringWheelHeatAuto && <span className="text-[9px] text-neon-green">Auto</span>}
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Preconditioning</span>
             <span className={clsx('text-sm font-semibold', live.defrostPreconditioning ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>{live.defrostPreconditioning ? 'Active' : 'Off'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Rear Defrost</span>
             <span className={clsx('text-sm font-semibold', live.rearDefrost ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>{live.rearDefrost ? 'On' : 'Off'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Rear Display HVAC</span>
             <span className={clsx('text-sm font-semibold', live.rearDisplayHvac ? 'text-neon-green' : 'text-[var(--text-muted)]')}>{live.rearDisplayHvac ? 'On' : 'Off'}</span>
-          </div>
-          <div className="glass-card p-3 flex flex-col items-center gap-1">
+          </GlassPanel>
+          <GlassPanel className="p-3 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Wiper Heat</span>
             <span className={clsx('text-sm font-semibold', live.wiperHeat ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>{live.wiperHeat ? 'On' : 'Off'}</span>
-          </div>
+          </GlassPanel>
         </div>
       </GlassPanel>
     </FadeIn>

@@ -4,7 +4,7 @@ import {
   getVehicles, getFleetAnalytics, getEnergyStats, getBatteryReport,
   getMileageStats, getStateSummary
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError, MetricCard, ChartContainer, Select } from '../components/ui'
 import {
   BarChart3, Car, Zap, Battery, Fuel, MapPin, Clock, TrendingUp, Gauge
 } from 'lucide-react'
@@ -15,10 +15,12 @@ import {
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const COLORS = ['#00f0ff', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#3b82f6']
 
 function formatDuration(min: number): string {
+  usePageTitle('Statistics')
   if (min < 60) return `${Math.round(min)}m`
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
@@ -99,14 +101,11 @@ export default function Statistics() {
             onEndDateChange={setEndDate}
           />
           {vehicles && vehicles.length > 1 && (
-            <select
+            <Select
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
         </div>
       </div>
@@ -120,24 +119,14 @@ export default function Statistics() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6 sm:mb-8">
-          {[
-            { label: 'Vehicles', value: `${analytics?.total_vehicles ?? 0}`, icon: Car, color: '#00f0ff' },
-            { label: 'Distance', value: `${fmtNumber(convertDistance(analytics?.total_distance_km ?? 0) / 1000, 1)}k ${distanceUnit}`, icon: MapPin, color: '#10b981' },
-            { label: 'Drives', value: `${analytics?.total_drives ?? 0}`, icon: TrendingUp, color: '#3b82f6' },
-            { label: 'Charges', value: `${analytics?.total_charging_sessions ?? 0}`, icon: Battery, color: '#f59e0b' },
-            { label: 'Energy', value: fmtWithUnit(analytics?.total_energy_kwh ?? 0, 'kWh', 0), icon: Zap, color: '#8b5cf6' },
-            { label: 'Cost', value: `$${fmtInt(analytics?.total_cost ?? 0)}`, icon: Fuel, color: '#ec4899' },
-            { label: 'Efficiency', value: `${fmtInt(convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0))} ${efficiencyUnit}`, icon: Gauge, color: '#f97316' },
-            { label: 'CO₂ Saved', value: fmtWithUnit(energy?.co2_saved_kg ?? 0, 'kg', 0), icon: Clock, color: '#06b6d4' },
-          ].map(card => (
-            <GlassPanel key={card.label} className="p-3">
-              <div className="flex items-center gap-1.5 mb-1">
-                <card.icon className="h-3.5 w-3.5" style={{ color: card.color }} />
-                <span className="text-[10px] font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
-              </div>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{card.value}</p>
-            </GlassPanel>
-          ))}
+          <MetricCard label="Vehicles" value={`${analytics?.total_vehicles ?? 0}`} icon={<Car className="h-3.5 w-3.5" />} color="cyan" />
+          <MetricCard label="Distance" value={`${fmtNumber(convertDistance(analytics?.total_distance_km ?? 0) / 1000, 1)}k ${distanceUnit}`} icon={<MapPin className="h-3.5 w-3.5" />} color="green" />
+          <MetricCard label="Drives" value={`${analytics?.total_drives ?? 0}`} icon={<TrendingUp className="h-3.5 w-3.5" />} color="cyan" />
+          <MetricCard label="Charges" value={`${analytics?.total_charging_sessions ?? 0}`} icon={<Battery className="h-3.5 w-3.5" />} color="amber" />
+          <MetricCard label="Energy" value={fmtWithUnit(analytics?.total_energy_kwh ?? 0, 'kWh', 0)} icon={<Zap className="h-3.5 w-3.5" />} color="purple" />
+          <MetricCard label="Cost" value={`$${fmtInt(analytics?.total_cost ?? 0)}`} icon={<Fuel className="h-3.5 w-3.5" />} color="red" />
+          <MetricCard label="Efficiency" value={`${fmtInt(convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0))} ${efficiencyUnit}`} icon={<Gauge className="h-3.5 w-3.5" />} color="amber" />
+          <MetricCard label="CO₂ Saved" value={fmtWithUnit(energy?.co2_saved_kg ?? 0, 'kg', 0)} icon={<Clock className="h-3.5 w-3.5" />} color="cyan" />
         </div>
       )}
 
@@ -169,12 +158,11 @@ export default function Statistics() {
         </GlassPanel>
 
         {/* State Distribution */}
-        <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>State Distribution</h3>
+        <ChartContainer title="State Distribution" height={280}>
           {statePie.length === 0 ? (
-            <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No state data</div>
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No state data</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={statePie} dataKey="value" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2}>
                   {statePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
@@ -184,7 +172,7 @@ export default function Statistics() {
               </PieChart>
             </ResponsiveContainer>
           )}
-        </GlassPanel>
+        </ChartContainer>
 
         {/* Mileage Summary */}
         <GlassPanel className="p-4 sm:p-6">
@@ -212,9 +200,8 @@ export default function Statistics() {
 
       {/* Vehicle Comparison */}
       {compChart.length > 1 && (
-        <GlassPanel className="p-6 mb-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Vehicle Comparison</h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Vehicle Comparison" height={280} className="mb-6">
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={compChart}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -225,14 +212,13 @@ export default function Statistics() {
               <Bar dataKey="energy" fill="#f59e0b" name="Energy (kWh)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* Monthly Charging Trend */}
       {chargingTrend.length > 0 && (
-        <GlassPanel className="p-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Monthly Charging Trend</h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Monthly Charging Trend" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chargingTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -244,7 +230,7 @@ export default function Statistics() {
               <Bar dataKey="savings" fill="#f59e0b" name="Gas Savings ($)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
     </FadeIn>
   )

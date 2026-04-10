@@ -1,4 +1,5 @@
 import { formatDate } from './dateFormat'
+import { fmtNumber } from './numberFormat'
 
 export function exportDriveAsGPX(drive: any, positions: any[], vehicleName: string) {
   const gpx = `<?xml version="1.0" encoding="UTF-8"?>
@@ -8,7 +9,7 @@ export function exportDriveAsGPX(drive: any, positions: any[], vehicleName: stri
   xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
     <name>${vehicleName} - ${formatDate(drive.start_date)}</name>
-    <desc>Drive exported from TeslaSync. Distance: ${drive.distance?.toFixed(1)} km, Duration: ${Math.round(drive.duration_min)} min</desc>
+    <desc>Drive exported from TeslaSync. Distance: ${fmtNumber(drive.distance, 1)} km, Duration: ${Math.round(drive.duration_min)} min</desc>
     <time>${new Date(drive.start_date).toISOString()}</time>
   </metadata>
   <trk>

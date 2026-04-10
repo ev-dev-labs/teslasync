@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, WifiOff } from 'lucide-react'
+import { Button } from './ui'
 
 interface Props {
   children: ReactNode
@@ -34,9 +35,39 @@ export class ErrorBoundary extends Component<Props, State> {
       componentStack: info.componentStack,
       retryCount: this.state.retryCount,
     })
+
+    // Auto-reload on chunk load errors (stale deploy)
+    if (this.isChunkLoadError(error)) {
+      const reloadKey = 'teslasync-chunk-reload'
+      const lastReload = sessionStorage.getItem(reloadKey)
+      const now = Date.now()
+      // Only auto-reload once per 60s to prevent infinite loops
+      if (!lastReload || now - Number(lastReload) > 60_000) {
+        sessionStorage.setItem(reloadKey, String(now))
+        console.warn('[ErrorBoundary] Chunk load error — reloading for new version')
+        window.location.reload()
+        return
+      }
+    }
+  }
+
+  private isChunkLoadError(error: Error): boolean {
+    const msg = error.message?.toLowerCase() ?? ''
+    return (
+      error.name === 'ChunkLoadError' ||
+      msg.includes('loading chunk') ||
+      msg.includes('loading css chunk') ||
+      msg.includes('dynamically imported module') ||
+      msg.includes('failed to fetch dynamically imported module')
+    )
   }
 
   handleRetry = () => {
+    // For chunk errors, do a full page reload to get new assets
+    if (this.state.error && this.isChunkLoadError(this.state.error)) {
+      window.location.reload()
+      return
+    }
     this.setState(prev => ({
       hasError: false,
       error: null,
@@ -54,6 +85,8 @@ export class ErrorBoundary extends Component<Props, State> {
         this.state.error?.message?.includes('offline') ||
         this.state.error?.message?.includes('Failed to fetch')
 
+      const isChunkError = this.state.error ? this.isChunkLoadError(this.state.error) : false
+
       const tooManyRetries = this.state.retryCount >= 3
 
       if (this.props.inline) {
@@ -64,9 +97,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="text-sm font-medium text-gray-300">Component failed to load</p>
               <p className="text-xs text-[var(--text-muted)] truncate">{this.state.error?.message}</p>
             </div>
-            <button onClick={this.handleRetry} className="glass-button text-xs shrink-0">
+            <Button variant="secondary" size="sm" onClick={this.handleRetry} className="shrink-0">
               <RefreshCw className="h-3 w-3" /> Retry
-            </button>
+            </Button>
           </div>
         )
       }
@@ -82,10 +115,12 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
             <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
-              {isNetworkError ? 'Connection Lost' : 'Something went wrong'}
+              {isChunkError ? 'New Version Deployed' : isNetworkError ? 'Connection Lost' : 'Something went wrong'}
             </h2>
             <p className="text-sm text-[var(--text-secondary)] mb-2">
-              {isNetworkError
+              {isChunkError
+                ? 'A new version of TeslaSync has been deployed. Click reload to update.'
+                : isNetworkError
                 ? 'Unable to reach the server. Check your connection and try again.'
                 : this.state.error?.message || 'An unexpected error occurred. Please try again.'}
             </p>
@@ -95,17 +130,17 @@ export class ErrorBoundary extends Component<Props, State> {
               </p>
             )}
             <div className="flex items-center justify-center gap-3 mt-6">
-              <button
+              <Button
                 onClick={this.handleRetry}
-                className="neon-button text-sm"
+                variant="primary"
               >
                 <RefreshCw className="h-4 w-4" />
                 {tooManyRetries ? 'Try Again Anyway' : 'Try Again'}
-              </button>
-              <a href="/" className="glass-button text-sm">
+              </Button>
+              <Button variant="secondary" onClick={() => { window.location.href = '/' }}>
                 <Home className="h-4 w-4" />
                 Go Home
-              </a>
+              </Button>
             </div>
             {this.state.retryCount > 0 && (
               <p className="mt-4 text-[10px] text-gray-600">

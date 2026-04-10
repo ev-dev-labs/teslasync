@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getDrives, type Drive } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, DateRangeFilter } from '../components/ui'
-import { Trophy, TrendingUp, Zap, Gauge, ShieldCheck, Star, AlertTriangle, Lightbulb, Target, Award, Fuel, Wind, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, DateRangeFilter, ChartContainer, Select } from '../components/ui'
+import { Trophy, Zap, Gauge, ShieldCheck, Star, AlertTriangle, Lightbulb, Target, Award, Fuel, Wind, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDate, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -36,6 +38,7 @@ const GRADE_COLORS: Record<string, string> = {
 }
 
 function gradeColor(grade: string): string {
+  usePageTitle('Drive Score')
   return GRADE_COLORS[grade] ?? '#6b7280'
 }
 
@@ -120,7 +123,7 @@ function ScoreRing({
             cy={size / 2}
             r={radius}
             fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--glass-border)"
             strokeWidth={strokeWidth}
           />
           {/* Animated score ring */}
@@ -482,14 +485,11 @@ export default function DriveScore() {
           icon={<Trophy className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -526,17 +526,7 @@ export default function DriveScore() {
           {/* ── Section 3: Overall Score (Hero) ──────────────────────── */}
           <GlassPanel className="p-6 sm:p-10">
             <div className="flex flex-col items-center">
-              <div className="relative">
-                {/* Outer glow pulse */}
-                <div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: `radial-gradient(circle, ${scoreColor(avgScore.total)}15 0%, transparent 70%)`,
-                    animation: 'pulse-glow 3s ease-in-out infinite',
-                    transform: 'scale(1.6)',
-                  }}
-                />
-                <ScoreRing
+              <ScoreRing
                   score={avgScore.total}
                   max={100}
                   size={200}
@@ -544,7 +534,6 @@ export default function DriveScore() {
                   grade={avgScore.grade}
                   showGrade
                 />
-              </div>
               <p className="mt-4 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Your average drive score
               </p>
@@ -582,17 +571,13 @@ export default function DriveScore() {
           </div>
 
           {/* ── Section 5: Score Trend Chart ──────────────────────────── */}
-          <GlassPanel className="p-4 sm:p-6">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              <TrendingUp className="inline h-4 w-4 mr-1.5 text-neon-cyan" />
-              Score Trend
-            </h3>
+          <ChartContainer title="Score Trend" height={280}>
             {trendData.length < 2 ? (
               <div className="flex items-center justify-center h-56 text-[var(--text-muted)] text-sm">
                 Not enough data for trend — need at least 2 weeks
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                   <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -612,7 +597,7 @@ export default function DriveScore() {
                 </LineChart>
               </ResponsiveContainer>
             )}
-          </GlassPanel>
+          </ChartContainer>
 
           {/* ── Section 6: Recent Drives Scoreboard ──────────────────── */}
           <GlassPanel className="p-4 sm:p-6">
@@ -647,9 +632,9 @@ export default function DriveScore() {
                 const dur = formatDuration(sd.drive.duration_min)
 
                 return (
-                  <div
+                  <GlassPanel
                     key={sd.drive.id}
-                    className="glass-card rounded-lg overflow-hidden transition-all duration-200 hover:ring-1 hover:ring-white/[0.08]"
+                    className="rounded-lg overflow-hidden transition-all duration-200 hover:ring-1 hover:ring-white/[0.08]"
                   >
                     <button
                       onClick={() => setExpandedDrive(isExpanded ? null : sd.drive.id)}
@@ -662,7 +647,7 @@ export default function DriveScore() {
                           {driveDate}
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {dist.toFixed(1)} {distanceUnit} · {dur}
+                          {fmtNumber(dist)} {distanceUnit} · {dur}
                         </p>
                       </div>
 
@@ -695,7 +680,7 @@ export default function DriveScore() {
                           <div>
                             <span style={{ color: 'var(--text-muted)' }}>Efficiency</span>
                             <p className="font-semibold mt-0.5" style={{ color: '#4ade80' }}>
-                              {sd.efficiency}/40 · {convertEfficiency(sd.whPerKm).toFixed(0)} {efficiencyUnit}
+                              {sd.efficiency}/40 · {fmtInt(convertEfficiency(sd.whPerKm))} {efficiencyUnit}
                             </p>
                           </div>
                           <div>
@@ -707,7 +692,7 @@ export default function DriveScore() {
                           <div>
                             <span style={{ color: 'var(--text-muted)' }}>Speed</span>
                             <p className="font-semibold mt-0.5" style={{ color: '#22d3ee' }}>
-                              {sd.speed}/30 · Max {convertSpeed(sd.drive.speed_max ?? 0).toFixed(0)} {speedUnit}
+                              {sd.speed}/30 · Max {fmtInt(convertSpeed(sd.drive.speed_max ?? 0))} {speedUnit}
                             </p>
                           </div>
                           <div>
@@ -719,7 +704,7 @@ export default function DriveScore() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </GlassPanel>
                 )
               })}
             </div>
@@ -745,7 +730,7 @@ export default function DriveScore() {
                       <div className="flex items-center justify-between text-xs">
                         <span style={{ color: 'var(--text-muted)' }}>Distance</span>
                         <span style={{ color: 'var(--text-primary)' }}>
-                          {convertDistance(bestDrive.drive.distance).toFixed(1)} {distanceUnit}
+                          {fmtNumber(convertDistance(bestDrive.drive.distance))} {distanceUnit}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
@@ -754,7 +739,7 @@ export default function DriveScore() {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span style={{ color: 'var(--text-muted)' }}>Consumption</span>
-                        <span style={{ color: 'var(--text-primary)' }}>{convertEfficiency(bestDrive.whPerKm).toFixed(0)} {efficiencyUnit}</span>
+                        <span style={{ color: 'var(--text-primary)' }}>{fmtInt(convertEfficiency(bestDrive.whPerKm))} {efficiencyUnit}</span>
                       </div>
                     </div>
                   </div>
@@ -792,7 +777,7 @@ export default function DriveScore() {
                       <div className="flex items-center justify-between text-xs">
                         <span style={{ color: 'var(--text-muted)' }}>Distance</span>
                         <span style={{ color: 'var(--text-primary)' }}>
-                          {convertDistance(worstDrive.drive.distance).toFixed(1)} {distanceUnit}
+                          {fmtNumber(convertDistance(worstDrive.drive.distance))} {distanceUnit}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
@@ -801,7 +786,7 @@ export default function DriveScore() {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span style={{ color: 'var(--text-muted)' }}>Consumption</span>
-                        <span style={{ color: 'var(--text-primary)' }}>{convertEfficiency(worstDrive.whPerKm).toFixed(0)} {efficiencyUnit}</span>
+                        <span style={{ color: 'var(--text-primary)' }}>{fmtInt(convertEfficiency(worstDrive.whPerKm))} {efficiencyUnit}</span>
                       </div>
                     </div>
                   </div>
@@ -823,12 +808,8 @@ export default function DriveScore() {
           </div>
 
           {/* ── Section 8: Score Distribution Histogram ───────────────── */}
-          <GlassPanel className="p-4 sm:p-6">
-            <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              <Target className="inline h-4 w-4 mr-1.5 text-neon-cyan" />
-              Score Distribution
-            </h3>
-            <ResponsiveContainer width="100%" height={220}>
+          <ChartContainer title="Score Distribution" height={220}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={histogramData} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} vertical={false} />
                 <XAxis dataKey="range" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
@@ -841,7 +822,7 @@ export default function DriveScore() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </GlassPanel>
+          </ChartContainer>
 
           {/* ── Section 9: Improvement Tips ───────────────────────────── */}
           <GlassPanel className="p-5 sm:p-6">
@@ -853,9 +834,9 @@ export default function DriveScore() {
               {tips.map((tip, i) => {
                 const Icon = tip.icon
                 return (
-                  <div
+                  <GlassPanel
                     key={i}
-                    className="glass-card p-4 rounded-xl flex items-start gap-3 transition-all duration-200 hover:ring-1 hover:ring-white/[0.06]"
+                    className="p-4 flex items-start gap-3 transition-all duration-200 hover:ring-1 hover:ring-white/[0.06]"
                   >
                     <div
                       className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
@@ -871,7 +852,7 @@ export default function DriveScore() {
                         {tip.description}
                       </p>
                     </div>
-                  </div>
+                  </GlassPanel>
                 )
               })}
             </div>
@@ -881,7 +862,7 @@ export default function DriveScore() {
           {periodStats && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {/* This week vs last week */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   This Week
                 </span>
@@ -901,10 +882,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   vs {periodStats.lastWeekAvg ?? '--'} last week
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* This month vs last month */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   This Month
                 </span>
@@ -924,10 +905,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   vs {periodStats.lastMonthAvg ?? '--'} last month
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* Best week ever */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Best Week
                 </span>
@@ -937,10 +918,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {periodStats.bestWeek.label}
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* Best month ever */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Best Month
                 </span>
@@ -950,10 +931,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {periodStats.bestMonth.label}
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* Total drives */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Total Drives
                 </span>
@@ -963,10 +944,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   drives scored
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* A or better */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Rated A+/A
                 </span>
@@ -976,7 +957,7 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {periodStats.totalDrives > 0 ? `${Math.round((periodStats.aOrBetter / periodStats.totalDrives) * 100)}% of drives` : 'no drives'}
                 </span>
-              </div>
+              </GlassPanel>
             </div>
           )}
         </div>

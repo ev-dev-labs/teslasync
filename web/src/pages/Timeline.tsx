@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleTimeline, getStateSummary, getDailyStateBreakdown } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError, ChartContainer, Select } from '../components/ui'
 import { Clock, Activity, Car, BatteryCharging, Moon, Wifi, Download } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 
 const stateColors: Record<string, string> = {
@@ -30,13 +32,14 @@ const stateIcons: Record<string, typeof Car> = {
 
 interface TimelineTooltipPayload { name: string; value: number; color?: string; fill?: string }
 function TimelineTooltip({ active, payload, label }: { active?: boolean; payload?: TimelineTooltipPayload[]; label?: string }) {
+  usePageTitle('Timeline')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? p.value.toFixed(0) : p.value} min
+          <span style={{ color: p.color || p.fill }}>●</span> {p.name}: {typeof p.value === 'number' ? fmtInt(p.value) : p.value} min
         </p>
       ))}
     </div>
@@ -121,14 +124,11 @@ export default function Timeline() {
             onEndDateChange={setEndDate}
           />
           {vehicles && vehicles.length > 1 && (
-            <select
+            <Select
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function Timeline() {
               <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{formatDuration(s.total_min)}</p>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-[10px] text-[var(--text-muted)]">{s.count} times</span>
-                <span className="text-[10px] font-medium" style={{ color: stateColors[s.state] }}>{pct.toFixed(1)}%</span>
+                <span className="text-[10px] font-medium" style={{ color: stateColors[s.state] }}>{fmtNumber(pct)}%</span>
               </div>
               <div className="mt-2 h-1 rounded-full bg-white/5 overflow-hidden">
                 <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: stateColors[s.state] }} />
@@ -163,15 +163,15 @@ export default function Timeline() {
       <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
           <div>
-            <p className="text-2xl font-bold" style={{ color: stateColors.asleep }}>{parkedPct.toFixed(1)}%</p>
+            <p className="text-2xl font-bold" style={{ color: stateColors.asleep }}>{fmtNumber(parkedPct)}%</p>
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Parked / Asleep</p>
           </div>
           <div>
-            <p className="text-2xl font-bold" style={{ color: stateColors.driving }}>{drivingPct.toFixed(1)}%</p>
+            <p className="text-2xl font-bold" style={{ color: stateColors.driving }}>{fmtNumber(drivingPct)}%</p>
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Driving</p>
           </div>
           <div>
-            <p className="text-2xl font-bold" style={{ color: stateColors.charging }}>{chargingPct.toFixed(1)}%</p>
+            <p className="text-2xl font-bold" style={{ color: stateColors.charging }}>{fmtNumber(chargingPct)}%</p>
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Charging</p>
           </div>
           <div>
@@ -191,19 +191,18 @@ export default function Timeline() {
         <div className="mt-4 h-3 rounded-full bg-white/5 overflow-hidden flex">
           {(summary ?? []).map(s => {
             const pct = totalMinutes > 0 ? (s.total_min / totalMinutes * 100) : 0
-            return pct > 0.5 ? <div key={s.state} className="h-full" style={{ width: `${pct}%`, background: stateColors[s.state] ?? '#4b5563' }} title={`${s.state}: ${pct.toFixed(1)}%`} /> : null
+            return pct > 0.5 ? <div key={s.state} className="h-full" style={{ width: `${pct}%`, background: stateColors[s.state] ?? '#4b5563' }} title={`${s.state}: ${fmtNumber(pct)}%`} /> : null
           })}
         </div>
       </GlassPanel>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Pie Chart */}
-        <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Time Distribution</h3>
+        <ChartContainer title="Time Distribution" height={280}>
           {pieData.length === 0 ? (
-            <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No data</div>
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No data</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
                   {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
@@ -213,15 +212,14 @@ export default function Timeline() {
               </PieChart>
             </ResponsiveContainer>
           )}
-        </GlassPanel>
+        </ChartContainer>
 
         {/* Daily Stacked Bar */}
-        <GlassPanel className="p-4 sm:p-6 lg:col-span-2">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily State Breakdown</h3>
-          {isLoading ? <Skeleton className="h-48 sm:h-64 rounded-xl" /> : stackedData.length === 0 ? (
-            <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No daily data</div>
+        <ChartContainer title="Daily State Breakdown" height={280} className="lg:col-span-2">
+          {isLoading ? <Skeleton className="h-full rounded-xl" /> : stackedData.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No daily data</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stackedData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -234,7 +232,7 @@ export default function Timeline() {
               </BarChart>
             </ResponsiveContainer>
           )}
-        </GlassPanel>
+        </ChartContainer>
       </div>
 
       {/* Recent Timeline */}
@@ -254,13 +252,13 @@ export default function Timeline() {
                     <div className="absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]" style={{ background: `${color}20` }}>
                       <Icon className="h-3 w-3" style={{ color }} />
                     </div>
-                    <div className="glass-card p-3 flex items-center justify-between">
+                    <GlassPanel className="p-3 flex items-center justify-between">
                       <div>
                         <span className="text-sm font-medium capitalize" style={{ color }}>{s.state}</span>
                         <span className="text-xs text-[var(--text-muted)] ml-2">{formatDuration(s.duration_min)}</span>
                       </div>
                       <span className="text-[11px] text-[var(--text-muted)]">{formatDateTime(s.start_date)}</span>
-                    </div>
+                    </GlassPanel>
                   </div>
                 )
               })}

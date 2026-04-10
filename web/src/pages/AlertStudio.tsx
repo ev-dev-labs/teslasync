@@ -16,7 +16,7 @@ import {
   AlertRule,
   RuleConditionTree,
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button, Input, Select } from '../components/ui'
 import RuleBuilder from '../components/RuleBuilder'
 import { useToast } from '../components/Toast'
 import {
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ interface EditorState {
 }
 
 function freshEditor(): EditorState {
+  usePageTitle('Alert Studio')
   return {
     name: '',
     type: 'custom',
@@ -277,18 +279,12 @@ export default function AlertStudio() {
         icon={<Zap className="h-6 w-6 text-neon-cyan" />}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[var(--text-primary)] bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-              onClick={() => setShowTemplates(!showTemplates)}
-            >
-              <Sparkles className="h-3.5 w-3.5 text-neon-amber" /> Templates
-            </button>
-            <button
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 rounded-lg transition-colors"
-              onClick={handleNewRule}
-            >
-              <Plus className="h-3.5 w-3.5" /> New Rule
-            </button>
+            <Button variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
+              Templates
+            </Button>
+            <Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
+              New Rule
+            </Button>
           </div>
         }
       />
@@ -301,8 +297,8 @@ export default function AlertStudio() {
               <p className="text-sm font-semibold text-[var(--text-primary)]">Rule Templates — {ruleTemplates.length} pre-built rules</p>
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <input
-                  className="glass-input w-full pl-8 text-xs py-1.5"
+                <Input
+                  className="w-full pl-8 text-xs py-1.5"
                   placeholder="Search templates…"
                   value={templateSearch}
                   onChange={e => setTemplateSearch(e.target.value)}
@@ -338,9 +334,9 @@ export default function AlertStudio() {
                 const Icon = tpl.icon
                 const sev = severityConfig[tpl.severity]
                 return (
-                  <button
+                  <GlassPanel
                     key={tpl.name}
-                    className="glass-card p-3 text-left hover:border-neon-cyan/30 transition-all group"
+                    className="p-3 text-left hover:border-neon-cyan/30 transition-all group cursor-pointer"
                     onClick={() => handleCloneTemplate(tpl)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
@@ -351,13 +347,13 @@ export default function AlertStudio() {
                     </div>
                     <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{tpl.msg_template}</p>
                     <div className="flex items-center justify-between mt-1.5">
-                      <span className={clsx('text-[9px] px-1.5 py-0.5 rounded font-medium', sev.bg, sev.color)}>{tpl.severity}</span>
+                      <Badge color={tpl.severity === 'critical' ? 'red' : tpl.severity === 'warning' ? 'amber' : 'cyan'} size="sm">{tpl.severity}</Badge>
                       <div className="flex items-center gap-1">
                         <Copy className="h-3 w-3 text-[var(--text-muted)]" />
                         <span className="text-[10px] text-[var(--text-muted)]">Use</span>
                       </div>
                     </div>
-                  </button>
+                  </GlassPanel>
                 )
               })}
               {filteredTemplates.length === 0 && (
@@ -451,8 +447,8 @@ export default function AlertStudio() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Name</label>
-                <input
-                  className="glass-input w-full"
+                <Input
+                  className="w-full"
                   placeholder="My alert rule"
                   value={editor.name}
                   onChange={e => setEditor(s => ({ ...s, name: e.target.value }))}
@@ -462,15 +458,12 @@ export default function AlertStudio() {
               {/* Severity */}
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Severity</label>
-                <select
-                  className="glass-input w-full"
+                <Select
+                  className="w-full"
                   value={editor.severity}
                   onChange={e => setEditor(s => ({ ...s, severity: e.target.value as Severity }))}
-                >
-                  <option value="info">Info</option>
-                  <option value="warning">Warning</option>
-                  <option value="critical">Critical</option>
-                </select>
+                  options={[{ value: 'info', label: 'Info' }, { value: 'warning', label: 'Warning' }, { value: 'critical', label: 'Critical' }]}
+                />
               </div>
             </div>
 
@@ -478,10 +471,10 @@ export default function AlertStudio() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1 font-medium">Cooldown (minutes)</label>
-                <input
+                <Input
                   type="number"
                   min={0}
-                  className="glass-input w-full"
+                  className="w-full"
                   value={editor.cooldown_min}
                   onChange={e => setEditor(s => ({ ...s, cooldown_min: Number(e.target.value) || 0 }))}
                 />
@@ -491,8 +484,8 @@ export default function AlertStudio() {
                   Message Template
                   <span className="text-[var(--text-muted)] ml-1 normal-case tracking-normal">{'Use {{SignalName}}'}</span>
                 </label>
-                <input
-                  className="glass-input w-full"
+                <Input
+                  className="w-full"
                   placeholder="Battery at {{BatteryLevel}}%"
                   value={editor.msg_template}
                   onChange={e => setEditor(s => ({ ...s, msg_template: e.target.value }))}
@@ -569,31 +562,32 @@ export default function AlertStudio() {
 
             {/* Action buttons */}
             <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-              <button
-                className={clsx(
-                  'flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors',
-                  'bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30',
-                  saveMut.isPending && 'opacity-60 pointer-events-none',
-                )}
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Save className="h-3.5 w-3.5" />}
+                loading={saveMut.isPending}
                 onClick={() => saveMut.mutate(editor)}
                 disabled={!editor.name.trim()}
               >
-                <Save className="h-3.5 w-3.5" />
                 {saveMut.isPending ? 'Saving…' : isEditing ? 'Update Rule' : 'Create Rule'}
-              </button>
+              </Button>
 
               {isEditing && (
-                <button
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-neon-red/10 text-neon-red hover:bg-neon-red/20 transition-colors"
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={<Trash2 className="h-3.5 w-3.5" />}
                   onClick={() => { if (editor.id) deleteMut.mutate(editor.id) }}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
                   Delete
-                </button>
+                </Button>
               )}
 
-              <button
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20 transition-colors"
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Bell className="h-3.5 w-3.5" />}
                 onClick={async () => {
                   try {
                     await fetch('/api/v1/alerts/test', {
@@ -605,16 +599,12 @@ export default function AlertStudio() {
                 }}
                 disabled={!editor.name.trim()}
               >
-                <Bell className="h-3.5 w-3.5" />
                 Test
-              </button>
+              </Button>
 
-              <button
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition-colors ml-auto"
-                onClick={handleNewRule}
-              >
+              <Button variant="ghost" size="sm" onClick={handleNewRule} className="ml-auto">
                 Reset
-              </button>
+              </Button>
             </div>
           </GlassPanel>
         </div>

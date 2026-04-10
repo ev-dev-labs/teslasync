@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSoftwareUpdates, getVehicleState, Vehicle } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, MetricCard, Badge, Select } from '../components/ui'
 import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDate } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const statusConfig: Record<string, { color: string; bg: string; icon: typeof CheckCircle; label: string }> = {
   installed: { color: 'text-neon-green', bg: 'bg-neon-green/10', icon: CheckCircle, label: 'Installed' },
@@ -16,6 +17,7 @@ const statusConfig: Record<string, { color: string; bg: string; icon: typeof Che
 }
 
 function getStatus(status: string) {
+  usePageTitle('Software Updates')
   return statusConfig[status] ?? statusConfig.available
 }
 
@@ -55,46 +57,34 @@ export default function SoftwareUpdates() {
       <div className="flex items-center justify-between mb-8">
         <PageHeader title="Software Updates" subtitle="Track firmware versions and update history" icon={<Smartphone className="h-7 w-7 text-neon-cyan" />} />
         {vehicles && vehicles.length > 1 && (
-          <select
+          <Select
             value={vehicleId ?? ''}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <GlassPanel className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-neon-cyan/10 p-2.5"><Smartphone className="h-5 w-5 text-neon-cyan" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Current Version</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{latestVersion}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-neon-green/10 p-2.5"><CheckCircle className="h-5 w-5 text-neon-green" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Updates Installed</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{installedCount}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-neon-purple/10 p-2.5"><Download className="h-5 w-5 text-neon-purple" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Total Updates</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{totalUpdates}</p>
-            </div>
-          </div>
-        </GlassPanel>
+        <MetricCard
+          icon={<Smartphone className="h-5 w-5" />}
+          label="Current Version"
+          value={latestVersion}
+          color="cyan"
+        />
+        <MetricCard
+          icon={<CheckCircle className="h-5 w-5" />}
+          label="Updates Installed"
+          value={installedCount}
+          color="green"
+        />
+        <MetricCard
+          icon={<Download className="h-5 w-5" />}
+          label="Total Updates"
+          value={totalUpdates}
+          color="purple"
+        />
       </div>
 
       {/* Live Update Progress (shown when an update is in progress) */}
@@ -205,12 +195,12 @@ export default function SoftwareUpdates() {
                     <div className={clsx('absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4', s.bg, 'ring-[var(--bg)]')}>
                       <Icon className={clsx('h-3 w-3', s.color)} />
                     </div>
-                    <div className="glass-card p-4 hover:border-[var(--glass-border)] transition-colors">
+                    <GlassPanel className="p-4 hover:border-[var(--glass-border)] transition-colors">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{u.version}</span>
-                            <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', s.bg, s.color)}>{s.label}</span>
+                            <Badge color={s.color === 'text-neon-green' ? 'green' : s.color === 'text-neon-cyan' ? 'cyan' : s.color === 'text-neon-amber' ? 'amber' : s.color === 'text-neon-purple' ? 'purple' : 'cyan'}>{s.label}</Badge>
                             <a
                               href={`https://www.notateslaapp.com/software-updates/version/${encodeURIComponent(u.version)}/release-notes`}
                               target="_blank"
@@ -239,7 +229,7 @@ export default function SoftwareUpdates() {
                           <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(u.created_at)}</p>
                         </div>
                       </div>
-                    </div>
+                    </GlassPanel>
                   </div>
                 )
               })}

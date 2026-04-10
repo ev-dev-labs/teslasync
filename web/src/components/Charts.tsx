@@ -6,6 +6,7 @@
  */
 import { CartesianGrid } from 'recharts'
 import { memo } from 'react'
+import { fmtNumber } from '../lib/numberFormat'
 
 // ── Neon color palette used across all charts ──
 export { CHART_COLORS, CHART_COLORS as NEON_COLORS } from '../lib/colors'
@@ -48,7 +49,7 @@ export function ChartTooltipBase({ active, payload, label }: {
           />
           <span style={{ color: 'var(--text-secondary)' }}>{p.name}:</span>
           <span className="font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>
-            {typeof p.value === 'number' ? p.value.toFixed(1) : String(p.value ?? '')}
+            {typeof p.value === 'number' ? fmtNumber(p.value) : String(p.value ?? '')}
             {p.unit && <span className="ml-0.5 opacity-60">{p.unit}</span>}
           </span>
         </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, sendCommand, wakeVehicle, Vehicle, VehicleState } from '../api'
-import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, StatusBadge, Skeleton, EmptyState } from '../components/ui'
+import { PageHeader, GlassPanel, StaggerContainer, StaggerItem, StatusBadge, Skeleton, EmptyState, AlertBanner } from '../components/ui'
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import {
   Lock, Unlock, Wind, Car, Zap, Power, Shield,
@@ -11,8 +11,10 @@ import {
 import { getVehicleStatus } from '../api'
 import { useToast } from '../components/Toast'
 import { useSettings } from '../hooks/useSettings'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface CommandButtonProps {
   icon: React.ReactNode
@@ -26,6 +28,7 @@ interface CommandButtonProps {
 }
 
 function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'default', disabled, active }: CommandButtonProps) {
+  usePageTitle('Commands')
   const variants = {
     default: 'hover:border-neon-cyan/30 hover:shadow-[0_0_15px_rgba(0,240,255,0.08)]',
     danger: 'hover:border-neon-red/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.08)]',
@@ -144,7 +147,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
                 return [
                   { icon: Battery, label: 'Battery', value: `${battery}%`, color: battery > 50 ? 'text-neon-green' : battery > 20 ? 'text-neon-amber' : 'text-neon-red' },
                   { icon: Zap, label: 'Range', value: `${Math.round(convertDistance(range))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
-                  { icon: Thermometer, label: 'Inside', value: `${convertTemp(insideTemp).toFixed(1)}${tempUnit}`, color: insideTemp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
+                  { icon: Thermometer, label: 'Inside', value: `${fmtNumber(convertTemp(insideTemp))}${tempUnit}`, color: insideTemp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
                   { icon: Wifi, label: 'Status', value: status, color: status === 'online' || status === 'driving' ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
                   { icon: Cpu, label: 'Firmware', value: liveState.version || 'N/A', color: 'text-[var(--text-primary)]' },
                 ]
@@ -178,21 +181,20 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
 
       {/* Status feedback */}
       {lastResult && (
-        <div className={clsx(
-          'flex items-center gap-2 rounded-xl p-3 mb-4 text-sm animate-in',
-          lastResult.success ? 'bg-neon-green/10 text-neon-green border border-neon-green/20' : 'bg-neon-red/10 text-neon-red border border-neon-red/20'
-        )}>
-          {lastResult.success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
-          <span className="truncate">{lastResult.message}</span>
-        </div>
+        <AlertBanner
+          variant={lastResult.success ? 'success' : 'danger'}
+          icon={lastResult.success ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+          className="mb-4"
+        >
+          {lastResult.message}
+        </AlertBanner>
       )}
 
       {/* Asleep overlay hint */}
       {isAsleep && (
-        <div className="flex items-center gap-2 rounded-xl p-3 mb-4 text-sm bg-neon-amber/10 text-neon-amber border border-neon-amber/20">
-          <Power className="h-4 w-4 shrink-0" />
+        <AlertBanner variant="warning" icon={<Power className="h-4 w-4" />} className="mb-4">
           Vehicle is {status}. Wake it up first to send commands.
-        </div>
+        </AlertBanner>
       )}
 
       {/* Grouped Commands */}
@@ -238,7 +240,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
           <CommandButton
             icon={<Wind className="h-5 w-5" />}
             label="Climate"
-            sublabel={(state?.is_climate_on || liveState.hvacPower) ? `ON · ${convertTemp(liveState.insideTemp || state?.inside_temp || 0).toFixed(0)}${tempUnit}` : 'OFF'}
+            sublabel={(state?.is_climate_on || liveState.hvacPower) ? `ON · ${fmtInt(convertTemp(liveState.insideTemp || state?.inside_temp || 0))}${tempUnit}` : 'OFF'}
             onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')}
             loading={cmd.isPending}
             active={state?.is_climate_on}
@@ -369,12 +371,9 @@ export default function Commands() {
       )}
 
       {statesError && (
-        <GlassPanel className="p-4">
-          <div className="flex items-center gap-2 text-neon-red text-sm">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>Failed to load vehicle states: {(statesError as Error).message}</span>
-          </div>
-        </GlassPanel>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-4 w-4" />}>
+          Failed to load vehicle states: {(statesError as Error).message}
+        </AlertBanner>
       )}
 
       {isLoading ? (

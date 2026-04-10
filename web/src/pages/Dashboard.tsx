@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import {
   GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge,
-  Skeleton, PageHeader,
+  Skeleton, PageHeader, Badge, Button,
 } from '../components/ui'
 import { TeslaCarViz, TeslaCarMini, parseModelKey } from '../components/TeslaCarViz'
 import { AnimatedNumber, TimelineItem, RadialGauge, StatusPill, MiniChart } from '../components/Widgets'
@@ -27,9 +27,11 @@ import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useSettings } from '../hooks/useSettings'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { ChartTooltip } from '../components/Charts'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
+  usePageTitle('Dashboard')
   const status = getVehicleStatus(vehicle, state)
   const { convertDistance, convertTemp, distanceUnit } = useSettings()
   return (
@@ -294,8 +296,8 @@ export default function Dashboard() {
                 Connect your account in <Link to="/settings" className="text-neon-cyan hover:underline">Settings</Link> to start tracking.
               </p>
             </div>
-            <Link to="/settings" className="neon-button text-xs px-3 py-1.5">
-              Connect <ArrowUpRight className="h-3 w-3 ml-1 inline-block" />
+            <Link to="/settings">
+              <Button variant="primary" size="sm">Connect <ArrowUpRight className="h-3 w-3 ml-1 inline-block" /></Button>
             </Link>
           </GlassPanel>
         </FadeIn>
@@ -439,22 +441,22 @@ export default function Dashboard() {
 
                       {/* Quick actions */}
                       <div className="flex gap-2 mt-4">
-                        <Link to={`/vehicles/${primaryVehicle!.id}`} className="glass-button text-xs flex items-center gap-1.5">
-                          <Eye className="h-3.5 w-3.5" /> Details
+                        <Link to={`/vehicles/${primaryVehicle!.id}`}>
+                          <Button variant="secondary" size="sm" icon={<Eye className="h-3.5 w-3.5" />}>Details</Button>
                         </Link>
-                        <Link to="/commands" className="glass-button text-xs flex items-center gap-1.5">
-                          <Zap className="h-3.5 w-3.5" /> Commands
+                        <Link to="/commands">
+                          <Button variant="secondary" size="sm" icon={<Zap className="h-3.5 w-3.5" />}>Commands</Button>
                         </Link>
-                        <Link to="/live" className="glass-button text-xs flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5" /> Live Map
+                        <Link to="/live">
+                          <Button variant="secondary" size="sm" icon={<MapPin className="h-3.5 w-3.5" />}>Live Map</Button>
                         </Link>
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
+                    <GlassPanel className="mt-6 p-4 text-center">
                       <p className="text-sm text-[var(--text-secondary)]">Vehicle asleep — wake to see live data</p>
-                      <Link to="/commands" className="neon-button text-xs mt-3 inline-flex">Wake Up</Link>
-                    </div>
+                      <Link to="/commands"><Button variant="primary" size="sm" className="mt-3">Wake Up</Button></Link>
+                    </GlassPanel>
                   )}
                 </div>
 
@@ -702,14 +704,9 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Gear</span>
                       {cleanNil(motorData.gear) ? (
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          motorData.gear === 'D' ? 'bg-neon-green/10 text-neon-green' :
-                          motorData.gear === 'R' ? 'bg-neon-red/10 text-neon-red' :
-                          motorData.gear === 'N' ? 'bg-neon-amber/10 text-neon-amber' :
-                          'bg-white/5 text-[var(--text-secondary)]'
-                        }`}>
+                        <Badge color={motorData.gear === 'D' ? 'green' : motorData.gear === 'R' ? 'red' : motorData.gear === 'N' ? 'amber' : 'neutral'}>
                           {cleanNil(motorData.gear)}
-                        </span>
+                        </Badge>
                       ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
                     </div>
                     <div className="flex items-center justify-between">
@@ -822,19 +819,15 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--text-secondary)]">Doors</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          openDoors.length === 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
-                        }`}>
+                        <Badge color={openDoors.length === 0 ? 'green' : 'amber'}>
                           {openDoors.length === 0 ? 'All Closed' : `${openDoors.length} Open`}
-                        </span>
+                        </Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--text-secondary)]">Windows</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          openWindows.length === 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
-                        }`}>
+                        <Badge color={openWindows.length === 0 ? 'green' : 'amber'}>
                           {openWindows.length === 0 ? 'All Closed' : `${openWindows.length} Open`}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   )
@@ -881,12 +874,10 @@ export default function Dashboard() {
                         ))}
                       </div>
                       <div className="text-center">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          allNormal ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
-                        }`}>
+                        <Badge color={allNormal ? 'green' : 'amber'}>
                           <ShieldCheck className="h-2.5 w-2.5" />
                           {allNormal ? 'All Normal' : 'Warning'}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   )
@@ -914,13 +905,9 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Status</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        cleanNil(mediaData.playback_status) === 'Playing' ? 'bg-neon-green/10 text-neon-green'
-                          : cleanNil(mediaData.playback_status) === 'Paused' ? 'bg-neon-amber/10 text-neon-amber'
-                          : 'bg-white/5 text-[var(--text-muted)]'
-                      }`}>
+                      <Badge color={cleanNil(mediaData.playback_status) === 'Playing' ? 'green' : cleanNil(mediaData.playback_status) === 'Paused' ? 'amber' : 'neutral'}>
                         {cleanNil(mediaData.playback_status) ?? '—'}
-                      </span>
+                      </Badge>
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -1033,12 +1020,12 @@ export default function Dashboard() {
               </p>
               <div className="flex items-center justify-center gap-4">
                 {auth?.authenticated ? (
-                  <button onClick={() => { syncVehiclesApi().then(() => window.location.reload()) }} className="neon-button">
-                    Sync Vehicles <RefreshCw className="h-4 w-4 ml-1 inline-block" />
-                  </button>
+                  <Button onClick={() => { syncVehiclesApi().then(() => window.location.reload()) }} icon={<RefreshCw className="h-4 w-4" />}>
+                    Sync Vehicles
+                  </Button>
                 ) : (
-                  <Link to="/settings" className="neon-button">
-                    Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
+                  <Link to="/settings">
+                    <Button variant="primary">Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" /></Button>
                   </Link>
                 )}
               </div>
@@ -1049,10 +1036,10 @@ export default function Dashboard() {
                   { icon: BatteryCharging, label: 'Charge Analytics', color: '#10b981' },
                   { icon: Shield, label: 'Vehicle Control', color: '#ef4444' },
                 ].map(f => (
-                  <div key={f.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
+                  <GlassPanel key={f.label} className="p-3 text-center">
                     <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
                     <p className="text-xs font-medium text-gray-300">{f.label}</p>
-                  </div>
+                  </GlassPanel>
                 ))}
               </div>
             </div>

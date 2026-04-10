@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getDrives, getFleetAnalytics } from '../api'
-import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, DateRangeFilter, Skeleton, QueryError, MetricCard, ChartContainer, Select, DataTable } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
@@ -11,8 +11,10 @@ import {
   Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
 import { ChartTooltip } from '../components/Charts'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function Efficiency() {
+  usePageTitle('Efficiency')
   const { convertDistance, convertSpeed, convertTemp, convertEfficiency, distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -140,14 +142,11 @@ export default function Efficiency() {
             onEndDateChange={setEndDate}
           />
           {vehicles && vehicles.length > 1 && (
-            <select
-              value={vehicleId ?? ''}
+            <Select
+              value={String(vehicleId ?? '')}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
         </div>
       </div>
@@ -161,32 +160,31 @@ export default function Efficiency() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 sm:mb-8">
-          {[
-            { label: 'Avg Efficiency', value: `${fmtInt(convertEfficiency(avgEff))} ${efficiencyUnit}`, sub: '', icon: Gauge, color: '#00f0ff' },
-            { label: 'Energy Used', value: `${fmtNumber(totalEnergy, 1)} kWh`, sub: `selected period`, icon: Zap, color: '#f59e0b' },
-            { label: 'Distance', value: `${fmtInt(convertDistance(totalDist))} ${distanceUnit}`, sub: 'selected period', icon: TrendingUp, color: '#10b981' },
-            { label: 'Cost', value: `$${energy?.total_cost != null ? fmtNumber(energy.total_cost, 2) : '0'}`, sub: `$${totalDist > 0 ? fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100, 1) : '0'}/100${distanceUnit}`, icon: Fuel, color: '#8b5cf6' },
-            { label: 'CO₂ Saved', value: `${fmtInt(co2Saved)} kg`, sub: 'vs ICE vehicle', icon: Thermometer, color: '#ec4899' },
-          ].map(card => (
-            <GlassPanel key={card.label} className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className="h-4 w-4" style={{ color: card.color }} />
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
-              </div>
-              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{card.value}</p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">{card.sub}</p>
-            </GlassPanel>
+          {([
+            { label: 'Avg Efficiency', value: `${fmtInt(convertEfficiency(avgEff))} ${efficiencyUnit}`, subtitle: '', icon: Gauge, color: 'cyan' as const },
+            { label: 'Energy Used', value: `${fmtNumber(totalEnergy, 1)} kWh`, subtitle: 'selected period', icon: Zap, color: 'amber' as const },
+            { label: 'Distance', value: `${fmtInt(convertDistance(totalDist))} ${distanceUnit}`, subtitle: 'selected period', icon: TrendingUp, color: 'green' as const },
+            { label: 'Cost', value: `$${energy?.total_cost != null ? fmtNumber(energy.total_cost, 2) : '0'}`, subtitle: `$${totalDist > 0 ? fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100, 1) : '0'}/100${distanceUnit}`, icon: Fuel, color: 'purple' as const },
+            { label: 'CO₂ Saved', value: `${fmtInt(co2Saved)} kg`, subtitle: 'vs ICE vehicle', icon: Thermometer, color: 'red' as const },
+          ]).map(card => (
+            <MetricCard
+              key={card.label}
+              label={card.label}
+              value={card.value}
+              icon={<card.icon className="h-4 w-4" />}
+              color={card.color}
+              subtitle={card.subtitle}
+            />
           ))}
         </div>
       )}
 
       {/* Daily Efficiency Trend */}
-      <GlassPanel className="p-4 sm:p-6 mb-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Daily Efficiency Trend ({efficiencyUnit})</h3>
+      <ChartContainer title={`Daily Efficiency Trend (${efficiencyUnit})`} height={280} className="mb-6">
         {dailyEfficiency.length === 0 ? (
-          <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No efficiency data</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No efficiency data</div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dailyEfficiency}>
               <defs>
                 <linearGradient id="effGrad" x1="0" y1="0" x2="0" y2="1">
@@ -202,16 +200,15 @@ export default function Efficiency() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
         {/* Speed vs Efficiency Scatter */}
-        <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Speed vs Energy Consumption</h3>
+        <ChartContainer title="Speed vs Energy Consumption" height={280}>
           {speedEffData.length === 0 ? (
-            <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">Not enough drive data</div>
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">Not enough drive data</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height="100%">
               <ScatterChart>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis dataKey="speed" name={`Speed (${speedUnit})`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -223,17 +220,14 @@ export default function Efficiency() {
               </ScatterChart>
             </ResponsiveContainer>
           )}
-        </GlassPanel>
+        </ChartContainer>
 
         {/* Temperature vs Efficiency */}
-        <GlassPanel className="p-4 sm:p-6">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Thermometer className="h-4 w-4 inline mr-1" /> Temperature vs Efficiency
-          </h3>
+        <ChartContainer title="Temperature vs Efficiency" height={280}>
           {tempEffData.length === 0 ? (
-            <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No temperature data</div>
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No temperature data</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height="100%">
               <ScatterChart>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                 <XAxis dataKey="temp" name={`Temp (${tempUnit})`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -245,16 +239,15 @@ export default function Efficiency() {
               </ScatterChart>
             </ResponsiveContainer>
           )}
-        </GlassPanel>
+        </ChartContainer>
       </div>
 
       {/* Speed Distribution */}
-      <GlassPanel className="p-4 sm:p-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Speed Distribution</h3>
+      <ChartContainer title="Speed Distribution" height={250}>
         {speedDist.length === 0 ? (
-          <div className="flex items-center justify-center h-48 sm:h-64 text-[var(--text-muted)] text-sm">No speed distribution data</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No speed distribution data</div>
         ) : (
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={speedDist}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="range" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -264,7 +257,7 @@ export default function Efficiency() {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* Temperature-Bucketed Efficiency Table */}
       {tempBuckets.length > 0 && (
@@ -272,36 +265,29 @@ export default function Efficiency() {
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
             <Thermometer className="h-4 w-4 text-neon-amber" /> Efficiency by Temperature Range
           </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs uppercase tracking-wider text-[var(--text-muted)] border-b border-white/5">
-                  <th className="text-left py-2 pr-4">Temp Range</th>
-                  <th className="text-right py-2 px-3">Drives</th>
-                  <th className="text-right py-2 px-3">Avg {efficiencyUnit}</th>
-                  <th className="text-right py-2 px-3">{distanceUnit}/kWh</th>
-                  <th className="text-right py-2 px-3">Total {distanceUnit}</th>
-                  <th className="text-right py-2 px-3">Avg Speed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tempBuckets.map(b => (
-                  <tr key={b.range} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2 pr-4 font-medium text-[var(--text-primary)]">{b.range}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{b.count}</td>
-                    <td className="text-right py-2 px-3">
-                      <span style={{ color: b.avgEff < 160 ? '#10b981' : b.avgEff < 200 ? '#f59e0b' : '#ef4444' }}>
-                        {fmtInt(convertEfficiency(b.avgEff))}
-                      </span>
-                    </td>
-                    <td className="text-right py-2 px-3 text-neon-cyan">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff), 1) : '—'}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{fmtInt(convertDistance(b.totalDist))}</td>
-                    <td className="text-right py-2 px-3 text-[var(--text-secondary)]">{fmtInt(convertSpeed(b.avgSpeed))} {speedUnit}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={tempBuckets}
+            keyExtractor={b => b.range}
+            compact
+            columns={[
+              { key: 'range', header: 'Temp Range', render: b => <span className="font-medium text-[var(--text-primary)]">{b.range}</span> },
+              { key: 'count', header: 'Drives', className: 'text-right', render: b => <span className="text-[var(--text-secondary)]">{b.count}</span> },
+              { key: 'avgEff', header: `Avg ${efficiencyUnit}`, className: 'text-right', render: b => (
+                <span style={{ color: b.avgEff < 160 ? '#10b981' : b.avgEff < 200 ? '#f59e0b' : '#ef4444' }}>
+                  {fmtInt(convertEfficiency(b.avgEff))}
+                </span>
+              )},
+              { key: 'kmPerKwh', header: `${distanceUnit}/kWh`, className: 'text-right', render: b => (
+                <span className="text-neon-cyan">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff), 1) : '—'}</span>
+              )},
+              { key: 'totalDist', header: `Total ${distanceUnit}`, className: 'text-right', render: b => (
+                <span className="text-[var(--text-secondary)]">{fmtInt(convertDistance(b.totalDist))}</span>
+              )},
+              { key: 'avgSpeed', header: 'Avg Speed', className: 'text-right', render: b => (
+                <span className="text-[var(--text-secondary)]">{fmtInt(convertSpeed(b.avgSpeed))} {speedUnit}</span>
+              )},
+            ]}
+          />
         </GlassPanel>
       )}
 

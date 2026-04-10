@@ -1,15 +1,18 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryDegradation, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, AlertBanner, Select } from '../components/ui'
 import { Battery, TrendingDown, AlertTriangle, Thermometer, Zap, Shield } from 'lucide-react'
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ReferenceLine
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function HealthGauge({ value, size = 200 }: { value: number; size?: number }) {
+  usePageTitle('Battery Degradation')
   const clamped = Math.min(Math.max(value, 0), 100)
   const r = (size - 20) / 2
   const circ = 2 * Math.PI * r * 0.75
@@ -26,7 +29,7 @@ function HealthGauge({ value, size = 200 }: { value: number; size?: number }) {
             <stop offset="100%" stopColor={color} stopOpacity={0.3} />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={10}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--glass-border)" strokeWidth={10}
           strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ * 0.25}
           transform={`rotate(${startAngle} ${size / 2} ${size / 2})`} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="url(#health-grad)" strokeWidth={10}
@@ -35,7 +38,7 @@ function HealthGauge({ value, size = 200 }: { value: number; size?: number }) {
           style={{ transition: 'stroke-dashoffset 1.2s ease-out', filter: `drop-shadow(0 0 8px ${color}66)` }} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ paddingBottom: 10 }}>
-        <p className="text-4xl font-bold" style={{ color }}>{clamped.toFixed(1)}%</p>
+        <p className="text-4xl font-bold" style={{ color }}>{fmtNumber(clamped)}%</p>
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Battery Health</p>
       </div>
     </div>
@@ -110,7 +113,7 @@ export default function BatteryDegradation() {
 
   const habits = data?.charging_habits
   const totalCharges = (habits?.fast_charge_count ?? 0) + (habits?.slow_charge_count ?? 0)
-  const fastChargePct = totalCharges > 0 ? ((habits?.fast_charge_count ?? 0) / totalCharges * 100).toFixed(0) : '0'
+  const fastChargePct = totalCharges > 0 ? fmtInt((habits?.fast_charge_count ?? 0) / totalCharges * 100) : '0'
 
   const noData = !isLoading && (!data || data.snapshots.length === 0)
 
@@ -127,15 +130,12 @@ export default function BatteryDegradation() {
         subtitle="Health trends, degradation predictions, and charging habit impact analysis"
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
+            <Select
               value={vehicleId ?? ''}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-input text-sm px-3 py-2"
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              className="text-sm px-3 py-2"
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           ) : undefined
         }
       />
@@ -165,7 +165,7 @@ export default function BatteryDegradation() {
                 <div className="flex items-center gap-4 mt-4">
                   <div className="text-center">
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Capacity</p>
-                    <p className="text-lg font-bold text-neon-cyan">{(data?.current_capacity ?? 0).toFixed(1)} kWh</p>
+                    <p className="text-lg font-bold text-neon-cyan">{fmtNumber(data?.current_capacity ?? 0)} kWh</p>
                   </div>
                   <div className="h-8 w-px" style={{ background: 'var(--glass-border)' }} />
                   <div className="text-center">
@@ -175,7 +175,7 @@ export default function BatteryDegradation() {
                   <div className="h-8 w-px" style={{ background: 'var(--glass-border)' }} />
                   <div className="text-center">
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Range</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{(data?.current_range ?? 0).toFixed(0)} km</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{fmtInt(data?.current_range ?? 0)} km</p>
                   </div>
                 </div>
               </GlassPanel>
@@ -190,7 +190,7 @@ export default function BatteryDegradation() {
                     <div className="rounded-xl p-4" style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.15)' }}>
                       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         At current rate, battery reaches <span className="font-bold text-neon-amber">80% health</span> in approximately{' '}
-                        <span className="font-bold text-neon-purple">~{(data.prediction.years_to_80_pct ?? 0).toFixed(1)} years</span>
+                        <span className="font-bold text-neon-purple">~{fmtNumber(data.prediction.years_to_80_pct ?? 0)} years</span>
                         {data.prediction.predicted_date && (
                           <> ({data.prediction.predicted_date})</>
                         )}
@@ -199,7 +199,7 @@ export default function BatteryDegradation() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-lg p-3" style={{ background: 'var(--surface-2)' }}>
                         <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Degradation Rate</p>
-                        <p className="text-lg font-bold text-neon-red">{Math.abs(data.prediction.slope_per_year).toFixed(2)}%/yr</p>
+                        <p className="text-lg font-bold text-neon-red">{fmtNumber(Math.abs(data.prediction.slope_per_year))}%/yr</p>
                       </div>
                       <div className="rounded-lg p-3" style={{ background: 'var(--surface-2)' }}>
                         <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Stress Level</p>
@@ -225,11 +225,7 @@ export default function BatteryDegradation() {
           {/* Degradation trend chart with projection */}
           {trendChartData.length > 0 && (
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-neon-cyan" /> Health Trend & Projection
-                </h3>
-                <div className="h-64 sm:h-80">
+              <ChartContainer title="Health Trend & Projection" height="clamp(256px, 40vw, 320px)">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendChartData}>
                       {chartGrid}
@@ -244,8 +240,7 @@ export default function BatteryDegradation() {
                         strokeDasharray="8 4" dot={false} connectNulls={false} />
                     </LineChart>
                   </ResponsiveContainer>
-                </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           )}
 
@@ -276,7 +271,7 @@ export default function BatteryDegradation() {
                 />
                 <RiskCard
                   label="Avg Cell Temp"
-                  value={`${(data?.current_temp ?? 0).toFixed(1)}°C`}
+                  value={`${fmtNumber(data?.current_temp ?? 0)}°C`}
                   detail={tempLevel === 'green' ? 'Optimal range' : tempLevel === 'amber' ? 'Slightly elevated' : 'High temperature'}
                   level={tempLevel as 'green' | 'amber' | 'red'}
                 />
@@ -287,11 +282,7 @@ export default function BatteryDegradation() {
           {/* Monthly capacity trend */}
           {capacityChartData.length > 0 && (
             <FadeIn delay={0.2}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Battery className="h-4 w-4 text-neon-purple" /> Capacity Over Time
-                </h3>
-                <div className="h-56 sm:h-72">
+              <ChartContainer title="Capacity Over Time" height="clamp(224px, 36vw, 288px)">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={capacityChartData}>
                       {chartGrid}
@@ -308,8 +299,7 @@ export default function BatteryDegradation() {
                         fill="url(#cap-gradient)" />
                     </AreaChart>
                   </ResponsiveContainer>
-                </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           )}
 
@@ -319,35 +309,17 @@ export default function BatteryDegradation() {
               <h3 className="section-title mb-4 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-neon-green" /> Charging Habits Impact
               </h3>
-              <div className="rounded-xl p-4" style={{
-                background: data?.stress_level === 'Low' ? 'rgba(16,185,129,0.06)' :
-                  data?.stress_level === 'Medium' ? 'rgba(245,158,11,0.06)' : 'rgba(239,68,68,0.06)',
-                border: `1px solid ${data?.stress_level === 'Low' ? 'rgba(16,185,129,0.15)' :
-                  data?.stress_level === 'Medium' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)'}`,
-              }}>
-                <div className="flex items-start gap-3">
-                  <Thermometer className={`h-5 w-5 mt-0.5 shrink-0 ${
-                    data?.stress_level === 'Low' ? 'text-neon-green' :
-                    data?.stress_level === 'Medium' ? 'text-neon-amber' : 'text-neon-red'
-                  }`} />
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                      {fastChargePct}% fast charges, {habits?.deep_discharge_count ?? 0} deep discharges —{' '}
-                      <span className={`font-bold ${
-                        data?.stress_level === 'Low' ? 'text-neon-green' :
-                        data?.stress_level === 'Medium' ? 'text-neon-amber' : 'text-neon-red'
-                      }`}>{data?.stress_level} stress</span>
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      {data?.stress_level === 'Low'
-                        ? 'Your charging habits are optimal for battery longevity.'
-                        : data?.stress_level === 'Medium'
-                        ? 'Consider reducing fast charging frequency and avoiding full charges when possible.'
-                        : 'High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <AlertBanner
+                variant={data?.stress_level === 'Low' ? 'success' : data?.stress_level === 'Medium' ? 'warning' : 'danger'}
+                icon={<Thermometer className="h-5 w-5" />}
+                title={`${fastChargePct}% fast charges, ${habits?.deep_discharge_count ?? 0} deep discharges — ${data?.stress_level} stress`}
+              >
+                {data?.stress_level === 'Low'
+                  ? 'Your charging habits are optimal for battery longevity.'
+                  : data?.stress_level === 'Medium'
+                  ? 'Consider reducing fast charging frequency and avoiding full charges when possible.'
+                  : 'High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.'}
+              </AlertBanner>
             </GlassPanel>
           </FadeIn>
         </>

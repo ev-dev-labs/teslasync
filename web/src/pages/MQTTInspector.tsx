@@ -2,12 +2,13 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Radio, Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, DataTable, type Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { formatRelative } from '../lib/dateFormat'
 import { fmtInt, fmtNumber } from '../lib/numberFormat'
-import clsx from 'clsx'
+import { usePageTitle } from '../hooks/usePageTitle'
+// clsx removed — using component library
 
 interface TelemetryStatus {
   connected: boolean
@@ -34,7 +35,65 @@ interface ThroughputPoint {
 
 const STALE_THRESHOLD = 120 // seconds
 
+const vehicleColumns: Column<VehicleTelemetry>[] = [
+  {
+    key: 'vin',
+    header: 'VIN',
+    render: (v) => <span className="font-mono text-[var(--text-primary)]">{v.vin}</span>,
+  },
+  {
+    key: 'state',
+    header: 'State',
+    render: (v) => v.state ? (
+      <Badge color={
+        v.state === 'driving' ? 'green' :
+        v.state === 'charging' ? 'amber' :
+        v.state === 'parked' ? 'cyan' :
+        'neutral'
+      }>
+        {v.state}
+      </Badge>
+    ) : (
+      <span className="text-[var(--text-muted)]">—</span>
+    ),
+  },
+  {
+    key: 'signals',
+    header: 'Signals',
+    className: 'text-right',
+    render: (v) => <span className="font-mono text-[var(--text-secondary)]">{fmtInt(v.signal_count)}</span>,
+  },
+  {
+    key: 'batches',
+    header: 'Batches',
+    className: 'text-right',
+    render: (v) => <span className="font-mono text-[var(--text-secondary)]">{fmtInt(v.batch_count)}</span>,
+  },
+  {
+    key: 'sigPerSec',
+    header: 'Sig/sec',
+    className: 'text-right',
+    render: (v) => <span className="font-mono text-[var(--text-secondary)]">{v.signals_per_sec != null ? fmtNumber(v.signals_per_sec, 1) : '—'}</span>,
+  },
+  {
+    key: 'lastReceived',
+    header: 'Last Received',
+    className: 'text-right',
+    render: (v) => <span className="text-[var(--text-muted)] whitespace-nowrap">{v.last_received ? formatRelative(v.last_received) : '—'}</span>,
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    className: 'text-center',
+    render: (v) => {
+      const isStale = !v.last_received || (Date.now() - new Date(v.last_received).getTime()) / 1000 > STALE_THRESHOLD
+      return isStale ? <Badge color="amber" dot>Stale</Badge> : <Badge color="green" dot>Live</Badge>
+    },
+  },
+]
+
 export default function MQTTInspector() {
+  usePageTitle('MQTT Inspector')
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([])
   const prevTotalRef = useRef<number | null>(null)
 
@@ -83,13 +142,9 @@ export default function MQTTInspector() {
               <RefreshCw className="inline h-3 w-3 mr-1" />
               Refreshes every 5s
             </span>
-            <span className={clsx(
-              'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full',
-              status?.connected ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'
-            )}>
-              {status?.connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              {status?.connected ? 'Connected' : 'Disconnected'}
-            </span>
+            <Badge color={status?.connected ? 'green' : 'red'} dot>
+              {status?.connected ? <><Wifi className="h-3 w-3" /> Connected</> : <><WifiOff className="h-3 w-3" /> Disconnected</>}
+            </Badge>
           </div>
         }
       />
@@ -211,70 +266,14 @@ export default function MQTTInspector() {
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
             </div>
-          ) : vehicles.length > 0 ? (
-            <div className="overflow-auto rounded-lg border border-[var(--border)]">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-[var(--surface)] z-10">
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">VIN</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">State</th>
-                    <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Signals</th>
-                    <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Batches</th>
-                    <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Sig/sec</th>
-                    <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Last Received</th>
-                    <th className="text-center px-3 py-2.5 text-[var(--text-muted)] font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vehicles.map(v => {
-                    const isStale = !v.last_received || (Date.now() - new Date(v.last_received).getTime()) / 1000 > STALE_THRESHOLD
-                    return (
-                      <tr key={v.vin} className={clsx(
-                        'border-b border-[var(--border)] hover:bg-white/[0.02]',
-                        isStale && 'bg-neon-amber/[0.03]'
-                      )}>
-                        <td className="px-3 py-2.5 font-mono text-[var(--text-primary)]">{v.vin}</td>
-                        <td className="px-3 py-2.5">
-                          {v.state ? (
-                            <span className={clsx(
-                              'px-2 py-0.5 rounded-full text-[10px] font-medium capitalize',
-                              v.state === 'driving' && 'bg-neon-green/10 text-neon-green',
-                              v.state === 'charging' && 'bg-neon-amber/10 text-neon-amber',
-                              v.state === 'parked' && 'bg-neon-cyan/10 text-neon-cyan',
-                              v.state === 'online' && 'bg-blue-500/10 text-blue-400',
-                              (!v.state || v.state === 'offline') && 'bg-gray-500/10 text-gray-400',
-                            )}>
-                              {v.state}
-                            </span>
-                          ) : (
-                            <span className="text-[var(--text-muted)]">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{fmtInt(v.signal_count)}</td>
-                        <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{fmtInt(v.batch_count)}</td>
-                        <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{v.signals_per_sec != null ? fmtNumber(v.signals_per_sec, 1) : '—'}</td>
-                        <td className="px-3 py-2.5 text-right text-[var(--text-muted)] whitespace-nowrap">
-                          {v.last_received ? formatRelative(v.last_received) : '—'}
-                        </td>
-                        <td className="px-3 py-2.5 text-center">
-                          {isStale ? (
-                            <span className="inline-flex items-center gap-1 text-neon-amber text-[10px]">
-                              <AlertTriangle className="h-3 w-3" /> Stale
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-neon-green text-[10px]">
-                              <Wifi className="h-3 w-3" /> Live
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
           ) : (
-            <p className="text-center py-12 text-[var(--text-muted)]">No vehicles currently streaming</p>
+            <DataTable<VehicleTelemetry>
+              columns={vehicleColumns}
+              data={vehicles}
+              keyExtractor={(v) => v.vin}
+              compact
+              emptyMessage="No vehicles currently streaming"
+            />
           )}
         </GlassPanel>
       </FadeIn>

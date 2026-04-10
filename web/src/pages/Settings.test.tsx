@@ -136,10 +136,10 @@ describe('Settings', () => {
     })
   })
 
-  it('shows Tesla API Polling section', async () => {
+  it('shows Fleet API Settings section', async () => {
     renderPage(<Settings />)
     await waitFor(() => {
-      expect(screen.getByText('Tesla API Polling')).toBeInTheDocument()
+      expect(screen.getByText('Fleet API Settings')).toBeInTheDocument()
     })
   })
 

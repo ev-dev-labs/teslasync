@@ -9,16 +9,18 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
   MapPin, FileText,
 } from 'lucide-react'
-import { PageHeader, GlassPanel } from '../components/ui'
+import { PageHeader, GlassPanel, Badge, Button, Input, Select, DataTable, type Column } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
 import SignalConfigModal from '../components/SignalConfigModal'
 import { motion } from 'framer-motion'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 // ─── Shared helpers ──────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
+  usePageTitle('Dev Tools')
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
     navigator.clipboard.writeText(text)
@@ -26,9 +28,9 @@ function CopyButton({ text }: { text: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
   return (
-    <button onClick={handleCopy} className="p-1 rounded hover:bg-white/10 transition-colors" title="Copy">
+    <Button variant="ghost" size="sm" onClick={handleCopy} aria-label="Copy to clipboard" title="Copy" className="!p-1 !rounded">
       {copied ? <CheckCircle className="h-3.5 w-3.5 text-neon-green" /> : <Copy className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-    </button>
+    </Button>
   )
 }
 
@@ -88,19 +90,8 @@ function AccordionSection({ icon, title, description, badges, children, isOpen, 
 }
 
 function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray' | 'cyan' | 'purple'; label: string }) {
-  const colors = {
-    green: 'bg-green-500/20 text-green-400 border-green-500/30',
-    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    red: 'bg-red-500/20 text-red-400 border-red-500/30',
-    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-    cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-    purple: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  }
-  return (
-    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
-      {label}
-    </span>
-  )
+  const badgeColor = color === 'gray' ? 'neutral' as const : color
+  return <Badge color={badgeColor}>{label}</Badge>
 }
 
 function ToolCard({
@@ -139,8 +130,7 @@ function ToolCard({
   )
 }
 
-const inputClasses = 'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 font-mono'
-const textareaClasses = 'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 font-mono resize-y min-h-[80px]'
+const textareaClasses= 'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40 font-mono resize-y min-h-[80px]'
 
 // ─── Backend API helpers ─────────────────────────────────────────
 
@@ -186,10 +176,9 @@ function BackendTool({
   return (
     <ToolCard icon={icon} color={color} title={title} description={description}>
       {children}
-      <button onClick={() => mut.mutate()} disabled={mut.isPending} className="glass-button text-xs flex items-center gap-2 mt-3">
-        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+      <Button variant="secondary" size="sm" onClick={() => mut.mutate()} loading={mut.isPending} icon={<Play className="h-3.5 w-3.5" />} className="mt-3">
         Run
-      </button>
+      </Button>
       {result !== null && <ResultPanel title={`${title} Result`} data={result} />}
     </ToolCard>
   )
@@ -213,25 +202,24 @@ function FleetApiConfigTool() {
   }
   return (
     <ToolCard icon={Server} color="cyan" title="Fleet API Configuration" description="Current Tesla Fleet API setup — base URL, client ID, auth status, active region">
-      <button onClick={run} disabled={loading} className="glass-button text-xs flex items-center gap-2">
-        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+      <Button variant="secondary" size="sm" onClick={run} loading={loading} icon={<Play className="h-3.5 w-3.5" />}>
         Load Config
-      </button>
+      </Button>
       {result && !('error' in result) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
           {[
             { label: 'Base URL', value: result.base_url as string },
             { label: 'Client ID', value: (result.client_id as string) || '(not set)' },
           ].map(({ label, value }) => (
-            <div key={label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <GlassPanel key={label} className="p-3">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{label}</p>
               <div className="flex items-center gap-2">
                 <p className="text-xs font-mono text-[var(--text-primary)] truncate flex-1">{value}</p>
                 {value !== '(not set)' && <CopyButton text={value} />}
               </div>
-            </div>
+            </GlassPanel>
           ))}
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+          <GlassPanel className="p-3">
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Auth Status</p>
             <div className="flex items-center gap-2">
               {result.has_valid_token ? (
@@ -240,9 +228,9 @@ function FleetApiConfigTool() {
                 <><AlertTriangle className="h-4 w-4 text-neon-amber" /><span className="text-xs text-neon-amber">Not Connected</span></>
               )}
             </div>
-          </div>
+          </GlassPanel>
           {typeof result.regions === 'object' && result.regions !== null && (
-            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <GlassPanel className="p-3">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Regions</p>
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {Object.entries(result.regions as Record<string, string>).map(([key, url]) => (
@@ -254,7 +242,7 @@ function FleetApiConfigTool() {
                   </span>
                 ))}
               </div>
-            </div>
+            </GlassPanel>
           )}
         </div>
       ) : result ? (
@@ -283,7 +271,7 @@ function PartnerRegistrationTool() {
           <li>Public key at <code className="text-neon-cyan">https://DOMAIN/.well-known/appspecific/com.tesla.3p.public-key.pem</code></li>
         </ul>
       </div>
-      <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] mb-3">
+        <GlassPanel className="p-3 mb-3">
         <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Generate Key Pair</p>
         {[
           'openssl ecparam -name prime256v1 -genkey -noout -out private-key.pem',
@@ -294,14 +282,13 @@ function PartnerRegistrationTool() {
             <CopyButton text={cmd} />
           </div>
         ))}
-      </div>
+      </GlassPanel>
       <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">Your Domain</label>
       <div className="flex gap-3">
-        <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="teslasync.yourdomain.com" className={clsx(inputClasses, 'flex-1')} />
-        <button onClick={() => mut.mutate()} disabled={mut.isPending || !domain} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40 shrink-0">
-          {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+        <Input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="teslasync.yourdomain.com" className="flex-1" />
+        <Button variant="secondary" size="sm" onClick={() => mut.mutate()} disabled={!domain} loading={mut.isPending} icon={<KeyRound className="h-3.5 w-3.5" />} className="shrink-0">
           Register
-        </button>
+        </Button>
       </div>
       {result !== null && <ResultPanel title="Partner Registration Result" data={result} />}
     </ToolCard>
@@ -386,24 +373,24 @@ function PublicKeySetupTool() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {status.fingerprint && (
-              <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <GlassPanel className="p-2.5">
                 <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Fingerprint</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <p className="text-xs font-mono text-[var(--text-primary)] truncate">{status.fingerprint.substring(0, 24)}…</p>
                   <CopyButton text={status.fingerprint} />
                 </div>
-              </div>
+              </GlassPanel>
             )}
             {status.created_at && (
-              <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+              <GlassPanel className="p-2.5">
                 <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider">Created</p>
                 <p className="text-xs font-mono text-[var(--text-primary)] mt-0.5">{formatDate(status.created_at)}</p>
-              </div>
+              </GlassPanel>
             )}
           </div>
 
           {/* Well-Known URL */}
-          <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+          <GlassPanel className="p-2.5">
             <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Well-Known URL</p>
             <div className="flex items-center gap-2">
               <code className="text-[10px] text-neon-cyan font-mono truncate flex-1">{wellKnownUrl}</code>
@@ -412,20 +399,19 @@ function PublicKeySetupTool() {
                 <ExternalLink className="h-3.5 w-3.5 text-[var(--text-muted)]" />
               </a>
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Collapsible Public Key PEM */}
           {status.public_key_pem && (
             <div>
-              <button onClick={() => setShowPublicKeyPem(!showPublicKeyPem)} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
-                {showPublicKeyPem ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              <Button variant="ghost" size="sm" icon={showPublicKeyPem ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} onClick={() => setShowPublicKeyPem(!showPublicKeyPem)}>
                 {showPublicKeyPem ? 'Hide' : 'Show'} Public Key PEM
-              </button>
+              </Button>
               {showPublicKeyPem && (
-                <div className="mt-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] relative">
+                <GlassPanel className="mt-2 p-3 relative">
                   <div className="absolute top-2 right-2"><CopyButton text={status.public_key_pem} /></div>
                   <pre className="text-[10px] font-mono text-[var(--text-secondary)] whitespace-pre-wrap break-all">{status.public_key_pem}</pre>
-                </div>
+                </GlassPanel>
               )}
             </div>
           )}
@@ -462,14 +448,9 @@ function PublicKeySetupTool() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2 mt-4">
-        <button
-          onClick={() => generateMut.mutate()}
-          disabled={generateMut.isPending}
-          className="glass-button text-xs flex items-center gap-2"
-        >
-          {generateMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+        <Button variant="secondary" size="sm" onClick={() => generateMut.mutate()} loading={generateMut.isPending} icon={<KeyRound className="h-3.5 w-3.5" />}>
           Generate Keypair
-        </button>
+        </Button>
 
         {status?.configured && !confirmDelete && (
           <button
@@ -489,7 +470,7 @@ function PublicKeySetupTool() {
               {deleteMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
               Confirm Delete
             </button>
-            <button onClick={() => setConfirmDelete(false)} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]">Cancel</button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
           </div>
         )}
       </div>
@@ -508,14 +489,9 @@ function PublicKeySetupTool() {
           className={textareaClasses}
           rows={4}
         />
-        <button
-          onClick={() => uploadMut.mutate()}
-          disabled={uploadMut.isPending || !uploadPem.trim()}
-          className="glass-button text-xs flex items-center gap-2 mt-2 disabled:opacity-40"
-        >
-          {uploadMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        <Button variant="secondary" size="sm" onClick={() => uploadMut.mutate()} disabled={!uploadPem.trim()} loading={uploadMut.isPending} icon={<Upload className="h-3.5 w-3.5" />} className="mt-2">
           Upload Public Key
-        </button>
+        </Button>
         {uploadResult && (
           <div className={clsx('mt-2 p-3 rounded-xl border text-xs', uploadResult.ok ? 'bg-neon-green/5 border-neon-green/20 text-neon-green' : 'bg-neon-red/5 border-neon-red/20 text-neon-red')}>
             <div className="flex items-center gap-1.5">
@@ -644,22 +620,22 @@ function FleetTelemetrySubscribeTool() {
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Hostname</label>
-          <input type="text" value={hostname} onChange={e => setHostname(e.target.value)} placeholder="telemetry.yourdomain.com" className={inputClasses} />
+          <Input type="text" value={hostname} onChange={e => setHostname(e.target.value)} placeholder="telemetry.yourdomain.com" />
         </div>
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Port</label>
-          <input type="text" value={port} onChange={e => setPort(e.target.value)} placeholder="4443" className={inputClasses} />
+          <Input type="text" value={port} onChange={e => setPort(e.target.value)} placeholder="4443" />
         </div>
       </div>
 
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Interval (seconds)</label>
-        <input type="text" value={interval} onChange={e => setInterval(e.target.value)} placeholder="10" className={clsx(inputClasses, 'w-24')} />
+        <Input type="text" value={interval} onChange={e => setInterval(e.target.value)} placeholder="10" className="w-24" />
       </div>
 
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">CA Certificate (optional)</label>
-        <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(inputClasses, 'h-16 resize-y font-mono text-[10px]')} />
+        <textarea value={ca} onChange={e => setCa(e.target.value)} placeholder="Paste PEM-encoded CA certificate..." className={clsx(textareaClasses, 'h-16 text-[10px]')} />
       </div>
 
       {/* Signal Configuration */}
@@ -685,10 +661,9 @@ function FleetTelemetrySubscribeTool() {
         }}
       />
 
-      <button onClick={() => mut.mutate()} disabled={mut.isPending || selectedVins.length === 0 || !hostname} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
-        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Satellite className="h-3.5 w-3.5" />}
+      <Button variant="secondary" size="sm" onClick={() => mut.mutate()} disabled={selectedVins.length === 0 || !hostname} loading={mut.isPending} icon={<Satellite className="h-3.5 w-3.5" />}>
         Subscribe to Telemetry
-      </button>
+      </Button>
       {result !== null && <ResultPanel title="Fleet Telemetry Subscription Result" data={result} />}
     </ToolCard>
   )
@@ -769,45 +744,57 @@ function FleetTelemetryConfigTool() {
     return []
   })()
 
+  const errorColumns: Column<Record<string, unknown>>[] = [
+    {
+      key: 'time',
+      header: 'Time',
+      render: (err) => (
+        <span className="text-[var(--text-secondary)] whitespace-nowrap font-mono">
+          {err.created_at ? formatDateTime(err.created_at as string) : err.timestamp ? formatDateTime(err.timestamp as string) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'error',
+      header: 'Error',
+      render: (err) => (
+        <span className="text-neon-red font-medium">
+          {(err.name || err.error || err.code || '—') as string}
+        </span>
+      ),
+    },
+    {
+      key: 'details',
+      header: 'Details',
+      render: (err) => (
+        <span className="text-[var(--text-muted)] max-w-xs truncate block">
+          {(err.body || err.message || err.description || JSON.stringify(err)) as string}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <ToolCard icon={Eye} color="green" title="Fleet Telemetry Status" description="View, manage, and debug fleet telemetry configuration per vehicle">
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVin} onChange={e => handleVinChange(e.target.value)} className={inputClasses}>
-            <option value="">Select a vehicle...</option>
-            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
-              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
-            ))}
-          </select>
+          <Select value={selectedVin} onChange={e => handleVinChange(e.target.value)} options={[{ value: '', label: 'Select a vehicle...' }, ...vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => ({ value: v.vin, label: `${v.display_name} (${v.vin})` }))]} />
         ) : (
           <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
         )}
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <button onClick={() => getConfig.mutate()} disabled={getConfig.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
-          {getConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+        <Button variant="secondary" size="sm" onClick={() => getConfig.mutate()} disabled={!selectedVin} loading={getConfig.isPending} icon={<Eye className="h-3 w-3" />}>
           Get Config
-        </button>
-        <button
-          onClick={() => getErrors.mutate()}
-          disabled={getErrors.isPending || !selectedVin}
-          className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-amber"
-          title="Fetch recent fleet telemetry errors for this vehicle"
-        >
-          {getErrors.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => getErrors.mutate()} disabled={!selectedVin} loading={getErrors.isPending} icon={<AlertTriangle className="h-3 w-3" />} className="text-neon-amber" title="Fetch recent fleet telemetry errors for this vehicle">
           View Errors
-        </button>
-        <button
-          onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle? The vehicle will stop streaming telemetry data.')) deleteConfig.mutate() }}
-          disabled={deleteConfig.isPending || !selectedVin}
-          className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-red"
-          title="Remove fleet telemetry config from this vehicle"
-        >
-          {deleteConfig.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => { if (confirm('Remove fleet telemetry config for this vehicle? The vehicle will stop streaming telemetry data.')) deleteConfig.mutate() }} disabled={!selectedVin} loading={deleteConfig.isPending} icon={<Trash2 className="h-3 w-3" />} className="text-neon-red" title="Remove fleet telemetry config from this vehicle">
           Delete Config
-        </button>
+        </Button>
       </div>
 
       {!configExists && result === null && selectedVin && (
@@ -823,33 +810,17 @@ function FleetTelemetryConfigTool() {
               Fleet Telemetry Errors {errorsList.length > 0 && <span className="text-neon-amber">({errorsList.length})</span>}
             </h4>
             {errorsList.length > 0 && (
-              <button onClick={downloadErrors} className="text-[10px] text-neon-cyan hover:underline flex items-center gap-1">
-                <Download className="h-3 w-3" /> Download JSON
-              </button>
+              <Button variant="ghost" size="sm" icon={<Download className="h-3 w-3" />} onClick={downloadErrors}>Download JSON</Button>
             )}
           </div>
           {errorsList.length > 0 ? (
             <div className="glass-panel rounded-lg overflow-hidden max-h-64 overflow-y-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-[var(--glass-border)]">
-                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Time</th>
-                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Error</th>
-                    <th className="px-3 py-2 text-left text-[var(--text-muted)]">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {errorsList.map((err, i) => (
-                    <tr key={i} className="border-b border-[var(--glass-border)] last:border-0">
-                      <td className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap font-mono">
-                        {err.created_at ? formatDateTime(err.created_at as string) : err.timestamp ? formatDateTime(err.timestamp as string) : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-neon-red font-medium">{(err.name || err.error || err.code || '—') as string}</td>
-                      <td className="px-3 py-2 text-[var(--text-muted)] max-w-xs truncate">{(err.body || err.message || err.description || JSON.stringify(err)) as string}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable<Record<string, unknown>>
+                columns={errorColumns}
+                data={errorsList}
+                keyExtractor={(err) => `${String(err.created_at ?? err.timestamp ?? '')}-${String(err.name ?? err.error ?? '')}`}
+                compact
+              />
             </div>
           ) : (
             <div className="glass-panel rounded-lg p-4 text-center">
@@ -883,10 +854,9 @@ function FleetStatusTool() {
 
   return (
     <ToolCard icon={Zap} color="amber" title="Fleet Status" description="Check firmware version, telemetry version, command protocol, and key count for all vehicles">
-      <button onClick={() => mut.mutate()} disabled={mut.isPending || !vehicles?.length} className="glass-button text-xs flex items-center gap-2 disabled:opacity-40">
-        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+      <Button variant="secondary" size="sm" onClick={() => mut.mutate()} disabled={!vehicles?.length} loading={mut.isPending} icon={<Zap className="h-3.5 w-3.5" />}>
         Check Fleet Status
-      </button>
+      </Button>
       {result !== null && <ResultPanel title="Fleet Status" data={result} />}
     </ToolCard>
   )
@@ -919,34 +889,25 @@ function VehicleDataTools() {
       <div className="mb-3">
         <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Vehicle</label>
         {vehicles && vehicles.length > 0 ? (
-          <select value={selectedVin} onChange={e => { setSelectedVin(e.target.value); setResult(null) }} className={inputClasses}>
-            <option value="">Select a vehicle...</option>
-            {vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => (
-              <option key={v.vin} value={v.vin}>{v.display_name} ({v.vin})</option>
-            ))}
-          </select>
+          <Select value={selectedVin} onChange={e => { setSelectedVin(e.target.value); setResult(null) }} options={[{ value: '', label: 'Select a vehicle...' }, ...vehicles.map((v: { id: number; vehicle_id: number; display_name: string; vin: string }) => ({ value: v.vin, label: `${v.display_name} (${v.vin})` }))]} />
         ) : (
           <p className="text-xs text-[var(--text-muted)]">No vehicles found.</p>
         )}
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <button onClick={() => handleFetch('nearby-charging', 'Nearby Chargers')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
-          {fetchData.isPending && activeQuery === 'Nearby Chargers' ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />}
+        <Button variant="secondary" size="sm" onClick={() => handleFetch('nearby-charging', 'Nearby Chargers')} disabled={fetchData.isPending || !selectedVin} loading={fetchData.isPending && activeQuery === 'Nearby Chargers'} icon={<MapPin className="h-3 w-3" />}>
           Nearby Chargers
-        </button>
-        <button onClick={() => handleFetch('release-notes', 'Release Notes')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
-          {fetchData.isPending && activeQuery === 'Release Notes' ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => handleFetch('release-notes', 'Release Notes')} disabled={fetchData.isPending || !selectedVin} loading={fetchData.isPending && activeQuery === 'Release Notes'} icon={<FileText className="h-3 w-3" />}>
           Release Notes
-        </button>
-        <button onClick={() => handleFetch('recent-alerts', 'Recent Alerts')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40 text-neon-amber">
-          {fetchData.isPending && activeQuery === 'Recent Alerts' ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => handleFetch('recent-alerts', 'Recent Alerts')} disabled={fetchData.isPending || !selectedVin} loading={fetchData.isPending && activeQuery === 'Recent Alerts'} icon={<AlertTriangle className="h-3 w-3" />} className="text-neon-amber">
           Recent Alerts
-        </button>
-        <button onClick={() => handleFetch('service-data', 'Service Data')} disabled={fetchData.isPending || !selectedVin} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
-          {fetchData.isPending && activeQuery === 'Service Data' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wrench className="h-3 w-3" />}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => handleFetch('service-data', 'Service Data')} disabled={fetchData.isPending || !selectedVin} loading={fetchData.isPending && activeQuery === 'Service Data'} icon={<Wrench className="h-3 w-3" />}>
           Service Data
-        </button>
+        </Button>
       </div>
 
       {result !== null && <ResultPanel title={activeQuery} data={result} />}
@@ -1075,9 +1036,7 @@ function OnboardingWorkflow() {
         </div>
         <span className="text-[10px] text-[var(--text-muted)] shrink-0">{completedSteps.size}/{ONBOARDING_STEPS.length}</span>
         {completedSteps.size > 0 && (
-          <button onClick={resetAll} className="text-[10px] text-[var(--text-muted)] hover:text-neon-red ml-1 transition-colors" title="Reset progress">
-            <RefreshCw className="h-3 w-3" />
-          </button>
+          <Button variant="ghost" size="sm" icon={<RefreshCw className="h-3 w-3" />} onClick={resetAll} className="ml-1" title="Reset progress" />
         )}
       </div>
 
@@ -1275,13 +1234,9 @@ function OnboardingWorkflow() {
                 <RefreshCw className="h-3 w-3" /> Mark Incomplete
               </button>
             ) : (
-              <button
-                onClick={() => markComplete(currentStep)}
-                className="glass-button text-xs flex items-center gap-1.5"
-              >
-                <CheckCircle className="h-3.5 w-3.5" />
+              <Button variant="secondary" size="sm" onClick={() => markComplete(currentStep)} icon={<CheckCircle className="h-3.5 w-3.5" />}>
                 Mark Complete {currentStep < ONBOARDING_STEPS.length - 1 ? '& Continue' : ''}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -1332,17 +1287,16 @@ function MqttTestTool() {
       <div className="space-y-2 mb-3">
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Topic (optional)</label>
-          <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="test/topic" className={inputClasses} />
+          <Input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="test/topic" />
         </div>
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">Message (optional)</label>
-          <input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello MQTT" className={inputClasses} />
+          <Input type="text" value={message} onChange={e => setMessage(e.target.value)} placeholder="Hello MQTT" />
         </div>
       </div>
-      <button onClick={() => mut.mutate()} disabled={mut.isPending} className="glass-button text-xs flex items-center gap-2">
-        {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+      <Button variant="secondary" size="sm" onClick={() => mut.mutate()} loading={mut.isPending} icon={<Play className="h-3.5 w-3.5" />}>
         Send Test
-      </button>
+      </Button>
       {result !== null && <ResultPanel title="MQTT Test Result" data={result} />}
     </ToolCard>
   )
@@ -1385,7 +1339,7 @@ function VinDecoderTool() {
 
   return (
     <ToolCard icon={Car} color="cyan" title="VIN Decoder" description="Decode Tesla VIN to model, year, drive type, battery">
-      <input type="text" value={vin} onChange={e => setVin(e.target.value)} placeholder="5YJ3E1EA1PF000000" maxLength={17} className={inputClasses} />
+      <Input type="text" value={vin} onChange={e => setVin(e.target.value)} placeholder="5YJ3E1EA1PF000000" maxLength={17} />
       {vin.length > 0 && vin.length !== 17 && <p className="text-[10px] text-neon-amber mt-1">{17 - vin.length} more characters needed</p>}
       {decoded && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
@@ -1469,10 +1423,10 @@ function TimestampTool() {
 
   return (
     <ToolCard icon={Clock} color="green" title="Timestamp Converter" description="Convert between Unix epoch, ISO 8601, and human-readable dates">
-      <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="1700000000, 2024-01-15T12:00:00Z, or Jan 15 2024" className={inputClasses} />
-      <button onClick={() => setInput(Math.floor(Date.now() / 1000).toString())} className="glass-button text-[10px] mt-2 flex items-center gap-1.5">
-        <Clock className="h-3 w-3" /> Now
-      </button>
+      <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="1700000000, 2024-01-15T12:00:00Z, or Jan 15 2024" />
+      <Button variant="secondary" size="sm" onClick={() => setInput(Math.floor(Date.now() / 1000).toString())} icon={<Clock className="h-3 w-3" />} className="mt-2">
+        Now
+      </Button>
       {result && !('error' in result) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
           {Object.entries(result).map(([k, v]) => (
@@ -1526,13 +1480,13 @@ function Base64Tool() {
       </div>
       <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 to decode...'} className={textareaClasses} rows={3} />
       {output && (
-        <div className="mt-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+        <GlassPanel className="mt-3 p-3">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Output</p>
             <CopyButton text={output} />
           </div>
           <pre className="text-xs font-mono text-[var(--text-primary)] whitespace-pre-wrap break-all">{output}</pre>
-        </div>
+        </GlassPanel>
       )}
     </ToolCard>
   )
@@ -1562,13 +1516,13 @@ function UrlEncoderTool() {
       </div>
       <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={mode === 'encode' ? 'Enter URL to encode...' : 'Enter encoded URL to decode...'} className={textareaClasses} rows={2} />
       {output && (
-        <div className="mt-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+        <GlassPanel className="mt-3 p-3">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Output</p>
             <CopyButton text={output} />
           </div>
           <pre className="text-xs font-mono text-[var(--text-primary)] whitespace-pre-wrap break-all">{output}</pre>
-        </div>
+        </GlassPanel>
       )}
     </ToolCard>
   )
@@ -1619,9 +1573,9 @@ function UuidGeneratorTool() {
   }
   return (
     <ToolCard icon={Fingerprint} color="purple" title="UUID Generator" description="Generate v4 UUIDs with one click">
-      <button onClick={generate} className="glass-button text-xs flex items-center gap-2">
-        <RefreshCw className="h-3.5 w-3.5" /> Generate UUID
-      </button>
+      <Button variant="secondary" size="sm" onClick={generate} icon={<RefreshCw className="h-3.5 w-3.5" />}>
+        Generate UUID
+      </Button>
       {uuids.length > 0 && (
         <div className="mt-3 space-y-1.5">
           {uuids.map((id, i) => (
@@ -1652,13 +1606,13 @@ function HashCalculatorTool() {
     <ToolCard icon={Hash} color="cyan" title="Hash Calculator" description="Calculate SHA-256 hash of input text">
       <textarea value={input} onChange={e => { setInput(e.target.value); calculate(e.target.value) }} placeholder="Enter text to hash..." className={textareaClasses} rows={3} />
       {hash && (
-        <div className="mt-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+        <GlassPanel className="mt-3 p-3">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">SHA-256</p>
             <CopyButton text={hash} />
           </div>
           <code className="text-xs font-mono text-[var(--text-primary)] break-all">{hash}</code>
-        </div>
+        </GlassPanel>
       )}
     </ToolCard>
   )
@@ -1681,10 +1635,8 @@ function ByteSizeTool() {
   return (
     <ToolCard icon={HardDrive} color="amber" title="Byte Size Converter" description="Convert between B, KB, MB, GB, TB">
       <div className="flex gap-2">
-        <input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="1024" className={clsx(inputClasses, 'flex-1')} />
-        <select value={unit} onChange={e => setUnit(e.target.value)} className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/40">
-          {BYTE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-        </select>
+        <Input type="number" value={value} onChange={e => setValue(e.target.value)} placeholder="1024" className="flex-1" />
+        <Select value={unit} onChange={e => setUnit(e.target.value)} options={BYTE_UNITS.map(u => ({ value: u, label: u }))} />
       </div>
       {conversions && (
         <div className="grid grid-cols-5 gap-2 mt-3">
@@ -1734,7 +1686,7 @@ function ColorConverterTool() {
   return (
     <ToolCard icon={Palette} color="purple" title="Color Converter" description="Convert between HEX, RGB, HSL">
       <div className="flex gap-2">
-        <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="#3B82F6 or rgb(59,130,246) or hsl(217,91%,60%)" className={clsx(inputClasses, 'flex-1')} />
+        <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="#3B82F6 or rgb(59,130,246) or hsl(217,91%,60%)" className="flex-1" />
         {result && <div className="w-10 h-10 rounded-lg border border-white/[0.08] shrink-0" style={{ backgroundColor: result.hex }} />}
       </div>
       {result && (
@@ -1798,7 +1750,7 @@ function CronParserTool() {
 
   return (
     <ToolCard icon={Timer} color="green" title="Cron Expression Parser" description="Parse cron expressions and show next run times">
-      <input type="text" value={cron} onChange={e => setCron(e.target.value)} placeholder="*/5 * * * *" className={inputClasses} />
+      <Input type="text" value={cron} onChange={e => setCron(e.target.value)} placeholder="*/5 * * * *" />
       <div className="flex flex-wrap gap-1.5 mt-2">
         {[
           { label: 'Every minute', val: '* * * * *' },
@@ -1820,12 +1772,12 @@ function CronParserTool() {
             <div className="p-3 rounded-xl bg-neon-green/5 border border-neon-green/20">
               <p className="text-xs text-[var(--text-primary)]">{result.description}</p>
             </div>
-            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <GlassPanel className="p-3">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Next 5 runs</p>
               {result.nextRuns.map((t, i) => (
                 <p key={i} className="text-xs font-mono text-[var(--text-secondary)]">{t}</p>
               ))}
-            </div>
+            </GlassPanel>
           </div>
         )
       )}
@@ -1941,7 +1893,7 @@ function HttpStatusTool() {
 
   return (
     <ToolCard icon={Network} color="cyan" title="HTTP Status Code Reference" description="Searchable table of HTTP status codes">
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by code or name..." className={inputClasses} />
+      <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by code or name..." />
       <div className="mt-3 max-h-64 overflow-y-auto space-y-1 pr-1">
         {filtered.map(([code, name, desc]) => (
           <div key={code} className="flex items-start gap-3 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -1999,7 +1951,7 @@ function TeslaApiRefTool() {
 
   return (
     <ToolCard icon={BookOpen} color="green" title="Tesla API Endpoint Reference" description="Common Tesla Fleet API endpoints">
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search endpoints..." className={inputClasses} />
+      <Input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search endpoints..." />
       <div className="mt-3 max-h-72 overflow-y-auto space-y-1 pr-1">
         {filtered.map(([method, path, desc], i) => (
           <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -2051,8 +2003,8 @@ function RegexTesterTool() {
     <ToolCard icon={Regex} color="amber" title="Regex Tester" description="Test regex patterns against input text">
       <div className="space-y-2">
         <div className="flex gap-2">
-          <input type="text" value={pattern} onChange={e => setPattern(e.target.value)} placeholder="Pattern: e.g. \d+" className={clsx(inputClasses, 'flex-1')} />
-          <input type="text" value={flags} onChange={e => setFlags(e.target.value)} placeholder="gi" className={clsx(inputClasses, 'w-16')} />
+          <Input type="text" value={pattern} onChange={e => setPattern(e.target.value)} placeholder="Pattern: e.g. \d+" className="flex-1" />
+          <Input type="text" value={flags} onChange={e => setFlags(e.target.value)} placeholder="gi" className="w-16" />
         </div>
         <textarea value={testStr} onChange={e => setTestStr(e.target.value)} placeholder="Test string..." className={textareaClasses} rows={3} />
       </div>
@@ -2118,7 +2070,7 @@ function UnixPermTool() {
 
   return (
     <ToolCard icon={Lock} color="purple" title="Unix Permission Calculator" description="Convert between octal (755) and symbolic (rwxr-xr-x)">
-      <input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="755 or rwxr-xr-x" className={inputClasses} />
+      <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="755 or rwxr-xr-x" />
       <div className="flex flex-wrap gap-1.5 mt-2">
         {['755', '644', '700', '777', '600', '444'].map(p => (
           <button key={p} onClick={() => setInput(p)} className="px-2 py-0.5 text-[10px] rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] transition-colors font-mono">

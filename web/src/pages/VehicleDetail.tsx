@@ -18,7 +18,7 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge } from '../components/ui'
+import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge, Button, IconBox, InlineMetric, MetricCard, Badge } from '../components/ui'
 import { TeslaCarViz, parseModelKey } from '../components/TeslaCarViz'
 import { RadialGauge, AnimatedNumber, MetricBar } from '../components/Widgets'
 import { useSettings } from '../hooks/useSettings'
@@ -29,6 +29,7 @@ import { formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '../lib/numberFormat'
 import { parseSettingEnum } from '../lib/parseSettingEnum'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)]', sub }: {
   icon: React.ElementType; label: string; value: string | number | boolean; color?: string; sub?: string
@@ -47,6 +48,7 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
 }
 
 export default function VehicleDetail() {
+  usePageTitle('Vehicle Detail')
   const { id } = useParams<{ id: string }>()
   const vehicleId = Number(id)
   const { convertDistance, convertSpeed, convertTemp, convertPressure, distanceUnit, speedUnit, tempUnit, pressureUnit } = useSettings()
@@ -167,14 +169,13 @@ export default function VehicleDetail() {
               {vehicle?.model} {vehicle?.trim_badging} &middot; <span className="font-mono">{vehicle?.vin}</span>
             </p>
           </div>
-          <button
+          <Button
             onClick={() => wakeMut.mutate()}
-            disabled={wakeMut.isPending}
-            className="neon-button flex items-center gap-2 text-sm"
+            loading={wakeMut.isPending}
+            icon={<Power className="h-4 w-4" />}
           >
-            <Power className="h-4 w-4" />
-            {wakeMut.isPending ? 'Waking...' : 'Wake Up'}
-          </button>
+            Wake Up
+          </Button>
         </div>
       </FadeIn>
 
@@ -202,7 +203,7 @@ export default function VehicleDetail() {
                 {/* Gauges + metrics */}
                 <div className="flex flex-col gap-6">
                   {/* Radial gauge row */}
-                  <div className="flex items-center gap-5 flex-wrap">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 justify-items-center">
                     <RadialGauge
                       value={state.battery_level} max={100}
                       label="Battery" unit="%"
@@ -381,18 +382,14 @@ export default function VehicleDetail() {
 
                     {/* G-Forces */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Lateral G</p>
-                        <p className="text-base font-mono text-[var(--text-primary)]">
-                          {motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel, 2)}g` : '—'}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Longitudinal G</p>
-                        <p className="text-base font-mono text-[var(--text-primary)]">
-                          {motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel, 2)}g` : '—'}
-                        </p>
-                      </div>
+                      <MetricCard
+                        label="Lateral G"
+                        value={motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel, 2)}g` : '—'}
+                      />
+                      <MetricCard
+                        label="Longitudinal G"
+                        value={motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel, 2)}g` : '—'}
+                      />
                     </div>
                   </div>
                 ) : (
@@ -411,20 +408,16 @@ export default function VehicleDetail() {
                   <div className="space-y-4">
                     {/* Cabin + Outside temps */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Cabin</p>
-                        <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {climateData.inside_temp != null ? fmtNumber(convertTemp(climateData.inside_temp)) : '—'}
-                        </p>
-                        <p className="text-[10px] text-[var(--text-muted)]">{tempUnit}</p>
-                      </div>
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Outside</p>
-                        <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {climateData.outside_temp != null ? fmtNumber(convertTemp(climateData.outside_temp)) : '—'}
-                        </p>
-                        <p className="text-[10px] text-[var(--text-muted)]">{tempUnit}</p>
-                      </div>
+                      <MetricCard
+                        label="Cabin"
+                        value={climateData.inside_temp != null ? fmtNumber(convertTemp(climateData.inside_temp)) : '—'}
+                        subtitle={tempUnit}
+                      />
+                      <MetricCard
+                        label="Outside"
+                        value={climateData.outside_temp != null ? fmtNumber(convertTemp(climateData.outside_temp)) : '—'}
+                        subtitle={tempUnit}
+                      />
                     </div>
 
                     {/* Target temps */}
@@ -737,20 +730,16 @@ export default function VehicleDetail() {
                   <div className="space-y-4">
                     {/* Pack Voltage / Current */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Pack Voltage</p>
-                        <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {chargingTelemetry.pack_voltage != null ? fmtNumber(chargingTelemetry.pack_voltage) : '—'}
-                        </p>
-                        <p className="text-[10px] text-[var(--text-muted)]">V</p>
-                      </div>
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] mb-1">Pack Current</p>
-                        <p className="text-2xl font-bold text-[var(--text-primary)]">
-                          {chargingTelemetry.pack_current != null ? fmtNumber(chargingTelemetry.pack_current) : '—'}
-                        </p>
-                        <p className="text-[10px] text-[var(--text-muted)]">A</p>
-                      </div>
+                      <MetricCard
+                        label="Pack Voltage"
+                        value={chargingTelemetry.pack_voltage != null ? fmtNumber(chargingTelemetry.pack_voltage) : '—'}
+                        subtitle="V"
+                      />
+                      <MetricCard
+                        label="Pack Current"
+                        value={chargingTelemetry.pack_current != null ? fmtNumber(chargingTelemetry.pack_current) : '—'}
+                        subtitle="A"
+                      />
                     </div>
 
                     {/* Energy Remaining */}
@@ -830,12 +819,13 @@ export default function VehicleDetail() {
                             </span>
                           )}
                           {cleanNil(mediaData.playback_status) && (
-                            <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
-                              mediaData.playback_status === 'Playing' ? 'bg-green-500/10 text-green-400'
-                                : mediaData.playback_status === 'Paused' ? 'bg-amber-500/10 text-amber-400'
-                                : 'bg-white/5 text-[var(--text-muted)]')}>
+                            <Badge color={
+                              mediaData.playback_status === 'Playing' ? 'green'
+                                : mediaData.playback_status === 'Paused' ? 'amber'
+                                : 'neutral'
+                            }>
                               {cleanNil(mediaData.playback_status)}
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -956,10 +946,7 @@ export default function VehicleDetail() {
                       { label: 'SW Download', value: vehicleConfigData.software_update_download_pct != null ? `${vehicleConfigData.software_update_download_pct}%` : '—' },
                       { label: 'SW Install', value: vehicleConfigData.software_update_install_pct != null ? `${vehicleConfigData.software_update_install_pct}%` : '—' },
                     ].map(item => (
-                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.value || '—'}</p>
-                      </div>
+                      <MetricCard key={item.label} label={item.label} value={item.value || '—'} />
                     ))}
                   </div>
                 </GlassPanel>
@@ -985,10 +972,7 @@ export default function VehicleDetail() {
                       { label: 'Tire Pressure', value: parseSettingEnum(userPrefData.setting_tire_pressure_unit, 'pressure') },
                       { label: '24h Time', value: userPrefData.setting_24hr_time != null ? (userPrefData.setting_24hr_time ? 'Yes' : 'No') : '—' },
                     ].map(item => (
-                      <div key={item.label} className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{item.label}</p>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.value || '—'}</p>
-                      </div>
+                      <MetricCard key={item.label} label={item.label} value={item.value || '—'} />
                     ))}
                   </div>
                 </GlassPanel>
@@ -1041,9 +1025,9 @@ export default function VehicleDetail() {
                   <div className="space-y-2">
                     {drives.slice(0, 5).map(d => (
                       <Link key={d.id} to={`/drives/${d.id}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group">
-                        <div className="rounded-lg bg-neon-cyan/10 p-2 text-neon-cyan">
+                        <IconBox color="cyan" size="sm">
                           <Route className="h-3.5 w-3.5" />
-                        </div>
+                        </IconBox>
                         <div className="flex-1 text-sm">
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-cyan transition-colors">
                             <AnimatedNumber value={convertDistance(d.distance)} decimals={1} suffix={` ${distanceUnit}`} />
@@ -1051,10 +1035,7 @@ export default function VehicleDetail() {
                           <p className="text-xs text-[var(--text-muted)]">{formatDateTime(d.start_date)}</p>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {Math.floor(d.duration_min / 60)}h {Math.round(d.duration_min % 60)}m
-                          </span>
+                          <InlineMetric icon={<Clock />} value={`${Math.floor(d.duration_min / 60)}h ${Math.round(d.duration_min % 60)}m`} />
                           {d.start_battery_level != null && d.end_battery_level != null && (
                             <span className="text-[10px] text-gray-600">{d.start_battery_level}% → {d.end_battery_level}%</span>
                           )}
@@ -1082,9 +1063,9 @@ export default function VehicleDetail() {
                   <div className="space-y-2">
                     {sessions.slice(0, 5).map(s => (
                       <Link key={s.id} to={`/charging/${s.id}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group">
-                        <div className="rounded-lg bg-neon-green/10 p-2 text-neon-green">
+                        <IconBox color="green" size="sm">
                           <Zap className="h-3.5 w-3.5" />
-                        </div>
+                        </IconBox>
                         <div className="flex-1 text-sm">
                           <p className="text-[var(--text-primary)] font-medium group-hover:text-neon-green transition-colors">
                             <AnimatedNumber value={s.charge_energy_added} decimals={1} suffix=" kWh" />
