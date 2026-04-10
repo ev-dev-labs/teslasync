@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { Activity, Search, Clock, Database } from 'lucide-react'
-import { Badge, Button } from '../components/ui'
+import { Badge, Button, Input } from '../components/ui'
 import { request } from '../api/client'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber } from '../lib/numberFormat'
@@ -46,19 +46,19 @@ export default function SignalExplorer() {
   const [timeRange, setTimeRange] = useState(24)
   const vehicleId = 1 // TODO: multi-vehicle support
 
-  const { data: availableSignals } = useQuery<{ signals: string[] }>({
+  const { data: availableSignals, error: signalsError } = useQuery<{ signals: string[] }>({
     queryKey: ['signal-available', vehicleId],
     queryFn: () => request(`/signals/${vehicleId}/available`),
     refetchInterval: 60_000,
   })
 
-  const { data: stats } = useQuery<SignalStatsResponse>({
+  const { data: stats, error: statsError } = useQuery<SignalStatsResponse>({
     queryKey: ['signal-stats', vehicleId],
     queryFn: () => request(`/signals/${vehicleId}/stats`),
     refetchInterval: 60_000,
   })
 
-  const { data: liveState } = useQuery<{ signals: Record<string, unknown> }>({
+  const { data: liveState, error: liveError } = useQuery<{ signals: Record<string, unknown> }>({
     queryKey: ['signal-live', vehicleId],
     queryFn: () => request(`/signals/${vehicleId}/live`),
     refetchInterval: 5_000,
@@ -67,12 +67,14 @@ export default function SignalExplorer() {
   const from = new Date(Date.now() - timeRange * 3600 * 1000).toISOString()
   const to = new Date().toISOString()
 
-  const { data: history, isLoading: historyLoading } = useQuery<SignalHistoryResponse>({
+  const { data: history, isLoading: historyLoading, error: historyError } = useQuery<SignalHistoryResponse>({
     queryKey: ['signal-history', vehicleId, selectedSignal, timeRange],
     queryFn: () => request(`/signals/${vehicleId}/${selectedSignal}/history?from=${from}&to=${to}&limit=2000`),
     enabled: !!selectedSignal,
     refetchInterval: 30_000,
   })
+
+  const anyError = signalsError || statsError || liveError || historyError
 
   const filteredSignals = (availableSignals?.signals || []).filter(s =>
     s.toLowerCase().includes(searchQuery.toLowerCase())
@@ -102,17 +104,23 @@ export default function SignalExplorer() {
         )}
       </div>
 
+      {anyError && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(anyError as Error).message}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Signal List */}
         <div className="lg:col-span-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 max-h-[80vh] overflow-y-auto">
-          <div className="relative mb-3">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[var(--text-muted)]" />
-            <input
+          <div className="mb-3">
+            <Input
               type="text"
               placeholder="Search signals..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] outline-none focus:border-[var(--neon-cyan)]"
+              icon={<Search className="h-4 w-4" />}
+              aria-label="Search signals"
             />
           </div>
           <div className="text-xs text-[var(--text-muted)] mb-2">{filteredSignals.length} signals</div>

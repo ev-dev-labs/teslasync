@@ -1,4 +1,4 @@
-import { type ReactNode, type ButtonHTMLAttributes, forwardRef } from 'react'
+import { type ReactNode, type ButtonHTMLAttributes, forwardRef, useId } from 'react'
 import { cn } from '../../lib/cn'
 import { type NeonColor, neonColorMap } from '../../lib/tokens'
 
@@ -172,13 +172,16 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 /** Glass-styled text input with optional label and error state. */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, icon, className, ...props }, ref) => {
+    const autoId = useId()
+    const inputId = props.id || autoId
     return (
       <div className="space-y-1.5">
-        {label && <label className="metric-label">{label}</label>}
+        {label && <label htmlFor={inputId} className="metric-label">{label}</label>}
         <div className="relative">
           {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</div>}
           <input
             ref={ref}
+            id={inputId}
             className={cn(
               'glass-input',
               icon && 'pl-10',
@@ -206,11 +209,14 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 /** Glass-styled select dropdown with label support. */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, options, className, ...props }, ref) => {
+    const autoId = useId()
+    const selectId = props.id || autoId
     return (
       <div className="space-y-1.5">
-        {label && <label className="metric-label">{label}</label>}
+        {label && <label htmlFor={selectId} className="metric-label">{label}</label>}
         <select
           ref={ref}
+          id={selectId}
           className={cn(
             'glass-input appearance-none pr-8',
             'bg-[length:16px] bg-[right_12px_center] bg-no-repeat',

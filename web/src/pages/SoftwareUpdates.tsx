@@ -226,7 +226,7 @@ export default function SoftwareUpdates() {
                               <span>Scheduled: {formatDate(u.scheduled_at)}</span>
                             </div>
                           )}
-                          <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(u.created_at)}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{formatDate(u.created_at)}</p>
                         </div>
                       </div>
                     </GlassPanel>

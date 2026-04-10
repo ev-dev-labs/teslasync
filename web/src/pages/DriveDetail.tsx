@@ -421,7 +421,7 @@ export default function DriveDetail() {
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">Min Speed</p>
-                <p className="text-lg font-bold text-gray-300">{minSpeed > 0 ? `${fmtInt(minSpeed)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
+                <p className="text-lg font-bold text-[var(--text-secondary)]">{minSpeed > 0 ? `${fmtInt(minSpeed)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
               </div>
             </div>
           )}
@@ -700,7 +700,7 @@ export default function DriveDetail() {
                     {climateStatus != null && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Climate</p>
-                        <p className={`text-sm font-bold ${climateStatus === 'On' ? 'text-neon-green' : 'text-gray-400'}`}>{climateStatus}</p>
+                        <p className={`text-sm font-bold ${climateStatus === 'On' ? 'text-neon-green' : 'text-[var(--text-muted)]'}`}>{climateStatus}</p>
                       </div>
                     )}
                     {maxFanSpeed != null && (

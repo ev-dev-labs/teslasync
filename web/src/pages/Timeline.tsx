@@ -68,13 +68,13 @@ export default function Timeline() {
     enabled: vehicleId !== null,
   })
 
-  const { data: summary } = useQuery({
+  const { data: summary, error: summaryError } = useQuery({
     queryKey: ['state-summary', vehicleId, startDate],
     queryFn: () => getStateSummary(vehicleId!, 30, startDate),
     enabled: vehicleId !== null,
   })
 
-  const { data: dailyBreakdown } = useQuery({
+  const { data: dailyBreakdown, error: breakdownError } = useQuery({
     queryKey: ['state-daily', vehicleId, startDate],
     queryFn: () => getDailyStateBreakdown(vehicleId!, 30, startDate),
     enabled: vehicleId !== null,
@@ -134,6 +134,11 @@ export default function Timeline() {
       </div>
 
       {timelineError && <QueryError error={timelineError} onRetry={refetch} />}
+      {!timelineError && (summaryError || breakdownError) && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {((summaryError || breakdownError) as Error).message}
+        </div>
+      )}
 
       {/* State Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6 sm:mb-8">

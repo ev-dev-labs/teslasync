@@ -94,7 +94,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="flex items-center gap-3 rounded-xl border border-tesla-red/20 bg-tesla-red/5 p-4">
             <AlertTriangle className="h-5 w-5 text-tesla-red shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-300">Component failed to load</p>
+              <p className="text-sm font-medium text-[var(--text-secondary)]">Component failed to load</p>
               <p className="text-xs text-[var(--text-muted)] truncate">{this.state.error?.message}</p>
             </div>
             <Button variant="secondary" size="sm" onClick={this.handleRetry} className="shrink-0">
@@ -143,7 +143,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
             {this.state.retryCount > 0 && (
-              <p className="mt-4 text-[10px] text-gray-600">
+              <p className="mt-4 text-[10px] text-[var(--text-muted)]">
                 Retry attempt {this.state.retryCount}
               </p>
             )}

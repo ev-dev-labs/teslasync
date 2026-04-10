@@ -164,7 +164,7 @@ export default function Energy() {
         ].map(m => (
           <StaggerItem key={m.label}>
             <GlassPanel className="p-3 text-center">
-              <p className="text-[10px] text-gray-600 uppercase tracking-wider">{m.label}</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{m.label}</p>
               <p className={`text-lg font-bold ${m.color}`}>{m.value}</p>
             </GlassPanel>
           </StaggerItem>
@@ -305,14 +305,14 @@ export default function Energy() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="flex items-center gap-2 text-sm">
                               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.fill }} />
-                              <span className="text-gray-300">{b.name}</span>
+                              <span className="text-[var(--text-secondary)]">{b.name}</span>
                             </span>
                             <span className="text-xs text-[var(--text-muted)]">{b.count} sessions</span>
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-neon-cyan">{fmtNumber(b.energy ?? 0, 1)} kWh</span>
                             <span className="text-neon-green">${fmtNumber(b.cost ?? 0, 2)}</span>
-                            <span className="text-gray-600">${b.energy > 0 ? fmtNumber(b.cost / b.energy, 3) : '0'}/kWh</span>
+                            <span className="text-[var(--text-muted)]">${b.energy > 0 ? fmtNumber(b.cost / b.energy, 3) : '0'}/kWh</span>
                           </div>
                         </div>
                       ))}
@@ -324,6 +324,19 @@ export default function Energy() {
           </div>
 
           {/* Recent Charging Sessions (enhanced) */}
+          {sessions && sessions.length === 0 && (
+            <FadeIn delay={0.3}>
+              <GlassPanel className="p-6">
+                <h3 className="section-title mb-4 flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-neon-amber" /> Recent Charging Sessions
+                </h3>
+                <div className="text-center py-12 text-[var(--text-muted)]">
+                  <p className="text-lg">No charging sessions recorded</p>
+                  <p className="text-sm mt-1">Charging data will appear here once your vehicle completes a session.</p>
+                </div>
+              </GlassPanel>
+            </FadeIn>
+          )}
           {sessions && sessions.length > 0 && (
             <FadeIn delay={0.3}>
               <GlassPanel className="p-6">

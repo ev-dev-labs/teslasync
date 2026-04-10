@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowUpDown, Filter, RefreshCw } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, Button, Input, DataTable, type Column } from '../components/ui'
 import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import clsx from 'clsx'
@@ -24,7 +24,7 @@ type FilterMode = 'all' | 'stale' | 'active'
 
 function getStalenessColor(seconds: number, hasTimestamp: boolean) {
   usePageTitle('Signal Gaps')
-  if (!hasTimestamp) return { dot: 'bg-gray-500', text: 'text-gray-400', label: 'Never received', bg: 'bg-gray-500/10' }
+  if (!hasTimestamp) return { dot: 'bg-gray-500', text: 'text-[var(--text-muted)]', label: 'Never received', bg: 'bg-gray-500/10' }
   if (seconds < 30) return { dot: 'bg-neon-green', text: 'text-neon-green', label: 'Active', bg: 'bg-neon-green/10' }
   if (seconds < 300) return { dot: 'bg-neon-amber', text: 'text-neon-amber', label: 'Aging', bg: 'bg-neon-amber/10' }
   return { dot: 'bg-neon-red', text: 'text-neon-red', label: 'Stale', bg: 'bg-neon-red/10' }
@@ -138,47 +138,52 @@ export default function SignalGapDetector() {
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <input
+            <Input
               type="text"
               placeholder="Filter by signal name..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] outline-none focus:border-neon-cyan/50"
+              aria-label="Filter signals"
+              className="w-full sm:w-64"
             />
 
             <div className="flex items-center gap-2">
               <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" />
               {(['all', 'stale', 'active'] as FilterMode[]).map(mode => (
-                <button
+                <Button
                   key={mode}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setFilterMode(mode)}
                   className={clsx(
-                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+                    'border',
                     filterMode === mode
                       ? 'bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20'
                       : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   {mode === 'all' ? 'All' : mode === 'stale' ? 'Stale Only' : 'Active Only'}
-                </button>
+                </Button>
               ))}
             </div>
 
             <div className="flex items-center gap-2 sm:ml-auto">
               <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
               {(['staleness', 'alpha', 'category'] as SortMode[]).map(mode => (
-                <button
+                <Button
                   key={mode}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSortMode(mode)}
                   className={clsx(
-                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+                    'border',
                     sortMode === mode
                       ? 'bg-neon-purple/10 text-neon-purple border-neon-purple/20'
                       : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]'
                   )}
                 >
                   {mode === 'staleness' ? 'Most Stale' : mode === 'alpha' ? 'A-Z' : 'Category'}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

@@ -502,6 +502,11 @@ export default function MediaPlayer() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
           </div>
+        ) : !history?.length ? (
+          <div className="text-center py-12 text-[var(--text-muted)]">
+            <p className="text-lg">No media data available</p>
+            <p className="text-sm mt-1">Listening stats will appear once playback history is recorded.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <GlassPanel className="p-4 flex items-center gap-4">

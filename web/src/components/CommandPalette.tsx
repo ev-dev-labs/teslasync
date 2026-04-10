@@ -190,11 +190,11 @@ export function CommandPaletteTrigger() {
   return (
     <button
       onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-      className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-sm text-[var(--text-muted)] hover:border-white/[0.12] hover:text-gray-300 transition-all"
+      className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-sm text-[var(--text-muted)] hover:border-white/[0.12] hover:text-[var(--text-secondary)] transition-all"
     >
       <Search className="h-4 w-4" />
       <span className="flex-1 text-left">Search...</span>
-      <kbd className="hidden sm:flex items-center gap-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] px-1.5 py-0.5 text-[10px] font-mono text-gray-600">
+      <kbd className="hidden sm:flex items-center gap-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] px-1.5 py-0.5 text-[10px] font-mono text-[var(--text-muted)]">
         <Command className="h-2.5 w-2.5" />K
       </kbd>
     </button>

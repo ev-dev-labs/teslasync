@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn, Badge, Button, Select, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button, Input, Select, DataTable, type Column } from '../components/ui'
 import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
@@ -100,7 +100,7 @@ export default function SignalLogViewer() {
     number: 'text-neon-cyan',
     string: 'text-neon-green',
     boolean: 'text-neon-amber',
-    null: 'text-gray-600',
+    null: 'text-[var(--text-muted)]',
   }
 
   const currentLiveRaw = selectedSignal && liveData?.signals
@@ -155,14 +155,14 @@ export default function SignalLogViewer() {
         {/* Left panel: Signal selector */}
         <div className="lg:col-span-1">
           <GlassPanel className="p-3 max-h-[80vh] overflow-y-auto sticky top-4">
-            <div className="relative mb-3">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
+            <div className="mb-3">
+              <Input
                 type="text"
                 placeholder="Filter signals..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/50"
+                icon={<Search className="h-3.5 w-3.5" />}
+                aria-label="Filter signals"
               />
             </div>
             <p className="text-[10px] text-[var(--text-muted)] mb-2">{filteredSignals.length} signals available</p>
@@ -176,23 +176,25 @@ export default function SignalLogViewer() {
                   ? typeof raw === 'number' ? fmtNumber(raw as number, 2) : String(raw).slice(0, 20)
                   : null
                 return (
-                  <button
+                  <Button
                     key={sig}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => { setSelectedSignal(sig); setPage(1) }}
                     className={clsx(
-                      'w-full text-left px-2 py-1.5 rounded-md text-[11px] font-mono transition-colors',
+                      'w-full !justify-start font-mono !text-[11px]',
                       selectedSignal === sig
                         ? 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30'
                         : 'hover:bg-white/[0.03] text-[var(--text-secondary)]'
                     )}
                   >
-                    <div className="flex justify-between items-center gap-1">
+                    <div className="flex justify-between items-center gap-1 w-full">
                       <span className="truncate">{sig}</span>
                       {liveStr && (
                         <span className="text-[9px] text-[var(--text-muted)] truncate max-w-[60px] shrink-0">{liveStr}</span>
                       )}
                     </div>
-                  </button>
+                  </Button>
                 )
               })}
               {filteredSignals.length === 0 && (
@@ -211,14 +213,14 @@ export default function SignalLogViewer() {
               <div className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                 {TIME_RANGES.map(tr => (
-                  <button key={tr.label} onClick={() => { setTimeRange(tr.hours); setPage(1) }}
-                    className={clsx('px-2 py-1 rounded text-[10px] font-medium transition-colors',
+                  <Button key={tr.label} variant="ghost" size="sm" onClick={() => { setTimeRange(tr.hours); setPage(1) }}
+                    className={clsx('!px-2 !py-1 !rounded !text-[10px]',
                       timeRange === tr.hours
                         ? 'bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
                     )}>
                     {tr.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
 

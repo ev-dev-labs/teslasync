@@ -49,7 +49,7 @@ export function MetricBar({ value, max, color, label, sublabel }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-gray-300">{label}</span>
+        <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
         <span className="text-xs font-mono" style={{ color }}>{sublabel || fmtNumber(value)}</span>
       </div>
       <div className="h-2 rounded-full bg-white/5 overflow-hidden">
@@ -83,7 +83,7 @@ export function TimelineItem({ icon, title, subtitle, time, color, isLast }: {
       <div className="pb-4 min-w-0 flex-1">
         <p className="text-sm font-medium text-[var(--text-primary)] truncate">{title}</p>
         {subtitle && <p className="text-xs text-[var(--text-muted)] mt-0.5">{subtitle}</p>}
-        <p className="text-[10px] text-gray-600 mt-1">{time}</p>
+        <p className="text-[10px] text-[var(--text-muted)] mt-1">{time}</p>
       </div>
     </div>
   )

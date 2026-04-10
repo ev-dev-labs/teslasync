@@ -193,7 +193,7 @@ export default function BatteryHealth() {
                 <div className="flex flex-col items-center text-center">
                   <p className="text-3xl font-bold text-[var(--text-primary)]">{yearsTo70}</p>
                   <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Years to 70%</p>
-                  <p className="text-[10px] text-gray-600">warranty threshold</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">warranty threshold</p>
                 </div>
               </div>
             </GlassPanel>
@@ -205,15 +205,15 @@ export default function BatteryHealth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
                   <MetricBar label="Current Capacity" value={currentCapacity} max={100} color="#00f0ff" />
-                  <p className="text-[10px] text-gray-600 mt-1">{report?.estimated_range_current_km ? `${Math.round(convertDistance(report.estimated_range_current_km))} ${distanceUnit} current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(convertDistance(report.estimated_range_new_km))} ${distanceUnit} when new` : ''}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{report?.estimated_range_current_km ? `${Math.round(convertDistance(report.estimated_range_current_km))} ${distanceUnit} current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(convertDistance(report.estimated_range_new_km))} ${distanceUnit} when new` : ''}</p>
                 </div>
                 <div>
                   <MetricBar label="Degradation" value={degradation} max={30} color={degradation < 10 ? '#10b981' : '#f59e0b'} />
-                  <p className="text-[10px] text-gray-600 mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12, 2)} per year</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12, 2)} per year</p>
                 </div>
                 <div>
                   <MetricBar label="Charge Cycles" value={cycles} max={1500} color="#a855f7" />
-                  <p className="text-[10px] text-gray-600 mt-1">Tesla warranty: 1,500 cycles / 70%</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Tesla warranty: 1,500 cycles / 70%</p>
                 </div>
               </div>
             </GlassPanel>

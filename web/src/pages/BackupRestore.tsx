@@ -47,7 +47,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 /* ------------------------------------------------------------------ */
 
 const PROVIDERS = [
-  { value: 'local', label: 'Local', color: 'bg-gray-500/15 text-gray-400 border-gray-500/30' },
+  { value: 'local', label: 'Local', color: 'bg-gray-500/15 text-[var(--text-muted)] border-gray-500/30' },
   { value: 's3', label: 'Amazon S3', color: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
   { value: 'azure', label: 'Azure Blob', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
   { value: 'gcs', label: 'Google Cloud', color: 'bg-green-500/15 text-green-400 border-green-500/30' },
@@ -69,7 +69,7 @@ const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
   completed: { icon: CheckCircle2, color: 'text-neon-green', bg: 'bg-neon-green/15', label: 'Completed' },
   failed: { icon: XCircle, color: 'text-neon-red', bg: 'bg-neon-red/15', label: 'Failed' },
   running: { icon: Loader2, color: 'text-neon-cyan', bg: 'bg-neon-cyan/15', label: 'Running' },
-  queued: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-500/15', label: 'Queued' },
+  queued: { icon: Clock, color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/15', label: 'Queued' },
 }
 
 /* ------------------------------------------------------------------ */

@@ -91,7 +91,7 @@ export default function OnboardingWizard() {
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-gray-500 hover:bg-white/[0.05] hover:text-gray-300 transition-colors"
+          className="absolute right-4 top-4 rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -124,14 +124,14 @@ export default function OnboardingWizard() {
           </div>
 
           <h2 className="text-xl font-bold text-white mb-2">{step.title}</h2>
-          <p className="text-sm text-gray-400 leading-relaxed mb-8">{step.description}</p>
+          <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-8">{step.description}</p>
         </div>
 
         {/* Actions */}
         <div className="flex items-center justify-between">
           <button
             onClick={handleClose}
-            className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            className="rounded-lg px-4 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
           >
             Skip
           </button>

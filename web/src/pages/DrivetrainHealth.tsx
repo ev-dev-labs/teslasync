@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getMotorData, getMotorLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, ChartContainer, AlertBanner } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, ChartContainer, AlertBanner, Select } from '../components/ui'
 import { Cog, Thermometer, Activity, Gauge, AlertTriangle, CheckCircle, TrendingUp, Zap, Shield } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -311,14 +311,12 @@ export default function DrivetrainHealth() {
           icon={<Cog className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            label="Vehicle"
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 

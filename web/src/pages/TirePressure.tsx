@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTirePressure } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, AlertBanner, ChartContainer, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, AlertBanner, ChartContainer, Select, Button } from '../components/ui'
 import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Clock, Zap, ShieldAlert } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -343,14 +343,14 @@ export default function TirePressure() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {TIME_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => setTimeRange(opt.value)}
-                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+              <Button key={opt.value} variant="ghost" size="sm" onClick={() => setTimeRange(opt.value)}
+                className={clsx('border',
                   timeRange === opt.value
                     ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
                     : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 )}>
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
           {vehicles && vehicles.length > 1 && (

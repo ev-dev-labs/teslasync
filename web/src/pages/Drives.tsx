@@ -60,7 +60,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
           {/* Efficiency score badge */}
           <div className="flex flex-col items-center shrink-0 w-12">
             <span className="text-lg font-bold" style={{ color: score.color }}>{score.label}</span>
-            <span className="text-[9px] text-gray-600 uppercase">score</span>
+            <span className="text-[9px] text-[var(--text-muted)] uppercase">score</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
@@ -232,7 +232,7 @@ export default function Drives() {
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={Math.round(convertSpeed(stats.topSpeed))} /></p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Top Speed</p>
-                <p className="text-[10px] text-gray-600">{speedUnit}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{speedUnit}</p>
               </div>
             </div>
           </GlassPanel>
@@ -246,19 +246,19 @@ export default function Drives() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <div>
                 <MetricBar label="Total Drive Time" value={stats.totalDuration} max={Math.max(stats.totalDuration, 600)} color="#00f0ff" />
-                <p className="text-[10px] text-gray-600 mt-1">{formatDuration(stats.totalDuration)}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDuration(stats.totalDuration)}</p>
               </div>
               <div>
                 <MetricBar label="Avg Trip Distance" value={stats.totalDistance / stats.count} max={100} color="#10b981" />
-                <p className="text-[10px] text-gray-600 mt-1">{fmtNumber(convertDistance(stats.totalDistance / stats.count))} {distanceUnit}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertDistance(stats.totalDistance / stats.count))} {distanceUnit}</p>
               </div>
               <div>
                 <MetricBar label="Longest Drive" value={stats.longestDrive.distance} max={Math.max(stats.longestDrive.distance, 200)} color="#a855f7" />
-                <p className="text-[10px] text-gray-600 mt-1">{fmtNumber(convertDistance(stats.longestDrive.distance))} {distanceUnit}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertDistance(stats.longestDrive.distance))} {distanceUnit}</p>
               </div>
               <div>
                 <MetricBar label="Avg Duration" value={stats.totalDuration / stats.count} max={120} color="#f59e0b" />
-                <p className="text-[10px] text-gray-600 mt-1">{formatDuration(stats.totalDuration / stats.count)}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDuration(stats.totalDuration / stats.count)}</p>
               </div>
             </div>
           </GlassPanel>
@@ -343,10 +343,10 @@ export default function Drives() {
             <div className="flex items-center gap-2">
               <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
               {(['date', 'distance', 'efficiency'] as const).map(s => (
-                <button key={s} onClick={() => setSortBy(s)}
-                  className={clsx('text-xs px-2.5 py-1 rounded-lg transition-colors', sortBy === s ? 'bg-neon-cyan/10 text-neon-cyan' : 'text-[var(--text-muted)] hover:text-gray-300')}>
+                <Button key={s} variant="ghost" size="sm" onClick={() => setSortBy(s)}
+                  className={clsx(sortBy === s ? 'bg-neon-cyan/10 text-neon-cyan' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]')}>
                   {s === 'date' ? 'Recent' : s === 'distance' ? 'Distance' : 'Efficiency'}
-                </button>
+                </Button>
               ))}
               <span className="mx-1 h-4 w-px bg-white/10" />
               <a

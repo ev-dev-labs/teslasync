@@ -435,12 +435,15 @@ function PublicKeySetupTool() {
           </p>
           <pre className="text-[10px] font-mono text-[var(--text-primary)] bg-black/30 p-3 rounded-lg whitespace-pre-wrap break-all mb-3">{showPrivateKey}</pre>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => downloadPrivateKey(showPrivateKey)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-neon-green/20 text-neon-green ring-1 ring-neon-green/30 hover:bg-neon-green/30 transition-colors"
+              className="bg-neon-green/20 text-neon-green ring-1 ring-neon-green/30 hover:bg-neon-green/30"
+              icon={<Download className="h-4 w-4" />}
             >
-              <Download className="h-4 w-4" /> Download Private Key
-            </button>
+              Download Private Key
+            </Button>
             <CopyButton text={showPrivateKey} />
           </div>
         </div>
@@ -453,23 +456,26 @@ function PublicKeySetupTool() {
         </Button>
 
         {status?.configured && !confirmDelete && (
-          <button
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => setConfirmDelete(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-neon-red bg-neon-red/5 ring-1 ring-neon-red/20 hover:bg-neon-red/10 transition-colors"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
           >
-            <Trash2 className="h-3.5 w-3.5" /> Delete Key
-          </button>
+            Delete Key
+          </Button>
         )}
         {confirmDelete && (
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() => deleteMut.mutate()}
-              disabled={deleteMut.isPending}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-neon-red/80 hover:bg-neon-red transition-colors"
+              loading={deleteMut.isPending}
+              icon={<Trash2 className="h-3.5 w-3.5" />}
             >
-              {deleteMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
               Confirm Delete
-            </button>
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
           </div>
         )}
@@ -640,11 +646,10 @@ function FleetTelemetrySubscribeTool() {
 
       {/* Signal Configuration */}
       <div className="mb-3">
-        <button onClick={() => setShowSignalModal(true)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-neon-cyan transition-colors w-full px-3 py-2 rounded-lg border border-white/[0.06] hover:border-neon-cyan/30 bg-white/[0.02]">
-          <Settings className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="sm" onClick={() => setShowSignalModal(true)} className="w-full !justify-start border border-white/[0.06] hover:border-neon-cyan/30 bg-white/[0.02] hover:text-neon-cyan" icon={<Settings className="h-3.5 w-3.5" />}>
           <span className="font-medium">Configure Signals</span>
           <span className="text-[10px] text-[var(--text-muted)] ml-auto">{selectedFields.length} selected</span>
-        </button>
+        </Button>
       </div>
 
       <SignalConfigModal
@@ -1217,22 +1222,27 @@ function OnboardingWorkflow() {
 
         {/* Step actions footer */}
         <div className="p-4 border-t border-white/[0.06] flex items-center justify-between">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
+            icon={<ArrowLeft className="h-3.5 w-3.5" />}
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Previous
-          </button>
+            Previous
+          </Button>
 
           <div className="flex items-center gap-2">
             {completedSteps.has(currentStep) ? (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => markIncomplete(currentStep)}
-                className="text-xs text-[var(--text-muted)] hover:text-neon-amber transition-colors flex items-center gap-1.5"
+                className="hover:text-neon-amber"
+                icon={<RefreshCw className="h-3 w-3" />}
               >
-                <RefreshCw className="h-3 w-3" /> Mark Incomplete
-              </button>
+                Mark Incomplete
+              </Button>
             ) : (
               <Button variant="secondary" size="sm" onClick={() => markComplete(currentStep)} icon={<CheckCircle className="h-3.5 w-3.5" />}>
                 Mark Complete {currentStep < ONBOARDING_STEPS.length - 1 ? '& Continue' : ''}
@@ -1240,13 +1250,14 @@ function OnboardingWorkflow() {
             )}
           </div>
 
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCurrentStep(Math.min(ONBOARDING_STEPS.length - 1, currentStep + 1))}
             disabled={currentStep === ONBOARDING_STEPS.length - 1}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
           >
             Next <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1473,9 +1484,9 @@ function Base64Tool() {
     <ToolCard icon={FileCode} color="amber" title="Base64 Encode/Decode" description="Text ↔ Base64 converter">
       <div className="flex gap-2 mb-2">
         {(['encode', 'decode'] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)} className={clsx('px-3 py-1 rounded-lg text-xs font-medium transition-colors', mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
+          <Button key={m} variant="ghost" size="sm" onClick={() => setMode(m)} className={clsx(mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
             {m.charAt(0).toUpperCase() + m.slice(1)}
-          </button>
+          </Button>
         ))}
       </div>
       <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 to decode...'} className={textareaClasses} rows={3} />
@@ -1509,9 +1520,9 @@ function UrlEncoderTool() {
     <ToolCard icon={Link} color="cyan" title="URL Encoder/Decoder" description="Encode/decode URL components">
       <div className="flex gap-2 mb-2">
         {(['encode', 'decode'] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)} className={clsx('px-3 py-1 rounded-lg text-xs font-medium transition-colors', mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
+          <Button key={m} variant="ghost" size="sm" onClick={() => setMode(m)} className={clsx(mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
             {m.charAt(0).toUpperCase() + m.slice(1)}
-          </button>
+          </Button>
         ))}
       </div>
       <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={mode === 'encode' ? 'Enter URL to encode...' : 'Enter encoded URL to decode...'} className={textareaClasses} rows={2} />
@@ -1759,9 +1770,9 @@ function CronParserTool() {
           { label: 'Daily midnight', val: '0 0 * * *' },
           { label: 'Weekly Monday', val: '0 0 * * 1' },
         ].map(p => (
-          <button key={p.val} onClick={() => setCron(p.val)} className="px-2 py-0.5 text-[10px] rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] transition-colors">
+          <Button key={p.val} variant="ghost" size="sm" onClick={() => setCron(p.val)} className="!px-2 !py-0.5 !text-[10px] !rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08]">
             {p.label}
-          </button>
+          </Button>
         ))}
       </div>
       {result && (
@@ -2073,9 +2084,9 @@ function UnixPermTool() {
       <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="755 or rwxr-xr-x" />
       <div className="flex flex-wrap gap-1.5 mt-2">
         {['755', '644', '700', '777', '600', '444'].map(p => (
-          <button key={p} onClick={() => setInput(p)} className="px-2 py-0.5 text-[10px] rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] transition-colors font-mono">
+          <Button key={p} variant="ghost" size="sm" onClick={() => setInput(p)} className="!px-2 !py-0.5 !text-[10px] !rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] font-mono">
             {p}
-          </button>
+          </Button>
         ))}
       </div>
       {result && (

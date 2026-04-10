@@ -211,7 +211,7 @@ function GeofenceForm({ editing, form, setForm, onSubmit, onCancel, isSaving }: 
               placeholder="0.12 (optional)"
               min={0}
             />
-            <p className="text-[10px] text-gray-600 mt-1">Used for charging cost calculation</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1">Used for charging cost calculation</p>
           </div>
         </div>
 

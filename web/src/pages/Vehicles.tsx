@@ -59,7 +59,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
               <StatusBadge status={status} />
             </div>
             <p className="text-xs text-[var(--text-muted)] mb-3">
-              {vehicle.model} {vehicle.trim_badging} · <span className="font-mono text-gray-600">{vehicle.vin}</span>
+              {vehicle.model} {vehicle.trim_badging} · <span className="font-mono text-[var(--text-muted)]">{vehicle.vin}</span>
             </p>
 
             {/* Stats row */}
@@ -98,14 +98,14 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
           <div className="flex flex-col items-center gap-1 shrink-0">
             <Link
               to={`/vehicles/${vehicle.id}`}
-              className="rounded-lg p-2 text-gray-600 hover:bg-neon-cyan/10 hover:text-neon-cyan transition-all"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-neon-cyan/10 hover:text-neon-cyan transition-all"
               title="View details"
             >
               <ExternalLink className="h-4 w-4" />
             </Link>
             <button
               onClick={() => onDelete(vehicle)}
-              className="rounded-lg p-2 text-gray-600 hover:bg-neon-red/10 hover:text-neon-red transition-all"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-neon-red/10 hover:text-neon-red transition-all"
               title="Remove vehicle"
             >
               <Trash2 className="h-4 w-4" />
@@ -219,7 +219,7 @@ function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
                   />
                 </div>
                 <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">{level}%</span>
-                <span className="text-[10px] text-gray-600 w-16 text-right">{Math.round(convertDistance(state?.rated_range ?? 0))} {distanceUnit}</span>
+                <span className="text-[10px] text-[var(--text-muted)] w-16 text-right">{Math.round(convertDistance(state?.rated_range ?? 0))} {distanceUnit}</span>
               </div>
             )
           })}

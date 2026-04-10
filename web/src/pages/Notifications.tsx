@@ -13,7 +13,7 @@ import {
   getNotificationLogs, getNotificationStats,
   NotificationChannel, NotificationLog,
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState, Badge, Button, MetricCard, Toggle, Modal, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState, Badge, Button, Input, MetricCard, Toggle, Modal, DataTable, type Column } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -216,15 +216,15 @@ export default function Notifications() {
 
       {/* Delivery Log toggle */}
       <FadeIn delay={0.15}>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setShowLogs(!showLogs)}
-          className="flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: 'var(--text-secondary)' }}
+          icon={<BarChart3 className="h-4 w-4" />}
         >
-          <BarChart3 className="h-4 w-4" />
           Delivery Log
           {showLogs ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        </Button>
       </FadeIn>
 
       {/* Delivery Log table */}
@@ -382,18 +382,15 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
               {meta.label} Configuration
             </label>
             {meta.fields.map(f => (
-              <div key={f.key}>
-                <label className="block text-[11px] font-medium mb-1 ml-1" style={{ color: 'var(--text-tertiary)' }}>{f.label}</label>
-                <input
-                  type={f.type === 'password' ? 'password' : 'text'}
-                  value={config[f.key] ?? ''}
-                  onChange={e => setConfig({ ...config, [f.key]: e.target.value })}
-                  placeholder={f.placeholder}
-                  autoComplete={f.type === 'password' ? 'new-password' : 'off'}
-                  className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-colors focus:border-neon-cyan/50"
-                  style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
-                />
-              </div>
+              <Input
+                key={f.key}
+                label={f.label}
+                type={f.type === 'password' ? 'password' : 'text'}
+                value={config[f.key] ?? ''}
+                onChange={e => setConfig({ ...config, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                autoComplete={f.type === 'password' ? 'new-password' : 'off'}
+              />
             ))}
           </div>
 

@@ -182,7 +182,7 @@ export default function VampireDrain() {
                 { key: 'batteryLost', header: 'Battery Lost', className: 'text-right', render: (e) => <span className="text-neon-red">{e.battery_lost}%</span> },
                 { key: 'drainRate', header: 'Drain Rate', className: 'text-right', render: (e) => <span className="text-neon-purple">{fmtNumber(e.drain_rate_pct_per_hour)}%/hr</span> },
                 { key: 'temp', header: 'Temp', className: 'text-right', render: (e) => <span className="text-[var(--text-secondary)]">{e.outside_temp_avg !== null ? `${fmtInt(convertTemp(e.outside_temp_avg))}${tempUnit}` : '--'}</span> },
-                { key: 'sentry', header: 'Sentry', className: 'text-center', render: (e) => e.sentry_mode ? <Shield className="h-3.5 w-3.5 text-neon-amber inline" /> : <span className="text-gray-600">--</span> },
+                { key: 'sentry', header: 'Sentry', className: 'text-center', render: (e) => e.sentry_mode ? <Shield className="h-3.5 w-3.5 text-neon-amber inline" /> : <span className="text-[var(--text-muted)]">--</span> },
               ]}
               data={events}
               keyExtractor={(e) => e.id}

@@ -308,22 +308,26 @@ export default function AlertStudio() {
 
             {/* Category tabs */}
             <div className="flex flex-wrap gap-1.5 mb-4">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setTemplateCategory(null)}
-                className={clsx('px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors',
+                className={clsx('!text-[11px] border',
                   templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 )}
-              >All ({ruleTemplates.length})</button>
+              >All ({ruleTemplates.length})</Button>
               {templateCategories.map(cat => {
                 const count = ruleTemplates.filter(t => t.category === cat).length
                 return (
-                  <button
+                  <Button
                     key={cat}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
-                    className={clsx('px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors',
+                    className={clsx('!text-[11px] border',
                       templateCategory === cat ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
-                  >{cat} ({count})</button>
+                  >{cat} ({count})</Button>
                 )
               })}
             </div>

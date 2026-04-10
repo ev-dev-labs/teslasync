@@ -84,8 +84,10 @@ export default function Locations() {
       </ChartContainer>
 
       {/* Top Locations by Time Spent */}
-      {timeChartData.length > 0 && (
-        <ChartContainer title="Top Locations by Time Spent (hours)" height={Math.max(280, timeChartData.length * 36)} className="mb-6 sm:mb-8">
+      <ChartContainer title="Top Locations by Time Spent (hours)" height={Math.max(280, timeChartData.length * 36)} className="mb-6 sm:mb-8">
+        {isLoading ? <Skeleton className="h-full rounded-xl" /> : timeChartData.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No time-spent data available</div>
+        ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={timeChartData} layout="vertical" margin={{ left: 120 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
@@ -95,8 +97,8 @@ export default function Locations() {
               <Bar dataKey="hours" name="Hours" fill="#a855f7" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </ChartContainer>
-      )}
+        )}
+      </ChartContainer>
 
       {/* Location List */}
       <GlassPanel className="p-4 sm:p-6">

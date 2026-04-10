@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Database, ArrowUpDown, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Button, DataTable } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Button, DataTable, AlertBanner } from '../components/ui'
 import type { Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
@@ -59,17 +59,19 @@ const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024 // 100MB
 export default function DBHealthDashboard() {
   const [sortKey, setSortKey] = useState<SortKey>('size')
 
-  const { data: dbStats, isLoading: statsLoading } = useQuery<DBStats>({
+  const { data: dbStats, isLoading: statsLoading, error: statsError } = useQuery<DBStats>({
     queryKey: ['db-stats'],
     queryFn: () => request('/dev-tools/db-stats'),
     refetchInterval: 30_000,
   })
 
-  const { data: migrationStatus, isLoading: migrationLoading } = useQuery<MigrationStatus>({
+  const { data: migrationStatus, isLoading: migrationLoading, error: migrationError } = useQuery<MigrationStatus>({
     queryKey: ['migration-status'],
     queryFn: () => request('/dev-tools/migration-status'),
     refetchInterval: 60_000,
   })
+
+  const queryError = statsError || migrationError
 
   const tables = dbStats?.tables ?? []
 
@@ -130,6 +132,12 @@ export default function DBHealthDashboard() {
           </span>
         }
       />
+
+      {queryError && (
+        <AlertBanner variant="danger" title="Error loading data">
+          {(queryError as Error).message}
+        </AlertBanner>
+      )}
 
       {/* Summary Cards */}
       <FadeIn delay={0.1}>

@@ -60,7 +60,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
             </div>
           </div>
         ) : (
-          <p className="text-xs text-gray-600 text-center">Asleep</p>
+          <p className="text-xs text-[var(--text-muted)] text-center">Asleep</p>
         )}
       </GlassPanel>
     </Link>
@@ -84,16 +84,16 @@ function formatTimeAgo(date: Date): string {
 export default function Dashboard() {
   const queryClient = useQueryClient()
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery({
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useQuery({
     queryKey: ['vehicles'], queryFn: getVehicles,
   })
   const { data: auth } = useQuery({
     queryKey: ['auth-status'], queryFn: getAuthStatus,
   })
-  const { data: analytics } = useQuery({
+  const { data: analytics, error: analyticsError } = useQuery({
     queryKey: ['fleet-analytics', '30'], queryFn: () => getFleetAnalytics(30),
   })
-  const { data: alerts } = useQuery({
+  const { data: alerts, error: alertsError } = useQuery({
     queryKey: ['alerts'], queryFn: () => getAlerts(10),
   })
   const { convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure, isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
@@ -104,7 +104,7 @@ export default function Dashboard() {
 
   // Get state for the primary (first) vehicle
   const primaryVehicle = vehicles?.[0]
-  const { data: primaryStateData, dataUpdatedAt } = useQuery({
+  const { data: primaryStateData, dataUpdatedAt, error: stateError } = useQuery({
     queryKey: ['vehicle-state', primaryVehicle?.id],
     queryFn: () => getVehicleState(primaryVehicle!.id),
     enabled: !!primaryVehicle,
@@ -119,12 +119,12 @@ export default function Dashboard() {
   const firmwareVersion = live.version || live.swUpdateVersion || primaryState?.software_version || '—'
 
   // Get recent drives and charges for the primary vehicle
-  const { data: recentDrives } = useQuery({
+  const { data: recentDrives, error: drivesError } = useQuery({
     queryKey: ['drives', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getDrives(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
   })
-  const { data: recentCharges } = useQuery({
+  const { data: recentCharges, error: chargesError } = useQuery({
     queryKey: ['charging', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getChargingSessions(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
@@ -147,48 +147,50 @@ export default function Dashboard() {
   })
 
   // Live telemetry queries for primary vehicle
-  const { data: motorData } = useQuery({
+  const { data: motorData, error: motorError } = useQuery({
     queryKey: ['motor-latest', primaryVehicle?.id],
     queryFn: () => getMotorLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: climateData } = useQuery({
+  const { data: climateData, error: climateError } = useQuery({
     queryKey: ['climate-latest', primaryVehicle?.id],
     queryFn: () => getClimateLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: securityData } = useQuery({
+  const { data: securityData, error: securityError } = useQuery({
     queryKey: ['security-latest', primaryVehicle?.id],
     queryFn: () => getSecurityLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: tireData } = useQuery({
+  const { data: tireData, error: tireError } = useQuery({
     queryKey: ['tire-latest', primaryVehicle?.id],
     queryFn: () => getLatestTirePressure(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: mediaData } = useQuery({
+  const { data: mediaData, error: mediaError } = useQuery({
     queryKey: ['media-latest', primaryVehicle?.id],
     queryFn: () => getMediaLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: locationData } = useQuery({
+  const { data: locationData, error: locationError } = useQuery({
     queryKey: ['location-latest', primaryVehicle?.id],
     queryFn: () => getLocationSnapshotLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
+
+  const anyError = vehiclesError || analyticsError || alertsError || stateError || drivesError || chargesError || motorError || climateError || securityError || tireError || mediaError || locationError
 
   const onlineCount= vehicles?.filter(v => v.state === 'online').length ?? 0
   const totalCount = vehicles?.length ?? 0
@@ -282,6 +284,13 @@ export default function Dashboard() {
           </div>
         }
       />
+
+      {/* Data error banner */}
+      {anyError && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(anyError as Error).message}
+        </div>
+      )}
 
       {/* Auth warning */}
       {auth && !auth.authenticated && (
@@ -483,7 +492,7 @@ export default function Dashboard() {
               <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Fleet Size</p>
                 <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={totalCount} /></p>
-                <p className="text-[10px] text-gray-600 mt-1">{onlineCount} online</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{onlineCount} online</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
@@ -506,7 +515,7 @@ export default function Dashboard() {
                 <p className="text-xl sm:text-2xl font-bold text-neon-amber">
                   <AnimatedNumber value={convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0)} suffix={` ${efficiencyUnit}`} />
                 </p>
-                <p className="text-[10px] text-gray-600 mt-1">fleet average</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">fleet average</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
@@ -515,7 +524,7 @@ export default function Dashboard() {
                 <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? '#ef4444' : '#10b981' }}>
                   <AnimatedNumber value={unreadAlerts} />
                 </p>
-                <p className="text-[10px] text-gray-600 mt-1">unread</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">unread</p>
               </GlassPanel>
             </StaggerItem>
           </StaggerContainer>
@@ -550,7 +559,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Clock className="h-6 w-6 text-gray-600 mb-2" />
+                    <Clock className="h-6 w-6 text-[var(--text-muted)] mb-2" />
                     <p className="text-xs text-[var(--text-muted)]">No activity yet. Start driving!</p>
                   </div>
                 )}
@@ -585,7 +594,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="h-36 sm:h-48 flex items-center justify-center">
-                      <p className="text-xs text-gray-600">Charge data will appear here</p>
+                      <p className="text-xs text-[var(--text-muted)]">Charge data will appear here</p>
                     </div>
                   )}
                 </GlassPanel>
@@ -1038,7 +1047,7 @@ export default function Dashboard() {
                 ].map(f => (
                   <GlassPanel key={f.label} className="p-3 text-center">
                     <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
-                    <p className="text-xs font-medium text-gray-300">{f.label}</p>
+                    <p className="text-xs font-medium text-[var(--text-secondary)]">{f.label}</p>
                   </GlassPanel>
                 ))}
               </div>

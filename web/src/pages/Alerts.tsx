@@ -130,11 +130,11 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
           )}
         </div>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-[10px] text-gray-600 flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{timeAgo}</span>
+          <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{timeAgo}</span>
           <Badge color={alert.severity === 'critical' ? 'red' : alert.severity === 'warning' ? 'amber' : 'cyan'} size="sm">
             {alert.severity}
           </Badge>
-          <span className="text-[10px] text-gray-600">{alert.type.replace(/_/g, ' ')}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{alert.type.replace(/_/g, ' ')}</span>
           {!alert.is_read && (
             <Button variant="ghost" size="sm" icon={<Eye className="h-3 w-3" />} onClick={onMarkRead} className="ml-auto opacity-0 group-hover:opacity-100">Mark read</Button>
           )}
@@ -150,20 +150,22 @@ function NotificationHistory() {
   const [logPage, setLogPage] = useState(1)
   const logPageSize = 25
 
-  const { data: logs, isLoading: logsLoading } = useQuery({
+  const { data: logs, isLoading: logsLoading, error: logsError } = useQuery({
     queryKey: ['notification-logs', logPage],
     queryFn: () => getNotificationLogs(logPageSize, (logPage - 1) * logPageSize),
   })
 
-  const { data: stats } = useQuery({
+  const { data: stats, error: statsError } = useQuery({
     queryKey: ['notification-stats'],
     queryFn: getNotificationStats,
   })
 
-  const { data: channels } = useQuery({
+  const { data: channels, error: channelsError } = useQuery({
     queryKey: ['notification-channels'],
     queryFn: getNotificationChannels,
   })
+
+  const anyError = logsError || statsError || channelsError
 
   const channelMap = useMemo(() => {
     const m: Record<number, string> = {}
@@ -191,6 +193,11 @@ function NotificationHistory() {
 
   return (
     <div className="space-y-6">
+      {anyError && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(anyError as Error).message}
+        </div>
+      )}
       {/* Analytics cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCard label="Total Sent" value={totalSent} icon={<Send className="h-4 w-4" />} color="cyan" />
@@ -410,16 +417,18 @@ export default function Alerts() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all')
 
   // ─ Data queries ─
-  const { data: alerts, isLoading: alertsLoading } = useQuery({
+  const { data: alerts, isLoading: alertsLoading, error: alertsError } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => getAlerts(100),
     refetchInterval: 30_000,
   })
 
-  const { data: rules } = useQuery({
+  const { data: rules, error: rulesError } = useQuery({
     queryKey: ['alert-rules'],
     queryFn: getAlertRules,
   })
+
+  const anyQueryError = alertsError || rulesError
 
   // ─ Mutations ─
   const markReadMut = useMutation({
@@ -510,6 +519,12 @@ export default function Alerts() {
           </div>
         }
       />
+
+      {anyQueryError && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(anyQueryError as Error).message}
+        </div>
+      )}
 
       {/* Alert Stats Row */}
       <FadeIn>

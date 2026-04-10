@@ -33,7 +33,7 @@ const stateColors: Record<string, { bg: string; text: string; dot: string; hex: 
   charging: { bg: 'bg-neon-amber/10', text: 'text-neon-amber', dot: 'bg-neon-amber', hex: '#f59e0b' },
   parked: { bg: 'bg-neon-cyan/10', text: 'text-neon-cyan', dot: 'bg-neon-cyan', hex: '#00f0ff' },
   online: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400', hex: '#60a5fa' },
-  offline: { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-400', hex: '#9ca3af' },
+  offline: { bg: 'bg-gray-500/10', text: 'text-[var(--text-muted)]', dot: 'bg-gray-400', hex: '#9ca3af' },
   asleep: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400', hex: '#a78bfa' },
 }
 

@@ -60,7 +60,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
       <div className="flex items-center justify-between mb-2.5">
         <div>
           <span className="text-sm font-semibold text-[var(--text-primary)] block">{vehicle.display_name || vehicle.vin}</span>
-          <span className="text-[10px] text-gray-600">{vehicle.model} {vehicle.trim_badging}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{vehicle.model} {vehicle.trim_badging}</span>
         </div>
         <StatusBadge status={status} size="sm" />
       </div>
@@ -198,7 +198,7 @@ export default function LiveMap() {
                 <div className="h-2 w-2 rounded-full bg-neon-green" style={{ boxShadow: '0 0 6px rgba(16,185,129,0.5)' }} />
                 <span className="text-[var(--text-secondary)]">{markers.length} tracked</span>
               </div>
-              <span className="text-[10px] text-gray-600 font-mono">Refresh 15s</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-mono">Refresh 15s</span>
             </div>
           </GlassPanel>
 
@@ -236,7 +236,7 @@ export default function LiveMap() {
             <GlassPanel className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-[var(--text-secondary)]">Drive Replay</span>
-                <span className="text-[10px] text-gray-600">{trailPositions.length} points</span>
+                <span className="text-[10px] text-[var(--text-muted)]">{trailPositions.length} points</span>
               </div>
               <div className="flex items-center gap-2">
                 {!replayMode ? (
@@ -271,7 +271,7 @@ export default function LiveMap() {
                   <div key={d.id} className="flex items-center justify-between text-[11px]">
                     <span className="text-[var(--text-secondary)]">{formatDateShort(d.start_date)}</span>
                     <span className="text-neon-cyan font-medium">{fmtNumber(convertDistance(d.distance))} {distanceUnit}</span>
-                    <span className="text-gray-600">{d.duration_min}m</span>
+                    <span className="text-[var(--text-muted)]">{d.duration_min}m</span>
                   </div>
                 ))}
               </div>

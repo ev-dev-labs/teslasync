@@ -146,7 +146,7 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: string; 
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">{title}</h1>
             <div className="mt-1.5 sm:mt-2 h-0.5 w-12 sm:w-16 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple opacity-60" />
-            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>{subtitle}</p>}
+            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[var(--text-secondary)]">{subtitle}</p>}
           </div>
         </div>
         {actions && <div className="flex items-center gap-2 sm:gap-3">{actions}</div>}
@@ -179,7 +179,7 @@ export function StatusBadge({ status, size = 'sm' }: { status: 'online' | 'offli
 // === Progress ring ===
 
 /** Animated SVG circular progress indicator with percentage label. */
-export function ProgressRing({ value, max = 100, size = 80, strokeWidth = 4, color = '#00f0ff', label }: { value: number; max?: number; size?: number; strokeWidth?: number; color?: string; label?: string }) {
+export function ProgressRing({ value, max = 100, size = 80, strokeWidth = 4, color = 'var(--neon-cyan, #00f0ff)', label }: { value: number; max?: number; size?: number; strokeWidth?: number; color?: string; label?: string }) {
   const pct = Math.min((value / max) * 100, 100)
   const r = (size - strokeWidth * 2) / 2
   const circ = 2 * Math.PI * r
@@ -215,7 +215,7 @@ export function ProgressRing({ value, max = 100, size = 80, strokeWidth = 4, col
 // === Sparkline ===
 
 /** Tiny inline SVG line chart for showing trends in a compact space. */
-export function Sparkline({ data, color = '#00f0ff', height = 30, width = 100 }: { data: number[]; color?: string; height?: number; width?: number }) {
+export function Sparkline({ data, color = 'var(--neon-cyan, #00f0ff)', height = 30, width = 100 }: { data: number[]; color?: string; height?: number; width?: number }) {
   if (!data.length) return null
   const max = Math.max(...data)
   const min = Math.min(...data)
@@ -415,7 +415,7 @@ export function TabNav({ tabs, active, onChange }: { tabs: { key: string; label:
             'flex items-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap shrink-0',
             active === t.key
               ? 'bg-white/[0.08] text-[var(--text-primary)] shadow-sm'
-              : 'text-[var(--text-muted)] hover:text-gray-300'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
           )}
         >
           {t.icon}
@@ -463,7 +463,7 @@ export function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDa
           onChange={e => onStartDateChange(e.target.value)}
           className="bg-transparent text-xs text-[var(--text-primary)] outline-none [color-scheme:dark] min-w-0 flex-1 sm:flex-none"
         />
-        <span className="text-gray-600 text-xs">→</span>
+        <span className="text-[var(--text-muted)] text-xs">→</span>
         <input
           type="date"
           value={endDate}
@@ -522,7 +522,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
           <select
             value={pageSize}
             onChange={e => onPageSizeChange(Number(e.target.value))}
-            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-gray-300 outline-none ring-1 ring-white/[0.08]"
+            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none ring-1 ring-white/[0.08]"
           >
             {pageSizeOptions.map(s => (
               <option key={s} value={s} className="bg-[var(--bg)]">{s} / page</option>
@@ -539,7 +539,7 @@ export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChan
           className="rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="px-3 text-xs font-medium text-gray-300">
+        <span className="px-3 text-xs font-medium text-[var(--text-secondary)]">
           {page} / {totalPages}
         </span>
         <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}
