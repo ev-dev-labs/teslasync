@@ -153,7 +153,7 @@ export default function Trips() {
         ) : (
           <div className="space-y-3">
             {filteredTrips.map(trip => (
-              <div key={trip.id} className="glass-card p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <GlassPanel key={trip.id} className="p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,240,255,0.1)' }}>
                     <Route className="h-5 w-5 text-neon-cyan" />
@@ -186,7 +186,7 @@ export default function Trips() {
                     </div>
                   )}
                 </div>
-              </div>
+              </GlassPanel>
             ))}
           </div>
         )}

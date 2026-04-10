@@ -798,8 +798,8 @@ export default function CostAnalysis() {
 
                 {/* results */}
                 <div className="flex flex-col items-center justify-center text-center space-y-4">
-                  <div
-                    className="glass-card rounded-2xl p-6 w-full"
+                  <GlassPanel
+                    className="rounded-2xl p-6 w-full"
                     style={{
                       background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(0,240,255,0.05))',
                       borderColor: 'var(--glass-border)',
@@ -822,26 +822,26 @@ export default function CostAnalysis() {
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       {totalSavings >= 0 ? 'compared to gasoline' : 'more than gasoline (check your rates!)'}
                     </p>
-                  </div>
+                  </GlassPanel>
                   <div className="grid grid-cols-3 gap-3 w-full">
-                    <div className="glass-card rounded-lg p-3">
+                    <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Monthly</p>
                       <p className="text-sm font-bold" style={{ color: '#00f0ff' }}>
                         ${fmtNumber(monthlySavings, 2)}
                       </p>
-                    </div>
-                    <div className="glass-card rounded-lg p-3">
+                    </GlassPanel>
+                    <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Annual (est.)</p>
                       <p className="text-sm font-bold" style={{ color: '#10b981' }}>
                         ${fmtNumber(annualSavings, 2)}
                       </p>
-                    </div>
-                    <div className="glass-card rounded-lg p-3">
+                    </GlassPanel>
+                    <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Lifetime</p>
                       <p className="text-sm font-bold" style={{ color: '#a855f7' }}>
                         ${fmtNumber(lifetimeSavings, 2)}
                       </p>
-                    </div>
+                    </GlassPanel>
                   </div>
                 </div>
               </div>
@@ -979,8 +979,8 @@ export default function CostAnalysis() {
                 {/* insights */}
                 <div className="space-y-3">
                   {cheapestHour && cheapestHour.avgRate > 0 && (
-                    <div
-                      className="glass-card rounded-lg p-3"
+                    <GlassPanel
+                      className="rounded-lg p-3"
                       style={{ borderLeft: '3px solid #10b981' }}
                     >
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -992,11 +992,11 @@ export default function CostAnalysis() {
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {cheapestHour.sessions} sessions
                       </p>
-                    </div>
+                    </GlassPanel>
                   )}
                   {mostExpensiveHour && mostExpensiveHour.avgRate > 0 && (
-                    <div
-                      className="glass-card rounded-lg p-3"
+                    <GlassPanel
+                      className="rounded-lg p-3"
                       style={{ borderLeft: '3px solid #ef4444' }}
                     >
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1008,11 +1008,11 @@ export default function CostAnalysis() {
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {mostExpensiveHour.sessions} sessions
                       </p>
-                    </div>
+                    </GlassPanel>
                   )}
                   {cheapestChargerType && (
-                    <div
-                      className="glass-card rounded-lg p-3"
+                    <GlassPanel
+                      className="rounded-lg p-3"
                       style={{ borderLeft: `3px solid ${cheapestChargerType.fill}` }}
                     >
                       <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1021,10 +1021,10 @@ export default function CostAnalysis() {
                       <p className="text-sm font-bold" style={{ color: cheapestChargerType.fill }}>
                         {cheapestChargerType.type} — ${fmtNumber(cheapestChargerType.avgCostKwh, 3)}/kWh
                       </p>
-                    </div>
+                    </GlassPanel>
                   )}
-                  <div
-                    className="glass-card rounded-lg p-3"
+                  <GlassPanel
+                    className="rounded-lg p-3"
                     style={{ borderLeft: '3px solid #00f0ff' }}
                   >
                     <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -1035,7 +1035,7 @@ export default function CostAnalysis() {
                         ? `You save the most charging via ${cheapestChargerType.type} around ${cheapestHour.hour}.`
                         : 'Charge during off-peak hours at home for maximum savings.'}
                     </p>
-                  </div>
+                  </GlassPanel>
                 </div>
               </div>
             </ChartContainer>
@@ -1095,7 +1095,7 @@ export default function CostAnalysis() {
                     icon: TreePine,
                   },
                 ].map(item => (
-                  <div key={item.label} className="glass-card rounded-xl p-4 text-center">
+                  <GlassPanel key={item.label} className="p-4 text-center">
                     <item.icon className="h-5 w-5 mx-auto mb-2" style={{ color: item.color }} />
                     <p className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>
                       {item.label}
@@ -1103,13 +1103,13 @@ export default function CostAnalysis() {
                     <p className="text-lg font-bold" style={{ color: item.color }}>
                       {item.value}
                     </p>
-                  </div>
+                  </GlassPanel>
                 ))}
               </div>
 
               {/* environmental impact emphasis */}
-              <div
-                className="mt-6 glass-card rounded-xl p-4 text-center"
+              <GlassPanel
+                className="mt-6 p-4 text-center"
                 style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(0,240,255,0.04))',
                   borderColor: 'var(--glass-border)',
@@ -1131,7 +1131,7 @@ export default function CostAnalysis() {
                   </span>{' '}
                   for a year.
                 </p>
-              </div>
+              </GlassPanel>
             </GlassPanel>
           </FadeIn>
         </>

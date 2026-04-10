@@ -253,13 +253,13 @@ export default function Timeline() {
                     <div className="absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]" style={{ background: `${color}20` }}>
                       <Icon className="h-3 w-3" style={{ color }} />
                     </div>
-                    <div className="glass-card p-3 flex items-center justify-between">
+                    <GlassPanel className="p-3 flex items-center justify-between">
                       <div>
                         <span className="text-sm font-medium capitalize" style={{ color }}>{s.state}</span>
                         <span className="text-xs text-[var(--text-muted)] ml-2">{formatDuration(s.duration_min)}</span>
                       </div>
                       <span className="text-[11px] text-[var(--text-muted)]">{formatDateTime(s.start_date)}</span>
-                    </div>
+                    </GlassPanel>
                   </div>
                 )
               })}

@@ -113,7 +113,7 @@ export default function Locations() {
           <>
           <div className="space-y-2">
             {locations.map((loc, i) => (
-              <div key={loc.id} className="glass-card p-4 flex items-center gap-4 hover:border-[var(--glass-border)] transition-colors">
+              <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-[var(--glass-border)] transition-colors">
                 <div className={clsx(
                   'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
                   i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-white/5 text-[var(--text-muted)]'
@@ -130,7 +130,7 @@ export default function Locations() {
                 <div className="flex items-center gap-1 text-neon-green text-xs font-medium">
                   <Hash className="h-3 w-3" />{loc.visit_count}
                 </div>
-              </div>
+              </GlassPanel>
             ))}
           </div>
           <Pagination page={page} pageSize={pageSize} total={locations.length < pageSize ? (page - 1) * pageSize + locations.length : page * pageSize + 1} onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1) }} />

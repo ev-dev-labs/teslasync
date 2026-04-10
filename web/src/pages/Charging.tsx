@@ -594,28 +594,28 @@ export default function Charging() {
               <span className="text-xs text-[var(--text-muted)] font-normal ml-2">Wall-to-battery energy conversion ({efficiencyStats.count} sessions with data)</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="glass-card text-center">
+              <GlassPanel className="p-5 text-center">
                 <p className="text-2xl font-bold text-neon-cyan">{fmtPercent(efficiencyStats.avgEfficiency, 1)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Average Efficiency</p>
                 <div className="mt-2 h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
                   <div className="h-full rounded-full bg-neon-cyan" style={{ width: `${Math.min(efficiencyStats.avgEfficiency, 100)}%` }} />
                 </div>
-              </div>
-              <div className="glass-card text-center">
+              </GlassPanel>
+              <GlassPanel className="p-5 text-center">
                 <p className="text-2xl font-bold text-neon-green">{fmtPercent(efficiencyStats.best.efficiency, 1)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Best Session</p>
                 <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(efficiencyStats.best.date)}</p>
-              </div>
-              <div className="glass-card text-center">
+              </GlassPanel>
+              <GlassPanel className="p-5 text-center">
                 <p className="text-2xl font-bold text-neon-red">{fmtPercent(efficiencyStats.worst.efficiency, 1)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Worst Session</p>
                 <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(efficiencyStats.worst.date)}</p>
-              </div>
-              <div className="glass-card text-center">
+              </GlassPanel>
+              <GlassPanel className="p-5 text-center">
                 <p className="text-2xl font-bold text-neon-amber">{fmtWithUnit(efficiencyStats.wallLoss, 'kWh', 1)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Wall-to-Battery Loss</p>
                 <p className="text-[9px] text-[var(--text-muted)]">{fmtNumber(efficiencyStats.totalUsed, 1)} kWh drawn → {fmtNumber(efficiencyStats.totalAdded, 1)} kWh stored</p>
-              </div>
+              </GlassPanel>
             </div>
           </GlassPanel>
         </FadeIn>

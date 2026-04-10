@@ -160,8 +160,8 @@ function dayIndex(dateStr: string): number {
 function DigestTooltip({ active, payload, label, unit }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div
-      className="glass-card rounded-lg px-3 py-2 text-xs shadow-lg"
+    <GlassPanel
+      className="px-3 py-2 text-xs shadow-lg"
       style={{ background: 'var(--surface-2)', border: '1px solid var(--glass-border)' }}
     >
       <p style={{ color: 'var(--text-primary)' }} className="font-medium mb-1">
@@ -172,11 +172,11 @@ function DigestTooltip({ active, payload, label, unit }: any) {
           {fmtNumber(entry.value, 1)} {unit}
         </p>
       ))}
-    </div>
+    </GlassPanel>
   )
 }
 
-// ── main component ───────────────────────────────────────────────────────────
+// ── main component───────────────────────────────────────────────────────────
 
 export default function WeeklyDigest() {
   const [weekOffset, setWeekOffset] = useState(0)
@@ -908,7 +908,7 @@ function HighlightCard({
   detail: string
 }) {
   return (
-    <div className="glass-card rounded-xl p-4 flex flex-col gap-2">
+    <GlassPanel className="p-4 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         {icon}
         <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
@@ -921,7 +921,7 @@ function HighlightCard({
       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
         {detail}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -957,9 +957,9 @@ function BatteryPill({
       <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>
         {label}
       </p>
-      <div className={clsx('glass-card rounded-xl px-4 py-3 inline-block', bg)}>
+      <GlassPanel className={clsx('px-4 py-3 inline-block', bg)}>
         <span className={clsx('text-2xl font-bold tabular-nums', color)}>{level}%</span>
-      </div>
+      </GlassPanel>
       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
         {formatDateWithDay(date)}
       </p>

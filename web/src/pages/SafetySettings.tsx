@@ -49,7 +49,7 @@ function SafetyCard({
   const statusBg = isEnabled ? 'bg-neon-green/20' : 'bg-neon-red/20'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className={clsx('p-2 rounded-lg', statusBg)}>
@@ -77,12 +77,12 @@ function SafetyCard({
           </>
         )}
       </div>
-    </div>
+    </GlassPanel>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/*  Stats Card                                                         */
+/*  Stats Card*/
 /* ------------------------------------------------------------------ */
 
 function StatsCard({
@@ -98,19 +98,19 @@ function StatsCard({
 }) {
   const formatted = value != null ? value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '--'
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3 text-center">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3 text-center">
       <div className="p-2.5 rounded-lg bg-neon-cyan/10">
         {icon}
       </div>
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatted}</p>
       <Badge color="cyan" size="sm">{unit}</Badge>
-    </div>
+    </GlassPanel>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/*  Safety Score Badge                                                 */
+/*  Safety Score Badge*/
 /* ------------------------------------------------------------------ */
 
 function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
@@ -119,7 +119,7 @@ function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
   const assessment= pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Fair' : 'Needs Attention'
 
   return (
-    <div className="glass-card p-5 sm:p-6 flex flex-col items-center gap-4 text-center">
+    <GlassPanel className="p-5 sm:p-6 flex flex-col items-center gap-4 text-center">
       <div className="relative w-28 h-28 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/5" />
@@ -137,7 +137,7 @@ function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
         </p>
       </div>
       <Badge color={pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'red'} size="md">{assessment}</Badge>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -347,7 +347,7 @@ export default function SafetySettings() {
       {/* ---- Live Seat Belt Status ---- */}
       <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Live Safety Signals</h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.driverSeatBelt ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
             <User className={clsx('h-5 w-5', live.driverSeatBelt ? 'text-neon-green' : 'text-neon-red')} />
           </div>
@@ -355,8 +355,8 @@ export default function SafetySettings() {
             {live.driverSeatBelt ? 'Buckled' : 'Unbuckled'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Belt</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.passengerSeatBelt ? 'bg-neon-green/10' : 'bg-white/5')}>
             <User className={clsx('h-5 w-5', live.passengerSeatBelt ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
           </div>
@@ -364,8 +364,8 @@ export default function SafetySettings() {
             {live.passengerSeatBelt ? 'Buckled' : 'Unbuckled'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Passenger Belt</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.driverSeatOccupied ? 'bg-neon-green/10' : 'bg-white/5')}>
             <Car className={clsx('h-5 w-5', live.driverSeatOccupied ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
           </div>
@@ -373,8 +373,8 @@ export default function SafetySettings() {
             {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Seat</span>
-        </div>
-        <div className="glass-card p-4 flex flex-col items-center gap-2">
+        </GlassPanel>
+        <GlassPanel className="p-4 flex flex-col items-center gap-2">
           <div className={clsx('p-2.5 rounded-lg', live.locked ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
             <Lock className={clsx('h-5 w-5', live.locked ? 'text-neon-green' : 'text-neon-red')} />
           </div>
@@ -382,7 +382,7 @@ export default function SafetySettings() {
             {live.locked ? 'Locked' : 'Unlocked'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vehicle Lock</span>
-        </div>
+        </GlassPanel>
       </div>
 
       {/* ---- Self-Driving Stats ---- */}

@@ -933,7 +933,7 @@ function SummaryCard({
   accent: string
 }) {
   return (
-    <div className="glass-card p-4 flex flex-col gap-2">
+    <GlassPanel className="p-4 flex flex-col gap-2">
       <div
         className="flex items-center gap-1.5 text-xs"
         style={{ color: 'var(--text-secondary)' }}
@@ -942,7 +942,7 @@ function SummaryCard({
         {label}
       </div>
       <p className={clsx('text-lg font-bold', accent)}>{value}</p>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -978,7 +978,7 @@ function TimeToChargeCard({
   sub?: string
 }) {
   return (
-    <div className="glass-card p-3 sm:p-4 text-center">
+    <GlassPanel className="p-3 sm:p-4 text-center">
       <p
         className="text-[10px] uppercase tracking-wider mb-1"
         style={{ color: 'var(--text-secondary)' }}
@@ -991,6 +991,6 @@ function TimeToChargeCard({
           {sub}
         </p>
       )}
-    </div>
+    </GlassPanel>
   )
 }

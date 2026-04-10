@@ -422,7 +422,7 @@ export default function Maintenance() {
             const Icon = item.icon
             const cfg = statusConfig[status]
             return (
-              <div key={item.id} className="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <GlassPanel key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className={clsx('p-2 rounded-lg shrink-0', cfg.bg)}>
                     <Icon className={clsx('h-5 w-5', cfg.color)} />
@@ -460,7 +460,7 @@ export default function Maintenance() {
                     </span>
                   )}
                 </div>
-              </div>
+              </GlassPanel>
             )
           })}
         </div>
@@ -644,7 +644,7 @@ export default function Maintenance() {
               if (!item) return null
               const Icon = item.icon
               return (
-                <div key={`${record.itemId}-${record.date}-${idx}`} className="glass-card p-3 flex items-center gap-3">
+                <GlassPanel key={`${record.itemId}-${record.date}-${idx}`} className="p-3 flex items-center gap-3">
                   <div className="p-1.5 rounded-lg bg-neon-cyan/10 shrink-0">
                     <Icon className="h-4 w-4 text-neon-cyan" />
                   </div>
@@ -662,7 +662,7 @@ export default function Maintenance() {
                   >
                     ✕
                   </button>
-                </div>
+                </GlassPanel>
               )
             })}
           </div>
@@ -724,7 +724,7 @@ export default function Maintenance() {
                 .map(({ item, daysUntilDue, estDate }) => {
                   const months = daysUntilDue !== null ? Math.round(daysUntilDue / 30) : null
                   return (
-                    <div key={item.id} className="flex items-center justify-between text-sm glass-card p-3">
+                    <GlassPanel key={item.id} className="flex items-center justify-between text-sm p-3">
                       <div className="flex items-center gap-2">
                         <item.icon className="h-3.5 w-3.5 text-neon-purple" />
                         <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
@@ -739,7 +739,7 @@ export default function Maintenance() {
                           </p>
                         )}
                       </div>
-                    </div>
+                    </GlassPanel>
                   )
                 })}
               {projections.filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0).length === 0 && (

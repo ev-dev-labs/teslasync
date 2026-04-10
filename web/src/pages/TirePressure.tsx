@@ -36,7 +36,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
   const bg = isLow ? 'bg-neon-red/20' : isHigh ? 'bg-neon-amber/20' : 'bg-neon-green/20'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center justify-center gap-3 h-full">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center justify-center gap-3 h-full">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <div className="relative w-24 h-24 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -57,7 +57,7 @@ function PressureGauge({ label, value, min = 30, max = 50, unit = 'PSI' }: { lab
         )}
       </div>
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>{psi > 0 ? `${fmtNumber(psi)} ${unit}` : 'N/A'}</span>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -392,13 +392,13 @@ export default function TirePressure() {
           { label: 'Hard Warnings', value: hasHardWarning ? live.tpmsHardWarnings : 'None', icon: <ShieldAlert className={clsx('h-3.5 w-3.5', hasHardWarning ? 'text-neon-red' : 'text-[var(--text-muted)]')} /> },
           { label: 'HV Isolation', value: live.isolationResistance > 0 ? `${Math.round(live.isolationResistance)} Ω` : '—', icon: <Zap className="h-3.5 w-3.5 text-neon-cyan" /> },
         ].map(item => (
-          <div key={item.label} className="glass-card p-3 flex flex-col gap-1.5">
+          <GlassPanel key={item.label} className="p-3 flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               {item.icon}
               <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
             </div>
             <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
-          </div>
+          </GlassPanel>
         ))}
       </div>
 

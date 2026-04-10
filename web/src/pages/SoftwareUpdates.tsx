@@ -196,7 +196,7 @@ export default function SoftwareUpdates() {
                     <div className={clsx('absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4', s.bg, 'ring-[var(--bg)]')}>
                       <Icon className={clsx('h-3 w-3', s.color)} />
                     </div>
-                    <div className="glass-card p-4 hover:border-[var(--glass-border)] transition-colors">
+                    <GlassPanel className="p-4 hover:border-[var(--glass-border)] transition-colors">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
@@ -230,7 +230,7 @@ export default function SoftwareUpdates() {
                           <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(u.created_at)}</p>
                         </div>
                       </div>
-                    </div>
+                    </GlassPanel>
                   </div>
                 )
               })}

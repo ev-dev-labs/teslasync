@@ -155,11 +155,11 @@ function ExportTypeSelector({
         const Icon = t.icon
         const active = selected === t.value
         return (
-          <button
+          <GlassPanel
             key={t.value}
             onClick={() => onChange(t.value)}
             className={clsx(
-              'glass-card p-4 text-left transition-all duration-200 cursor-pointer border-2 rounded-xl',
+              'p-4 text-left transition-all duration-200 cursor-pointer border-2 rounded-xl',
               active
                 ? `border-neon-${t.color} shadow-[0_0_20px_rgba(var(--neon-${t.color}-rgb),0.15)]`
                 : 'border-transparent hover:border-white/10'
@@ -185,7 +185,7 @@ function ExportTypeSelector({
             <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               {t.description}
             </p>
-          </button>
+          </GlassPanel>
         )
       })}
     </div>
@@ -262,8 +262,8 @@ function JobRow({
   onDownload: (job: ExportJobSummary) => void
 }) {
   return (
-    <div
-      className="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 transition-all duration-200 hover:border-white/10"
+    <GlassPanel
+      className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 transition-all duration-200 hover:border-white/10"
       style={{ borderColor: 'var(--glass-border)' }}
     >
       {/* Type + Format */}
@@ -316,7 +316,7 @@ function JobRow({
           <span className="text-[10px] text-[var(--text-muted)] italic">In progress…</span>
         )}
       </div>
-    </div>
+    </GlassPanel>
   )
 }
 
@@ -334,7 +334,7 @@ function FormatInfoCard({
   color: string
 }) {
   return (
-    <div className="glass-card p-5 flex flex-col gap-3">
+    <GlassPanel className="p-5 flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <div className={clsx('p-2 rounded-lg', `bg-${color}/15`)} style={{ background: `color-mix(in srgb, var(--neon-cyan) 10%, transparent)` }}>
           <Icon className={clsx('h-5 w-5', `text-${color}`)} style={{ color: `var(--neon-cyan)` }} />
@@ -357,7 +357,7 @@ function FormatInfoCard({
           </span>
         ))}
       </div>
-    </div>
+    </GlassPanel>
   )
 }
 

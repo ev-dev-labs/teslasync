@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Send, User, Sparkles, MessageSquare, Clock, Loader2 } from 'lucide-react'
-import { Button } from '../components/ui'
+import { Button, GlassPanel } from '../components/ui'
 import clsx from 'clsx'
 import { sendChatMessage, getChatHistory, getChatSessions, ChatMessage } from '../api'
 import { formatTime } from '../lib/dateFormat'
@@ -167,7 +167,7 @@ export default function Chatbot() {
         </AnimatePresence>
 
         {/* Chat area */}
-        <div className="flex flex-col flex-1 glass-card !p-0 overflow-hidden">
+        <GlassPanel className="flex flex-col flex-1 !p-0 overflow-hidden">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
@@ -240,10 +240,10 @@ export default function Chatbot() {
                 <div className="rounded-lg bg-gradient-to-br from-neon-purple/20 to-neon-blue/20 p-1.5">
                   <Bot className="h-4 w-4 text-neon-purple" />
                 </div>
-                <div className="glass-card !p-3 flex items-center gap-2">
+                <GlassPanel className="!p-3 flex items-center gap-2">
                   <Loader2 className="h-4 w-4 text-neon-purple animate-spin" />
                   <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Thinking...</span>
-                </div>
+                </GlassPanel>
               </motion.div>
             )}
 
@@ -270,7 +270,7 @@ export default function Chatbot() {
               />
             </div>
           </div>
-        </div>
+        </GlassPanel>
       </div>
     </div>
   )

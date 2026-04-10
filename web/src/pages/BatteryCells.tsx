@@ -646,34 +646,34 @@ export default function BatteryCells() {
 
           {/* ═══ Section 11: Summary Stats ═══ */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Health Score</p>
               <p className="text-2xl font-bold text-neon-cyan">{fmtInt(healthScore)}<span className="text-sm">%</span></p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cell V Spread</p>
               <p className={clsx('text-2xl font-bold', statusColors[voltageStatus].text)}>{fmtNumber(cellSpread, 3)}<span className="text-sm">V</span></p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Temp Spread</p>
               <p className={clsx('text-2xl font-bold', statusColors[tempStatus].text)}>
                 {fmtNumber(convertTemp(moduleTempDelta) - convertTemp(0), 1)}<span className="text-sm">{tempUnit}</span>
               </p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Charge Cycles</p>
               <p className="text-2xl font-bold text-neon-purple">{cycles}</p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Capacity</p>
               <p className="text-2xl font-bold text-neon-green">{fmtNumber(currentCapacityKwh, 1)}<span className="text-sm">kWh</span></p>
-            </div>
-            <div className="glass-card p-4 flex flex-col items-center gap-1">
+            </GlassPanel>
+            <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Deg. Rate</p>
               <p className={clsx('text-2xl font-bold', degradationRatePerYear > 3 ? 'text-neon-red' : degradationRatePerYear > 1.5 ? 'text-neon-amber' : 'text-neon-green')}>
                 {fmtNumber(degradationRatePerYear, 1)}<span className="text-sm">%/yr</span>
               </p>
-            </div>
+            </GlassPanel>
           </div>
         </>
       )}

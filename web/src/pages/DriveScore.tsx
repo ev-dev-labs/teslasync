@@ -644,9 +644,9 @@ export default function DriveScore() {
                 const dur = formatDuration(sd.drive.duration_min)
 
                 return (
-                  <div
+                  <GlassPanel
                     key={sd.drive.id}
-                    className="glass-card rounded-lg overflow-hidden transition-all duration-200 hover:ring-1 hover:ring-white/[0.08]"
+                    className="rounded-lg overflow-hidden transition-all duration-200 hover:ring-1 hover:ring-white/[0.08]"
                   >
                     <button
                       onClick={() => setExpandedDrive(isExpanded ? null : sd.drive.id)}
@@ -716,7 +716,7 @@ export default function DriveScore() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </GlassPanel>
                 )
               })}
             </div>
@@ -846,9 +846,9 @@ export default function DriveScore() {
               {tips.map((tip, i) => {
                 const Icon = tip.icon
                 return (
-                  <div
+                  <GlassPanel
                     key={i}
-                    className="glass-card p-4 rounded-xl flex items-start gap-3 transition-all duration-200 hover:ring-1 hover:ring-white/[0.06]"
+                    className="p-4 flex items-start gap-3 transition-all duration-200 hover:ring-1 hover:ring-white/[0.06]"
                   >
                     <div
                       className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
@@ -864,7 +864,7 @@ export default function DriveScore() {
                         {tip.description}
                       </p>
                     </div>
-                  </div>
+                  </GlassPanel>
                 )
               })}
             </div>
@@ -874,7 +874,7 @@ export default function DriveScore() {
           {periodStats && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {/* This week vs last week */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   This Week
                 </span>
@@ -894,10 +894,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   vs {periodStats.lastWeekAvg ?? '--'} last week
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* This month vs last month */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   This Month
                 </span>
@@ -917,10 +917,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   vs {periodStats.lastMonthAvg ?? '--'} last month
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* Best week ever */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Best Week
                 </span>
@@ -930,10 +930,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {periodStats.bestWeek.label}
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* Best month ever */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Best Month
                 </span>
@@ -943,10 +943,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {periodStats.bestMonth.label}
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* Total drives */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Total Drives
                 </span>
@@ -956,10 +956,10 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   drives scored
                 </span>
-              </div>
+              </GlassPanel>
 
               {/* A or better */}
-              <div className="glass-card p-4 sm:p-5 flex flex-col gap-2">
+              <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                 <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Rated A+/A
                 </span>
@@ -969,7 +969,7 @@ export default function DriveScore() {
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {periodStats.totalDrives > 0 ? `${Math.round((periodStats.aOrBetter / periodStats.totalDrives) * 100)}% of drives` : 'no drives'}
                 </span>
-              </div>
+              </GlassPanel>
             </div>
           )}
         </div>

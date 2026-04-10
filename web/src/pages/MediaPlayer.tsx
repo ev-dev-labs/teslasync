@@ -38,7 +38,7 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
   const statusLabel = vol === 0 ? 'Muted' : isHigh ? 'Loud' : isLow ? 'Quiet' : 'Normal'
 
   return (
-    <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+    <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Volume</p>
       <div className="relative w-28 h-28 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -63,11 +63,11 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bg, color)}>
         {vol > 0 ? `${vol} / ${max}` : 'N/A'}
       </span>
-    </div>
+    </GlassPanel>
   )
 }
 
-/* ── Playback status badge ────────────────────────────────────────────────── */
+/* ── Playback status badge────────────────────────────────────────────────── */
 
 function PlaybackStatusBadge({ status }: { status?: string }) {
   // Normalize protobuf enum values (MediaStatusPlaying → playing)
@@ -333,32 +333,32 @@ export default function MediaPlayer() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <VolumeGauge value={latest?.audio_volume ?? null} max={volumeMax} />
 
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Unique Tracks</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <Music className="absolute h-10 w-10 text-neon-cyan/10" />
               <span className="text-3xl font-bold text-neon-cyan">{listeningStats.uniqueTracks}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/20 text-neon-cyan">tracks seen</span>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Top Source</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <SourceIcon source={listeningStats.topSource} className="absolute h-10 w-10 text-neon-purple/10" />
               <span className="text-lg font-bold text-neon-purple text-center leading-tight">{listeningStats.topSource}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-purple/20 text-neon-purple">most used</span>
-          </div>
+          </GlassPanel>
 
-          <div className="glass-card p-4 sm:p-5 flex flex-col items-center gap-3">
+          <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3">
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Volume</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <Volume2 className="absolute h-10 w-10 text-neon-green/10" />
               <span className="text-3xl font-bold text-neon-green">{fmtNumber(listeningStats.avgVolume)}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">average level</span>
-          </div>
+          </GlassPanel>
         </div>
       )}
 
@@ -488,7 +488,7 @@ export default function MediaPlayer() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="glass-card p-4 flex items-center gap-4">
+            <GlassPanel className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neon-cyan/10 flex items-center justify-center">
                 <Music className="h-5 w-5 text-neon-cyan" />
               </div>
@@ -496,9 +496,9 @@ export default function MediaPlayer() {
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Unique Tracks</p>
                 <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{listeningStats.uniqueTracks}</p>
               </div>
-            </div>
+            </GlassPanel>
 
-            <div className="glass-card p-4 flex items-center gap-4">
+            <GlassPanel className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neon-purple/10 flex items-center justify-center">
                 <Headphones className="h-5 w-5 text-neon-purple" />
               </div>
@@ -506,9 +506,9 @@ export default function MediaPlayer() {
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Most Played Source</p>
                 <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{listeningStats.topSource}</p>
               </div>
-            </div>
+            </GlassPanel>
 
-            <div className="glass-card p-4 flex items-center gap-4">
+            <GlassPanel className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-neon-green/10 flex items-center justify-center">
                 <Volume2 className="h-5 w-5 text-neon-green" />
               </div>
@@ -516,7 +516,7 @@ export default function MediaPlayer() {
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Average Volume</p>
                 <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{fmtNumber(listeningStats.avgVolume)}<span className="text-sm font-normal" style={{ color: 'var(--text-muted)' }}> / {volumeMax}</span></p>
               </div>
-            </div>
+            </GlassPanel>
           </div>
         )}
       </GlassPanel>

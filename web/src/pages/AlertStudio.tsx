@@ -332,9 +332,9 @@ export default function AlertStudio() {
                 const Icon = tpl.icon
                 const sev = severityConfig[tpl.severity]
                 return (
-                  <button
+                  <GlassPanel
                     key={tpl.name}
-                    className="glass-card p-3 text-left hover:border-neon-cyan/30 transition-all group"
+                    className="p-3 text-left hover:border-neon-cyan/30 transition-all group cursor-pointer"
                     onClick={() => handleCloneTemplate(tpl)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
@@ -351,7 +351,7 @@ export default function AlertStudio() {
                         <span className="text-[10px] text-[var(--text-muted)]">Use</span>
                       </div>
                     </div>
-                  </button>
+                  </GlassPanel>
                 )
               })}
               {filteredTemplates.length === 0 && (
