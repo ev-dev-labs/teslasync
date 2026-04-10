@@ -6,7 +6,7 @@ import {
 } from '../api'
 import { formatDateTime } from '../lib/dateFormat'
 import { CHART_COLORS } from '../lib/colors'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard, Button } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard, Button, DataTable, type Column } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
@@ -235,32 +235,17 @@ function NotificationHistory() {
         ) : logs && logs.length > 0 ? (
           <>
             <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Time</th>
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Title</th>
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Channel</th>
-                    <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map(log => (
-                    <tr key={log.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                      <td className="py-2 px-3 text-[var(--text-muted)] whitespace-nowrap">
-                        {formatDateTime(log.created_at)}
-                      </td>
-                      <td className="py-2 px-3 text-[var(--text-primary)] max-w-[200px] truncate">{log.title}</td>
-                      <td className="py-2 px-3 text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</td>
-                      <td className="py-2 px-3">
-                        <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">
-                          {log.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                columns={[
+                  { key: 'time', header: 'Time', render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span> },
+                  { key: 'title', header: 'Title', render: (log) => <span className="text-[var(--text-primary)] max-w-[200px] truncate block">{log.title}</span> },
+                  { key: 'channel', header: 'Channel', render: (log) => <span className="text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</span> },
+                  { key: 'status', header: 'Status', render: (log) => <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">{log.status}</Badge> },
+                ] satisfies Column<(typeof logs)[number]>[]}
+                data={logs}
+                keyExtractor={(log) => log.id}
+                compact
+              />
             </div>
             <Pagination
               page={logPage}

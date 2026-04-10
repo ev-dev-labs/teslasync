@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getChargingSessions, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError, ChartContainer, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError, ChartContainer, Select, DataTable, type Column } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
 import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight } from 'lucide-react'
 import {
@@ -328,50 +328,19 @@ export default function Energy() {
                 <h3 className="section-title mb-4 flex items-center gap-2">
                   <Zap className="h-4 w-4 text-neon-amber" /> Recent Charging Sessions
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="pb-3 pr-4">Date</th>
-                        <th className="pb-3 pr-4">Energy</th>
-                        <th className="pb-3 pr-4">Battery</th>
-                        <th className="pb-3 pr-4">Power</th>
-                        <th className="pb-3 pr-4">Type</th>
-                        <th className="pb-3 pr-4">Cost</th>
-                        <th className="pb-3">$/kWh</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.03]">
-                      {sessions.slice(0, 15).map(s => (
-                        <tr key={s.id} className="text-gray-300 hover:bg-white/[0.02] transition-colors cursor-pointer">
-                          <td className="py-3 pr-4">
-                            <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">
-                              {formatDateShort(s.start_date)}
-                            </Link>
-                          </td>
-                          <td className="py-3 pr-4 text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0, 1)} kWh</td>
-                          <td className="py-3 pr-4">
-                            <span className="text-[var(--text-muted)]">{s.start_battery_level}%</span>
-                            <span className="text-gray-700 mx-1">→</span>
-                            <span className="text-neon-green">{s.end_battery_level ?? '—'}%</span>
-                          </td>
-                          <td className="py-3 pr-4">{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</td>
-                          <td className="py-3 pr-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
-                              s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' :
-                              s.fast_charger_type ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' :
-                              'bg-neon-green/10 text-neon-green ring-neon-green/20'
-                            }`}>
-                              {s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4">{typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : '—'}</td>
-                          <td className="py-3 text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added, 3)}` : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  columns={[
+                    { key: 'date', header: 'Date', render: (s) => <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">{formatDateShort(s.start_date)}</Link> },
+                    { key: 'energy', header: 'Energy', render: (s) => <span className="text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0, 1)} kWh</span> },
+                    { key: 'battery', header: 'Battery', render: (s) => <><span className="text-[var(--text-muted)]">{s.start_battery_level}%</span><span className="text-gray-700 mx-1">→</span><span className="text-neon-green">{s.end_battery_level ?? '—'}%</span></> },
+                    { key: 'power', header: 'Power', render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</> },
+                    { key: 'type', header: 'Type', render: (s) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' : s.fast_charger_type ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' : 'bg-neon-green/10 text-neon-green ring-neon-green/20'}`}>{s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}</span> },
+                    { key: 'cost', header: 'Cost', render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : '—'}</> },
+                    { key: 'perKwh', header: '$/kWh', render: (s) => <span className="text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added, 3)}` : '—'}</span> },
+                  ] satisfies Column<(typeof sessions)[number]>[]}
+                  data={sessions.slice(0, 15)}
+                  keyExtractor={(s) => s.id}
+                />
               </GlassPanel>
             </FadeIn>
           )}

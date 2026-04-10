@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getChargingSessions, ChargingSession, Vehicle } from '../api'
 import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download, Cable, Activity, Gauge } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter, QueryError, Badge, InlineMetric, Button, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter, QueryError, Badge, InlineMetric, Button, Select, DataTable, type Column } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -483,36 +483,21 @@ export default function Charging() {
             </div>
             {/* Stats Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-[var(--text-muted)] border-b border-white/5">
-                    <th className="text-left py-2 px-2 font-medium">Type</th>
-                    <th className="text-right py-2 px-2 font-medium">Sessions</th>
-                    <th className="text-right py-2 px-2 font-medium">Energy</th>
-                    <th className="text-right py-2 px-2 font-medium">Cost</th>
-                    <th className="text-right py-2 px-2 font-medium">$/kWh</th>
-                    <th className="text-right py-2 px-2 font-medium">Avg Energy</th>
-                    <th className="text-right py-2 px-2 font-medium">Avg Time</th>
-                    <th className="text-right py-2 px-2 font-medium">Free</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[{ label: 'AC Charging', color: '#3b82f6', ...acDcBreakdown.ac }, { label: 'DC Charging', color: '#f59e0b', ...acDcBreakdown.dc }]
-                    .filter(r => r.count > 0)
-                    .map(r => (
-                    <tr key={r.label} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-                      <td className="py-2 px-2 font-medium" style={{ color: r.color }}>{r.label}</td>
-                      <td className="py-2 px-2 text-right text-[var(--text-primary)]">{r.count}</td>
-                      <td className="py-2 px-2 text-right text-[var(--text-primary)]">{r.energy >= 1000 ? fmtWithUnit(r.energy / 1000, 'MWh', 2) : fmtWithUnit(r.energy, 'kWh', 1)}</td>
-                      <td className="py-2 px-2 text-right text-neon-amber">${fmtNumber(r.cost, 2)}</td>
-                      <td className="py-2 px-2 text-right text-gray-300">${r.energy > 0 ? fmtNumber(r.cost / r.energy, 3) : '—'}</td>
-                      <td className="py-2 px-2 text-right text-gray-300">{fmtWithUnit(r.energy / r.count, 'kWh', 1)}</td>
-                      <td className="py-2 px-2 text-right text-gray-300">{formatDuration(r.totalDuration / r.count)}</td>
-                      <td className="py-2 px-2 text-right text-neon-green">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh', 1)})` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                columns={[
+                  { key: 'type', header: 'Type', render: (r) => <span className="font-medium" style={{ color: r.color }}>{r.label}</span> },
+                  { key: 'sessions', header: 'Sessions', render: (r) => <span className="text-[var(--text-primary)]">{r.count}</span>, className: 'text-right' },
+                  { key: 'energy', header: 'Energy', render: (r) => <span className="text-[var(--text-primary)]">{r.energy >= 1000 ? fmtWithUnit(r.energy / 1000, 'MWh', 2) : fmtWithUnit(r.energy, 'kWh', 1)}</span>, className: 'text-right' },
+                  { key: 'cost', header: 'Cost', render: (r) => <span className="text-neon-amber">${fmtNumber(r.cost, 2)}</span>, className: 'text-right' },
+                  { key: 'perKwh', header: '$/kWh', render: (r) => <span className="text-gray-300">${r.energy > 0 ? fmtNumber(r.cost / r.energy, 3) : '—'}</span>, className: 'text-right' },
+                  { key: 'avgEnergy', header: 'Avg Energy', render: (r) => <span className="text-gray-300">{fmtWithUnit(r.energy / r.count, 'kWh', 1)}</span>, className: 'text-right' },
+                  { key: 'avgTime', header: 'Avg Time', render: (r) => <span className="text-gray-300">{formatDuration(r.totalDuration / r.count)}</span>, className: 'text-right' },
+                  { key: 'free', header: 'Free', render: (r) => <span className="text-neon-green">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh', 1)})` : '—'}</span>, className: 'text-right' },
+                ] as Column<{ label: string; color: string; count: number; energy: number; cost: number; totalDuration: number; freeCount: number; freeEnergy: number }>[]}
+                data={[{ label: 'AC Charging', color: '#3b82f6', ...acDcBreakdown.ac }, { label: 'DC Charging', color: '#f59e0b', ...acDcBreakdown.dc }].filter(r => r.count > 0)}
+                keyExtractor={(r) => r.label}
+                compact
+              />
             </div>
             {/* Free charging total */}
             {acDcBreakdown.total.freeCount > 0 && (

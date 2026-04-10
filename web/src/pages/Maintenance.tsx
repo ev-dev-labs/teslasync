@@ -2,11 +2,11 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getDrives, getMileageStats, getDailyMileage } from '../api'
 import type { Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError, Badge, AlertBanner, Button, Select, Input } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError, Badge, AlertBanner, Button, Select, Input, DataTable, type Column } from '../components/ui'
 import {
   Wrench, RefreshCw, Wind, Droplets, CloudRain, Crosshair, Snowflake,
   Thermometer, Gauge, CheckCircle, AlertTriangle, Clock, Plus,
-  ChevronDown, ChevronUp, Calendar, Car, TrendingUp, DollarSign,
+  Calendar, Car, TrendingUp, DollarSign,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
@@ -288,9 +288,9 @@ export default function Maintenance() {
   }, [itemStatuses, avgDailyKm])
 
   /* ── Handlers ── */
-  const handleSort = (col: typeof sortCol) => {
+  const handleSort = (col: string) => {
     if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortCol(col); setSortDir('desc') }
+    else { setSortCol(col as typeof sortCol); setSortDir('desc') }
   }
 
   const handleAddRecord = useCallback(() => {
@@ -467,75 +467,24 @@ export default function Maintenance() {
           <Calendar className="h-4 w-4 text-neon-cyan" />
           Maintenance Schedule
         </h3>
-        <table className="w-full text-sm" style={{ color: 'var(--text-primary)' }}>
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              {([
-                ['name', 'Item'],
-                ['category', 'Category'],
-                ['interval', 'Interval'],
-                ['status', 'Status'],
-              ] as const).map(([col, label]) => (
-                <th
-                  key={col}
-                  className="pb-3 pr-4 cursor-pointer select-none hover:text-neon-cyan transition-colors"
-                  onClick={() => handleSort(col)}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    {label}
-                    {sortCol === col && (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
-                  </span>
-                </th>
-              ))}
-              <th className="pb-3 pr-4">Last Service</th>
-              <th className="pb-3">Next Due</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedItems.map(({ item, lastRecord, progress, status }) => {
+        <DataTable
+          columns={[
+            { key: 'name', header: 'Item', sortable: true, render: ({ item, status }) => {
               const cfg = statusConfig[status]
-              return (
-                <tr key={item.id} className="border-t border-white/5 hover:bg-white/[.02] transition-colors">
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2">
-                      <item.icon className={clsx('h-4 w-4 shrink-0', cfg.color)} />
-                      <span className="font-medium">{item.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4">
-                    <CategoryBadge category={item.category} />
-                  </td>
-                  <td className="py-3 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {item.intervalKm !== null && (
-                      <span>{convertDistance(item.intervalKm).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span>
-                    )}
-                    {item.intervalKm !== null && item.intervalMonths !== null && ' / '}
-                    {item.intervalMonths !== null && (
-                      <span>{item.intervalMonths} mo</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <Badge color={status === 'overdue' ? 'red' : status === 'soon' ? 'amber' : 'green'}>{cfg.label}</Badge>
-                  </td>
-                  <td className="py-3 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {lastRecord ? formatDate(lastRecord.date) : '—'}
-                  </td>
-                  <td className="py-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {status === 'overdue' ? (
-                      <span className="text-neon-red font-semibold">Now</span>
-                    ) : progress.kmRemaining !== null && progress.kmRemaining > 0 ? (
-                      <span>{convertDistance(progress.kmRemaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span>
-                    ) : progress.monthsRemaining !== null && progress.monthsRemaining > 0 ? (
-                      <span>{progress.monthsRemaining} months</span>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              return <div className="flex items-center gap-2"><item.icon className={clsx('h-4 w-4 shrink-0', cfg.color)} /><span className="font-medium">{item.name}</span></div>
+            }},
+            { key: 'category', header: 'Category', sortable: true, render: ({ item }) => <CategoryBadge category={item.category} /> },
+            { key: 'interval', header: 'Interval', sortable: true, render: ({ item }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item.intervalKm !== null && <span>{convertDistance(item.intervalKm).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span>}{item.intervalKm !== null && item.intervalMonths !== null && ' / '}{item.intervalMonths !== null && <span>{item.intervalMonths} mo</span>}</span> },
+            { key: 'status', header: 'Status', sortable: true, render: ({ status }) => <Badge color={status === 'overdue' ? 'red' : status === 'soon' ? 'amber' : 'green'}>{statusConfig[status].label}</Badge> },
+            { key: 'lastService', header: 'Last Service', render: ({ lastRecord }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{lastRecord ? formatDate(lastRecord.date) : '—'}</span> },
+            { key: 'nextDue', header: 'Next Due', render: ({ status, progress }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{status === 'overdue' ? <span className="text-neon-red font-semibold">Now</span> : progress.kmRemaining !== null && progress.kmRemaining > 0 ? <span>{convertDistance(progress.kmRemaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span> : progress.monthsRemaining !== null && progress.monthsRemaining > 0 ? <span>{progress.monthsRemaining} months</span> : '—'}</span> },
+          ] as Column<(typeof sortedItems)[number]>[]}
+          data={sortedItems}
+          keyExtractor={({ item }) => item.id}
+          sortKey={sortCol}
+          sortDir={sortDir}
+          onSort={handleSort}
+        />
       </GlassPanel>
 
       {/* ── Log Service Form ── */}

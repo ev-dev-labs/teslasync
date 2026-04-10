@@ -12,8 +12,8 @@ import {
   verifyBackup,
   previewRestore,
 } from '../api'
-import type { BackupConfig } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal } from '../components/ui'
+import type { BackupConfig, BackupRun } from '../api'
+import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal, DataTable, type Column } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
   DatabaseBackup,
@@ -493,113 +493,36 @@ export default function BackupRestore() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.06]">
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Status</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Type</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Provider</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">File</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Size</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Records</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Duration</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Created</th>
-                      <th className="text-center px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.map(run => {
+                <DataTable
+                  columns={[
+                    { key: 'status', header: 'Status', render: (run) => {
                       const sc = STATUS_CONFIG[run.status] ?? STATUS_CONFIG.queued
                       const StatusIcon = sc.icon
-                      return (
-                        <tr key={run.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                          {/* Status */}
-                          <td className="px-4 py-3">
-                            <Badge color={({ completed: 'green', failed: 'red', running: 'cyan', queued: 'neutral' } as Record<string, 'green' | 'red' | 'cyan' | 'neutral'>)[run.status] ?? 'neutral'}>
-                              <StatusIcon className={clsx('h-3 w-3', run.status === 'running' && 'animate-spin')} />
-                              {sc.label}
-                            </Badge>
-                          </td>
-                          {/* Type */}
-                          <td className="px-4 py-3">
-                            <Badge color={({ backup: 'cyan', restore: 'purple', quick: 'amber' } as Record<string, 'cyan' | 'purple' | 'amber'>)[run.run_type] ?? 'neutral'}>
-                              {run.run_type}
-                            </Badge>
-                          </td>
-                          {/* Provider */}
-                          <td className="px-4 py-3">
-                            <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[run.provider] ?? 'neutral'}>
-                              {PROVIDER_MAP[run.provider]?.label ?? run.provider}
-                            </Badge>
-                          </td>
-                          {/* File */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] max-w-[200px] truncate font-mono">
-                            {run.file_name || '—'}
-                          </td>
-                          {/* Size */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] text-right font-mono">
-                            {formatFileSize(run.file_size)}
-                          </td>
-                          {/* Records */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] text-right font-mono">
-                            {run.record_count > 0 ? run.record_count.toLocaleString() : '—'}
-                          </td>
-                          {/* Duration */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-secondary)] text-right font-mono">
-                            {formatDuration(run.duration_ms)}
-                          </td>
-                          {/* Created */}
-                          <td className="px-4 py-3 text-xs text-[var(--text-muted)] whitespace-nowrap">
-                            {formatDateTime(run.created_at)}
-                          </td>
-                          {/* Actions */}
-                          <td className="px-4 py-3">
-                            {run.status === 'completed' ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => downloadBackup(run.id)}
-                                  title="Download backup"
-                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-cyan hover:bg-neon-cyan/10 transition-all"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleVerify(run.id)}
-                                  disabled={verifyResults[run.id] === 'loading'}
-                                  title="Verify backup integrity"
-                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-amber hover:bg-neon-amber/10 transition-all disabled:opacity-50 relative"
-                                >
-                                  {verifyResults[run.id] === 'loading' ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : (
-                                    <Lock className="h-3.5 w-3.5" />
-                                  )}
-                                  {verifyResults[run.id] && verifyResults[run.id] !== 'loading' && (
-                                    <span className={clsx(
-                                      'absolute -top-1 -right-1 text-[9px] leading-none',
-                                      (verifyResults[run.id] as { verified: boolean }).verified ? 'text-neon-green' : 'text-neon-red'
-                                    )}>
-                                      {(verifyResults[run.id] as { verified: boolean }).verified ? '✅' : '❌'}
-                                    </span>
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => handlePreview(run.id)}
-                                  title="Preview / Restore"
-                                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-purple hover:bg-neon-purple/10 transition-all"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[var(--text-muted)] text-xs">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      return <Badge color={({ completed: 'green', failed: 'red', running: 'cyan', queued: 'neutral' } as Record<string, 'green' | 'red' | 'cyan' | 'neutral'>)[run.status] ?? 'neutral'}><StatusIcon className={clsx('h-3 w-3', run.status === 'running' && 'animate-spin')} />{sc.label}</Badge>
+                    }},
+                    { key: 'type', header: 'Type', render: (run) => <Badge color={({ backup: 'cyan', restore: 'purple', quick: 'amber' } as Record<string, 'cyan' | 'purple' | 'amber'>)[run.run_type] ?? 'neutral'}>{run.run_type}</Badge> },
+                    { key: 'provider', header: 'Provider', render: (run) => <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[run.provider] ?? 'neutral'}>{PROVIDER_MAP[run.provider]?.label ?? run.provider}</Badge> },
+                    { key: 'file', header: 'File', render: (run) => <span className="text-xs text-[var(--text-secondary)] max-w-[200px] truncate block font-mono">{run.file_name || '—'}</span> },
+                    { key: 'size', header: 'Size', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{formatFileSize(run.file_size)}</span>, className: 'text-right' },
+                    { key: 'records', header: 'Records', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{run.record_count > 0 ? run.record_count.toLocaleString() : '—'}</span>, className: 'text-right' },
+                    { key: 'duration', header: 'Duration', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{formatDuration(run.duration_ms)}</span>, className: 'text-right' },
+                    { key: 'created', header: 'Created', render: (run) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(run.created_at)}</span> },
+                    { key: 'actions', header: 'Actions', className: 'text-center', render: (run) => run.status === 'completed' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => downloadBackup(run.id)} title="Download backup" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-cyan hover:bg-neon-cyan/10 transition-all"><Download className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => handleVerify(run.id)} disabled={verifyResults[run.id] === 'loading'} title="Verify backup integrity" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-amber hover:bg-neon-amber/10 transition-all disabled:opacity-50 relative">
+                          {verifyResults[run.id] === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
+                          {verifyResults[run.id] && verifyResults[run.id] !== 'loading' && (
+                            <span className={clsx('absolute -top-1 -right-1 text-[9px] leading-none', (verifyResults[run.id] as { verified: boolean }).verified ? 'text-neon-green' : 'text-neon-red')}>{(verifyResults[run.id] as { verified: boolean }).verified ? '✅' : '❌'}</span>
+                          )}
+                        </button>
+                        <button onClick={() => handlePreview(run.id)} title="Preview / Restore" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-neon-purple hover:bg-neon-purple/10 transition-all"><Eye className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ) : <span className="text-[var(--text-muted)] text-xs">—</span> },
+                  ] as Column<BackupRun>[]}
+                  data={runs}
+                  keyExtractor={(run) => run.id}
+                />
 
                 {/* Error messages for failed runs */}
                 {runs.filter(r => r.status === 'failed' && r.error_message).length > 0 && (
@@ -820,22 +743,15 @@ export default function BackupRestore() {
                       Tables ({previewModal.data.tables.length})
                     </p>
                     <div className="rounded-lg bg-white/[0.03] ring-1 ring-white/[0.06] overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-white/[0.06]">
-                            <th className="text-left px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Table</th>
-                            <th className="text-right px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Rows</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {previewModal.data.tables.map(t => (
-                            <tr key={t.name} className="border-b border-white/[0.03]">
-                              <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">{t.name}</td>
-                              <td className="px-3 py-2 text-xs text-[var(--text-secondary)] text-right font-mono">{t.rows.toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <DataTable
+                        columns={[
+                          { key: 'name', header: 'Table', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{t.name}</span> },
+                          { key: 'rows', header: 'Rows', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{t.rows.toLocaleString()}</span>, className: 'text-right' },
+                        ] as Column<{ name: string; rows: number }>[]}
+                        data={previewModal.data.tables}
+                        keyExtractor={(t) => t.name}
+                        compact
+                      />
                     </div>
                   </div>
                 </div>

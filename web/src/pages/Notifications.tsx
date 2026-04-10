@@ -13,7 +13,7 @@ import {
   getNotificationLogs, getNotificationStats,
   NotificationChannel, NotificationLog,
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState, Badge, Button, MetricCard, Toggle, Modal } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState, Badge, Button, MetricCard, Toggle, Modal, DataTable, type Column } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
 
@@ -235,50 +235,24 @@ export default function Notifications() {
             className="overflow-hidden"
           >
             <GlassPanel className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                    {['Time', 'Channel', 'Title', 'Status', 'Error'].map(h => (
-                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log: NotificationLog) => (
-                    <tr key={log.id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }}>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        {formatDateTime(log.created_at)}
-                      </td>
-                      <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const ch = channels.find(c => c.id === log.channel_id)
-                            if (!ch) return `#${log.channel_id}`
-                            const m = getChannelMeta(ch.type)
-                            const CIcon = m.icon
-                            return (
-                              <>
-                                <CIcon className="h-3.5 w-3.5" style={{ color: m.color }} />
-                                <span className="text-sm">{ch.name}</span>
-                              </>
-                            )
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>{log.title}</td>
-                      <td className="px-4 py-3">
-                        <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">
-                          {log.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-neon-red/70 max-w-[200px] truncate">{log.error}</td>
-                    </tr>
-                  ))}
-                  {logs.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-12 text-center" style={{ color: 'var(--text-tertiary)' }}>No delivery logs yet</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <DataTable
+                columns={[
+                  { key: 'time', header: 'Time', render: (log) => <span className="whitespace-nowrap text-xs" style={{ color: 'var(--text-tertiary)' }}>{formatDateTime(log.created_at)}</span> },
+                  { key: 'channel', header: 'Channel', render: (log) => {
+                    const ch = channels.find(c => c.id === log.channel_id)
+                    if (!ch) return <span style={{ color: 'var(--text-primary)' }}>{`#${log.channel_id}`}</span>
+                    const m = getChannelMeta(ch.type)
+                    const CIcon = m.icon
+                    return <div className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}><CIcon className="h-3.5 w-3.5" style={{ color: m.color }} /><span className="text-sm">{ch.name}</span></div>
+                  }},
+                  { key: 'title', header: 'Title', render: (log) => <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{log.title}</span> },
+                  { key: 'status', header: 'Status', render: (log) => <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">{log.status}</Badge> },
+                  { key: 'error', header: 'Error', render: (log) => <span className="text-xs text-neon-red/70 max-w-[200px] truncate block">{log.error}</span> },
+                ] satisfies Column<NotificationLog>[]}
+                data={logs}
+                keyExtractor={(log) => log.id}
+                emptyMessage="No delivery logs yet"
+              />
             </GlassPanel>
           </motion.div>
         )}

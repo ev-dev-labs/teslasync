@@ -18,6 +18,8 @@ import {
   ChartContainer,
   Select,
   Input,
+  DataTable,
+  type Column,
 } from '../components/ui'
 import {
   DollarSign,
@@ -30,8 +32,6 @@ import {
   Calculator,
   TreePine,
   PiggyBank,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -424,15 +424,10 @@ export default function CostAnalysis() {
     setEndDate(new Date().toISOString().split('T')[0])
   }
 
-  function toggleSort(col: typeof sortCol) {
+  function toggleSort(col: string) {
     if (sortCol === col) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    else { setSortCol(col); setSortDir('desc') }
+    else { setSortCol(col as typeof sortCol); setSortDir('desc') }
   }
-
-  const SortIcon = ({ col }: { col: typeof sortCol }) =>
-    sortCol === col
-      ? sortDir === 'asc' ? <ChevronUp className="inline h-3 w-3" /> : <ChevronDown className="inline h-3 w-3" />
-      : null
 
   /* ── render ─────────────────────────────────────── */
 
@@ -858,73 +853,27 @@ export default function CostAnalysis() {
                   No monthly data to display.
                 </p>
               ) : (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--glass-border)' }}>
-                      {([
-                        ['month', 'Month'],
-                        ['energy', 'Energy (kWh)'],
-                        ['distance', `Distance (${distanceUnit})`],
-                        ['cost', 'Cost ($)'],
-                        ['perUnit', `$/${distanceUnit}`],
-                        ['gasCost', 'Gas Would Be'],
-                        ['saved', 'Saved'],
-                      ] as [typeof sortCol, string][]).map(([col, label]) => (
-                        <th
-                          key={col}
-                          className="py-2 px-2 text-left cursor-pointer hover:text-neon-cyan select-none"
-                          onClick={() => toggleSort(col)}
-                        >
-                          {label} <SortIcon col={col} />
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableData.map(row => {
+                <DataTable
+                  columns={[
+                    { key: 'month', header: 'Month', sortable: true, render: (row) => {
                       const isBest = bestMonth?.month === row.month && row.perUnit > 0
                       const isWorst = worstMonth?.month === row.month && row.perUnit > 0
-                      return (
-                        <tr
-                          key={row.month}
-                          className={clsx(
-                            'transition-colors',
-                            isBest && 'bg-neon-green/5',
-                            isWorst && 'bg-neon-red/5',
-                          )}
-                          style={{ borderBottom: '1px solid var(--glass-border)' }}
-                        >
-                          <td className="py-2 px-2 font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {row.label}
-                            {isBest && <span className="ml-1 text-neon-green text-[9px]">★ Best</span>}
-                            {isWorst && <span className="ml-1 text-neon-red text-[9px]">▼ Worst</span>}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            {fmtNumber(row.energy)}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            {fmtNumber(row.distance)}
-                          </td>
-                          <td className="py-2 px-2 font-medium" style={{ color: '#00f0ff' }}>
-                            ${fmtNumber(row.cost, 2)}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>
-                            ${fmtNumber(row.perUnit, 3)}
-                          </td>
-                          <td className="py-2 px-2" style={{ color: '#f59e0b' }}>
-                            ${fmtNumber(row.gasCost, 2)}
-                          </td>
-                          <td
-                            className="py-2 px-2 font-medium"
-                            style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}
-                          >
-                            {row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved, 2)}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      return <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{row.label}{isBest && <span className="ml-1 text-neon-green text-[9px]">★ Best</span>}{isWorst && <span className="ml-1 text-neon-red text-[9px]">▼ Worst</span>}</span>
+                    }},
+                    { key: 'energy', header: 'Energy (kWh)', sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>{fmtNumber(row.energy)}</span> },
+                    { key: 'distance', header: `Distance (${distanceUnit})`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>{fmtNumber(row.distance)}</span> },
+                    { key: 'cost', header: 'Cost ($)', sortable: true, render: (row) => <span className="font-medium" style={{ color: '#00f0ff' }}>${fmtNumber(row.cost, 2)}</span> },
+                    { key: 'perUnit', header: `$/${distanceUnit}`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>${fmtNumber(row.perUnit, 3)}</span> },
+                    { key: 'gasCost', header: 'Gas Would Be', sortable: true, render: (row) => <span style={{ color: '#f59e0b' }}>${fmtNumber(row.gasCost, 2)}</span> },
+                    { key: 'saved', header: 'Saved', sortable: true, render: (row) => <span className="font-medium" style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}>{row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved, 2)}</span> },
+                  ] as Column<(typeof tableData)[number]>[]}
+                  data={tableData}
+                  keyExtractor={(row) => row.month}
+                  sortKey={sortCol}
+                  sortDir={sortDir}
+                  onSort={toggleSort}
+                  compact
+                />
               )}
             </GlassPanel>
           </FadeIn>
