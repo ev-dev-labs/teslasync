@@ -3,6 +3,12 @@ import { type ReactNode } from 'react'
 import clsx from 'clsx'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar } from 'lucide-react'
 
+// ── Re-export new component library ──
+export { Badge, Button, IconBox, Toggle, Input, Select, Tooltip } from './ui/Atoms'
+export type { BadgeVariant } from './ui/Atoms'
+export { DataTable, Modal, Drawer, ChartContainer, MetricCard, AlertBanner, Accordion, FormSection, InlineMetric, useSortToggle } from './ui/Composites'
+export type { Column } from './ui/Composites'
+
 // === Animated containers ===
 
 /** Fades in children with a slide-up animation. Optional delay for stagger orchestration. */

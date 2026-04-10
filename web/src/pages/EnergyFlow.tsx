@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getChargingTelemetry, getChargingTelemetryLatest } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, Select } from '../components/ui'
 import { Zap, Battery, Activity, Gauge, AlertTriangle, CheckCircle, Thermometer, Shield, BatteryCharging } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts'
 import clsx from 'clsx'
@@ -284,14 +284,11 @@ export default function EnergyFlow() {
           icon={<Zap className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -588,11 +585,8 @@ export default function EnergyFlow() {
 
       {/* ── Pack Voltage & Current Trends ── */}
       {!noData && packData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Gauge className="inline h-4 w-4 mr-1.5 text-neon-cyan" />Pack Voltage &amp; Current
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Pack Voltage & Current" height={280} className="mb-6 sm:mb-8">
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={packData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -604,16 +598,13 @@ export default function EnergyFlow() {
               <Line yAxisId="a" type="monotone" dataKey="current" name="Current (A)" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── 9. Charging Rate Trends ── */}
       {!noData && chargingRateData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            <Activity className="inline h-4 w-4 mr-1.5 text-emerald-400" />Charging Rate Trends
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
+        <ChartContainer title="Charging Rate Trends" height={280} className="mb-6 sm:mb-8">
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chargingRateData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -625,7 +616,7 @@ export default function EnergyFlow() {
               <Line yAxisId="hours" type="monotone" dataKey="ttf" name="Time to Full (h)" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* ── 10. Summary Stats ── */}

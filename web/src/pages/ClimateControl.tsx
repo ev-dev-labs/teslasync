@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getClimateData, getClimateLatest } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer } from '../components/ui'
 import { Thermometer, Wind, Snowflake, Sun, Fan, Flame, Shield, Zap, Activity, Car } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -436,12 +436,11 @@ export default function ClimateControl() {
       {/* ================================================================ */}
       {/* Section 4 — Temperature History Chart                           */}
       {/* ================================================================ */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Temperature History</h3>
+      <ChartContainer title="Temperature History" className="mb-6 sm:mb-8" height={300}>
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : tempChartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No temperature history data available</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No temperature history data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={tempChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -455,17 +454,16 @@ export default function ClimateControl() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ================================================================ */}
       {/* Section 5 — HVAC Power & Fan Speed History                      */}
       {/* ================================================================ */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>HVAC Power &amp; Fan Speed</h3>
+      <ChartContainer title="HVAC Power &amp; Fan Speed" className="mb-6 sm:mb-8" height={300}>
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : hvacChartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No HVAC history data available</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No HVAC history data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={hvacChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -478,7 +476,7 @@ export default function ClimateControl() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ================================================================ */}
       {/* Section 6 — Climate Efficiency Panel                            */}

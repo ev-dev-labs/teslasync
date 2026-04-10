@@ -15,7 +15,7 @@ import {
   HardDrive,
   AlertTriangle,
 } from 'lucide-react'
-import { FadeIn, GlassPanel, PageHeader, Skeleton } from '../components/ui'
+import { FadeIn, GlassPanel, PageHeader, Skeleton, Button, DataTable, Badge } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
 import {
@@ -155,14 +155,7 @@ export default function Admin() {
             { icon: <BarChart3 className="w-4 h-4" />, label: 'View API Usage', action: () => { queryClient.invalidateQueries({ queryKey: ['admin-api-usage'] }); toast.success('API usage refreshed') } },
             { icon: <Key className="w-4 h-4" />, label: 'Manage API Keys', action: () => { window.location.href = '/admin#api-keys' } },
           ].map(({ icon, label, action }) => (
-            <button
-              key={label}
-              onClick={action}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              {icon}
-              {label}
-            </button>
+            <Button key={label} variant="secondary" size="sm" icon={icon} onClick={action}>{label}</Button>
           ))}
         </div>
       </GlassPanel>
@@ -251,32 +244,17 @@ export default function Admin() {
         ) : auditError ? (
           <p className="text-sm text-red-400 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Failed to load audit logs: {(auditError as Error).message}</p>
         ) : auditLogs?.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Time</th>
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Action</th>
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Resource</th>
-                  <th className="text-left py-2 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log) => (
-                  <tr key={log.id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-2 pr-4 text-xs font-mono whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                      {formatDateTime(log.created_at)}
-                    </td>
-                    <td className="py-2 pr-4 text-white">{log.action}</td>
-                    <td className="py-2 pr-4 font-mono text-neon-cyan">{log.resource}</td>
-                    <td className="py-2 text-xs truncate max-w-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {log.details}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              { key: 'time', header: 'Time', render: (log) => <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{formatDateTime(log.created_at)}</span> },
+              { key: 'action', header: 'Action', render: (log) => <span className="text-white">{log.action}</span> },
+              { key: 'resource', header: 'Resource', render: (log) => <span className="font-mono text-neon-cyan">{log.resource}</span> },
+              { key: 'details', header: 'Details', render: (log) => <span className="text-xs truncate max-w-xs" style={{ color: 'var(--text-secondary)' }}>{log.details}</span> },
+            ]}
+            data={auditLogs}
+            keyExtractor={(log) => String(log.id)}
+            compact
+          />
         ) : (
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No audit entries found</p>
         )}
@@ -297,36 +275,18 @@ export default function Admin() {
         ) : keysError ? (
           <p className="text-sm text-red-400 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Failed to load API keys: {(keysError as Error).message}</p>
         ) : apiKeys?.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Name</th>
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Prefix</th>
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Permissions</th>
-                  <th className="text-left py-2 pr-4 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Last Used</th>
-                  <th className="text-left py-2 text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Expires</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apiKeys.map((key) => (
-                  <tr key={key.id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-2 pr-4 text-white">{key.name}</td>
-                    <td className="py-2 pr-4 font-mono text-neon-cyan">{key.key_prefix}…</td>
-                    <td className="py-2 pr-4">
-                      <span className="px-1.5 py-0.5 text-xs rounded bg-white/10 text-gray-300">{key.permissions}</span>
-                    </td>
-                    <td className="py-2 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {key.last_used_at ? formatDate(key.last_used_at) : 'Never'}
-                    </td>
-                    <td className="py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {key.expires_at ? formatDate(key.expires_at) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              { key: 'name', header: 'Name', render: (key) => <span className="text-white">{key.name}</span> },
+              { key: 'prefix', header: 'Prefix', render: (key) => <span className="font-mono text-neon-cyan">{key.key_prefix}…</span> },
+              { key: 'permissions', header: 'Permissions', render: (key) => <Badge color="neutral">{key.permissions}</Badge> },
+              { key: 'last_used', header: 'Last Used', render: (key) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{key.last_used_at ? formatDate(key.last_used_at) : 'Never'}</span> },
+              { key: 'expires', header: 'Expires', render: (key) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{key.expires_at ? formatDate(key.expires_at) : '—'}</span> },
+            ]}
+            data={apiKeys}
+            keyExtractor={(key) => String(key.id)}
+            compact
+          />
         ) : (
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No API keys configured</p>
         )}

@@ -16,7 +16,7 @@ import {
   AlertRule,
   RuleConditionTree,
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button } from '../components/ui'
 import RuleBuilder from '../components/RuleBuilder'
 import { useToast } from '../components/Toast'
 import {
@@ -277,18 +277,12 @@ export default function AlertStudio() {
         icon={<Zap className="h-6 w-6 text-neon-cyan" />}
         actions={
           <div className="flex items-center gap-2">
-            <button
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[var(--text-primary)] bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-              onClick={() => setShowTemplates(!showTemplates)}
-            >
-              <Sparkles className="h-3.5 w-3.5 text-neon-amber" /> Templates
-            </button>
-            <button
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 rounded-lg transition-colors"
-              onClick={handleNewRule}
-            >
-              <Plus className="h-3.5 w-3.5" /> New Rule
-            </button>
+            <Button variant="ghost" size="sm" icon={<Sparkles className="h-3.5 w-3.5 text-neon-amber" />} onClick={() => setShowTemplates(!showTemplates)}>
+              Templates
+            </Button>
+            <Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={handleNewRule}>
+              New Rule
+            </Button>
           </div>
         }
       />
@@ -351,7 +345,7 @@ export default function AlertStudio() {
                     </div>
                     <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">{tpl.msg_template}</p>
                     <div className="flex items-center justify-between mt-1.5">
-                      <span className={clsx('text-[9px] px-1.5 py-0.5 rounded font-medium', sev.bg, sev.color)}>{tpl.severity}</span>
+                      <Badge color={tpl.severity === 'critical' ? 'red' : tpl.severity === 'warning' ? 'amber' : 'cyan'} size="sm">{tpl.severity}</Badge>
                       <div className="flex items-center gap-1">
                         <Copy className="h-3 w-3 text-[var(--text-muted)]" />
                         <span className="text-[10px] text-[var(--text-muted)]">Use</span>
@@ -569,31 +563,32 @@ export default function AlertStudio() {
 
             {/* Action buttons */}
             <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-              <button
-                className={clsx(
-                  'flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors',
-                  'bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30',
-                  saveMut.isPending && 'opacity-60 pointer-events-none',
-                )}
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Save className="h-3.5 w-3.5" />}
+                loading={saveMut.isPending}
                 onClick={() => saveMut.mutate(editor)}
                 disabled={!editor.name.trim()}
               >
-                <Save className="h-3.5 w-3.5" />
                 {saveMut.isPending ? 'Saving…' : isEditing ? 'Update Rule' : 'Create Rule'}
-              </button>
+              </Button>
 
               {isEditing && (
-                <button
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-neon-red/10 text-neon-red hover:bg-neon-red/20 transition-colors"
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={<Trash2 className="h-3.5 w-3.5" />}
                   onClick={() => { if (editor.id) deleteMut.mutate(editor.id) }}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
                   Delete
-                </button>
+                </Button>
               )}
 
-              <button
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20 transition-colors"
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Bell className="h-3.5 w-3.5" />}
                 onClick={async () => {
                   try {
                     await fetch('/api/v1/alerts/test', {
@@ -605,16 +600,12 @@ export default function AlertStudio() {
                 }}
                 disabled={!editor.name.trim()}
               >
-                <Bell className="h-3.5 w-3.5" />
                 Test
-              </button>
+              </Button>
 
-              <button
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/10 transition-colors ml-auto"
-                onClick={handleNewRule}
-              >
+              <Button variant="ghost" size="sm" onClick={handleNewRule} className="ml-auto">
                 Reset
-              </button>
+              </Button>
             </div>
           </GlassPanel>
         </div>

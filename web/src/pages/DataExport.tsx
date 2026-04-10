@@ -9,7 +9,7 @@ import {
   getChargingSessions,
 } from '../api'
 import type { ExportJobSummary, ExportJobSubmitRequest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, Button, MetricCard } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
   Download,
@@ -64,19 +64,7 @@ const DATE_PRESETS = [
   { label: 'All Time', days: 0 },
 ] as const
 
-const TYPE_COLORS: Record<string, string> = {
-  drives: 'bg-neon-cyan/15 text-neon-cyan border-neon-cyan/30',
-  charging: 'bg-neon-green/15 text-neon-green border-neon-green/30',
-  analytics: 'bg-neon-purple/15 text-neon-purple border-neon-purple/30',
-  backup: 'bg-neon-amber/15 text-neon-amber border-neon-amber/30',
-  import_drives: 'bg-neon-cyan/15 text-neon-cyan border-neon-cyan/30',
-  import_charging: 'bg-neon-green/15 text-neon-green border-neon-green/30',
-}
 
-const FORMAT_COLORS: Record<string, string> = {
-  csv: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  json: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -114,59 +102,43 @@ function relativeTime(dateStr: string): string {
 /*  Sub-components                                                     */
 /* ------------------------------------------------------------------ */
 
+const TYPE_BADGE_COLORS: Record<string, 'cyan' | 'green' | 'purple' | 'amber' | 'neutral'> = {
+  drives: 'cyan',
+  charging: 'green',
+  analytics: 'purple',
+  backup: 'amber',
+  import_drives: 'cyan',
+  import_charging: 'green',
+}
+
 function TypeBadge({ type }: { type: string }) {
-  const colors = TYPE_COLORS[type] || 'bg-white/10 text-white/70 border-white/20'
+  const color = TYPE_BADGE_COLORS[type] || 'neutral'
   const label = type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-  return (
-    <span className={clsx('inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border', colors)}>
-      {label}
-    </span>
-  )
+  return <Badge color={color}>{label}</Badge>
 }
 
 function FormatBadge({ format }: { format: string }) {
-  const colors = FORMAT_COLORS[format] || 'bg-white/10 text-white/70 border-white/20'
   return (
-    <span className={clsx('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border', colors)}>
+    <Badge color={format === 'csv' ? 'blue' : 'amber'}>
       {format === 'csv' && <FileSpreadsheet className="h-3 w-3" />}
       {format === 'json' && <FileJson className="h-3 w-3" />}
       {format.toUpperCase()}
-    </span>
+    </Badge>
   )
 }
 
 function StatusIndicator({ status }: { status: ExportJobSummary['status'] }) {
   switch (status) {
     case 'queued':
-      return (
-        <span className="inline-flex items-center gap-1.5 text-neon-amber text-xs font-medium">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Queued
-        </span>
-      )
+      return <Badge color="amber"><Loader2 className="h-3 w-3 animate-spin" /> Queued</Badge>
     case 'processing':
-      return (
-        <span className="inline-flex items-center gap-1.5 text-neon-cyan text-xs font-medium">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Processing
-        </span>
-      )
+      return <Badge color="cyan"><Loader2 className="h-3 w-3 animate-spin" /> Processing</Badge>
     case 'ready':
-      return (
-        <span className="inline-flex items-center gap-1.5 text-neon-green text-xs font-medium">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          Ready
-        </span>
-      )
+      return <Badge color="green"><CheckCircle2 className="h-3 w-3" /> Ready</Badge>
     case 'failed':
-      return (
-        <span className="inline-flex items-center gap-1.5 text-neon-red text-xs font-medium">
-          <XCircle className="h-3.5 w-3.5" />
-          Failed
-        </span>
-      )
+      return <Badge color="red"><XCircle className="h-3 w-3" /> Failed</Badge>
     default:
-      return <span className="text-xs text-[var(--text-muted)]">{status}</span>
+      return <Badge color="neutral">{status}</Badge>
   }
 }
 
@@ -333,13 +305,9 @@ function JobRow({
       {/* Actions */}
       <div className="sm:w-24 shrink-0 flex justify-end">
         {job.status === 'ready' ? (
-          <button
-            onClick={() => onDownload(job)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 text-xs font-medium hover:bg-neon-cyan/20 transition-colors cursor-pointer"
-          >
-            <Download className="h-3.5 w-3.5" />
+          <Button variant="secondary" size="sm" onClick={() => onDownload(job)} icon={<Download className="h-3.5 w-3.5" />}>
             Download
-          </button>
+          </Button>
         ) : job.status === 'failed' ? (
           <span className="text-[10px] text-neon-red/60 max-w-[120px] truncate hidden sm:inline" title={job.error_message}>
             {job.error_message || 'Export failed'}
@@ -405,24 +373,13 @@ function DataOverviewCard({
   sublabel?: string
 }) {
   return (
-    <div className="glass-card p-4 flex items-center gap-3">
-      <div className="p-2 rounded-lg bg-white/5">
-        <Icon className="h-4 w-4 text-neon-cyan" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-          {label}
-        </p>
-        <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-          {value}
-        </p>
-        {sublabel && (
-          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            {sublabel}
-          </p>
-        )}
-      </div>
-    </div>
+    <MetricCard
+      label={label}
+      value={value}
+      icon={<Icon className="h-4 w-4" />}
+      color="cyan"
+      subtitle={sublabel}
+    />
   )
 }
 
@@ -674,28 +631,16 @@ export default function DataExport() {
         </div>
 
         {/* Export Button */}
-        <button
+        <Button
+          variant="primary"
+          size="lg"
           onClick={handleExport}
-          disabled={exportMutation.isPending}
-          className={clsx(
-            'flex items-center justify-center gap-2.5 w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 cursor-pointer',
-            exportMutation.isPending
-              ? 'bg-neon-cyan/20 text-neon-cyan/50 cursor-not-allowed'
-              : 'bg-neon-cyan text-gray-900 hover:bg-neon-cyan/90 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] active:scale-[0.98]'
-          )}
+          loading={exportMutation.isPending}
+          icon={<Download className="h-4.5 w-4.5" />}
+          className="w-full sm:w-auto"
         >
-          {exportMutation.isPending ? (
-            <>
-              <Loader2 className="h-4.5 w-4.5 animate-spin" />
-              Starting Export…
-            </>
-          ) : (
-            <>
-              <Download className="h-4.5 w-4.5" />
-              Start Export
-            </>
-          )}
-        </button>
+          {exportMutation.isPending ? 'Starting Export…' : 'Start Export'}
+        </Button>
       </GlassPanel>
 
       {/* ================================================================ */}
@@ -750,13 +695,9 @@ export default function DataExport() {
               </span>
             )}
           </div>
-          <button
-            onClick={() => refetchJobs()}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-neon-cyan transition-colors cursor-pointer"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
+          <Button variant="ghost" size="sm" onClick={() => refetchJobs()} icon={<RefreshCw className="h-3.5 w-3.5" />}>
             Refresh
-          </button>
+          </Button>
         </div>
 
         {loadingJobs ? (

@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getMediaData, getMediaLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, Button } from '../components/ui'
 import { Music, Volume2, Play, Pause, Square, Radio, Headphones, BarChart3, Clock } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { fmtNumber } from '../lib/numberFormat'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
@@ -18,7 +19,7 @@ function MediaTooltip({ active, payload, label, unit = '' }: { active?: boolean;
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value?.toFixed(1)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -68,29 +69,17 @@ function VolumeGauge({ value, max = 11 }: { value: number | null; max?: number }
 
 /* ── Playback status badge ────────────────────────────────────────────────── */
 
-function StatusBadge({ status }: { status?: string }) {
+function PlaybackStatusBadge({ status }: { status?: string }) {
   // Normalize protobuf enum values (MediaStatusPlaying → playing)
   const raw = cleanNil(status) ?? ''
   const s = raw.toLowerCase().replace('mediastatus', '')
   if (s === 'playing') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">
-        <Play className="h-3 w-3" /> Playing
-      </span>
-    )
+    return <Badge color="green"><Play className="h-3 w-3" /> Playing</Badge>
   }
   if (s === 'paused') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-amber/20 text-neon-amber">
-        <Pause className="h-3 w-3" /> Paused
-      </span>
-    )
+    return <Badge color="amber"><Pause className="h-3 w-3" /> Paused</Badge>
   }
-  return (
-    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-white/10 text-[var(--text-muted)]">
-      <Square className="h-3 w-3" /> {s || 'Stopped'}
-    </span>
-  )
+  return <Badge color="neutral"><Square className="h-3 w-3" /> {s || 'Stopped'}</Badge>
 }
 
 /* ── Progress bar for elapsed / duration ──────────────────────────────────── */
@@ -260,14 +249,12 @@ export default function MediaPlayer() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {TIME_RANGES.map(tr => (
-              <button key={tr.label} onClick={() => setTimeRange(tr)}
-                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
-                  timeRange.label === tr.label
-                    ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
-                    : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                )}>
+              <Button key={tr.label} onClick={() => setTimeRange(tr)}
+                variant={timeRange.label === tr.label ? 'primary' : 'secondary'}
+                size="sm"
+              >
                 {tr.label}
-              </button>
+              </Button>
             ))}
           </div>
           {vehicles && vehicles.length > 1 && (
@@ -310,7 +297,7 @@ export default function MediaPlayer() {
                     </p>
                   )}
                 </div>
-                <StatusBadge status={cleanNil(latest.playback_status)} />
+                <PlaybackStatusBadge status={cleanNil(latest.playback_status)} />
               </div>
 
               {cleanNil(latest.now_playing_station) && (
@@ -368,7 +355,7 @@ export default function MediaPlayer() {
             <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Volume</p>
             <div className="relative w-24 h-24 flex items-center justify-center">
               <Volume2 className="absolute h-10 w-10 text-neon-green/10" />
-              <span className="text-3xl font-bold text-neon-green">{listeningStats.avgVolume.toFixed(1)}</span>
+              <span className="text-3xl font-bold text-neon-green">{fmtNumber(listeningStats.avgVolume)}</span>
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-green/20 text-neon-green">average level</span>
           </div>
@@ -415,7 +402,7 @@ export default function MediaPlayer() {
                       </span>
                     </td>
                     <td className="py-2 px-3">
-                      <StatusBadge status={cleanNil(row.playback_status)} />
+                      <PlaybackStatusBadge status={cleanNil(row.playback_status)} />
                     </td>
                   </tr>
                 ))}
@@ -527,7 +514,7 @@ export default function MediaPlayer() {
               </div>
               <div>
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Average Volume</p>
-                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{listeningStats.avgVolume.toFixed(1)}<span className="text-sm font-normal" style={{ color: 'var(--text-muted)' }}> / {volumeMax}</span></p>
+                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{fmtNumber(listeningStats.avgVolume)}<span className="text-sm font-normal" style={{ color: 'var(--text-muted)' }}> / {volumeMax}</span></p>
               </div>
             </div>
           </div>

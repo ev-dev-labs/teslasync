@@ -14,6 +14,9 @@ import {
   Skeleton,
   DateRangeFilter,
   EmptyState,
+  MetricCard,
+  ChartContainer,
+  Select,
 } from '../components/ui'
 import {
   DollarSign,
@@ -464,16 +467,11 @@ export default function CostAnalysis() {
       <FadeIn delay={0.05}>
         <div className="flex flex-wrap items-center gap-3">
           {vehicles && vehicles.length > 1 && (
-            <select
-              value={vehicleId ?? ''}
+            <Select
+              value={String(vehicleId ?? '')}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-card px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-            >
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           )}
 
           <div className="flex gap-1">
@@ -519,81 +517,71 @@ export default function CostAnalysis() {
           {/* ── 3. Cost summary cards ────────────────── */}
           <FadeIn delay={0.1}>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {[
+              {([
                 {
                   label: 'Total Charging Cost',
                   value: `$${fmtNumber(totalCost, 2)}`,
                   icon: DollarSign,
-                  color: '#00f0ff',
-                  sub: `${(sessions ?? []).length} sessions`,
+                  color: 'cyan' as const,
+                  subtitle: `${(sessions ?? []).length} sessions`,
                 },
                 {
                   label: `Cost per ${distanceUnit}`,
                   value: `$${fmtNumber(costPerUnit, 3)}`,
                   icon: TrendingDown,
-                  color: '#10b981',
-                  sub: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit} driven`,
+                  color: 'green' as const,
+                  subtitle: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit} driven`,
                 },
                 {
                   label: 'Avg Cost per kWh',
                   value: `$${fmtNumber(costPerKwh, 3)}`,
                   icon: Zap,
-                  color: '#f59e0b',
-                  sub: `${fmtWithUnit(totalEnergy, 'kWh')} total`,
+                  color: 'amber' as const,
+                  subtitle: `${fmtWithUnit(totalEnergy, 'kWh')} total`,
                 },
                 {
                   label: 'Gas Equivalent',
                   value: `$${fmtNumber(gasEquiv, 2)}`,
                   icon: Fuel,
-                  color: '#ef4444',
-                  sub: `at $${fmtNumber(gasPrice, 2)}/gal, ${mpg} mpg`,
+                  color: 'red' as const,
+                  subtitle: `at $${fmtNumber(gasPrice, 2)}/gal, ${mpg} mpg`,
                 },
                 {
                   label: 'Total Savings',
                   value: `$${fmtNumber(totalSavings, 2)}`,
                   icon: PiggyBank,
-                  color: totalSavings >= 0 ? '#10b981' : '#ef4444',
-                  sub: `vs gasoline`,
+                  color: totalSavings >= 0 ? 'green' as const : 'red' as const,
+                  subtitle: `vs gasoline`,
                 },
                 {
                   label: 'Savings %',
                   value: `${fmtPercent(savingsPct, 1)}`,
                   icon: TrendingUp,
-                  color: savingsPct >= 0 ? '#10b981' : '#ef4444',
-                  sub: `cheaper than gas`,
+                  color: savingsPct >= 0 ? 'green' as const : 'red' as const,
+                  subtitle: `cheaper than gas`,
                 },
-              ].map(card => (
-                <GlassPanel key={card.label} className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <card.icon className="h-4 w-4" style={{ color: card.color }} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                      {card.label}
-                    </span>
-                  </div>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                    {card.value}
-                  </p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
-                    {card.sub}
-                  </p>
-                </GlassPanel>
+              ]).map(card => (
+                <MetricCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  icon={<card.icon className="h-4 w-4" />}
+                  color={card.color}
+                  subtitle={card.subtitle}
+                />
               ))}
             </div>
           </FadeIn>
 
           {/* ── 4. Monthly cost trend chart ─────────── */}
           <FadeIn delay={0.15}>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                <BarChart3 className="inline h-4 w-4 mr-2" style={{ color: '#10b981' }} />
-                Monthly Cost Trend
-              </h3>
+            <ChartContainer title="Monthly Cost Trend" height={300}>
               {monthlyData.length === 0 ? (
                 <p className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
                   No monthly data available for this period.
                 </p>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyData}>
                     <defs>
                       <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
@@ -629,22 +617,18 @@ export default function CostAnalysis() {
                   </AreaChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* ── 5. Cost per mile/km trend ───────────── */}
           <FadeIn delay={0.2}>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                <TrendingDown className="inline h-4 w-4 mr-2" style={{ color: '#00f0ff' }} />
-                Cost per {distanceUnit} Over Time
-              </h3>
+            <ChartContainer title={`Cost per ${distanceUnit} Over Time`} height={280}>
               {costPerUnitTrend.length === 0 ? (
                 <p className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
                   Not enough data to show cost per {distanceUnit} trend.
                 </p>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={costPerUnitTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
                     <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -674,24 +658,20 @@ export default function CostAnalysis() {
                   </LineChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* ── 6. Cost by charger type ─────────────── */}
           <FadeIn delay={0.25}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* donut chart */}
-              <GlassPanel className="p-4 sm:p-6">
-                <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                  <Zap className="inline h-4 w-4 mr-2" style={{ color: '#a855f7' }} />
-                  Cost by Charger Type
-                </h3>
+              <ChartContainer title="Cost by Charger Type" height={280}>
                 {chargerBreakdown.length === 0 ? (
                   <p className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>
                     No charging session data available.
                   </p>
                 ) : (
-                  <ResponsiveContainer width="100%" height={280}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={chargerBreakdown}
@@ -714,7 +694,7 @@ export default function CostAnalysis() {
                     </PieChart>
                   </ResponsiveContainer>
                 )}
-              </GlassPanel>
+              </ChartContainer>
 
               {/* detail bars */}
               <GlassPanel className="p-4 sm:p-6">
@@ -953,11 +933,7 @@ export default function CostAnalysis() {
 
           {/* ── 9. Electricity rate analysis ────────── */}
           <FadeIn delay={0.4}>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                <Zap className="inline h-4 w-4 mr-2" style={{ color: '#f59e0b' }} />
-                Electricity Rate Analysis
-              </h3>
+            <ChartContainer title="Electricity Rate Analysis" height="auto">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* hourly rate chart */}
                 <div className="lg:col-span-2">
@@ -1062,7 +1038,7 @@ export default function CostAnalysis() {
                   </div>
                 </div>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* ── 10. Lifetime summary ───────────────── */}

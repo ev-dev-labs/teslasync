@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getMotorData, getMotorLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, MetricCard } from '../components/ui'
 import { Activity, Gauge, Thermometer, Zap, Circle, ArrowUp, ArrowDown, Disc } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -91,23 +91,6 @@ function GForceDot({ latG, lonG }: { latG: number; lonG: number }) {
       <text x="92" y="48" textAnchor="end" fontSize="3" fill="var(--text-muted)">1g</text>
       <text x="70" y="48" textAnchor="end" fontSize="3" fill="var(--text-muted)">0.5g</text>
     </svg>
-  )
-}
-
-/* ---------- Stat Card ---------- */
-function StatCard({ label, value, unit, icon, color }: {
-  label: string; value: string | number; unit?: string; icon: React.ReactNode; color: string
-}) {
-  return (
-    <div className="glass-card p-4 sm:p-5">
-      <div className="flex items-center gap-2 mb-2">
-        <span className={color}>{icon}</span>
-        <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
-      </div>
-      <p className={clsx('text-2xl font-bold', color)}>
-        {value}{unit && <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>{unit}</span>}
-      </p>
-    </div>
   )
 }
 
@@ -480,12 +463,11 @@ export default function DrivingDynamics() {
       </div>
 
       {/* ===== Speed Over Time Chart ===== */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Speed Over Time</h3>
+      <ChartContainer title="Speed Over Time" height={300} className="mb-6 sm:mb-8">
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : speedChartData.length === 0 ? (
           <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No speed data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={speedChartData}>
               <defs>
                 <linearGradient id="speedGradient" x1="0" y1="0" x2="0" y2="1">
@@ -501,15 +483,14 @@ export default function DrivingDynamics() {
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ===== Motor Torque History Chart ===== */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Motor Torque History</h3>
+      <ChartContainer title="Motor Torque History" height={300} className="mb-6 sm:mb-8">
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : torqueChartData.length === 0 ? (
           <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No torque data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={torqueChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -520,15 +501,14 @@ export default function DrivingDynamics() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ===== G-Force History Chart ===== */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>G-Force History</h3>
+      <ChartContainer title="G-Force History" height={300} className="mb-6 sm:mb-8">
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : gForceChartData.length === 0 ? (
           <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No acceleration data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={gForceChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -540,7 +520,7 @@ export default function DrivingDynamics() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* ===== Speed Distribution / Motor Insights ===== */}
       <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
@@ -620,46 +600,41 @@ export default function DrivingDynamics() {
         </div>
       ) : stats ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <StatCard
+          <MetricCard
             label="Total Readings"
             value={stats.totalReadings}
             icon={<Disc className="h-4 w-4" />}
-            color="text-neon-cyan"
+            color="cyan"
           />
-          <StatCard
+          <MetricCard
             label="Avg Torque"
-            value={fmtNumber(stats.avgTorque)}
-            unit="Nm"
+            value={`${fmtNumber(stats.avgTorque)} Nm`}
             icon={<Gauge className="h-4 w-4" />}
-            color="text-neon-green"
+            color="green"
           />
-          <StatCard
+          <MetricCard
             label="Max Lateral G"
-            value={fmtNumber(stats.maxLatG, 3)}
-            unit="g"
+            value={`${fmtNumber(stats.maxLatG, 3)} g`}
             icon={<ArrowUp className="h-4 w-4" />}
-            color="text-neon-amber"
+            color="amber"
           />
-          <StatCard
+          <MetricCard
             label="Max Longitudinal G"
-            value={fmtNumber(stats.maxLonG, 3)}
-            unit="g"
+            value={`${fmtNumber(stats.maxLonG, 3)} g`}
             icon={<ArrowDown className="h-4 w-4" />}
-            color="text-neon-cyan"
+            color="cyan"
           />
-          <StatCard
+          <MetricCard
             label="Avg Pedal Position"
-            value={fmtNumber(stats.avgPedal)}
-            unit="%"
+            value={`${fmtNumber(stats.avgPedal)}%`}
             icon={<Activity className="h-4 w-4" />}
-            color="text-neon-green"
+            color="green"
           />
-          <StatCard
+          <MetricCard
             label="Avg Stator Temp"
-            value={fmtNumber(convertTemp(stats.avgTemp))}
-            unit={tempUnit}
+            value={`${fmtNumber(convertTemp(stats.avgTemp))} ${tempUnit}`}
             icon={<Thermometer className="h-4 w-4" />}
-            color="text-neon-amber"
+            color="amber"
           />
         </div>
       ) : null}

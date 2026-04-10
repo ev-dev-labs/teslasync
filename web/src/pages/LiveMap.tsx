@@ -5,7 +5,7 @@ import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression, divIcon } from 'leaflet'
-import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, StatusBadge, FadeIn, Skeleton, Button } from '../components/ui'
 import { RadialGauge, MetricBar } from '../components/Widgets'
 import { Navigation, Battery, Gauge, Thermometer, MapPin, Play, Pause, SkipForward, Zap, Shield, Lock, Eye } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -13,6 +13,7 @@ import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { formatDateShort } from '../lib/dateFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 function createVehicleIcon(status: string, heading: number = 0) {
   const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
@@ -67,7 +68,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Gauge className="h-3 w-3 text-neon-cyan" />{Math.round(convertSpeed(state.speed))} {speedUnit}</span>
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Navigation className="h-3 w-3 text-neon-cyan" />{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span>
-            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Thermometer className="h-3 w-3 text-neon-amber" />{convertTemp(state.inside_temp).toFixed(0)}°/{convertTemp(state.outside_temp).toFixed(0)}{tempUnit}</span>
+            <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Thermometer className="h-3 w-3 text-neon-amber" />{fmtInt(convertTemp(state.inside_temp))}°/{fmtInt(convertTemp(state.outside_temp))}{tempUnit}</span>
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Battery className="h-3 w-3 text-neon-green" />{state.power} kW</span>
           </div>
           {/* Status icons */}
@@ -237,17 +238,11 @@ export default function LiveMap() {
               </div>
               <div className="flex items-center gap-2">
                 {!replayMode ? (
-                  <button onClick={startReplay} className="glass-button !py-1.5 !px-3 text-xs text-neon-cyan">
-                    <Play className="h-3 w-3" /> Replay Trail
-                  </button>
+                  <Button variant="secondary" size="sm" icon={<Play className="h-3 w-3" />} onClick={startReplay}>Replay Trail</Button>
                 ) : (
                   <>
-                    <button onClick={() => setReplayPlaying(!replayPlaying)} className="glass-button !py-1.5 !px-2.5 text-xs text-neon-cyan">
-                      {replayPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                    </button>
-                    <button onClick={() => { setReplayMode(false); setReplayPlaying(false) }} className="glass-button !py-1.5 !px-2.5 text-xs text-[var(--text-secondary)]">
-                      <SkipForward className="h-3 w-3" />
-                    </button>
+                    <Button variant="secondary" size="sm" icon={replayPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />} onClick={() => setReplayPlaying(!replayPlaying)} />
+                    <Button variant="ghost" size="sm" icon={<SkipForward className="h-3 w-3" />} onClick={() => { setReplayMode(false); setReplayPlaying(false) }} />
                     <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
                       <div className="h-full bg-neon-cyan rounded-full transition-all" style={{ width: `${(replayIdx / Math.max(1, trailPositions.length - 1)) * 100}%` }} />
                     </div>
@@ -259,7 +254,7 @@ export default function LiveMap() {
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] text-[var(--text-muted)]">
                   <span><Gauge className="h-2.5 w-2.5 inline" /> {Math.round(convertSpeed(replayPos.speed ?? 0))} {speedUnit}</span>
                   <span><Battery className="h-2.5 w-2.5 inline" /> {replayPos.battery_level}%</span>
-                  <span><Navigation className="h-2.5 w-2.5 inline" /> {replayPos.elevation?.toFixed(0) ?? '—'}m</span>
+                  <span><Navigation className="h-2.5 w-2.5 inline" /> {replayPos.elevation != null ? fmtInt(replayPos.elevation) : '—'}m</span>
                 </div>
               )}
             </GlassPanel>
@@ -273,7 +268,7 @@ export default function LiveMap() {
                 {recentDrives.slice(0, 3).map(d => (
                   <div key={d.id} className="flex items-center justify-between text-[11px]">
                     <span className="text-[var(--text-secondary)]">{formatDateShort(d.start_date)}</span>
-                    <span className="text-neon-cyan font-medium">{convertDistance(d.distance).toFixed(1)} {distanceUnit}</span>
+                    <span className="text-neon-cyan font-medium">{fmtNumber(convertDistance(d.distance))} {distanceUnit}</span>
                     <span className="text-gray-600">{d.duration_min}m</span>
                   </div>
                 ))}
@@ -321,7 +316,7 @@ export default function LiveMap() {
                         <p>🔋 Battery: {(useLive && live.batteryLevel) || s.battery_level}%</p>
                         <p>⚡ Speed: {Math.round(convertSpeed((useLive && live.speed) || s.speed))} {speedUnit}</p>
                         <p>📍 Range: {Math.round(convertDistance(s.rated_range))} {distanceUnit}</p>
-                        <p>🌡️ Temp: {convertTemp(s.inside_temp).toFixed(0)}{tempUnit} / {convertTemp(s.outside_temp).toFixed(0)}{tempUnit}</p>
+                        <p>🌡️ Temp: {fmtInt(convertTemp(s.inside_temp))}{tempUnit} / {fmtInt(convertTemp(s.outside_temp))}{tempUnit}</p>
                         <p>{s.is_locked ? '🔒' : '🔓'} {s.is_locked ? 'Locked' : 'Unlocked'}</p>
                       </div>
                     </div>

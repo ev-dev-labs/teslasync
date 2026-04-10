@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTemperatureImpact, Vehicle, TempEfficiencyBucket } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
-import { Thermometer, Snowflake, Sun, TrendingDown, Activity } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, ChartContainer, Select, DataTable } from '../components/ui'
+import { Thermometer, Snowflake, Sun, Activity } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ComposedChart, Line, ReferenceLine
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 const TEMP_COLORS: Record<string, string> = {
   'Below 0°C': '#3b82f6',
@@ -61,7 +62,7 @@ export default function TemperatureImpact() {
     const increase = worst.avg_battery_pct_per_100km > 0
       ? Math.round(((worst.avg_battery_pct_per_100km - best.avg_battery_pct_per_100km) / best.avg_battery_pct_per_100km) * 100)
       : 0
-    return `Your car is most efficient at ${best.temp_bucket} (${best.avg_battery_pct_per_100km.toFixed(1)}%/100km). ${worst.temp_bucket} increases consumption by ${increase}%.`
+    return `Your car is most efficient at ${best.temp_bucket} (${fmtNumber(best.avg_battery_pct_per_100km)}%/100km). ${worst.temp_bucket} increases consumption by ${increase}%.`
   }, [data])
 
   // Chart data for efficiency curve with colored area
@@ -91,15 +92,11 @@ export default function TemperatureImpact() {
         subtitle="How temperature affects driving efficiency, battery drain, and energy consumption"
         actions={
           vehicles && vehicles.length > 1 ? (
-            <select
-              value={vehicleId ?? ''}
+            <Select
+              value={String(vehicleId ?? '')}
               onChange={e => setSelectedVehicle(Number(e.target.value))}
-              className="glass-input text-sm px-3 py-2"
-            >
-              {vehicles.map((v: Vehicle) => (
-                <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-              ))}
-            </select>
+              options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
           ) : undefined
         }
       />
@@ -148,7 +145,7 @@ export default function TemperatureImpact() {
                 <Activity className="mx-auto h-6 w-6 text-neon-green mb-2" />
                 <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Optimal Efficiency</p>
                 <p className="text-xl font-bold text-neon-green">
-                  {penalties.optimalEff > 0 ? `${penalties.optimalEff.toFixed(1)}%` : 'N/A'}
+                  {penalties.optimalEff > 0 ? `${fmtNumber(penalties.optimalEff)}%` : 'N/A'}
                 </p>
                 <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>per 100km</p>
               </GlassPanel>
@@ -177,10 +174,7 @@ export default function TemperatureImpact() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Efficiency vs Temperature */}
             <FadeIn>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Thermometer className="h-4 w-4 text-neon-cyan" /> Efficiency vs Temperature
-                </h3>
+              <ChartContainer title="Efficiency vs Temperature" height="auto">
                 <div className="h-48 sm:h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={efficiencyChartData}>
@@ -201,15 +195,12 @@ export default function TemperatureImpact() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             {/* Vampire Drain vs Temperature */}
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-neon-purple" /> Vampire Drain vs Temperature
-                </h3>
+              <ChartContainer title="Vampire Drain vs Temperature" height="auto">
                 <div className="h-48 sm:h-64">
                   {data.vampire_drain.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -233,15 +224,12 @@ export default function TemperatureImpact() {
                     </div>
                   )}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             {/* Monthly Trend */}
             <FadeIn delay={0.2}>
-              <GlassPanel className="p-6 lg:col-span-2">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-neon-amber" /> Monthly Temperature &amp; Efficiency Trend
-                </h3>
+              <ChartContainer title="Monthly Temperature & Efficiency Trend" height="auto" className="lg:col-span-2">
                 <div className="h-48 sm:h-64">
                   {monthlyData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -271,7 +259,7 @@ export default function TemperatureImpact() {
                     </div>
                   )}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
@@ -281,36 +269,31 @@ export default function TemperatureImpact() {
               <h3 className="section-title mb-4 flex items-center gap-2">
                 <Thermometer className="h-4 w-4 text-neon-cyan" /> Efficiency by Temperature Range
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                      <th className="text-left py-2 px-3 font-medium" style={{ color: 'var(--text-muted)' }}>Temp Range</th>
-                      <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-muted)' }}>Drives</th>
-                      <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-muted)' }}>Avg Dist (km)</th>
-                      <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-muted)' }}>Avg Duration</th>
-                      <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-muted)' }}>Battery %/100km</th>
-                      <th className="text-right py-2 px-3 font-medium" style={{ color: 'var(--text-muted)' }}>Avg Temp</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.efficiency.map((b: TempEfficiencyBucket) => (
-                      <tr key={b.temp_bucket} className="border-b" style={{ borderColor: 'var(--glass-border)' }}>
-                        <td className="py-2 px-3 font-medium" style={{ color: getBucketColor(b.temp_bucket) }}>
-                          {b.temp_bucket}
-                        </td>
-                        <td className="text-right py-2 px-3" style={{ color: 'var(--text-secondary)' }}>{b.drive_count}</td>
-                        <td className="text-right py-2 px-3" style={{ color: 'var(--text-secondary)' }}>{b.avg_distance_km.toFixed(1)}</td>
-                        <td className="text-right py-2 px-3" style={{ color: 'var(--text-secondary)' }}>{b.avg_duration_min.toFixed(0)} min</td>
-                        <td className="text-right py-2 px-3 font-bold" style={{ color: getBucketColor(b.temp_bucket) }}>
-                          {b.avg_battery_pct_per_100km.toFixed(2)}
-                        </td>
-                        <td className="text-right py-2 px-3" style={{ color: 'var(--text-secondary)' }}>{b.avg_temp.toFixed(1)}°C</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={data.efficiency}
+                keyExtractor={(b: TempEfficiencyBucket) => b.temp_bucket}
+                compact
+                columns={[
+                  { key: 'temp_bucket', header: 'Temp Range', render: (b: TempEfficiencyBucket) => (
+                    <span className="font-medium" style={{ color: getBucketColor(b.temp_bucket) }}>{b.temp_bucket}</span>
+                  )},
+                  { key: 'drive_count', header: 'Drives', className: 'text-right', render: (b: TempEfficiencyBucket) => (
+                    <span style={{ color: 'var(--text-secondary)' }}>{b.drive_count}</span>
+                  )},
+                  { key: 'avg_distance_km', header: 'Avg Dist (km)', className: 'text-right', render: (b: TempEfficiencyBucket) => (
+                    <span style={{ color: 'var(--text-secondary)' }}>{fmtNumber(b.avg_distance_km)}</span>
+                  )},
+                  { key: 'avg_duration_min', header: 'Avg Duration', className: 'text-right', render: (b: TempEfficiencyBucket) => (
+                    <span style={{ color: 'var(--text-secondary)' }}>{fmtInt(b.avg_duration_min)} min</span>
+                  )},
+                  { key: 'avg_battery_pct', header: 'Battery %/100km', className: 'text-right', render: (b: TempEfficiencyBucket) => (
+                    <span className="font-bold" style={{ color: getBucketColor(b.temp_bucket) }}>{fmtNumber(b.avg_battery_pct_per_100km)}</span>
+                  )},
+                  { key: 'avg_temp', header: 'Avg Temp', className: 'text-right', render: (b: TempEfficiencyBucket) => (
+                    <span style={{ color: 'var(--text-secondary)' }}>{fmtNumber(b.avg_temp)}°C</span>
+                  )},
+                ]}
+              />
             </GlassPanel>
           </FadeIn>
         </>

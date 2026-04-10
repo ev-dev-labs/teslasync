@@ -1,4 +1,4 @@
-import { GlassPanel, FadeIn, PageHeader } from '../components/ui'
+import { GlassPanel, FadeIn, PageHeader, Badge } from '../components/ui'
 import { FileText, Calendar } from 'lucide-react'
 
 interface ChangelogEntry {
@@ -110,9 +110,7 @@ export default function Changelog() {
 
               <GlassPanel className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="rounded-lg bg-neon-cyan/10 px-3 py-1 text-sm font-bold text-neon-cyan">
-                    v{entry.version}
-                  </span>
+                  <Badge color="cyan" size="md">v{entry.version}</Badge>
                   <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                     <Calendar className="h-3 w-3" />
                     {entry.date}

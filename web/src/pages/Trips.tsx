@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTrips } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, DateRangeFilter, QueryError, MetricCard, ChartContainer, InlineMetric } from '../components/ui'
 import { Route, MapPin, Clock, Fuel, Zap, Calendar, Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, ChartGradient, axisTickSm, chartGrid, chartAnimation } from '../components/Charts'
 import { exportAsCSV, exportAsJSON } from '../lib/export'
 import { formatDate } from '../lib/dateFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 function formatDuration(startDate: string, endDate: string | null): string {
   if (!endDate) return 'In progress'
@@ -90,29 +91,20 @@ export default function Trips() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 sm:mb-8">
-          {[
-            { label: 'Total Distance', value: `${convertDistance(totalDist).toFixed(0)} ${distanceUnit}`, sub: `${filteredTrips.length} trips`, icon: MapPin, color: '#00f0ff' },
-            { label: 'Energy Used', value: `${totalEnergy.toFixed(1)} kWh`, sub: `${totalDrives} drives`, icon: Zap, color: '#f59e0b' },
-            { label: 'Total Cost', value: `$${totalCost.toFixed(2)}`, sub: `$${totalDist > 0 ? (totalCost / convertDistance(totalDist) * 100).toFixed(1) : '0'}/100${distanceUnit}`, icon: Fuel, color: '#10b981' },
-            { label: 'Total Trips', value: `${filteredTrips.length}`, sub: `${totalDrives} total drives`, icon: Route, color: '#8b5cf6' },
-          ].map(card => (
-            <GlassPanel key={card.label} className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className="h-4 w-4" style={{ color: card.color }} />
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
-              </div>
-              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{card.value}</p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">{card.sub}</p>
-            </GlassPanel>
-          ))}
+          <MetricCard label="Total Distance" value={`${fmtInt(convertDistance(totalDist))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" subtitle={`${filteredTrips.length} trips`} />
+          <MetricCard label="Energy Used" value={`${fmtNumber(totalEnergy)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" subtitle={`${totalDrives} drives`} />
+          <MetricCard label="Total Cost" value={`$${fmtNumber(totalCost, 2)}`} icon={<Fuel className="h-4 w-4" />} color="green" subtitle={`$${totalDist > 0 ? fmtNumber(totalCost / convertDistance(totalDist) * 100) : '0'}/100${distanceUnit}`} />
+          <MetricCard label="Total Trips" value={`${filteredTrips.length}`} icon={<Route className="h-4 w-4" />} color="purple" subtitle={`${totalDrives} total drives`} />
         </div>
       )}
 
       {/* Top Trips Chart */}
       {chartData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Top Trips by Distance</h3>
+        <ChartContainer
+          title="Top Trips by Distance"
+          height={280}
+          className="mb-6"
+          actions={
             <div className="flex gap-2">
               <button
                 onClick={() => exportAsCSV(filteredTrips.map(t => ({
@@ -133,8 +125,9 @@ export default function Trips() {
                 <Download className="h-3.5 w-3.5" /> JSON
               </button>
             </div>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
+          }
+        >
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" {...chartAnimation}>
               <defs>
                 <ChartGradient id="tripGrad" color="#00f0ff" opacity={0.8} />
@@ -146,7 +139,7 @@ export default function Trips() {
               <Bar dataKey="distance" fill="url(#tripGrad)" name={`Distance (${distanceUnit})`} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* Trip List */}
@@ -170,14 +163,8 @@ export default function Trips() {
                       {trip.name || `Trip #${trip.id}`}
                     </p>
                     <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)] mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(trip.start_date)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(trip.start_date, trip.end_date)}
-                      </span>
+                      <InlineMetric icon={<Calendar />} value={formatDate(trip.start_date)} />
+                      <InlineMetric icon={<Clock />} value={formatDuration(trip.start_date, trip.end_date)} />
                       <span>{trip.drive_count} drives</span>
                       {trip.charge_count > 0 && <span>{trip.charge_count} charges</span>}
                     </div>
@@ -185,16 +172,16 @@ export default function Trips() {
                 </div>
                 <div className="flex items-center gap-4 sm:gap-6 text-right w-full sm:w-auto justify-end">
                   <div>
-                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{convertDistance(trip.total_distance_km).toFixed(0)} {distanceUnit}</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{fmtInt(convertDistance(trip.total_distance_km))} {distanceUnit}</p>
                     <p className="text-[10px] text-[var(--text-muted)]">{trip.drive_count} drives</p>
                   </div>
                   <div>
-                    <p className="text-sm font-bold" style={{ color: '#f59e0b' }}>{trip.total_energy_kwh.toFixed(1)} kWh</p>
-                    <p className="text-[10px] text-[var(--text-muted)]">{trip.total_distance_km > 0 ? convertEfficiency(trip.total_energy_kwh / trip.total_distance_km * 1000).toFixed(0) : 0} {efficiencyUnit}</p>
+                    <p className="text-sm font-bold" style={{ color: '#f59e0b' }}>{fmtNumber(trip.total_energy_kwh)} kWh</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{trip.total_distance_km > 0 ? fmtInt(convertEfficiency(trip.total_energy_kwh / trip.total_distance_km * 1000)) : 0} {efficiencyUnit}</p>
                   </div>
                   {trip.total_cost > 0 && (
                     <div>
-                      <p className="text-sm font-bold" style={{ color: '#10b981' }}>${trip.total_cost.toFixed(2)}</p>
+                      <p className="text-sm font-bold" style={{ color: '#10b981' }}>${fmtNumber(trip.total_cost, 2)}</p>
                       <p className="text-[10px] text-[var(--text-muted)]">cost</p>
                     </div>
                   )}

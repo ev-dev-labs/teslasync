@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 import {
   GlassPanel, FadeIn, StaggerContainer, StaggerItem, StatusBadge,
-  Skeleton, PageHeader,
+  Skeleton, PageHeader, Badge, Button,
 } from '../components/ui'
 import { TeslaCarViz, TeslaCarMini, parseModelKey } from '../components/TeslaCarViz'
 import { AnimatedNumber, TimelineItem, RadialGauge, StatusPill, MiniChart } from '../components/Widgets'
@@ -702,14 +702,9 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Gear</span>
                       {cleanNil(motorData.gear) ? (
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          motorData.gear === 'D' ? 'bg-neon-green/10 text-neon-green' :
-                          motorData.gear === 'R' ? 'bg-neon-red/10 text-neon-red' :
-                          motorData.gear === 'N' ? 'bg-neon-amber/10 text-neon-amber' :
-                          'bg-white/5 text-[var(--text-secondary)]'
-                        }`}>
+                        <Badge color={motorData.gear === 'D' ? 'green' : motorData.gear === 'R' ? 'red' : motorData.gear === 'N' ? 'amber' : 'neutral'}>
                           {cleanNil(motorData.gear)}
-                        </span>
+                        </Badge>
                       ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
                     </div>
                     <div className="flex items-center justify-between">
@@ -822,19 +817,15 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--text-secondary)]">Doors</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          openDoors.length === 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
-                        }`}>
+                        <Badge color={openDoors.length === 0 ? 'green' : 'amber'}>
                           {openDoors.length === 0 ? 'All Closed' : `${openDoors.length} Open`}
-                        </span>
+                        </Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[var(--text-secondary)]">Windows</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          openWindows.length === 0 ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
-                        }`}>
+                        <Badge color={openWindows.length === 0 ? 'green' : 'amber'}>
                           {openWindows.length === 0 ? 'All Closed' : `${openWindows.length} Open`}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   )
@@ -881,12 +872,10 @@ export default function Dashboard() {
                         ))}
                       </div>
                       <div className="text-center">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          allNormal ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-amber/10 text-neon-amber'
-                        }`}>
+                        <Badge color={allNormal ? 'green' : 'amber'}>
                           <ShieldCheck className="h-2.5 w-2.5" />
                           {allNormal ? 'All Normal' : 'Warning'}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   )
@@ -914,13 +903,9 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Status</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        cleanNil(mediaData.playback_status) === 'Playing' ? 'bg-neon-green/10 text-neon-green'
-                          : cleanNil(mediaData.playback_status) === 'Paused' ? 'bg-neon-amber/10 text-neon-amber'
-                          : 'bg-white/5 text-[var(--text-muted)]'
-                      }`}>
+                      <Badge color={cleanNil(mediaData.playback_status) === 'Playing' ? 'green' : cleanNil(mediaData.playback_status) === 'Paused' ? 'amber' : 'neutral'}>
                         {cleanNil(mediaData.playback_status) ?? '—'}
-                      </span>
+                      </Badge>
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -1033,9 +1018,9 @@ export default function Dashboard() {
               </p>
               <div className="flex items-center justify-center gap-4">
                 {auth?.authenticated ? (
-                  <button onClick={() => { syncVehiclesApi().then(() => window.location.reload()) }} className="neon-button">
-                    Sync Vehicles <RefreshCw className="h-4 w-4 ml-1 inline-block" />
-                  </button>
+                  <Button onClick={() => { syncVehiclesApi().then(() => window.location.reload()) }} icon={<RefreshCw className="h-4 w-4" />}>
+                    Sync Vehicles
+                  </Button>
                 ) : (
                   <Link to="/settings" className="neon-button">
                     Connect Tesla Account <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />

@@ -10,7 +10,7 @@ import {
   deleteDrive,
 } from '../api'
 import type { ChargingSession, Drive } from '../api'
-import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
 import { Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle, X, Save, Clock, Trash2 } from 'lucide-react'
@@ -95,18 +95,18 @@ function ChargingEditForm({
         <Field label="Cost ($)" value={form.cost} onChange={v => setForm(f => ({ ...f, cost: v }))} type="number" />
       </div>
       <div className="flex items-center gap-2 pt-2">
-        <button onClick={() => update.mutate()} disabled={update.isPending} className="btn-primary flex items-center gap-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3 py-1.5 text-xs font-medium ring-1 ring-amber-500/30 transition-colors">
-          <Save className="h-3.5 w-3.5" /> Save
-        </button>
-        <button onClick={() => close.mutate()} disabled={close.isPending} className="flex items-center gap-1.5 rounded-lg bg-neon-green/10 hover:bg-neon-green/20 text-neon-green px-3 py-1.5 text-xs font-medium ring-1 ring-neon-green/20 transition-colors">
-          <Clock className="h-3.5 w-3.5" /> Close Session
-        </button>
-        <button onClick={() => { if (confirm('Delete this session permanently?')) discard.mutate() }} disabled={discard.isPending} className="flex items-center gap-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 text-xs font-medium ring-1 ring-red-500/20 transition-colors">
-          <Trash2 className="h-3.5 w-3.5" /> Discard
-        </button>
-        <button onClick={onClose} className="ml-auto flex items-center gap-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[var(--text-secondary)] px-3 py-1.5 text-xs font-medium transition-colors">
-          <X className="h-3.5 w-3.5" /> Cancel
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => update.mutate()} disabled={update.isPending} icon={<Save className="h-3.5 w-3.5" />}>
+          Save
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => close.mutate()} disabled={close.isPending} icon={<Clock className="h-3.5 w-3.5" />}>
+          Close Session
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => { if (confirm('Delete this session permanently?')) discard.mutate() }} disabled={discard.isPending} icon={<Trash2 className="h-3.5 w-3.5" />}>
+          Discard
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onClose} icon={<X className="h-3.5 w-3.5" />} className="ml-auto">
+          Cancel
+        </Button>
       </div>
     </div>
   )
@@ -182,18 +182,18 @@ function DriveEditForm({
         <Field label="End Range (km)" value={form.end_range_km} onChange={v => setForm(f => ({ ...f, end_range_km: v }))} type="number" />
       </div>
       <div className="flex items-center gap-2 pt-2">
-        <button onClick={() => update.mutate()} disabled={update.isPending} className="flex items-center gap-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3 py-1.5 text-xs font-medium ring-1 ring-amber-500/30 transition-colors">
-          <Save className="h-3.5 w-3.5" /> Save
-        </button>
-        <button onClick={() => close.mutate()} disabled={close.isPending} className="flex items-center gap-1.5 rounded-lg bg-neon-green/10 hover:bg-neon-green/20 text-neon-green px-3 py-1.5 text-xs font-medium ring-1 ring-neon-green/20 transition-colors">
-          <Clock className="h-3.5 w-3.5" /> Close Drive
-        </button>
-        <button onClick={() => { if (confirm('Delete this drive permanently?')) discard.mutate() }} disabled={discard.isPending} className="flex items-center gap-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 text-xs font-medium ring-1 ring-red-500/20 transition-colors">
-          <Trash2 className="h-3.5 w-3.5" /> Discard
-        </button>
-        <button onClick={onClose} className="ml-auto flex items-center gap-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[var(--text-secondary)] px-3 py-1.5 text-xs font-medium transition-colors">
-          <X className="h-3.5 w-3.5" /> Cancel
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => update.mutate()} disabled={update.isPending} icon={<Save className="h-3.5 w-3.5" />}>
+          Save
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => close.mutate()} disabled={close.isPending} icon={<Clock className="h-3.5 w-3.5" />}>
+          Close Drive
+        </Button>
+        <Button variant="danger" size="sm" onClick={() => { if (confirm('Delete this drive permanently?')) discard.mutate() }} disabled={discard.isPending} icon={<Trash2 className="h-3.5 w-3.5" />}>
+          Discard
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onClose} icon={<X className="h-3.5 w-3.5" />} className="ml-auto">
+          Cancel
+        </Button>
       </div>
     </div>
   )
@@ -369,9 +369,9 @@ function DriveRow({ drive, expanded, onToggle }: { drive: Drive; expanded: boole
 
 function StatusBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-400 ring-1 ring-amber-500/20">
+    <Badge color="amber">
       <AlertTriangle className="h-3 w-3" /> Open
-    </span>
+    </Badge>
   )
 }
 

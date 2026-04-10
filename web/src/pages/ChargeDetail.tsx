@@ -16,7 +16,7 @@ import { MapContainer, CircleMarker, Popup } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
 import type { MapStyle } from '../components/MapTileLayer'
-import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { AnimatedNumber, RadialGauge, MetricBar } from '../components/Widgets'
 import { ChartTooltip } from '../components/Charts'
@@ -162,19 +162,19 @@ export default function ChargeDetail() {
           </div>
           <div className="flex items-center gap-2">
             {session.fast_charger_type && (
-              <span className="rounded-full border border-neon-green/20 bg-neon-green/5 px-3 py-1 text-xs font-medium text-neon-green">
+              <Badge color="green" size="md">
                 <Zap className="h-3 w-3 inline mr-1" />
                 {session.fast_charger_type}
-              </span>
+              </Badge>
             )}
             {session.fast_charger_brand && (
-              <span className="rounded-full border border-neon-purple/20 bg-neon-purple/5 px-3 py-1 text-xs font-medium text-neon-purple">
+              <Badge color="purple" size="md">
                 {session.fast_charger_brand}
-              </span>
+              </Badge>
             )}
-            <span className={`rounded-full border px-3 py-1 text-xs font-medium ${isDC ? 'border-neon-amber/20 bg-neon-amber/5 text-neon-amber' : 'border-blue-400/20 bg-blue-400/5 text-blue-400'}`}>
+            <Badge color={isDC ? 'amber' : 'cyan'} size="md">
               {isDC ? 'DC' : 'AC'}
-            </span>
+            </Badge>
           </div>
         </div>
       </FadeIn>

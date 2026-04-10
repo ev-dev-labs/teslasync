@@ -1,9 +1,9 @@
 /** Global decimal precision — set by useSettings, read by all formatters */
-let _globalPrecision = 1
+let _globalPrecision = 2
 
 /** Set the global decimal precision (called by useSettings on load) */
 export function setGlobalPrecision(decimals: number) {
-  _globalPrecision = Math.max(0, Math.min(4, decimals))
+  _globalPrecision = Math.max(0, Math.min(20, decimals))
 }
 
 /** Get the current global decimal precision */
@@ -25,13 +25,13 @@ export function fmtNumber(v: unknown, decimals?: number): string {
   })
 }
 
-/** Format with unit suffix: fmtWithUnit(42.567, 'kWh', 1) → "42.6 kWh" */
-export function fmtWithUnit(v: unknown, unit: string, decimals = 1): string {
+/** Format with unit suffix: fmtWithUnit(42.567, 'kWh') → "42.57 kWh" (at precision 2) */
+export function fmtWithUnit(v: unknown, unit: string, decimals?: number): string {
   return `${fmtNumber(v, decimals)} ${unit}`
 }
 
-/** Format percentage: fmtPercent(85.432, 0) → "85%" */
-export function fmtPercent(v: unknown, decimals = 0): string {
+/** Format percentage: fmtPercent(85.432) → "85.43%" (at precision 2) */
+export function fmtPercent(v: unknown, decimals?: number): string {
   return `${fmtNumber(v, decimals)}%`
 }
 

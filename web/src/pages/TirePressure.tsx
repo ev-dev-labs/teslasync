@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTirePressure } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, AlertBanner, ChartContainer } from '../components/ui'
 import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Clock, Zap, ShieldAlert } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -365,30 +365,21 @@ export default function TirePressure() {
       </div>
 
       {anyLow && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
-          <p className="text-sm text-neon-red">One or more tires have low pressure. Check and inflate to recommended levels.</p>
-        </div>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />} className="mb-6">
+          One or more tires have low pressure. Check and inflate to recommended levels.
+        </AlertBanner>
       )}
 
       {/* TPMS Warning Alerts */}
       {hasHardWarning && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <ShieldAlert className="h-5 w-5 text-neon-red shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-neon-red">TPMS Hard Warning</p>
-            <p className="text-xs text-neon-red/80">Tire pressure severely out of range — inspect immediately. {live.tpmsHardWarnings}</p>
-          </div>
-        </div>
+        <AlertBanner variant="danger" icon={<ShieldAlert className="h-5 w-5" />} title="TPMS Hard Warning" className="mb-4">
+          Tire pressure severely out of range — inspect immediately. {live.tpmsHardWarnings}
+        </AlertBanner>
       )}
       {hasSoftWarning && !hasHardWarning && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-neon-amber/30 bg-neon-amber/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-amber shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-neon-amber">TPMS Soft Warning</p>
-            <p className="text-xs text-neon-amber/80">Tire pressure slightly out of range. {live.tpmsSoftWarnings}</p>
-          </div>
-        </div>
+        <AlertBanner variant="warning" icon={<AlertTriangle className="h-5 w-5" />} title="TPMS Soft Warning" className="mb-4">
+          Tire pressure slightly out of range. {live.tpmsSoftWarnings}
+        </AlertBanner>
       )}
 
       {/* Service Signals — Last Seen Times & Isolation Resistance */}
@@ -446,12 +437,11 @@ export default function TirePressure() {
       )}
 
       {/* History Chart */}
-      <GlassPanel className="p-4 sm:p-6">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Pressure History</h3>
+      <ChartContainer title="Pressure History" height={300}>
         {loadingHistory ? <Skeleton className="h-72 rounded-xl" /> : chartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No pressure history data available</div>
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No pressure history data available</div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -465,7 +455,7 @@ export default function TirePressure() {
             </LineChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
     </FadeIn>
   )
 }

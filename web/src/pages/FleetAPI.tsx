@@ -2,9 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, toggleAPISuspend, getPollingConfig, updatePollingConfig, getCaptureStats, getVersionInfo, PollingConfig } from '../api'
 import { useCallback } from 'react'
 import { Shield, Pause, Play, Globe, Link, ToggleLeft, ToggleRight } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, IconBox, Toggle } from '../components/ui'
 import { useToast } from '../components/Toast'
-import clsx from 'clsx'
 
 export default function FleetAPI() {
   const queryClient = useQueryClient()
@@ -70,14 +69,9 @@ export default function FleetAPI() {
         <GlassPanel className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={clsx(
-                'flex h-10 w-10 items-center justify-center rounded-xl ring-1',
-                settings?.api_suspended
-                  ? 'bg-neon-red/10 text-neon-red ring-neon-red/20'
-                  : 'bg-neon-green/10 text-neon-green ring-neon-green/20'
-              )}>
+              <IconBox color={settings?.api_suspended ? 'red' : 'green'}>
                 {settings?.api_suspended ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </div>
+              </IconBox>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Tesla API Polling</h2>
                 <p className="text-xs text-[var(--text-muted)]">
@@ -88,19 +82,7 @@ export default function FleetAPI() {
               </div>
             </div>
 
-            <button
-              onClick={() => suspendMut.mutate(!settings?.api_suspended)}
-              disabled={suspendMut.isPending}
-              className={clsx(
-                'relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-40',
-                settings?.api_suspended ? 'bg-neon-red/60' : 'bg-neon-green/60'
-              )}
-            >
-              <span className={clsx(
-                'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200',
-                settings?.api_suspended ? 'translate-x-0' : 'translate-x-5'
-              )} />
-            </button>
+            <Toggle checked={!settings?.api_suspended} onChange={() => suspendMut.mutate(!settings?.api_suspended)} disabled={suspendMut.isPending} />
           </div>
 
           {settings?.api_suspended && (
@@ -118,9 +100,9 @@ export default function FleetAPI() {
       <FadeIn delay={0.05}>
         <GlassPanel className="p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20">
+            <IconBox color="cyan">
               <Shield className="h-5 w-5" />
-            </div>
+            </IconBox>
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">API Endpoint Controls</h2>
               <p className="text-xs text-[var(--text-muted)]">
@@ -255,9 +237,9 @@ export default function FleetAPI() {
         <FadeIn delay={0.1}>
           <GlassPanel className="p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neon-purple/10 text-neon-purple ring-1 ring-neon-purple/20">
+              <IconBox color="purple">
                 <Globe className="h-5 w-5" />
-              </div>
+              </IconBox>
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">API Endpoints</h2>
                 <p className="text-xs text-[var(--text-muted)]">

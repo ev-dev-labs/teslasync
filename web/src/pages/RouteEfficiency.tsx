@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getRouteEfficiency, getRouteEfficiencyDetail, Vehicle, RouteSummary, RouteDriveDetail } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer, IconBox } from '../components/ui'
 import { MapPin, ArrowRight, TrendingUp, Clock, Gauge } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
@@ -37,9 +37,9 @@ function RouteCard({ route, onExpand, isExpanded }: {
     <GlassPanel className="p-5 cursor-pointer transition-all hover:border-white/10" onClick={onExpand}>
       {/* Route header */}
       <div className="flex items-start gap-3 mb-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon-cyan/10 text-neon-cyan shrink-0">
+        <IconBox color="cyan" size="sm">
           <MapPin className="h-4 w-4" />
-        </div>
+        </IconBox>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             <span className="truncate">{route.start_location}</span>
@@ -266,46 +266,23 @@ export default function RouteEfficiency() {
           {/* Summary stats */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StaggerItem>
-              <GlassPanel className="p-4 text-center">
-                <MapPin className="mx-auto h-6 w-6 text-neon-cyan mb-2" />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Routes</p>
-                <p className="text-xl font-bold text-neon-cyan">{routes.length}</p>
-              </GlassPanel>
+              <MetricCard label="Routes" value={routes.length} icon={<MapPin className="h-4 w-4" />} color="cyan" />
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-4 text-center">
-                <TrendingUp className="mx-auto h-6 w-6 text-neon-green mb-2" />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Trips</p>
-                <p className="text-xl font-bold text-neon-green">
-                  {routes.reduce((s, r) => s + r.trip_count, 0)}
-                </p>
-              </GlassPanel>
+              <MetricCard label="Total Trips" value={routes.reduce((s, r) => s + r.trip_count, 0)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-4 text-center">
-                <Gauge className="mx-auto h-6 w-6 text-neon-purple mb-2" />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Best Efficiency</p>
-                <p className="text-xl font-bold text-neon-purple">
-                  {fmtPercent(Math.min(...routes.map(r => r.best_efficiency)), 1)}
-                </p>
-              </GlassPanel>
+              <MetricCard label="Best Efficiency" value={fmtPercent(Math.min(...routes.map(r => r.best_efficiency)), 1)} icon={<Gauge className="h-4 w-4" />} color="purple" />
             </StaggerItem>
             <StaggerItem>
-              <GlassPanel className="p-4 text-center">
-                <Clock className="mx-auto h-6 w-6 text-neon-amber mb-2" />
-                <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Most Driven</p>
-                <p className="text-xl font-bold text-neon-amber">{routes[0].trip_count}x</p>
-              </GlassPanel>
+              <MetricCard label="Most Driven" value={`${routes[0].trip_count}x`} icon={<Clock className="h-4 w-4" />} color="amber" />
             </StaggerItem>
           </StaggerContainer>
 
           {/* Route comparison chart */}
           {comparisonData.length > 1 && (
             <FadeIn>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-neon-cyan" /> Route Efficiency Comparison
-                </h3>
+              <ChartContainer title="Route Efficiency Comparison" height="100%">
                 <div className="h-48 sm:h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={comparisonData} layout="vertical">
@@ -319,7 +296,7 @@ export default function RouteEfficiency() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           )}
 

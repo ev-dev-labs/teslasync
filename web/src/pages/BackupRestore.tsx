@@ -13,7 +13,7 @@ import {
   previewRestore,
 } from '../api'
 import type { BackupConfig } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
   DatabaseBackup,
@@ -28,9 +28,6 @@ import {
   HardDrive,
   Cloud,
   FolderOpen,
-  ToggleLeft,
-  ToggleRight,
-  X,
   Zap,
   Archive,
   Shield,
@@ -41,7 +38,7 @@ import {
   Lock,
   Eye,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 
@@ -73,12 +70,6 @@ const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
   failed: { icon: XCircle, color: 'text-neon-red', bg: 'bg-neon-red/15', label: 'Failed' },
   running: { icon: Loader2, color: 'text-neon-cyan', bg: 'bg-neon-cyan/15', label: 'Running' },
   queued: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-500/15', label: 'Queued' },
-}
-
-const RUN_TYPE_COLORS: Record<string, string> = {
-  backup: 'bg-neon-cyan/15 text-neon-cyan border-neon-cyan/30',
-  restore: 'bg-neon-purple/15 text-neon-purple border-neon-purple/30',
-  quick: 'bg-neon-amber/15 text-neon-amber border-neon-amber/30',
 }
 
 /* ------------------------------------------------------------------ */
@@ -359,13 +350,9 @@ export default function BackupRestore() {
         subtitle="Manage automated backups and restore points"
         icon={<DatabaseBackup className="h-7 w-7 text-neon-cyan" />}
         actions={
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-neon-cyan/10 px-4 py-2.5 text-sm font-medium text-neon-cyan ring-1 ring-neon-cyan/20 hover:bg-neon-cyan/20 transition-all"
-          >
-            <Plus className="h-4 w-4" />
+          <Button variant="secondary" onClick={openCreateModal} icon={<Plus className="h-4 w-4" />}>
             New Config
-          </button>
+          </Button>
         }
       />
 
@@ -374,14 +361,9 @@ export default function BackupRestore() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {/* Quick Backup Card */}
           <GlassPanel className="p-4 sm:p-5 flex flex-col items-center justify-center gap-3" hover glow="cyan">
-            <button
-              onClick={() => quickBackupMutation.mutate()}
-              disabled={quickBackupMutation.isPending}
-              className="flex items-center gap-2 rounded-xl bg-neon-green/10 px-5 py-3 text-sm font-medium text-neon-green ring-1 ring-neon-green/20 hover:bg-neon-green/20 transition-all disabled:opacity-50"
-            >
-              {quickBackupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            <Button variant="secondary" onClick={() => quickBackupMutation.mutate()} loading={quickBackupMutation.isPending} icon={<Zap className="h-4 w-4" />}>
               Quick Backup
-            </button>
+            </Button>
             <p className="text-[10px] text-[var(--text-muted)] text-center">Full backup with default settings</p>
           </GlassPanel>
 
@@ -439,37 +421,26 @@ export default function BackupRestore() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-semibold text-[var(--text-primary)] truncate">{cfg.name}</h3>
-                        <span className={clsx(
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                          cfg.enabled
-                            ? 'bg-neon-green/15 text-neon-green ring-neon-green/30'
-                            : 'bg-gray-500/15 text-gray-400 ring-gray-500/30',
-                        )}>
+                        <Badge color={cfg.enabled ? 'green' : 'neutral'}>
                           {cfg.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   </div>
 
                   {/* Badges */}
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                    <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                      cfg.backup_type === 'full' ? 'bg-neon-cyan/15 text-neon-cyan ring-neon-cyan/30' : 'bg-neon-amber/15 text-neon-amber ring-neon-amber/30'
-                    )}>
+                    <Badge color={cfg.backup_type === 'full' ? 'cyan' : 'amber'}>
                       {cfg.backup_type === 'full' ? 'Full' : 'Incremental'}
-                    </span>
-                    <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                      PROVIDER_MAP[cfg.provider]?.color ?? 'bg-gray-500/15 text-gray-400 border-gray-500/30'
-                    )}>
+                    </Badge>
+                    <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[cfg.provider] ?? 'neutral'}>
                       {cfg.provider === 'local' && <FolderOpen className="h-3 w-3 mr-1" />}
                       {cfg.provider === 's3' && <Cloud className="h-3 w-3 mr-1" />}
                       {cfg.provider === 'azure' && <Cloud className="h-3 w-3 mr-1" />}
                       {cfg.provider === 'gcs' && <Cloud className="h-3 w-3 mr-1" />}
                       {PROVIDER_MAP[cfg.provider]?.label ?? cfg.provider}
-                    </span>
-                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 bg-white/5 text-[var(--text-secondary)] ring-white/10">
-                      Every {cfg.frequency_days}d
-                    </span>
+                    </Badge>
+                    <Badge color="neutral">Every {cfg.frequency_days}d</Badge>
                   </div>
 
                   {/* Times */}
@@ -480,25 +451,13 @@ export default function BackupRestore() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-3 border-t border-white/[0.06]">
-                    <button
-                      onClick={() => openEditModal(cfg)}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-all"
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => triggerMutation.mutate(cfg.id)}
-                      disabled={triggerMutation.isPending}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-neon-cyan hover:bg-neon-cyan/10 transition-all disabled:opacity-50"
-                    >
-                      <Play className="h-3.5 w-3.5" /> Trigger Now
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm({ open: true, id: cfg.id, name: cfg.name })}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-neon-red hover:bg-neon-red/10 transition-all ml-auto"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <Button variant="ghost" size="sm" onClick={() => openEditModal(cfg)} icon={<Pencil className="h-3.5 w-3.5" />}>
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => triggerMutation.mutate(cfg.id)} disabled={triggerMutation.isPending} icon={<Play className="h-3.5 w-3.5" />}>
+                      Trigger Now
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => setDeleteConfirm({ open: true, id: cfg.id, name: cfg.name })} icon={<Trash2 className="h-3.5 w-3.5" />} className="ml-auto" />
                   </div>
                 </GlassPanel>
               ))}
@@ -515,12 +474,9 @@ export default function BackupRestore() {
               <Clock className="h-5 w-5 text-neon-cyan/70" />
               Backup History
             </h2>
-            <button
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['backup-runs'] })}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-all"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </button>
+            <Button variant="ghost" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['backup-runs'] })} icon={<RefreshCw className="h-3.5 w-3.5" />}>
+              Refresh
+            </Button>
           </div>
 
           <GlassPanel className="overflow-hidden">
@@ -559,26 +515,22 @@ export default function BackupRestore() {
                         <tr key={run.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                           {/* Status */}
                           <td className="px-4 py-3">
-                            <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium', sc.bg, sc.color)}>
+                            <Badge color={({ completed: 'green', failed: 'red', running: 'cyan', queued: 'neutral' } as Record<string, 'green' | 'red' | 'cyan' | 'neutral'>)[run.status] ?? 'neutral'}>
                               <StatusIcon className={clsx('h-3 w-3', run.status === 'running' && 'animate-spin')} />
                               {sc.label}
-                            </span>
+                            </Badge>
                           </td>
                           {/* Type */}
                           <td className="px-4 py-3">
-                            <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                              RUN_TYPE_COLORS[run.run_type] ?? 'bg-white/5 text-[var(--text-secondary)] ring-white/10'
-                            )}>
+                            <Badge color={({ backup: 'cyan', restore: 'purple', quick: 'amber' } as Record<string, 'cyan' | 'purple' | 'amber'>)[run.run_type] ?? 'neutral'}>
                               {run.run_type}
-                            </span>
+                            </Badge>
                           </td>
                           {/* Provider */}
                           <td className="px-4 py-3">
-                            <span className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1',
-                              PROVIDER_MAP[run.provider]?.color ?? 'bg-gray-500/15 text-gray-400 ring-gray-500/30'
-                            )}>
+                            <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[run.provider] ?? 'neutral'}>
                               {PROVIDER_MAP[run.provider]?.label ?? run.provider}
-                            </span>
+                            </Badge>
                           </td>
                           {/* File */}
                           <td className="px-4 py-3 text-xs text-[var(--text-secondary)] max-w-[200px] truncate font-mono">
@@ -684,32 +636,7 @@ export default function BackupRestore() {
       />
 
       {/* Create/Edit Config Modal */}
-      <AnimatePresence>
-        {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={closeModal}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative glass-panel p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto scrollbar-thin"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                  {editingId !== null ? 'Edit Configuration' : 'New Backup Configuration'}
-                </h3>
-                <button onClick={closeModal} className="rounded-lg p-1.5 hover:bg-white/5 transition-colors">
-                  <X className="h-5 w-5 text-[var(--text-muted)]" />
-                </button>
-              </div>
-
+      <Modal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Edit Configuration' : 'New Backup Configuration'}>
               <div className="space-y-5">
                 {/* Name */}
                 <div>
@@ -724,18 +651,11 @@ export default function BackupRestore() {
                 </div>
 
                 {/* Enabled Toggle */}
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-[var(--text-secondary)]">Enabled</label>
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, enabled: !prev.enabled }))}
-                    className="transition-colors"
-                  >
-                    {form.enabled
-                      ? <ToggleRight className="h-7 w-7 text-neon-green" />
-                      : <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />}
-                  </button>
-                </div>
+                <Toggle
+                  checked={form.enabled}
+                  onChange={(v) => setForm(prev => ({ ...prev, enabled: v }))}
+                  label="Enabled"
+                />
 
                 {/* Backup Type */}
                 <div>
@@ -829,93 +749,34 @@ export default function BackupRestore() {
                 ))}
 
                 {/* Compress Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">Compress</label>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Gzip compression for smaller file size</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, compress: !prev.compress }))}
-                    className="transition-colors"
-                  >
-                    {form.compress
-                      ? <ToggleRight className="h-7 w-7 text-neon-green" />
-                      : <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />}
-                  </button>
-                </div>
+                <Toggle
+                  checked={form.compress}
+                  onChange={(v) => setForm(prev => ({ ...prev, compress: v }))}
+                  label="Compress"
+                  description="Gzip compression for smaller file size"
+                />
 
                 {/* Encrypt Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">Encrypt</label>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">AES-256 encryption for sensitive data</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, encrypt: !prev.encrypt }))}
-                    className="transition-colors"
-                  >
-                    {form.encrypt
-                      ? <ToggleRight className="h-7 w-7 text-neon-green" />
-                      : <ToggleLeft className="h-7 w-7 text-[var(--text-muted)]" />}
-                  </button>
-                </div>
+                <Toggle
+                  checked={form.encrypt}
+                  onChange={(v) => setForm(prev => ({ ...prev, encrypt: v }))}
+                  label="Encrypt"
+                  description="AES-256 encryption for sensitive data"
+                />
               </div>
 
               {/* Modal Footer */}
               <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-white/[0.06]">
-                <button
-                  onClick={closeModal}
-                  className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all"
-                >
+                <Button variant="ghost" onClick={closeModal}>
                   Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 rounded-lg bg-neon-cyan/20 px-4 py-2 text-sm font-medium text-neon-cyan ring-1 ring-neon-cyan/30 hover:bg-neon-cyan/30 transition-all disabled:opacity-50"
-                >
-                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                </Button>
+                <Button variant="secondary" onClick={handleSubmit} loading={isSaving}>
                   {editingId !== null ? 'Save Changes' : 'Create Configuration'}
-                </button>
+                </Button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
+      </Modal>
       {/* Restore Preview Modal */}
-      <AnimatePresence>
-        {previewModal.open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative glass-panel p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto scrollbar-thin"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                  <Eye className="h-5 w-5 text-neon-purple" />
-                  Restore Preview
-                </h3>
-                <button
-                  onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
-                  className="rounded-lg p-1.5 hover:bg-white/5 transition-colors"
-                >
-                  <X className="h-5 w-5 text-[var(--text-muted)]" />
-                </button>
-              </div>
-
+      <Modal open={previewModal.open} onClose={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })} title="Restore Preview">
               {previewModal.loading ? (
                 <div className="py-12 text-center">
                   <Loader2 className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
@@ -982,17 +843,11 @@ export default function BackupRestore() {
 
               {/* Modal Footer */}
               <div className="flex items-center justify-end mt-6 pt-4 border-t border-white/[0.06]">
-                <button
-                  onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}
-                  className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg hover:bg-white/5 transition-all"
-                >
+                <Button variant="ghost" onClick={() => setPreviewModal({ open: false, runId: null, loading: false, data: null })}>
                   Close
-                </button>
+                </Button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </>
   )
 }

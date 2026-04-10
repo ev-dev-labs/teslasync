@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVehicleState, getDrives, getMileageStats, getDailyMileage } from '../api'
 import type { Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, EmptyState, QueryError, Badge, AlertBanner, Button } from '../components/ui'
 import {
   Wrench, RefreshCw, Wind, Droplets, CloudRain, Crosshair, Snowflake,
   Thermometer, Gauge, CheckCircle, AlertTriangle, Clock, Plus,
@@ -12,6 +12,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDate } from '../lib/dateFormat'
+import { fmtNumber } from '../lib/numberFormat'
 
 /* ────────────────────────────── Types ────────────────────────────── */
 
@@ -45,14 +46,6 @@ const MAINTENANCE_SCHEDULE: MaintenanceItem[] = [
   { id: 'coolant', name: 'Battery Coolant', description: 'Check battery coolant level and condition', intervalKm: 80000, intervalMonths: 48, icon: Thermometer, category: 'fluids', estimatedCostUsd: 120 },
   { id: 'tire-pressure-check', name: 'Tire Pressure Check', description: 'Verify and adjust tire pressure', intervalKm: 5000, intervalMonths: 3, icon: Gauge, category: 'tires', estimatedCostUsd: 0 },
 ]
-
-const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  tires: { bg: 'bg-neon-cyan/15', text: 'text-neon-cyan' },
-  fluids: { bg: 'bg-neon-purple/15', text: 'text-neon-purple' },
-  filters: { bg: 'bg-neon-green/15', text: 'text-neon-green' },
-  exterior: { bg: 'bg-neon-amber/15', text: 'text-neon-amber' },
-  inspection: { bg: 'bg-neon-red/15', text: 'text-neon-red' },
-}
 
 const STORAGE_KEY = 'teslasync-maintenance-log'
 const ICE_ANNUAL_COST = 1200
@@ -127,12 +120,10 @@ function ProgressBar({ pct, className }: { pct: number; className?: string }) {
 }
 
 function CategoryBadge({ category }: { category: string }) {
-  const c = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.inspection
-  return (
-    <span className={clsx('text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full', c.bg, c.text)}>
-      {category}
-    </span>
-  )
+  const colorMap: Record<string, 'cyan' | 'purple' | 'green' | 'amber' | 'red'> = {
+    tires: 'cyan', fluids: 'purple', filters: 'green', exterior: 'amber', inspection: 'red',
+  }
+  return <Badge color={colorMap[category] ?? 'cyan'}>{category}</Badge>
 }
 
 /* ────────────────────────── Main component ────────────────────────── */
@@ -369,7 +360,7 @@ export default function Maintenance() {
           <div className="text-right">
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Average daily</p>
             <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {convertDistance(avgDailyKm).toFixed(1)} {distanceUnit}/day
+              {fmtNumber(convertDistance(avgDailyKm))} {distanceUnit}/day
             </p>
           </div>
         )}
@@ -415,12 +406,9 @@ export default function Maintenance() {
 
       {/* ── Overdue Alert ── */}
       {counts.overdue > 0 && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
-          <p className="text-sm text-neon-red">
-            {counts.overdue} maintenance {counts.overdue === 1 ? 'item is' : 'items are'} overdue. Schedule service soon.
-          </p>
-        </div>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />} className="mb-6">
+          {counts.overdue} maintenance {counts.overdue === 1 ? 'item is' : 'items are'} overdue. Schedule service soon.
+        </AlertBanner>
       )}
 
       {/* ── Upcoming Maintenance ── */}
@@ -457,9 +445,7 @@ export default function Maintenance() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   {status === 'overdue' ? (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-neon-red/20 text-neon-red uppercase tracking-wider animate-pulse">
-                      Overdue
-                    </span>
+                    <Badge color="red" className="animate-pulse">Overdue</Badge>
                   ) : (
                     <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                       {progress.kmRemaining !== null && progress.kmRemaining > 0
@@ -534,9 +520,7 @@ export default function Maintenance() {
                     )}
                   </td>
                   <td className="py-3 pr-4">
-                    <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider', cfg.bg, cfg.color)}>
-                      {cfg.label}
-                    </span>
+                    <Badge color={status === 'overdue' ? 'red' : status === 'soon' ? 'amber' : 'green'}>{cfg.label}</Badge>
                   </td>
                   <td className="py-3 pr-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
                     {lastRecord ? formatDate(lastRecord.date) : '—'}
@@ -566,17 +550,13 @@ export default function Maintenance() {
             <Plus className="h-4 w-4 text-neon-cyan" />
             Log Service
           </h3>
-          <button
+          <Button
+            variant={showForm ? 'secondary' : 'primary'}
+            size="sm"
             onClick={() => setShowForm(v => !v)}
-            className={clsx(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-              showForm
-                ? 'bg-white/10 text-[var(--text-primary)]'
-                : 'bg-neon-cyan/15 text-neon-cyan hover:bg-neon-cyan/25',
-            )}
           >
             {showForm ? 'Cancel' : 'Add Record'}
-          </button>
+          </Button>
         </div>
 
         {showForm && (
@@ -637,12 +617,9 @@ export default function Maintenance() {
             </div>
 
             <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-              <button
-                onClick={handleAddRecord}
-                className="px-5 py-2 rounded-lg text-sm font-semibold bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 transition-all shadow-[0_0_12px_rgba(0,240,255,.15)]"
-              >
+              <Button onClick={handleAddRecord}>
                 Save Record
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -777,7 +754,7 @@ export default function Maintenance() {
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                 Based on your average of{' '}
                 <span className="font-semibold text-neon-purple">
-                  {convertDistance(avgDailyKm).toFixed(1)} {distanceUnit}/day
+                  {fmtNumber(convertDistance(avgDailyKm))} {distanceUnit}/day
                 </span>
               </p>
             </div>

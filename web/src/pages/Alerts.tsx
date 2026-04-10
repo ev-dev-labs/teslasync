@@ -6,7 +6,7 @@ import {
 } from '../api'
 import { formatDateTime } from '../lib/dateFormat'
 import { CHART_COLORS } from '../lib/colors'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, TabNav, Skeleton, EmptyState, Pagination, Badge, MetricCard } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   Bell, BellOff, AlertTriangle, Info, AlertCircle, MapPin, Battery,
@@ -129,9 +129,9 @@ function AlertCard({ alert, onMarkRead }: { alert: Alert; onMarkRead: () => void
         </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[10px] text-gray-600 flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{timeAgo}</span>
-          <span className={clsx('text-[10px] px-1.5 py-0.5 rounded-full font-medium', sev.bg, sev.color)}>
+          <Badge color={alert.severity === 'critical' ? 'red' : alert.severity === 'warning' ? 'amber' : 'cyan'} size="sm">
             {alert.severity}
-          </span>
+          </Badge>
           <span className="text-[10px] text-gray-600">{alert.type.replace(/_/g, ' ')}</span>
           {!alert.is_read && (
             <button onClick={onMarkRead}className="ml-auto flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-neon-cyan transition-colors opacity-0 group-hover:opacity-100">
@@ -193,22 +193,10 @@ function NotificationHistory() {
     <div className="space-y-6">
       {/* Analytics cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Total Sent</p>
-          <p className="text-sm font-bold text-neon-cyan"><AnimatedNumber value={totalSent} /></p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Failed</p>
-          <p className="text-sm font-bold text-neon-red"><AnimatedNumber value={totalFailed} /></p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Success Rate</p>
-          <p className="text-sm font-bold text-neon-green">{successRate}%</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Channels</p>
-          <p className="text-sm font-bold text-neon-purple"><AnimatedNumber value={stats?.enabled_channels ?? 0} /> / <AnimatedNumber value={stats?.total_channels ?? 0} /></p>
-        </div>
+        <MetricCard label="Total Sent" value={totalSent} icon={<Send className="h-4 w-4" />} color="cyan" />
+        <MetricCard label="Failed" value={totalFailed} icon={<AlertCircle className="h-4 w-4" />} color="red" />
+        <MetricCard label="Success Rate" value={`${successRate}%`} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+        <MetricCard label="Channels" value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
       </div>
 
       {/* Delivery status pie */}
@@ -267,17 +255,9 @@ function NotificationHistory() {
                       <td className="py-2 px-3 text-[var(--text-primary)] max-w-[200px] truncate">{log.title}</td>
                       <td className="py-2 px-3 text-[var(--text-secondary)]">{channelMap[log.channel_id] || `#${log.channel_id}`}</td>
                       <td className="py-2 px-3">
-                        <span className={clsx(
-                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
-                          log.status === 'sent' && 'bg-neon-green/10 text-neon-green',
-                          log.status === 'failed' && 'bg-neon-red/10 text-neon-red',
-                          log.status === 'pending' && 'bg-neon-amber/10 text-neon-amber',
-                        )}>
-                          {log.status === 'sent' && <CheckCircle className="h-2.5 w-2.5" />}
-                          {log.status === 'failed' && <AlertCircle className="h-2.5 w-2.5" />}
-                          {log.status === 'pending' && <Clock className="h-2.5 w-2.5" />}
+                        <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">
                           {log.status}
-                        </span>
+                        </Badge>
                       </td>
                     </tr>
                   ))}
@@ -542,22 +522,13 @@ export default function Alerts() {
         actions={
           <div className="flex items-center gap-3">
             {quietActive && (
-              <span className="flex items-center gap-1.5 rounded-full bg-neon-purple/10 px-3 py-1 text-xs font-medium text-neon-purple">
-                <Moon className="h-3 w-3" />
-                🌙 Quiet hours
-              </span>
+              <Badge color="purple" size="md" dot>🌙 Quiet hours</Badge>
             )}
             {unreadCount > 0 && (
-              <span className="flex items-center gap-1.5 rounded-full bg-neon-cyan/10 px-3 py-1 text-xs font-medium text-neon-cyan">
-                <span className="h-1.5 w-1.5 rounded-full bg-neon-cyan animate-pulse" />
-                {unreadCount} unread
-              </span>
+              <Badge color="cyan" size="md" dot>{unreadCount} unread</Badge>
             )}
             {criticalCount > 0 && (
-              <span className="flex items-center gap-1.5 rounded-full bg-neon-red/10 px-3 py-1 text-xs font-medium text-neon-red">
-                <AlertCircle className="h-3 w-3" />
-                {criticalCount} critical
-              </span>
+              <Badge color="red" size="md" dot>{criticalCount} critical</Badge>
             )}
           </div>
         }

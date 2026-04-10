@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSoftwareUpdates, getVehicleState, Vehicle } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, MetricCard, Badge } from '../components/ui'
 import { Download, CheckCircle, Clock, ArrowUpCircle, Smartphone, Calendar, ExternalLink, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDate } from '../lib/dateFormat'
@@ -68,33 +68,24 @@ export default function SoftwareUpdates() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <GlassPanel className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-neon-cyan/10 p-2.5"><Smartphone className="h-5 w-5 text-neon-cyan" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Current Version</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{latestVersion}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-neon-green/10 p-2.5"><CheckCircle className="h-5 w-5 text-neon-green" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Updates Installed</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{installedCount}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-neon-purple/10 p-2.5"><Download className="h-5 w-5 text-neon-purple" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Total Updates</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{totalUpdates}</p>
-            </div>
-          </div>
-        </GlassPanel>
+        <MetricCard
+          icon={<Smartphone className="h-5 w-5" />}
+          label="Current Version"
+          value={latestVersion}
+          color="cyan"
+        />
+        <MetricCard
+          icon={<CheckCircle className="h-5 w-5" />}
+          label="Updates Installed"
+          value={installedCount}
+          color="green"
+        />
+        <MetricCard
+          icon={<Download className="h-5 w-5" />}
+          label="Total Updates"
+          value={totalUpdates}
+          color="purple"
+        />
       </div>
 
       {/* Live Update Progress (shown when an update is in progress) */}
@@ -210,7 +201,7 @@ export default function SoftwareUpdates() {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{u.version}</span>
-                            <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', s.bg, s.color)}>{s.label}</span>
+                            <Badge color={s.color === 'text-neon-green' ? 'green' : s.color === 'text-neon-cyan' ? 'cyan' : s.color === 'text-neon-amber' ? 'amber' : s.color === 'text-neon-purple' ? 'purple' : 'cyan'}>{s.label}</Badge>
                             <a
                               href={`https://www.notateslaapp.com/software-updates/version/${encodeURIComponent(u.version)}/release-notes`}
                               target="_blank"

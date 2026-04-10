@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Radio, Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { formatRelative } from '../lib/dateFormat'
@@ -83,13 +83,9 @@ export default function MQTTInspector() {
               <RefreshCw className="inline h-3 w-3 mr-1" />
               Refreshes every 5s
             </span>
-            <span className={clsx(
-              'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full',
-              status?.connected ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-red/10 text-neon-red'
-            )}>
-              {status?.connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              {status?.connected ? 'Connected' : 'Disconnected'}
-            </span>
+            <Badge color={status?.connected ? 'green' : 'red'} dot>
+              {status?.connected ? <><Wifi className="h-3 w-3" /> Connected</> : <><WifiOff className="h-3 w-3" /> Disconnected</>}
+            </Badge>
           </div>
         }
       />
@@ -236,16 +232,14 @@ export default function MQTTInspector() {
                         <td className="px-3 py-2.5 font-mono text-[var(--text-primary)]">{v.vin}</td>
                         <td className="px-3 py-2.5">
                           {v.state ? (
-                            <span className={clsx(
-                              'px-2 py-0.5 rounded-full text-[10px] font-medium capitalize',
-                              v.state === 'driving' && 'bg-neon-green/10 text-neon-green',
-                              v.state === 'charging' && 'bg-neon-amber/10 text-neon-amber',
-                              v.state === 'parked' && 'bg-neon-cyan/10 text-neon-cyan',
-                              v.state === 'online' && 'bg-blue-500/10 text-blue-400',
-                              (!v.state || v.state === 'offline') && 'bg-gray-500/10 text-gray-400',
-                            )}>
+                            <Badge color={
+                              v.state === 'driving' ? 'green' :
+                              v.state === 'charging' ? 'amber' :
+                              v.state === 'parked' ? 'cyan' :
+                              'neutral'
+                            }>
                               {v.state}
-                            </span>
+                            </Badge>
                           ) : (
                             <span className="text-[var(--text-muted)]">—</span>
                           )}
@@ -258,13 +252,9 @@ export default function MQTTInspector() {
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           {isStale ? (
-                            <span className="inline-flex items-center gap-1 text-neon-amber text-[10px]">
-                              <AlertTriangle className="h-3 w-3" /> Stale
-                            </span>
+                            <Badge color="amber" dot>Stale</Badge>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-neon-green text-[10px]">
-                              <Wifi className="h-3 w-3" /> Live
-                            </span>
+                            <Badge color="green" dot>Live</Badge>
                           )}
                         </td>
                       </tr>

@@ -9,14 +9,14 @@ import type { MapStyle } from '../components/MapTileLayer'
 import { LatLngExpression, latLngBounds } from 'leaflet'
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
-  MapPin, Navigation, Flag, Thermometer, Mountain, BarChart3,
+  MapPin, Navigation, Flag, Thermometer,
   BatteryCharging, Activity, ArrowUpRight, ArrowDownRight, Share2, CircleDot,
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, BarChart, Bar, ComposedChart, ReferenceLine, Legend,
 } from 'recharts'
-import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, ChartContainer } from '../components/ui'
 import { AnimatedNumber, RadialGauge } from '../components/Widgets'
 import { useUnits } from '../hooks/useUnits'
 import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
@@ -580,10 +580,7 @@ export default function DriveDetail() {
         <>
           {/* Row 1: Comprehensive Drive Chart (TeslaMate-style) */}
           <FadeIn delay={0.12}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title flex items-center gap-2 mb-4">
-                <Activity className="h-4 w-4 text-neon-cyan" /> Drive
-              </h3>
+            <ChartContainer title="Drive" height="100%">
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData}>
@@ -620,16 +617,11 @@ export default function DriveDetail() {
                   </span>
                 ))}
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
-
-          {/* Row 2: SOC % + Elevation Profile */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.14}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title flex items-center gap-2 mb-4">
-                  <BatteryCharging className="h-4 w-4 text-neon-green" /> SOC % Over Time
-                </h3>
+              <ChartContainer title="SOC % Over Time" height="100%">
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
@@ -641,14 +633,11 @@ export default function DriveDetail() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             <FadeIn delay={0.16}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title flex items-center gap-2 mb-4">
-                  <Mountain className="h-4 w-4 text-neon-green" /> Elevation Profile
-                </h3>
+              <ChartContainer title="Elevation Profile" height="100%">
                 <div className="flex items-center gap-4 mb-3 text-xs">
                   <span className="flex items-center gap-1 text-neon-green"><ArrowUpRight className="h-3 w-3" />{Math.round(elevGain)} m gain</span>
                   <span className="flex items-center gap-1 text-neon-red"><ArrowDownRight className="h-3 w-3" />{Math.round(elevLoss)} m loss</span>
@@ -668,7 +657,7 @@ export default function DriveDetail() {
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
@@ -748,11 +737,8 @@ export default function DriveDetail() {
             )}
 
             <FadeIn delay={0.2} className="h-full">
-              <GlassPanel className="p-6 h-full flex flex-col">
-                <h3 className="section-title flex items-center gap-2 mb-4">
-                  <BarChart3 className="h-4 w-4 text-neon-purple" /> Speed Histogram
-                </h3>
-                <div className="flex-1 min-h-[14rem]">
+              <ChartContainer title="Speed Histogram" height="100%" className="h-full">
+                <div className="min-h-[14rem]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={speedHistData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -763,16 +749,13 @@ export default function DriveDetail() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
           {/* Row 4: Power Profile (dedicated) */}
           <FadeIn delay={0.22}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title flex items-center gap-2 mb-4">
-                <Zap className="h-4 w-4 text-neon-amber" /> Power Profile
-              </h3>
+            <ChartContainer title="Power Profile" height="100%">
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData}>
@@ -790,7 +773,7 @@ export default function DriveDetail() {
                 <span>Max Regen: <strong className="text-neon-cyan">{fmtInt(powerMin)} kW</strong></span>
                 <span>Avg: <strong className="text-[var(--text-primary)]">{fmtNumber(avgPower)} kW</strong></span>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* Row 5: Tire Pressure During Drive */}

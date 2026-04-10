@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSleepAnalytics, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
-import { Moon, Shield, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer } from '../components/ui'
+import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Legend,
@@ -10,6 +10,7 @@ import {
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
 import { formatDateShort, formatTime } from '../lib/dateFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 const STATE_COLORS: Record<string, string> = {
   asleep: '#a855f7',
@@ -41,13 +42,12 @@ export default function SleepEfficiency() {
     enabled: vehicleId !== null,
   })
 
-  const fmt = (v: number, decimals = 2) => v.toFixed(decimals)
 
   const pieData = sleep?.state_distribution.map(s => ({
     name: STATE_LABELS[s.state] || s.state,
     value: Math.round(s.total_minutes),
     color: STATE_COLORS[s.state] || CHART_COLORS[0],
-    hours: (s.total_minutes / 60).toFixed(1),
+    hours: fmtNumber(s.total_minutes / 60),
   })) ?? []
 
   const sentryOn = sleep?.sentry_comparison.find(s => s.sentry_mode)
@@ -106,59 +106,51 @@ export default function SleepEfficiency() {
           {/* Key metric cards */}
           <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StaggerItem>
-              <GlassPanel className="p-5" glow="purple" hover>
-                <div className="flex items-center gap-2 mb-3">
-                  <Moon className="h-4 w-4 text-neon-purple" />
-                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Sleep Efficiency</span>
-                </div>
-                <p className="text-2xl font-bold text-neon-purple">{fmt(sleep.sleep_efficiency_pct, 1)}%</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">Time spent sleeping vs total</p>
-              </GlassPanel>
+              <MetricCard
+                icon={<Moon className="h-4 w-4" />}
+                label="Sleep Efficiency"
+                value={`${fmtNumber(sleep.sleep_efficiency_pct)}%`}
+                color="purple"
+                subtitle="Time spent sleeping vs total"
+              />
             </StaggerItem>
 
             <StaggerItem>
-              <GlassPanel className="p-5" hover>
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-neon-cyan" />
-                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Avg Time to Sleep</span>
-                </div>
-                <p className="text-2xl font-bold text-neon-cyan">{fmt(sleep.time_to_sleep_avg_min, 0)} min</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">After going idle</p>
-              </GlassPanel>
+              <MetricCard
+                icon={<Clock className="h-4 w-4" />}
+                label="Avg Time to Sleep"
+                value={`${fmtInt(sleep.time_to_sleep_avg_min)} min`}
+                color="cyan"
+                subtitle="After going idle"
+              />
             </StaggerItem>
 
             <StaggerItem>
-              <GlassPanel className="p-5" hover>
-                <div className="flex items-center gap-2 mb-3">
-                  <Eye className="h-4 w-4 text-amber-400" />
-                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Sentry Drain Rate</span>
-                </div>
-                <p className="text-2xl font-bold text-amber-400">{fmt(sleep.sentry_on_drain_rate, 2)}%/hr</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">vs {fmt(sleep.sentry_off_drain_rate, 2)}%/hr without</p>
-              </GlassPanel>
+              <MetricCard
+                icon={<Eye className="h-4 w-4" />}
+                label="Sentry Drain Rate"
+                value={`${fmtNumber(sleep.sentry_on_drain_rate)}%/hr`}
+                color="amber"
+                subtitle={`vs ${fmtNumber(sleep.sentry_off_drain_rate)}%/hr without`}
+              />
             </StaggerItem>
 
             <StaggerItem>
-              <GlassPanel className="p-5" glow="red" hover>
-                <div className="flex items-center gap-2 mb-3">
-                  <DollarSign className="h-4 w-4 text-neon-red" />
-                  <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Sentry Monthly Cost</span>
-                </div>
-                <p className="text-2xl font-bold text-neon-red">${fmt(sleep.sentry_monthly_cost, 2)}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">{fmt(sleep.sentry_monthly_kwh, 1)} kWh/month</p>
-              </GlassPanel>
+              <MetricCard
+                icon={<DollarSign className="h-4 w-4" />}
+                label="Sentry Monthly Cost"
+                value={`$${fmtNumber(sleep.sentry_monthly_cost, 2)}`}
+                color="red"
+                subtitle={`${fmtNumber(sleep.sentry_monthly_kwh)} kWh/month`}
+              />
             </StaggerItem>
           </StaggerContainer>
 
           {/* Donut chart + Sentry comparison */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FadeIn>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Moon className="h-4 w-4 text-neon-purple" /> State Distribution
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer title="State Distribution" height={264}>
+                <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieData}
@@ -178,7 +170,6 @@ export default function SleepEfficiency() {
                       <Tooltip content={<ChartTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
                 <div className="flex flex-wrap justify-center gap-3 mt-4">
                   {pieData.map(entry => (
                     <div key={entry.name} className="flex items-center gap-1.5 text-xs">
@@ -188,16 +179,12 @@ export default function SleepEfficiency() {
                     </div>
                   ))}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-amber-400" /> Sentry vs No-Sentry
-                </h3>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer title="Sentry vs No-Sentry" height={224}>
+                <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={comparisonData}>
                       {chartGrid}
                       <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
@@ -208,7 +195,6 @@ export default function SleepEfficiency() {
                       <Bar dataKey="sentry_off" name="Sentry Off" fill="#a855f7" radius={[4, 4, 0, 0]} animationDuration={800} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
 
                 {/* Sentry cost callout */}
                 <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4">
@@ -218,20 +204,20 @@ export default function SleepEfficiency() {
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div>
-                      <p className="text-lg font-bold text-amber-400">{fmt(sleep.sentry_extra_drain_rate, 2)}%</p>
+                      <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_drain_rate)}%</p>
                       <p className="text-xs text-[var(--text-muted)]">Extra drain/hr</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-amber-400">{fmt(sleep.sentry_extra_monthly_kwh, 1)} kWh</p>
+                      <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_monthly_kwh)} kWh</p>
                       <p className="text-xs text-[var(--text-muted)]">Extra monthly</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-neon-red">${fmt(sleep.sentry_extra_monthly_cost, 2)}</p>
+                      <p className="text-lg font-bold text-neon-red">${fmtNumber(sleep.sentry_extra_monthly_cost, 2)}</p>
                       <p className="text-xs text-[var(--text-muted)]">Extra cost/mo</p>
                     </div>
                   </div>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
@@ -262,13 +248,13 @@ export default function SleepEfficiency() {
                             {formatTime(event.start_date)}
                           </span>
                         </td>
-                        <td className="py-3 pr-4">{fmt(event.duration_hours, 1)}h</td>
+                        <td className="py-3 pr-4">{fmtNumber(event.duration_hours)}h</td>
                         <td className="py-3 pr-4">
-                          <span className="text-neon-red">{fmt(event.battery_lost, 1)}%</span>
+                          <span className="text-neon-red">{fmtNumber(event.battery_lost)}%</span>
                         </td>
                         <td className="py-3 pr-4">
                           <span className={event.drain_rate > 1.5 ? 'text-neon-red' : 'text-neon-green'}>
-                            {fmt(event.drain_rate, 2)}%/hr
+                            {fmtNumber(event.drain_rate)}%/hr
                           </span>
                         </td>
                         <td className="py-3 pr-4">
@@ -286,7 +272,7 @@ export default function SleepEfficiency() {
                           {event.outside_temp != null ? (
                             <span className="flex items-center gap-1">
                               <Thermometer className="h-3 w-3 text-[var(--text-muted)]" />
-                              {fmt(event.outside_temp, 1)}°C
+                              {fmtNumber(event.outside_temp)}°C
                             </span>
                           ) : (
                             <span className="text-[var(--text-muted)]">—</span>

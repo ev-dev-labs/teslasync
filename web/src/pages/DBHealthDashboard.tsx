@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Database, ArrowUpDown, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Button, DataTable } from '../components/ui'
+import type { Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { formatDateTime } from '../lib/dateFormat'
@@ -92,6 +93,28 @@ export default function DBHealthDashboard() {
 
   const pool = dbStats?.connection_pool
 
+  const tableColumns: Column<TableInfo>[] = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Table',
+      render: (t) => {
+        const isLarge = (t.size_bytes ?? 0) > LARGE_TABLE_THRESHOLD
+        return (
+          <div className="flex items-center gap-2">
+            {isLarge && <AlertTriangle className="h-3 w-3 text-neon-amber shrink-0" />}
+            <span className={clsx('font-mono', isLarge ? 'text-neon-amber' : 'text-[var(--text-primary)]')}>
+              {t.name}
+            </span>
+          </div>
+        )
+      },
+    },
+    { key: 'rows', header: 'Rows', render: (t) => <span className="font-mono text-[var(--text-secondary)]">{fmtInt(t.row_count)}</span>, className: 'text-right' },
+    { key: 'size', header: 'Size', render: (t) => <span className="font-mono text-[var(--text-secondary)]">{t.size_human || (t.size_bytes ? formatBytes(t.size_bytes) : '—')}</span>, className: 'text-right' },
+    { key: 'indexes', header: 'Indexes', render: (t) => <span className="font-mono text-[var(--text-muted)]">{t.index_count ?? '—'}</span>, className: 'text-right' },
+    { key: 'vacuum', header: 'Last Vacuum', render: (t) => <span className="text-[var(--text-muted)] whitespace-nowrap">{t.last_vacuum ? formatDateTime(t.last_vacuum) : '—'}</span>, className: 'text-right' },
+  ], [])
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -168,18 +191,14 @@ export default function DBHealthDashboard() {
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                 {(['size', 'rows', 'name'] as SortKey[]).map(key => (
-                  <button
+                  <Button
                     key={key}
                     onClick={() => setSortKey(key)}
-                    className={clsx(
-                      'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border',
-                      sortKey === key
-                        ? 'bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20'
-                        : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)]'
-                    )}
+                    variant={sortKey === key ? 'primary' : 'secondary'}
+                    size="sm"
                   >
                     {key === 'size' ? 'Size' : key === 'rows' ? 'Rows' : 'Name'}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -189,43 +208,13 @@ export default function DBHealthDashboard() {
                 {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
               </div>
             ) : (
-              <div className="overflow-auto max-h-[50vh] rounded-lg border border-[var(--border)]">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-[var(--surface)] z-10">
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="text-left px-3 py-2.5 text-[var(--text-muted)] font-medium">Table</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Rows</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Size</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Indexes</th>
-                      <th className="text-right px-3 py-2.5 text-[var(--text-muted)] font-medium">Last Vacuum</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedTables.map(table => {
-                      const isLarge = (table.size_bytes ?? 0) > LARGE_TABLE_THRESHOLD
-                      return (
-                        <tr key={table.name} className={clsx(
-                          'border-b border-[var(--border)] hover:bg-white/[0.02]',
-                          isLarge && 'bg-neon-amber/[0.03]'
-                        )}>
-                          <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-2">
-                              {isLarge && <AlertTriangle className="h-3 w-3 text-neon-amber shrink-0" />}
-                              <span className={clsx('font-mono', isLarge ? 'text-neon-amber' : 'text-[var(--text-primary)]')}>
-                                {table.name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{fmtInt(table.row_count)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-[var(--text-secondary)]">{table.size_human || (table.size_bytes ? formatBytes(table.size_bytes) : '—')}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-[var(--text-muted)]">{table.index_count ?? '—'}</td>
-                          <td className="px-3 py-2.5 text-right text-[var(--text-muted)] whitespace-nowrap">{table.last_vacuum ? formatDateTime(table.last_vacuum) : '—'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable<TableInfo>
+                columns={tableColumns}
+                data={sortedTables}
+                keyExtractor={t => t.name}
+                compact
+                className="max-h-[50vh] overflow-auto"
+              />
             )}
           </GlassPanel>
         </FadeIn>

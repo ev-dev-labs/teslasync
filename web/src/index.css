@@ -36,6 +36,15 @@ body {
   overflow: hidden;
 }
 
+/* Force dark dropdown options in all selects */
+select option {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+select option:checked {
+  background: var(--surface-3);
+}
+
 /* === SCROLLBAR === */
 ::-webkit-scrollbar {
   width: 6px;

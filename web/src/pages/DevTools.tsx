@@ -9,7 +9,7 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
   MapPin, FileText,
 } from 'lucide-react'
-import { PageHeader, GlassPanel } from '../components/ui'
+import { PageHeader, GlassPanel, Badge } from '../components/ui'
 import { getApiBase } from '../lib/resilience'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
@@ -88,19 +88,8 @@ function AccordionSection({ icon, title, description, badges, children, isOpen, 
 }
 
 function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray' | 'cyan' | 'purple'; label: string }) {
-  const colors = {
-    green: 'bg-green-500/20 text-green-400 border-green-500/30',
-    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    red: 'bg-red-500/20 text-red-400 border-red-500/30',
-    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-    cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-    purple: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  }
-  return (
-    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
-      {label}
-    </span>
-  )
+  const badgeColor = color === 'gray' ? 'neutral' as const : color
+  return <Badge color={badgeColor}>{label}</Badge>
 }
 
 function ToolCard({

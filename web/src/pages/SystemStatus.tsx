@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { getAuditLogs, getAPIUsage, getCompressionStats, getExtendedHealth, getVersionInfo, getTelemetryStatus, getWorkersHealth, getNotificationStats, getNotificationLogs, getExportJobs, AuditLog, APIUsage, CompressionStats, ExtendedHealthResponse, TelemetryStatus, WorkersHealth, NotificationStats, NotificationLog, ExportJobSummary } from '../api'
 import { getApiBase } from '../lib/resilience'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
@@ -10,7 +9,7 @@ import {
   Shield, Gauge, DollarSign, BarChart3, Zap, Archive, TrendingUp, HeartPulse,
   Satellite, Link, Globe, Rss, ChevronDown, Bell, Package, Download, Send,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, Badge, DataTable, Modal } from '../components/ui'
 import { AnimatedNumber } from '../components/Widgets'
 import PollingEnginePanel from '../components/PollingEngine'
 import { motion } from 'framer-motion'
@@ -107,17 +106,8 @@ function AccordionSection({ icon, title, description, badges, defaultOpen = fals
 
 /** Small colored dot with optional label for accordion summary badges. */
 function StatusBadge({ color, label }: { color: 'green' | 'amber' | 'red' | 'gray'; label: string }) {
-  const colors = {
-    green: 'bg-green-500/20 text-green-400 border-green-500/30',
-    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    red: 'bg-red-500/20 text-red-400 border-red-500/30',
-    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  }
-  return (
-    <span className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full border', colors[color])}>
-      {label}
-    </span>
-  )
+  const badgeColor = color === 'gray' ? 'neutral' as const : color
+  return <Badge color={badgeColor} size="sm">{label}</Badge>
 }
 
 function getStatusLabel(status: string): string {
@@ -267,37 +257,22 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
       </div>
 
       {/* Signals Modal — full screen via portal */}
-      {showSignalsModal && info.details?.supported_signals && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowSignalsModal(false)}>
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="relative w-full max-w-5xl max-h-[90vh] rounded-2xl border border-white/10 p-6 overflow-y-auto shadow-2xl"
-            style={{ background: 'var(--surface-1, #0a0b1a)' }}
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between mb-4 pb-3 border-b border-white/10" style={{ background: 'var(--surface-1, #0a0b1a)' }}>
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">Subscribed Signals ({info.details.supported_signals.length})</h3>
-              <button onClick={() => setShowSignalsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-lg">✕</button>
+      <Modal open={showSignalsModal && !!info.details?.supported_signals} onClose={() => setShowSignalsModal(false)} title={`Subscribed Signals (${info.details?.supported_signals?.length ?? 0})`} size="lg">
+        {info.details?.supported_signals && SIGNAL_GROUPS.map(group => {
+          const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
+          if (matched.length === 0) return null
+          return (
+            <div key={group.label} className="mb-3">
+              <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: group.color }}>{group.label} ({matched.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {matched.map((s: string) => (
+                  <span key={s} className="px-2 py-0.5 text-[10px] rounded-full" style={{ backgroundColor: `${group.color}15`, color: group.color }}>{s}</span>
+                ))}
+              </div>
             </div>
-            {SIGNAL_GROUPS.map(group => {
-              const matched = group.signals.filter((s: string) => info.details!.supported_signals!.includes(s))
-              if (matched.length === 0) return null
-              return (
-                <div key={group.label} className="mb-3">
-                  <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: group.color }}>{group.label} ({matched.length})</p>
-                  <div className="flex flex-wrap gap-1">
-                    {matched.map((s: string) => (
-                      <span key={s} className="px-2 py-0.5 text-[10px] rounded-full" style={{ backgroundColor: `${group.color}15`, color: group.color }}>{s}</span>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </motion.div>
-        </div>,
-        document.body
-      )}
+          )
+        })}
+      </Modal>
     </GlassPanel>
   )
 }
@@ -677,26 +652,16 @@ function RateLimitsPanel() {
             <p className="text-[11px] text-[var(--text-muted)]">Request throttling configured per route</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Route</th>
-                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Limit</th>
-                <th className="text-left py-2 px-3 text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {limits.map(l => (
-                <tr key={l.route} className="border-b border-white/[0.03] last:border-0">
-                  <td className="py-2.5 px-3 text-[var(--text-primary)] font-medium">{l.route}</td>
-                  <td className="py-2.5 px-3"><span className="font-mono text-neon-cyan">{l.limit}</span></td>
-                  <td className="py-2.5 px-3 text-[var(--text-muted)]">{l.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { key: 'route', header: 'Route', render: (l) => <span className="text-[var(--text-primary)] font-medium">{l.route}</span> },
+            { key: 'limit', header: 'Limit', render: (l) => <span className="font-mono text-neon-cyan">{l.limit}</span> },
+            { key: 'description', header: 'Description', render: (l) => <span className="text-[var(--text-muted)]">{l.description}</span> },
+          ]}
+          data={limits}
+          keyExtractor={(l) => l.route}
+          compact
+        />
       </GlassPanel>
     </FadeIn>
   )
@@ -723,35 +688,18 @@ function AuditLogTable() {
             {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
           </div>
         ) : logs && logs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider border-b border-white/[0.06]">
-                  <th className="py-2 text-left">Time</th>
-                  <th className="py-2 text-left">Action</th>
-                  <th className="py-2 text-left">Resource</th>
-                  <th className="py-2 text-left">Details</th>
-                  <th className="py-2 text-left">IP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((l: AuditLog) => (
-                  <tr key={l.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                    <td className="py-2 text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</td>
-                    <td className="py-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                        style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>
-                        {l.action}
-                      </span>
-                    </td>
-                    <td className="py-2 text-[var(--text-secondary)]">{l.resource}</td>
-                    <td className="py-2 text-[var(--text-muted)] max-w-xs truncate">{l.details}</td>
-                    <td className="py-2 text-[var(--text-muted)] font-mono">{l.ip}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              { key: 'time', header: 'Time', render: (l: AuditLog) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</span> },
+              { key: 'action', header: 'Action', render: (l: AuditLog) => <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>{l.action}</span> },
+              { key: 'resource', header: 'Resource', render: (l: AuditLog) => <span className="text-[var(--text-secondary)]">{l.resource}</span> },
+              { key: 'details', header: 'Details', render: (l: AuditLog) => <span className="text-[var(--text-muted)] max-w-xs truncate">{l.details}</span> },
+              { key: 'ip', header: 'IP', render: (l: AuditLog) => <span className="text-[var(--text-muted)] font-mono">{l.ip}</span> },
+            ]}
+            data={logs}
+            keyExtractor={(l: AuditLog) => String(l.id)}
+            compact
+          />
         ) : (
           <p className="text-xs text-[var(--text-muted)] text-center py-4">No audit log entries yet</p>
         )}

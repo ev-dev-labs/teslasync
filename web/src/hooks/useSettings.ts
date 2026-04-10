@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSettings, type AppSettings } from '../api'
-import { setGlobalPrecision } from '../lib/numberFormat'
+import { setGlobalPrecision, fmtNumber } from '../lib/numberFormat'
 
 const defaults: AppSettings = {
   unit_of_length: 'km',
@@ -16,7 +16,7 @@ const defaults: AppSettings = {
   gas_price_per_unit: 0,
   gas_unit: 'gallon',
   gas_efficiency_mpg: 25,
-  decimal_precision: 1,
+  decimal_precision: 2,
   quiet_hours_enabled: false,
   quiet_hours_start: '22:00',
   quiet_hours_end: '07:00',
@@ -76,15 +76,15 @@ export function useSettings() {
 
   /** Format a distance value with unit */
   const fmtDistance = (km: number, d?: number): string =>
-    `${convertDistance(km).toFixed(d ?? decimals)} ${distanceUnit}`
+    `${fmtNumber(convertDistance(km), d)} ${distanceUnit}`
 
   /** Format a speed value with unit */
   const fmtSpeed = (kmh: number, d?: number): string =>
-    `${convertSpeed(kmh).toFixed(d ?? Math.max(0, decimals - 1))} ${speedUnit}`
+    `${fmtNumber(convertSpeed(kmh), d)} ${speedUnit}`
 
   /** Format a temperature value with unit */
   const fmtTemp = (celsius: number, d?: number): string =>
-    `${convertTemp(celsius).toFixed(d ?? decimals)} ${tempUnit}`
+    `${fmtNumber(convertTemp(celsius), d)} ${tempUnit}`
 
   return {
     settings: s,

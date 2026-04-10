@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { GitCompare, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Button } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { fmtNumber } from '../lib/numberFormat'
@@ -192,14 +192,12 @@ export default function SignalDiff() {
 
           {/* Presets */}
           <div className="flex gap-2 mt-4">
-            <button onClick={() => applyPreset('today-yesterday')}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-neon-cyan/30 hover:text-neon-cyan transition-colors">
+            <Button variant="secondary" size="sm" onClick={() => applyPreset('today-yesterday')}>
               Today vs Yesterday
-            </button>
-            <button onClick={() => applyPreset('week')}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-neon-cyan/30 hover:text-neon-cyan transition-colors">
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => applyPreset('week')}>
               This Week vs Last Week
-            </button>
+            </Button>
           </div>
         </GlassPanel>
       </FadeIn>

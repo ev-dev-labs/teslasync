@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Cpu } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
@@ -181,15 +181,21 @@ export default function StateMachineDebugger() {
                     {Object.entries(countByState)
                       .sort((a, b) => (durationByState[b[0]] ?? 0) - (durationByState[a[0]] ?? 0))
                       .map(([state, count]) => {
-                        const s = getStateStyle(state)
                         const dur = durationByState[state] ?? 0
                         const pct = totalDuration > 0 ? (dur / totalDuration) * 100 : 0
                         return (
                           <tr key={state} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
                             <td className="px-3 py-2.5">
                               <div className="flex items-center gap-2">
-                                <span className={clsx('h-2 w-2 rounded-full', s.dot)} />
-                                <span className={clsx('font-medium capitalize', s.text)}>{state}</span>
+                                <Badge color={
+                                  state === 'driving' ? 'green' :
+                                  state === 'charging' ? 'amber' :
+                                  state === 'parked' ? 'cyan' :
+                                  state === 'asleep' ? 'purple' :
+                                  'neutral'
+                                } dot>
+                                  {state}
+                                </Badge>
                               </div>
                             </td>
                             <td className="px-3 py-2.5 text-right text-[var(--text-primary)] font-mono">{count}</td>
@@ -234,14 +240,18 @@ export default function StateMachineDebugger() {
                 </thead>
                 <tbody>
                   {transitions.map((t, i) => {
-                    const s = getStateStyle(t.state)
                     return (
                       <tr key={i} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
                         <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className={clsx('h-2 w-2 rounded-full', s.dot)} />
-                            <span className={clsx('font-medium capitalize', s.text)}>{t.state}</span>
-                          </div>
+                          <Badge color={
+                            t.state?.toLowerCase() === 'driving' ? 'green' :
+                            t.state?.toLowerCase() === 'charging' ? 'amber' :
+                            t.state?.toLowerCase() === 'parked' ? 'cyan' :
+                            t.state?.toLowerCase() === 'asleep' ? 'purple' :
+                            'neutral'
+                          } dot>
+                            {t.state}
+                          </Badge>
                         </td>
                         <td className="px-3 py-2.5 text-[var(--text-secondary)] font-mono whitespace-nowrap">{formatDateTime(t.started_at)}</td>
                         <td className="px-3 py-2.5 text-[var(--text-secondary)] font-mono whitespace-nowrap">

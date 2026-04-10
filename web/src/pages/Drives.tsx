@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getDrives, Drive, Vehicle } from '../api'
-import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, Zap, ArrowUpDown, Calendar, MapPin, Download } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, Pagination, DateRangeFilter } from '../components/ui'
+import { Route, Clock, Gauge, Battery, ChevronRight, TrendingUp, Zap, ArrowUpDown, MapPin, Download } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, EmptyState, Pagination, DateRangeFilter, Badge, InlineMetric, ChartContainer } from '../components/ui'
 import { RadialGauge, MetricBar, AnimatedNumber } from '../components/Widgets'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,6 +13,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 function formatDuration(min: number): string {
   const h = Math.floor(min / 60)
@@ -42,8 +43,8 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
   const isCompleted = drive.end_date != null
   const hasData = actualDistance > 0 || (drive.duration_min > 0)
   const avgSpeed = drive.speed_avg != null
-    ? convertSpeed(drive.speed_avg).toFixed(0)
-    : drive.duration_min > 0 && actualDistance > 0 ? convertSpeed(actualDistance / (drive.duration_min / 60)).toFixed(0) : '—'
+    ? fmtInt(convertSpeed(drive.speed_avg))
+    : drive.duration_min > 0 && actualDistance > 0 ? fmtInt(convertSpeed(actualDistance / (drive.duration_min / 60))) : '—'
   const eff = getEfficiency(drive)
   const effConverted = eff ? convertEfficiency(eff) : null
   const score = getEfficiencyScore(eff)
@@ -63,29 +64,29 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
             <div className="flex items-center gap-3 mb-1">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateTime(drive.start_date)}</p>
               {hasData ? (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-neon-cyan/10 text-neon-cyan font-medium">
-                  {convertDistance(actualDistance).toFixed(1)} {distanceUnit}
-                </span>
+                <Badge color="cyan" size="sm">
+                  {fmtNumber(convertDistance(actualDistance))} {distanceUnit}
+                </Badge>
               ) : isCompleted ? (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-neon-amber/10 text-neon-amber font-medium">
+                <Badge color="amber" size="sm">
                   No telemetry
-                </span>
+                </Badge>
               ) : (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-medium">
+                <Badge color="green" size="sm">
                   In progress
-                </span>
+                </Badge>
               )}
               {drive.speed_max !== null && drive.speed_max > 130 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neon-red/10 text-neon-red font-medium">
+                <Badge color="red" size="sm">
                   High speed
-                </span>
+                </Badge>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDuration(drive.duration_min)}</span>
-              <span className="flex items-center gap-1"><Gauge className="h-3 w-3" /> Avg {avgSpeed} {speedUnit}</span>
+              <InlineMetric icon={<Clock />} value={formatDuration(drive.duration_min)} />
+              <InlineMetric icon={<Gauge />} value={`Avg ${avgSpeed} ${speedUnit}`} />
               {drive.speed_max !== null && (
-                <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Max {convertSpeed(drive.speed_max).toFixed(0)} {speedUnit}</span>
+                <InlineMetric icon={<TrendingUp />} value={`Max ${fmtInt(convertSpeed(drive.speed_max))} ${speedUnit}`} />
               )}
               {hasBattery && (
                 <span className="flex items-center gap-1">
@@ -95,7 +96,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
               )}
               {effConverted && (
                 <span className="flex items-center gap-1" style={{ color: score.color }}>
-                  <Zap className="h-3 w-3" /> {effConverted.toFixed(0)} {efficiencyUnit}
+                  <Zap className="h-3 w-3" /> {fmtInt(effConverted)} {efficiencyUnit}
                 </span>
               )}
             </div>
@@ -249,11 +250,11 @@ export default function Drives() {
               </div>
               <div>
                 <MetricBar label="Avg Trip Distance" value={stats.totalDistance / stats.count} max={100} color="#10b981" />
-                <p className="text-[10px] text-gray-600 mt-1">{convertDistance(stats.totalDistance / stats.count).toFixed(1)} {distanceUnit}</p>
+                <p className="text-[10px] text-gray-600 mt-1">{fmtNumber(convertDistance(stats.totalDistance / stats.count))} {distanceUnit}</p>
               </div>
               <div>
                 <MetricBar label="Longest Drive" value={stats.longestDrive.distance} max={Math.max(stats.longestDrive.distance, 200)} color="#a855f7" />
-                <p className="text-[10px] text-gray-600 mt-1">{convertDistance(stats.longestDrive.distance).toFixed(1)} {distanceUnit}</p>
+                <p className="text-[10px] text-gray-600 mt-1">{fmtNumber(convertDistance(stats.longestDrive.distance))} {distanceUnit}</p>
               </div>
               <div>
                 <MetricBar label="Avg Duration" value={stats.totalDuration / stats.count} max={120} color="#f59e0b" />
@@ -269,10 +270,7 @@ export default function Drives() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Distance trend */}
           <FadeIn delay={0.1}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title mb-4 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-neon-cyan" /> Recent Drives
-              </h3>
+            <ChartContainer title="Recent Drives" height="100%">
               <div className="h-40 sm:h-52">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={distanceTrend}>
@@ -290,15 +288,12 @@ export default function Drives() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* Trip distance distribution */}
           <FadeIn delay={0.15}>
-            <GlassPanel className="p-6">
-              <h3 className="section-title mb-4 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-neon-green" /> Trip Distance Distribution
-              </h3>
+            <ChartContainer title="Trip Distance Distribution" height="100%">
               <div className="h-40 sm:h-52">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={distDist}>
@@ -310,7 +305,7 @@ export default function Drives() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
         </div>
       )}
@@ -318,11 +313,11 @@ export default function Drives() {
       {/* Speed vs Efficiency scatter */}
       {scatterData.length > 5 && (
         <FadeIn delay={0.2}>
-          <GlassPanel className="p-6">
-            <h3 className="section-title mb-4 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-neon-amber" /> Speed vs Efficiency
-              <span className="text-xs text-[var(--text-muted)] font-normal ml-2">Lower {efficiencyUnit} = better</span>
-            </h3>
+          <ChartContainer
+            title="Speed vs Efficiency"
+            subtitle={`Lower ${efficiencyUnit} = better`}
+            height="100%"
+          >
             <div className="h-40 sm:h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart>
@@ -334,7 +329,7 @@ export default function Drives() {
                 </ScatterChart>
               </ResponsiveContainer>
             </div>
-          </GlassPanel>
+          </ChartContainer>
         </FadeIn>
       )}
 

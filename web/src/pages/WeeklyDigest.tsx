@@ -5,12 +5,13 @@ import type { Alert } from '../api'
 import {
   PageHeader,
   GlassPanel,
-  StatCard,
+  MetricCard,
   FadeIn,
   StaggerContainer,
   StaggerItem,
   Skeleton,
   EmptyState,
+  AlertBanner,
 } from '../components/ui'
 import {
   CalendarDays,
@@ -152,30 +153,6 @@ function dayIndex(dateStr: string): number {
   const d = new Date(dateStr)
   const day = d.getDay()
   return day === 0 ? 6 : day - 1
-}
-
-// ── severity helpers ─────────────────────────────────────────────────────────
-
-function severityColor(severity: Alert['severity']): string {
-  switch (severity) {
-    case 'critical':
-      return 'text-neon-red'
-    case 'warning':
-      return 'text-neon-amber'
-    default:
-      return 'text-neon-cyan'
-  }
-}
-
-function severityBg(severity: Alert['severity']): string {
-  switch (severity) {
-    case 'critical':
-      return 'bg-neon-red/20 text-neon-red'
-    case 'warning':
-      return 'bg-neon-amber/20 text-neon-amber'
-    default:
-      return 'bg-neon-cyan/20 text-neon-cyan'
-  }
 }
 
 // ── chart tooltip ────────────────────────────────────────────────────────────
@@ -433,25 +410,25 @@ export default function WeeklyDigest() {
         metric: `Distance (${distanceUnit})`,
         current: convertDistance(stats.totalDist),
         previous: convertDistance(stats.prevDist),
-        fmt: (v: number) => v.toFixed(1),
+        fmt: (v: number) => fmtNumber(v),
       },
       {
         metric: 'Energy (kWh)',
         current: stats.totalEnergy,
         previous: stats.prevEnergy,
-        fmt: (v: number) => v.toFixed(1),
+        fmt: (v: number) => fmtNumber(v),
       },
       {
         metric: 'Cost ($)',
         current: stats.totalCost,
         previous: stats.prevCost,
-        fmt: (v: number) => `$${v.toFixed(2)}`,
+        fmt: (v: number) => `$${fmtNumber(v, 2)}`,
       },
       {
         metric: `Avg Top Speed (${speedUnit})`,
         current: convertSpeed(avgSpeed),
         previous: convertSpeed(prevAvgSpeed),
-        fmt: (v: number) => v.toFixed(0),
+        fmt: (v: number) => fmtInt(v),
       },
     ]
   }, [stats, weekDrives, prevDrives, convertDistance, convertSpeed, distanceUnit, speedUnit])
@@ -531,7 +508,7 @@ export default function WeeklyDigest() {
             {/* ── 3. Week-at-a-Glance Summary ────────────────────────── */}
             <StaggerContainer className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Total Drives"
                   value={stats.driveCount}
                   icon={<Car className="h-5 w-5" />}
@@ -540,7 +517,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label={`Total Distance`}
                   value={fmtDistance(stats.totalDist, 1)}
                   icon={<Route className="h-5 w-5" />}
@@ -549,7 +526,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Energy Used"
                   value={fmtWithUnit(stats.totalEnergy, 'kWh', 1)}
                   icon={<Zap className="h-5 w-5" />}
@@ -558,7 +535,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Charging Cost"
                   value={`$${fmtNumber(stats.totalCost, 2)}`}
                   icon={<DollarSign className="h-5 w-5" />}
@@ -567,7 +544,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Gas Savings"
                   value={`$${fmtNumber(stats.gasSavings, 2)}`}
                   icon={<Leaf className="h-5 w-5" />}
@@ -577,7 +554,7 @@ export default function WeeklyDigest() {
                 />
               </StaggerItem>
               <StaggerItem>
-                <StatCard
+                <MetricCard
                   label="Drive Time"
                   value={`${Math.floor(stats.totalDuration / 60)}h ${Math.round(stats.totalDuration % 60)}m`}
                   icon={<Timer className="h-5 w-5" />}
@@ -789,37 +766,26 @@ export default function WeeklyDigest() {
               {weekAlerts.length > 0 ? (
                 <div className="space-y-3">
                   {weekAlerts.map((alert) => (
-                    <div
+                    <AlertBanner
                       key={alert.id}
-                      className="glass-card rounded-lg p-3 flex items-start gap-3"
+                      variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'}
+                      title={alert.title}
+                      icon={<AlertTriangle className="h-4 w-4" />}
                     >
-                      <AlertTriangle className={clsx('h-4 w-4 mt-0.5 shrink-0', severityColor(alert.severity))} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', severityBg(alert.severity))}
-                          >
-                            {alert.severity}
-                          </span>
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {alert.title}
-                          </span>
-                        </div>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                          {alert.message}
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                          <Clock className="inline h-3 w-3 mr-1" />
-                          {new Date(alert.created_at).toLocaleString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {alert.message}
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                        <Clock className="inline h-3 w-3 mr-1" />
+                        {new Date(alert.created_at).toLocaleString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </AlertBanner>
                   ))}
                 </div>
               ) : (

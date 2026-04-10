@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getRegenStats, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
-import { Zap, TrendingUp, Activity, Calendar } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer } from '../components/ui'
+import { Zap, Activity, Calendar } from 'lucide-react'
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   ComposedChart, Line, Bar
@@ -117,16 +117,13 @@ export default function RegenEfficiency() {
           {/* Hero stats */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Lifetime Regen', value: fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh', 1), color: 'text-neon-green' },
-              { label: 'Regen Ratio', value: fmtPercent(data?.regen_ratio ?? 0, 1), color: 'text-neon-cyan' },
-              { label: 'Monthly Avg', value: fmtWithUnit(data?.monthly_avg_regen ?? 0, 'kW', 1), color: 'text-neon-purple' },
-              { label: 'Free Charges', value: fmtNumber(data?.free_charges ?? 0, 1), color: 'text-neon-amber' },
+              { label: 'Lifetime Regen', value: fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh', 1), color: 'green' as const },
+              { label: 'Regen Ratio', value: fmtPercent(data?.regen_ratio ?? 0, 1), color: 'cyan' as const },
+              { label: 'Monthly Avg', value: fmtWithUnit(data?.monthly_avg_regen ?? 0, 'kW', 1), color: 'purple' as const },
+              { label: 'Free Charges', value: fmtNumber(data?.free_charges ?? 0, 1), color: 'amber' as const },
             ].map(m => (
               <StaggerItem key={m.label}>
-                <GlassPanel className="p-4 text-center">
-                  <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{m.label}</p>
-                  <p className={`text-xl font-bold mt-1 ${m.color}`}>{m.value}</p>
-                </GlassPanel>
+                <MetricCard label={m.label} value={m.value} color={m.color} />
               </StaggerItem>
             ))}
           </StaggerContainer>
@@ -171,10 +168,7 @@ export default function RegenEfficiency() {
           {/* Monthly regen trend chart */}
           {monthlyChartData.length > 0 && (
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-neon-cyan" /> Monthly Regen Trend
-                </h3>
+              <ChartContainer title="Monthly Regen Trend" height="100%">
                 <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={monthlyChartData}>
@@ -188,7 +182,7 @@ export default function RegenEfficiency() {
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           )}
 

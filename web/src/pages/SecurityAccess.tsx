@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSecurityEvents, getSecurityLatest, SecurityEvent } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, AlertBanner } from '../components/ui'
 import {
   Lock, Unlock, Shield, ShieldCheck, ShieldAlert, Eye,
   DoorOpen, DoorClosed, Home, UserCheck, AlertTriangle, CheckCircle,
@@ -469,10 +469,9 @@ export default function SecurityAccess() {
 
       {/* Alert banner for insecure state */}
       {!loadingLatest && latest && !isSecure && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
-          <p className="text-sm text-neon-red">Vehicle is not fully secure. Check lock status, doors, and windows.</p>
-        </div>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />} className="mb-6">
+          Vehicle is not fully secure. Check lock status, doors, and windows.
+        </AlertBanner>
       )}
 
       {/* ── Summary Stats Row ──────────────────────────────────────────────────── */}
@@ -539,9 +538,7 @@ export default function SecurityAccess() {
             <span className={clsx('text-lg font-bold', latest?.locked ? 'text-neon-green' : 'text-neon-red')}>
               {latest?.locked ? 'Locked' : 'Unlocked'}
             </span>
-            <span className={clsx('text-[10px] px-3 py-0.5 rounded-full font-medium', latest?.locked ? 'bg-neon-green/20 text-neon-green' : 'bg-neon-red/20 text-neon-red')}>
-              Lock Status
-            </span>
+            <Badge color={latest?.locked ? 'green' : 'red'} size="sm">Lock Status</Badge>
           </div>
 
           {/* Sentry Mode */}
@@ -552,9 +549,7 @@ export default function SecurityAccess() {
             <span className={clsx('text-lg font-bold', latest?.sentry_mode ? 'text-blue-400' : 'text-[var(--text-muted)]')}>
               {latest?.sentry_mode ? 'Active' : 'Inactive'}
             </span>
-            <span className={clsx('text-[10px] px-3 py-0.5 rounded-full font-medium', latest?.sentry_mode ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-[var(--text-muted)]')}>
-              Sentry Mode
-            </span>
+            <Badge color={latest?.sentry_mode ? 'cyan' : 'neutral'} size="sm">Sentry Mode</Badge>
           </div>
 
           {/* Doors */}
@@ -565,9 +560,7 @@ export default function SecurityAccess() {
             <span className={clsx('text-lg font-bold', doorClosed(latest?.door_state) ? 'text-neon-green' : 'text-neon-amber')}>
               {doorClosed(latest?.door_state) ? 'Closed' : latest?.door_state ?? 'Unknown'}
             </span>
-            <span className={clsx('text-[10px] px-3 py-0.5 rounded-full font-medium', doorClosed(latest?.door_state) ? 'bg-neon-green/20 text-neon-green' : 'bg-neon-amber/20 text-neon-amber')}>
-              Doors
-            </span>
+            <Badge color={doorClosed(latest?.door_state) ? 'green' : 'amber'} size="sm">Doors</Badge>
           </div>
 
           {/* Windows */}
@@ -578,9 +571,7 @@ export default function SecurityAccess() {
             <span className={clsx('text-sm font-bold text-center', windowSummary === 'All Closed' ? 'text-neon-green' : 'text-neon-amber')}>
               {windowSummary}
             </span>
-            <span className={clsx('text-[10px] px-3 py-0.5 rounded-full font-medium', windowSummary === 'All Closed' ? 'bg-neon-green/20 text-neon-green' : 'bg-neon-amber/20 text-neon-amber')}>
-              Windows
-            </span>
+            <Badge color={windowSummary === 'All Closed' ? 'green' : 'amber'} size="sm">Windows</Badge>
           </div>
 
           {/* HomeLink */}
@@ -591,9 +582,7 @@ export default function SecurityAccess() {
             <span className={clsx('text-lg font-bold', latest?.homelink_nearby ? 'text-purple-400' : 'text-[var(--text-muted)]')}>
               {latest?.homelink_nearby ? 'Nearby' : 'Not Detected'}
             </span>
-            <span className={clsx('text-[10px] px-3 py-0.5 rounded-full font-medium', latest?.homelink_nearby ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-[var(--text-muted)]')}>
-              HomeLink
-            </span>
+            <Badge color={latest?.homelink_nearby ? 'purple' : 'neutral'} size="sm">HomeLink</Badge>
           </div>
 
           {/* Guest Mode */}
@@ -604,9 +593,7 @@ export default function SecurityAccess() {
             <span className={clsx('text-lg font-bold', latest?.guest_mode ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
               {latest?.guest_mode ? 'Enabled' : 'Disabled'}
             </span>
-            <span className={clsx('text-[10px] px-3 py-0.5 rounded-full font-medium', latest?.guest_mode ? 'bg-neon-amber/20 text-neon-amber' : 'bg-white/5 text-[var(--text-muted)]')}>
-              Guest Mode
-            </span>
+            <Badge color={latest?.guest_mode ? 'amber' : 'neutral'} size="sm">Guest Mode</Badge>
           </div>
         </div>
       )}

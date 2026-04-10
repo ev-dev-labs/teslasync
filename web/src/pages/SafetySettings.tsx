@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSafetyData, getSafetyLatest } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge } from '../components/ui'
 import {
   Shield, ShieldCheck, ShieldAlert, Eye, AlertTriangle, Car, Gauge, Lock,
   Milestone, CheckCircle, XCircle, Activity, User, Bell,
@@ -46,7 +46,6 @@ function SafetyCard({
   description?: string
 }) {
   const isEnabled = value?.enabled ?? false
-  const statusColor = isEnabled ? 'text-neon-green' : 'text-neon-red'
   const statusBg = isEnabled ? 'bg-neon-green/20' : 'bg-neon-red/20'
 
   return (
@@ -74,9 +73,7 @@ function SafetyCard({
             ) : (
               <XCircle className="h-3.5 w-3.5 text-neon-red" />
             )}
-            <span className={clsx('text-[11px] px-2.5 py-1 rounded-full font-medium', statusBg, statusColor)}>
-              {value.text}
-            </span>
+            <Badge color={isEnabled ? 'green' : 'red'} size="sm">{value.text}</Badge>
           </>
         )}
       </div>
@@ -107,7 +104,7 @@ function StatsCard({
       </div>
       <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatted}</p>
-      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/10 text-neon-cyan">{unit}</span>
+      <Badge color="cyan" size="sm">{unit}</Badge>
     </div>
   )
 }
@@ -119,8 +116,7 @@ function StatsCard({
 function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0
   const color = pct >= 80 ? 'text-neon-green' : pct >= 50 ? 'text-neon-amber' : 'text-neon-red'
-  const bg = pct >= 80 ? 'bg-neon-green/20' : pct >= 50 ? 'bg-neon-amber/20' : 'bg-neon-red/20'
-  const assessment = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Fair' : 'Needs Attention'
+  const assessment= pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Fair' : 'Needs Attention'
 
   return (
     <div className="glass-card p-5 sm:p-6 flex flex-col items-center gap-4 text-center">
@@ -140,7 +136,7 @@ function SafetyScoreBadge({ score, total }: { score: number; total: number }) {
           {score} of {total} features enabled
         </p>
       </div>
-      <span className={clsx('text-xs px-3 py-1 rounded-full font-medium', bg, color)}>{assessment}</span>
+      <Badge color={pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'red'} size="md">{assessment}</Badge>
     </div>
   )
 }
@@ -448,28 +444,18 @@ export default function SafetySettings() {
                       <StatusDot enabled={!!s.automatic_blind_spot_camera} />
                     </td>
                     <td className="py-2 px-3 text-center whitespace-nowrap">
-                      <span className={clsx(
-                        'text-[10px] px-1.5 py-0.5 rounded-full',
-                        s.forward_collision_warning && s.forward_collision_warning.toLowerCase() !== 'off'
-                          ? 'bg-neon-green/10 text-neon-green'
-                          : 'bg-neon-red/10 text-neon-red',
-                      )}>
+                      <Badge color={s.forward_collision_warning && s.forward_collision_warning.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
                         {s.forward_collision_warning
                           ? s.forward_collision_warning.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
                           : '--'}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="py-2 px-3 text-center whitespace-nowrap">
-                      <span className={clsx(
-                        'text-[10px] px-1.5 py-0.5 rounded-full',
-                        s.lane_departure_avoidance && s.lane_departure_avoidance.toLowerCase() !== 'off'
-                          ? 'bg-neon-green/10 text-neon-green'
-                          : 'bg-neon-red/10 text-neon-red',
-                      )}>
+                      <Badge color={s.lane_departure_avoidance && s.lane_departure_avoidance.toLowerCase() !== 'off' ? 'green' : 'red'} size="sm">
                         {s.lane_departure_avoidance
                           ? s.lane_departure_avoidance.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
                           : '--'}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="py-2 px-3 text-center whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                       {s.cruise_follow_distance

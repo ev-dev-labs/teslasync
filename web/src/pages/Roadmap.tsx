@@ -2,7 +2,7 @@ import {
   Rocket, CheckCircle, Clock, Star, Zap,
   Bell, Smartphone, Cloud, Brain, Plug,
 } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Badge } from '../components/ui'
 import clsx from 'clsx'
 
 type Phase = 'done' | 'current' | 'next' | 'future'
@@ -181,12 +181,9 @@ function RoadmapCard({ item }: { item: RoadmapItem }) {
               <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{item.description}</p>
             </div>
           </div>
-          <span
-            className={clsx('text-[10px] font-medium px-2 py-0.5 rounded-full')}
-            style={{ backgroundColor: `${phase.color}15`, color: phase.color }}
-          >
+          <Badge color={({ done: 'green', current: 'cyan', next: 'purple', future: 'amber' } as Record<string, 'green' | 'cyan' | 'purple' | 'amber'>)[item.phase] ?? 'cyan'}>
             {phase.label}
-          </span>
+          </Badge>
         </div>
 
         <ul className="mt-4 space-y-1.5">
@@ -230,7 +227,7 @@ export default function Roadmap() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.color }} />
                     <span className="text-xs font-medium" style={{ color: config.color }}>{config.label}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${config.color}15`, color: config.color }}>{count}</span>
+                    <Badge color={({ done: 'green', current: 'cyan', next: 'purple', future: 'amber' } as Record<string, 'green' | 'cyan' | 'purple' | 'amber'>)[phase] ?? 'cyan'}>{count}</Badge>
                   </div>
                   {i < phases.length - 1 && (
                     <div className="w-8 sm:w-16 h-px" style={{ backgroundColor: 'var(--glass-border)' }} />

@@ -3,7 +3,7 @@ import { getSettings, updateSettings, getAuthURL, getAuthStatus, refreshAuth, di
 import { useState, useEffect } from 'react'
 import { isSettingMiles, isSettingFahrenheit, parseSettingEnum } from '../lib/parseSettingEnum'
 import { Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield, CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles, Pause, Play, Fuel, Zap } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Select, Button, Input } from '../components/ui'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme, type ThemeId, type ModeId } from '../components/ThemeProvider'
 import { useToast } from '../components/Toast'
@@ -51,7 +51,7 @@ export default function Settings() {
     gas_price_per_unit: 3.50,
     gas_unit: 'gallon',
     gas_efficiency_mpg: 25,
-    decimal_precision: 1,
+    decimal_precision: 2,
     quiet_hours_enabled: false,
     quiet_hours_start: '22:00',
     quiet_hours_end: '07:00',
@@ -195,48 +195,13 @@ export default function Settings() {
 
           <div className="flex flex-wrap gap-3">
             {!auth?.authenticated ? (
-              <button
-                onClick={handleLogin}
-                disabled={authUrlMut.isPending}
-                className="neon-button flex items-center gap-2 px-5 py-2.5 text-sm font-medium disabled:opacity-40"
-              >
-                <ExternalLink className="h-4 w-4" />
-                {authUrlMut.isPending ? 'Loading...' : 'Connect Tesla Account'}
-              </button>
+              <Button variant="primary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} loading={authUrlMut.isPending}>Connect Tesla Account</Button>
             ) : (
               <>
-                <button
-                  onClick={() => refreshMut.mutate()}
-                  disabled={refreshMut.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors disabled:opacity-40"
-                >
-                  <RefreshCw className={clsx('h-4 w-4', refreshMut.isPending && 'animate-spin')} />
-                  Refresh Token
-                </button>
-                <button
-                  onClick={() => syncMut.mutate()}
-                  disabled={syncMut.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 transition-colors disabled:opacity-40"
-                >
-                  <Car className={clsx('h-4 w-4', syncMut.isPending && 'animate-spin')} />
-                  Sync Vehicles
-                </button>
-                <button
-                  onClick={handleLogin}
-                  disabled={authUrlMut.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-neon-cyan/30 px-4 py-2.5 text-sm text-neon-cyan hover:bg-neon-cyan/5 transition-colors disabled:opacity-40"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Re-authorize
-                </button>
-                <button
-                  onClick={() => { if (confirm('Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.')) disconnectMut.mutate() }}
-                  disabled={disconnectMut.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-neon-red/30 px-4 py-2.5 text-sm text-neon-red hover:bg-neon-red/5 transition-colors disabled:opacity-40"
-                >
-                  <XCircle className="h-4 w-4" />
-                  Disconnect
-                </button>
+                <Button variant="secondary" icon={<RefreshCw className={clsx('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>Refresh Token</Button>
+                <Button variant="secondary" icon={<Car className={clsx('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>Sync Vehicles</Button>
+                <Button variant="secondary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending} className="!border-neon-cyan/30 !text-neon-cyan hover:!bg-neon-cyan/5">Re-authorize</Button>
+                <Button variant="danger" icon={<XCircle className="h-4 w-4" />} onClick={() => { if (confirm('Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.')) disconnectMut.mutate() }} disabled={disconnectMut.isPending}>Disconnect</Button>
               </>
             )}
           </div>
@@ -312,77 +277,33 @@ export default function Settings() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={syncUnitsFromCar}
-                  className="neon-button flex items-center gap-1.5 text-xs shrink-0 px-3 py-2"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Sync from Car
-                </button>
+                <Button variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={syncUnitsFromCar} className="shrink-0">Sync from Car</Button>
               </div>
             )}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <SettingField label="Distance Unit">
-                <select
-                  value={form.unit_of_length}
-                  onChange={e => setForm({ ...form, unit_of_length: e.target.value })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
-                >
-                  <option value="km">Kilometers</option>
-                  <option value="mi">Miles</option>
-                </select>
-              </SettingField>
+              <Select label="Distance Unit" value={form.unit_of_length} onChange={e => setForm({ ...form, unit_of_length: e.target.value })} options={[{ value: 'km', label: 'Kilometers' }, { value: 'mi', label: 'Miles' }]} />
 
-              <SettingField label="Temperature Unit">
-                <select
-                  value={form.unit_of_temp}
-                  onChange={e => setForm({ ...form, unit_of_temp: e.target.value })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
-                >
-                  <option value="C">Celsius</option>
-                  <option value="F">Fahrenheit</option>
-                </select>
-              </SettingField>
+              <Select label="Temperature Unit" value={form.unit_of_temp} onChange={e => setForm({ ...form, unit_of_temp: e.target.value })} options={[{ value: 'C', label: 'Celsius' }, { value: 'F', label: 'Fahrenheit' }]} />
 
-              <SettingField label="Preferred Range">
-                <select
-                  value={form.preferred_range}
-                  onChange={e => setForm({ ...form, preferred_range: e.target.value })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
-                >
-                  <option value="rated">Rated</option>
-                  <option value="ideal">Ideal</option>
-                </select>
-              </SettingField>
+              <Select label="Preferred Range" value={form.preferred_range} onChange={e => setForm({ ...form, preferred_range: e.target.value })} options={[{ value: 'rated', label: 'Rated' }, { value: 'ideal', label: 'Ideal' }]} />
 
-              <SettingField label="Decimal Precision">
-                <select
-                  value={form.decimal_precision}
-                  onChange={e => setForm({ ...form, decimal_precision: Number(e.target.value) })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
-                >
-                  <option value={0}>0 — 14</option>
-                  <option value={1}>1 — 14.2</option>
-                  <option value={2}>2 — 14.25</option>
-                  <option value={3}>3 — 14.249</option>
-                  <option value={4}>4 — 14.2485</option>
-                </select>
-              </SettingField>
+              <div>
+                <Input
+                  label="Decimal Precision"
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={String(form.decimal_precision)}
+                  onChange={e => setForm({ ...form, decimal_precision: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })}
+                  placeholder="e.g. 2"
+                />
+                <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                  Preview: {(14.248539).toFixed(form.decimal_precision)}
+                </p>
+              </div>
 
-              <SettingField label="Language">
-                <select
-                  value={form.language}
-                  onChange={e => setForm({ ...form, language: e.target.value })}
-                  className="glass-input w-full px-3 py-2.5 text-sm"
-                >
-                  <option value="en">English</option>
-                  <option value="de">Deutsch</option>
-                  <option value="fr">Fran&#231;ais</option>
-                  <option value="es">Espa&#241;ol</option>
-                  <option value="zh">&#20013;&#25991;</option>
-                </select>
-              </SettingField>
+              <Select label="Language" value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} options={[{ value: 'en', label: 'English' }, { value: 'de', label: 'Deutsch' }, { value: 'fr', label: 'Français' }, { value: 'es', label: 'Español' }, { value: 'zh', label: '中文' }]} />
 
               <SettingField label="Electricity Cost (per kWh)">
                 <div className="relative">
@@ -409,14 +330,7 @@ export default function Settings() {
                       className="glass-input w-full pl-7 pr-3 py-2.5 text-sm"
                     />
                   </div>
-                  <select
-                    value={form.gas_unit}
-                    onChange={e => setForm({ ...form, gas_unit: e.target.value })}
-                    className="glass-input px-3 py-2.5 text-sm w-28"
-                  >
-                    <option value="gallon">/ gallon</option>
-                    <option value="liter">/ liter</option>
-                  </select>
+                  <Select value={form.gas_unit} onChange={e => setForm({ ...form, gas_unit: e.target.value })} options={[{ value: 'gallon', label: '/ gallon' }, { value: 'liter', label: '/ liter' }]} className="w-28" />
                 </div>
               </SettingField>
 
@@ -449,14 +363,7 @@ export default function Settings() {
           )}
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => settingsMut.mutate(form)}
-              disabled={settingsMut.isPending}
-              className="neon-button flex items-center gap-2 px-5 py-2.5 text-sm font-medium disabled:opacity-40"
-            >
-              <Save className="h-4 w-4" />
-              {settingsMut.isPending ? 'Saving...' : 'Save Settings'}
-            </button>
+            <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form)} loading={settingsMut.isPending}>Save Settings</Button>
 
             <AnimatePresence>
               {saved && (
@@ -508,20 +415,7 @@ export default function Settings() {
             </SettingField>
 
             {/* Poll interval dropdown */}
-            <SettingField label="Poll Interval">
-              <select
-                value={gasPriceStatus?.poll_interval || '7d'}
-                onChange={e => {
-                  updateGasPriceConfig(e.target.value).then(() => { refetchGasPrice(); toast.info('Poll interval updated') })
-                }}
-                className="glass-input w-full px-3 py-2.5 text-sm"
-              >
-                <option value="daily">Daily</option>
-                <option value="7d">Weekly</option>
-                <option value="15d">Bi-weekly</option>
-                <option value="30d">Monthly</option>
-              </select>
-            </SettingField>
+            <Select label="Poll Interval" value={gasPriceStatus?.poll_interval || '7d'} onChange={e => { updateGasPriceConfig(e.target.value).then(() => { refetchGasPrice(); toast.info('Poll interval updated') }) }} options={[{ value: 'daily', label: 'Daily' }, { value: '7d', label: 'Weekly' }, { value: '15d', label: 'Bi-weekly' }, { value: '30d', label: 'Monthly' }]} />
           </div>
 
           {/* Current price & last polled */}
@@ -544,18 +438,7 @@ export default function Settings() {
 
           {/* Poll Now button */}
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                pollGasPrice().then(() => {
-                  toast.info('Gas price poll triggered')
-                  setTimeout(() => refetchGasPrice(), 3000)
-                })
-              }}
-              className="neon-button flex items-center gap-2 px-5 py-2.5 text-sm font-medium"
-            >
-              <Zap className="h-4 w-4" />
-              Poll Now
-            </button>
+              <Button variant="primary" icon={<Zap className="h-4 w-4" />} onClick={() => { pollGasPrice().then(() => { toast.info('Gas price poll triggered'); setTimeout(() => refetchGasPrice(), 3000) }) }}>Poll Now</Button>
             <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
               Source: U.S. Energy Information Administration
             </p>

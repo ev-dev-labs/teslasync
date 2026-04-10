@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button } from '../components/ui'
 import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
@@ -256,12 +256,12 @@ export default function SignalLogViewer() {
                               <td className="px-4 py-2 font-mono text-[var(--text-secondary)]">{formatDateTime(entry.timestamp)}</td>
                               <td className={clsx('px-4 py-2 font-mono font-semibold', typeColor[valType])}>{formatValue(entry)}</td>
                               <td className="px-4 py-2">
-                                <span className={clsx('inline-block px-1.5 py-0.5 rounded text-[9px] font-medium',
-                                  valType === 'number' ? 'bg-neon-cyan/10 text-neon-cyan' :
-                                  valType === 'string' ? 'bg-neon-green/10 text-neon-green' :
-                                  valType === 'boolean' ? 'bg-neon-amber/10 text-neon-amber' :
-                                  'bg-gray-500/10 text-gray-500'
-                                )}>{valType}</span>
+                                <Badge color={
+                                  valType === 'number' ? 'cyan' :
+                                  valType === 'string' ? 'green' :
+                                  valType === 'boolean' ? 'amber' :
+                                  'neutral'
+                                }>{valType}</Badge>
                               </td>
                             </tr>
                           )
@@ -275,15 +275,11 @@ export default function SignalLogViewer() {
                       Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalRecords)} of {totalRecords.toLocaleString()}
                     </span>
                     <div className="flex gap-1">
-                      <button onClick={() => setPage(1)} disabled={page <= 1}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">First</button>
-                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">Prev</button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(1)} disabled={page <= 1}>First</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
                       <span className="px-3 py-1 text-[10px] text-[var(--text-primary)]">{page} / {totalPages}</span>
-                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">Next</button>
-                      <button onClick={() => setPage(totalPages)} disabled={page >= totalPages}
-                        className="px-2 py-1 rounded text-[10px] border border-[var(--border)] disabled:opacity-30 hover:bg-white/[0.05]">Last</button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>Last</Button>
                     </div>
                   </div>
                 </>

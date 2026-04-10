@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bell, Plus, Trash2, TestTube, ToggleLeft, ToggleRight,
   Send, MessageSquare, Mail, Webhook, Hash, Megaphone, Smartphone,
-  CheckCircle, XCircle, Clock, BarChart3, X, Pencil, ChevronDown, ChevronUp,
-  Loader2,
+  CheckCircle, XCircle, Clock, BarChart3, Pencil, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -14,7 +13,7 @@ import {
   getNotificationLogs, getNotificationStats,
   NotificationChannel, NotificationLog,
 } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, EmptyState, Badge, Button, MetricCard, Toggle, Modal } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDateTime } from '../lib/dateFormat'
 
@@ -108,12 +107,9 @@ export default function Notifications() {
         title="Notification Center"
         subtitle="Manage notification channels, view delivery logs, and monitor delivery stats"
         actions={
-          <button
-            onClick={() => { setEditingChannel(null); setShowForm(true) }}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 border border-neon-cyan/20 transition-colors"
-          >
-            <Plus className="h-4 w-4" /> Add Channel
-          </button>
+          <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => { setEditingChannel(null); setShowForm(true) }}>
+            Add Channel
+          </Button>
         }
       />
 
@@ -121,22 +117,10 @@ export default function Notifications() {
       <FadeIn>
         {stats ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: 'Total Sent', value: stats.sent, icon: CheckCircle, color: 'text-neon-green', bg: 'bg-neon-green/10', ring: 'ring-neon-green/20' },
-              { label: 'Failed', value: stats.failed, icon: XCircle, color: 'text-neon-red', bg: 'bg-neon-red/10', ring: 'ring-neon-red/20' },
-              { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-neon-amber', bg: 'bg-neon-amber/10', ring: 'ring-neon-amber/20' },
-              { label: 'Active Channels', value: `${stats.enabled_channels}/${stats.total_channels}`, icon: Bell, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', ring: 'ring-neon-cyan/20' },
-            ].map(s => (
-              <GlassPanel key={s.label} className="p-4 flex items-center gap-3">
-                <div className={clsx('rounded-xl p-2.5 ring-1', s.bg, s.ring)}>
-                  <s.icon className={clsx('h-5 w-5', s.color)} />
-                </div>
-                <div>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{s.value}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{s.label}</p>
-                </div>
-              </GlassPanel>
-            ))}
+            <MetricCard label="Total Sent" value={stats.sent} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+            <MetricCard label="Failed" value={stats.failed} icon={<XCircle className="h-4 w-4" />} color="red" />
+            <MetricCard label="Pending" value={stats.pending} icon={<Clock className="h-4 w-4" />} color="amber" />
+            <MetricCard label="Active Channels" value={`${stats.enabled_channels}/${stats.total_channels}`} icon={<Bell className="h-4 w-4" />} color="cyan" />
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -176,13 +160,9 @@ export default function Notifications() {
                         <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{ch.name}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-xs capitalize" style={{ color: meta.color }}>{ch.type}</span>
-                          <span className={clsx(
-                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                            ch.enabled ? 'bg-neon-green/10 text-neon-green' : 'bg-white/5 text-[var(--text-muted)]'
-                          )}>
-                            <span className={clsx('h-1.5 w-1.5 rounded-full', ch.enabled ? 'bg-neon-green animate-pulse' : 'bg-gray-600')} />
+                          <Badge color={ch.enabled ? 'green' : 'neutral'} size="sm" dot>
                             {ch.enabled ? 'Active' : 'Disabled'}
-                          </span>
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -211,31 +191,19 @@ export default function Notifications() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--glass-border)' }}>
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<TestTube className="h-3.5 w-3.5" />}
+                      loading={isTestingThis}
                       onClick={() => testMut.mutate(ch.id)}
-                      disabled={isTestingThis}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 transition-colors disabled:opacity-50"
                     >
-                      {isTestingThis ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <TestTube className="h-3.5 w-3.5" />
-                      )}
                       {isTestingThis ? 'Testing...' : 'Test'}
-                    </button>
-                    <button
-                      onClick={() => { setEditingChannel(ch); setShowForm(true) }}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 transition-colors"
-                      style={{ color: 'var(--text-secondary)' }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => { if (confirm(`Delete "${ch.name}"?`)) deleteMut.mutate(ch.id) }}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-neon-red/70 hover:bg-neon-red/10 transition-colors ml-auto"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
+                    <Button variant="ghost" size="sm" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => { setEditingChannel(ch); setShowForm(true) }}>
+                      Edit
+                    </Button>
+                    <Button variant="danger" size="sm" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => { if (confirm(`Delete "${ch.name}"?`)) deleteMut.mutate(ch.id) }} className="ml-auto" />
                   </div>
                 </GlassPanel>
               </motion.div>
@@ -309,17 +277,9 @@ export default function Notifications() {
                       </td>
                       <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>{log.title}</td>
                       <td className="px-4 py-3">
-                        <span className={clsx(
-                          'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                          log.status === 'sent' && 'bg-neon-green/10 text-neon-green',
-                          log.status === 'failed' && 'bg-neon-red/10 text-neon-red',
-                          log.status === 'pending' && 'bg-neon-amber/10 text-neon-amber',
-                        )}>
-                          {log.status === 'sent' && <CheckCircle className="h-3 w-3" />}
-                          {log.status === 'failed' && <XCircle className="h-3 w-3" />}
-                          {log.status === 'pending' && <Clock className="h-3 w-3" />}
+                        <Badge color={log.status === 'sent' ? 'green' : log.status === 'failed' ? 'red' : 'amber'} size="sm">
                           {log.status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 text-xs text-neon-red/70 max-w-[200px] truncate">{log.error}</td>
                     </tr>
@@ -406,33 +366,8 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        onClick={e => e.stopPropagation()}
-        className="glass-panel p-6 w-full max-w-lg space-y-5 max-h-[90vh] overflow-y-auto"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl p-2" style={{ background: `${meta.color}15` }}>
-              <meta.icon className="h-5 w-5" style={{ color: meta.color }} />
-            </div>
-            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-              {isEdit ? 'Edit Channel' : 'Add Channel'}
-            </h2>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="h-5 w-5" style={{ color: 'var(--text-secondary)' }} />
-          </button>
-        </div>
+    <Modal open={true} onClose={onClose} title={isEdit ? 'Edit Channel' : 'Add Channel'}>
+      <div className="space-y-5">
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type selector */}
@@ -496,14 +431,7 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
           </div>
 
           {/* Enabled toggle */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <button type="button" onClick={() => setEnabled(!enabled)}>
-              {enabled ? <ToggleRight className="h-6 w-6 text-neon-green" /> : <ToggleLeft className="h-6 w-6 text-[var(--text-muted)]" />}
-            </button>
-            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-              {enabled ? 'Enabled' : 'Disabled'}
-            </span>
-          </label>
+          <Toggle checked={enabled} onChange={setEnabled} label={enabled ? 'Enabled' : 'Disabled'} />
 
           {/* Test result */}
           {testResult && (
@@ -521,33 +449,28 @@ function ChannelFormModal({ channel, onClose, onSaved }: { channel: Notification
           <div className="flex items-center gap-3 pt-2">
             {/* Test Connection button */}
             {isEdit && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                icon={<TestTube className="h-4 w-4" />}
+                loading={testMut.isPending}
                 onClick={() => testMut.mutate()}
-                disabled={testMut.isPending}
-                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
-                style={{ color: 'var(--text-secondary)' }}
+                type="button"
               >
-                {testMut.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <TestTube className="h-4 w-4" />
-                )}
                 {testMut.isPending ? 'Testing...' : 'Test Connection'}
-              </button>
+              </Button>
             )}
             <div className="flex-1" />
-            <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-white/5 transition-colors" style={{ color: 'var(--text-secondary)' }}>Cancel</button>
-            <button
+            <Button variant="ghost" onClick={onClose} type="button">Cancel</Button>
+            <Button
+              variant="primary"
               type="submit"
-              disabled={createMut.isPending || updateMut.isPending}
-              className="rounded-xl px-5 py-2 text-sm font-medium bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 border border-neon-cyan/20 transition-colors disabled:opacity-50"
+              loading={createMut.isPending || updateMut.isPending}
             >
               {(createMut.isPending || updateMut.isPending) ? 'Saving...' : isEdit ? 'Update' : 'Create'}
-            </button>
+            </Button>
           </div>
         </form>
-      </motion.div>
-    </motion.div>
+      </div>
+    </Modal>
   )
 }

@@ -1,15 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getChargingSessions, type ChargingSession } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer } from '../components/ui'
 import {
   Zap,
   BatteryCharging,
   Clock,
   DollarSign,
-  TrendingDown,
   Activity,
-  BarChart3,
 } from 'lucide-react'
 import {
   LineChart,
@@ -477,19 +475,13 @@ export default function ChargingCurve() {
 
           {/* Section 3 + 4 – Selected session curve + details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 sm:mb-8">
-            <GlassPanel className="lg:col-span-2 p-4 sm:p-6">
-              <h3
-                className="text-sm font-semibold mb-4"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                Charging Curve – {sessionLabel(selectedSession)}
-              </h3>
+            <ChartContainer title={`Charging Curve – ${sessionLabel(selectedSession)}`} height={selectedCurve.length === 0 ? 288 : 320} className="lg:col-span-2">
               {selectedCurve.length === 0 ? (
-                <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">
+                <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
                   No curve data for this session
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={320}>
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={selectedCurve}>
                     <defs>
                       <linearGradient
@@ -550,7 +542,7 @@ export default function ChargingCurve() {
                   </AreaChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
 
             {/* Section 4 – Session details card */}
             <GlassPanel className="p-4 sm:p-6">
@@ -642,19 +634,13 @@ export default function ChargingCurve() {
           </div>
 
           {/* Section 5 – Session comparison */}
-          <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-            <h3
-              className="text-sm font-semibold mb-4"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Session Comparison (Last {comparisonSessions.length} Sessions)
-            </h3>
+          <ChartContainer title={`Session Comparison (Last ${comparisonSessions.length} Sessions)`} height={comparisonData.length === 0 ? 288 : 320} className="mb-6 sm:mb-8">
             {comparisonData.length === 0 ? (
-              <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">
+              <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
                 Not enough data for comparison
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={320}>
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={comparisonData}>
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -699,25 +685,18 @@ export default function ChargingCurve() {
                 </LineChart>
               </ResponsiveContainer>
             )}
-          </GlassPanel>
+          </ChartContainer>
 
           {/* Section 6 + 7 – Charger type stats + Speed trend */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 sm:mb-8">
             {/* Section 6 – Charge rate by charger type */}
-            <GlassPanel className="p-4 sm:p-6">
-              <h3
-                className="text-sm font-semibold mb-4 flex items-center gap-2"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                <BarChart3 className="h-4 w-4 text-neon-cyan" />
-                Charge Rate by Charger Type
-              </h3>
+            <ChartContainer title="Charge Rate by Charger Type" height={chargerTypeStats.length === 0 ? 256 : 280}>
               {chargerTypeStats.length === 0 ? (
-                <div className="flex items-center justify-center h-64 text-[var(--text-muted)] text-sm">
+                <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
                   No data available
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chargerTypeStats}>
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -772,23 +751,16 @@ export default function ChargingCurve() {
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
 
             {/* Section 7 – Charging speed trend */}
-            <GlassPanel className="p-4 sm:p-6">
-              <h3
-                className="text-sm font-semibold mb-4 flex items-center gap-2"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                <TrendingDown className="h-4 w-4 text-neon-amber" />
-                Charging Speed Trend
-              </h3>
+            <ChartContainer title="Charging Speed Trend" height={speedTrend.length === 0 ? 256 : 280}>
               {speedTrend.length === 0 ? (
-                <div className="flex items-center justify-center h-64 text-[var(--text-muted)] text-sm">
+                <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
                   No data available
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={speedTrend}>
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -832,7 +804,7 @@ export default function ChargingCurve() {
                   </LineChart>
                 </ResponsiveContainer>
               )}
-            </GlassPanel>
+            </ChartContainer>
           </div>
 
           {/* Section 8 – Time-to-charge analysis */}

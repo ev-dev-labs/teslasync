@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getChargingHeatmap, Vehicle, ChargingHeatmapCell } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton } from '../components/ui'
-import { BatteryCharging, MapPin, Clock, Zap, DollarSign, BarChart3 } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, Skeleton, MetricCard, ChartContainer } from '../components/ui'
+import { BatteryCharging, Clock, Zap, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -81,22 +82,10 @@ export default function ChargingHeatmap() {
         <>
           {/* Summary Stats */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'Total Sessions', value: data?.summary.total_sessions ?? 0, icon: <BatteryCharging className="h-4 w-4" />, color: 'text-neon-cyan' },
-              { label: 'Total kWh', value: `${(data?.summary.total_kwh ?? 0).toFixed(1)}`, icon: <Zap className="h-4 w-4" />, color: 'text-neon-green' },
-              { label: 'Total Cost', value: `$${(data?.summary.total_cost ?? 0).toFixed(2)}`, icon: <DollarSign className="h-4 w-4" />, color: 'text-neon-amber' },
-              { label: 'Avg Duration', value: `${(data?.summary.avg_duration ?? 0).toFixed(0)} min`, icon: <Clock className="h-4 w-4" />, color: 'text-neon-purple' },
-            ].map(m => (
-              <StaggerItem key={m.label}>
-                <GlassPanel className="p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className={m.color}>{m.icon}</span>
-                  </div>
-                  <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{m.label}</p>
-                  <p className={`text-xl font-bold ${m.color}`}>{m.value}</p>
-                </GlassPanel>
-              </StaggerItem>
-            ))}
+            <StaggerItem><MetricCard label="Total Sessions" value={data?.summary.total_sessions ?? 0} icon={<BatteryCharging className="h-4 w-4" />} color="cyan" /></StaggerItem>
+            <StaggerItem><MetricCard label="Total kWh" value={`${fmtNumber(data?.summary.total_kwh ?? 0)}`} icon={<Zap className="h-4 w-4" />} color="green" /></StaggerItem>
+            <StaggerItem><MetricCard label="Total Cost" value={`$${fmtNumber(data?.summary.total_cost ?? 0, 2)}`} icon={<DollarSign className="h-4 w-4" />} color="amber" /></StaggerItem>
+            <StaggerItem><MetricCard label="Avg Duration" value={`${fmtInt(data?.summary.avg_duration ?? 0)} min`} icon={<Clock className="h-4 w-4" />} color="purple" /></StaggerItem>
           </StaggerContainer>
 
           {/* Favorite Time Callout */}
@@ -118,10 +107,7 @@ export default function ChargingHeatmap() {
 
           {/* Heatmap Grid */}
           <FadeIn>
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="section-title mb-4 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-neon-cyan" /> Weekly Charging Heatmap
-              </h3>
+            <ChartContainer title="Weekly Charging Heatmap" height="auto">
               <div className="overflow-x-auto">
                 <div className="min-w-[600px]">
                   {/* Hour labels */}
@@ -154,7 +140,7 @@ export default function ChargingHeatmap() {
                               <div className="rounded-lg px-2 py-1 text-[10px] whitespace-nowrap shadow-lg" style={{ background: 'var(--surface-1)', border: '1px solid var(--glass-border)' }}>
                                 <p className="font-semibold">{DAYS[d]} {h}:00</p>
                                 <p>{count} session{count !== 1 ? 's' : ''}</p>
-                                {count > 0 && <p>~{avgE.toFixed(1)} kWh avg</p>}
+                                {count > 0 && <p>~{fmtNumber(avgE)} kWh avg</p>}
                               </div>
                             </div>
                           </div>
@@ -172,17 +158,14 @@ export default function ChargingHeatmap() {
                   </div>
                 </div>
               </div>
-            </GlassPanel>
+            </ChartContainer>
           </FadeIn>
 
           {/* Location Breakdown */}
           {locationData.length > 0 && (
             <FadeIn>
-              <GlassPanel className="p-4 sm:p-6">
-                <h3 className="section-title mb-4 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-neon-amber" /> Top Charging Locations
-                </h3>
-                <ResponsiveContainer width="100%" height={Math.max(200, locationData.length * 40)}>
+              <ChartContainer title="Top Charging Locations" height={Math.max(200, locationData.length * 40)}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={locationData} layout="vertical" margin={{ left: 10, right: 20 }}>
                     <defs>
                       <linearGradient id="locGrad" x1="0" y1="0" x2="1" y2="0">
@@ -197,7 +180,7 @@ export default function ChargingHeatmap() {
                     <Bar dataKey="count" fill="url(#locGrad)" radius={[0, 4, 4, 0]} animationDuration={800} name="Sessions" />
                   </BarChart>
                 </ResponsiveContainer>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           )}
         </>

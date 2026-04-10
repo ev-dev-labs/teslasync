@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getVisitedLocations } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Pagination, QueryError, MetricCard, ChartContainer } from '../components/ui'
 import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import clsx from 'clsx'
@@ -60,60 +60,19 @@ export default function Locations() {
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="rounded-lg sm:rounded-xl bg-neon-green/10 p-2 sm:p-2.5"><Navigation className="h-4 w-4 sm:h-5 sm:w-5 text-neon-green" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Unique Places</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{uniquePlaces}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="rounded-lg sm:rounded-xl bg-neon-cyan/10 p-2 sm:p-2.5"><Hash className="h-4 w-4 sm:h-5 sm:w-5 text-neon-cyan" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Total Visits</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{totalVisits}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="rounded-lg sm:rounded-xl bg-neon-purple/10 p-2 sm:p-2.5"><Clock className="h-4 w-4 sm:h-5 sm:w-5 text-neon-purple" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Total Time</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{Math.round(totalTime / 60)}h</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="rounded-lg sm:rounded-xl bg-neon-amber/10 p-2 sm:p-2.5"><Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-neon-amber" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Most Visited</p>
-              <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)', maxWidth: 140 }}>{topLocation?.address_name ?? '--'}</p>
-            </div>
-          </div>
-        </GlassPanel>
-        <GlassPanel className="p-4 sm:p-5">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="rounded-lg sm:rounded-xl bg-neon-blue/10 p-2 sm:p-2.5"><Clock className="h-4 w-4 sm:h-5 sm:w-5 text-neon-blue" /></div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">Avg Visit</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{avgDurationMin > 60 ? `${Math.floor(avgDurationMin / 60)}h ${avgDurationMin % 60}m` : `${avgDurationMin}m`}</p>
-            </div>
-          </div>
-        </GlassPanel>
+        <MetricCard label="Unique Places" value={uniquePlaces} icon={<Navigation className="h-4 w-4 sm:h-5 sm:w-5" />} color="green" />
+        <MetricCard label="Total Visits" value={totalVisits} icon={<Hash className="h-4 w-4 sm:h-5 sm:w-5" />} color="cyan" />
+        <MetricCard label="Total Time" value={`${Math.round(totalTime / 60)}h`} icon={<Clock className="h-4 w-4 sm:h-5 sm:w-5" />} color="purple" />
+        <MetricCard label="Most Visited" value={topLocation?.address_name ?? '--'} icon={<Trophy className="h-4 w-4 sm:h-5 sm:w-5" />} color="amber" />
+        <MetricCard label="Avg Visit" value={avgDurationMin > 60 ? `${Math.floor(avgDurationMin / 60)}h ${avgDurationMin % 60}m` : `${avgDurationMin}m`} icon={<Clock className="h-4 w-4 sm:h-5 sm:w-5" />} color="cyan" />
       </div>
 
       {/* Top Locations Chart */}
-      <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Top Locations by Visits</h3>
-        {isLoading ? <Skeleton className="h-72 rounded-xl" /> : chartData.length === 0 ? (
-          <div className="flex items-center justify-center h-72 text-[var(--text-muted)] text-sm">No visited location data</div>
+      <ChartContainer title="Top Locations by Visits" height={Math.max(300, chartData.length * 36)} className="mb-6 sm:mb-8">
+        {isLoading ? <Skeleton className="h-full rounded-xl" /> : chartData.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No visited location data</div>
         ) : (
-          <ResponsiveContainer width="100%" height={Math.max(300, chartData.length * 36)}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ left: 120 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -123,13 +82,12 @@ export default function Locations() {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </GlassPanel>
+      </ChartContainer>
 
       {/* Top Locations by Time Spent */}
       {timeChartData.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6 mb-6 sm:mb-8">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Top Locations by Time Spent (hours)</h3>
-          <ResponsiveContainer width="100%" height={Math.max(280, timeChartData.length * 36)}>
+        <ChartContainer title="Top Locations by Time Spent (hours)" height={Math.max(280, timeChartData.length * 36)} className="mb-6 sm:mb-8">
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={timeChartData} layout="vertical" margin={{ left: 120 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
               <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
@@ -138,7 +96,7 @@ export default function Locations() {
               <Bar dataKey="hours" name="Hours" fill="#a855f7" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </ChartContainer>
       )}
 
       {/* Location List */}

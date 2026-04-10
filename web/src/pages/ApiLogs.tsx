@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getAPICallLogs, getAPICallLogStats } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, Button } from '../components/ui'
 import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
 
 function StatusBadge({ code }: { code: number | null }) {
@@ -105,7 +106,7 @@ export default function ApiLogs() {
       <FadeIn>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard icon={<FileText className="h-5 w-5" />} label="Total Calls" value={stats?.total_calls?.toLocaleString() ?? '—'} color="cyan" />
-          <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Error Rate" value={stats ? `${stats.error_rate.toFixed(1)}%` : '—'} color="amber" change={stats && stats.error_rate > 5 ? { value: String(stats.error_count), positive: false } : undefined} />
+          <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Error Rate" value={stats ? `${fmtNumber(stats.error_rate)}%` : '—'} color="amber" change={stats && stats.error_rate > 5 ? { value: String(stats.error_count), positive: false } : undefined} />
           <StatCard icon={<Clock className="h-5 w-5" />} label="Avg Duration" value={stats ? `${Math.round(stats.avg_duration_ms)}ms` : '—'} color="green" />
           <StatCard icon={<Activity className="h-5 w-5" />} label="Last 24h" value={stats?.last_24h?.toLocaleString() ?? '—'} color="purple" />
         </div>
@@ -118,9 +119,7 @@ export default function ApiLogs() {
             <Filter className="h-4 w-4 text-[var(--text-muted)]" />
             <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">Filters</span>
             {hasFilters && (
-              <button onClick={clearFilters} className="ml-auto text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] flex items-center gap-1 transition-colors">
-                <X className="h-3 w-3" /> Clear
-              </button>
+              <Button variant="ghost" size="sm" icon={<X className="h-3 w-3" />} onClick={clearFilters} className="ml-auto">Clear</Button>
             )}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -162,9 +161,7 @@ export default function ApiLogs() {
             <p className="text-sm text-[var(--text-secondary)]">
               {total > 0 ? `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${total.toLocaleString()}` : 'No logs found'}
             </p>
-            <button onClick={handleExport} disabled={logs.length === 0} className="glass-button text-xs flex items-center gap-1.5 disabled:opacity-40">
-              <Download className="h-3.5 w-3.5" /> Export JSON
-            </button>
+            <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={logs.length === 0}>Export JSON</Button>
           </div>
 
           {isLoading ? (
@@ -265,23 +262,11 @@ export default function ApiLogs() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="glass-button text-xs flex items-center gap-1 disabled:opacity-30"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" /> Previous
-              </button>
+              <Button variant="secondary" size="sm" icon={<ChevronLeft className="h-3.5 w-3.5" />} onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>Previous</Button>
               <span className="text-xs text-[var(--text-muted)]">
                 Page {page + 1} of {totalPages}
               </span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="glass-button text-xs flex items-center gap-1 disabled:opacity-30"
-              >
-                Next <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+              <Button variant="secondary" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>Next <ChevronRight className="h-3.5 w-3.5" /></Button>
             </div>
           )}
         </GlassPanel>

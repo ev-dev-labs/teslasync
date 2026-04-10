@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getFleetAnalytics, getBatteryReport, getMileageStats, getVisitedLocations, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, DataTable, type Column } from '../components/ui'
 import { GitCompare, Check, AlertTriangle } from 'lucide-react'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -10,6 +10,7 @@ import {
 import { ChartTooltip } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
 import { useSettings } from '../hooks/useSettings'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 
 type ComparisonRow = {
   label: string
@@ -128,15 +129,15 @@ export default function Compare() {
         },
         makeRow(`Total Distance (${distanceUnit})`, a => convertDistance(a.mileage?.total_distance ?? 0), v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }), true),
         makeRow('Total Drives', a => a.mileage?.total_drives ?? 0, v => v.toLocaleString(), true),
-        makeRow('Total Energy (kWh)', a => a.fleetEntry?.energy ?? a.mileage?.total_energy ?? 0, v => v.toFixed(1), true),
+        makeRow('Total Energy (kWh)', a => a.fleetEntry?.energy ?? a.mileage?.total_energy ?? 0, v => fmtNumber(v), true),
         makeRow('Total Charging Cost ($)', _a => {
           const monthlyTrend = fleet?.charging_analytics?.monthly_trend ?? []
           return monthlyTrend.reduce((sum, m) => sum + m.cost, 0) / (fleet?.total_vehicles || 1)
-        }, v => `$${v.toFixed(2)}`, false),
-        makeRow(`Avg Efficiency (${efficiencyUnit})`, a => convertEfficiency(a.fleetEntry?.efficiency ?? 0), v => v.toFixed(1), false),
-        makeRow('Battery Health Score', a => a.battery?.health_score ?? 0, v => v.toFixed(0), true),
-        makeRow('Battery Degradation (%)', a => a.battery?.degradation_pct ?? 0, v => `${v.toFixed(1)}%`, false),
-        makeRow(`Avg Daily Distance (${distanceUnit})`, a => convertDistance(a.mileage?.avg_daily ?? 0), v => v.toFixed(1), true),
+        }, v => `$${fmtNumber(v, 2)}`, false),
+        makeRow(`Avg Efficiency (${efficiencyUnit})`, a => convertEfficiency(a.fleetEntry?.efficiency ?? 0), v => fmtNumber(v), false),
+        makeRow('Battery Health Score', a => a.battery?.health_score ?? 0, v => fmtInt(v), true),
+        makeRow('Battery Degradation (%)', a => a.battery?.degradation_pct ?? 0, v => `${fmtNumber(v)}%`, false),
+        makeRow(`Avg Daily Distance (${distanceUnit})`, a => convertDistance(a.mileage?.avg_daily ?? 0), v => fmtNumber(v), true),
         {
           label: 'Most Visited Location',
           values: arr.map(a => a.topLocation?.address_name || '—'),
@@ -171,6 +172,31 @@ export default function Compare() {
       return entry
     })
   }, [isDataReady, rows, selectedVehicles])
+
+  const textInfoLabels = ['Vehicle Name', 'Model', 'VIN', 'Most Visited Location']
+
+  const comparisonColumns = useMemo((): Column<ComparisonRow>[] => [
+    {
+      key: 'label',
+      header: 'Metric',
+      render: (row) => <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{row.label}</span>,
+      className: 'min-w-[100px] sm:min-w-[180px]',
+    },
+    ...selectedVehicles.map((v, i) => ({
+      key: `vehicle-${v.id}`,
+      header: v.display_name || v.vin,
+      render: (row: ComparisonRow) => (
+        <span className={
+          textInfoLabels.includes(row.label)
+            ? 'text-[var(--text-primary)]'
+            : highlightClass(row.raw, i, row.higherIsBetter)
+        }>
+          {row.values[i]}
+        </span>
+      ),
+      className: 'min-w-[80px] sm:min-w-[150px]',
+    })),
+  ], [selectedVehicles])
 
   if (loadingVehicles) {
     return (
@@ -246,43 +272,15 @@ export default function Compare() {
       {isDataReady && rows.length > 0 && (
         <>
           <FadeIn delay={0.1}>
-            <GlassPanel className="p-6 overflow-x-auto">
+            <GlassPanel className="p-6">
               <h3 className="section-title mb-6 flex items-center gap-2">
                 <GitCompare className="h-4 w-4 text-neon-cyan" /> Comparison Table
               </h3>
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider">
-                  <tr>
-                    <th className="pb-3 pr-6 min-w-[100px] sm:min-w-[180px]">Metric</th>
-                    {selectedVehicles.map(v => (
-                      <th key={v.id} className="pb-3 pr-6 min-w-[80px] sm:min-w-[150px]">
-                        {v.display_name || v.vin}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.03]">
-                  {rows.map(row => (
-                    <tr key={row.label} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 pr-6 font-medium" style={{ color: 'var(--text-secondary)' }}>
-                        {row.label}
-                      </td>
-                      {row.values.map((val, i) => (
-                        <td
-                          key={i}
-                          className={`py-3 pr-6 ${
-                            ['Vehicle Name', 'Model', 'VIN', 'Most Visited Location'].includes(row.label)
-                              ? 'text-[var(--text-primary)]'
-                              : highlightClass(row.raw, i, row.higherIsBetter)
-                          }`}
-                        >
-                          {val}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataTable
+                columns={comparisonColumns}
+                data={rows}
+                keyExtractor={(row) => row.label}
+              />
             </GlassPanel>
           </FadeIn>
 

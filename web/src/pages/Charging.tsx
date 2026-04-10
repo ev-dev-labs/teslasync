@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getVehicles, getChargingSessions, ChargingSession, Vehicle } from '../api'
 import { BatteryCharging, Clock, Zap, DollarSign, TrendingUp, Plug, ChevronRight, Home, Bolt, Calendar, ArrowUpDown, Filter, Download, Cable, Activity, Gauge } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, ProgressRing, Skeleton, EmptyState, Pagination, DateRangeFilter, QueryError, Badge, InlineMetric } from '../components/ui'
 import { RadialGauge, AnimatedNumber } from '../components/Widgets'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -63,28 +63,24 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateTime(session.start_date)}</p>
-              <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1',
-                cat === 'supercharger' ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' :
-                cat === 'dc' ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' :
-                'bg-neon-green/10 text-neon-green ring-neon-green/20'
-              )}>
+              <Badge color={cat === 'supercharger' ? 'red' : cat === 'dc' ? 'amber' : 'green'}>
                 {chargerLabels[cat]}
-              </span>
+              </Badge>
               {session.conn_charge_cable && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1 bg-neon-purple/10 text-neon-purple ring-neon-purple/20">
+                <Badge color="purple">
                   <Cable className="h-2.5 w-2.5 inline mr-0.5" />{session.conn_charge_cable}
-                </span>
+                </Badge>
               )}
               {batteryGain > 0 && <span className="text-xs text-neon-green font-medium">+{batteryGain}%</span>}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> {fmtWithUnit(session.charge_energy_added ?? 0, 'kWh', 1)}</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDuration(session.duration_min)}</span>
-              {session.charger_power != null && <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {fmtNumber(session.charger_power, 1)} kW peak</span>}
-              {avgRate && <span className="flex items-center gap-1"><Plug className="h-3 w-3" /> ~{avgRate} kW avg</span>}
-              {typeof session.cost === 'number' && <span className="flex items-center gap-1 text-neon-green"><DollarSign className="h-3 w-3" /> ${fmtNumber(session.cost, 2)}</span>}
+              <InlineMetric icon={<Zap className="h-3 w-3" />} value={fmtWithUnit(session.charge_energy_added ?? 0, 'kWh', 1)} />
+              <InlineMetric icon={<Clock className="h-3 w-3" />} value={formatDuration(session.duration_min)} />
+              {session.charger_power != null && <InlineMetric icon={<TrendingUp className="h-3 w-3" />} value={`${fmtNumber(session.charger_power, 1)} kW peak`} />}
+              {avgRate && <InlineMetric icon={<Plug className="h-3 w-3" />} value={`~${avgRate} kW avg`} />}
+              {typeof session.cost === 'number' && <InlineMetric icon={<DollarSign className="h-3 w-3" />} value={`$${fmtNumber(session.cost, 2)}`} className="text-neon-green" />}
               {typeof costPerKwh === 'number' && <span className="text-gray-600">(${fmtNumber(costPerKwh, 3)}/kWh)</span>}
-              {typeof efficiency === 'number' && <span className="flex items-center gap-1 text-neon-cyan"><Activity className="h-3 w-3" /> {fmtPercent(efficiency, 1)} eff</span>}
+              {typeof efficiency === 'number' && <InlineMetric icon={<Activity className="h-3 w-3" />} value={`${fmtPercent(efficiency, 1)} eff`} className="text-neon-cyan" />}
               {typeof rangeGained === 'number' && rangeGained > 0 && <span className="flex items-center gap-1 text-neon-purple">+{fmtInt(rangeGained)} {distanceUnit}</span>}
             </div>
             {chargerSpec && (

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowUpDown, Filter, RefreshCw } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge } from '../components/ui'
 import { request } from '../api/client'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import clsx from 'clsx'
@@ -190,10 +190,9 @@ export default function SignalGapDetector() {
                     return (
                       <tr key={signal.name} className="border-b border-[var(--border)] hover:bg-white/[0.02]">
                         <td className="px-3 py-2.5">
-                          <span className={clsx('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium', style.bg, style.text)}>
-                            <span className={clsx('h-1.5 w-1.5 rounded-full', style.dot)} />
+                          <Badge color={!signal.timestamp ? 'neutral' : signal.staleness < 30 ? 'green' : signal.staleness < 300 ? 'amber' : 'red'} dot>
                             {style.label}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-3 py-2.5 font-mono text-[var(--text-primary)]">{signal.name}</td>
                         <td className="px-3 py-2.5 font-mono text-[var(--text-secondary)] max-w-[200px] truncate">{signal.value}</td>

@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getEnergyStats, getChargingSessions, Vehicle } from '../api'
-import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StaggerContainer, StaggerItem, DateRangeFilter, Skeleton, QueryError, ChartContainer, Select } from '../components/ui'
 import { RadialGauge } from '../components/Widgets'
-import { Zap, Leaf, BarChart3, Activity, Fuel, Sun, Moon, Clock, ArrowRight } from 'lucide-react'
+import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ComposedChart, Line, PieChart, Pie, Cell, Brush
@@ -119,15 +119,12 @@ export default function Energy() {
         actions={
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {vehicles && vehicles.length > 1 && (
-              <select
-                value={vehicleId ?? ''}
+              <Select
+                value={String(vehicleId ?? '')}
                 onChange={e => setSelectedVehicle(Number(e.target.value))}
-                className="glass-input text-sm px-3 py-2"
-              >
-                {vehicles.map((v: Vehicle) => (
-                  <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>
-                ))}
-              </select>
+                options={vehicles.map((v: Vehicle) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+                className="text-sm"
+              />
             )}
             <DateRangeFilter
               startDate={startDate}
@@ -199,10 +196,7 @@ export default function Energy() {
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-neon-cyan" /> Energy & Cost Daily
-                </h3>
+              <ChartContainer title="Energy & Cost Daily" height="auto">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -227,14 +221,11 @@ export default function Energy() {
                     <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">Connect vehicle to see energy data</div>
                   )}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
 
             <FadeIn delay={0.15}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-6 flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-neon-green" /> Efficiency Trend
-                </h3>
+              <ChartContainer title="Efficiency Trend" height="auto">
                 <div className="h-48 sm:h-64">
                   {dailyEnergy.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -261,7 +252,7 @@ export default function Energy() {
                     <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">No efficiency data yet</div>
                   )}
                 </div>
-              </GlassPanel>
+              </ChartContainer>
             </FadeIn>
           </div>
 
@@ -269,10 +260,7 @@ export default function Energy() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {timeOfDayData.length > 0 && (
               <FadeIn delay={0.2}>
-                <GlassPanel className="p-6">
-                  <h3 className="section-title mb-6 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-neon-amber" /> Charging by Time of Day
-                  </h3>
+                <ChartContainer title="Charging by Time of Day" height="auto">
                   <div className="h-44 sm:h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={timeOfDayData}>
@@ -289,16 +277,13 @@ export default function Energy() {
                     <span className="flex items-center gap-1"><Moon className="h-3 w-3" /> Off-peak charging saves money</span>
                     <span className="flex items-center gap-1"><Sun className="h-3 w-3" /> Solar-optimal: 10am–3pm</span>
                   </div>
-                </GlassPanel>
+                </ChartContainer>
               </FadeIn>
             )}
 
             {chargerBreakdown.length > 0 && (
               <FadeIn delay={0.25}>
-                <GlassPanel className="p-6">
-                  <h3 className="section-title mb-6 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-neon-cyan" /> Charger Type Breakdown
-                  </h3>
+                <ChartContainer title="Charger Type Breakdown" height="auto">
                   <div className="flex items-center gap-6">
                     <div className="h-48 w-48">
                       <ResponsiveContainer width="100%" height="100%">
@@ -331,7 +316,7 @@ export default function Energy() {
                       ))}
                     </div>
                   </div>
-                </GlassPanel>
+                </ChartContainer>
               </FadeIn>
             )}
           </div>

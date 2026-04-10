@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError, AlertBanner } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { BATTERY_COLORS } from '../lib/colors'
@@ -491,10 +491,9 @@ export default function BatteryCells() {
 
       {/* ── Warning banner ── */}
       {!isLoading && voltageStatus === 'warning' && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-neon-red/30 bg-neon-red/5 p-4">
-          <AlertTriangle className="h-5 w-5 text-neon-red shrink-0" />
-          <p className="text-sm text-neon-red">Cell voltage spread exceeds safe threshold. Battery conditioning or service may be required.</p>
-        </div>
+        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />} className="mb-6">
+          Cell voltage spread exceeds safe threshold. Battery conditioning or service may be required.
+        </AlertBanner>
       )}
 
       {isLoading ? (
