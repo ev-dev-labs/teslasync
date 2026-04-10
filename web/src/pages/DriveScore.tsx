@@ -121,7 +121,7 @@ function ScoreRing({
             cy={size / 2}
             r={radius}
             fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--glass-border)"
             strokeWidth={strokeWidth}
           />
           {/* Animated score ring */}
@@ -522,7 +522,7 @@ export default function DriveScore() {
         <div className="space-y-6 sm:space-y-8">
 
           {/* ── Section 3: Overall Score (Hero) ──────────────────────── */}
-          <GlassPanel className="p-6 sm:p-10">
+          <GlassPanel className="p-6 sm:p-10 !overflow-visible">
             <div className="flex flex-col items-center">
               <div className="relative">
                 {/* Outer glow pulse */}
