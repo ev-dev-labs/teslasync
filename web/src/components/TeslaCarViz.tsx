@@ -33,11 +33,11 @@ const WHEEL_POS: Record<TeslaModel, {
   headX: number; headY: number; tailX: number; tailY: number
   batX: number; batY: number; lockX: number; lockY: number
 }> = {
-  model3:     { fx: 160, rx: 432, wy: 210, headX: 112, headY: 180, tailX: 488, tailY: 178, batX: 158, batY: 172, lockX: 296, lockY: 108 },
-  models:     { fx: 160, rx: 432, wy: 210, headX: 108, headY: 180, tailX: 490, tailY: 178, batX: 158, batY: 172, lockX: 296, lockY: 108 },
-  modely:     { fx: 160, rx: 432, wy: 210, headX: 112, headY: 178, tailX: 486, tailY: 176, batX: 158, batY: 170, lockX: 296, lockY: 104 },
-  modelx:     { fx: 160, rx: 432, wy: 210, headX: 112, headY: 176, tailX: 486, tailY: 174, batX: 158, batY: 168, lockX: 296, lockY: 100 },
-  cybertruck: { fx: 160, rx: 432, wy: 210, headX: 108, headY: 176, tailX: 480, tailY: 165, batX: 158, batY: 172, lockX: 296, lockY: 108 },
+  model3:     { fx: 192, rx: 422, wy: 210, headX: 144, headY: 184, tailX: 472, tailY: 184, batX: 180, batY: 174, lockX: 310, lockY: 110 },
+  models:     { fx: 190, rx: 424, wy: 210, headX: 140, headY: 184, tailX: 476, tailY: 184, batX: 178, batY: 174, lockX: 310, lockY: 110 },
+  modely:     { fx: 192, rx: 422, wy: 210, headX: 144, headY: 182, tailX: 472, tailY: 182, batX: 180, batY: 172, lockX: 310, lockY: 108 },
+  modelx:     { fx: 192, rx: 422, wy: 210, headX: 144, headY: 180, tailX: 472, tailY: 180, batX: 180, batY: 170, lockX: 310, lockY: 106 },
+  cybertruck: { fx: 192, rx: 422, wy: 210, headX: 108, headY: 176, tailX: 480, tailY: 165, batX: 180, batY: 172, lockX: 310, lockY: 108 },
 }
 
 /** Theme-aware color palette for SVG rendering */
@@ -132,27 +132,27 @@ function ModelBody({ model, driving: _driving, palette }: { model: TeslaModel; d
   const bodies: Record<TeslaModel, { body: string; roof: string; wind: string }> = {
     /* Model 3 — compact sport sedan, short nose, smooth fastback */
     model3: {
-      body: 'M 118 210 Q 104 186 122 170 L 181 166 Q 201 148 228 132 Q 263 118 304 116 L 385 116 Q 416 118 444 132 Q 467 148 483 168 Q 492 180 494 194 Q 496 202 496 210 L 118 210 Z',
-      roof: 'M 214 144 Q 232 130 263 120 Q 296 116 337 114 L 381 114 Q 412 116 438 130 L 461 150 L 459 160 Q 418 164 329 164 Q 259 164 226 162 L 216 154 Z',
-      wind: 'M 218 148 L 238 130 Q 265 118 298 116 L 378 116 L 436 132 L 430 138 C 414 132 386 124 356 120 C 326 118 296 119 272 124 L 222 148 Z',
+      body: 'M 148 210 Q 136 194 142 180 L 162 176 Q 174 172 184 162 Q 198 150 216 140 L 246 122 Q 270 116 304 114 L 358 116 Q 390 120 416 134 Q 440 150 456 168 Q 466 182 472 196 Q 474 204 474 210 L 148 210 Z',
+      roof: 'M 222 144 L 250 124 Q 272 116 306 114 L 356 116 Q 388 120 412 134 L 432 150 L 430 158 Q 396 162 328 162 Q 264 162 242 160 L 224 152 Z',
+      wind: 'M 226 148 L 254 128 Q 278 120 310 116 L 354 116 L 410 134 L 404 138 C 390 130 366 122 344 120 C 322 116 298 118 280 124 L 230 148 Z',
     },
     /* Model S — longer, sleeker fastback */
     models: {
-      body: 'M 112 210 Q 96 184 116 170 L 181 166 Q 201 148 228 132 Q 263 118 303 116 L 387 116 Q 418 118 446 132 Q 469 148 484 168 Q 494 180 496 194 Q 498 202 498 210 L 112 210 Z',
-      roof: 'M 214 144 Q 232 130 263 120 Q 296 116 337 114 L 383 114 Q 414 116 440 130 L 463 150 L 461 160 Q 420 164 329 164 Q 259 164 226 162 L 216 154 Z',
-      wind: 'M 218 148 L 238 130 Q 265 118 298 116 L 380 116 L 438 132 L 432 138 C 416 132 388 124 358 120 C 328 118 298 119 274 124 L 222 148 Z',
+      body: 'M 144 210 Q 132 194 138 180 L 158 176 Q 170 172 180 162 Q 194 150 212 140 L 244 122 Q 268 116 302 114 L 362 116 Q 394 120 420 134 Q 444 150 460 168 Q 470 182 476 196 Q 478 204 478 210 L 144 210 Z',
+      roof: 'M 218 144 L 248 124 Q 270 116 304 114 L 360 116 Q 392 120 416 134 L 436 150 L 434 158 Q 400 162 330 162 Q 266 162 244 160 L 220 152 Z',
+      wind: 'M 222 148 L 252 128 Q 276 120 308 116 L 358 116 L 414 134 L 408 138 C 394 130 370 122 348 120 C 326 116 302 118 282 124 L 226 148 Z',
     },
     /* Model Y — crossover, taller greenhouse */
     modely: {
-      body: 'M 118 210 Q 104 186 122 168 L 179 164 Q 199 146 226 130 Q 261 116 300 114 L 375 114 Q 410 116 440 130 Q 465 146 481 168 Q 490 182 492 196 Q 494 204 494 210 L 118 210 Z',
-      roof: 'M 210 142 Q 228 128 259 118 Q 292 114 331 112 L 372 112 Q 405 114 432 128 L 455 148 L 453 158 Q 414 162 319 162 Q 249 162 220 160 L 212 150 Z',
-      wind: 'M 214 146 L 234 128 Q 261 116 294 114 L 370 114 L 430 130 L 424 136 C 408 128 380 120 350 118 C 320 116 292 117 268 122 L 218 146 Z',
+      body: 'M 148 210 Q 136 194 142 178 L 162 174 Q 174 170 184 160 Q 198 148 216 138 L 246 120 Q 270 114 304 112 L 358 114 Q 390 118 416 132 Q 440 148 456 166 Q 466 180 472 194 Q 474 204 474 210 L 148 210 Z',
+      roof: 'M 222 142 L 250 122 Q 272 114 306 112 L 356 114 Q 388 118 412 132 L 432 148 L 430 156 Q 396 160 328 160 Q 264 160 242 158 L 224 150 Z',
+      wind: 'M 226 146 L 254 126 Q 278 118 310 114 L 354 114 L 410 132 L 404 136 C 390 128 366 120 344 118 C 322 114 298 116 280 122 L 230 146 Z',
     },
     /* Model X — tall SUV, falcon-wing doors */
     modelx: {
-      body: 'M 118 210 Q 104 186 122 168 L 179 164 Q 199 146 226 130 Q 259 116 298 112 L 375 112 Q 410 114 440 130 Q 463 146 479 166 Q 488 180 492 194 Q 494 202 494 210 L 118 210 Z',
-      roof: 'M 210 140 Q 228 126 257 118 Q 288 112 327 110 L 372 110 Q 405 112 432 126 L 455 144 L 453 156 Q 412 160 317 160 Q 247 160 218 158 L 212 150 Z',
-      wind: 'M 214 144 L 234 126 Q 259 116 290 112 L 370 112 L 430 128 L 424 134 C 408 126 380 118 350 116 C 320 114 290 115 268 120 L 218 144 Z',
+      body: 'M 148 210 Q 136 194 142 176 L 162 172 Q 174 168 184 158 Q 198 146 216 136 L 246 118 Q 270 112 304 110 L 358 112 Q 390 116 416 130 Q 440 146 456 164 Q 466 178 472 192 Q 474 202 474 210 L 148 210 Z',
+      roof: 'M 222 140 L 250 120 Q 272 112 306 110 L 356 112 Q 388 116 412 130 L 432 146 L 430 154 Q 396 158 328 158 Q 264 158 242 156 L 224 148 Z',
+      wind: 'M 226 144 L 254 124 Q 278 116 310 112 L 354 112 L 410 130 L 404 134 C 390 126 366 118 344 116 C 322 112 298 114 280 120 L 230 144 Z',
     },
     /* Cybertruck — angular, geometric, sharp edges */
     cybertruck: {
@@ -181,8 +181,8 @@ function ModelBody({ model, driving: _driving, palette }: { model: TeslaModel; d
       {/* Model X falcon-wing door hinge hint */}
       {model === 'modelx' && (
         <g>
-          <path d="M290 100 L290 85 C290 78 300 75 310 78 L340 88" fill="none" stroke={palette.falconWing.main} strokeWidth="0.8" />
-          <path d="M340 88 L360 82 C365 80 370 82 370 87" fill="none" stroke={palette.falconWing.tip} strokeWidth="0.8" />
+          <path d="M300 104 L300 88 C300 81 310 78 320 81 L350 91" fill="none" stroke={palette.falconWing.main} strokeWidth="0.8" />
+          <path d="M350 91 L370 85 C375 83 380 85 380 90" fill="none" stroke={palette.falconWing.tip} strokeWidth="0.8" />
         </g>
       )}
     </g>
@@ -234,7 +234,7 @@ export function TeslaCarViz({
         className="relative z-10"
       >
         {/* Ground shadow */}
-        <ellipse cx="280" cy="270" rx={model === 'cybertruck' ? 240 : 220} ry="12" fill={palette.shadow} />
+        <ellipse cx="310" cy="270" rx={model === 'cybertruck' ? 240 : 200} ry="12" fill={palette.shadow} />
 
         {/* Model-specific car body */}
         <ModelBody model={model} driving={driving} palette={palette} />
@@ -245,31 +245,31 @@ export function TeslaCarViz({
             {/* Roof highlight (shine line) */}
             <path
               d={model === 'models'
-                ? 'M220 112 Q296 106 390 108'
+                ? 'M226 110 Q310 106 384 108'
                 : model === 'modelx' || model === 'modely'
-                ? 'M220 108 Q296 102 380 104'
-                : 'M220 112 Q296 108 380 110'}
+                ? 'M226 106 Q310 102 380 106'
+                : 'M226 110 Q310 108 380 110'}
               fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" strokeLinecap="round"
             />
             {/* Front door seam */}
             <line
-              x1={model === 'models' ? 270 : 265} y1={model === 'modelx' ? 120 : model === 'modely' ? 122 : 126}
-              x2={model === 'models' ? 268 : 260} y2="205"
+              x1={model === 'models' ? 278 : 280} y1={model === 'modelx' ? 120 : model === 'modely' ? 122 : 126}
+              x2={model === 'models' ? 276 : 278} y2="205"
               stroke={palette.detail.lineFaint} strokeWidth="0.8"
             />
             {/* Rear door seam */}
             <line
-              x1={model === 'models' ? 355 : 345} y1={model === 'modelx' ? 122 : model === 'modely' ? 124 : 128}
-              x2={model === 'models' ? 358 : 348} y2="205"
+              x1={model === 'models' ? 352 : 348} y1={model === 'modelx' ? 122 : model === 'modely' ? 124 : 128}
+              x2={model === 'models' ? 354 : 350} y2="205"
               stroke={palette.detail.lineFaint} strokeWidth="0.8"
             />
             {/* Side skirt line */}
             <path
               d={model === 'models'
-                ? 'M120 202 Q200 208 296 208 Q430 208 498 202'
+                ? 'M148 204 Q240 208 310 208 Q424 208 474 204'
                 : model === 'modelx' || model === 'modely'
-                ? 'M122 204 Q200 210 296 210 Q430 210 494 204'
-                : 'M120 202 Q200 208 296 208 Q430 208 496 202'}
+                ? 'M152 206 Q240 210 310 210 Q420 210 470 206'
+                : 'M152 204 Q240 208 310 208 Q420 208 470 204'}
               fill="none" stroke={palette.detail.lineFaint} strokeWidth="0.8"
             />
           </g>
@@ -404,22 +404,22 @@ export function TeslaCarViz({
         {model === 'cybertruck' ? (
           <line x1="210" y1="162" x2="380" y2="162" stroke={palette.detail.lineFaint} strokeWidth="1" />
         ) : (
-          <line x1="250" y1="156" x2="340" y2="154" stroke={palette.detail.line} strokeWidth="1" />
+          <line x1="254" y1="154" x2="340" y2="152" stroke={palette.detail.line} strokeWidth="1" />
         )}
 
         {/* Battery indicator bar */}
-        <rect x={WHEEL_POS[model].batX} y={WHEEL_POS[model].batY} width="260" height="8" rx="4" fill={palette.battery.bg} />
+        <rect x={WHEEL_POS[model].batX} y={WHEEL_POS[model].batY} width="240" height="8" rx="4" fill={palette.battery.bg} />
         <motion.rect
           x={WHEEL_POS[model].batX} y={WHEEL_POS[model].batY}
           rx="4"
           height="8"
           fill={batteryColor}
           initial={{ width: 0 }}
-          animate={{ width: (batteryLevel / 100) * 260 }}
+          animate={{ width: (batteryLevel / 100) * 240 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
           style={{ filter: `drop-shadow(0 0 6px ${batteryColor})` }}
         />
-        <text x={WHEEL_POS[model].batX + 135} y={WHEEL_POS[model].batY + 8} textAnchor="middle" fill={palette.battery.text} fontSize="6" fontWeight="bold" opacity="0.7">
+        <text x={WHEEL_POS[model].batX + 120} y={WHEEL_POS[model].batY + 8} textAnchor="middle" fill={palette.battery.text} fontSize="6" fontWeight="bold" opacity="0.7">
           {batteryLevel}%
         </text>
 
@@ -495,10 +495,9 @@ export function TeslaCarViz({
         {/* Sentry mode ring */}
         {sentryMode && (
           <motion.circle
-            cx="280" cy="160"
+            cx="310" cy="160"
             r="90"
             fill="none"
-            stroke={palette.sentry.ring1}
             strokeWidth="1"
             strokeDasharray="4 4"
             animate={{ rotate: 360 }}
@@ -507,7 +506,7 @@ export function TeslaCarViz({
         )}
         {sentryMode && (
           <motion.circle
-            cx="280" cy="160"
+            cx="310" cy="160"
             r="95"
             fill="none"
             stroke={palette.sentry.ring2}
