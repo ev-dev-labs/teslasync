@@ -62,13 +62,13 @@ const signalColumns: Column<SignalEntry>[] = [
 ]
 
 function detectType(value: unknown): 'number' | 'string' | 'boolean' {
-  usePageTitle('Live Monitor')
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
   return 'string'
 }
 
 export default function LiveSignalMonitor() {
+  usePageTitle('Live Monitor')
   const [entries, setEntries] = useState<SignalEntry[]>([])
   const [paused, setPaused] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)

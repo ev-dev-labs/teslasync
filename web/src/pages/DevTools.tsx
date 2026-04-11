@@ -20,7 +20,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 // ─── Shared helpers ──────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
-  usePageTitle('Dev Tools')
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
     navigator.clipboard.writeText(text)
@@ -2148,6 +2147,7 @@ function ClientUtilitiesSection() {
 // ─── Main Page Component ─────────────────────────────────────────
 
 export default function DevTools() {
+  usePageTitle('Dev Tools')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
   const toggle = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
 

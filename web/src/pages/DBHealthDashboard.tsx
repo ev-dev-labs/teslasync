@@ -47,7 +47,6 @@ interface MigrationStatus {
 type SortKey = 'size' | 'rows' | 'name'
 
 function formatBytes(bytes: number): string {
-  usePageTitle('DB Health')
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -57,6 +56,7 @@ function formatBytes(bytes: number): string {
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024 // 100MB
 
 export default function DBHealthDashboard() {
+  usePageTitle('DB Health')
   const [sortKey, setSortKey] = useState<SortKey>('size')
 
   const { data: dbStats, isLoading: statsLoading, error: statsError } = useQuery<DBStats>({

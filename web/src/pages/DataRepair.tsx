@@ -21,7 +21,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 type Tab = 'charging' | 'drives'
 
 function hoursOpen(startDate: string): string {
-  usePageTitle('Data Repair')
   const h = Math.round((Date.now() - new Date(startDate).getTime()) / 3600000)
   if (h < 24) return `${h}h`
   const d = Math.floor(h / 24)
@@ -232,6 +231,7 @@ function Field({
 
 /* ───────── Main page ───────── */
 export default function DataRepair() {
+  usePageTitle('Data Repair')
   const [tab, setTab] = useState<Tab>('charging')
   const [expandedId, setExpandedId] = useState<number | null>(null)
 

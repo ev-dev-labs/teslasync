@@ -14,7 +14,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface EnergyTooltipPayload { name: string; value: number; color?: string }
 function EnergyTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: EnergyTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Energy Flow')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -133,6 +132,7 @@ function StatCard({ label, value, unit, color = 'text-neon-cyan' }: { label: str
    Main Component
    ═══════════════════════════════════════════════════════ */
 export default function EnergyFlow() {
+  usePageTitle('Energy Flow')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

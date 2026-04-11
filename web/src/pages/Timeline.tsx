@@ -32,7 +32,6 @@ const stateIcons: Record<string, typeof Car> = {
 
 interface TimelineTooltipPayload { name: string; value: number; color?: string; fill?: string }
 function TimelineTooltip({ active, payload, label }: { active?: boolean; payload?: TimelineTooltipPayload[]; label?: string }) {
-  usePageTitle('Timeline')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -54,6 +53,7 @@ function formatDuration(min: number): string {
 }
 
 export default function Timeline() {
+  usePageTitle('Timeline')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [startDate, setStartDate] = useState(() => {

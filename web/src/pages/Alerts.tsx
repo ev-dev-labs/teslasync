@@ -60,7 +60,6 @@ const typeIcons: Record<string, React.ElementType> = {
 // ─── Time helper ─────────────────────────────────────────────────────────────
 
 function getTimeAgo(dateStr: string): string {
-  usePageTitle('Alerts')
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 60) return `${mins}m ago`
@@ -411,6 +410,7 @@ function PreferencesSection() {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Alerts() {
+  usePageTitle('Alerts')
   const queryClient = useQueryClient()
   const toast = useToast()
   const [tab, setTab] = useState<'alerts' | 'history' | 'preferences'>('alerts')

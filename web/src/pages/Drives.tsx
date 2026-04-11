@@ -17,7 +17,6 @@ import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function formatDuration(min: number): string {
-  usePageTitle('Drives')
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
@@ -117,6 +116,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
 }
 
 export default function Drives() {
+  usePageTitle('Drives')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<'date' | 'distance' | 'efficiency'>('date')

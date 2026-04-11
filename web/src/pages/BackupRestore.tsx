@@ -77,7 +77,6 @@ const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
 /* ------------------------------------------------------------------ */
 
 function formatFileSize(bytes: number): string {
-  usePageTitle('Backup & Restore')
   if (!bytes || bytes === 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -172,6 +171,7 @@ const PROVIDER_FIELDS: Record<string, { key: string; label: string; type?: strin
 /* ------------------------------------------------------------------ */
 
 export default function BackupRestore() {
+  usePageTitle('Backup & Restore')
   const queryClient = useQueryClient()
   const toast = useToast()
 

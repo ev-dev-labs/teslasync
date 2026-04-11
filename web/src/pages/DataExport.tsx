@@ -71,7 +71,6 @@ const DATE_PRESETS = [
 /* ------------------------------------------------------------------ */
 
 function formatFileSize(bytes: number): string {
-  usePageTitle('Data Export')
   if (!bytes || bytes === 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -389,6 +388,7 @@ function DataOverviewCard({
 /* ------------------------------------------------------------------ */
 
 export default function DataExport() {
+  usePageTitle('Data Export')
   const queryClient = useQueryClient()
   const { success, error: showError } = useToast()
 

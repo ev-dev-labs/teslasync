@@ -41,7 +41,6 @@ interface SystemStatus {
 }
 
 function getStatusColor(status: string): string {
-  usePageTitle('System Status')
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': case 'authenticated': case 'connected': case 'enabled': return '#10b981'
     case 'degraded': case 'disconnected': return '#f59e0b'
@@ -1320,6 +1319,7 @@ function ExportJobQueuePanel() {
 }
 
 export default function SystemStatus() {
+  usePageTitle('System Status')
   const [refreshing, setRefreshing] = useState(false)
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
   const [, setTick] = useState(0)

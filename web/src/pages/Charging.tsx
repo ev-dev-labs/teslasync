@@ -21,7 +21,6 @@ type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power'
 type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home'
 
 function formatDuration(min: number): string {
-  usePageTitle('Charging')
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
@@ -106,6 +105,7 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
 }
 
 export default function Charging() {
+  usePageTitle('Charging')
   const { convertDistance, distanceUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)

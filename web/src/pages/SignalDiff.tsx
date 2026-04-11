@@ -33,7 +33,6 @@ interface RangeStats {
 }
 
 function computeStats(data: SignalPoint[]): RangeStats {
-  usePageTitle('Signal Diff')
   const nums = data.map(d => d.value_num).filter((v): v is number => v != null)
   if (nums.length === 0) return { min: 0, max: 0, avg: 0, count: 0 }
   const min = Math.min(...nums)
@@ -60,6 +59,7 @@ function endOfDay(d: Date): Date {
 }
 
 export default function SignalDiff() {
+  usePageTitle('Signal Diff')
   const vehicleId = 1
   const [selectedSignal, setSelectedSignal] = useState('')
 

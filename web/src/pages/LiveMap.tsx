@@ -17,7 +17,6 @@ import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function createVehicleIcon(status: string, heading: number = 0) {
-  usePageTitle('Live Map')
   const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
   return divIcon({
     className: '',
@@ -89,6 +88,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
 }
 
 export default function LiveMap() {
+  usePageTitle('Live Map')
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { convertSpeed, convertDistance, convertTemp, speedUnit, distanceUnit, tempUnit } = useSettings()
   const [selectedId, setSelectedId] = useState<number | null>(null)

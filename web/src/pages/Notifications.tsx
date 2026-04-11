@@ -54,11 +54,11 @@ const CHANNEL_TYPES = [
 type ChannelType = typeof CHANNEL_TYPES[number]['value']
 
 function getChannelMeta(type: string) {
-  usePageTitle('Notifications')
   return CHANNEL_TYPES.find(t => t.value === type) ?? CHANNEL_TYPES[4]
 }
 
 export default function Notifications() {
+  usePageTitle('Notifications')
   const qc = useQueryClient()
   const toast = useToast()
   const [showForm, setShowForm] = useState(false)

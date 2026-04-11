@@ -18,6 +18,7 @@ import {
 import { FadeIn, GlassPanel, PageHeader, Skeleton, Button, DataTable, Badge } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 import {
   getAPIUsage,
   getBackupStats,
@@ -29,10 +30,8 @@ import {
   type APIUsage,
   type ExtendedHealthResponse,
 } from '../api'
-import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
-  usePageTitle('Admin')
   return (
     <GlassPanel className="p-4">
       <div className="flex items-center gap-3">
@@ -49,6 +48,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 }
 
 export default function Admin() {
+  usePageTitle('Admin')
   const toast = useToast()
   const queryClient = useQueryClient()
 

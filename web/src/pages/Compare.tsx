@@ -21,7 +21,6 @@ type ComparisonRow = {
 }
 
 function highlightClass(raw: number[], idx: number, higherIsBetter: boolean): string {
-  usePageTitle('Compare')
   if (raw.length < 2 || raw.every(v => v === raw[0])) return ''
   const best = higherIsBetter ? Math.max(...raw) : Math.min(...raw)
   const worst = higherIsBetter ? Math.min(...raw) : Math.max(...raw)
@@ -31,6 +30,7 @@ function highlightClass(raw: number[], idx: number, higherIsBetter: boolean): st
 }
 
 export default function Compare() {
+  usePageTitle('Compare')
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const { data: vehicles, isLoading: loadingVehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selected, setSelected] = useState<number[]>([])

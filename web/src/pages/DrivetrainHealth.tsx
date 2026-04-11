@@ -15,7 +15,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface DrivetrainTooltipPayload { name: string; value: number; color?: string }
 function DrivetrainTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: DrivetrainTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Drivetrain Health')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -174,6 +173,7 @@ function StatusBadge({ label, value, color = 'text-neon-cyan' }: { label: string
    Main Component
    ═══════════════════════════════════════════════════════ */
 export default function DrivetrainHealth() {
+  usePageTitle('Drivetrain Health')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

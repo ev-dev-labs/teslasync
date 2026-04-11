@@ -23,7 +23,6 @@ type SortMode = 'staleness' | 'alpha' | 'category'
 type FilterMode = 'all' | 'stale' | 'active'
 
 function getStalenessColor(seconds: number, hasTimestamp: boolean) {
-  usePageTitle('Signal Gaps')
   if (!hasTimestamp) return { dot: 'bg-gray-500', text: 'text-[var(--text-muted)]', label: 'Never received', bg: 'bg-gray-500/10' }
   if (seconds < 30) return { dot: 'bg-neon-green', text: 'text-neon-green', label: 'Active', bg: 'bg-neon-green/10' }
   if (seconds < 300) return { dot: 'bg-neon-amber', text: 'text-neon-amber', label: 'Aging', bg: 'bg-neon-amber/10' }
@@ -57,6 +56,7 @@ const gapColumns: Column<SignalRow>[] = [
 ]
 
 export default function SignalGapDetector() {
+  usePageTitle('Signal Gaps')
   const vehicleId = 1
   const [sortMode, setSortMode] = useState<SortMode>('staleness')
   const [filterMode, setFilterMode] = useState<FilterMode>('all')

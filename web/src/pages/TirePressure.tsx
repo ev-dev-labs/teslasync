@@ -14,7 +14,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 interface PressureTooltipPayload { name: string; value: number; color?: string }
 function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: PressureTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Tire Pressure')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -275,6 +274,7 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
 }
 
 export default function TirePressure() {
+  usePageTitle('Tire Pressure')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

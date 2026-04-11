@@ -289,7 +289,6 @@ const roadmapItems: RoadmapItem[] = [
 ]
 
 function RoadmapCard({ item }: { item: RoadmapItem }) {
-  usePageTitle('Roadmap')
   const phase = phaseConfig[item.phase]
   const Icon = item.icon
 
@@ -332,6 +331,7 @@ function RoadmapCard({ item }: { item: RoadmapItem }) {
 }
 
 export default function Roadmap() {
+  usePageTitle('Roadmap')
   const phases: Phase[] = ['done', 'current', 'next', 'future']
 
   return (

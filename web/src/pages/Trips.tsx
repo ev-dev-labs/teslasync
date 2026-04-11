@@ -12,7 +12,6 @@ import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function formatDuration(startDate: string, endDate: string | null): string {
-  usePageTitle('Trips')
   if (!endDate) return 'In progress'
   const ms = new Date(endDate).getTime() - new Date(startDate).getTime()
   const hours = Math.floor(ms / 3600000)
@@ -22,6 +21,7 @@ function formatDuration(startDate: string, endDate: string | null): string {
 }
 
 export default function Trips() {
+  usePageTitle('Trips')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

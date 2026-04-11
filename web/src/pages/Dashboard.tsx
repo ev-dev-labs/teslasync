@@ -31,7 +31,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
-  usePageTitle('Dashboard')
   const status = getVehicleStatus(vehicle, state)
   const { convertDistance, convertTemp, distanceUnit } = useSettings()
   return (
@@ -82,6 +81,7 @@ function formatTimeAgo(date: Date): string {
 
 /* ---------- Main Dashboard ---------- */
 export default function Dashboard() {
+  usePageTitle('Dashboard')
   const queryClient = useQueryClient()
 
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useQuery({

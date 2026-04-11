@@ -18,7 +18,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 interface SafetyTooltipPayload { name: string; value: number; color?: string }
 function SafetyTooltip({ active, payload, label }: { active?: boolean; payload?: SafetyTooltipPayload[]; label?: string }) {
-  usePageTitle('Safety Settings')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -239,6 +238,7 @@ const safetyColumns: Column<SafetySnapshot>[] = [
 /* ------------------------------------------------------------------ */
 
 export default function SafetySettings() {
+  usePageTitle('Safety Settings')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

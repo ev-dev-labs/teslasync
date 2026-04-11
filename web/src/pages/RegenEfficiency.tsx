@@ -26,7 +26,6 @@ const regenDriveColumns: Column<RegenDrive>[] = [
 ]
 
 function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
-  usePageTitle('Regen Efficiency')
   const clamped = Math.min(Math.max(value, 0), 100)
   const r = (size - 20) / 2
   const circ = Math.PI * r // semicircle
@@ -70,6 +69,7 @@ function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
 }
 
 export default function RegenEfficiency() {
+  usePageTitle('Regen Efficiency')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

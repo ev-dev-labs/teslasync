@@ -38,7 +38,6 @@ const stateColors: Record<string, { bg: string; text: string; dot: string; hex: 
 }
 
 function getStateStyle(state?: string | null) {
-  usePageTitle('State Debugger')
   if (!state || typeof state !== 'string') return stateColors.offline
   return stateColors[state.toLowerCase()] ?? stateColors.offline
 }
@@ -52,6 +51,7 @@ function formatDuration(seconds: number): string {
 }
 
 export default function StateMachineDebugger() {
+  usePageTitle('State Debugger')
   const vehicleId = 1
 
   const { data: stateResponse, isLoading: stateLoading } = useQuery<{ state?: VehicleState; live?: boolean }>({

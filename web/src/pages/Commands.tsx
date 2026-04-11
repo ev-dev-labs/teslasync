@@ -28,7 +28,6 @@ interface CommandButtonProps {
 }
 
 function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'default', disabled, active }: CommandButtonProps) {
-  usePageTitle('Commands')
   const variants = {
     default: 'hover:border-neon-cyan/30 hover:shadow-[0_0_15px_rgba(0,240,255,0.08)]',
     danger: 'hover:border-neon-red/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.08)]',
@@ -311,6 +310,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
 }
 
 export default function Commands() {
+  usePageTitle('Commands')
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
 
   const vehicleStates = useQuery({

@@ -8,7 +8,6 @@ import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function PermissionBadge({ perm }: { perm: string }) {
-  usePageTitle('API Keys')
   const cfg: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
     'read':       { icon: <Shield className="h-3 w-3" />,      color: '#10b981', label: '🔒 Read' },
     'read-write': { icon: <ShieldAlert className="h-3 w-3" />, color: '#f59e0b', label: '✏️ Read-Write' },
@@ -24,6 +23,7 @@ function PermissionBadge({ perm }: { perm: string }) {
 }
 
 export default function APIKeys() {
+  usePageTitle('API Keys')
   const queryClient = useQueryClient()
   const { data: keys, isLoading } = useQuery({ queryKey: ['api-keys'], queryFn: getAPIKeys })
   const [showCreate, setShowCreate] = useState(false)

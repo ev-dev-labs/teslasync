@@ -8,12 +8,12 @@ import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { fmtNumber } from '../lib/numberFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ── Chart tooltip (same pattern as TirePressure) ─────────────────────────── */
 
 interface MediaTooltipPayload { name: string; value: number; color?: string }
 function MediaTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: MediaTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Media Player')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -148,7 +148,6 @@ function SourceIcon({ source, className }: { source?: string; className?: string
 
 /** Filter out Go nil string representations */
 import { cleanNil } from '../lib/cleanNil'
-import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ── Pie chart colors ─────────────────────────────────────────────────────── */
 
@@ -204,6 +203,7 @@ const playbackColumns: Column<MediaSnapshot>[] = [
 /* ══════════════════════════════════════════════════════════════════════════ */
 
 export default function MediaPlayer() {
+  usePageTitle('Media Player')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

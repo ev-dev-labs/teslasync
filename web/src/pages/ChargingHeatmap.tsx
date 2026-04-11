@@ -12,7 +12,6 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function heatColor(count: number, max: number): string {
-  usePageTitle('Charging Heatmap')
   if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)'
   const ratio = count / max
   if (ratio < 0.25) return 'rgba(0, 240, 255, 0.15)'
@@ -22,6 +21,7 @@ function heatColor(count: number, max: number): string {
 }
 
 export default function ChargingHeatmap() {
+  usePageTitle('Charging Heatmap')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

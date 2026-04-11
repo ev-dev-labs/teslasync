@@ -16,7 +16,6 @@ import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
-  usePageTitle('Energy')
   const savings = (gasCost ?? 0) - (evCost ?? 0)
   const savingsPct = gasCost > 0 ? (savings / gasCost * 100) : 0
   return (
@@ -45,6 +44,7 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
 }
 
 export default function Energy() {
+  usePageTitle('Energy')
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)

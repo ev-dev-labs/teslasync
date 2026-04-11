@@ -22,7 +22,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 type WindowState = 'Closed' | 'Venting' | 'Open' | 'Unknown'
 
 function parseWindowState(val?: string): WindowState {
-  usePageTitle('Security & Access')
   if (!val) return 'Unknown'
   const v = val.toLowerCase()
   if (v === 'closed' || v === 'close') return 'Closed'
@@ -366,6 +365,7 @@ function EventIcon({ icon, className }: { icon: EventChange['icon']; className?:
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export default function SecurityAccess() {
+  usePageTitle('Security & Access')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

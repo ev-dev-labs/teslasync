@@ -20,11 +20,11 @@ const TEMP_COLORS: Record<string, string> = {
 }
 
 function getBucketColor(bucket: string): string {
-  usePageTitle('Temperature Impact')
   return TEMP_COLORS[bucket] ?? '#00f0ff'
 }
 
 export default function TemperatureImpact() {
+  usePageTitle('Temperature Impact')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

@@ -18,7 +18,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 /* ---------- Tooltip ---------- */
 interface DynamicsTooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
 function DynamicsTooltip({ active, payload, label, unit }: { active?: boolean; payload?: DynamicsTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Driving Dynamics')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -98,6 +97,7 @@ function GForceDot({ latG, lonG }: { latG: number; lonG: number }) {
 
 /* ========== MAIN COMPONENT ========== */
 export default function DrivingDynamics() {
+  usePageTitle('Driving Dynamics')
   const { convertSpeed, convertTemp, speedUnit, tempUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)

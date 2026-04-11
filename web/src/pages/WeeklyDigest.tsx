@@ -111,7 +111,6 @@ const comparisonColumns: Column<ComparisonRow>[] = [
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function getWeekRange(offset: number): [Date, Date] {
-  usePageTitle('Weekly Digest')
   const now = new Date()
   const dayOfWeek = now.getDay()
   const monday = new Date(now)
@@ -240,6 +239,7 @@ function DigestTooltip({ active, payload, label, unit }: any) {
 // ── main component───────────────────────────────────────────────────────────
 
 export default function WeeklyDigest() {
+  usePageTitle('Weekly Digest')
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
 

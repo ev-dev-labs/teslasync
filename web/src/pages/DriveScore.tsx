@@ -38,7 +38,6 @@ const GRADE_COLORS: Record<string, string> = {
 }
 
 function gradeColor(grade: string): string {
-  usePageTitle('Drive Score')
   return GRADE_COLORS[grade] ?? '#6b7280'
 }
 
@@ -292,6 +291,7 @@ function getImprovementTips(avgBreakdown: ScoreBreakdown): Tip[] {
 /* ─── Main Component ────────────────────────────────────────────────── */
 
 export default function DriveScore() {
+  usePageTitle('Drive Score')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

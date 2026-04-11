@@ -16,7 +16,6 @@ import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function InsightCard({ icon, title, description, status }: { icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }) {
-  usePageTitle('Battery Health')
   const colors = { good: 'border-neon-green/20 bg-neon-green/5', warning: 'border-neon-amber/20 bg-neon-amber/5', critical: 'border-neon-red/20 bg-neon-red/5' }
   const iconColors = { good: 'text-neon-green', warning: 'text-neon-amber', critical: 'text-neon-red' }
   return (
@@ -33,6 +32,7 @@ function InsightCard({ icon, title, description, status }: { icon: React.ReactNo
 }
 
 export default function BatteryHealth() {
+  usePageTitle('Battery Health')
   const { convertDistance, distanceUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)

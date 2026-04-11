@@ -17,7 +17,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 interface NavTooltipPayload { name: string; value: number; color?: string }
 function NavTooltip({ active, payload, label }: { active?: boolean; payload?: NavTooltipPayload[]; label?: string }) {
-  usePageTitle('Navigation')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -105,6 +104,7 @@ function TrafficDelayBadge({ minutes }: { minutes: number | null | undefined }) 
 /* ------------------------------------------------------------------ */
 
 export default function NavigationRoute() {
+  usePageTitle('Navigation')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

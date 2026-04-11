@@ -10,7 +10,6 @@ import { fmtNumber, fmtPercent, fmtInt, fmtWithUnit } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function EfficiencyBar({ best, avg, worst }: { best: number; avg: number; worst: number }) {
-  usePageTitle('Route Efficiency')
   const max = Math.max(worst, 1)
   return (
     <div className="flex items-center gap-2 mt-2">
@@ -175,6 +174,7 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
 }
 
 export default function RouteEfficiency() {
+  usePageTitle('Route Efficiency')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

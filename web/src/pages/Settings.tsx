@@ -23,7 +23,6 @@ const modeIcons: Record<string, React.ReactNode> = {
 }
 
 function SettingField({ label, children }: { label: string; children: React.ReactNode }) {
-  usePageTitle('Settings')
   return (
     <div>
       <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">{label}</label>
@@ -33,6 +32,7 @@ function SettingField({ label, children }: { label: string; children: React.Reac
 }
 
 export default function Settings() {
+  usePageTitle('Settings')
   const queryClient = useQueryClient()
   const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
   const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })

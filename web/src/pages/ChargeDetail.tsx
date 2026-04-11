@@ -24,7 +24,6 @@ import { fmtNumber } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color: string; value: React.ReactNode; label: string }) {
-  usePageTitle('Charge Detail')
   return (
     <GlassPanel className="p-4 text-center">
       <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
@@ -35,6 +34,7 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color
 }
 
 export default function ChargeDetail() {
+  usePageTitle('Charge Detail')
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { id } = useParams<{ id: string }>()
   const sessionId = Number(id)

@@ -10,7 +10,6 @@ import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatusBadge({ code }: { code: number | null }) {
-  usePageTitle('API Logs')
   if (!code) return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-[var(--text-muted)]">N/A</span>
   const color = code < 300 ? 'text-emerald-400 bg-emerald-400/10' : code < 400 ? 'text-blue-400 bg-blue-400/10' : code < 500 ? 'text-amber-400 bg-amber-400/10' : 'text-red-400 bg-red-400/10'
   return <span className={clsx('text-xs font-mono px-2 py-0.5 rounded-full', color)}>{code}</span>
@@ -48,6 +47,7 @@ function JsonViewer({ data, label }: { data: string | null; label: string }) {
 }
 
 export default function ApiLogs() {
+  usePageTitle('API Logs')
   const [page, setPage] = useState(0)
   const [method, setMethod] = useState('')
   const [status, setStatus] = useState('')

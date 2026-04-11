@@ -20,7 +20,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const COLORS = ['#00f0ff', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#3b82f6']
 
 function formatDuration(min: number): string {
-  usePageTitle('Statistics')
   if (min < 60) return `${Math.round(min)}m`
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
@@ -28,6 +27,7 @@ function formatDuration(min: number): string {
 }
 
 export default function Statistics() {
+  usePageTitle('Statistics')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)

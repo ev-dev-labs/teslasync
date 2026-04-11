@@ -17,11 +17,11 @@ const statusConfig: Record<string, { color: string; bg: string; icon: typeof Che
 }
 
 function getStatus(status: string) {
-  usePageTitle('Software Updates')
   return statusConfig[status] ?? statusConfig.available
 }
 
 export default function SoftwareUpdates() {
+  usePageTitle('Software Updates')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

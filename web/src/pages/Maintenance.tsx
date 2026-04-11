@@ -54,7 +54,6 @@ const ICE_ANNUAL_COST = 1200
 /* ────────────────────────── Helpers ────────────────────────── */
 
 function monthsFromNow(iso: string): number {
-  usePageTitle('Maintenance')
   const d = new Date(iso)
   const now = new Date()
   return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
@@ -131,6 +130,7 @@ function CategoryBadge({ category }: { category: string }) {
 /* ────────────────────────── Main component ────────────────────────── */
 
 export default function Maintenance() {
+  usePageTitle('Maintenance')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

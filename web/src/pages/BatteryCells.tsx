@@ -26,7 +26,6 @@ const TOTAL_CELLS = MODULES * BRICKS_PER_MODULE
 /* ─────────────────────── Helpers ─────────────────────── */
 
 function gradeFromScore(score: number): { grade: string; color: string } {
-  usePageTitle('Battery Cells')
   if (score >= 95) return { grade: 'A+', color: '#10b981' }
   if (score >= 90) return { grade: 'A', color: '#10b981' }
   if (score >= 80) return { grade: 'B', color: '#00f0ff' }
@@ -243,6 +242,7 @@ function InsightCard({ icon, title, description, status }: {
 /* ═══════════════════════ MAIN COMPONENT ═══════════════════════ */
 
 export default function BatteryCells() {
+  usePageTitle('Battery Cells')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
