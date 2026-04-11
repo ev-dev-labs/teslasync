@@ -248,7 +248,9 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 
 	// 4. Dispatch to notification channels (skip during quiet hours for non-critical)
 	if len(rule.NotifyChannels) > 0 && !quietSuppressed {
-		go e.dispatchNotifications(rule, title, message)
+		safeGo("notification-dispatch", func() {
+			e.dispatchNotifications(rule, title, message)
+		})
 	}
 
 	// 5. Prometheus metric

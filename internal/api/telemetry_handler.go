@@ -221,7 +221,7 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 		h.sessionTracker.CleanupStaleSessions(ctx, 10*time.Minute)
 	}
 
-	go func() {
+	safeGo("telemetry-cleanup", func() {
 		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
 		for {
@@ -236,7 +236,7 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 				}
 			}
 		}
-	}()
+	})
 }
 
 func (h *TelemetryHandler) cleanupStaleEntries() {
@@ -369,13 +369,13 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			Signals:     rawCopy,
 			SignalCount: len(signals),
 		}
-		go func() {
+		safeGo("raw-telemetry-insert", func() {
 			captureCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := h.rawTelemetryRepo.Insert(captureCtx, rec); err != nil {
 				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to capture raw signals")
 			}
-		}()
+		})
 	}
 
 	// Normalize fleet telemetry units to metric. Tesla Fleet Telemetry sends
@@ -403,13 +403,13 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		for k, v := range signals {
 			signalsCopy[k] = v
 		}
-		go func() {
+		safeGo("signal-log-mongodb", func() {
 			logCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := h.signalLogRepo.WriteBatch(logCtx, vehicleID, signalsCopy); err != nil {
 				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to log signals to MongoDB")
 			}
-		}()
+		})
 	}
 
 	// Log every signal to Postgres signal_history (buffered, non-blocking)
@@ -507,11 +507,11 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// 10s accumulated write cycle.
 	if vehicleID > 0 {
 		if _, hasGear := signals["Gear"]; hasGear {
-			go func() {
+			safeGo("gear-state-transition", func() {
 				bgCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
 				defer cancel()
 				h.trackStateTransition(bgCtx, vehicleID, signals)
-			}()
+			})
 		}
 	}
 
@@ -546,7 +546,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		}
 		h.lastWriteMu.Unlock()
 
-		go func() {
+		safeGo("snapshot-writes", func() {
 			bgCtx, cancel := context.WithTimeout(h.bgCtx, 30*time.Second)
 			defer cancel()
 
@@ -616,7 +616,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 					log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store accumulated position")
 				}
 			}
-		}()
+		})
 	}
 }
 

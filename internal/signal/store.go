@@ -216,6 +216,11 @@ func (s *Store) flushNow(vehicleID int64) {
 		return
 	}
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error().Interface("panic", r).Int64("vehicle_id", vehicleID).Msg("signal store: panic in flush goroutine")
+			}
+		}()
 		flushStart := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

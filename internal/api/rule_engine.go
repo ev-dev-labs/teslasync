@@ -76,10 +76,13 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		return EvalResult{}
 	}
 
-	// Get previous signals for this rule+vehicle
+	// Get previous signals for this rule+vehicle (copy to avoid concurrent access)
 	var prevSignals map[string]interface{}
 	if hasState && st.PrevSignals != nil {
-		prevSignals = st.PrevSignals
+		prevSignals = make(map[string]interface{}, len(st.PrevSignals))
+		for k, v := range st.PrevSignals {
+			prevSignals[k] = v
+		}
 	}
 
 	// === EVALUATE CONDITION TREE ===
