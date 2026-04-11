@@ -10,6 +10,7 @@ import {
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { type VehicleState } from '../lib/enums'
 
 
 const stateColors: Record<string, string> = {
@@ -103,9 +104,9 @@ export default function Timeline() {
   const totalMinutes = (summary ?? []).reduce((s, item) => s + item.total_min, 0)
 
   // Derived key stats
-  const parkedMin = (summary ?? []).find(s => s.state === 'asleep')?.total_min ?? 0
-  const drivingMin = (summary ?? []).find(s => s.state === 'driving')?.total_min ?? 0
-  const chargingMin = (summary ?? []).find(s => s.state === 'charging')?.total_min ?? 0
+  const parkedMin = (summary ?? []).find(s => s.state === ('asleep' as VehicleState))?.total_min ?? 0
+  const drivingMin = (summary ?? []).find(s => s.state === ('driving' as VehicleState))?.total_min ?? 0
+  const chargingMin = (summary ?? []).find(s => s.state === ('charging' as VehicleState))?.total_min ?? 0
   const parkedPct = totalMinutes > 0 ? (parkedMin / totalMinutes * 100) : 0
   const drivingPct = totalMinutes > 0 ? (drivingMin / totalMinutes * 100) : 0
   const chargingPct = totalMinutes > 0 ? (chargingMin / totalMinutes * 100) : 0

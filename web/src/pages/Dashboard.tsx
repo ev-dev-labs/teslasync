@@ -29,6 +29,7 @@ import { useSettings } from '../hooks/useSettings'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { ChartTooltip } from '../components/Charts'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { type VehicleState as VehicleStateValue } from '../lib/enums'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
@@ -397,7 +398,7 @@ export default function Dashboard() {
                       {/* Context-aware telemetry grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {(() => {
-                          const isDriving = primaryVehicle?.state === 'driving' || primaryState.speed > 0
+                          const isDriving = primaryVehicle?.state === ('driving' as VehicleStateValue) || primaryState.speed > 0
                           const isCharging = primaryState.is_charging
 
                           // Build cards based on current state

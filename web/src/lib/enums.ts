@@ -42,6 +42,22 @@ export function isChargeCompleteState(state: string): boolean {
 
 export type WindowState = 'Closed' | 'Partial' | 'Open'
 
-/* ── Charge Port ── */
+/** Badge color name for the shared Badge component, given a vehicle state string */
+export function getStateBadgeColor(state: string | undefined | null): 'green' | 'amber' | 'cyan' | 'purple' | 'red' | 'neutral' {
+  const s = (state ?? '').toLowerCase() as VehicleState
+  return VEHICLE_STATE_CONFIG[s]?.badgeColor ?? 'neutral'
+}
+
+/** CSS text color class for a vehicle state */
+export function getStateColor(state: string | undefined | null): string {
+  const s = (state ?? '').toLowerCase() as VehicleState
+  return VEHICLE_STATE_CONFIG[s]?.color ?? 'text-[var(--text-muted)]'
+}
+
+/** Display label for a vehicle state */
+export function getStateLabel(state: string | undefined | null): string {
+  const s = (state ?? '').toLowerCase() as VehicleState
+  return VEHICLE_STATE_CONFIG[s]?.label ?? 'Unknown'
+}
 
 export type ChargePortLatchState = 'Engaged' | 'Disengaged'

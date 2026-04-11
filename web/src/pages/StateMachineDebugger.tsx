@@ -8,6 +8,7 @@ import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
 import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { getStateBadgeColor } from '../lib/enums'
 
 interface VehicleState {
   state: string
@@ -100,7 +101,7 @@ export default function StateMachineDebugger() {
 
   const stateCountColumns: Column<StateCountRow>[] = [
     { key: 'state', header: 'State', render: (row) => (
-      <Badge color={row.state === 'driving' ? 'green' : row.state === 'charging' ? 'amber' : row.state === 'parked' ? 'cyan' : row.state === 'asleep' ? 'purple' : 'neutral'} dot>
+      <Badge color={getStateBadgeColor(row.state)} dot>
         {row.state}
       </Badge>
     )},
@@ -111,7 +112,7 @@ export default function StateMachineDebugger() {
 
   const timelineColumns: Column<StateTransition>[] = [
     { key: 'state', header: 'State', render: (t) => (
-      <Badge color={t.state?.toLowerCase() === 'driving' ? 'green' : t.state?.toLowerCase() === 'charging' ? 'amber' : t.state?.toLowerCase() === 'parked' ? 'cyan' : t.state?.toLowerCase() === 'asleep' ? 'purple' : 'neutral'} dot>
+      <Badge color={getStateBadgeColor(t.state)} dot>
         {t.state}
       </Badge>
     )},

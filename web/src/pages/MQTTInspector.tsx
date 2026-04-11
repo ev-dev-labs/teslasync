@@ -8,6 +8,7 @@ import { request } from '../api/client'
 import { formatRelative } from '../lib/dateFormat'
 import { fmtInt, fmtNumber } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { getStateBadgeColor } from '../lib/enums'
 // clsx removed — using component library
 
 interface TelemetryStatus {
@@ -45,12 +46,7 @@ const vehicleColumns: Column<VehicleTelemetry>[] = [
     key: 'state',
     header: 'State',
     render: (v) => v.state ? (
-      <Badge color={
-        v.state === 'driving' ? 'green' :
-        v.state === 'charging' ? 'amber' :
-        v.state === 'parked' ? 'cyan' :
-        'neutral'
-      }>
+      <Badge color={getStateBadgeColor(v.state)}>
         {v.state}
       </Badge>
     ) : (
