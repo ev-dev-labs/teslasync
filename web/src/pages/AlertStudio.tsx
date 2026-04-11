@@ -248,10 +248,12 @@ export default function AlertStudio() {
     setEditor(ruleToEditor(rule))
   }, [])
 
+  const allChannelIds = useMemo(() => (channels ?? []).map(ch => ch.id), [channels])
+
   const handleNewRule = useCallback(() => {
     setSelectedId(null)
-    setEditor(freshEditor())
-  }, [])
+    setEditor({ ...freshEditor(), notify_channels: allChannelIds })
+  }, [allChannelIds])
 
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
     setSelectedId(null)
@@ -262,11 +264,11 @@ export default function AlertStudio() {
       cooldown_min: tpl.cooldown_min,
       msg_template: tpl.msg_template,
       conditions: JSON.parse(JSON.stringify(tpl.conditions)),
-      notify_channels: [],
+      notify_channels: allChannelIds,
       enabled: true,
     })
     setShowTemplates(false)
-  }, [])
+  }, [allChannelIds])
 
   // Filter CEP rules (have conditions)
   const cepRules = useMemo(() => (rules ?? []).filter(r => r.conditions), [rules])

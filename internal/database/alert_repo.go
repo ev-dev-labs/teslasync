@@ -88,18 +88,23 @@ func (r *AlertRuleRepo) UpdateFireState(ctx context.Context, ruleID int64, fired
 	return err
 }
 
-func (r *AlertRuleRepo) Update(ctx context.Context, id int64, enabled bool, threshold float64) error {
+func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.AlertRule) error {
+	condJSON, _ := json.Marshal(rule.Conditions)
 	_, err := r.db.Pool.Exec(ctx,
-		`UPDATE alert_rules SET enabled=$2, threshold=$3, updated_at=$4 WHERE id=$1`,
-		id, enabled, threshold, time.Now().UTC())
+		`UPDATE alert_rules SET name=$2, type=$3, enabled=$4, threshold=$5, conditions=$6, cooldown_min=$7,
+		severity=$8, msg_template=$9, notify_channels=$10, tags=$11, updated_at=$12 WHERE id=$1`,
+		id, rule.Name, rule.Type, rule.Enabled, rule.Threshold,
+		condJSON, rule.CooldownMin, rule.Severity, rule.MsgTemplate, rule.NotifyChannels, rule.Tags, time.Now().UTC())
 	return err
 }
 
 func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRule, error) {
-	query := `SELECT id, name, type, enabled, threshold, vehicle_id, created_at, updated_at
+	query := `SELECT id, name, type, enabled, threshold, vehicle_id, created_at, updated_at,
+		conditions, COALESCE(cooldown_min, 15), for_duration_s, COALESCE(severity, 'warning'), COALESCE(msg_template, ''), notify_channels, last_fired_at, COALESCE(fire_count, 0), tags
 		FROM alert_rules WHERE id = $1`
 	ar := &models.AlertRule{}
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(&ar.ID, &ar.Name, &ar.Type, &ar.Enabled, &ar.Threshold, &ar.VehicleID, &ar.CreatedAt, &ar.UpdatedAt)
+	err := r.db.Pool.QueryRow(ctx, query, id).Scan(&ar.ID, &ar.Name, &ar.Type, &ar.Enabled, &ar.Threshold, &ar.VehicleID, &ar.CreatedAt, &ar.UpdatedAt,
+		&ar.Conditions, &ar.CooldownMin, &ar.ForDurationS, &ar.Severity, &ar.MsgTemplate, &ar.NotifyChannels, &ar.LastFiredAt, &ar.FireCount, &ar.Tags)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}

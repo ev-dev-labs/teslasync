@@ -81,28 +81,75 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch existing rule so partial updates don't wipe fields
+	existing, err := h.alertRuleRepo.GetByID(r.Context(), id)
+	if err != nil || existing == nil {
+		writeError(w, http.StatusNotFound, "rule not found")
+		return
+	}
+
 	var body struct {
-		Enabled   bool    `json:"enabled"`
-		Threshold float64 `json:"threshold"`
+		Name           *string          `json:"name"`
+		Type           *string          `json:"type"`
+		Enabled        *bool            `json:"enabled"`
+		Threshold      *float64         `json:"threshold"`
+		Severity       *string          `json:"severity"`
+		Conditions     *json.RawMessage `json:"conditions"`
+		CooldownMin    *int             `json:"cooldown_min"`
+		MsgTemplate    *string          `json:"msg_template"`
+		NotifyChannels *[]int64         `json:"notify_channels"`
+		Tags           *[]string        `json:"tags"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if err := h.alertRuleRepo.Update(r.Context(), id, body.Enabled, body.Threshold); err != nil {
+	// Merge: only overwrite fields that were sent
+	if body.Name != nil {
+		existing.Name = *body.Name
+	}
+	if body.Type != nil {
+		existing.Type = *body.Type
+	}
+	if body.Enabled != nil {
+		existing.Enabled = *body.Enabled
+	}
+	if body.Threshold != nil {
+		existing.Threshold = *body.Threshold
+	}
+	if body.Severity != nil {
+		existing.Severity = *body.Severity
+	}
+	if body.Conditions != nil {
+		existing.Conditions = *body.Conditions
+	}
+	if body.CooldownMin != nil {
+		existing.CooldownMin = *body.CooldownMin
+	}
+	if body.MsgTemplate != nil {
+		existing.MsgTemplate = *body.MsgTemplate
+	}
+	if body.NotifyChannels != nil {
+		existing.NotifyChannels = *body.NotifyChannels
+	}
+	if body.Tags != nil {
+		existing.Tags = *body.Tags
+	}
+
+	if err := h.alertRuleRepo.Update(r.Context(), id, existing); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update alert rule")
 		writeError(w, http.StatusInternalServerError, "failed to update alert rule")
 		return
 	}
 
-	rule, err := h.alertRuleRepo.GetByID(r.Context(), id)
+	updated, err := h.alertRuleRepo.GetByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to fetch updated alert rule")
 		writeError(w, http.StatusInternalServerError, "rule updated but failed to retrieve")
 		return
 	}
-	writeJSON(w, http.StatusOK, rule)
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
