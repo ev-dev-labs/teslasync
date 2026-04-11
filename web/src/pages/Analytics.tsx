@@ -127,18 +127,20 @@ export default function Analytics() {
       <PageHeader
         title="Fleet Analytics"
         subtitle="Deep-dive into driving patterns, charging behavior, battery health, and fleet performance"
-        actions={
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <TabNav tabs={TABS} active={tab} onChange={(key) => setTab(key as typeof tab)} />
-            <DateRangeFilter
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-            />
-          </div>
-        }
       />
+
+      {/* Controls bar */}
+      <FadeIn>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <TabNav tabs={TABS} active={tab} onChange={(key) => setTab(key as typeof tab)} />
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
+        </div>
+      </FadeIn>
 
       {/* ===== HERO GAUGES (always visible) ===== */}
       <FadeIn>
