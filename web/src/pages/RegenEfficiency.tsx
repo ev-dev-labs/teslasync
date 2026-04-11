@@ -10,6 +10,7 @@ import {
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { regenColor } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 type RegenDrive = RegenData['drives'][number]
@@ -30,7 +31,7 @@ function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
   const r = (size - 20) / 2
   const circ = Math.PI * r // semicircle
   const offset = circ - (clamped / 100) * circ
-  const color = clamped >= 25 ? '#10b981' : clamped >= 15 ? '#f59e0b' : '#ef4444'
+  const color = regenColor(clamped)
 
   return (
     <div className="relative inline-flex flex-col items-center" style={{ width: size, height: size / 2 + 40 }}>

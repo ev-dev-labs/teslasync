@@ -9,6 +9,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtWithUnit, fmtInt } from '../lib/numberFormat'
+import { COLOR } from '../lib/colors'
 import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -81,7 +82,7 @@ function BmsIndicator({ label, active, icon: Icon }: { label: string; active: bo
 function PowerFlowArrow({ dcPower, acPower, energyRemaining }: { dcPower?: number | null; acPower?: number | null; energyRemaining?: number | null }) {
   const hasDc = dcPower != null && dcPower > 0
   const hasAc = acPower != null && acPower > 0
-  const activeColor = hasDc ? '#00f0ff' : hasAc ? '#a855f7' : '#334155'
+  const activeColor = hasDc ? COLOR.CYAN : hasAc ? COLOR.PURPLE : COLOR.DARK
   const powerLabel = hasDc ? `DC ${fmtWithUnit(dcPower, 'kW')}` : hasAc ? `AC ${fmtWithUnit(acPower, 'kW')}` : 'No Charge'
   return (
     <svg viewBox="0 0 480 120" className="w-full" style={{ maxWidth: 480 }}>

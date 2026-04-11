@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
 import { GlassPanel, Badge, Button, Input } from './ui'
+import { fmtInt } from '../lib/numberFormat'
 import { Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -300,7 +301,7 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <span className="text-[10px] text-[var(--text-muted)]">{total.toLocaleString()} records</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{fmtInt(total)} records</span>
           <div className="flex items-center gap-1">
             <button onClick={() => onPageChange(1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>

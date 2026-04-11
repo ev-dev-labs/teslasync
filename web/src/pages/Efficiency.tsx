@@ -11,6 +11,7 @@ import {
   Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
 import { ChartTooltip } from '../components/Charts'
+import { efficiencyColor } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function Efficiency() {
@@ -273,7 +274,7 @@ export default function Efficiency() {
               { key: 'range', header: 'Temp Range', render: b => <span className="font-medium text-[var(--text-primary)]">{b.range}</span> },
               { key: 'count', header: 'Drives', className: 'text-right', render: b => <span className="text-[var(--text-secondary)]">{b.count}</span> },
               { key: 'avgEff', header: `Avg ${efficiencyUnit}`, className: 'text-right', render: b => (
-                <span style={{ color: b.avgEff < 160 ? '#10b981' : b.avgEff < 200 ? '#f59e0b' : '#ef4444' }}>
+                <span style={{ color: efficiencyColor(b.avgEff, 160, 200) }}>
                   {fmtInt(convertEfficiency(b.avgEff))}
                 </span>
               )},

@@ -8,6 +8,7 @@ import { AnimatedNumber } from '../components/Widgets'
 import { TeslaCarViz } from '../components/TeslaCarViz'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { batteryColor } from '../lib/colors'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -22,7 +23,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
   const state = stateData?.state
   const status = getVehicleStatus(vehicle, state)
 
-  const batteryColor = state && state.battery_level > 50 ? '#10b981' : state && state.battery_level > 20 ? '#f59e0b' : '#ef4444'
+  const batColor = batteryColor(state?.battery_level ?? 0)
 
   return (
     <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-300 group">
@@ -65,7 +66,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
             {state && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <div className="flex items-center gap-2">
-                  <ProgressRing value={state.battery_level} size={36} strokeWidth={3} color={batteryColor} label="" />
+                  <ProgressRing value={state.battery_level} size={36} strokeWidth={3} color={batColor} label="" />
                   <div>
                     <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level}%</p>
                     <p className="text-[10px] text-[var(--text-muted)]">{Math.round(convertDistance(state.rated_range))} {distanceUnit}</p>
@@ -207,7 +208,7 @@ function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
         <div className="space-y-3">
           {bars.map(({ vehicle, state }) => {
             const level = state?.battery_level ?? 0
-            const color = level > 50 ? '#10b981' : level > 20 ? '#f59e0b' : '#ef4444'
+            const color = batteryColor(level)
             return (
               <div key={vehicle.id} className="flex items-center gap-3">
                 <span className="text-xs text-[var(--text-secondary)] w-24 truncate">{vehicle.display_name || vehicle.vin}</span>

@@ -17,7 +17,7 @@ import {
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip, axisTick, axisTickSm, chartGrid, safe, fmt } from '../components/Charts'
-import { CHART_COLORS } from '../lib/colors'
+import { CHART_COLORS, efficiencyColor } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function MiniBar({ label, value, maxValue, color }: { label: string; value: number; maxValue: number; color: string }) {
@@ -149,7 +149,7 @@ export default function Analytics() {
             <RadialGauge value={Math.round(convertDistance(totalDistance))} max={Math.max(convertDistance(totalDistance), 1000)} label="Distance" unit={distanceUnit} color="#00f0ff" />
             <RadialGauge value={totalDrives} max={Math.max(totalDrives, 50)} label="Drives" unit="" color="#a855f7" />
             <RadialGauge value={Math.round(totalEnergy)} max={Math.max(totalEnergy, 500)} label="Energy" unit="kWh" color="#10b981" />
-            <RadialGauge value={Math.round(convertEfficiency(avgEfficiency))} max={300} label="Efficiency" unit={efficiencyUnit} color={avgEfficiency < 180 ? '#10b981' : '#f59e0b'} />
+            <RadialGauge value={Math.round(convertEfficiency(avgEfficiency))} max={300} label="Efficiency" unit={efficiencyUnit} color={efficiencyColor(avgEfficiency)} />
             <div className="flex flex-col items-center text-center">
               <p className="text-xl font-bold text-neon-green">$<AnimatedNumber value={Math.round(gasSavings)} /></p>
               <p className="text-[10px] uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>Gas Savings</p>

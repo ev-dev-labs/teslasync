@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest, getVehicleConfigLatest, getUserPreferenceLatest } from '../api'
 import { cleanNil } from '../lib/cleanNil'
+import { batteryColor, boolColor, boolColorMuted } from '../lib/colors'
 import { useState } from 'react'
 import { MapContainer, Polyline, Marker } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
@@ -215,7 +216,7 @@ export default function VehicleDetail() {
                     <RadialGauge
                       value={state.battery_level} max={100}
                       label="Battery" unit="%"
-                      color={state.battery_level > 50 ? '#10b981' : state.battery_level > 20 ? '#f59e0b' : '#ef4444'}
+                      color={batteryColor(state.battery_level)}
                       size={110}
                     />
                     <RadialGauge
@@ -232,14 +233,14 @@ export default function VehicleDetail() {
                     <RadialGauge
                       value={state.charger_power} max={250}
                       label="Power" unit="kW"
-                      color={state.is_charging ? '#10b981' : '#374151'}
+                      color={boolColorMuted(state.is_charging)}
                       size={110}
                     />
                   </div>
 
                   {/* Metric bars */}
                   <div className="space-y-3">
-                    <MetricBar value={state.battery_level} max={100} color={state.battery_level > 50 ? '#10b981' : '#f59e0b'} label="Battery Level" sublabel={`${state.battery_level}%`} />
+                    <MetricBar value={state.battery_level} max={100} color={batteryColor(state.battery_level)} label="Battery Level" sublabel={`${state.battery_level}%`} />
                     <MetricBar value={convertDistance(state.rated_range)} max={convertDistance(600)} color="#00f0ff" label="Estimated Range" sublabel={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`} />
                     {state.is_charging && (
                       <MetricBar value={convertSpeed(state.charge_rate)} max={state.charger_power || 100} color="#10b981" label="Charge Rate" sublabel={`${Math.round(convertSpeed(state.charge_rate))} ${speedUnit} added`} />
@@ -249,7 +250,7 @@ export default function VehicleDetail() {
                   {/* Quick info chips */}
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { icon: state.is_locked ? Lock : Unlock, label: state.is_locked ? 'Locked' : 'Unlocked', color: state.is_locked ? '#10b981' : '#f59e0b' },
+                      { icon: state.is_locked ? Lock : Unlock, label: state.is_locked ? 'Locked' : 'Unlocked', color: boolColor(state.is_locked) },
                       { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? '#ef4444' : '#4b5563' },
                       { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? '#00f0ff' : '#4b5563' },
                       { icon: Cpu, label: state.software_version || 'N/A', color: '#a855f7' },

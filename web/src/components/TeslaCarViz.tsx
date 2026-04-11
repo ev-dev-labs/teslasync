@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { useTheme } from './ThemeProvider'
+import { batteryColor, boolColor } from '../lib/colors'
 
 export type TeslaModel = 'model3' | 'models' | 'modely' | 'modelx' | 'cybertruck'
 
@@ -201,7 +202,7 @@ export function TeslaCarViz({
   model = 'model3',
 }: TeslaCarVizProps) {
   const palette = useSvgPalette()
-  const batteryColor = batteryLevel > 60 ? '#10b981' : batteryLevel > 25 ? '#f59e0b' : '#ef4444'
+  const batClr = batteryColor(batteryLevel)
   const driving = speed > 0
   const sizeMap = { sm: 180, md: 280, lg: 380 }
   const w = sizeMap[size]
@@ -413,11 +414,11 @@ export function TeslaCarViz({
           x={WHEEL_POS[model].batX} y={WHEEL_POS[model].batY}
           rx="4"
           height="8"
-          fill={batteryColor}
+          fill={batClr}
           initial={{ width: 0 }}
           animate={{ width: (batteryLevel / 100) * 260 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
-          style={{ filter: `drop-shadow(0 0 6px ${batteryColor})` }}
+          style={{ filter: `drop-shadow(0 0 6px ${batClr})` }}
         />
         <text x={WHEEL_POS[model].batX + 135} y={WHEEL_POS[model].batY + 8} textAnchor="middle" fill={palette.battery.text} fontSize="6" fontWeight="bold" opacity="0.7">
           {batteryLevel}%
@@ -549,7 +550,7 @@ export function TeslaCarViz({
         />
         <StatusDot
           active={isLocked}
-          color={isLocked ? '#10b981' : '#f59e0b'}
+          color={boolColor(isLocked)}
           label={isLocked ? 'Locked' : 'Unlocked'}
           palette={palette}
         />
@@ -578,7 +579,7 @@ function StatusDot({ active, color, label, palette }: { active: boolean; color: 
 /** Mini version for cards/lists */
 export function TeslaCarMini({ batteryLevel, isCharging, model }: { batteryLevel: number; isCharging: boolean; model?: TeslaModel }) {
   const palette = useSvgPalette()
-  const color = batteryLevel > 60 ? '#10b981' : batteryLevel > 25 ? '#f59e0b' : '#ef4444'
+  const color = batteryColor(batteryLevel)
   const m = model ?? 'model3'
   const miniPaths: Record<TeslaModel, string> = {
     model3:     'M8 22 C8 22 9 18 13 16 L20 12 C22 11 26 9 30 8.5 C34 8 40 7.8 44 8 C48 8.2 51 9.5 53 11 L57 14 C58.5 15 59.5 16.5 59.8 18 L60 22 L8 22 Z',

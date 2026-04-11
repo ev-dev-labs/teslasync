@@ -12,6 +12,7 @@ import { GEAR_BADGE_COLORS } from '../lib/gear'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { formatDateShort } from '../lib/dateFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { batteryColor, boolColor, boolColorMuted, powerColor, COLOR } from '../lib/colors'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
@@ -49,7 +50,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-xs text-[var(--text-muted)]">Battery</p>
-              <p className="text-sm font-bold" style={{ color: state.battery_level > 50 ? '#10b981' : '#f59e0b' }}>{state.battery_level}%</p>
+              <p className="text-sm font-bold" style={{ color: batteryColor(state.battery_level) }}>{state.battery_level}%</p>
             </div>
             <div>
               <p className="text-xs text-[var(--text-muted)]">Range</p>
@@ -279,7 +280,7 @@ export default function Dashboard() {
                 </span>
               </Link>
             )}
-            <StatusPill color={connected ? '#10b981' : '#6b7280'} pulse={connected}>
+            <StatusPill color={boolColorMuted(connected)} pulse={connected}>
               <Radio className="h-3 w-3" />
               {connected ? 'LIVE' : 'OFFLINE'}
             </StatusPill>
@@ -348,7 +349,7 @@ export default function Dashboard() {
                     <div className="mt-4 sm:mt-6">
                       {/* Context-aware radial gauges — show what's relevant to current state */}
                       <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
-                        <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={primaryState.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70} />
+                        <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={batteryColor(primaryState.battery_level)} size={70} />
                         <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={70} />
                         {/* Show Speed gauge only when driving */}
                         {(primaryVehicle?.state === 'driving' || primaryState.speed > 0) && (
@@ -408,7 +409,7 @@ export default function Dashboard() {
                             // Driving: speed, power, odometer, heading
                             cards.push(
                               { icon: Gauge, label: 'Speed', value: `${Math.round(convertSpeed(primaryState.speed))} ${speedUnit}`, color: '#a855f7' },
-                              { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                              { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: powerColor(primaryState.power) },
                               { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )
@@ -432,10 +433,10 @@ export default function Dashboard() {
 
                           // Always show lock and sentry
                           cards.push(
-                            { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
+                            { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: boolColor(primaryState.is_locked) },
                             { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
                             { icon: Gauge, label: 'Firmware', value: firmwareVersion, color: '#6366f1' },
-                            { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                            { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: powerColor(primaryState.power) },
                           )
 
                           return cards.map(item => (
@@ -554,7 +555,7 @@ export default function Dashboard() {
                         title={item.title}
                         subtitle={item.subtitle}
                         time={formatTimeAgo(item.time)}
-                        color={item.type === 'drive' ? '#00f0ff' : '#10b981'}
+                        color={item.type === 'drive' ? COLOR.CYAN : COLOR.GOOD}
                         isLast={i === Math.min(activityItems.length, 8) - 1}
                       />
                     ))}

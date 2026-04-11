@@ -52,7 +52,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
-import { CHARGER_COLORS } from '../lib/colors'
+import { CHARGER_COLORS, savingsColor } from '../lib/colors'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -803,7 +803,7 @@ export default function CostAnalysis() {
                     <p
                       className="text-4xl sm:text-5xl font-black tracking-tight"
                       style={{
-                        color: totalSavings >= 0 ? '#10b981' : '#ef4444',
+                        color: savingsColor(totalSavings),
                         textShadow: totalSavings >= 0
                           ? '0 0 20px rgba(16,185,129,0.4)'
                           : '0 0 20px rgba(239,68,68,0.4)',
@@ -864,7 +864,7 @@ export default function CostAnalysis() {
                     { key: 'cost', header: 'Cost ($)', sortable: true, render: (row) => <span className="font-medium" style={{ color: '#00f0ff' }}>${fmtNumber(row.cost)}</span> },
                     { key: 'perUnit', header: `$/${distanceUnit}`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>${fmtNumber(row.perUnit)}</span> },
                     { key: 'gasCost', header: 'Gas Would Be', sortable: true, render: (row) => <span style={{ color: '#f59e0b' }}>${fmtNumber(row.gasCost)}</span> },
-                    { key: 'saved', header: 'Saved', sortable: true, render: (row) => <span className="font-medium" style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}>{row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved)}</span> },
+                    { key: 'saved', header: 'Saved', sortable: true, render: (row) => <span className="font-medium" style={{ color: savingsColor(row.saved) }}>{row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved)}</span> },
                   ] as Column<(typeof tableData)[number]>[]}
                   data={tableData}
                   keyExtractor={(row) => row.month}
@@ -1023,7 +1023,7 @@ export default function CostAnalysis() {
                   {
                     label: 'Total Savings',
                     value: `$${fmtNumber(totalSavings)}`,
-                    color: totalSavings >= 0 ? '#10b981' : '#ef4444',
+                    color: savingsColor(totalSavings),
                     icon: PiggyBank,
                   },
                   {

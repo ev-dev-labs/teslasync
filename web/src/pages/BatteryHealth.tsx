@@ -13,6 +13,7 @@ import {
 import clsx from 'clsx'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { healthColor, degradationColor } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function InsightCard({ icon, title, description, status }: { icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }) {
@@ -185,10 +186,10 @@ export default function BatteryHealth() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
                 <div className="col-span-2 sm:col-span-1 flex flex-col items-center">
                   <RadialGauge value={healthScore} max={100} label="Health Score" unit="/100" size={130}
-                    color={healthScore >= 90 ? '#10b981' : healthScore >= 70 ? '#f59e0b' : '#ef4444'} />
+                    color={healthColor(healthScore)} />
                 </div>
                 <RadialGauge value={currentCapacity} max={100} label="Capacity" unit="%" color="#00f0ff" />
-                <RadialGauge value={degradation} max={30} label="Degradation" unit="%" color={degradation < 10 ? '#10b981' : '#f59e0b'} />
+                <RadialGauge value={degradation} max={30} label="Degradation" unit="%" color={degradationColor(degradation)} />
                 <RadialGauge value={cycles} max={1500} label="Cycles" unit="" color="#a855f7" />
                 <div className="flex flex-col items-center text-center">
                   <p className="text-3xl font-bold text-[var(--text-primary)]">{yearsTo70}</p>
@@ -208,7 +209,7 @@ export default function BatteryHealth() {
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">{report?.estimated_range_current_km ? `${Math.round(convertDistance(report.estimated_range_current_km))} ${distanceUnit} current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(convertDistance(report.estimated_range_new_km))} ${distanceUnit} when new` : ''}</p>
                 </div>
                 <div>
-                  <MetricBar label="Degradation" value={degradation} max={30} color={degradation < 10 ? '#10b981' : '#f59e0b'} />
+                  <MetricBar label="Degradation" value={degradation} max={30} color={degradationColor(degradation)} />
                   <p className="text-[10px] text-[var(--text-muted)] mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12)} per year</p>
                 </div>
                 <div>

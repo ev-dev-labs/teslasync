@@ -4,7 +4,7 @@ import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError, AlertBanner, Select } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
-import { BATTERY_COLORS } from '../lib/colors'
+import { BATTERY_COLORS, healthColor } from '../lib/colors'
 import {
   Battery, Thermometer, AlertTriangle, CheckCircle, Activity, Zap,
   Shield, Info,
@@ -212,7 +212,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
 
       {/* Health badge */}
       <rect x={totalW - 90} y={totalH - 28} width="76" height="20" rx="6" fill="#0f172a" stroke="#22d3ee" strokeWidth="1" opacity="0.85" />
-      <text x={totalW - 52} y={totalH - 14} textAnchor="middle" fontSize="8" fontWeight="bold" fill={healthScore >= 90 ? '#10b981' : healthScore >= 70 ? '#f59e0b' : '#ef4444'} fontFamily="system-ui,sans-serif">
+      <text x={totalW - 52} y={totalH - 14} textAnchor="middle" fontSize="8" fontWeight="bold" fill={healthColor(healthScore)} fontFamily="system-ui,sans-serif">
         HEALTH {fmtPercent(healthScore)}
       </text>
     </svg>

@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, ReferenceLine
 } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
+import { healthColor } from '../lib/colors'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -16,7 +17,7 @@ function HealthGauge({ value, size = 200 }: { value: number; size?: number }) {
   const r = (size - 20) / 2
   const circ = 2 * Math.PI * r * 0.75
   const offset = circ - (clamped / 100) * circ
-  const color = clamped >= 90 ? '#10b981' : clamped >= 80 ? '#f59e0b' : '#ef4444'
+  const color = healthColor(clamped)
   const startAngle = 135
 
   return (

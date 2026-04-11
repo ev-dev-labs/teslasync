@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { GlassPanel, FadeIn } from './ui'
 import { fmtNumber } from '../lib/numberFormat'
+import { trendColor } from '../lib/colors'
 import type {
   Drive, ChargingSession, EnergyStats, BatteryReport,
   MileageStats, VampireDrainStats,
@@ -370,11 +371,11 @@ export function InsightsEngine({ data }: { data: InsightData }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {insights.map((insight) => {
             const borderColor = SEVERITY_BORDER[insight.severity]
-            const { Icon: TrendIcon, color: trendColor } = insight.trendGood
+            const { Icon: TrendIcon, color: trendClr } = insight.trendGood
               ? TREND_ICON[insight.trend]
               : {
                   Icon: TREND_ICON[insight.trend].Icon,
-                  color: insight.trend === 'up' ? '#ef4444' : insight.trend === 'down' ? '#10b981' : 'var(--text-secondary)',
+                  color: trendColor(insight.trend),
                 }
 
             return (
@@ -399,7 +400,7 @@ export function InsightsEngine({ data }: { data: InsightData }) {
                       >
                         {insight.title}
                       </span>
-                      <TrendIcon className="h-3.5 w-3.5" style={{ color: trendColor }} />
+                      <TrendIcon className="h-3.5 w-3.5" style={{ color: trendClr }} />
                     </div>
                     <p
                       className="text-xs leading-relaxed"
