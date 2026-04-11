@@ -141,7 +141,6 @@ interface EditorState {
 }
 
 function freshEditor(): EditorState {
-  usePageTitle('Alert Studio')
   return {
     name: '',
     type: 'custom',
@@ -171,6 +170,7 @@ function ruleToEditor(rule: AlertRule): EditorState {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function AlertStudio() {
+  usePageTitle('Alert Studio')
   const queryClient = useQueryClient()
   const toast = useToast()
 
