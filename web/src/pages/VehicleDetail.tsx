@@ -36,12 +36,12 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
 }) {
   const display = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value
   return (
-    <GlassPanel className="p-4">
-      <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs mb-1.5">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
+    <GlassPanel className="p-4 overflow-hidden">
+      <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs mb-1.5 min-w-0">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
       </div>
-      <p className={clsx('text-lg font-semibold', color)}>{display}</p>
+      <p className={clsx('text-lg font-semibold truncate', color)} title={String(display)}>{display}</p>
       {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{sub}</p>}
     </GlassPanel>
   )
@@ -933,7 +933,7 @@ export default function VehicleDetail() {
                     <Car className="h-4 w-4 text-neon-purple" />
                     Vehicle Configuration
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
                       { label: 'Model', value: cleanNil(vehicleConfigData.car_type) },
                       { label: 'Trim', value: cleanNil(vehicleConfigData.trim) },
