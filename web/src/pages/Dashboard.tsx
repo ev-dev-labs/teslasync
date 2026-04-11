@@ -350,14 +350,14 @@ export default function Dashboard() {
                       {/* Context-aware radial gauges — show what's relevant to current state */}
                       <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
                         <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={batteryColor(primaryState.battery_level)} size={70} />
-                        <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={70} />
+                        <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color={COLOR.CYAN} size={70} />
                         {/* Show Speed gauge only when driving */}
-                        {(primaryVehicle?.state === 'driving' || primaryState.speed > 0) && (
-                          <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color="#a855f7" size={70} />
+                        {((primaryVehicle?.state as VehicleStateValue) === 'driving' || primaryState.speed > 0) && (
+                          <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color={COLOR.PURPLE} size={70} />
                         )}
                         {/* Show Charge Power gauge when charging */}
                         {primaryState.is_charging && (
-                          <RadialGauge value={Math.round(primaryState.charger_power ?? 0)} max={250} label="Power" unit="kW" color="#10b981" size={70} />
+                          <RadialGauge value={Math.round(primaryState.charger_power ?? 0)} max={250} label="Power" unit="kW" color={COLOR.GOOD} size={70} />
                         )}
                         <RadialGauge value={Math.round(convertTemp(primaryState.inside_temp))} max={isFahrenheit ? 122 : 50} label="Inside" unit={tempUnit} color="#f97316" size={70} />
                         <RadialGauge value={Math.round(convertTemp(primaryState.outside_temp))} max={isFahrenheit ? 122 : 50} label="Outside" unit={tempUnit} color="#3b82f6" size={70} />
