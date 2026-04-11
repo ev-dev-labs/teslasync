@@ -1221,8 +1221,11 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 	}
 
 	// Distance: miles → km
-	// NOTE: Odometer from Fleet Telemetry arrives in the vehicle's configured
-	// unit (km for metric vehicles). Do NOT convert — it's already in km.
+	// Odometer is documented as miles: "The number of miles the vehicle has driven."
+	// https://developer.tesla.com/docs/fleet-api/fleet-telemetry/available-data
+	if v, ok := toFloatOk(signals["Odometer"]); ok {
+		signals["Odometer"] = v * milesToKm
+	}
 	if v, ok := toFloatOk(signals["EstBatteryRange"]); ok {
 		signals["EstBatteryRange"] = v * milesToKm
 	}
