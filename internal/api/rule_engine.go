@@ -214,6 +214,26 @@ func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.Ale
 	}
 }
 
+// LoadPrevSignalsFromStore populates prevSignals for all rules from the SignalStore.
+// Called after pod restart so changed_to/changed_from operators have a baseline.
+func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[string]interface{}) {
+	if len(signals) == 0 {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for key, st := range e.state {
+		if key.VehicleID == vehicleID || key.VehicleID == 0 {
+			if st.PrevSignals == nil {
+				st.PrevSignals = make(map[string]interface{}, len(signals))
+			}
+			for k, v := range signals {
+				st.PrevSignals[k] = v
+			}
+		}
+	}
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Condition tree evaluation
 // ──────────────────────────────────────────────────────────────────────

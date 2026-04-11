@@ -53,6 +53,11 @@ func (e *TelemetryAlertEvaluator) LoadState(ctx context.Context) {
 	log.Info().Int("rules", len(rules)).Msg("cep: loaded rule cooldown state from DB")
 }
 
+// RuleEngine returns the underlying rule engine for state recovery.
+func (e *TelemetryAlertEvaluator) RuleEngine() *RuleEngine {
+	return e.ruleEngine
+}
+
 // Evaluate checks all alert rules against the given signals for a vehicle.
 // accumulatedSignals contains last-known values from recent batches — used as
 // fallback for legacy rules when a signal isn't in the current sparse batch.

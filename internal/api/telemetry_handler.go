@@ -75,6 +75,9 @@ type TelemetryHandler struct {
 
 	// Per-signal logging to MongoDB (optional)
 	signalLogRepo *database.SignalLogRepo
+
+	// Per-signal history to Postgres (signal_history table)
+	signalHistoryWriter *database.SignalHistoryWriter
 }
 
 // vehicleStateMachine tracks vehicle state transitions.
@@ -185,9 +188,19 @@ func (h *TelemetryHandler) SessionTracker() *TelemetrySessionTracker {
 	return h.sessionTracker
 }
 
+// AlertEvaluator returns the underlying alert evaluator for state recovery.
+func (h *TelemetryHandler) AlertEvaluator() *TelemetryAlertEvaluator {
+	return h.alertEvaluator
+}
+
 // SetSignalLogRepo enables per-signal logging to MongoDB.
 func (h *TelemetryHandler) SetSignalLogRepo(repo *database.SignalLogRepo) {
 	h.signalLogRepo = repo
+}
+
+// SetSignalHistoryWriter enables per-signal history logging to Postgres.
+func (h *TelemetryHandler) SetSignalHistoryWriter(w *database.SignalHistoryWriter) {
+	h.signalHistoryWriter = w
 }
 
 // SetCaptureEnabled toggles raw telemetry capture on or off.
@@ -397,6 +410,11 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				log.Warn().Err(err).Str("vin", vin).Msg("telemetry: failed to log signals to MongoDB")
 			}
 		}()
+	}
+
+	// Log every signal to Postgres signal_history (buffered, non-blocking)
+	if vehicleID > 0 && h.signalHistoryWriter != nil {
+		h.signalHistoryWriter.Append(vehicleID, signals)
 	}
 
 	// Position writing is deferred to the accumulated/throttled write path below

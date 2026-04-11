@@ -140,8 +140,9 @@ type AuthConfig struct {
 }
 
 type RetentionConfig struct {
-	DataRetentionDays     int
-	PositionRetentionDays int
+	DataRetentionDays        int
+	PositionRetentionDays    int
+	SignalHistoryRetentionDays int
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -212,8 +213,9 @@ func Load() (*Config, error) {
 		},
 
 		Retention: RetentionConfig{
-			DataRetentionDays:     envInt("DATA_RETENTION_DAYS", 365),
-			PositionRetentionDays: envInt("POSITION_RETENTION_DAYS", 90),
+			DataRetentionDays:          envInt("DATA_RETENTION_DAYS", 365),
+			PositionRetentionDays:      envInt("POSITION_RETENTION_DAYS", 90),
+			SignalHistoryRetentionDays: envInt("SIGNAL_HISTORY_RETENTION_DAYS", 7),
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{

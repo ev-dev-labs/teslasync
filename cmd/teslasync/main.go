@@ -208,6 +208,31 @@ func main() {
 		}
 		log.Info().Msg("signal store initialized")
 
+		// Recover active drive/charge sessions from Postgres (pod restart resilience)
+		sessionTracker := telemetryHandler.SessionTracker()
+		if sessionTracker != nil {
+			sessionTracker.RecoverSessions(ctx)
+			sessionTracker.ValidateRecoveredSessions(ctx)
+		}
+
+		// Populate alert prevSignals from SignalStore (pod restart resilience)
+		alertEvaluator := telemetryHandler.AlertEvaluator()
+		if alertEvaluator != nil {
+			for _, vid := range signalStore.VehicleIDs() {
+				raw := signalStore.GetRawMap(vid)
+				if raw != nil {
+					alertEvaluator.RuleEngine().LoadPrevSignalsFromStore(vid, raw)
+				}
+			}
+			log.Info().Msg("alert prevSignals populated from signal store")
+		}
+
+		// Postgres signal_history writer (always-on per-signal history)
+		signalHistoryWriter := database.NewSignalHistoryWriter(db, 2*time.Second)
+		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
+		go signalHistoryWriter.FlushLoop(ctx)
+		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
+
 		// MongoDB raw telemetry capture (optional)
 		if cfg.MongoDB.Enabled {
 			mongoClient, err := database.NewMongoClient(cfg.MongoDB)
@@ -318,6 +343,27 @@ func main() {
 		worker.StartMaintenanceWorker(loopCtx, db, cfg)
 	})
 	log.Info().Msg("maintenance worker started")
+
+	// Signal history TTL cleanup — daily purge of old rows
+	if cfg.FleetTelemetry.Enabled {
+		go func() {
+			// Run immediately on startup, then daily
+			shWriter := database.NewSignalHistoryWriter(db, 0)
+			shWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
+
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					shWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
+				}
+			}
+		}()
+		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
+	}
 
 	// Trip generator — backfill monthly summaries on startup, then daily
 	tripRepo := database.NewTripRepo(db)

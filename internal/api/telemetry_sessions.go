@@ -163,6 +163,108 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 // this window so each row has complete data instead of mostly NULLs.
 const telemetryWriteInterval = 5 * time.Second
 
+// RecoverSessions restores active drive/charge sessions from Postgres on pod restart.
+// Queries for sessions with no end_date and rebuilds the in-memory tracking state.
+func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	// Recover open drives (started within last 24 hours)
+	cutoff := time.Now().UTC().Add(-24 * time.Hour)
+	openDrives, err := t.driveRepo.GetStale(ctx, cutoff)
+	if err != nil {
+		log.Warn().Err(err).Msg("session recovery: failed to query open drives")
+	}
+	for _, d := range openDrives {
+		if _, exists := t.activeDrives[d.VehicleID]; exists {
+			continue
+		}
+		sd := &streamingDrive{
+			DriveID:            d.ID,
+			VehicleID:          d.VehicleID,
+			StartTime:          d.StartDate,
+			LastSeen:           time.Now().UTC(),
+			accumulatedSignals: make(map[string]interface{}),
+			lastTelemetryWrite: time.Now().UTC(),
+		}
+		if d.StartOdometer != nil {
+			sd.StartOdometer = d.StartOdometer
+			sd.LastOdometer = d.StartOdometer
+		}
+		t.activeDrives[d.VehicleID] = sd
+		log.Info().Int64("drive_id", d.ID).Int64("vehicle_id", d.VehicleID).Msg("session recovery: restored open drive")
+	}
+
+	// Recover open charges (started within last 48 hours — charges can be long)
+	chargeCutoff := time.Now().UTC().Add(-48 * time.Hour)
+	openCharges, err := t.chargeRepo.GetStale(ctx, chargeCutoff)
+	if err != nil {
+		log.Warn().Err(err).Msg("session recovery: failed to query open charges")
+	}
+	for _, c := range openCharges {
+		if _, exists := t.activeCharges[c.VehicleID]; exists {
+			continue
+		}
+		sc := &streamingCharge{
+			SessionID:          c.ID,
+			VehicleID:          c.VehicleID,
+			StartTime:          c.StartDate,
+			StartBatteryLevel:  c.StartBatteryLevel,
+			LastSeen:           time.Now().UTC(),
+			accumulatedSignals: make(map[string]interface{}),
+			lastTelemetryWrite: time.Now().UTC(),
+		}
+		if c.ChargerPower != nil {
+			sc.Power = c.ChargerPower
+		}
+		t.activeCharges[c.VehicleID] = sc
+		log.Info().Int64("session_id", c.ID).Int64("vehicle_id", c.VehicleID).Msg("session recovery: restored open charge")
+	}
+
+	log.Info().Int("drives", len(t.activeDrives)).Int("charges", len(t.activeCharges)).Msg("session recovery: complete")
+}
+
+// ValidateRecoveredSessions checks recovered sessions against current SignalStore state.
+// Auto-closes sessions that are no longer active (vehicle parked, charge complete, or timed out).
+func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	for vehicleID, drive := range t.activeDrives {
+		// Auto-close drives open > 4 hours with no new telemetry
+		if time.Since(drive.StartTime) > 4*time.Hour {
+			log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: auto-closing stale drive (>4h)")
+			t.completeDriveLocked(ctx, vehicleID, drive, nil)
+			continue
+		}
+		// If SignalStore shows Gear=P and Speed=0, close the drive
+		if t.signalStore != nil {
+			if gear, ok := t.signalStore.GetString(vehicleID, "Gear"); ok && gear == "P" {
+				log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: closing drive (Gear=P)")
+				t.completeDriveLocked(ctx, vehicleID, drive, nil)
+			}
+		}
+	}
+
+	for vehicleID, charge := range t.activeCharges {
+		// Auto-close charges open > 24 hours
+		if time.Since(charge.StartTime) > 24*time.Hour {
+			log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: auto-closing stale charge (>24h)")
+			t.completeChargeLocked(ctx, vehicleID, charge, nil)
+			continue
+		}
+		// If SignalStore shows charge complete, close
+		if t.signalStore != nil {
+			if state, ok := t.signalStore.GetString(vehicleID, "DetailedChargeState"); ok {
+				if strings.Contains(state, "Complete") {
+					log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: closing charge (Complete)")
+					t.completeChargeLocked(ctx, vehicleID, charge, nil)
+				}
+			}
+		}
+	}
+}
+
 // accumulateSignals merges incoming signals into the accumulator map.
 func accumulateSignals(acc map[string]interface{}, signals map[string]interface{}) map[string]interface{} {
 	if acc == nil {
