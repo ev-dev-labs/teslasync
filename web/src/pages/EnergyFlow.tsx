@@ -9,6 +9,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtWithUnit, fmtInt } from '../lib/numberFormat'
+import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
@@ -271,7 +272,7 @@ export default function EnergyFlow() {
     : null
   const cellHealthy = cellSpread != null && cellSpread < 30
 
-  const hasPowershare = latest?.powershare_status != null && latest.powershare_status !== ''
+  const hasPowershare = parseEnumBool(latest?.powershare_status)
 
   const noData = !isLoading && (!history || history.length === 0)
 
@@ -540,7 +541,7 @@ export default function EnergyFlow() {
               <div>
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Isolation Ω</p>
                 <p className="text-sm font-semibold text-yellow-400">
-                  {latest?.isolation_resistance != null ? `${latest.isolation_resistance.toLocaleString()} kΩ` : '--'}
+                  {latest?.isolation_resistance != null ? `${fmtNumber(latest.isolation_resistance)} kΩ` : '--'}
                 </p>
               </div>
             </GlassPanel>

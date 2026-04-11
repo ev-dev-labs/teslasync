@@ -10,6 +10,8 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
+import { fmtNumber } from '../lib/numberFormat'
+import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ------------------------------------------------------------------ */
@@ -97,7 +99,7 @@ function StatsCard({
   value: number | null | undefined
   unit: string
 }) {
-  const formatted = value != null ? value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '--'
+  const formatted = value != null ? fmtNumber(value) : '--'
   return (
     <GlassPanel className="p-4 sm:p-5 flex flex-col items-center gap-3 text-center">
       <div className="p-2.5 rounded-lg bg-neon-cyan/10">
@@ -154,8 +156,7 @@ function boolStatus(val: boolean | undefined, invertLogic = false): { text: stri
 
 function stringStatus(val: string | undefined): { text: string; enabled: boolean } | null {
   if (val === undefined || val === null) return null
-  const lower = val.toLowerCase()
-  const enabled = lower !== 'off' && lower !== 'disabled' && lower !== 'none' && lower !== ''
+  const enabled = parseEnumBool(val)
   const display = val.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   return { text: display, enabled }
 }

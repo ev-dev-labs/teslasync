@@ -18,6 +18,7 @@ import { formatDateTime, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 import { tableTokens } from '../lib/tokens'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { request } from '../api/client'
 
 interface ComponentInfo {
   status: string
@@ -878,7 +879,7 @@ function TelemetryLivePanel() {
             { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? '#10b981' : '#6b7280' },
             { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec) : '0', color: '#00f0ff' },
             { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? '#10b981' : avgLatency < 5000 ? '#f59e0b' : '#ef4444' },
-            { label: 'Total Signals', value: totalSignals.toLocaleString(), color: '#8b5cf6' },
+            { label: 'Total Signals', value: fmtInt(totalSignals), color: '#8b5cf6' },
           ].map(item => (
             <div key={item.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{item.label}</p>
@@ -974,7 +975,7 @@ function TelemetryLivePanel() {
                             <div className="px-4 pb-4 pt-1 border-t border-white/[0.04]">
                               <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)] mb-2">
                                 <span>Batch: {signalCount} signal{signalCount !== 1 ? 's' : ''}</span>
-                                {v.batch_count > 0 && <span>Batches: {v.batch_count.toLocaleString()}</span>}
+                                {v.batch_count > 0 && <span>Batches: {fmtInt(v.batch_count)}</span>}
                                 {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${fmtNumber(v.uptime_seconds / 3600)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
                               </div>
                               {v.last_signals ? (
@@ -1296,7 +1297,7 @@ function ExportJobQueuePanel() {
                   {job.type} <span className="text-[var(--text-muted)]">({job.format})</span>
                 </span>
                 {job.record_count > 0 && (
-                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">{job.record_count.toLocaleString()} rows</span>
+                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">{fmtInt(job.record_count)} rows</span>
                 )}
                 {job.file_size > 0 && (
                   <span className="text-[10px] text-[var(--text-muted)] shrink-0">{formatSize(job.file_size)}</span>
@@ -1327,12 +1328,11 @@ export default function SystemStatus() {
   const { data: status, isLoading, refetch, dataUpdatedAt } = useQuery<SystemStatus>({
     queryKey: ['system-status'],
     queryFn: async () => {
-      const res = await fetch(`${getApiBase()}/api/v1/system/status`)
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        return body as SystemStatus
+      try {
+        return await request<SystemStatus>('/system/status')
+      } catch {
+        return {} as SystemStatus
       }
-      return res.json()
     },
     refetchInterval: 30_000,
   })

@@ -4,7 +4,7 @@ import { getAPICallLogs, getAPICallLogStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, StatCard, Button, Select, Input } from '../components/ui'
 import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -108,10 +108,10 @@ export default function ApiLogs() {
       {/* Stats */}
       <FadeIn>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={<FileText className="h-5 w-5" />} label="Total Calls" value={stats?.total_calls?.toLocaleString() ?? '—'} color="cyan" />
+          <StatCard icon={<FileText className="h-5 w-5" />} label="Total Calls" value={stats?.total_calls != null ? fmtInt(stats.total_calls) : '—'} color="cyan" />
           <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Error Rate" value={stats ? `${fmtNumber(stats.error_rate)}%` : '—'} color="amber" change={stats && stats.error_rate > 5 ? { value: String(stats.error_count), positive: false } : undefined} />
           <StatCard icon={<Clock className="h-5 w-5" />} label="Avg Duration" value={stats ? `${Math.round(stats.avg_duration_ms)}ms` : '—'} color="green" />
-          <StatCard icon={<Activity className="h-5 w-5" />} label="Last 24h" value={stats?.last_24h?.toLocaleString() ?? '—'} color="purple" />
+          <StatCard icon={<Activity className="h-5 w-5" />} label="Last 24h" value={stats?.last_24h != null ? fmtInt(stats.last_24h) : '—'} color="purple" />
         </div>
       </FadeIn>
 
@@ -150,7 +150,7 @@ export default function ApiLogs() {
           {/* Header with export */}
           <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--glass-border)' }}>
             <p className="text-sm text-[var(--text-secondary)]">
-              {total > 0 ? `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${total.toLocaleString()}` : 'No logs found'}
+              {total > 0 ? `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}` : 'No logs found'}
             </p>
             <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={logs.length === 0}>Export JSON</Button>
           </div>

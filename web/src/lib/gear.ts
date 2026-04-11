@@ -27,3 +27,11 @@ export const GEAR_BG_COLORS: Record<string, string> = {
   P: 'bg-neon-cyan/10 text-neon-cyan',
   N: 'bg-neon-amber/10 text-neon-amber',
 }
+
+/** Badge color name for the shared Badge component */
+export const GEAR_BADGE_COLORS: Record<string, 'green' | 'red' | 'cyan' | 'amber' | 'neutral'> = {
+  D: 'green',
+  R: 'red',
+  P: 'cyan',
+  N: 'amber',
+}

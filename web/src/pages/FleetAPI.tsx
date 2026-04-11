@@ -5,6 +5,7 @@ import { Shield, Pause, Play, Globe, Link } from 'lucide-react'
 import { PageHeader, GlassPanel, FadeIn, IconBox, Toggle, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { fmtInt } from '../lib/numberFormat'
 
 export default function FleetAPI() {
   usePageTitle('Fleet API')
@@ -223,7 +224,7 @@ export default function FleetAPI() {
                       {captureStats.total_documents > 0 && (
                         <div className="flex items-center gap-3 p-2.5 rounded-lg bg-neon-cyan/5 border border-neon-cyan/10">
                           <p className="text-[10px] text-neon-cyan">
-                            {captureStats.total_documents.toLocaleString()} signals captured from {captureStats.distinct_vins.length} vehicle{captureStats.distinct_vins.length !== 1 ? 's' : ''}
+                            {fmtInt(captureStats.total_documents)} signals captured from {captureStats.distinct_vins.length} vehicle{captureStats.distinct_vins.length !== 1 ? 's' : ''}
                           </p>
                         </div>
                       )}

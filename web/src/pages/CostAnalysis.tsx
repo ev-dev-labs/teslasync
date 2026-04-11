@@ -60,7 +60,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 const DEFAULT_GAS_PRICE = 3.5        // $/gal
 const DEFAULT_MPG = 30               // miles per gallon
-const KM_PER_MILE = 1.60934
 const CO2_PER_GAL_KG = 8.887         // kg CO₂ per gallon of gasoline
 const KG_CO2_PER_TREE_YEAR = 22      // kg CO₂ absorbed per tree per year
 
@@ -120,11 +119,10 @@ function categorizeCharger(type: string | null, cable: string | null): string {
 }
 
 function gasEquivalentCost(
-  distanceKm: number,
+  distanceMiles: number,
   gasPriceDollar: number,
   mpg: number,
 ): number {
-  const distanceMiles = distanceKm / KM_PER_MILE
   const gallonsNeeded = distanceMiles / mpg
   return gallonsNeeded * gasPriceDollar
 }
@@ -408,8 +406,7 @@ export default function CostAnalysis() {
   /* ── lifetime / CO₂ ────────────────────────────── */
   const co2SavedKg = useMemo(() => {
     if (energy?.co2_saved_kg) return energy.co2_saved_kg
-    const distMiles = totalDistanceKm / KM_PER_MILE
-    const gallonsSaved = distMiles / mpg
+    const gallonsSaved = totalDistanceKm / mpg  // totalDistanceKm is actually miles now
     return gallonsSaved * CO2_PER_GAL_KG
   }, [energy, totalDistanceKm, mpg])
 

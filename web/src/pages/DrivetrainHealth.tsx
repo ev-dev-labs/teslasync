@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { cleanNil } from '../lib/cleanNil'
+import { GEAR_COLORS } from '../lib/gear'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { formatDateTime } from '../lib/dateFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -293,10 +294,7 @@ export default function DrivetrainHealth() {
     : 'text-[var(--text-muted)]'
 
   const gearValue = live.gear || cleanNil(latest?.gear)
-  const gearColor = gearValue === 'D' ? 'text-neon-green'
-    : gearValue === 'R' ? 'text-neon-amber'
-    : gearValue === 'P' ? 'text-neon-cyan'
-    : 'text-[var(--text-muted)]'
+  const gearColor = GEAR_COLORS[gearValue ?? ''] ?? 'text-[var(--text-muted)]'
 
   const noData = !isLoading && (!history || history.length === 0)
 
@@ -692,7 +690,7 @@ export default function DrivetrainHealth() {
               {/* Data coverage */}
               <GlassPanel className="p-4">
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Data Points</p>
-                <p className="text-sm font-semibold text-neon-cyan">{stats.totalSnapshots.toLocaleString()} snapshots</p>
+                <p className="text-sm font-semibold text-neon-cyan">{fmtInt(stats.totalSnapshots)} snapshots</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                   {stats.avgSpeed != null ? `Avg speed: ${fmtNumber(convertSpeed(stats.avgSpeed))} ${speedUnit}` : 'Collecting data...'}
                 </p>

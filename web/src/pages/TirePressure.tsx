@@ -10,6 +10,7 @@ import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { STATUS_COLORS } from '../lib/colors'
 import { fmtNumber } from '../lib/numberFormat'
+import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 interface PressureTooltipPayload { name: string; value: number; color?: string }
@@ -284,8 +285,8 @@ export default function TirePressure() {
   const { state: live } = useVehicleLive(vehicleId ?? undefined)
 
   // Parse TPMS warnings — format is "TireLocationFl:Warning,TireLocationFr:Warning,..."
-  const hasHardWarning = live.tpmsHardWarnings !== '' && !live.tpmsHardWarnings.toLowerCase().includes('none')
-  const hasSoftWarning = live.tpmsSoftWarnings !== '' && !live.tpmsSoftWarnings.toLowerCase().includes('none')
+  const hasHardWarning = parseEnumBool(live.tpmsHardWarnings) && !live.tpmsHardWarnings.toLowerCase().includes('none')
+  const hasSoftWarning = parseEnumBool(live.tpmsSoftWarnings) && !live.tpmsSoftWarnings.toLowerCase().includes('none')
 
   // Thresholds in the display unit
   const lowThreshold = convertPressure(2.4)   // ~35 PSI

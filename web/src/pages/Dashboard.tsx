@@ -8,6 +8,7 @@ import {
   getMediaLatest, getLocationSnapshotLatest,
 } from '../api'
 import { cleanNil } from '../lib/cleanNil'
+import { GEAR_BADGE_COLORS } from '../lib/gear'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { formatDateShort } from '../lib/dateFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
@@ -407,7 +408,7 @@ export default function Dashboard() {
                             cards.push(
                               { icon: Gauge, label: 'Speed', value: `${Math.round(convertSpeed(primaryState.speed))} ${speedUnit}`, color: '#a855f7' },
                               { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
-                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )
                           } else if (isCharging) {
@@ -416,14 +417,14 @@ export default function Dashboard() {
                               { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: '#10b981' },
                               { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge)}h` : '—', color: '#f59e0b' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
-                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                             )
                           } else {
                             // Parked/Online: temps, odometer, range
                             cards.push(
                               { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp)) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
                               { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp)) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
-                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )
                           }
@@ -713,7 +714,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Gear</span>
                       {cleanNil(motorData.gear) ? (
-                        <Badge color={motorData.gear === 'D' ? 'green' : motorData.gear === 'R' ? 'red' : motorData.gear === 'N' ? 'amber' : 'neutral'}>
+                        <Badge color={GEAR_BADGE_COLORS[motorData.gear ?? ''] ?? 'neutral'}>
                           {cleanNil(motorData.gear)}
                         </Badge>
                       ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
@@ -962,7 +963,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Distance</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934))} ${distanceUnit}` : '—'}
+                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival))} ${distanceUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

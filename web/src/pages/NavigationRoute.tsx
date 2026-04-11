@@ -186,7 +186,7 @@ export default function NavigationRoute() {
       className: 'text-right',
       render: (row) => (
         <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-          {row.miles != null ? `${fmtNumber(convertDistance(row.miles * 1.60934))} ${distanceUnit}` : '—'}
+          {row.miles != null ? `${fmtNumber(convertDistance(row.miles))} ${distanceUnit}` : '—'}
         </span>
       ),
     },
@@ -311,7 +311,7 @@ export default function NavigationRoute() {
                   <div className="flex items-center gap-1.5">
                     <Route className="h-4 w-4 text-neon-cyan" />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {fmtNumber(convertDistance(latest!.miles_to_arrival * 1.60934))} {distanceUnit}
+                      {fmtNumber(convertDistance(latest!.miles_to_arrival))} {distanceUnit}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>remaining</span>
                   </div>
@@ -666,7 +666,7 @@ export default function NavigationRoute() {
             <MetricCard
               icon={<Route className="h-4 w-4" />}
               label="Avg Trip Distance"
-              value={stats.avgDistance > 0 ? `${fmtNumber(convertDistance(stats.avgDistance * 1.60934))} ${distanceUnit}` : '—'}
+              value={stats.avgDistance > 0 ? `${fmtNumber(convertDistance(stats.avgDistance))} ${distanceUnit}` : '—'}
               subtitle={`${distanceUnit} to arrival average`}
               color="green"
             />

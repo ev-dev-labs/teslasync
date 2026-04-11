@@ -126,8 +126,8 @@ export default function Compare() {
           raw: arr.map(() => 0),
           higherIsBetter: true,
         },
-        makeRow(`Total Distance (${distanceUnit})`, a => convertDistance(a.mileage?.total_distance ?? 0), v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }), true),
-        makeRow('Total Drives', a => a.mileage?.total_drives ?? 0, v => v.toLocaleString(), true),
+        makeRow(`Total Distance (${distanceUnit})`, a => convertDistance(a.mileage?.total_distance ?? 0), v => fmtInt(v), true),
+        makeRow('Total Drives', a => a.mileage?.total_drives ?? 0, v => fmtInt(v), true),
         makeRow('Total Energy (kWh)', a => a.fleetEntry?.energy ?? a.mileage?.total_energy ?? 0, v => fmtNumber(v), true),
         makeRow('Total Charging Cost ($)', _a => {
           const monthlyTrend = fleet?.charging_analytics?.monthly_trend ?? []

@@ -13,6 +13,7 @@ import {
   previewRestore,
 } from '../api'
 import type { BackupConfig, BackupRun } from '../api'
+import { fmtInt } from '../lib/numberFormat'
 import { PageHeader, GlassPanel, FadeIn, StatCard, ConfirmModal, Badge, Button, Toggle, Modal, DataTable, type Column, Input, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
@@ -505,7 +506,7 @@ export default function BackupRestore() {
                     { key: 'provider', header: 'Provider', render: (run) => <Badge color={({ local: 'neutral', s3: 'amber', azure: 'blue', gcs: 'green' } as Record<string, 'neutral' | 'amber' | 'blue' | 'green'>)[run.provider] ?? 'neutral'}>{PROVIDER_MAP[run.provider]?.label ?? run.provider}</Badge> },
                     { key: 'file', header: 'File', render: (run) => <span className="text-xs text-[var(--text-secondary)] max-w-[200px] truncate block font-mono">{run.file_name || '—'}</span> },
                     { key: 'size', header: 'Size', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{formatFileSize(run.file_size)}</span>, className: 'text-right' },
-                    { key: 'records', header: 'Records', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{run.record_count > 0 ? run.record_count.toLocaleString() : '—'}</span>, className: 'text-right' },
+                    { key: 'records', header: 'Records', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{run.record_count > 0 ? fmtInt(run.record_count) : '—'}</span>, className: 'text-right' },
                     { key: 'duration', header: 'Duration', render: (run) => <span className="text-xs text-[var(--text-secondary)] font-mono">{formatDuration(run.duration_ms)}</span>, className: 'text-right' },
                     { key: 'created', header: 'Created', render: (run) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(run.created_at)}</span> },
                     { key: 'actions', header: 'Actions', className: 'text-center', render: (run) => run.status === 'completed' ? (
@@ -731,7 +732,7 @@ export default function BackupRestore() {
                       <DataTable
                         columns={[
                           { key: 'name', header: 'Table', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{t.name}</span> },
-                          { key: 'rows', header: 'Rows', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{t.rows.toLocaleString()}</span>, className: 'text-right' },
+                          { key: 'rows', header: 'Rows', render: (t) => <span className="text-xs text-[var(--text-secondary)] font-mono">{fmtInt(t.rows)}</span>, className: 'text-right' },
                         ] as Column<{ name: string; rows: number }>[]}
                         data={previewModal.data.tables}
                         keyExtractor={(t) => t.name}

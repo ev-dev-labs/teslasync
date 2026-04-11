@@ -281,7 +281,7 @@ export default function VehicleDetail() {
                 sub={`Outside: ${fmtNumber(convertTemp(state.outside_temp))}${tempUnit}`} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(convertDistance(state.odometer)).toLocaleString()} ${distanceUnit}`} />
+              <InfoTile icon={Navigation} label="Odometer" value={`${fmtInt(convertDistance(state.odometer))} ${distanceUnit}`} />
             </StaggerItem>
             <StaggerItem>
               <InfoTile icon={BatteryCharging} label="Charger" value={state.is_charging ? `${state.charger_power} kW` : 'Not charging'}
@@ -857,7 +857,7 @@ export default function VehicleDetail() {
                             </p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                               {locationData.miles_to_arrival != null && (
-                                <span>{fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934))} {distanceUnit}</span>
+                                <span>{fmtNumber(convertDistance(locationData.miles_to_arrival))} {distanceUnit}</span>
                               )}
                               {locationData.minutes_to_arrival != null && (
                                 <span>{Math.round(locationData.minutes_to_arrival)} min</span>

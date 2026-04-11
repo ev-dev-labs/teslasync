@@ -10,9 +10,10 @@ import {
   MapPin, FileText,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, Badge, Button, Input, Select, DataTable, type Column } from '../components/ui'
-import { getApiBase } from '../lib/resilience'
+import { request } from '../api/client'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
+import { fmtNumber } from '../lib/numberFormat'
 import SignalConfigModal from '../components/SignalConfigModal'
 import { motion } from 'framer-motion'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -133,15 +134,15 @@ const textareaClasses= 'w-full bg-white/[0.04] border border-white/[0.08] rounde
 
 // ─── Backend API helpers ─────────────────────────────────────────
 
-async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: unknown) {
-  const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } }
-  if (body) opts.body = JSON.stringify(body)
-  const res = await fetch(`${getApiBase()}/api/v1/dev-tools/${endpoint}`, opts)
-  const text = await res.text()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: unknown): Promise<any> {
   try {
-    return JSON.parse(text)
-  } catch {
-    return { error: `Unexpected response (HTTP ${res.status})`, details: text.substring(0, 500) }
+    return await request<unknown>(`/dev-tools/${endpoint}`, {
+      method,
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Request failed' }
   }
 }
 
@@ -556,9 +557,11 @@ const TELEMETRY_FIELDS = [
 
 function FleetTelemetrySubscribeTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [selectedVins, setSelectedVins] = useState<string[]>([])
   const [hostname, setHostname] = useState('')
@@ -675,9 +678,11 @@ function FleetTelemetrySubscribeTool() {
 
 function FleetTelemetryConfigTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [selectedVin, setSelectedVin] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -844,9 +849,11 @@ function FleetTelemetryConfigTool() {
 
 function FleetStatusTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
 
@@ -868,9 +875,11 @@ function FleetStatusTool() {
 
 function VehicleDataTools() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [selectedVin, setSelectedVin] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -1022,10 +1031,7 @@ function OnboardingWorkflow() {
   // Fetch live status checks for auto-detection
   const { data: keyStatus } = useQuery({ queryKey: ['onboard-key-status'], queryFn: () => apiFetch('public-key-status'), refetchInterval: 30000 })
   const { data: fleetInfo } = useQuery({ queryKey: ['onboard-fleet-info'], queryFn: () => apiFetch('fleet-api-info'), refetchInterval: 30000 })
-  const { data: authStatus } = useQuery({ queryKey: ['onboard-auth-status'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/auth/status`)
-    return res.json()
-  }, refetchInterval: 30000 })
+  const { data: authStatus } = useQuery({ queryKey: ['onboard-auth-status'], queryFn: () => request<Record<string, unknown>>('/auth/status'), refetchInterval: 30000 })
 
   return (
     <div className="space-y-4">
@@ -1639,7 +1645,7 @@ function ByteSizeTool() {
     const unitIdx = BYTE_UNITS.indexOf(unit as typeof BYTE_UNITS[number])
     if (unitIdx === -1) return null
     const bytes = num * Math.pow(1024, unitIdx)
-    return Object.fromEntries(BYTE_UNITS.map((u, i) => [u, (bytes / Math.pow(1024, i)).toLocaleString(undefined, { maximumFractionDigits: 6 })]))
+    return Object.fromEntries(BYTE_UNITS.map((u, i) => [u, fmtNumber(bytes / Math.pow(1024, i))]))
   }, [value, unit])
 
   return (

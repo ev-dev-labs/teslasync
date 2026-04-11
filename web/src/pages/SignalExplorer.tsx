@@ -7,7 +7,7 @@ import { ChartTooltip } from '../components/Charts'
 import { CHART_COLORS } from '../lib/colors'
 import { request } from '../api/client'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import {
   SignalMultiSelect,
   DateTimeRangeControls,
@@ -170,7 +170,7 @@ export default function SignalExplorer() {
               <h2 className="section-title">Signal Chart</h2>
               {chartResponse && (
                 <span className="ml-auto text-[10px] text-[var(--text-muted)]">
-                  {chartResponse.data.length.toLocaleString()} points loaded
+                  {fmtInt(chartResponse.data.length)} points loaded
                 </span>
               )}
             </div>
@@ -242,7 +242,7 @@ export default function SignalExplorer() {
                         <td className="px-3 py-2 text-right font-mono text-[var(--text-secondary)]">{fmtNumber(s.min)}</td>
                         <td className="px-3 py-2 text-right font-mono text-[var(--text-secondary)]">{fmtNumber(s.max)}</td>
                         <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">{fmtNumber(s.avg)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-[var(--text-muted)]">{s.count.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-right font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</td>
                       </tr>
                     ))}
                   </tbody>

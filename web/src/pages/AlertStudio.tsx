@@ -27,6 +27,7 @@ import {
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { request } from '../api/client'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -596,11 +597,11 @@ export default function AlertStudio() {
                 icon={<Bell className="h-3.5 w-3.5" />}
                 onClick={async () => {
                   try {
-                    await fetch('/api/v1/alerts/test', {
+                    await request('/alerts/test', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio', notify_channels: editor.notify_channels }),
-                    }).then(r => { if (r.ok) toast.success('Test sent!', 'Check your browser toast and Discord/Slack'); else throw new Error() })
+                    })
+                    toast.success('Test sent!', 'Check your browser toast and Discord/Slack')
                   } catch { toast.error('Test failed', 'Could not send test notification') }
                 }}
                 disabled={!editor.name.trim()}

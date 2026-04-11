@@ -8,7 +8,7 @@ import { AnimatedNumber } from '../components/Widgets'
 import { TeslaCarViz } from '../components/TeslaCarViz'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Vehicle) => void }) {
@@ -76,7 +76,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
                   <p className="text-[10px] text-[var(--text-muted)]">Interior</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{Math.round(convertDistance(state.odometer)).toLocaleString()}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{fmtInt(convertDistance(state.odometer))}</p>
                   <p className="text-[10px] text-[var(--text-muted)]">{distanceUnit}</p>
                 </div>
                 {state.is_charging && (
