@@ -345,10 +345,9 @@ func main() {
 	})
 	log.Info().Msg("maintenance worker started")
 
-	// Signal history TTL cleanup — daily purge of old rows
-	if signalHistoryWriter != nil {
+	// Signal history TTL cleanup — daily purge of old rows (only if retention configured)
+	if signalHistoryWriter != nil && cfg.Retention.SignalHistoryRetentionDays > 0 {
 		go func() {
-			// Run immediately on startup, then daily
 			signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
 
 			ticker := time.NewTicker(24 * time.Hour)
@@ -363,6 +362,8 @@ func main() {
 			}
 		}()
 		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
+	} else if signalHistoryWriter != nil {
+		log.Info().Msg("signal_history TTL cleanup DISABLED (SIGNAL_HISTORY_RETENTION_DAYS not set)")
 	}
 
 	// Trip generator — backfill monthly summaries on startup, then daily
