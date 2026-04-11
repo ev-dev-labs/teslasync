@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Search, LayoutDashboard, Car, Route, BatteryCharging, MapPin, Settings, Radar, Bolt,
-  HeartPulse, Gamepad2, Bell, BarChart3, Command, ArrowRight
-} from 'lucide-react'
+import { Search, Command, ArrowRight } from 'lucide-react'
 import { Input } from './ui'
+import { navSections } from './Layout'
 import clsx from 'clsx'
 
 interface CommandItem {
@@ -14,7 +12,6 @@ interface CommandItem {
   section: string
   icon: React.ReactNode
   action: () => void
-  keywords?: string[]
 }
 
 export function CommandPalette() {
@@ -27,28 +24,24 @@ export function CommandPalette() {
 
   const go = useCallback((path: string) => { navigate(path); setOpen(false) }, [navigate])
 
-  const commands: CommandItem[] = useMemo(() => [
-    { id: 'dashboard', label: 'Dashboard', section: 'Navigation', icon: <LayoutDashboard className="h-4 w-4" />, action: () => go('/'), keywords: ['home', 'command center'] },
-    { id: 'live-map', label: 'Live Map', section: 'Navigation', icon: <Radar className="h-4 w-4" />, action: () => go('/live'), keywords: ['track', 'location', 'gps'] },
-    { id: 'fleet', label: 'Fleet', section: 'Navigation', icon: <Car className="h-4 w-4" />, action: () => go('/vehicles'), keywords: ['vehicles', 'cars', 'tesla'] },
-    { id: 'energy', label: 'Energy', section: 'Navigation', icon: <Bolt className="h-4 w-4" />, action: () => go('/energy'), keywords: ['power', 'consumption', 'kwh'] },
-    { id: 'battery', label: 'Battery Health', section: 'Navigation', icon: <HeartPulse className="h-4 w-4" />, action: () => go('/battery'), keywords: ['degradation', 'health', 'capacity'] },
-    { id: 'drives', label: 'Drives', section: 'Navigation', icon: <Route className="h-4 w-4" />, action: () => go('/drives'), keywords: ['trips', 'travel', 'history'] },
-    { id: 'charging', label: 'Charging', section: 'Navigation', icon: <BatteryCharging className="h-4 w-4" />, action: () => go('/charging'), keywords: ['charge', 'supercharger', 'sessions'] },
-    { id: 'analytics', label: 'Analytics', section: 'Navigation', icon: <BarChart3 className="h-4 w-4" />, action: () => go('/analytics'), keywords: ['stats', 'metrics', 'comparison'] },
-    { id: 'commands', label: 'Vehicle Commands', section: 'Navigation', icon: <Gamepad2 className="h-4 w-4" />, action: () => go('/commands'), keywords: ['control', 'lock', 'hvac', 'horn'] },
-    { id: 'alerts', label: 'Alerts', section: 'Navigation', icon: <Bell className="h-4 w-4" />, action: () => go('/alerts'), keywords: ['notifications', 'warnings'] },
-    { id: 'geofences', label: 'Geofences', section: 'Navigation', icon: <MapPin className="h-4 w-4" />, action: () => go('/geofences'), keywords: ['zones', 'boundaries', 'fences'] },
-    { id: 'settings', label: 'Settings', section: 'Navigation', icon: <Settings className="h-4 w-4" />, action: () => go('/settings'), keywords: ['preferences', 'config', 'account'] },
-  ], [go])
+  const commands: CommandItem[] = useMemo(() =>
+    navSections.flatMap(section =>
+      section.items.map(item => ({
+        id: item.to,
+        label: item.label,
+        section: section.title,
+        icon: <item.icon className="h-4 w-4" />,
+        action: () => go(item.to),
+      }))
+    ),
+  [go])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return commands
     const q = query.toLowerCase()
     return commands.filter(cmd =>
       cmd.label.toLowerCase().includes(q) ||
-      cmd.section.toLowerCase().includes(q) ||
-      cmd.keywords?.some(k => k.includes(q))
+      cmd.section.toLowerCase().includes(q)
     )
   }, [commands, query])
 

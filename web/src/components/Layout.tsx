@@ -113,7 +113,7 @@ function SSEStatusDot({ state }: { state: SSEState }) {
   )
 }
 
-const navSections = [
+export const navSections = [
   {
     title: 'Overview',
     items: [
