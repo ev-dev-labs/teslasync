@@ -141,7 +141,7 @@ export default function Statistics() {
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="-mt-16 text-center">
-              <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{healthScore}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{fmtNumber(healthScore, 1)}</p>
               <p className="text-xs text-[var(--text-muted)]">of 100</p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4 text-center w-full">
