@@ -417,7 +417,7 @@ export default function DrivingDynamics() {
           <div className="flex gap-2 mt-2">
             {['P', 'R', 'N', 'D'].map(g => {
               const isActive = gear.text === g
-              const gColor = g === 'D' ? 'text-neon-green' : g === 'R' ? 'text-neon-red' : g === 'P' ? 'text-neon-cyan' : 'text-neon-amber'
+              const gColor = GEAR_COLORS[g] ?? 'text-[var(--text-muted)]'
               return (
                 <div
                   key={g}

@@ -13,6 +13,7 @@ import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDate } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { UNITS } from '../lib/constants'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ────────────────────────────── Types ────────────────────────────── */
@@ -301,7 +302,7 @@ export default function Maintenance() {
     const record: ServiceRecord = {
       itemId: formItemId,
       date: formDate,
-      odometerKm: isMiles ? odomKm : odomKm / 1.60934,  // DB stores miles; convert km input to miles
+      odometerKm: isMiles ? odomKm : odomKm / UNITS.MI_TO_KM,
       notes: formNotes.trim(),
     }
     setServiceLog(prev => [...prev, record])

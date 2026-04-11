@@ -239,7 +239,7 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 		}
 		// If SignalStore shows Gear=P and Speed=0, close the drive
 		if t.signalStore != nil {
-			if gear, ok := t.signalStore.GetString(vehicleID, "Gear"); ok && gear == "P" {
+			if gear, ok := t.signalStore.GetString(vehicleID, "Gear"); ok && gear == enums.GearPark {
 				log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: closing drive (Gear=P)")
 				t.completeDriveLocked(ctx, vehicleID, drive, nil)
 			}
@@ -461,8 +461,8 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 	// === GEAR-BASED PATH (primary) ===
 	if hasGear {
-		isDrivingGear := gear == "D" || gear == "R"
-		isParkGear := gear == "P" || gear == "N"
+		isDrivingGear := gear == enums.GearDrive || gear == enums.GearReverse
+		isParkGear := gear == enums.GearPark || gear == enums.GearNeutral
 
 		if isDrivingGear && !hasDrive {
 			// Gear→D/R with no active drive → START DRIVE immediately
@@ -543,7 +543,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 			if t.signalStore != nil {
 				if gv := t.signalStore.Get(vehicleID, "Gear"); gv != nil {
 					gearStr, _ := gv.Raw.(string)
-					if gearStr == "D" || gearStr == "R" {
+					if gearStr == enums.GearDrive || gearStr == enums.GearReverse {
 						// Last known Gear is D/R — car hasn't shifted to P.
 						// Keep the drive alive (traffic light, jam, accident, etc.)
 						active.LastSpeedZeroTime = time.Now().UTC()
