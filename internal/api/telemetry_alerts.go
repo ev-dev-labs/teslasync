@@ -20,6 +20,7 @@ type TelemetryAlertEvaluator struct {
 	alertRepo     *database.AlertRepo
 	notifRepo     *database.NotificationRepo
 	settingsRepo  *database.SettingsRepo
+	vehicleRepo   *database.VehicleRepo
 	eventBus      *events.Bus
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
@@ -33,6 +34,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		alertRepo:     database.NewAlertRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
+		vehicleRepo:   database.NewVehicleRepo(db),
 		eventBus:      eventBus,
 		eventHub:      hub,
 		ruleEngine:    NewRuleEngine(),
@@ -135,13 +137,28 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		severity = "warning"
 	}
 
+	// Resolve vehicle display name for context
+	vehicleName := ""
+	if v, err := e.vehicleRepo.GetByID(ctx, vehicleID); err == nil && v != nil && v.DisplayName != "" {
+		vehicleName = v.DisplayName
+	} else if vin != "" {
+		vehicleName = vin
+	}
+
+	// Prefix message with vehicle name so users know which vehicle triggered it
+	title := rule.Name
+	if vehicleName != "" {
+		title = fmt.Sprintf("[%s] %s", vehicleName, rule.Name)
+		message = fmt.Sprintf("%s — %s", vehicleName, message)
+	}
+
 	// 1. Create alert in DB (always — even during quiet hours)
 	vid := vehicleID
 	alert := &models.Alert{
 		VehicleID: &vid,
 		Type:      rule.Type,
 		Severity:  severity,
-		Title:     rule.Name,
+		Title:     title,
 		Message:   message,
 	}
 	if err := e.alertRepo.Create(ctx, alert); err != nil {
@@ -183,10 +200,11 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		e.eventHub.Broadcast("alert", map[string]interface{}{
 			"id":              alert.ID,
 			"vehicle_id":      vehicleID,
+			"vehicle_name":    vehicleName,
 			"vin":             vin,
 			"type":            rule.Type,
 			"severity":        severity,
-			"title":           rule.Name,
+			"title":           title,
 			"message":         message,
 			"rule_id":         rule.ID,
 			"timestamp":       now,
@@ -212,7 +230,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 
 	// 4. Dispatch to notification channels (skip during quiet hours for non-critical)
 	if len(rule.NotifyChannels) > 0 && !quietSuppressed {
-		go e.dispatchNotifications(rule, message)
+		go e.dispatchNotifications(rule, title, message)
 	}
 
 	// 5. Prometheus metric
@@ -222,7 +240,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 // dispatchNotifications publishes alert to the notification worker via MQTT.
 // The worker handles delivery, retry, rate limiting, and metrics — fully decoupled.
 // Falls back to direct send if MQTT is unavailable.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, message string) {
+func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, title, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -235,7 +253,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, 
 		req := &notification.Request{
 			ChannelType: ch.Type,
 			Config:      ch.Config,
-			Title:       rule.Name,
+			Title:       title,
 			Message:     message,
 			ChannelID:   ch.ID,
 		}
