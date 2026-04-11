@@ -180,7 +180,7 @@ export default function DBHealthDashboard() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickFormatter={v => `${fmtNumber(v, 1)} MB`} />
+                <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickFormatter={v => `${fmtNumber(v)} MB`} />
                 <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} width={140} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="rows" name="Rows" fill="#00f0ff" radius={[0, 4, 4, 0]} barSize={16} />
@@ -287,7 +287,7 @@ export default function DBHealthDashboard() {
                     { label: 'In Use', value: pool.in_use },
                     { label: 'Idle', value: pool.idle },
                     { label: 'Wait Count', value: pool.wait_count },
-                    { label: 'Wait Duration', value: `${fmtNumber(pool.wait_duration_ms, 0)}ms` },
+                    { label: 'Wait Duration', value: `${fmtInt(pool.wait_duration_ms)}ms` },
                   ].map(item => (
                     <div key={item.label} className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)]">{item.label}</span>

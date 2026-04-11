@@ -153,12 +153,12 @@ export default function BatteryHealth() {
       }
     }
     const ratePerYear = (degradation / 12) * 12
-    if (ratePerYear < 3) items.push({ icon: <Target className="h-4 w-4" />, title: 'Low Degradation Rate', description: `${fmtPercent(ratePerYear, 1)} per year — well below industry average of 3-5%.`, status: 'good' })
+    if (ratePerYear < 3) items.push({ icon: <Target className="h-4 w-4" />, title: 'Low Degradation Rate', description: `${fmtPercent(ratePerYear)} per year — well below industry average of 3-5%.`, status: 'good' })
     return items
   }, [healthScore, chargingHabits, degradation])
 
   // Years until 70% capacity
-  const yearsTo70 = degradation > 0 ? fmtNumber((currentCapacity - 70) / (degradation / (trendData.length / 12)), 1) : '20+'
+  const yearsTo70 = degradation > 0 ? fmtNumber((currentCapacity - 70) / (degradation / (trendData.length / 12))) : '20+'
 
   return (
     <div className="space-y-8">
@@ -209,7 +209,7 @@ export default function BatteryHealth() {
                 </div>
                 <div>
                   <MetricBar label="Degradation" value={degradation} max={30} color={degradation < 10 ? '#10b981' : '#f59e0b'} />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12, 2)} per year</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12)} per year</p>
                 </div>
                 <div>
                   <MetricBar label="Charge Cycles" value={cycles} max={1500} color="#a855f7" />
@@ -338,8 +338,8 @@ export default function BatteryHealth() {
                 </div>
                 <div className="text-center p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Capacity Now</p>
-                  <p className="text-2xl font-bold text-neon-cyan">{fmtNumber(currentCapacity, 1)}<span className="text-sm text-[var(--text-muted)]">%</span></p>
-                  <p className="text-[10px] text-neon-red mt-1">-{fmtNumber(degradation, 1)}%</p>
+                  <p className="text-2xl font-bold text-neon-cyan">{fmtNumber(currentCapacity)}<span className="text-sm text-[var(--text-muted)]">%</span></p>
+                  <p className="text-[10px] text-neon-red mt-1">-{fmtNumber(degradation)}%</p>
                 </div>
                 <div className="text-center p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Range When New</p>
@@ -391,9 +391,9 @@ export default function BatteryHealth() {
                       { label: 'Total Sessions', value: energyBreakdown.totalSessions.toString() },
                       { label: 'AC Sessions', value: energyBreakdown.acCount.toString() },
                       { label: 'DC / Supercharger Sessions', value: energyBreakdown.dcCount.toString() },
-                      { label: 'Total Energy Added', value: fmtWithUnit(energyBreakdown.totalEnergy, 'kWh', 1) },
-                      { label: 'Total Energy Used (from grid)', value: fmtWithUnit(energyBreakdown.totalEnergyUsed, 'kWh', 1) },
-                      { label: 'Charging Efficiency', value: fmtPercent(energyBreakdown.efficiency, 1) },
+                      { label: 'Total Energy Added', value: fmtWithUnit(energyBreakdown.totalEnergy, 'kWh') },
+                      { label: 'Total Energy Used (from grid)', value: fmtWithUnit(energyBreakdown.totalEnergyUsed, 'kWh') },
+                      { label: 'Charging Efficiency', value: fmtPercent(energyBreakdown.efficiency) },
                       { label: 'Charge Cycles', value: cycles.toString() },
                     ].map(row => (
                       <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">

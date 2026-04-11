@@ -233,14 +233,14 @@ export default function Dashboard() {
   const activityItems: { type: string; title: string; subtitle: string; time: Date }[] = []
   recentDrives?.forEach(d => activityItems.push({
     type: 'drive',
-    title: `${fmtNumber(convertDistance(d.distance ?? 0), 1)} ${distanceUnit} drive`,
+    title: `${fmtNumber(convertDistance(d.distance ?? 0))} ${distanceUnit} drive`,
     subtitle: `${Math.floor((d.duration_min ?? 0) / 60)}h ${Math.round((d.duration_min ?? 0) % 60)}m · ${d.start_battery_level ?? '?'}% → ${d.end_battery_level ?? '?'}%`,
     time: new Date(d.start_date),
   }))
   recentCharges?.forEach(s => activityItems.push({
     type: 'charge',
-    title: `${fmtNumber(s.charge_energy_added ?? 0, 1)} kWh charged`,
-    subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}% · ${typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : ''}`,
+    title: `${fmtNumber(s.charge_energy_added ?? 0)} kWh charged`,
+    subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}% · ${typeof s.cost === 'number' ? `$${fmtNumber(s.cost)}` : ''}`,
     time: new Date(s.start_date),
   }))
   activityItems.sort((a, b) => b.time.getTime() - a.time.getTime())
@@ -380,7 +380,7 @@ export default function Dashboard() {
                               <p className="text-[var(--text-muted)]">Time to Full</p>
                               <p className="text-sm font-bold text-[var(--text-primary)]">
                                 {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0
-                                  ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h`
+                                  ? `${fmtNumber(primaryState.time_to_full_charge)}h`
                                   : '—'}
                               </p>
                               {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 && (
@@ -414,15 +414,15 @@ export default function Dashboard() {
                             // Charging: charge rate, energy, charge limit, cable
                             cards.push(
                               { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: '#10b981' },
-                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
+                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge)}h` : '—', color: '#f59e0b' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                               { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
                             )
                           } else {
                             // Parked/Online: temps, odometer, range
                             cards.push(
-                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp), 1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
-                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp), 1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
+                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp)) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
+                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp)) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
                               { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )
@@ -615,7 +615,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Total Cost</span>
-                      <span className="text-sm font-bold text-neon-amber">${fmtNumber((analytics?.total_cost ?? 0), 2)}</span>
+                      <span className="text-sm font-bold text-neon-amber">${fmtNumber((analytics?.total_cost ?? 0))}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">CO2 Saved</span>
@@ -722,7 +722,7 @@ export default function Dashboard() {
                       <span className="text-xs text-[var(--text-secondary)]">G-Force</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
                         {motorData.lateral_accel != null || motorData.longitudinal_accel != null
-                          ? `${fmtNumber(Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)), 2)}g`
+                          ? `${fmtNumber(Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)))}g`
                           : '—'}
                       </span>
                     </div>
@@ -756,7 +756,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">HVAC Power</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {climateData.hvac_power != null ? `${fmtNumber(climateData.hvac_power, 1)} kW` : '—'}
+                        {climateData.hvac_power != null ? `${fmtNumber(climateData.hvac_power)} kW` : '—'}
                       </span>
                     </div>
                     <div>
@@ -876,7 +876,7 @@ export default function Dashboard() {
                           <div key={t.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
                             <p className="text-[10px] text-[var(--text-muted)] uppercase">{t.label}</p>
                             <p className={`text-sm font-bold ${getPressureColor(t.value)}`}>
-                              {t.value != null ? fmtNumber(convertPressure(t.value), 1) : '—'}
+                              {t.value != null ? fmtNumber(convertPressure(t.value)) : '—'}
                             </p>
                             <p className="text-[9px] text-[var(--text-muted)]">{pressureUnit}</p>
                           </div>
@@ -962,7 +962,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Distance</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934), 1)} ${distanceUnit}` : '—'}
+                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934))} ${distanceUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

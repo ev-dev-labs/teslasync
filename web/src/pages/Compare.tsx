@@ -132,7 +132,7 @@ export default function Compare() {
         makeRow('Total Charging Cost ($)', _a => {
           const monthlyTrend = fleet?.charging_analytics?.monthly_trend ?? []
           return monthlyTrend.reduce((sum, m) => sum + m.cost, 0) / (fleet?.total_vehicles || 1)
-        }, v => `$${fmtNumber(v, 2)}`, false),
+        }, v => `$${fmtNumber(v)}`, false),
         makeRow(`Avg Efficiency (${efficiencyUnit})`, a => convertEfficiency(a.fleetEntry?.efficiency ?? 0), v => fmtNumber(v), false),
         makeRow('Battery Health Score', a => a.battery?.health_score ?? 0, v => fmtInt(v), true),
         makeRow('Battery Degradation (%)', a => a.battery?.degradation_pct ?? 0, v => `${fmtNumber(v)}%`, false),

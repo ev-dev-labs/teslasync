@@ -106,7 +106,7 @@ export default function StateMachineDebugger() {
     )},
     { key: 'transitions', header: 'Transitions', className: 'text-right', render: (row) => <span className="text-[var(--text-primary)] font-mono">{row.count}</span> },
     { key: 'totalDuration', header: 'Total Duration', className: 'text-right', render: (row) => <span className="text-[var(--text-secondary)] font-mono">{formatDuration(row.duration)}</span> },
-    { key: 'pctTime', header: '% of Time', className: 'text-right', render: (row) => <span className="text-[var(--text-muted)] font-mono">{fmtNumber(row.pct, 1)}%</span> },
+    { key: 'pctTime', header: '% of Time', className: 'text-right', render: (row) => <span className="text-[var(--text-muted)] font-mono">{fmtNumber(row.pct)}%</span> },
   ]
 
   const timelineColumns: Column<StateTransition>[] = [

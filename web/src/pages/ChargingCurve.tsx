@@ -128,7 +128,7 @@ function chargerColor(session: ChargingSession): string {
 
 function sessionLabel(session: ChargingSession): string {
   const date = formatDateShort(session.start_date)
-  return `${date} · ${chargerLabel(session)} · ${fmtWithUnit(session.charge_energy_added, 'kWh', 1)}`
+  return `${date} · ${chargerLabel(session)} · ${fmtWithUnit(session.charge_energy_added, 'kWh')}`
 }
 
 function fmtDuration(minutes: number): string {
@@ -426,19 +426,19 @@ export default function ChargingCurve() {
               <SummaryCard
                 icon={<Zap className="h-4 w-4" />}
                 label="Total Energy"
-                value={fmtWithUnit(summary.totalEnergy, 'kWh', 1)}
+                value={fmtWithUnit(summary.totalEnergy, 'kWh')}
                 accent="text-neon-green"
               />
               <SummaryCard
                 icon={<Activity className="h-4 w-4" />}
                 label="Avg Charge Rate"
-                value={fmtWithUnit(summary.avgKw, 'kW', 1)}
+                value={fmtWithUnit(summary.avgKw, 'kW')}
                 accent="text-neon-purple"
               />
               <SummaryCard
                 icon={<Zap className="h-4 w-4" />}
                 label="Peak Rate"
-                value={fmtWithUnit(summary.maxKw, 'kW', 0)}
+                value={fmtWithUnit(summary.maxKw, 'kW')}
                 accent="text-neon-amber"
               />
               <SummaryCard
@@ -450,7 +450,7 @@ export default function ChargingCurve() {
               <SummaryCard
                 icon={<DollarSign className="h-4 w-4" />}
                 label="Total Cost"
-                value={`$${fmtNumber(summary.totalCost, 2)}`}
+                value={`$${fmtNumber(summary.totalCost)}`}
                 accent="text-neon-green"
               />
             </div>
@@ -545,7 +545,7 @@ export default function ChargingCurve() {
               />
               <SessionDetailRow
                 label="Energy Added"
-                value={fmtWithUnit(selectedSession.charge_energy_added, 'kWh', 1)}
+                value={fmtWithUnit(selectedSession.charge_energy_added, 'kWh')}
               />
               <SessionDetailRow
                 label="Charger Type"
@@ -579,7 +579,7 @@ export default function ChargingCurve() {
                 label="Avg Charge Rate"
                 value={
                   selectedSession.duration_min > 0
-                    ? fmtWithUnit((selectedSession.charge_energy_added / selectedSession.duration_min) * 60, 'kW', 1)
+                    ? fmtWithUnit((selectedSession.charge_energy_added / selectedSession.duration_min) * 60, 'kW')
                     : '—'
                 }
               />
@@ -587,7 +587,7 @@ export default function ChargingCurve() {
                 label="Cost"
                 value={
                   selectedSession.cost != null
-                    ? `$${fmtNumber(selectedSession.cost, 2)}`
+                    ? `$${fmtNumber(selectedSession.cost)}`
                     : '—'
                 }
               />
@@ -596,7 +596,7 @@ export default function ChargingCurve() {
                 value={
                   selectedSession.cost != null &&
                   selectedSession.charge_energy_added > 0
-                    ? `$${fmtNumber(selectedSession.cost / selectedSession.charge_energy_added, 3)}/kWh`
+                    ? `$${fmtNumber(selectedSession.cost / selectedSession.charge_energy_added)}/kWh`
                     : '—'
                 }
               />
@@ -609,7 +609,7 @@ export default function ChargingCurve() {
                 value={
                   selectedSession.start_range_km != null &&
                   selectedSession.end_range_km != null
-                    ? `+${fmtNumber(convertDistance(selectedSession.end_range_km - selectedSession.start_range_km), 1)} ${distanceUnit}`
+                    ? `+${fmtNumber(convertDistance(selectedSession.end_range_km - selectedSession.start_range_km))} ${distanceUnit}`
                     : '—'
                 }
               />

@@ -426,7 +426,7 @@ export default function Settings() {
             <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
               <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Current Price</p>
               <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {gasPriceStatus?.current_price ? `$${fmtNumber(gasPriceStatus.current_price, 3)}/gal` : '—'}
+                {gasPriceStatus?.current_price ? `$${fmtNumber(gasPriceStatus.current_price)}/gal` : '—'}
               </p>
             </div>
             <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">

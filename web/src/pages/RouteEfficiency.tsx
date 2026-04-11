@@ -21,9 +21,9 @@ function EfficiencyBar({ best, avg, worst }: { best: number; avg: number; worst:
         </div>
       </div>
       <div className="flex gap-3 text-[10px] shrink-0">
-        <span className="text-neon-green font-bold">{fmtNumber(best, 1)}</span>
-        <span className="text-neon-cyan font-bold">{fmtNumber(avg, 1)}</span>
-        <span className="text-red-400 font-bold">{fmtNumber(worst, 1)}</span>
+        <span className="text-neon-green font-bold">{fmtNumber(best)}</span>
+        <span className="text-neon-cyan font-bold">{fmtNumber(avg)}</span>
+        <span className="text-red-400 font-bold">{fmtNumber(worst)}</span>
       </div>
     </div>
   )
@@ -48,7 +48,7 @@ function RouteCard({ route, onExpand, isExpanded }: {
             <span className="truncate">{route.end_location}</span>
           </div>
           <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {route.trip_count} trips · {fmtNumber(route.avg_distance_km, 1)} km avg
+            {route.trip_count} trips · {fmtNumber(route.avg_distance_km)} km avg
           </p>
         </div>
       </div>
@@ -57,12 +57,12 @@ function RouteCard({ route, onExpand, isExpanded }: {
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Efficiency</p>
-          <p className="text-sm font-bold text-neon-cyan">{fmtNumber(route.avg_efficiency, 1)}%/100km</p>
+          <p className="text-sm font-bold text-neon-cyan">{fmtNumber(route.avg_efficiency)}%/100km</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Speed</p>
           <p className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-            {route.avg_speed > 0 ? fmtWithUnit(route.avg_speed, 'km/h', 0) : 'N/A'}
+            {route.avg_speed > 0 ? fmtWithUnit(route.avg_speed, 'km/h') : 'N/A'}
           </p>
         </div>
         <div>
@@ -129,8 +129,8 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
           <span className="font-semibold text-neon-green">💡 </span>
           Your {route.start_location} → {route.end_location} commute averages{' '}
-          <span className="font-bold text-neon-cyan">{fmtNumber(route.avg_efficiency, 1)}%/100km</span>.
-          Best trip: <span className="font-bold text-neon-green">{fmtNumber(bestTrip.efficiency, 1)}%/100km</span> on {bestDate}
+          <span className="font-bold text-neon-cyan">{fmtNumber(route.avg_efficiency)}%/100km</span>.
+          Best trip: <span className="font-bold text-neon-green">{fmtNumber(bestTrip.efficiency)}%/100km</span> on {bestDate}
           {bestTrip.outside_temp_avg > 0 ? ` (${bestTrip.outside_temp_avg}°C` : ''}
           {bestTrip.speed_avg > 0 ? `, ${bestTrip.speed_avg} km/h avg)` : bestTrip.outside_temp_avg > 0 ? ')' : ''}.
         </p>
@@ -159,11 +159,11 @@ function RouteDetailPanel({ vehicleId, route }: { vehicleId: number; route: Rout
       <DataTable<RouteDriveDetail>
         columns={[
           { key: 'date', header: 'Date', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{formatDate(d.start_date)}</span> },
-          { key: 'dist', header: 'Dist', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{fmtWithUnit(d.distance, 'km', 1)}</span> },
+          { key: 'dist', header: 'Dist', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{fmtWithUnit(d.distance, 'km')}</span> },
           { key: 'duration', header: 'Duration', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{fmtInt(d.duration_min)} min</span> },
           { key: 'speed', header: 'Speed', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{d.speed_avg > 0 ? `${d.speed_avg} km/h` : '-'}</span> },
           { key: 'temp', header: 'Temp', className: 'text-right', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{d.outside_temp_avg > 0 ? `${d.outside_temp_avg}°C` : '-'}</span> },
-          { key: 'efficiency', header: 'Efficiency', className: 'text-right', render: (d) => <span className={`font-bold ${d.id === bestTrip.id ? 'text-neon-green' : 'text-neon-cyan'}`}>{fmtNumber(d.efficiency, 1)}</span> },
+          { key: 'efficiency', header: 'Efficiency', className: 'text-right', render: (d) => <span className={`font-bold ${d.id === bestTrip.id ? 'text-neon-green' : 'text-neon-cyan'}`}>{fmtNumber(d.efficiency)}</span> },
         ]}
         data={drives}
         keyExtractor={(d) => d.id}
@@ -247,7 +247,7 @@ export default function RouteEfficiency() {
               <MetricCard label="Total Trips" value={routes.reduce((s, r) => s + r.trip_count, 0)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
             </StaggerItem>
             <StaggerItem>
-              <MetricCard label="Best Efficiency" value={fmtPercent(Math.min(...routes.map(r => r.best_efficiency)), 1)} icon={<Gauge className="h-4 w-4" />} color="purple" />
+              <MetricCard label="Best Efficiency" value={fmtPercent(Math.min(...routes.map(r => r.best_efficiency)))} icon={<Gauge className="h-4 w-4" />} color="purple" />
             </StaggerItem>
             <StaggerItem>
               <MetricCard label="Most Driven" value={`${routes[0].trip_count}x`} icon={<Clock className="h-4 w-4" />} color="amber" />

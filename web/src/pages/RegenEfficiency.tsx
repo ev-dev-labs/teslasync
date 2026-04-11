@@ -16,12 +16,12 @@ type RegenDrive = RegenData['drives'][number]
 
 const regenDriveColumns: Column<RegenDrive>[] = [
   { key: 'date', header: 'Date', render: (d) => <span style={{ color: 'var(--text-secondary)' }}>{formatDateShort(d.start_date)}</span> },
-  { key: 'distance', header: 'Distance', className: 'text-right', render: (d) => <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{fmtWithUnit(d.distance, 'km', 1)}</span> },
-  { key: 'maxRegen', header: 'Max Regen', className: 'text-right', render: (d) => <span className="font-mono text-neon-cyan">{d.power_min != null ? fmtWithUnit(Math.abs(d.power_min), 'kW', 0) : '—'}</span> },
-  { key: 'efficiency', header: 'Efficiency', className: 'text-right', render: (d) => <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtPercent(d.efficiency, 1)}</span> },
+  { key: 'distance', header: 'Distance', className: 'text-right', render: (d) => <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{fmtWithUnit(d.distance, 'km')}</span> },
+  { key: 'maxRegen', header: 'Max Regen', className: 'text-right', render: (d) => <span className="font-mono text-neon-cyan">{d.power_min != null ? fmtWithUnit(Math.abs(d.power_min), 'kW') : '—'}</span> },
+  { key: 'efficiency', header: 'Efficiency', className: 'text-right', render: (d) => <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{fmtPercent(d.efficiency)}</span> },
   { key: 'score', header: 'Score', className: 'text-right', render: (d) => {
     const scoreColor = d.regen_score >= 30 ? 'text-neon-green' : d.regen_score >= 15 ? 'text-neon-amber' : 'text-neon-red'
-    return <span className={`font-bold ${scoreColor}`}>{fmtNumber(d.regen_score, 1)}</span>
+    return <span className={`font-bold ${scoreColor}`}>{fmtNumber(d.regen_score)}</span>
   }},
 ]
 
@@ -61,7 +61,7 @@ function RegenGauge({ value, size = 180 }: { value: number; size?: number }) {
         />
       </svg>
       <div className="absolute bottom-6 text-center">
-        <p className="text-3xl font-bold" style={{ color }}>{fmtPercent(clamped, 1)}</p>
+        <p className="text-3xl font-bold" style={{ color }}>{fmtPercent(clamped)}</p>
         <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Regen Ratio</p>
       </div>
     </div>
@@ -129,10 +129,10 @@ export default function RegenEfficiency() {
           {/* Hero stats */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Lifetime Regen', value: fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh', 1), color: 'green' as const },
-              { label: 'Regen Ratio', value: fmtPercent(data?.regen_ratio ?? 0, 1), color: 'cyan' as const },
-              { label: 'Monthly Avg', value: fmtWithUnit(data?.monthly_avg_regen ?? 0, 'kW', 1), color: 'purple' as const },
-              { label: 'Free Charges', value: fmtNumber(data?.free_charges ?? 0, 1), color: 'amber' as const },
+              { label: 'Lifetime Regen', value: fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh'), color: 'green' as const },
+              { label: 'Regen Ratio', value: fmtPercent(data?.regen_ratio ?? 0), color: 'cyan' as const },
+              { label: 'Monthly Avg', value: fmtWithUnit(data?.monthly_avg_regen ?? 0, 'kW'), color: 'purple' as const },
+              { label: 'Free Charges', value: fmtNumber(data?.free_charges ?? 0), color: 'amber' as const },
             ].map(m => (
               <StaggerItem key={m.label}>
                 <MetricCard label={m.label} value={m.value} color={m.color} />
@@ -158,18 +158,18 @@ export default function RegenEfficiency() {
                 <div className="space-y-4">
                   <div className="rounded-xl p-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      You've recovered <span className="font-bold text-neon-green">{fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh', 1)}</span> through
-                      regenerative braking — equivalent to <span className="font-bold text-neon-green">~{fmtNumber(data?.free_charges ?? 0, 1)} free charges</span>.
+                      You've recovered <span className="font-bold text-neon-green">{fmtWithUnit(data?.total_regen_kwh ?? 0, 'kWh')}</span> through
+                      regenerative braking — equivalent to <span className="font-bold text-neon-green">~{fmtNumber(data?.free_charges ?? 0)} free charges</span>.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg p-3" style={{ background: 'var(--surface-2)' }}>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Drive Energy</p>
-                      <p className="text-lg font-bold text-neon-cyan">{fmtWithUnit(data?.total_drive_kwh ?? 0, 'kWh', 1)}</p>
+                      <p className="text-lg font-bold text-neon-cyan">{fmtWithUnit(data?.total_drive_kwh ?? 0, 'kWh')}</p>
                     </div>
                     <div className="rounded-lg p-3" style={{ background: 'var(--surface-2)' }}>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Recovery Rate</p>
-                      <p className="text-lg font-bold text-neon-green">{fmtPercent(data?.regen_ratio ?? 0, 1)}</p>
+                      <p className="text-lg font-bold text-neon-green">{fmtPercent(data?.regen_ratio ?? 0)}</p>
                     </div>
                   </div>
                 </div>

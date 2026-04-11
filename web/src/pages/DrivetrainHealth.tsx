@@ -21,7 +21,7 @@ function DrivetrainTooltip({ active, payload, label, unit = '' }: { active?: boo
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 2)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -67,7 +67,7 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, axle
   const inverterColor = tempColor(inverterTemp)
 
   const fmtTemp = (c: number | null | undefined) =>
-    c != null ? `${fmtNumber(convertTemp(c), 1)} ${tempUnit}` : '--'
+    c != null ? `${fmtNumber(convertTemp(c))} ${tempUnit}` : '--'
 
   const worstTemp = [statorTemp, heatsinkTemp, inverterTemp].filter((t): t is number => t != null)
   const peakCelsius = worstTemp.length ? Math.max(...worstTemp) : null
@@ -107,7 +107,7 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, axle
         {/* Current */}
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Current</span>
-          <span className="text-sm font-semibold text-neon-cyan">{current != null ? `${fmtNumber(current, 1)} A` : '--'}</span>
+          <span className="text-sm font-semibold text-neon-cyan">{current != null ? `${fmtNumber(current)} A` : '--'}</span>
         </div>
         {/* Axle Speed */}
         <div className="flex items-center justify-between">
@@ -117,12 +117,12 @@ function MotorCard({ name, statorTemp, heatsinkTemp, inverterTemp, current, axle
         {/* Torque */}
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Torque</span>
-          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{torque != null ? `${fmtNumber(torque, 1)} Nm` : '--'}</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{torque != null ? `${fmtNumber(torque)} Nm` : '--'}</span>
         </div>
         {/* Battery Voltage */}
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Battery Voltage</span>
-          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{vBat != null ? `${fmtNumber(vBat, 1)} V` : '--'}</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{vBat != null ? `${fmtNumber(vBat)} V` : '--'}</span>
         </div>
         {/* State */}
         <div className="flex items-center justify-between">
@@ -369,7 +369,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Vehicle Speed</p>
               <p className="text-sm font-semibold text-neon-cyan">
-                {live.speed || latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(live.speed || latest.vehicle_speed!), 1)} ${speedUnit}` : '--'}
+                {live.speed || latest.vehicle_speed != null ? `${fmtNumber(convertSpeed(live.speed || latest.vehicle_speed!))} ${speedUnit}` : '--'}
               </p>
             </div>
           </GlassPanel>
@@ -397,7 +397,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Motor Torque Cmd</p>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {latest.di_torque != null ? `${fmtNumber(latest.di_torque, 1)} Nm` : '--'}
+                {latest.di_torque != null ? `${fmtNumber(latest.di_torque)} Nm` : '--'}
               </p>
             </div>
           </GlassPanel>
@@ -408,7 +408,7 @@ export default function DrivetrainHealth() {
             <div>
               <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Slave Torque Cmd</p>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {latest.di_slave_torque_cmd != null ? `${fmtNumber(latest.di_slave_torque_cmd, 1)} Nm` : '--'}
+                {latest.di_slave_torque_cmd != null ? `${fmtNumber(latest.di_slave_torque_cmd)} Nm` : '--'}
               </p>
             </div>
           </GlassPanel>
@@ -461,7 +461,7 @@ export default function DrivetrainHealth() {
               <div className="flex items-center gap-2">
                 <div className={clsx('w-3 h-3 rounded-full', tempBg(latest.di_stator_temp))} />
                 <span className={clsx('text-sm font-semibold', tempColor(latest.di_stator_temp))}>
-                  Current: {fmtNumber(convertTemp(latest.di_stator_temp), 1)} {tempUnit}
+                  Current: {fmtNumber(convertTemp(latest.di_stator_temp))} {tempUnit}
                 </span>
                 <span className={clsx('text-xs px-2 py-0.5 rounded-full', tempBg(latest.di_stator_temp), tempColor(latest.di_stator_temp))}>
                   {tempLabel(latest.di_stator_temp)}
@@ -602,12 +602,12 @@ export default function DrivetrainHealth() {
             <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Stator Temp</p>
               <p className={clsx('text-lg font-bold', tempColor(latest.di_stator_temp))}>
-                {latest.di_stator_temp != null ? `${fmtNumber(convertTemp(latest.di_stator_temp), 1)} ${tempUnit}` : '--'}
+                {latest.di_stator_temp != null ? `${fmtNumber(convertTemp(latest.di_stator_temp))} ${tempUnit}` : '--'}
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Torque</p>
-              <p className="text-lg font-bold text-neon-cyan">{latest.di_torque != null ? `${fmtNumber(latest.di_torque, 1)} Nm` : '--'}</p>
+              <p className="text-lg font-bold text-neon-cyan">{latest.di_torque != null ? `${fmtNumber(latest.di_torque)} Nm` : '--'}</p>
             </GlassPanel>
           </div>
           {/* Brake pedal status */}
@@ -637,12 +637,12 @@ export default function DrivetrainHealth() {
             <Gauge className="inline h-4 w-4 mr-1.5 text-purple-400" />Summary
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            <MetricCard label="Peak Torque" value={stats.peakTorque != null ? `${fmtNumber(stats.peakTorque, 1)} Nm` : '--'} color="cyan" />
-            <MetricCard label="Avg Torque" value={stats.avgTorque != null ? `${fmtNumber(stats.avgTorque, 1)} Nm` : '--'} color="blue" />
-            <MetricCard label="Peak Stator" value={stats.peakStatorTemp != null ? `${fmtNumber(convertTemp(stats.peakStatorTemp), 1)} ${tempUnit}` : '--'} color="red" />
-            <MetricCard label="Avg Stator" value={stats.avgStatorTemp != null ? `${fmtNumber(convertTemp(stats.avgStatorTemp), 1)} ${tempUnit}` : '--'} color="amber" />
-            <MetricCard label="Peak Speed" value={stats.peakSpeed != null ? `${fmtNumber(convertSpeed(stats.peakSpeed), 1)} ${speedUnit}` : '--'} color="green" />
-            <MetricCard label="Peak Lat-G" value={stats.peakLatAccel != null ? `${fmtNumber(stats.peakLatAccel, 1)} g` : '--'} color="purple" />
+            <MetricCard label="Peak Torque" value={stats.peakTorque != null ? `${fmtNumber(stats.peakTorque)} Nm` : '--'} color="cyan" />
+            <MetricCard label="Avg Torque" value={stats.avgTorque != null ? `${fmtNumber(stats.avgTorque)} Nm` : '--'} color="blue" />
+            <MetricCard label="Peak Stator" value={stats.peakStatorTemp != null ? `${fmtNumber(convertTemp(stats.peakStatorTemp))} ${tempUnit}` : '--'} color="red" />
+            <MetricCard label="Avg Stator" value={stats.avgStatorTemp != null ? `${fmtNumber(convertTemp(stats.avgStatorTemp))} ${tempUnit}` : '--'} color="amber" />
+            <MetricCard label="Peak Speed" value={stats.peakSpeed != null ? `${fmtNumber(convertSpeed(stats.peakSpeed))} ${speedUnit}` : '--'} color="green" />
+            <MetricCard label="Peak Lat-G" value={stats.peakLatAccel != null ? `${fmtNumber(stats.peakLatAccel)} g` : '--'} color="purple" />
           </div>
 
           {/* Thermal efficiency insights */}
@@ -657,10 +657,10 @@ export default function DrivetrainHealth() {
                 {stats.peakStatorTemp != null && stats.minStatorTemp != null ? (
                   <>
                     <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {fmtNumber(convertTemp(stats.minStatorTemp), 1)} – {fmtNumber(convertTemp(stats.peakStatorTemp), 1)} {tempUnit}
+                      {fmtNumber(convertTemp(stats.minStatorTemp))} – {fmtNumber(convertTemp(stats.peakStatorTemp))} {tempUnit}
                     </p>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      Δ {fmtNumber(convertTemp(stats.peakStatorTemp - stats.minStatorTemp + (stats.minStatorTemp > 0 ? 0 : stats.minStatorTemp)), 1)} {tempUnit} spread
+                      Δ {fmtNumber(convertTemp(stats.peakStatorTemp - stats.minStatorTemp + (stats.minStatorTemp > 0 ? 0 : stats.minStatorTemp)))} {tempUnit} spread
                     </p>
                   </>
                 ) : (
@@ -694,7 +694,7 @@ export default function DrivetrainHealth() {
                 <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Data Points</p>
                 <p className="text-sm font-semibold text-neon-cyan">{stats.totalSnapshots.toLocaleString()} snapshots</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  {stats.avgSpeed != null ? `Avg speed: ${fmtNumber(convertSpeed(stats.avgSpeed), 1)} ${speedUnit}` : 'Collecting data...'}
+                  {stats.avgSpeed != null ? `Avg speed: ${fmtNumber(convertSpeed(stats.avgSpeed))} ${speedUnit}` : 'Collecting data...'}
                 </p>
               </GlassPanel>
             </div>

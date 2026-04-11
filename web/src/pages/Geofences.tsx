@@ -57,7 +57,7 @@ function GeofenceCard({ geofence, onEdit, onDelete, color, isSelected, onSelect 
             </span>
             {geofence.cost_per_kwh != null && (
               <span className="flex items-center gap-1 text-neon-green">
-                <Zap className="h-3 w-3" /> ${fmtNumber(geofence.cost_per_kwh, 2)}/kWh
+                <Zap className="h-3 w-3" /> ${fmtNumber(geofence.cost_per_kwh)}/kWh
               </span>
             )}
           </div>
@@ -358,7 +358,7 @@ export default function Geofences() {
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Avg Radius</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(totalArea * convertDistance(1) ** 2, 2)} {distanceUnit}²</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(totalArea * convertDistance(1) ** 2)} {distanceUnit}²</p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Area</p>
               </div>
               <div className="text-center">

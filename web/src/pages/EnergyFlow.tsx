@@ -20,7 +20,7 @@ function EnergyTooltip({ active, payload, label, unit = '' }: { active?: boolean
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 2)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -421,7 +421,7 @@ export default function EnergyFlow() {
             <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Max</p>
               <p className="text-2xl font-bold text-neon-cyan">
-                {latest?.brick_voltage_max != null ? `${fmtWithUnit(latest.brick_voltage_max, 'V', 3)}` : '--'}
+                {latest?.brick_voltage_max != null ? `${fmtWithUnit(latest.brick_voltage_max, 'V')}` : '--'}
               </p>
               {latest?.num_brick_voltage_max != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_max}</p>
@@ -430,7 +430,7 @@ export default function EnergyFlow() {
             <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Min</p>
               <p className="text-2xl font-bold text-purple-400">
-                {latest?.brick_voltage_min != null ? `${fmtWithUnit(latest.brick_voltage_min, 'V', 3)}` : '--'}
+                {latest?.brick_voltage_min != null ? `${fmtWithUnit(latest.brick_voltage_min, 'V')}` : '--'}
               </p>
               {latest?.num_brick_voltage_min != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_min}</p>

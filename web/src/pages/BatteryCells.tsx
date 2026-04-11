@@ -62,7 +62,7 @@ function CellChartTooltip({ active, payload, label, unit = '' }: { active?: bool
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 3)}{unit && ` ${unit}`}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)}{unit && ` ${unit}`}
         </p>
       ))}
     </div>
@@ -91,7 +91,7 @@ function CircularGauge({ value, label, sublabel, unit, status, maxArc = 100 }: {
           />
         </svg>
         <div className="flex flex-col items-center">
-          <span className={clsx('text-2xl font-bold', sc.text)}>{fmtNumber(value, 3)}</span>
+          <span className={clsx('text-2xl font-bold', sc.text)}>{fmtNumber(value)}</span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{unit}</span>
         </div>
       </div>
@@ -513,8 +513,8 @@ export default function BatteryCells() {
                 maxArc={0.1}
               />
               <div className="mt-3 flex justify-center gap-6 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                <span>Max: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(maxCellV, 3)}V</span></span>
-                <span>Min: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(minCellV, 3)}V</span></span>
+                <span>Max: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(maxCellV)}V</span></span>
+                <span>Min: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(minCellV)}V</span></span>
               </div>
             </GlassPanel>
 
@@ -528,8 +528,8 @@ export default function BatteryCells() {
                 maxArc={convertTemp(10) - convertTemp(0)}
               />
               <div className="mt-3 flex justify-center gap-6 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                <span>Hot: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(convertTemp(maxModuleTemp), 1)}{tempUnit}</span></span>
-                <span>Cold: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(convertTemp(minModuleTemp), 1)}{tempUnit}</span></span>
+                <span>Hot: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(convertTemp(maxModuleTemp))}{tempUnit}</span></span>
+                <span>Cold: <span className="font-mono text-[var(--text-primary)]">{fmtNumber(convertTemp(minModuleTemp))}{tempUnit}</span></span>
               </div>
             </GlassPanel>
 
@@ -651,12 +651,12 @@ export default function BatteryCells() {
             </GlassPanel>
             <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cell V Spread</p>
-              <p className={clsx('text-2xl font-bold', statusColors[voltageStatus].text)}>{fmtNumber(cellSpread, 3)}<span className="text-sm">V</span></p>
+              <p className={clsx('text-2xl font-bold', statusColors[voltageStatus].text)}>{fmtNumber(cellSpread)}<span className="text-sm">V</span></p>
             </GlassPanel>
             <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Temp Spread</p>
               <p className={clsx('text-2xl font-bold', statusColors[tempStatus].text)}>
-                {fmtNumber(convertTemp(moduleTempDelta) - convertTemp(0), 1)}<span className="text-sm">{tempUnit}</span>
+                {fmtNumber(convertTemp(moduleTempDelta) - convertTemp(0))}<span className="text-sm">{tempUnit}</span>
               </p>
             </GlassPanel>
             <GlassPanel className="p-4 flex flex-col items-center gap-1">
@@ -665,12 +665,12 @@ export default function BatteryCells() {
             </GlassPanel>
             <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Capacity</p>
-              <p className="text-2xl font-bold text-neon-green">{fmtNumber(currentCapacityKwh, 1)}<span className="text-sm">kWh</span></p>
+              <p className="text-2xl font-bold text-neon-green">{fmtNumber(currentCapacityKwh)}<span className="text-sm">kWh</span></p>
             </GlassPanel>
             <GlassPanel className="p-4 flex flex-col items-center gap-1">
               <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Deg. Rate</p>
               <p className={clsx('text-2xl font-bold', degradationRatePerYear > 3 ? 'text-neon-red' : degradationRatePerYear > 1.5 ? 'text-neon-amber' : 'text-neon-green')}>
-                {fmtNumber(degradationRatePerYear, 1)}<span className="text-sm">%/yr</span>
+                {fmtNumber(degradationRatePerYear)}<span className="text-sm">%/yr</span>
               </p>
             </GlassPanel>
           </div>

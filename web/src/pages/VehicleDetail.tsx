@@ -392,11 +392,11 @@ export default function VehicleDetail() {
                     <div className="grid grid-cols-2 gap-3">
                       <MetricCard
                         label="Lateral G"
-                        value={motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel, 2)}g` : '—'}
+                        value={motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel)}g` : '—'}
                       />
                       <MetricCard
                         label="Longitudinal G"
-                        value={motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel, 2)}g` : '—'}
+                        value={motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel)}g` : '—'}
                       />
                     </div>
                   </div>
@@ -780,7 +780,7 @@ export default function VehicleDetail() {
                           && (chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) > 0.05
                           ? 'text-amber-400' : 'text-[var(--text-primary)]')}>
                         {chargingTelemetry.brick_voltage_max != null && chargingTelemetry.brick_voltage_min != null
-                          ? `${fmtWithUnit(((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000), 'mV', 0)}`
+                          ? `${fmtWithUnit(((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000), 'mV')}`
                           : '—'}
                       </span>
                     </div>
@@ -918,7 +918,7 @@ export default function VehicleDetail() {
                   </div>
                   <div className="p-3 text-center">
                     <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                      {fmtNumber(state.latitude, 5)}, {fmtNumber(state.longitude, 5)}
+                      {fmtNumber(state.latitude)}, {fmtNumber(state.longitude)}
                     </p>
                   </div>
                 </GlassPanel>
@@ -1083,7 +1083,7 @@ export default function VehicleDetail() {
                         <div className="text-right">
                           <span className="text-xs text-[var(--text-muted)]">{s.start_battery_level}% → {s.end_battery_level ?? '—'}%</span>
                           {s.cost != null && s.cost > 0 && (
-                            <p className="text-[10px] text-neon-amber">${fmtNumber(s.cost, 2)}</p>
+                            <p className="text-[10px] text-neon-amber">${fmtNumber(s.cost)}</p>
                           )}
                         </div>
                       </Link>

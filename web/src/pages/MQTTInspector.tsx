@@ -73,7 +73,7 @@ const vehicleColumns: Column<VehicleTelemetry>[] = [
     key: 'sigPerSec',
     header: 'Sig/sec',
     className: 'text-right',
-    render: (v) => <span className="font-mono text-[var(--text-secondary)]">{v.signals_per_sec != null ? fmtNumber(v.signals_per_sec, 1) : '—'}</span>,
+    render: (v) => <span className="font-mono text-[var(--text-secondary)]">{v.signals_per_sec != null ? fmtNumber(v.signals_per_sec) : '—'}</span>,
   },
   {
     key: 'lastReceived',
@@ -172,7 +172,7 @@ export default function MQTTInspector() {
           />
           <StatCard
             label="Signals / sec"
-            value={isLoading ? '—' : fmtNumber(totalRate, 1)}
+            value={isLoading ? '—' : fmtNumber(totalRate)}
             icon={<Radio className="h-4 w-4" />}
             color={staleVehicles.length > 0 ? 'amber' : 'cyan'}
             subtitle={staleVehicles.length > 0 ? `${staleVehicles.length} stale` : undefined}

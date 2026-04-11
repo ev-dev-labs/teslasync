@@ -24,7 +24,7 @@ function DynamicsTooltip({ active, payload, label, unit }: { active?: boolean; p
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? fmtNumber(p.value, 2) : p.value}{unit ? ` ${unit}` : ''}
+          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? fmtNumber(p.value) : p.value}{unit ? ` ${unit}` : ''}
         </p>
       ))}
     </div>
@@ -294,26 +294,26 @@ export default function DrivingDynamics() {
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Lateral G</p>
             <p className="text-3xl font-bold text-neon-amber">
-              {latest?.lateral_accel !== undefined ? fmtNumber(latest.lateral_accel, 3) : '--'}
+              {latest?.lateral_accel !== undefined ? fmtNumber(latest.lateral_accel) : '--'}
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>g</span>
             </p>
             {stats && (
               <div className="flex gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span>Peak L: {fmtNumber(stats.peakLatGNeg, 3)}g</span>
-                <span>Peak R: {fmtNumber(stats.peakLatG, 3)}g</span>
+                <span>Peak L: {fmtNumber(stats.peakLatGNeg)}g</span>
+                <span>Peak R: {fmtNumber(stats.peakLatG)}g</span>
               </div>
             )}
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Longitudinal G</p>
             <p className="text-3xl font-bold text-neon-cyan">
-              {latest?.longitudinal_accel !== undefined ? fmtNumber(latest.longitudinal_accel, 3) : '--'}
+              {latest?.longitudinal_accel !== undefined ? fmtNumber(latest.longitudinal_accel) : '--'}
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>g</span>
             </p>
             {stats && (
               <div className="flex gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span>Peak Brake: {fmtNumber(stats.peakLonGNeg, 3)}g</span>
-                <span>Peak Accel: {fmtNumber(stats.peakLonG, 3)}g</span>
+                <span>Peak Brake: {fmtNumber(stats.peakLonGNeg)}g</span>
+                <span>Peak Accel: {fmtNumber(stats.peakLonG)}g</span>
               </div>
             )}
           </div>
@@ -333,14 +333,14 @@ export default function DrivingDynamics() {
             <div className="space-y-3 flex-1 flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Lateral</span>
-                <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.maxLatG, 3)}g</span>
+                <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.maxLatG)}g</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/5">
                 <div className="h-full rounded-full bg-neon-amber/60" style={{ width: `${Math.min(100, stats.maxLatG * 100)}%` }} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Longitudinal</span>
-                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(stats.maxLonG, 3)}g</span>
+                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(stats.maxLonG)}g</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/5">
                 <div className="h-full rounded-full bg-neon-cyan/60" style={{ width: `${Math.min(100, stats.maxLonG * 100)}%` }} />
@@ -348,7 +348,7 @@ export default function DrivingDynamics() {
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Combined Peak</span>
                 <span className="text-sm font-bold text-neon-green">
-                  {fmtNumber(Math.sqrt(stats.maxLatG ** 2 + stats.maxLonG ** 2), 3)}g
+                  {fmtNumber(Math.sqrt(stats.maxLatG ** 2 + stats.maxLonG ** 2))}g
                 </span>
               </div>
             </div>
@@ -614,13 +614,13 @@ export default function DrivingDynamics() {
           />
           <MetricCard
             label="Max Lateral G"
-            value={`${fmtNumber(stats.maxLatG, 3)} g`}
+            value={`${fmtNumber(stats.maxLatG)} g`}
             icon={<ArrowUp className="h-4 w-4" />}
             color="amber"
           />
           <MetricCard
             label="Max Longitudinal G"
-            value={`${fmtNumber(stats.maxLonG, 3)} g`}
+            value={`${fmtNumber(stats.maxLonG)} g`}
             icon={<ArrowDown className="h-4 w-4" />}
             color="cyan"
           />

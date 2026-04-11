@@ -92,7 +92,7 @@ export default function Trips() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 sm:mb-8">
           <MetricCard label="Total Distance" value={`${fmtInt(convertDistance(totalDist))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" subtitle={`${filteredTrips.length} trips`} />
           <MetricCard label="Energy Used" value={`${fmtNumber(totalEnergy)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" subtitle={`${totalDrives} drives`} />
-          <MetricCard label="Total Cost" value={`$${fmtNumber(totalCost, 2)}`} icon={<Fuel className="h-4 w-4" />} color="green" subtitle={`$${totalDist > 0 ? fmtNumber(totalCost / convertDistance(totalDist) * 100) : '0'}/100${distanceUnit}`} />
+          <MetricCard label="Total Cost" value={`$${fmtNumber(totalCost)}`} icon={<Fuel className="h-4 w-4" />} color="green" subtitle={`$${totalDist > 0 ? fmtNumber(totalCost / convertDistance(totalDist) * 100) : '0'}/100${distanceUnit}`} />
           <MetricCard label="Total Trips" value={`${filteredTrips.length}`} icon={<Route className="h-4 w-4" />} color="purple" subtitle={`${totalDrives} total drives`} />
         </div>
       )}
@@ -180,7 +180,7 @@ export default function Trips() {
                   </div>
                   {trip.total_cost > 0 && (
                     <div>
-                      <p className="text-sm font-bold" style={{ color: '#10b981' }}>${fmtNumber(trip.total_cost, 2)}</p>
+                      <p className="text-sm font-bold" style={{ color: '#10b981' }}>${fmtNumber(trip.total_cost)}</p>
                       <p className="text-[10px] text-[var(--text-muted)]">cost</p>
                     </div>
                   )}

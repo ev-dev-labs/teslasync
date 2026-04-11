@@ -23,7 +23,7 @@ export default function TrueCostOwnership() {
     enabled: vehicleId !== null,
   })
 
-  const fmtCurrency = (v: number) => `$${fmtNumber(v, 2)}`
+  const fmtCurrency = (v: number) => `$${fmtNumber(v)}`
 
   return (
     <div className="space-y-8">
@@ -142,11 +142,11 @@ export default function TrueCostOwnership() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-center">
                   <div className="rounded-xl bg-neon-cyan/10 p-3 border border-neon-cyan/20">
-                    <p className="text-lg font-bold text-neon-cyan">${fmtNumber(tco.cost_per_km_ev, 4)}</p>
+                    <p className="text-lg font-bold text-neon-cyan">${fmtNumber(tco.cost_per_km_ev)}</p>
                     <p className="text-xs text-[var(--text-muted)]">per km (EV)</p>
                   </div>
                   <div className="rounded-xl bg-neon-red/10 p-3 border border-neon-red/20">
-                    <p className="text-lg font-bold text-neon-red">${fmtNumber(tco.cost_per_km_ice, 4)}</p>
+                    <p className="text-lg font-bold text-neon-red">${fmtNumber(tco.cost_per_km_ice)}</p>
                     <p className="text-xs text-[var(--text-muted)]">per km (Gas)</p>
                   </div>
                 </div>

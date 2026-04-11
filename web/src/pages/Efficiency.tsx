@@ -162,9 +162,9 @@ export default function Efficiency() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 sm:mb-8">
           {([
             { label: 'Avg Efficiency', value: `${fmtInt(convertEfficiency(avgEff))} ${efficiencyUnit}`, subtitle: '', icon: Gauge, color: 'cyan' as const },
-            { label: 'Energy Used', value: `${fmtNumber(totalEnergy, 1)} kWh`, subtitle: 'selected period', icon: Zap, color: 'amber' as const },
+            { label: 'Energy Used', value: `${fmtNumber(totalEnergy)} kWh`, subtitle: 'selected period', icon: Zap, color: 'amber' as const },
             { label: 'Distance', value: `${fmtInt(convertDistance(totalDist))} ${distanceUnit}`, subtitle: 'selected period', icon: TrendingUp, color: 'green' as const },
-            { label: 'Cost', value: `$${energy?.total_cost != null ? fmtNumber(energy.total_cost, 2) : '0'}`, subtitle: `$${totalDist > 0 ? fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100, 1) : '0'}/100${distanceUnit}`, icon: Fuel, color: 'purple' as const },
+            { label: 'Cost', value: `$${energy?.total_cost != null ? fmtNumber(energy.total_cost) : '0'}`, subtitle: `$${totalDist > 0 ? fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist) * 100) : '0'}/100${distanceUnit}`, icon: Fuel, color: 'purple' as const },
             { label: 'CO₂ Saved', value: `${fmtInt(co2Saved)} kg`, subtitle: 'vs ICE vehicle', icon: Thermometer, color: 'red' as const },
           ]).map(card => (
             <MetricCard
@@ -278,7 +278,7 @@ export default function Efficiency() {
                 </span>
               )},
               { key: 'kmPerKwh', header: `${distanceUnit}/kWh`, className: 'text-right', render: b => (
-                <span className="text-neon-cyan">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff), 1) : '—'}</span>
+                <span className="text-neon-cyan">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff)) : '—'}</span>
               )},
               { key: 'totalDist', header: `Total ${distanceUnit}`, className: 'text-right', render: b => (
                 <span className="text-[var(--text-secondary)]">{fmtInt(convertDistance(b.totalDist))}</span>
@@ -303,7 +303,7 @@ export default function Efficiency() {
                 { label: 'Drives Analyzed', value: consumptionStats.count.toString() },
                 { label: 'Total Distance', value: `${fmtInt(convertDistance(consumptionStats.totalDist))} ${distanceUnit}` },
                 { label: 'Avg Consumption', value: `${fmtInt(convertEfficiency(consumptionStats.avgEff))} ${efficiencyUnit}` },
-                { label: 'Avg Efficiency', value: `${fmtNumber(1000 / convertEfficiency(consumptionStats.avgEff), 1)} ${distanceUnit}/kWh` },
+                { label: 'Avg Efficiency', value: `${fmtNumber(1000 / convertEfficiency(consumptionStats.avgEff))} ${distanceUnit}/kWh` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">
                   <span className="text-xs text-[var(--text-secondary)]">{row.label}</span>
@@ -319,9 +319,9 @@ export default function Efficiency() {
             </h3>
             <div className="space-y-3">
               {[
-                { label: 'Total Energy Used', value: `${fmtNumber(totalEnergy, 1)} kWh` },
+                { label: 'Total Energy Used', value: `${fmtNumber(totalEnergy)} kWh` },
                 { label: 'Distance Covered', value: `${fmtInt(convertDistance(totalDist))} ${distanceUnit}` },
-                { label: `Cost per ${distanceUnit}`, value: totalDist > 0 ? `$${fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist), 3)}` : '$0' },
+                { label: `Cost per ${distanceUnit}`, value: totalDist > 0 ? `$${fmtNumber((energy?.total_cost ?? 0) / convertDistance(totalDist))}` : '$0' },
                 { label: 'CO₂ Saved vs ICE', value: `${fmtInt(co2Saved)} kg` },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">

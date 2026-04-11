@@ -229,7 +229,7 @@ function DigestTooltip({ active, payload, label, unit }: any) {
       </p>
       {payload.map((entry: any, i: number) => (
         <p key={i} style={{ color: entry.color }} className="tabular-nums">
-          {fmtNumber(entry.value, 1)} {unit}
+          {fmtNumber(entry.value)} {unit}
         </p>
       ))}
     </GlassPanel>
@@ -434,7 +434,7 @@ export default function WeeklyDigest() {
     facts.push(`Your car was parked ${parkedPct}% of the time this week`)
 
     if (stats.totalEnergy > 0) {
-      const treeDays = fmtNumber(stats.totalEnergy * 0.4 / 22, 1)
+      const treeDays = fmtNumber(stats.totalEnergy * 0.4 / 22)
       facts.push(
         `Your EV charging offset ~${treeDays} tree-days worth of CO₂ absorption 🌳`,
       )
@@ -483,7 +483,7 @@ export default function WeeklyDigest() {
         metric: 'Cost ($)',
         current: stats.totalCost,
         previous: stats.prevCost,
-        fmt: (v: number) => `$${fmtNumber(v, 2)}`,
+        fmt: (v: number) => `$${fmtNumber(v)}`,
       },
       {
         metric: `Avg Top Speed (${speedUnit})`,
@@ -582,7 +582,7 @@ export default function WeeklyDigest() {
               <StaggerItem>
                 <MetricCard
                   label="Energy Used"
-                  value={fmtWithUnit(stats.totalEnergy, 'kWh', 1)}
+                  value={fmtWithUnit(stats.totalEnergy, 'kWh')}
                   icon={<Zap className="h-5 w-5" />}
                   change={pctChange(stats.totalEnergy, stats.prevEnergy)}
                   color="amber"
@@ -591,7 +591,7 @@ export default function WeeklyDigest() {
               <StaggerItem>
                 <MetricCard
                   label="Charging Cost"
-                  value={`$${fmtNumber(stats.totalCost, 2)}`}
+                  value={`$${fmtNumber(stats.totalCost)}`}
                   icon={<DollarSign className="h-5 w-5" />}
                   change={pctChange(stats.totalCost, stats.prevCost)}
                   color="green"
@@ -600,7 +600,7 @@ export default function WeeklyDigest() {
               <StaggerItem>
                 <MetricCard
                   label="Gas Savings"
-                  value={`$${fmtNumber(stats.gasSavings, 2)}`}
+                  value={`$${fmtNumber(stats.gasSavings)}`}
                   icon={<Leaf className="h-5 w-5" />}
                   change={pctChange(stats.gasSavings, stats.prevGasSavings)}
                   color="green"
@@ -708,11 +708,11 @@ export default function WeeklyDigest() {
                 <div className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-4">
                     <MiniStat label="Sessions" value={String(weekCharging.length)} />
-                    <MiniStat label="Total Energy" value={fmtWithUnit(stats.totalEnergy, 'kWh', 1)} />
-                    <MiniStat label="Total Cost" value={`$${fmtNumber(stats.totalCost, 2)}`} />
+                    <MiniStat label="Total Energy" value={fmtWithUnit(stats.totalEnergy, 'kWh')} />
+                    <MiniStat label="Total Cost" value={`$${fmtNumber(stats.totalCost)}`} />
                     <MiniStat
                       label="Avg per Session"
-                      value={fmtWithUnit(stats.totalEnergy / weekCharging.length, 'kWh', 1)}
+                      value={fmtWithUnit(stats.totalEnergy / weekCharging.length, 'kWh')}
                     />
                   </div>
 

@@ -27,16 +27,16 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
       <div className="flex items-center gap-4 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>EV Cost</p>
-          <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0, 2)}</p>
+          <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0)}</p>
         </div>
         <ArrowRight className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Gas Equivalent</p>
-          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>${fmtNumber(gasCost ?? 0, 2)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>${fmtNumber(gasCost ?? 0)}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-neon-green">Saving ${fmtNumber(savings ?? 0, 2)}</span>
+        <span className="text-sm font-bold text-neon-green">Saving ${fmtNumber(savings ?? 0)}</span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">{fmtPercent(savingsPct ?? 0)} less</span>
       </div>
     </GlassPanel>
@@ -155,12 +155,12 @@ export default function Energy() {
       {/* Quick metrics strip */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: `Cost per ${distanceUnit}`, value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0, 3)}`, color: 'text-neon-cyan' },
-          { label: 'Cost per kWh', value: `$${fmtNumber(costPerKwh ?? 0, 3)}`, color: 'text-neon-green' },
+          { label: `Cost per ${distanceUnit}`, value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
+          { label: 'Cost per kWh', value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
           { label: 'Total Distance', value: `${fmtInt(convertDistance(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: 'Sessions', value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
-          { label: 'Monthly Est.', value: `$${fmtNumber(monthlyProjectedCost ?? 0, 2)}`, color: 'text-neon-amber' },
-          { label: 'Yearly Est.', value: `$${fmtNumber(yearlyProjectedCost ?? 0, 2)}`, color: 'text-neon-red' },
+          { label: 'Monthly Est.', value: `$${fmtNumber(monthlyProjectedCost ?? 0)}`, color: 'text-neon-amber' },
+          { label: 'Yearly Est.', value: `$${fmtNumber(yearlyProjectedCost ?? 0)}`, color: 'text-neon-red' },
         ].map(m => (
           <StaggerItem key={m.label}>
             <GlassPanel className="p-3 text-center">
@@ -310,9 +310,9 @@ export default function Energy() {
                             <span className="text-xs text-[var(--text-muted)]">{b.count} sessions</span>
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-neon-cyan">{fmtNumber(b.energy ?? 0, 1)} kWh</span>
-                            <span className="text-neon-green">${fmtNumber(b.cost ?? 0, 2)}</span>
-                            <span className="text-[var(--text-muted)]">${b.energy > 0 ? fmtNumber(b.cost / b.energy, 3) : '0'}/kWh</span>
+                            <span className="text-neon-cyan">{fmtNumber(b.energy ?? 0)} kWh</span>
+                            <span className="text-neon-green">${fmtNumber(b.cost ?? 0)}</span>
+                            <span className="text-[var(--text-muted)]">${b.energy > 0 ? fmtNumber(b.cost / b.energy) : '0'}/kWh</span>
                           </div>
                         </div>
                       ))}
@@ -346,12 +346,12 @@ export default function Energy() {
                 <DataTable
                   columns={[
                     { key: 'date', header: 'Date', render: (s) => <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">{formatDateShort(s.start_date)}</Link> },
-                    { key: 'energy', header: 'Energy', render: (s) => <span className="text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0, 1)} kWh</span> },
+                    { key: 'energy', header: 'Energy', render: (s) => <span className="text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0)} kWh</span> },
                     { key: 'battery', header: 'Battery', render: (s) => <><span className="text-[var(--text-muted)]">{s.start_battery_level}%</span><span className="text-gray-700 mx-1">→</span><span className="text-neon-green">{s.end_battery_level ?? '—'}%</span></> },
-                    { key: 'power', header: 'Power', render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</> },
+                    { key: 'power', header: 'Power', render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power)} kW` : '—'}</> },
                     { key: 'type', header: 'Type', render: (s) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' : s.fast_charger_type ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' : 'bg-neon-green/10 text-neon-green ring-neon-green/20'}`}>{s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}</span> },
-                    { key: 'cost', header: 'Cost', render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : '—'}</> },
-                    { key: 'perKwh', header: '$/kWh', render: (s) => <span className="text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added, 3)}` : '—'}</span> },
+                    { key: 'cost', header: 'Cost', render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost)}` : '—'}</> },
+                    { key: 'perKwh', header: '$/kWh', render: (s) => <span className="text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added)}` : '—'}</span> },
                   ] satisfies Column<(typeof sessions)[number]>[]}
                   data={sessions.slice(0, 15)}
                   keyExtractor={(s) => s.id}

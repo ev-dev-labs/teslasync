@@ -83,7 +83,7 @@ export default function SignalLogViewer() {
   )
 
   const formatValue = (entry: SignalLogEntry): string => {
-    if (entry.value_num != null) return fmtNumber(entry.value_num, 4)
+    if (entry.value_num != null) return fmtNumber(entry.value_num)
     if (entry.value_str != null) return entry.value_str
     if (entry.value_bool != null) return entry.value_bool ? 'true' : 'false'
     return '—'
@@ -173,7 +173,7 @@ export default function SignalLogViewer() {
                   ? (live as Record<string, unknown>).value
                   : live
                 const liveStr = raw != null
-                  ? typeof raw === 'number' ? fmtNumber(raw as number, 2) : String(raw).slice(0, 20)
+                  ? typeof raw === 'number' ? fmtNumber(raw as number) : String(raw).slice(0, 20)
                   : null
                 return (
                   <Button
@@ -247,7 +247,7 @@ export default function SignalLogViewer() {
                 <Activity className="h-4 w-4 text-neon-green animate-pulse" />
                 <span className="text-xs text-[var(--text-muted)]">Live value:</span>
                 <span className="text-sm font-bold font-mono text-neon-cyan">
-                  {typeof currentLiveValue === 'number' ? fmtNumber(currentLiveValue, 4)
+                  {typeof currentLiveValue === 'number' ? fmtNumber(currentLiveValue)
                     : typeof currentLiveValue === 'boolean' ? (currentLiveValue ? 'true' : 'false')
                     : String(currentLiveValue)}
                 </span>

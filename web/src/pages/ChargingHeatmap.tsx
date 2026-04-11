@@ -83,7 +83,7 @@ export default function ChargingHeatmap() {
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StaggerItem><MetricCard label="Total Sessions" value={data?.summary.total_sessions ?? 0} icon={<BatteryCharging className="h-4 w-4" />} color="cyan" /></StaggerItem>
             <StaggerItem><MetricCard label="Total kWh" value={`${fmtNumber(data?.summary.total_kwh ?? 0)}`} icon={<Zap className="h-4 w-4" />} color="green" /></StaggerItem>
-            <StaggerItem><MetricCard label="Total Cost" value={`$${fmtNumber(data?.summary.total_cost ?? 0, 2)}`} icon={<DollarSign className="h-4 w-4" />} color="amber" /></StaggerItem>
+            <StaggerItem><MetricCard label="Total Cost" value={`$${fmtNumber(data?.summary.total_cost ?? 0)}`} icon={<DollarSign className="h-4 w-4" />} color="amber" /></StaggerItem>
             <StaggerItem><MetricCard label="Avg Duration" value={`${fmtInt(data?.summary.avg_duration ?? 0)} min`} icon={<Clock className="h-4 w-4" />} color="purple" /></StaggerItem>
           </StaggerContainer>
 
