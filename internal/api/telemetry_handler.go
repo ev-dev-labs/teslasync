@@ -345,10 +345,15 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		if publishToMQTT {
 			source = "http_ingest"
 		}
+		// Copy the signals map to avoid concurrent read/write with normalizeFleetUnits
+		rawCopy := make(map[string]interface{}, len(signals))
+		for k, v := range signals {
+			rawCopy[k] = v
+		}
 		rec := &models.RawTelemetrySignal{
 			VIN:         vin,
 			Source:      source,
-			Signals:     signals,
+			Signals:     rawCopy,
 			SignalCount: len(signals),
 		}
 		go func() {
@@ -1244,19 +1249,19 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 		signals["ChargeRateMilePerHour"] = v * mphToKmh
 	}
 
-	// Gear: Tesla Fleet Telemetry sends "ShiftStateDrive", "ShiftStateReverse",
-	// "ShiftStatePark", "ShiftStateNeutral" — normalize to single-letter D/R/P/N
+	// Gear: Tesla Fleet Telemetry sends "ShiftStateD", "ShiftStateR",
+	// "ShiftStateP", "ShiftStateN" — normalize to single-letter D/R/P/N
 	// that the frontend and REST API path use.
 	if g, ok := signals["Gear"]; ok {
-		gs := toString(g)
+		gs := strings.TrimPrefix(toString(g), "ShiftState")
 		switch {
-		case strings.Contains(gs, "Drive") || gs == "D":
+		case gs == "D" || strings.Contains(gs, "Drive"):
 			signals["Gear"] = "D"
-		case strings.Contains(gs, "Reverse") || gs == "R":
+		case gs == "R" || strings.Contains(gs, "Reverse"):
 			signals["Gear"] = "R"
-		case strings.Contains(gs, "Park") || gs == "P":
+		case gs == "P" || strings.Contains(gs, "Park"):
 			signals["Gear"] = "P"
-		case strings.Contains(gs, "Neutral") || gs == "N":
+		case gs == "N" || strings.Contains(gs, "Neutral"):
 			signals["Gear"] = "N"
 		}
 	}

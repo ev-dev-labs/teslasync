@@ -407,20 +407,20 @@ export default function SafetySettings() {
       <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Live Safety Signals</h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <GlassPanel className="p-4 flex flex-col items-center gap-2">
-          <div className={clsx('p-2.5 rounded-lg', live.driverSeatBelt ? 'bg-neon-green/10' : 'bg-neon-red/10')}>
-            <User className={clsx('h-5 w-5', live.driverSeatBelt ? 'text-neon-green' : 'text-neon-red')} />
+          <div className={clsx('p-2.5 rounded-lg', live.driverSeatBelt ? 'bg-neon-red/10' : 'bg-neon-green/10')}>
+            <User className={clsx('h-5 w-5', live.driverSeatBelt ? 'text-neon-red' : 'text-neon-green')} />
           </div>
-          <span className={clsx('text-sm font-bold', live.driverSeatBelt ? 'text-neon-green' : 'text-neon-red')}>
-            {live.driverSeatBelt ? 'Buckled' : 'Unbuckled'}
+          <span className={clsx('text-sm font-bold', live.driverSeatBelt ? 'text-neon-red' : 'text-neon-green')}>
+            {live.driverSeatBelt ? 'Unbuckled' : 'Buckled'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Driver Belt</span>
         </GlassPanel>
         <GlassPanel className="p-4 flex flex-col items-center gap-2">
-          <div className={clsx('p-2.5 rounded-lg', live.passengerSeatBelt ? 'bg-neon-green/10' : 'bg-white/5')}>
-            <User className={clsx('h-5 w-5', live.passengerSeatBelt ? 'text-neon-green' : 'text-[var(--text-muted)]')} />
+          <div className={clsx('p-2.5 rounded-lg', live.passengerSeatBelt ? 'bg-neon-red/10' : 'bg-neon-green/10')}>
+            <User className={clsx('h-5 w-5', live.passengerSeatBelt ? 'text-neon-red' : 'text-neon-green')} />
           </div>
-          <span className={clsx('text-sm font-bold', live.passengerSeatBelt ? 'text-neon-green' : 'text-[var(--text-muted)]')}>
-            {live.passengerSeatBelt ? 'Buckled' : 'Unbuckled'}
+          <span className={clsx('text-sm font-bold', live.passengerSeatBelt ? 'text-neon-red' : 'text-neon-green')}>
+            {live.passengerSeatBelt ? 'Unbuckled' : 'Buckled'}
           </span>
           <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Passenger Belt</span>
         </GlassPanel>
