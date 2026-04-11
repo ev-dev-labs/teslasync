@@ -138,3 +138,105 @@ func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 	}
 	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_history: TTL cleanup")
 }
+
+// SignalHistoryEntry is a single row from signal_history for API responses.
+type SignalHistoryEntry struct {
+	Signal    string   `json:"signal"`
+	ValueNum  *float64 `json:"value_num,omitempty"`
+	ValueStr  *string  `json:"value_str,omitempty"`
+	ValueBool *bool    `json:"value_bool,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// Query returns signal history rows with pagination.
+func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signals []string, from, to time.Time, page, perPage int) ([]SignalHistoryEntry, int64, error) {
+	if perPage <= 0 { perPage = 50 }
+	if perPage > 100 { perPage = 100 }
+	if page < 1 { page = 1 }
+	offset := (page - 1) * perPage
+
+	// Count total
+	var total int64
+	err := w.db.Pool.QueryRow(ctx,
+		"SELECT COUNT(*) FROM signal_history WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4",
+		vehicleID, signals, from, to).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Fetch page
+	rows, err := w.db.Pool.Query(ctx,
+		`SELECT signal, value_num, value_str, value_bool, created_at
+		 FROM signal_history
+		 WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4
+		 ORDER BY created_at DESC LIMIT $5 OFFSET $6`,
+		vehicleID, signals, from, to, perPage, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var entries []SignalHistoryEntry
+	for rows.Next() {
+		var e SignalHistoryEntry
+		if err := rows.Scan(&e.Signal, &e.ValueNum, &e.ValueStr, &e.ValueBool, &e.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, total, rows.Err()
+}
+
+// AvailableSignals returns distinct signal names for a vehicle.
+func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID int64) ([]string, error) {
+	rows, err := w.db.Pool.Query(ctx,
+		"SELECT DISTINCT signal FROM signal_history WHERE vehicle_id = $1 ORDER BY signal",
+		vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var signals []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		signals = append(signals, s)
+	}
+	return signals, rows.Err()
+}
+
+// SignalStats holds min/max/avg/count for a signal.
+type SignalStats struct {
+	Signal string  `json:"signal"`
+	Min    float64 `json:"min"`
+	Max    float64 `json:"max"`
+	Avg    float64 `json:"avg"`
+	Count  int64   `json:"count"`
+}
+
+// Stats returns aggregate stats per signal.
+func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signals []string, from, to time.Time) ([]SignalStats, error) {
+	rows, err := w.db.Pool.Query(ctx,
+		`SELECT signal, COALESCE(MIN(value_num), 0), COALESCE(MAX(value_num), 0), COALESCE(AVG(value_num), 0), COUNT(*)
+		 FROM signal_history
+		 WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4 AND value_num IS NOT NULL
+		 GROUP BY signal ORDER BY signal`,
+		vehicleID, signals, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []SignalStats
+	for rows.Next() {
+		var s SignalStats
+		if err := rows.Scan(&s.Signal, &s.Min, &s.Max, &s.Avg, &s.Count); err != nil {
+			return nil, err
+		}
+		stats = append(stats, s)
+	}
+	return stats, rows.Err()
+}

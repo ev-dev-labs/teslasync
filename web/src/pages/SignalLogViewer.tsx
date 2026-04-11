@@ -1,304 +1,410 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn, Badge, Button, Input, Select, DataTable, type Column } from '../components/ui'
-import { Database, Search, Filter, Clock, Activity } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button, Input, Select, Skeleton, EmptyState } from '../components/ui'
+import { Database, Search, Clock, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import clsx from 'clsx'
-import { formatDateTime } from '../lib/dateFormat'
-import { fmtNumber } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+
+/* ── types ── */
 
 interface SignalLogEntry {
   timestamp: string
-  value_num?: number
-  value_str?: string
-  value_bool?: boolean
-}
-
-type NumberedLogEntry = SignalLogEntry & { _rowNum: number }
-
-interface SignalHistoryResponse {
-  vehicle_id: number
   signal: string
-  from: string
-  to: string
-  count: number
-  data: SignalLogEntry[]
+  value_num?: number | null
+  value_str?: string | null
+  value_bool?: boolean | null
 }
 
-const PAGE_SIZES = [25, 50, 100, 200]
+interface Pagination {
+  page: number
+  per_page: number
+  total: number
+  total_pages: number
+}
 
-const TIME_RANGES = [
+interface HistoryResponse {
+  data: SignalLogEntry[]
+  pagination: Pagination
+}
+
+interface AvailableSignalsResponse {
+  signals: string[]
+  count: number
+}
+
+/* ── constants ── */
+
+const PAGE_SIZES = [25, 50, 100]
+
+const TIME_PRESETS = [
   { label: '1h', hours: 1 },
   { label: '6h', hours: 6 },
   { label: '24h', hours: 24 },
   { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-  { label: 'All', hours: 8760 },
 ]
+
+/* ── helpers ── */
+
+/** Formats a Date to a `datetime-local` input value with seconds precision (local TZ). */
+function toLocalDatetimeStr(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+/** Formats an ISO timestamp with milliseconds for display. */
+function formatTimestampMs(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const pad3 = (n: number) => String(n).padStart(3, '0')
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}.${pad3(d.getMilliseconds())}`
+}
+
+function getValueType(entry: SignalLogEntry): 'num' | 'str' | 'bool' | 'null' {
+  if (entry.value_num != null) return 'num'
+  if (entry.value_str != null) return 'str'
+  if (entry.value_bool != null) return 'bool'
+  return 'null'
+}
+
+function formatValue(entry: SignalLogEntry): string {
+  if (entry.value_num != null) return String(entry.value_num)
+  if (entry.value_str != null) return entry.value_str
+  if (entry.value_bool != null) return entry.value_bool ? 'true' : 'false'
+  return '—'
+}
+
+const TYPE_BADGE_COLOR: Record<string, 'cyan' | 'green' | 'amber' | 'neutral'> = {
+  num: 'cyan',
+  str: 'green',
+  bool: 'amber',
+  null: 'neutral',
+}
+
+const TYPE_VALUE_COLOR: Record<string, string> = {
+  num: 'text-neon-cyan',
+  str: 'text-neon-green',
+  bool: 'text-neon-amber',
+  null: 'text-[var(--text-muted)]',
+}
+
+/* ── component ── */
 
 export default function SignalLogViewer() {
   usePageTitle('Signal Log')
-  const vehicleId = 1
-  const [selectedSignal, setSelectedSignal] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [timeRange, setTimeRange] = useState(24)
+  const { vehicleId: paramVehicleId } = useParams<{ vehicleId: string }>()
+  const vehicleId = paramVehicleId ? Number(paramVehicleId) : 1
+
+  // Signal selection
+  const [selectedSignals, setSelectedSignals] = useState<string[]>([])
+  const [signalSearch, setSignalSearch] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Date range (local-TZ strings for the datetime-local inputs)
+  const now = useMemo(() => new Date(), [])
+  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(now.getTime() - 24 * 3600_000)))
+  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(now))
+
+  // Pagination
+  const [perPage, setPerPage] = useState(50)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(50)
 
-  // Get available signals
-  const { data: availableData } = useQuery<{ signals: string[]; count: number }>({
-    queryKey: ['signal-log-available', vehicleId],
-    queryFn: () => request(`/signals/${vehicleId}/available`),
-    refetchInterval: 60_000,
-  })
+  // Query trigger — only fetch when user clicks "Query"
+  const [queryParams, setQueryParams] = useState<{
+    signals: string[]
+    from: string
+    to: string
+    page: number
+    perPage: number
+  } | null>(null)
 
-  // Get stats
-  const { data: stats } = useQuery<{ count: number; oldest: string; newest: string }>({
-    queryKey: ['signal-log-stats', vehicleId],
-    queryFn: () => request(`/signals/${vehicleId}/stats`),
-    refetchInterval: 60_000,
-  })
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
-  // Query signal history
-  const from = new Date(Date.now() - timeRange * 3600 * 1000).toISOString()
-  const to = new Date().toISOString()
-
-  const { data: history, isLoading, isFetching } = useQuery<SignalHistoryResponse>({
-    queryKey: ['signal-log-viewer', vehicleId, selectedSignal, timeRange, page, pageSize],
-    queryFn: () => request(`/signals/${vehicleId}/${selectedSignal}/history?from=${from}&to=${to}&limit=${pageSize}`),
-    enabled: !!selectedSignal,
-  })
-
-  // Get live state for current values
-  const { data: liveData } = useQuery<{ signals: Record<string, unknown> }>({
-    queryKey: ['signal-log-live', vehicleId],
-    queryFn: () => request(`/signals/${vehicleId}/live`),
-    refetchInterval: 5_000,
+  // Available signals
+  const { data: availableData } = useQuery<AvailableSignalsResponse>({
+    queryKey: ['signal-available', vehicleId],
+    queryFn: () => request(`/signals/available?vehicle_id=${vehicleId}`),
+    staleTime: 120_000,
   })
 
   const allSignals = availableData?.signals ?? []
-  const filteredSignals = allSignals.filter(s =>
-    s.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
-  const formatValue = (entry: SignalLogEntry): string => {
-    if (entry.value_num != null) return fmtNumber(entry.value_num)
-    if (entry.value_str != null) return entry.value_str
-    if (entry.value_bool != null) return entry.value_bool ? 'true' : 'false'
-    return '—'
+  const filteredDropdown = useMemo(() => {
+    if (!signalSearch) return allSignals.filter(s => !selectedSignals.includes(s))
+    const q = signalSearch.toLowerCase()
+    return allSignals.filter(s => s.toLowerCase().includes(q) && !selectedSignals.includes(s))
+  }, [allSignals, signalSearch, selectedSignals])
+
+  const addSignal = useCallback((sig: string) => {
+    setSelectedSignals(prev => prev.includes(sig) ? prev : [...prev, sig])
+    setSignalSearch('')
+  }, [])
+
+  const removeSignal = useCallback((sig: string) => {
+    setSelectedSignals(prev => prev.filter(s => s !== sig))
+  }, [])
+
+  // Preset buttons set the datetime inputs
+  function applyPreset(hours: number) {
+    const end = new Date()
+    const start = new Date(end.getTime() - hours * 3600_000)
+    setFromStr(toLocalDatetimeStr(start))
+    setToStr(toLocalDatetimeStr(end))
   }
 
-  const getValueType = (entry: SignalLogEntry): string => {
-    if (entry.value_num != null) return 'number'
-    if (entry.value_str != null) return 'string'
-    if (entry.value_bool != null) return 'boolean'
-    return 'null'
+  // Build query on button click
+  function handleQuery() {
+    if (selectedSignals.length === 0) return
+    const fromUTC = new Date(fromStr).toISOString()
+    const toUTC = new Date(toStr).toISOString()
+    setPage(1)
+    setQueryParams({ signals: selectedSignals, from: fromUTC, to: toUTC, page: 1, perPage })
   }
 
-  const typeColor: Record<string, string> = {
-    number: 'text-neon-cyan',
-    string: 'text-neon-green',
-    boolean: 'text-neon-amber',
-    null: 'text-[var(--text-muted)]',
+  // Keep queryParams page/perPage in sync when paginating after initial query
+  function goToPage(p: number) {
+    setPage(p)
+    if (queryParams) setQueryParams({ ...queryParams, page: p, perPage })
   }
 
-  const currentLiveRaw = selectedSignal && liveData?.signals
-    ? liveData.signals[selectedSignal]
-    : null
-  const currentLiveValue = currentLiveRaw != null && typeof currentLiveRaw === 'object' && 'value' in (currentLiveRaw as Record<string, unknown>)
-    ? (currentLiveRaw as Record<string, unknown>).value
-    : currentLiveRaw
+  // Fetch history
+  const { data: historyResp, isLoading, isFetching } = useQuery<HistoryResponse>({
+    queryKey: ['signal-history', queryParams],
+    queryFn: () => {
+      const qp = queryParams!
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        signals: qp.signals.join(','),
+        from: qp.from,
+        to: qp.to,
+        page: String(qp.page),
+        per_page: String(qp.perPage),
+      })
+      return request(`/signals/history?${params}`)
+    },
+    enabled: !!queryParams,
+  })
 
-  const totalRecords = history?.count ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
-
-  const logData: NumberedLogEntry[] = (history?.data ?? []).map((entry, idx) => ({
-    ...entry,
-    _rowNum: (page - 1) * pageSize + idx + 1,
-  }))
-
-  const logColumns: Column<NumberedLogEntry>[] = [
-    { key: 'rowNum', header: '#', render: (row) => <span className="text-[var(--text-muted)] font-mono">{row._rowNum}</span> },
-    { key: 'timestamp', header: 'Timestamp', render: (row) => <span className="font-mono text-[var(--text-secondary)]">{formatDateTime(row.timestamp)}</span> },
-    { key: 'value', header: 'Value', render: (row) => {
-      const valType = getValueType(row)
-      return <span className={clsx('font-mono font-semibold', typeColor[valType])}>{formatValue(row)}</span>
-    }},
-    { key: 'type', header: 'Type', render: (row) => {
-      const valType = getValueType(row)
-      return (
-        <Badge color={valType === 'number' ? 'cyan' : valType === 'string' ? 'green' : valType === 'boolean' ? 'amber' : 'neutral'}>
-          {valType}
-        </Badge>
-      )
-    }},
-  ]
+  const rows = historyResp?.data ?? []
+  const pagination = historyResp?.pagination
+  const totalPages = pagination?.total_pages ?? 1
+  const totalRecords = pagination?.total ?? 0
+  const hasQueried = queryParams !== null
 
   return (
     <FadeIn>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6">
-        <PageHeader
-          title="Signal Log Viewer"
-          subtitle="Browse raw telemetry signal recordings from MongoDB"
-          icon={<Database className="h-7 w-7 text-neon-cyan" />}
-        />
-        {stats && (
-          <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-            <span><Database className="inline h-3 w-3 mr-1" />{(stats.count ?? 0).toLocaleString()} records</span>
-            {stats.oldest && <span><Clock className="inline h-3 w-3 mr-1" />Since {formatDateTime(stats.oldest)}</span>}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Signal Log Viewer"
+        subtitle="Query signal history from Postgres"
+        icon={<Database className="h-7 w-7 text-neon-cyan" />}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Left panel: Signal selector */}
-        <div className="lg:col-span-1">
-          <GlassPanel className="p-3 max-h-[80vh] overflow-y-auto sticky top-4">
-            <div className="mb-3">
-              <Input
-                type="text"
-                placeholder="Filter signals..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                icon={<Search className="h-3.5 w-3.5" />}
-                aria-label="Filter signals"
-              />
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] mb-2">{filteredSignals.length} signals available</p>
-            <div className="space-y-0.5">
-              {filteredSignals.map(sig => {
-                const live = liveData?.signals?.[sig]
-                const raw = live != null && typeof live === 'object' && 'value' in (live as Record<string, unknown>)
-                  ? (live as Record<string, unknown>).value
-                  : live
-                const liveStr = raw != null
-                  ? typeof raw === 'number' ? fmtNumber(raw as number) : String(raw).slice(0, 20)
-                  : null
-                return (
-                  <Button
-                    key={sig}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { setSelectedSignal(sig); setPage(1) }}
-                    className={clsx(
-                      'w-full !justify-start font-mono !text-[11px]',
-                      selectedSignal === sig
-                        ? 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30'
-                        : 'hover:bg-white/[0.03] text-[var(--text-secondary)]'
-                    )}
+      {/* ── Controls ── */}
+      <GlassPanel className="p-4 mb-4 space-y-4">
+        {/* Row 1: Signal multi-select */}
+        <div>
+          <label className="metric-label mb-1.5 block">Signals</label>
+
+          {/* Selected chips */}
+          {selectedSignals.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedSignals.map(sig => (
+                <span
+                  key={sig}
+                  className="inline-flex items-center gap-1 rounded-lg bg-neon-cyan/10 border border-neon-cyan/25 px-2 py-0.5 text-xs font-mono text-neon-cyan"
+                >
+                  {sig}
+                  <button
+                    type="button"
+                    onClick={() => removeSignal(sig)}
+                    className="hover:text-white transition-colors"
+                    aria-label={`Remove ${sig}`}
                   >
-                    <div className="flex justify-between items-center gap-1 w-full">
-                      <span className="truncate">{sig}</span>
-                      {liveStr && (
-                        <span className="text-[9px] text-[var(--text-muted)] truncate max-w-[60px] shrink-0">{liveStr}</span>
-                      )}
-                    </div>
-                  </Button>
-                )
-              })}
-              {filteredSignals.length === 0 && (
-                <p className="text-xs text-[var(--text-muted)] text-center py-4">No signals match filter</p>
-              )}
-            </div>
-          </GlassPanel>
-        </div>
-
-        {/* Right panel: Data table */}
-        <div className="lg:col-span-4 space-y-3">
-          {/* Controls bar */}
-          <GlassPanel className="p-3">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Time range */}
-              <div className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                {TIME_RANGES.map(tr => (
-                  <Button key={tr.label} variant="ghost" size="sm" onClick={() => { setTimeRange(tr.hours); setPage(1) }}
-                    className={clsx('!px-2 !py-1 !rounded !text-[10px]',
-                      timeRange === tr.hours
-                        ? 'bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
-                    )}>
-                    {tr.label}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Page size */}
-              <div className="flex items-center gap-1 ml-auto">
-                <span className="text-[10px] text-[var(--text-muted)]">Rows:</span>
-                <Select value={String(pageSize)} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
-                  options={PAGE_SIZES.map(s => ({ value: String(s), label: String(s) }))} />
-              </div>
-
-              {/* Record count */}
-              {history && (
-                <span className="text-[10px] text-[var(--text-muted)]">
-                  {totalRecords.toLocaleString()} records
+                    <X className="h-3 w-3" />
+                  </button>
                 </span>
-              )}
+              ))}
             </div>
-          </GlassPanel>
-
-          {/* Current value banner */}
-          {selectedSignal && currentLiveValue != null && (
-            <GlassPanel className="p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-neon-green animate-pulse" />
-                <span className="text-xs text-[var(--text-muted)]">Live value:</span>
-                <span className="text-sm font-bold font-mono text-neon-cyan">
-                  {typeof currentLiveValue === 'number' ? fmtNumber(currentLiveValue)
-                    : typeof currentLiveValue === 'boolean' ? (currentLiveValue ? 'true' : 'false')
-                    : String(currentLiveValue)}
-                </span>
-              </div>
-              <span className="text-[10px] text-[var(--text-muted)] font-mono">{selectedSignal}</span>
-            </GlassPanel>
           )}
 
-          {/* Data table */}
-          {selectedSignal ? (
-            <GlassPanel className="overflow-hidden">
-              {isLoading || isFetching ? (
-                <div className="p-8 text-center text-[var(--text-muted)]">Loading...</div>
-              ) : logData.length > 0 ? (
-                <>
-                  <DataTable
-                    columns={logColumns}
-                    data={logData}
-                    keyExtractor={(row) => row._rowNum}
-                    compact
-                  />
-                  {/* Pagination */}
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
-                    <span className="text-[10px] text-[var(--text-muted)]">
-                      Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalRecords)} of {totalRecords.toLocaleString()}
-                    </span>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setPage(1)} disabled={page <= 1}>First</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>Prev</Button>
-                      <span className="px-3 py-1 text-[10px] text-[var(--text-primary)]">{page} / {totalPages}</span>
-                      <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
-                      <Button variant="ghost" size="sm" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>Last</Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="p-8 text-center text-[var(--text-muted)]">
-                  <Database className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p>No records for this time range</p>
-                </div>
-              )}
-            </GlassPanel>
-          ) : (
-            <GlassPanel className="p-12 text-center">
-              <Filter className="h-10 w-10 mx-auto mb-3 text-[var(--text-muted)] opacity-30" />
-              <p className="text-[var(--text-muted)]">Select a signal from the list to view its recorded values</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">{allSignals.length} signals available</p>
-            </GlassPanel>
-          )}
+          {/* Searchable dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <Input
+              type="text"
+              placeholder={selectedSignals.length ? 'Add more signals…' : 'Search signals…'}
+              value={signalSearch}
+              onChange={e => { setSignalSearch(e.target.value); setDropdownOpen(true) }}
+              onFocus={() => setDropdownOpen(true)}
+              icon={<Search className="h-3.5 w-3.5" />}
+              aria-label="Search signals"
+            />
+            {dropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-1)] backdrop-blur-xl shadow-2xl">
+                {filteredDropdown.length === 0 ? (
+                  <p className="px-3 py-4 text-xs text-[var(--text-muted)] text-center">
+                    {allSignals.length === 0 ? 'Loading signals…' : 'No matching signals'}
+                  </p>
+                ) : (
+                  filteredDropdown.map(sig => (
+                    <button
+                      key={sig}
+                      type="button"
+                      onClick={() => { addSignal(sig); setDropdownOpen(true) }}
+                      className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      {sig}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+
+        {/* Row 2: DateTime range + presets + rows per page + query button */}
+        <div className="flex flex-wrap items-end gap-3">
+          {/* From */}
+          <div className="space-y-1.5">
+            <label className="metric-label">From</label>
+            <input
+              type="datetime-local"
+              step="1"
+              value={fromStr}
+              onChange={e => setFromStr(e.target.value)}
+              className="glass-input text-xs font-mono"
+            />
+          </div>
+
+          {/* To */}
+          <div className="space-y-1.5">
+            <label className="metric-label">To</label>
+            <input
+              type="datetime-local"
+              step="1"
+              value={toStr}
+              onChange={e => setToStr(e.target.value)}
+              className="glass-input text-xs font-mono"
+            />
+          </div>
+
+          {/* Quick presets */}
+          <div className="flex items-center gap-1 self-end">
+            <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+            {TIME_PRESETS.map(tp => (
+              <Button
+                key={tp.label}
+                variant="ghost"
+                size="sm"
+                onClick={() => applyPreset(tp.hours)}
+                className="!px-2 !py-1 !rounded !text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent"
+              >
+                {tp.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Rows per page */}
+          <div className="flex items-center gap-1 self-end">
+            <span className="text-[10px] text-[var(--text-muted)]">Rows:</span>
+            <Select
+              value={String(perPage)}
+              onChange={e => setPerPage(Number(e.target.value))}
+              options={PAGE_SIZES.map(s => ({ value: String(s), label: String(s) }))}
+            />
+          </div>
+
+          {/* Query button */}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleQuery}
+            disabled={selectedSignals.length === 0 || isFetching}
+            loading={isFetching}
+            icon={isFetching ? undefined : <Play className="h-3.5 w-3.5" />}
+            className="self-end"
+          >
+            Query
+          </Button>
+        </div>
+      </GlassPanel>
+
+      {/* ── Results ── */}
+      {!hasQueried ? (
+        <EmptyState
+          icon={<Database className="h-10 w-10" />}
+          title="Select signals and click Query"
+          description="Choose one or more signals, set a date range, then hit Query to browse signal history."
+        />
+      ) : isLoading ? (
+        <GlassPanel className="p-6 space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </GlassPanel>
+      ) : rows.length === 0 ? (
+        <GlassPanel className="p-12 text-center">
+          <Database className="h-8 w-8 mx-auto mb-2 opacity-30 text-[var(--text-muted)]" />
+          <p className="text-[var(--text-muted)]">No records found for the selected signals and time range</p>
+        </GlassPanel>
+      ) : (
+        <GlassPanel className="overflow-hidden">
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-white/[0.02]">
+                  <th className="px-3 py-2 font-semibold text-[var(--text-muted)] w-12">#</th>
+                  <th className="px-3 py-2 font-semibold text-[var(--text-muted)]">Timestamp</th>
+                  <th className="px-3 py-2 font-semibold text-[var(--text-muted)]">Signal</th>
+                  <th className="px-3 py-2 font-semibold text-[var(--text-muted)]">Value</th>
+                  <th className="px-3 py-2 font-semibold text-[var(--text-muted)] w-20">Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((entry, idx) => {
+                  const rowNum = ((pagination?.page ?? 1) - 1) * (pagination?.per_page ?? perPage) + idx + 1
+                  const vt = getValueType(entry)
+                  return (
+                    <tr key={idx} className="border-b border-[var(--border)] hover:bg-white/[0.02] transition-colors">
+                      <td className="px-3 py-2 font-mono text-[var(--text-muted)]">{rowNum}</td>
+                      <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">{formatTimestampMs(entry.timestamp)}</td>
+                      <td className="px-3 py-2 font-mono text-[var(--text-primary)]">{entry.signal}</td>
+                      <td className={clsx('px-3 py-2 font-mono font-semibold', TYPE_VALUE_COLOR[vt])}>{formatValue(entry)}</td>
+                      <td className="px-3 py-2"><Badge color={TYPE_BADGE_COLOR[vt]}>{vt}</Badge></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
+            <span className="text-[10px] text-[var(--text-muted)]">
+              Showing {((pagination?.page ?? 1) - 1) * (pagination?.per_page ?? perPage) + 1}–{Math.min((pagination?.page ?? 1) * (pagination?.per_page ?? perPage), totalRecords)} of {totalRecords.toLocaleString()}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={() => goToPage(1)} disabled={page <= 1} icon={<ChevronsLeft className="h-3.5 w-3.5" />}>First</Button>
+              <Button variant="ghost" size="sm" onClick={() => goToPage(page - 1)} disabled={page <= 1} icon={<ChevronLeft className="h-3.5 w-3.5" />}>Prev</Button>
+              <span className="px-3 py-1 text-[10px] text-[var(--text-primary)]">Page {page} of {totalPages}</span>
+              <Button variant="ghost" size="sm" onClick={() => goToPage(page + 1)} disabled={page >= totalPages} icon={<ChevronRight className="h-3.5 w-3.5" />}>Next</Button>
+              <Button variant="ghost" size="sm" onClick={() => goToPage(totalPages)} disabled={page >= totalPages} icon={<ChevronsRight className="h-3.5 w-3.5" />}>Last</Button>
+            </div>
+          </div>
+        </GlassPanel>
+      )}
     </FadeIn>
   )
 }
