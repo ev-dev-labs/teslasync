@@ -1223,53 +1223,12 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-const (
-	milesToKm = 1.60934
-	mphToKmh  = 1.60934
-)
-
-// normalizeFleetUnits converts Tesla Fleet Telemetry signals from their native
-// units (miles, mph) to the metric units the system stores (km, km/h).
-// Temperatures (Celsius) and pressure (bar) are already metric.
+// normalizeFleetSignals normalizes Tesla Fleet Telemetry signal formats.
+// Raw values are stored AS-IS (no unit conversion) — conversion happens at display time.
+// Only format normalization is done here (e.g., Gear enum → single letter).
 func normalizeFleetUnits(signals map[string]interface{}) {
-	// Speed: mph → km/h
-	if v, ok := toFloatOk(signals["VehicleSpeed"]); ok {
-		signals["VehicleSpeed"] = v * mphToKmh
-	}
-	if v, ok := toFloatOk(signals["CruiseSetSpeed"]); ok {
-		signals["CruiseSetSpeed"] = v * mphToKmh
-	}
-	if v, ok := toFloatOk(signals["CurrentLimitMph"]); ok {
-		signals["CurrentLimitMph"] = v * mphToKmh
-	}
-
-	// Distance: miles → km
-	// Odometer is documented as miles: "The number of miles the vehicle has driven."
-	// https://developer.tesla.com/docs/fleet-api/fleet-telemetry/available-data
-	if v, ok := toFloatOk(signals["Odometer"]); ok {
-		signals["Odometer"] = v * milesToKm
-	}
-	if v, ok := toFloatOk(signals["EstBatteryRange"]); ok {
-		signals["EstBatteryRange"] = v * milesToKm
-	}
-	if v, ok := toFloatOk(signals["IdealBatteryRange"]); ok {
-		signals["IdealBatteryRange"] = v * milesToKm
-	}
-	if v, ok := toFloatOk(signals["RatedRange"]); ok {
-		signals["RatedRange"] = v * milesToKm
-	}
-	if v, ok := toFloatOk(signals["MilesToArrival"]); ok {
-		signals["MilesToArrival"] = v * milesToKm
-	}
-
-	// Charge rate: mph → km/h
-	if v, ok := toFloatOk(signals["ChargeRateMilePerHour"]); ok {
-		signals["ChargeRateMilePerHour"] = v * mphToKmh
-	}
-
-	// Gear: Tesla Fleet Telemetry sends "ShiftStateD", "ShiftStateR",
-	// "ShiftStateP", "ShiftStateN" — normalize to single-letter D/R/P/N
-	// that the frontend and REST API path use.
+	// Gear: Tesla sends "ShiftStateD", "ShiftStateR", "ShiftStateP", "ShiftStateN"
+	// Normalize to single-letter D/R/P/N for the frontend and state machine.
 	if g, ok := signals["Gear"]; ok {
 		gs := strings.TrimPrefix(toString(g), "ShiftState")
 		switch {
@@ -1283,6 +1242,10 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 			signals["Gear"] = "N"
 		}
 	}
+	// NOTE: No unit conversions. Tesla sends:
+	// - Distance/Odometer in miles, Speed in mph, Ranges in miles
+	// - Temperature in °C, Pressure in PSI, Energy in kWh
+	// All stored raw. Frontend converts using vehicle_units + user settings.
 }
 
 func toFloat(v interface{}) float64 {
@@ -2525,6 +2488,24 @@ func (h *TelemetryHandler) trackUserPreferences(ctx context.Context, vehicleID i
 	}
 	if err := h.userPrefRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store user preference snapshot")
+	}
+
+	// Update vehicle_units with car display preferences
+	if hasDist || hasTemp || hasPressure || hasCharge {
+		distPref := toString(signals["SettingDistanceUnit"])
+		tempPref := toString(signals["SettingTemperatureUnit"])
+		pressurePref := toString(signals["SettingTirePressureUnit"])
+		chargePref := toString(signals["SettingChargeUnit"])
+		_, _ = h.db.Pool.Exec(ctx,
+			`INSERT INTO vehicle_units (vehicle_id, car_distance_pref, car_temp_pref, car_pressure_pref, car_charge_pref, updated_at)
+			 VALUES ($1, NULLIF($2,''), NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NOW())
+			 ON CONFLICT (vehicle_id) DO UPDATE SET
+			   car_distance_pref = COALESCE(NULLIF($2,''), vehicle_units.car_distance_pref),
+			   car_temp_pref = COALESCE(NULLIF($3,''), vehicle_units.car_temp_pref),
+			   car_pressure_pref = COALESCE(NULLIF($4,''), vehicle_units.car_pressure_pref),
+			   car_charge_pref = COALESCE(NULLIF($5,''), vehicle_units.car_charge_pref),
+			   updated_at = NOW()`,
+			vehicleID, distPref, tempPref, pressurePref, chargePref)
 	}
 }
 

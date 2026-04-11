@@ -52,20 +52,23 @@ export function useSettings() {
   const isMiles = s.unit_of_length === 'mi'
   const isFahrenheit = s.unit_of_temp === 'F'
 
-  /** Convert km to user's preferred distance unit */
-  const convertDistance = (km: number): number => isMiles ? km * 0.621371 : km
+  // DB stores raw Tesla values: miles, mph, °C, PSI.
+  // Convert to user's preferred display unit.
 
-  /** Convert km/h to user's preferred speed unit */
-  const convertSpeed = (kmh: number): number => isMiles ? kmh * 0.621371 : kmh
+  /** Convert miles (DB) to user's preferred distance unit */
+  const convertDistance = (mi: number): number => isMiles ? mi : mi * 1.60934
 
-  /** Convert Celsius to user's preferred temperature unit */
+  /** Convert mph (DB) to user's preferred speed unit */
+  const convertSpeed = (mph: number): number => isMiles ? mph : mph * 1.60934
+
+  /** Convert Celsius (DB) to user's preferred temperature unit */
   const convertTemp = (celsius: number): number => isFahrenheit ? celsius * 9 / 5 + 32 : celsius
 
-  /** Convert Wh/km to Wh/mi if user prefers miles */
-  const convertEfficiency = (whPerKm: number): number => isMiles ? whPerKm * 1.60934 : whPerKm
+  /** Convert Wh/mi (DB) to user's preferred efficiency unit */
+  const convertEfficiency = (whPerMi: number): number => isMiles ? whPerMi : whPerMi / 1.60934
 
-  /** Convert bar to psi if user prefers miles (imperial) */
-  const convertPressure = (bar: number): number => isMiles ? bar * 14.5038 : bar
+  /** Convert PSI (DB) to user's preferred pressure unit */
+  const convertPressure = (psi: number): number => isMiles ? psi : psi * 0.06895
 
   const distanceUnit = isMiles ? 'mi' : 'km'
   const speedUnit = isMiles ? 'mph' : 'km/h'
@@ -74,15 +77,15 @@ export function useSettings() {
   const pressureUnit = isMiles ? 'psi' : 'bar'
   const rangeType = s.preferred_range as 'rated' | 'ideal'
 
-  /** Format a distance value with unit */
-  const fmtDistance = (km: number, d?: number): string =>
-    `${fmtNumber(convertDistance(km), d)} ${distanceUnit}`
+  /** Format a distance value with unit (input: miles from DB) */
+  const fmtDistance = (mi: number, d?: number): string =>
+    `${fmtNumber(convertDistance(mi), d)} ${distanceUnit}`
 
-  /** Format a speed value with unit */
-  const fmtSpeed = (kmh: number, d?: number): string =>
-    `${fmtNumber(convertSpeed(kmh), d)} ${speedUnit}`
+  /** Format a speed value with unit (input: mph from DB) */
+  const fmtSpeed = (mph: number, d?: number): string =>
+    `${fmtNumber(convertSpeed(mph), d)} ${speedUnit}`
 
-  /** Format a temperature value with unit */
+  /** Format a temperature value with unit (input: °C from DB) */
   const fmtTemp = (celsius: number, d?: number): string =>
     `${fmtNumber(convertTemp(celsius), d)} ${tempUnit}`
 
