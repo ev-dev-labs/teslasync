@@ -681,7 +681,7 @@ export default function Maintenance() {
                     </GlassPanel>
                   )
                 })}
-              {projections.filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0).length === 0 && (
+              {projections && projections.filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0).length === 0 && (
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   All items are overdue or have no mileage interval.
                 </p>
