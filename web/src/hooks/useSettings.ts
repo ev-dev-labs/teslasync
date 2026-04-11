@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSettings, type AppSettings } from '../api'
 import { setGlobalPrecision, fmtNumber } from '../lib/numberFormat'
+import { UNITS } from '../lib/constants'
 
 const defaults: AppSettings = {
   unit_of_length: 'km',
@@ -56,19 +57,19 @@ export function useSettings() {
   // Convert to user's preferred display unit.
 
   /** Convert miles (DB) to user's preferred distance unit */
-  const convertDistance = (mi: number): number => isMiles ? mi : mi * 1.60934
+  const convertDistance = (mi: number): number => isMiles ? mi : mi * UNITS.MI_TO_KM
 
   /** Convert mph (DB) to user's preferred speed unit */
-  const convertSpeed = (mph: number): number => isMiles ? mph : mph * 1.60934
+  const convertSpeed = (mph: number): number => isMiles ? mph : mph * UNITS.MI_TO_KM
 
   /** Convert Celsius (DB) to user's preferred temperature unit */
   const convertTemp = (celsius: number): number => isFahrenheit ? celsius * 9 / 5 + 32 : celsius
 
   /** Convert Wh/mi (DB) to user's preferred efficiency unit */
-  const convertEfficiency = (whPerMi: number): number => isMiles ? whPerMi : whPerMi / 1.60934
+  const convertEfficiency = (whPerMi: number): number => isMiles ? whPerMi : whPerMi * UNITS.KM_TO_MI
 
   /** Convert PSI (DB) to user's preferred pressure unit */
-  const convertPressure = (psi: number): number => isMiles ? psi : psi * 0.06895
+  const convertPressure = (psi: number): number => isMiles ? psi : psi * UNITS.PSI_TO_BAR
 
   const distanceUnit = isMiles ? 'mi' : 'km'
   const speedUnit = isMiles ? 'mph' : 'km/h'

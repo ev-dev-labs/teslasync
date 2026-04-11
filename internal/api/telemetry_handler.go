@@ -656,50 +656,50 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 
 	if gear != "" {
 		switch gear {
-		case "D", "R":
-			return "driving"
-		case "P":
+		case enums.GearDrive, enums.GearReverse:
+			return enums.StateDriving
+		case enums.GearPark:
 			// Check for active charging — Gear=P + charging = "charging"
 			if dcs, ok := signals["DetailedChargeState"]; ok {
 				if enums.IsCharging(toString(dcs)) {
-					return "charging"
+					return enums.StateCharging
 				}
 			}
 			if cs, ok := signals["ChargeState"]; ok {
 				if enums.IsCharging(toString(cs)) {
-					return "charging"
+					return enums.StateCharging
 				}
 			}
 			if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
-				return "charging"
+				return enums.StateCharging
 			}
-			return "parked"
-		case "N":
-			return "online"
+			return enums.StateParked
+		case enums.GearNeutral:
+			return enums.StateOnline
 		}
 	}
 
 	// Fallback: speed-based detection (REST API polling path, no Gear available)
 	if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 1.0 {
-		return "driving"
+		return enums.StateDriving
 	}
 
 	// Fallback: charging signals
 	if dcs, ok := signals["DetailedChargeState"]; ok {
 		if enums.IsCharging(toString(dcs)) {
-			return "charging"
+			return enums.StateCharging
 		}
 	}
 	if cs, ok := signals["ChargeState"]; ok {
 		if enums.IsCharging(toString(cs)) {
-			return "charging"
+			return enums.StateCharging
 		}
 	}
 	if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
-		return "charging"
+		return enums.StateCharging
 	}
 
-	return "online"
+	return enums.StateOnline
 }
 
 // trackStateTransition determines vehicle state from signals and commits transitions.

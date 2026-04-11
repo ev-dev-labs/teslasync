@@ -7,30 +7,30 @@ import "strings"
 
 // ParseGear normalizes Tesla ShiftState enum to single letter.
 func ParseGear(raw string) string {
-	g := strings.TrimPrefix(raw, "ShiftState")
+	g := strings.TrimPrefix(raw, PrefixShiftState)
 	switch {
-	case g == "D" || strings.Contains(g, "Drive"):
-		return "D"
-	case g == "R" || strings.Contains(g, "Reverse"):
-		return "R"
-	case g == "P" || strings.Contains(g, "Park"):
-		return "P"
-	case g == "N" || strings.Contains(g, "Neutral"):
-		return "N"
+	case g == GearDrive || strings.Contains(g, "Drive"):
+		return GearDrive
+	case g == GearReverse || strings.Contains(g, "Reverse"):
+		return GearReverse
+	case g == GearPark || strings.Contains(g, "Park"):
+		return GearPark
+	case g == GearNeutral || strings.Contains(g, "Neutral"):
+		return GearNeutral
 	}
 	return ""
 }
 
 // IsCharging checks if a DetailedChargeState/ChargeState indicates active charging.
 func IsCharging(raw string) bool {
-	return strings.Contains(raw, "Charging") ||
-		strings.Contains(raw, "Starting") ||
+	return strings.Contains(raw, ChargeStateCharging) ||
+		strings.Contains(raw, ChargeStateStarting) ||
 		raw == "Enable"
 }
 
 // IsChargeComplete checks if charging has finished.
 func IsChargeComplete(raw string) bool {
-	return strings.Contains(raw, "Complete")
+	return strings.Contains(raw, ChargeStateComplete)
 }
 
 // ParseEnumBool converts a Tesla enum string/bool/number to boolean.
