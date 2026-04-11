@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { getVehicles, getFleetAnalytics, getBatteryReport, getMileageStats, getVisitedLocations, Vehicle } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, DataTable, type Column } from '../components/ui'
 import { GitCompare, Check, AlertTriangle } from 'lucide-react'
@@ -41,32 +41,29 @@ export default function Compare() {
     enabled: selected.length >= 2,
   })
 
-  const batteryQueries = selected.map(id =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useQuery({
+  const batteryQueries = useQueries({
+    queries: selected.map(id => ({
       queryKey: ['battery-report', id],
       queryFn: () => getBatteryReport(id),
       enabled: selected.length >= 2,
-    })
-  )
+    })),
+  })
 
-  const mileageQueries = selected.map(id =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useQuery({
+  const mileageQueries = useQueries({
+    queries: selected.map(id => ({
       queryKey: ['mileage-stats', id],
       queryFn: () => getMileageStats(id),
       enabled: selected.length >= 2,
-    })
-  )
+    })),
+  })
 
-  const locationQueries = selected.map(id =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useQuery({
+  const locationQueries = useQueries({
+    queries: selected.map(id => ({
       queryKey: ['visited-locations', id],
       queryFn: () => getVisitedLocations(id, 1),
       enabled: selected.length >= 2,
-    })
-  )
+    })),
+  })
 
   const toggleVehicle = (id: number) => {
     setSelected(prev => {
