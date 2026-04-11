@@ -54,12 +54,25 @@ func (e *TelemetryAlertEvaluator) LoadState(ctx context.Context) {
 }
 
 // Evaluate checks all alert rules against the given signals for a vehicle.
-func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+// accumulatedSignals contains last-known values from recent batches — used as
+// fallback for legacy rules when a signal isn't in the current sparse batch.
+func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals, accumulatedSignals map[string]interface{}) {
 	evalStart := time.Now()
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("cep: failed to load alert rules, skipping evaluation")
 		return
+	}
+
+	// Build enriched signal map: accumulated (last-known) values overlaid with
+	// current batch so legacy rules can evaluate even when the target signal
+	// wasn't in this specific sparse batch.
+	enriched := make(map[string]interface{}, len(accumulatedSignals)+len(signals))
+	for k, v := range accumulatedSignals {
+		enriched[k] = v
+	}
+	for k, v := range signals {
+		enriched[k] = v // current batch takes precedence
 	}
 
 	enabledCount := 0
@@ -82,7 +95,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 			message = result.Message
 		} else {
 			metrics.AlertsEvaluated.Inc()
-			triggered, message = e.evaluateLegacy(rule, signals)
+			triggered, message = e.evaluateLegacy(rule, enriched)
 		}
 
 		if triggered {

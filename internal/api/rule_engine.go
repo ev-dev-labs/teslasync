@@ -137,8 +137,18 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	st.ConditionTrueSince = nil // reset after firing
 	e.mu.Unlock()
 
-	// Render message template
-	message := renderTemplate(rule.MsgTemplate, signals)
+	// Render message template — merge prevSignals with current batch so template
+	// variables resolve even when the signal was from a recent (but not current) batch
+	mergedSignals := make(map[string]interface{}, len(signals))
+	if prevSignals != nil {
+		for k, v := range prevSignals {
+			mergedSignals[k] = v
+		}
+	}
+	for k, v := range signals {
+		mergedSignals[k] = v
+	}
+	message := renderTemplate(rule.MsgTemplate, mergedSignals)
 	if message == "" {
 		message = rule.Name
 	}
@@ -245,7 +255,16 @@ func evalNode(node *models.RuleCondition, signals, prevSignals map[string]interf
 		if node.Compare == "changed_to" || node.Compare == "changed_from" {
 			return false // can't detect change without current value
 		}
-		return false
+		// Fall back to last-known value from previous batches (accumulated across sparse deliveries).
+		// Tesla delta-streams only changed values, so a signal may be absent from this batch
+		// but still valid from a recent batch. prevSignals accumulates across batches.
+		if prev, hasPrev := prevSignals[node.Signal]; hasPrev {
+			current = prev
+			hasCurrent = true
+		}
+		if !hasCurrent {
+			return false
+		}
 	}
 
 	switch node.Compare {

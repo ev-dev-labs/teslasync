@@ -475,7 +475,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 		h.accumulatedSignalsMu.Unlock()
 
 		h.sessionTracker.ProcessSignals(ctx, vehicleID, vin, signals, accum)
-		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals)
+		h.alertEvaluator.Evaluate(ctx, vehicleID, vin, signals, accum)
 	}
 
 	// --- Immediate gear-based state tracking ---
