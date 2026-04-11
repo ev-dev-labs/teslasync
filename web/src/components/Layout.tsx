@@ -349,14 +349,16 @@ export default function Layout() {
           </span>
         </NavLink>
 
+        {/* Sticky search trigger */}
+        <div className="px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
+          <CommandPaletteTrigger />
+        </div>
+
         {/* Navigation */}
         <nav 
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-4 px-3 space-y-6 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
-        >          {/* Search trigger */}
-          <div className="px-1 mb-2">
-            <CommandPaletteTrigger />
-          </div>
+        >
 
           {navSections.map(section => (
             <div key={section.title}>
