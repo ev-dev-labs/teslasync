@@ -276,6 +276,60 @@ func accumulateSignals(acc map[string]interface{}, signals map[string]interface{
 	return acc
 }
 
+// resolveFloat gets a float signal from batch → accumulated → SignalStore (last-known).
+func (t *TelemetrySessionTracker) resolveFloat(vehicleID int64, signals, accum map[string]interface{}, keys ...string) (float64, bool) {
+	if v, ok := signalFloat(signals, keys...); ok {
+		return v, true
+	}
+	if v, ok := signalFloat(accum, keys...); ok {
+		return v, true
+	}
+	if t.signalStore != nil {
+		for _, k := range keys {
+			if v, ok := t.signalStore.GetFloat(vehicleID, k); ok {
+				return v, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// resolveInt gets an int signal from batch → accumulated → SignalStore.
+func (t *TelemetrySessionTracker) resolveInt(vehicleID int64, signals, accum map[string]interface{}, keys ...string) (int, bool) {
+	if v, ok := signalInt(signals, keys...); ok {
+		return v, true
+	}
+	if v, ok := signalInt(accum, keys...); ok {
+		return v, true
+	}
+	if t.signalStore != nil {
+		for _, k := range keys {
+			if fv, ok := t.signalStore.GetFloat(vehicleID, k); ok {
+				return int(fv), true
+			}
+		}
+	}
+	return 0, false
+}
+
+// resolveLatLon gets location from batch → accumulated → SignalStore.
+func (t *TelemetrySessionTracker) resolveLatLon(vehicleID int64, signals, accum map[string]interface{}) (float64, float64, bool) {
+	if lat, lon, ok := signalLatLon(signals); ok {
+		return lat, lon, true
+	}
+	if lat, lon, ok := signalLatLon(accum); ok {
+		return lat, lon, true
+	}
+	if t.signalStore != nil {
+		lat, latOk := t.signalStore.GetFloat(vehicleID, "Latitude")
+		lon, lonOk := t.signalStore.GetFloat(vehicleID, "Longitude")
+		if latOk && lonOk && lat != 0 && lon != 0 {
+			return lat, lon, true
+		}
+	}
+	return 0, 0, false
+}
+
 // ProcessSignals evaluates incoming telemetry signals for drive/charge transitions.
 // accumulatedSignals contains the merged set of all signals seen in the handler's
 // current accumulation window — used to fill in start values (battery, odometer,
@@ -506,42 +560,15 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 
 // startDriveLocked creates a new drive session. Must be called with t.mu held.
 func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool) {
-	batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
-	if !hasBat {
-		batteryLevel, hasBat = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
-	}
-	odometer, hasOdo := signalFloat(signals, "Odometer")
-	if !hasOdo {
-		odometer, hasOdo = signalFloat(accumulatedSignals, "Odometer")
-	}
-	lat, lon, hasLoc := signalLatLon(signals)
-	if !hasLoc {
-		lat, lon, hasLoc = signalLatLon(accumulatedSignals)
-	}
-	elevation, hasElev := signalFloat(signals, "Elevation")
-	if !hasElev {
-		elevation, _ = signalFloat(accumulatedSignals, "Elevation")
-	}
-	ratedRange, hasRR := signalFloat(signals, "RatedRange")
-	if !hasRR {
-		ratedRange, _ = signalFloat(accumulatedSignals, "RatedRange")
-	}
-	idealRange, hasIR := signalFloat(signals, "IdealBatteryRange")
-	if !hasIR {
-		idealRange, _ = signalFloat(accumulatedSignals, "IdealBatteryRange")
-	}
-	estRange, hasER := signalFloat(signals, "EstBatteryRange")
-	if !hasER {
-		estRange, _ = signalFloat(accumulatedSignals, "EstBatteryRange")
-	}
-	soc, hasSoc := signalFloat(signals, "Soc", "BatteryLevel")
-	if !hasSoc {
-		soc, _ = signalFloat(accumulatedSignals, "Soc", "BatteryLevel")
-	}
-	usableSoc, hasUS := signalFloat(signals, "UsableSoc")
-	if !hasUS {
-		usableSoc, _ = signalFloat(accumulatedSignals, "UsableSoc")
-	}
+	batteryLevel, hasBat := t.resolveInt(vehicleID, signals, accumulatedSignals, "BatteryLevel", "Soc")
+	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
+	lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
+	elevation, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Elevation")
+	ratedRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "RatedRange")
+	idealRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "IdealBatteryRange")
+	estRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "EstBatteryRange")
+	soc, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Soc", "BatteryLevel")
+	usableSoc, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "UsableSoc")
 
 	drive := &models.Drive{
 		VehicleID: vehicleID,
@@ -811,11 +838,19 @@ func (t *TelemetrySessionTracker) updateDriveSocStats(active *streamingDrive, si
 }
 
 func (t *TelemetrySessionTracker) updateDriveTempStats(active *streamingDrive, signals map[string]interface{}) {
-	if it, ok := signalFloat(signals, "InsideTemp"); ok {
+	it, hasIT := signalFloat(signals, "InsideTemp")
+	if !hasIT && t.signalStore != nil {
+		it, hasIT = t.signalStore.GetFloat(active.VehicleID, "InsideTemp")
+	}
+	ot, hasOT := signalFloat(signals, "OutsideTemp")
+	if !hasOT && t.signalStore != nil {
+		ot, hasOT = t.signalStore.GetFloat(active.VehicleID, "OutsideTemp")
+	}
+	if hasIT {
 		active.InsideTempSum += it
 		active.TempCount++
 	}
-	if ot, ok := signalFloat(signals, "OutsideTemp"); ok {
+	if hasOT {
 		active.OutsideTempSum += ot
 	}
 	if dt, ok := signalFloat(signals, "DriverSeatTemp", "DriverTemp"); ok {
@@ -924,11 +959,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	endBattery := 0
-	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
+	if bl, ok := t.resolveInt(vehicleID, finalSignals, active.accumulatedSignals, "BatteryLevel", "Soc"); ok {
 		endBattery = bl
 	} else if active.SocCount > 0 && active.SocMin < math.MaxFloat64 {
-		// Fallback: use the last SOC reading from the accumulator when
-		// the final signal batch doesn't contain BatteryLevel.
 		endBattery = int(active.SocMin)
 	} else if active.StartSoc != nil {
 		endBattery = int(*active.StartSoc)
@@ -973,14 +1006,14 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		endLon = active.LastLongitude
 	}
 
-	// Get end ranges/SOC
+	// Get end ranges/SOC — fall back to accumulated signals → SignalStore
 	var endRatedRange, endIdealRange, endEstRange *float64
 	var endSoc, endUsableSoc *float64
-	if v, ok := signalFloat(finalSignals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
-	if v, ok := signalFloat(finalSignals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
-	if v, ok := signalFloat(finalSignals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
-	if v, ok := signalFloat(finalSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
-	if v, ok := signalFloat(finalSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok { endRatedRange = floatPtr(v) }
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "IdealBatteryRange"); ok { endIdealRange = floatPtr(v) }
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "EstBatteryRange"); ok { endEstRange = floatPtr(v) }
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "Soc", "BatteryLevel"); ok { endSoc = floatPtr(v) }
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "UsableSoc"); ok { endUsableSoc = floatPtr(v) }
 
 	var powerMax, powerMin *float64
 	if active.SpeedCount > 0 {
@@ -1322,19 +1355,10 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	if isCharging && !hasCharge {
 		// === START CHARGE ===
-		// Use accumulated signals from handler as fallback for start values
-		batteryLevel, hasBat := signalInt(signals, "BatteryLevel", "Soc")
-		if !hasBat {
-			batteryLevel, _ = signalInt(accumulatedSignals, "BatteryLevel", "Soc")
-		}
-		lat, lon, hasLoc := signalLatLon(signals)
-		if !hasLoc {
-			lat, lon, hasLoc = signalLatLon(accumulatedSignals)
-		}
-		startRange, hasRange := signalFloat(signals, "RatedRange")
-		if !hasRange {
-			startRange, _ = signalFloat(accumulatedSignals, "RatedRange")
-		}
+		// Use resolve helpers: batch → accumulated → SignalStore
+		batteryLevel, _ := t.resolveInt(vehicleID, signals, accumulatedSignals, "BatteryLevel", "Soc")
+		lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
+		startRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "RatedRange")
 
 		session := &models.ChargingSession{
 			VehicleID:         vehicleID,
@@ -1402,12 +1426,20 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		if v, ok := signalStr(signals, "FastChargerBrand"); ok { active.FastChargerBrand = strPtr(v) }
 		if v, ok := signalStr(signals, "ChargingCableType", "ConnChargeCable"); ok { active.ChargeCable = strPtr(v) }
 
-		// Temperature
-		if it, ok := signalFloat(signals, "InsideTemp"); ok {
+		// Temperature — fall back to SignalStore for sparse batches
+		it, hasIT := signalFloat(signals, "InsideTemp")
+		if !hasIT && t.signalStore != nil {
+			it, hasIT = t.signalStore.GetFloat(vehicleID, "InsideTemp")
+		}
+		ot, hasOT := signalFloat(signals, "OutsideTemp")
+		if !hasOT && t.signalStore != nil {
+			ot, hasOT = t.signalStore.GetFloat(vehicleID, "OutsideTemp")
+		}
+		if hasIT {
 			active.InsideTempSum += it
 			active.TempCount++
 		}
-		if ot, ok := signalFloat(signals, "OutsideTemp"); ok {
+		if hasOT {
 			active.OutsideTempSum += ot
 		}
 
@@ -1488,7 +1520,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 
 	endBattery := 0
-	if bl, ok := signalInt(finalSignals, "BatteryLevel", "Soc"); ok {
+	if bl, ok := t.resolveInt(vehicleID, finalSignals, active.accumulatedSignals, "BatteryLevel", "Soc"); ok {
 		endBattery = bl
 	}
 	duration := time.Since(active.StartTime).Minutes()
@@ -1516,9 +1548,20 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		active.EnergyAdded = estimatedKWh
 	}
 
-	// Get end range
+	// Get end range — fall back to accumulated signals → SignalStore
 	var endRange *float64
-	if v, ok := signalFloat(finalSignals, "RatedRange"); ok { endRange = floatPtr(v) }
+	if v, ok := t.resolveFloat(vehicleID, finalSignals, active.accumulatedSignals, "RatedRange"); ok { endRange = floatPtr(v) }
+
+	// Calculate charge_energy_used (grid energy = added / efficiency)
+	var chargeEnergyUsed *float64
+	if active.EnergyAdded > 0 {
+		efficiency := 0.90 // ~90% for L2
+		if active.FastChargerType != nil {
+			efficiency = 0.95 // ~95% for DC
+		}
+		used := active.EnergyAdded / efficiency
+		chargeEnergyUsed = &used
+	}
 
 	// Temperature averages
 	var insideAvg, outsideAvg *float64
@@ -1535,6 +1578,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	if active.Longitude != nil { enhancedFields["longitude"] = *active.Longitude }
 	if insideAvg != nil { enhancedFields["inside_temp_avg"] = *insideAvg }
 	if outsideAvg != nil { enhancedFields["outside_temp_avg"] = *outsideAvg }
+	if chargeEnergyUsed != nil { enhancedFields["charge_energy_used"] = *chargeEnergyUsed }
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := t.chargeRepo.CompleteWithTx(ctx, tx, active.SessionID, time.Now().UTC(),

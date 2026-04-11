@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -35,6 +36,7 @@ type RouterOptions struct {
 	TelemetryHandler *TelemetryHandler       // If set, reuses existing handler (for hybrid mode wiring)
 	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
 	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
+	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -169,6 +171,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
+
+	// Internal: PreStop flush endpoint for Kubernetes lifecycle hooks
+	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
+		if opt.SignalStore != nil {
+			flushCtx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
+			defer cancel()
+			opt.SignalStore.FlushAll(flushCtx)
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
+	})
 
 	// Metrics
 	r.Handle("/metrics", MetricsHandler())

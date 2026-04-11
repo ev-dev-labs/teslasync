@@ -511,6 +511,7 @@ func main() {
 		TelemetryHandler: telemetryHandler,
 		GasPriceWorker:   gasPriceWorker,
 		PollEngine:       pollEngine,
+		SignalStore:      signalStore,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
