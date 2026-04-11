@@ -25,15 +25,12 @@ type Value struct {
 
 // Store is a concurrent-safe, in-memory store of the latest signal values
 // per vehicle. Updated on every MQTT batch; never loses known values.
+// Write-through: every update is flushed to Postgres immediately.
 type Store struct {
 	mu       sync.RWMutex
 	vehicles map[int64]map[string]*Value
 
 	flusher Flusher
-
-	flushMu    sync.Mutex
-	lastFlush  map[int64]time.Time
-	flushEvery time.Duration
 }
 
 // Flusher persists the in-memory state to a durable store (e.g. Postgres).
@@ -42,22 +39,19 @@ type Flusher interface {
 	LoadLiveState(ctx context.Context, vehicleID int64) (map[string]interface{}, error)
 }
 
-// New creates a new SignalStore. If flusher is nil, no DB persistence occurs.
+// New creates a new SignalStore with write-through persistence.
+// If flusher is nil, no DB persistence occurs.
 func New(flusher Flusher, flushInterval time.Duration) *Store {
-	if flushInterval <= 0 {
-		flushInterval = 5 * time.Second
-	}
 	return &Store{
-		vehicles:   make(map[int64]map[string]*Value),
-		flusher:    flusher,
-		lastFlush:  make(map[int64]time.Time),
-		flushEvery: flushInterval,
+		vehicles: make(map[int64]map[string]*Value),
+		flusher:  flusher,
 	}
 }
 
 // Update merges incoming signals into the vehicle's state. Only non-nil,
 // non-empty values are stored — existing values are never overwritten with nil.
 // This is called on every MQTT batch and must be as fast as possible.
+// Write-through: every batch is flushed to Postgres immediately for zero data loss.
 func (s *Store) Update(vehicleID int64, signals map[string]interface{}) {
 	now := time.Now().UTC()
 
@@ -86,8 +80,9 @@ func (s *Store) Update(vehicleID int64, signals map[string]interface{}) {
 	// Update freshness metric
 	metrics.VehicleLastSeen.WithLabelValues(strconv.FormatInt(vehicleID, 10)).Set(0)
 
-	// Periodic flush to DB (non-blocking check)
-	s.maybeFlush(vehicleID)
+	// Write-through: flush to Postgres on every batch (no timer).
+	// ~1 UPSERT per batch per vehicle — Postgres handles this trivially.
+	s.flushNow(vehicleID)
 }
 
 // GetAll returns a snapshot of all latest signal values for a vehicle.
@@ -209,22 +204,13 @@ func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 	log.Info().Int64("vehicle_id", vehicleID).Int("signals", len(m)).Msg("signal store: loaded from DB")
 }
 
-// maybeFlush flushes to DB if the flush interval has elapsed for this vehicle.
-func (s *Store) maybeFlush(vehicleID int64) {
+// flushNow asynchronously flushes the vehicle's live state to Postgres.
+// Called on every batch for write-through persistence.
+func (s *Store) flushNow(vehicleID int64) {
 	if s.flusher == nil {
 		return
 	}
 
-	s.flushMu.Lock()
-	last := s.lastFlush[vehicleID]
-	if time.Since(last) < s.flushEvery {
-		s.flushMu.Unlock()
-		return
-	}
-	s.lastFlush[vehicleID] = time.Now().UTC()
-	s.flushMu.Unlock()
-
-	// Flush asynchronously to avoid blocking the MQTT handler
 	raw := s.GetRawMap(vehicleID)
 	if raw == nil {
 		return
@@ -238,6 +224,25 @@ func (s *Store) maybeFlush(vehicleID int64) {
 		}
 		metrics.SignalFlushDuration.Observe(time.Since(flushStart).Seconds())
 	}()
+}
+
+// FlushAll synchronously flushes all vehicles' live state to Postgres.
+// Called during graceful shutdown to ensure no data loss.
+func (s *Store) FlushAll(ctx context.Context) {
+	if s.flusher == nil {
+		return
+	}
+	ids := s.VehicleIDs()
+	for _, vid := range ids {
+		raw := s.GetRawMap(vid)
+		if raw == nil {
+			continue
+		}
+		if err := s.flusher.FlushLiveState(ctx, vid, raw); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vid).Msg("signal store: shutdown flush failed")
+		}
+	}
+	log.Info().Int("vehicles", len(ids)).Msg("signal store: graceful shutdown flush complete")
 }
 
 // VehicleIDs returns all vehicle IDs that have signal data.

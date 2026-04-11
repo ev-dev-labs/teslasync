@@ -191,12 +191,13 @@ func main() {
 
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
+	var signalStore *sigsvc.Store
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
 
-		// Initialize SignalStore with Postgres flusher for pod restart recovery
+		// Initialize SignalStore with write-through Postgres flusher
 		liveStateRepo := database.NewLiveStateRepo(db)
-		signalStore := sigsvc.New(liveStateRepo, 5*time.Second)
+		signalStore = sigsvc.New(liveStateRepo, 0)
 		telemetryHandler.SetSignalStore(signalStore)
 
 		// Load existing live state from DB (pod restart recovery)
@@ -505,12 +506,19 @@ func main() {
 	// Phase 1: Stop accepting new work
 	cancel()
 
-	// Phase 2: Shutdown telemetry handler goroutines
+	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
+	if signalStore != nil {
+		flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		signalStore.FlushAll(flushCtx)
+		flushCancel()
+	}
+
+	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {
 		telemetryHandler.Shutdown()
 	}
 
-	// Phase 3: Drain HTTP connections
+	// Phase 4: Drain HTTP connections
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
