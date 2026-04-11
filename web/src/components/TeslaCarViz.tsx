@@ -78,6 +78,9 @@ function useSvgPalette() {
       text: isLight ? 'rgba(0,0,0,0.7)' : 'white',
     },
     shadow: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.3)',
+    headlightOn: '#ffffff',
+    projectorOn: '#fffbe6',
+    turnSignalOn: '#fbbf24',
     headlightOff: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)',
     falconWing: {
       main: isLight ? 'rgba(0,120,200,0.15)' : 'rgba(0,240,255,0.08)',
@@ -325,7 +328,7 @@ export function TeslaCarViz({
               ? `M${WHEEL_POS[model].headX} ${WHEEL_POS[model].headY - 3} L${WHEEL_POS[model].headX + 20} ${WHEEL_POS[model].headY - 5}`
               : `M${WHEEL_POS[model].headX - 2} ${WHEEL_POS[model].headY - 14} Q${WHEEL_POS[model].headX - 6} ${WHEEL_POS[model].headY} ${WHEEL_POS[model].headX - 2} ${WHEEL_POS[model].headY + 14}`}
             fill="none"
-            stroke={driving ? '#ffffff' : palette.headlightOff}
+            stroke={driving ? palette.headlightOn : palette.headlightOff}
             strokeWidth={model === 'cybertruck' ? 3 : 2.5}
             strokeLinecap="round"
             animate={driving ? { opacity: [0.85, 1, 0.85] } : {}}
@@ -338,7 +341,7 @@ export function TeslaCarViz({
             cy={WHEEL_POS[model].headY}
             rx={model === 'cybertruck' ? 3 : 4}
             ry={model === 'cybertruck' ? 2.5 : 6}
-            fill={driving ? '#fffbe6' : palette.headlightOff}
+            fill={driving ? palette.projectorOn : palette.headlightOff}
             opacity={driving ? 0.9 : 0.5}
             style={driving ? { filter: 'drop-shadow(0 0 10px rgba(255,251,230,0.8))' } : {}}
           />
@@ -348,7 +351,7 @@ export function TeslaCarViz({
             cy={WHEEL_POS[model].headY + (model === 'cybertruck' ? 0 : 12)}
             rx={model === 'cybertruck' ? 2 : 3}
             ry={model === 'cybertruck' ? 1.5 : 2}
-            fill={driving ? '#fbbf24' : palette.headlightOff}
+            fill={driving ? palette.turnSignalOn : palette.headlightOff}
             opacity={driving ? 0.5 : 0.2}
           />
         </g>

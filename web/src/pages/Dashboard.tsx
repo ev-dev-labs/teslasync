@@ -424,8 +424,8 @@ export default function Dashboard() {
                           } else {
                             // Parked/Online: temps, odometer, range
                             cards.push(
-                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp)) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
-                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp)) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
+                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp)) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: COLOR.WARN },
+                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp)) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: COLOR.CYAN },
                               { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )

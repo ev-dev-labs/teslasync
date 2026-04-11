@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import clsx from 'clsx'
-import { COLOR } from '../lib/colors'
+import { boolColorMuted, COLOR } from '../lib/colors'
 import { formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -89,7 +89,7 @@ function SecurityCarVisualization({
   const isDoorClosed = doorClosed(doorState)
   const doorColor = isDoorClosed ? COLOR.GOOD : COLOR.BAD
   const lockColor = locked ? COLOR.GOOD : COLOR.BAD
-  const sentryColor = sentryMode ? '#3b82f6' : '#64748b'
+  const sentryColor = boolColorMuted(!!sentryMode)
 
   const windows = [
     { label: 'FD', state: parseWindowState(fdWindow), cx: 145, cy: 180 },
@@ -295,7 +295,7 @@ function describeEvent(event: SecurityEvent, prev?: SecurityEvent): EventChange[
       changes.push({
         type: 'sentry',
         label: event.sentry_mode ? 'Sentry Mode Activated' : 'Sentry Mode Deactivated',
-        color: event.sentry_mode ? '#3b82f6' : '#64748b',
+        color: boolColorMuted(!!event.sentry_mode),
         icon: event.sentry_mode ? 'shield-on' : 'shield-off',
       })
     }

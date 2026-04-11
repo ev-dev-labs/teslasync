@@ -86,7 +86,7 @@ export default function Timeline() {
   const pieData = (summary ?? []).map(s => ({
     name: s.state.charAt(0).toUpperCase() + s.state.slice(1),
     value: Math.round(s.total_min),
-    fill: stateColors[s.state] ?? '#4b5563',
+    fill: stateColors[s.state] ?? COLOR.MUTED,
   }))
 
   // Aggregate daily breakdown into stacked bar: each day → { day, driving, charging, asleep, online, ... }
@@ -198,7 +198,7 @@ export default function Timeline() {
         <div className="mt-4 h-3 rounded-full bg-white/5 overflow-hidden flex">
           {(summary ?? []).map(s => {
             const pct = totalMinutes > 0 ? (s.total_min / totalMinutes * 100) : 0
-            return pct > 0.5 ? <div key={s.state} className="h-full" style={{ width: `${pct}%`, background: stateColors[s.state] ?? '#4b5563' }} title={`${s.state}: ${fmtNumber(pct)}%`} /> : null
+            return pct > 0.5 ? <div key={s.state} className="h-full" style={{ width: `${pct}%`, background: stateColors[s.state] ?? COLOR.MUTED }} title={`${s.state}: ${fmtNumber(pct)}%`} /> : null
           })}
         </div>
       </GlassPanel>
@@ -234,7 +234,7 @@ export default function Timeline() {
                 <Tooltip content={<TimelineTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 {allStates.map(state => (
-                  <Bar key={state} dataKey={state} stackId="a" fill={stateColors[state] ?? '#4b5563'} name={state.charAt(0).toUpperCase() + state.slice(1)} />
+                  <Bar key={state} dataKey={state} stackId="a" fill={stateColors[state] ?? COLOR.MUTED} name={state.charAt(0).toUpperCase() + state.slice(1)} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
@@ -253,7 +253,7 @@ export default function Timeline() {
             <div className="space-y-2">
               {timeline.slice(0, 50).map(s => {
                 const Icon = stateIcons[s.state] ?? Activity
-                const color = stateColors[s.state] ?? '#4b5563'
+                const color = stateColors[s.state] ?? COLOR.MUTED
                 return (
                   <div key={s.id} className="relative pl-14">
                     <div className="absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]" style={{ background: `${color}20` }}>

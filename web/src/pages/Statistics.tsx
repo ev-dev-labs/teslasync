@@ -13,10 +13,10 @@ import {
   PieChart, Pie, Cell, Legend, RadialBarChart, RadialBar
 } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
+import { COLOR } from '../lib/colors'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { COLOR } from '@/lib/colors'
 
 const COLORS = ['#00f0ff', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#3b82f6']
 
@@ -183,9 +183,9 @@ export default function Statistics() {
               { label: 'Total Distance', value: `${fmtInt(convertDistance(mileage?.total_distance ?? 0))} ${distanceUnit}`, color: COLOR.CYAN },
               { label: 'Daily Average', value: `${fmtNumber(convertDistance(mileage?.avg_daily ?? 0))} ${distanceUnit}`, color: COLOR.GOOD },
               { label: 'Best Day', value: `${fmtInt(convertDistance(mileage?.max_daily ?? 0))} ${distanceUnit}`, color: COLOR.WARN },
-              { label: 'Total Energy', value: fmtWithUnit(mileage?.total_energy ?? 0, 'kWh'), color: '#8b5cf6' },
-              { label: 'Total Drives', value: `${mileage?.total_drives ?? 0}`, color: '#ec4899' },
-              { label: 'Days Tracked', value: `${mileage?.days_tracked ?? 0}`, color: '#3b82f6' },
+              { label: 'Total Energy', value: fmtWithUnit(mileage?.total_energy ?? 0, 'kWh'), color: COLOR.PURPLE },
+              { label: 'Total Drives', value: `${mileage?.total_drives ?? 0}`, color: COLOR.CYAN },
+              { label: 'Days Tracked', value: `${mileage?.days_tracked ?? 0}`, color: COLOR.GOOD },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

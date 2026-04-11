@@ -720,7 +720,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 	if !exists {
 		currentDB, _ := h.stateRepo.GetCurrentState(ctx, vehicleID)
 		if currentDB == "" {
-			currentDB = "online"
+			currentDB = enums.StateOnline
 		}
 		sm = &vehicleStateMachine{currentState: currentDB}
 		h.vehicleStates[vehicleID] = sm
@@ -762,7 +762,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 		sm.currentState = candidateState
 		sm.pendingState = ""
 		sm.pendingSince = time.Time{}
-		if candidateState == "driving" {
+		if candidateState == enums.StateDriving {
 			sm.lastSpeedTime = now
 		}
 		h.vehicleStateMu.Unlock()
@@ -781,7 +781,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 	// === SPEED-BASED FALLBACK: Debounced transitions (no Gear available) ===
 
 	// Track last speed for drive hold hysteresis
-	if candidateState == "driving" {
+	if candidateState == enums.StateDriving {
 		if speed, ok := toFloatOk(signals["VehicleSpeed"]); ok && speed > 0 {
 			sm.lastDriveSpeed = speed
 			sm.lastSpeedTime = now
@@ -790,9 +790,9 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 
 	// Drive hold: if currently driving and speed was seen within driveHoldDuration,
 	// suppress transitions to online/parked (handles red lights, brief stops)
-	if sm.currentState == "driving" && (candidateState == "online" || candidateState == "parked") {
+	if sm.currentState == enums.StateDriving && (candidateState == enums.StateOnline || candidateState == enums.StateParked) {
 		if !sm.lastSpeedTime.IsZero() && now.Sub(sm.lastSpeedTime) < driveHoldDuration {
-			candidateState = "driving"
+			candidateState = enums.StateDriving
 		}
 	}
 
@@ -804,7 +804,7 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 	}
 
 	// Fast path: entering "driving" is immediate even for speed-based
-	if candidateState == "driving" && sm.currentState != "driving" {
+	if candidateState == enums.StateDriving && sm.currentState != enums.StateDriving {
 		sm.currentState = candidateState
 		sm.pendingState = ""
 		sm.pendingSince = time.Time{}
@@ -853,14 +853,14 @@ func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID 
 func (h *TelemetryHandler) MarkVehicleOffline(ctx context.Context, vehicleID int64) {
 	h.vehicleStateMu.Lock()
 	sm, exists := h.vehicleStates[vehicleID]
-	if exists && (sm.currentState == "offline" || sm.currentState == "asleep") {
+	if exists && (sm.currentState == enums.StateOffline || sm.currentState == enums.StateAsleep) {
 		h.vehicleStateMu.Unlock()
 		return
 	}
 	// Choose asleep vs offline based on last known state
-	newState := "offline"
-	if exists && (sm.currentState == "parked" || sm.currentState == "online") {
-		newState = "asleep" // parked/online → quiet = normal sleep
+	newState := enums.StateOffline
+	if exists && (sm.currentState == enums.StateParked || sm.currentState == enums.StateOnline) {
+		newState = enums.StateAsleep // parked/online → quiet = normal sleep
 	}
 	if exists {
 		sm.currentState = newState

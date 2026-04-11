@@ -14,6 +14,7 @@ import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
@@ -288,7 +289,7 @@ export default function ClimateControl() {
             displayValue={latest?.inside_temp != null ? fmtNumber(convertTemp(latest.inside_temp)) : undefined}
             unit={tempUnit}
             min={convertTemp(0)} max={convertTemp(50)}
-            icon={<Thermometer className="h-4 w-4" style={{ color: insideColor.cls.includes('cyan') ? '#22d3ee' : insideColor.cls.includes('green') ? '#10b981' : insideColor.cls.includes('amber') ? '#f59e0b' : insideColor.cls.includes('red') ? '#ef4444' : '#9ca3af' }} />}
+            icon={<Thermometer className="h-4 w-4" style={{ color: insideColor.cls.includes('cyan') ? COLOR.CYAN : insideColor.cls.includes('green') ? COLOR.GOOD : insideColor.cls.includes('amber') ? COLOR.WARN : insideColor.cls.includes('red') ? COLOR.BAD : COLOR.MUTED }} />}
             colorClass={insideColor.cls}
             bgClass={insideColor.bg}
           />

@@ -13,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -385,9 +386,9 @@ func (h *ChatbotHandler) queryVehicleStates(ctx context.Context) string {
 			name = "Unknown"
 		}
 		emoji := "🔴"
-		if state == "online" {
+		if state == enums.StateOnline {
 			emoji = "🟢"
-		} else if state == "asleep" {
+		} else if state == enums.StateAsleep {
 			emoji = "🟡"
 		}
 		lines = append(lines, fmt.Sprintf("- %s **%s**: %s", emoji, name, state))

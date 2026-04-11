@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -183,7 +184,7 @@ func pollEngineDemo(engine *polling.PollEngine) http.HandlerFunc {
 		idleData := &tesla.VehicleDataResponse{
 			VIN:         demoVIN,
 			DisplayName: "Demo Model 3",
-			State:       "online",
+			State:       enums.StateOnline,
 			ChargeState: tesla.ChargeState{
 				BatteryLevel:       82,
 				BatteryRange:       241.5,

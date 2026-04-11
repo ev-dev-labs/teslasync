@@ -251,8 +251,8 @@ export default function VehicleDetail() {
                   <div className="flex flex-wrap gap-2">
                     {[
                       { icon: state.is_locked ? Lock : Unlock, label: state.is_locked ? 'Locked' : 'Unlocked', color: boolColor(state.is_locked) },
-                      { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? COLOR.BAD : '#4b5563' },
-                      { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? COLOR.CYAN : '#4b5563' },
+                      { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? COLOR.BAD : COLOR.MUTED },
+                      { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? COLOR.CYAN : COLOR.MUTED },
                       { icon: Cpu, label: state.software_version || 'N/A', color: '#a855f7' },
                     ].map(chip => (
                       <span key={chip.label} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border border-white/[0.06] bg-white/[0.02]">
