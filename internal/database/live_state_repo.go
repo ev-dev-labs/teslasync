@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 )
 
 // LiveStateRepo manages the vehicle_live_state table — one row per vehicle
@@ -338,10 +339,8 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 
 	// Handle HvacPower (enum → boolean)
 	if v, ok := signals["HvacPower"]; ok {
-		s := fmt.Sprintf("%v", v)
-		isOn := strings.Contains(s, "On") || strings.Contains(s, "Precondition")
 		cols = append(cols, "hvac_power")
-		vals = append(vals, isOn)
+		vals = append(vals, enums.ParseHvacPower(fmt.Sprintf("%v", v)))
 	}
 
 	// Handle HvacFanSpeed
@@ -352,23 +351,14 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 
 	// Handle SentryMode (enum → boolean)
 	if v, ok := signals["SentryMode"]; ok {
-		s := fmt.Sprintf("%v", v)
-		isActive := !strings.Contains(s, "Off") && s != "" && s != "false" && s != "0"
 		cols = append(cols, "sentry_mode")
-		vals = append(vals, isActive)
+		vals = append(vals, enums.ParseEnumBool(v))
 	}
 
 	// Handle Locked (may be bool or string)
 	if v, ok := signals["Locked"]; ok {
-		locked := false
-		switch lv := v.(type) {
-		case bool:
-			locked = lv
-		case string:
-			locked = lv == "true" || lv == "1"
-		}
 		cols = append(cols, "locked")
-		vals = append(vals, locked)
+		vals = append(vals, enums.ParseEnumBool(v))
 	}
 
 	// Handle ACChargingPower → charger_power (fallback if DCChargingPower not present)
@@ -431,15 +421,8 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	}
 	for sig, col := range enumBoolSignals {
 		if v, ok := signals[sig]; ok && v != nil {
-			b := false
-			switch sv := v.(type) {
-			case bool:
-				b = sv
-			case string:
-				b = sv != "" && !strings.Contains(sv, "Off") && sv != "false" && sv != "0"
-			}
 			cols = append(cols, col)
-			vals = append(vals, b)
+			vals = append(vals, enums.ParseEnumBool(v))
 		}
 	}
 

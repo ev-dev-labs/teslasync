@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -138,7 +138,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	// Charging state
 	if v := all["DetailedChargeState"]; v != nil {
 		if cs, ok := v.Raw.(string); ok {
-			state.IsCharging = strings.Contains(cs, "Charging") || strings.Contains(cs, "Starting")
+			state.IsCharging = enums.IsCharging(cs)
 		}
 	}
 	if v := all["ChargeAmps"]; v != nil && !state.IsCharging {
@@ -165,10 +165,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 	if v := all["SentryMode"]; v != nil {
-		switch sv := v.Raw.(type) {
-		case bool: state.SentryMode = sv
-		case string: state.SentryMode = !strings.Contains(sv, "Off") && sv != "false" && sv != ""
-		}
+		state.SentryMode = enums.ParseEnumBool(v.Raw)
 	}
 
 	// Software version
@@ -185,7 +182,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	if v := all["HvacPower"]; v != nil {
 		switch hv := v.Raw.(type) {
 		case bool: state.IsClimateOn = hv
-		case string: state.IsClimateOn = strings.Contains(hv, "On") || strings.Contains(hv, "Precondition")
+		case string: state.IsClimateOn = enums.ParseHvacPower(hv)
 		case float64: state.IsClimateOn = hv > 0
 		}
 	}

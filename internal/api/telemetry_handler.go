@@ -13,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -660,14 +661,12 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 		case "P":
 			// Check for active charging — Gear=P + charging = "charging"
 			if dcs, ok := signals["DetailedChargeState"]; ok {
-				dcsStr := toString(dcs)
-				if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
+				if enums.IsCharging(toString(dcs)) {
 					return "charging"
 				}
 			}
 			if cs, ok := signals["ChargeState"]; ok {
-				csStr := toString(cs)
-				if csStr == "Enable" || strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") {
+				if enums.IsCharging(toString(cs)) {
 					return "charging"
 				}
 			}
@@ -687,14 +686,12 @@ func (h *TelemetryHandler) detectVehicleState(signals map[string]interface{}) st
 
 	// Fallback: charging signals
 	if dcs, ok := signals["DetailedChargeState"]; ok {
-		dcsStr := toString(dcs)
-		if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
+		if enums.IsCharging(toString(dcs)) {
 			return "charging"
 		}
 	}
 	if cs, ok := signals["ChargeState"]; ok {
-		csStr := toString(cs)
-		if csStr == "Enable" || strings.Contains(csStr, "Charging") || strings.Contains(csStr, "Starting") {
+		if enums.IsCharging(toString(cs)) {
 			return "charging"
 		}
 	}
@@ -1227,25 +1224,12 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 // Raw values are stored AS-IS (no unit conversion) — conversion happens at display time.
 // Only format normalization is done here (e.g., Gear enum → single letter).
 func normalizeFleetUnits(signals map[string]interface{}) {
-	// Gear: Tesla sends "ShiftStateD", "ShiftStateR", "ShiftStateP", "ShiftStateN"
-	// Normalize to single-letter D/R/P/N for the frontend and state machine.
+	// Gear: normalize Tesla enum to single-letter D/R/P/N
 	if g, ok := signals["Gear"]; ok {
-		gs := strings.TrimPrefix(toString(g), "ShiftState")
-		switch {
-		case gs == "D" || strings.Contains(gs, "Drive"):
-			signals["Gear"] = "D"
-		case gs == "R" || strings.Contains(gs, "Reverse"):
-			signals["Gear"] = "R"
-		case gs == "P" || strings.Contains(gs, "Park"):
-			signals["Gear"] = "P"
-		case gs == "N" || strings.Contains(gs, "Neutral"):
-			signals["Gear"] = "N"
+		if parsed := enums.ParseGear(toString(g)); parsed != "" {
+			signals["Gear"] = parsed
 		}
 	}
-	// NOTE: No unit conversions. Tesla sends:
-	// - Distance/Odometer in miles, Speed in mph, Ranges in miles
-	// - Temperature in °C, Pressure in PSI, Energy in kWh
-	// All stored raw. Frontend converts using vehicle_units + user settings.
 }
 
 func toFloat(v interface{}) float64 {
@@ -1604,10 +1588,8 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 		snap.OutsideTemp = &f
 	}
 	if v, ok := signals["HvacPower"]; ok {
-		// HvacPower is an enum (HvacPowerState) — map to float for DB compatibility:
-		// "On"/"Precondition" → 1.0, "Off" → 0.0
 		s := toString(v)
-		if strings.Contains(s, "On") || strings.Contains(s, "Precondition") {
+		if enums.ParseHvacPower(s) {
 			one := 1.0
 			snap.HvacPower = &one
 		} else {
@@ -1749,9 +1731,7 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		ev.Locked = &b
 	}
 	if v, ok := signals["SentryMode"]; ok {
-		// SentryMode is an enum (SentryModeState) — any non-Off state is true
-		s := toString(v)
-		b := !strings.Contains(s, "Off") && s != "" && s != "0" && s != "false"
+		b := enums.ParseEnumBool(toString(v))
 		ev.SentryMode = &b
 	}
 	if v, ok := signals["DoorState"]; ok {

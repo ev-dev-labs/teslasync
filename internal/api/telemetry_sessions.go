@@ -3,13 +3,13 @@ package api
 import (
 	"context"
 	"math"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -256,7 +256,7 @@ func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context)
 		// If SignalStore shows charge complete, close
 		if t.signalStore != nil {
 			if state, ok := t.signalStore.GetString(vehicleID, "DetailedChargeState"); ok {
-				if strings.Contains(state, "Complete") {
+				if enums.IsChargeComplete(state) {
 					log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: closing charge (Complete)")
 					t.completeChargeLocked(ctx, vehicleID, charge, nil)
 				}
@@ -1346,7 +1346,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	// Tesla Fleet Telemetry sends enum values with prefixes like
 	// "DetailedChargeStateCharging", "DetailedChargeStateStarting", or just "Enable".
-	isCharging := strings.Contains(chargeState, "Charging") || strings.Contains(chargeState, "Starting") || chargeState == "Enable"
+	isCharging := enums.IsCharging(chargeState)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
