@@ -2,8 +2,8 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { request } from '../api/client'
-import { PageHeader, GlassPanel, FadeIn, Badge, Button, Input, Select, Skeleton, EmptyState } from '../components/ui'
-import { Database, Search, Clock, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { PageHeader, GlassPanel, FadeIn, Badge, Button, Input, Skeleton, EmptyState } from '../components/ui'
+import { Database, Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -105,7 +105,7 @@ export default function SignalLogViewer() {
 
   // Date range (local-TZ strings for the datetime-local inputs)
   const now = useMemo(() => new Date(), [])
-  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(now.getTime() - 24 * 3600_000)))
+  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(now.getTime() - 1 * 3600_000)))
   const [toStr, setToStr] = useState(() => toLocalDatetimeStr(now))
 
   // Pagination
@@ -274,7 +274,7 @@ export default function SignalLogViewer() {
         </div>
 
         {/* Row 2: DateTime range + presets + rows per page + query button */}
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
           {/* From */}
           <div className="space-y-1.5">
             <label className="metric-label">From</label>
@@ -283,7 +283,7 @@ export default function SignalLogViewer() {
               step="1"
               value={fromStr}
               onChange={e => setFromStr(e.target.value)}
-              className="glass-input text-xs font-mono"
+              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
             />
           </div>
 
@@ -295,48 +295,50 @@ export default function SignalLogViewer() {
               step="1"
               value={toStr}
               onChange={e => setToStr(e.target.value)}
-              className="glass-input text-xs font-mono"
+              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
             />
           </div>
 
-          {/* Quick presets */}
-          <div className="flex items-center gap-1 self-end">
-            <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-            {TIME_PRESETS.map(tp => (
-              <Button
-                key={tp.label}
-                variant="ghost"
-                size="sm"
-                onClick={() => applyPreset(tp.hours)}
-                className="!px-2 !py-1 !rounded !text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent"
+          {/* Quick presets + Rows per page */}
+          <div className="space-y-1.5">
+            <label className="metric-label">Quick Range</label>
+            <div className="flex items-center gap-1">
+              {TIME_PRESETS.map(tp => (
+                <button
+                  key={tp.label}
+                  onClick={() => applyPreset(tp.hours)}
+                  className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-neon-cyan/30 transition-colors"
+                >
+                  {tp.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rows per page + Query button */}
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="metric-label">Rows</label>
+              <select
+                value={perPage}
+                onChange={e => setPerPage(Number(e.target.value))}
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
               >
-                {tp.label}
-              </Button>
-            ))}
+                {PAGE_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleQuery}
+              disabled={selectedSignals.length === 0 || isFetching}
+              loading={isFetching}
+              icon={isFetching ? undefined : <Play className="h-3.5 w-3.5" />}
+              className="h-[34px]"
+            >
+              Query
+            </Button>
           </div>
-
-          {/* Rows per page */}
-          <div className="flex items-center gap-1 self-end">
-            <span className="text-[10px] text-[var(--text-muted)]">Rows:</span>
-            <Select
-              value={String(perPage)}
-              onChange={e => setPerPage(Number(e.target.value))}
-              options={PAGE_SIZES.map(s => ({ value: String(s), label: String(s) }))}
-            />
-          </div>
-
-          {/* Query button */}
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleQuery}
-            disabled={selectedSignals.length === 0 || isFetching}
-            loading={isFetching}
-            icon={isFetching ? undefined : <Play className="h-3.5 w-3.5" />}
-            className="self-end"
-          >
-            Query
-          </Button>
         </div>
       </GlassPanel>
 
