@@ -192,6 +192,7 @@ func main() {
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
 	var signalStore *sigsvc.Store
+	var signalHistoryWriter *database.SignalHistoryWriter
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
 
@@ -228,7 +229,7 @@ func main() {
 		}
 
 		// Postgres signal_history writer (always-on per-signal history)
-		signalHistoryWriter := database.NewSignalHistoryWriter(db, 2*time.Second)
+		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second)
 		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
 		go signalHistoryWriter.FlushLoop(ctx)
 		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
@@ -345,11 +346,10 @@ func main() {
 	log.Info().Msg("maintenance worker started")
 
 	// Signal history TTL cleanup — daily purge of old rows
-	if cfg.FleetTelemetry.Enabled {
+	if signalHistoryWriter != nil {
 		go func() {
 			// Run immediately on startup, then daily
-			shWriter := database.NewSignalHistoryWriter(db, 0)
-			shWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
+			signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
 
 			ticker := time.NewTicker(24 * time.Hour)
 			defer ticker.Stop()
@@ -358,7 +358,7 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					shWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
+					signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
 				}
 			}
 		}()
