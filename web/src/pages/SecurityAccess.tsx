@@ -13,6 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import clsx from 'clsx'
+import { COLOR } from '../lib/colors'
 import { formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -86,8 +87,8 @@ function SecurityCarVisualization({
   locked, sentryMode, doorState, fdWindow, fpWindow, rdWindow, rpWindow, homelinkNearby, guestMode,
 }: CarVisualizationProps) {
   const isDoorClosed = doorClosed(doorState)
-  const doorColor = isDoorClosed ? '#10b981' : '#ef4444'
-  const lockColor = locked ? '#10b981' : '#ef4444'
+  const doorColor = isDoorClosed ? COLOR.GOOD : COLOR.BAD
+  const lockColor = locked ? COLOR.GOOD : COLOR.BAD
   const sentryColor = sentryMode ? '#3b82f6' : '#64748b'
 
   const windows = [
@@ -105,7 +106,7 @@ function SecurityCarVisualization({
   ]
 
   const isSecure = locked && isDoorClosed && windows.every(w => w.state === 'Closed')
-  const statusColor = isSecure ? '#10b981' : '#ef4444'
+  const statusColor = isSecure ? COLOR.GOOD : COLOR.BAD
 
   return (
     <svg viewBox="0 0 400 620" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '100%' }} role="img" aria-label="Vehicle security visualization">
@@ -286,7 +287,7 @@ function describeEvent(event: SecurityEvent, prev?: SecurityEvent): EventChange[
       changes.push({
         type: 'lock',
         label: event.locked ? 'Vehicle Locked' : 'Vehicle Unlocked',
-        color: event.locked ? '#10b981' : '#ef4444',
+        color: event.locked ? COLOR.GOOD : COLOR.BAD,
         icon: event.locked ? 'lock' : 'unlock',
       })
     }

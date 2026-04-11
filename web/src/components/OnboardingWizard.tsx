@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, ChevronRight, Zap, Settings, Car, CheckCircle } from 'lucide-react'
+import { COLOR } from '../lib/colors'
 
 const ONBOARDED_KEY = 'teslasync-onboarded'
 
@@ -104,7 +105,7 @@ export default function OnboardingWizard() {
               className="h-1.5 rounded-full transition-all duration-300"
               style={{
                 width: i === currentStep ? '24px' : '8px',
-                background: i <= currentStep ? '#00f0ff' : 'rgba(255,255,255,0.1)',
+                background: i <= currentStep ? COLOR.CYAN : 'rgba(255,255,255,0.1)',
                 boxShadow: i === currentStep ? '0 0 8px rgba(0, 240, 255, 0.4)' : 'none',
               }}
             />

@@ -6,6 +6,7 @@ import { Trophy, Zap, Gauge, ShieldCheck, Star, AlertTriangle, Lightbulb, Target
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { COLOR } from '../lib/colors'
 import { formatDate, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
@@ -38,7 +39,7 @@ const GRADE_COLORS: Record<string, string> = {
 }
 
 function gradeColor(grade: string): string {
-  return GRADE_COLORS[grade] ?? '#6b7280'
+  return GRADE_COLORS[grade] ?? COLOR.MUTED
 }
 
 function scoreColor(score: number): string {

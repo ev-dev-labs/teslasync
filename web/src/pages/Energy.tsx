@@ -13,6 +13,7 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { COLOR } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
@@ -105,8 +106,8 @@ export default function Energy() {
       types[label].energy += s.charge_energy_added
       types[label].cost += s.cost ?? 0
     })
-    const colors: Record<string, string> = { Supercharger: '#ef4444', 'DC Fast': '#f59e0b', 'Home/AC': '#10b981' }
-    return Object.entries(types).map(([name, data]) => ({ name, ...data, fill: colors[name] ?? '#00f0ff' }))
+    const colors: Record<string, string> = { Supercharger: COLOR.BAD, 'DC Fast': COLOR.WARN, 'Home/AC': COLOR.GOOD }
+    return Object.entries(types).map(([name, data]) => ({ name, ...data, fill: colors[name] ?? COLOR.CYAN }))
   }, [sessions])
 
   // Monthly projection

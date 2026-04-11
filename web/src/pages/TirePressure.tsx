@@ -8,7 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
-import { STATUS_COLORS } from '../lib/colors'
+import { STATUS_COLORS, boolColor } from '../lib/colors'
 import { fmtNumber } from '../lib/numberFormat'
 import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -251,10 +251,10 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
       {/* Center HUD */}
       <rect x="160" y="272" width="80" height="56" rx="12" fill="#0f172a" fillOpacity="0.9" stroke="#22d3ee" strokeWidth="1" />
       <text x="200" y="292" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">TPMS</text>
-      <text x="200" y="308" textAnchor="middle" fontSize="8" fontWeight="600" fill={allNormal ? '#10b981' : '#f59e0b'} fontFamily="system-ui,sans-serif">
+      <text x="200" y="308" textAnchor="middle" fontSize="8" fontWeight="600" fill={boolColor(allNormal)} fontFamily="system-ui,sans-serif">
         {allNormal ? 'ALL NORMAL' : 'ATTENTION'}
       </text>
-      <circle cx="200" cy="320" r="3" fill={allNormal ? '#10b981' : '#f59e0b'}>
+      <circle cx="200" cy="320" r="3" fill={boolColor(allNormal)}>
         <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
       </circle>
 

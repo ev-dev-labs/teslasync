@@ -416,8 +416,8 @@ export default function Dashboard() {
                           } else if (isCharging) {
                             // Charging: charge rate, energy, charge limit, cable
                             cards.push(
-                              { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: '#10b981' },
-                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge)}h` : '—', color: '#f59e0b' },
+                              { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: COLOR.GOOD },
+                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge)}h` : '—', color: COLOR.WARN },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                               { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                             )
@@ -434,7 +434,7 @@ export default function Dashboard() {
                           // Always show lock and sentry
                           cards.push(
                             { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: boolColor(primaryState.is_locked) },
-                            { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
+                            { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? COLOR.BAD : COLOR.DARK },
                             { icon: Gauge, label: 'Firmware', value: firmwareVersion, color: '#6366f1' },
                             { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: powerColor(primaryState.power) },
                           )
@@ -524,7 +524,7 @@ export default function Dashboard() {
             <StaggerItem>
               <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Alerts</p>
-                <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? '#ef4444' : '#10b981' }}>
+                <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? COLOR.BAD : COLOR.GOOD }}>
                   <AnimatedNumber value={unreadAlerts} />
                 </p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">unread</p>

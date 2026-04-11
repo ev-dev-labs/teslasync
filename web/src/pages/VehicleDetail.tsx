@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest, getVehicleConfigLatest, getUserPreferenceLatest } from '../api'
 import { cleanNil } from '../lib/cleanNil'
-import { batteryColor, boolColor, boolColorMuted } from '../lib/colors'
+import { batteryColor, boolColor, boolColorMuted, COLOR } from '../lib/colors'
 import { useState } from 'react'
 import { MapContainer, Polyline, Marker } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
@@ -227,7 +227,7 @@ export default function VehicleDetail() {
                     <RadialGauge
                       value={Math.round(convertSpeed(state.speed))} max={Math.round(convertSpeed(250))}
                       label="Speed" unit={speedUnit}
-                      color={state.speed > 0 ? '#a855f7' : '#374151'}
+                      color={state.speed > 0 ? COLOR.PURPLE : COLOR.DARK}
                       size={110}
                     />
                     <RadialGauge
@@ -251,8 +251,8 @@ export default function VehicleDetail() {
                   <div className="flex flex-wrap gap-2">
                     {[
                       { icon: state.is_locked ? Lock : Unlock, label: state.is_locked ? 'Locked' : 'Unlocked', color: boolColor(state.is_locked) },
-                      { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? '#ef4444' : '#4b5563' },
-                      { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? '#00f0ff' : '#4b5563' },
+                      { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? COLOR.BAD : '#4b5563' },
+                      { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? COLOR.CYAN : '#4b5563' },
                       { icon: Cpu, label: state.software_version || 'N/A', color: '#a855f7' },
                     ].map(chip => (
                       <span key={chip.label} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border border-white/[0.06] bg-white/[0.02]">

@@ -18,6 +18,7 @@ import { formatDateTime, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 import { tableTokens } from '../lib/tokens'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '@/lib/colors'
 import { request } from '../api/client'
 
 interface ComponentInfo {
@@ -309,7 +310,7 @@ function ComponentHealthPanel() {
   )
 
   const statusDot = (status: string) => {
-    const color = status === 'healthy' ? '#10b981' : status === 'degraded' ? '#f59e0b' : status === 'unhealthy' ? '#ef4444' : '#6b7280'
+    const color = status === 'healthy' ? COLOR.GOOD : status === 'degraded' ? COLOR.WARN : status === 'unhealthy' ? COLOR.BAD : COLOR.MUTED
     return <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
   }
 
@@ -463,7 +464,7 @@ function APIUsageDashboard() {
 
   const remaining = Math.max(0, usage.monthly_credit - usage.estimated_cost)
   const costPct = Math.min((usage.estimated_cost / usage.monthly_credit) * 100, 100)
-  const costColor = usage.estimated_cost < 5 ? '#10b981' : usage.estimated_cost < 8 ? '#f59e0b' : '#ef4444'
+  const costColor = usage.estimated_cost < 5 ? COLOR.GOOD : usage.estimated_cost < 8 ? COLOR.WARN : COLOR.BAD
 
   // Rate limit gauge: estimate current minute usage from total / session uptime
   const rateLimit = 60
@@ -684,10 +685,10 @@ function AuditLogTable() {
   const { data: logs, isLoading } = useQuery({ queryKey: ['audit-logs'], queryFn: () => getAuditLogs(30), refetchInterval: 30_000 })
 
   const actionColor: Record<string, string> = {
-    create: '#10b981',
-    update: '#f59e0b',
-    delete: '#ef4444',
-    command: '#a855f7',
+    create: COLOR.GOOD,
+    update: COLOR.WARN,
+    delete: COLOR.BAD,
+    command: COLOR.PURPLE,
   }
 
   return (
@@ -704,7 +705,7 @@ function AuditLogTable() {
           <DataTable
             columns={[
               { key: 'time', header: 'Time', render: (l: AuditLog) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</span> },
-              { key: 'action', header: 'Action', render: (l: AuditLog) => <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>{l.action}</span> },
+              { key: 'action', header: 'Action', render: (l: AuditLog) => <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${actionColor[l.action] ?? COLOR.MUTED}15`, color: actionColor[l.action] ?? COLOR.MUTED }}>{l.action}</span> },
               { key: 'resource', header: 'Resource', render: (l: AuditLog) => <span className="text-[var(--text-secondary)]">{l.resource}</span> },
               { key: 'details', header: 'Details', render: (l: AuditLog) => <span className="text-[var(--text-muted)] max-w-xs truncate">{l.details}</span> },
               { key: 'ip', header: 'IP', render: (l: AuditLog) => <span className="text-[var(--text-muted)] font-mono">{l.ip}</span> },
@@ -875,10 +876,10 @@ function TelemetryLivePanel() {
         {/* Overview stats */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
           {[
-            { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? '#10b981' : '#f59e0b' },
-            { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? '#10b981' : '#6b7280' },
-            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec) : '0', color: '#00f0ff' },
-            { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? '#10b981' : avgLatency < 5000 ? '#f59e0b' : '#ef4444' },
+            { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? COLOR.GOOD : COLOR.WARN },
+            { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? COLOR.GOOD : COLOR.MUTED },
+            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec) : '0', color: COLOR.CYAN },
+            { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? COLOR.GOOD : avgLatency < 5000 ? COLOR.WARN : COLOR.BAD },
             { label: 'Total Signals', value: fmtInt(totalSignals), color: '#8b5cf6' },
           ].map(item => (
             <div key={item.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">

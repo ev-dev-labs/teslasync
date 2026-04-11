@@ -16,6 +16,7 @@ import { useSettings } from '../hooks/useSettings'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '@/lib/colors'
 
 const COLORS = ['#00f0ff', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#3b82f6']
 
@@ -87,7 +88,7 @@ export default function Statistics() {
 
   // Battery health radial
   const healthScore = battery?.health_score ?? 0
-  const radialData = [{ name: 'Health', value: healthScore, fill: healthScore >= 80 ? '#10b981' : healthScore >= 60 ? '#f59e0b' : '#ef4444' }]
+  const radialData = [{ name: 'Health', value: healthScore, fill: healthScore >= 80 ? COLOR.GOOD : healthScore >= 60 ? COLOR.WARN : COLOR.BAD }]
 
   return (
     <FadeIn>
@@ -179,9 +180,9 @@ export default function Statistics() {
           <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Mileage Summary</h3>
           <div className="space-y-4">
             {[
-              { label: 'Total Distance', value: `${fmtInt(convertDistance(mileage?.total_distance ?? 0))} ${distanceUnit}`, color: '#00f0ff' },
-              { label: 'Daily Average', value: `${fmtNumber(convertDistance(mileage?.avg_daily ?? 0))} ${distanceUnit}`, color: '#10b981' },
-              { label: 'Best Day', value: `${fmtInt(convertDistance(mileage?.max_daily ?? 0))} ${distanceUnit}`, color: '#f59e0b' },
+              { label: 'Total Distance', value: `${fmtInt(convertDistance(mileage?.total_distance ?? 0))} ${distanceUnit}`, color: COLOR.CYAN },
+              { label: 'Daily Average', value: `${fmtNumber(convertDistance(mileage?.avg_daily ?? 0))} ${distanceUnit}`, color: COLOR.GOOD },
+              { label: 'Best Day', value: `${fmtInt(convertDistance(mileage?.max_daily ?? 0))} ${distanceUnit}`, color: COLOR.WARN },
               { label: 'Total Energy', value: fmtWithUnit(mileage?.total_energy ?? 0, 'kWh'), color: '#8b5cf6' },
               { label: 'Total Drives', value: `${mileage?.total_drives ?? 0}`, color: '#ec4899' },
               { label: 'Days Tracked', value: `${mileage?.days_tracked ?? 0}`, color: '#3b82f6' },

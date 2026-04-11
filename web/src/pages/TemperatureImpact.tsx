@@ -10,6 +10,7 @@ import {
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 const TEMP_COLORS: Record<string, string> = {
   'Below 0°C': '#3b82f6',
@@ -20,7 +21,7 @@ const TEMP_COLORS: Record<string, string> = {
 }
 
 function getBucketColor(bucket: string): string {
-  return TEMP_COLORS[bucket] ?? '#00f0ff'
+  return TEMP_COLORS[bucket] ?? COLOR.CYAN
 }
 
 export default function TemperatureImpact() {

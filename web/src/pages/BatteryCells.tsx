@@ -4,7 +4,7 @@ import { getVehicles, getBatteryReport, getChargingSessions } from '../api'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, QueryError, AlertBanner, Select } from '../components/ui'
 import { useSettings } from '../hooks/useSettings'
 import { fmtNumber, fmtPercent, fmtInt } from '../lib/numberFormat'
-import { BATTERY_COLORS, healthColor } from '../lib/colors'
+import { BATTERY_COLORS, healthColor, COLOR } from '../lib/colors'
 import {
   Battery, Thermometer, AlertTriangle, CheckCircle, Activity, Zap,
   Shield, Info,
@@ -172,7 +172,7 @@ function PackVisualization({ cellVoltages, moduleTemps, healthScore }: {
               M{m + 1}
             </text>
             {/* Module temp indicator */}
-            <text x={totalW - 10} y={my + cellH / 2 + 4} textAnchor="end" fontSize="7" fill={moduleTemps[m] > 35 ? '#ef4444' : '#10b981'} fontFamily="system-ui,sans-serif">
+            <text x={totalW - 10} y={my + cellH / 2 + 4} textAnchor="end" fontSize="7" fill={moduleTemps[m] > 35 ? COLOR.BAD : COLOR.GOOD} fontFamily="system-ui,sans-serif">
               {fmtInt(moduleTemps[m])}°
             </text>
             {/* Cells */}

@@ -14,7 +14,7 @@ import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
-import { stateHexColor } from '../lib/colors'
+import { stateHexColor, COLOR } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function createVehicleIcon(status: string, heading: number = 0) {
@@ -66,7 +66,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
       </div>
       {state && (
         <>
-          <MetricBar label="Battery" value={state.battery_level} max={100} color={state.battery_level > 20 ? '#10b981' : '#ef4444'} />
+          <MetricBar label="Battery" value={state.battery_level} max={100} color={state.battery_level > 20 ? COLOR.GOOD : COLOR.BAD} />
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Gauge className="h-3 w-3 text-neon-cyan" />{Math.round(convertSpeed(state.speed))} {speedUnit}</span>
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Navigation className="h-3 w-3 text-neon-cyan" />{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span>

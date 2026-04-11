@@ -12,6 +12,7 @@ import {
   ComposedChart, Line,
 } from 'recharts'
 import { useState } from 'react'
+import { COLOR } from '../lib/colors'
 import { MapContainer, CircleMarker, Popup } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
@@ -291,8 +292,8 @@ export default function ChargeDetail() {
                 </span>
               )}
               <span className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-                <Zap className="h-3.5 w-3.5" style={{ color: isDC ? '#f59e0b' : '#60a5fa' }} />
-                <strong style={{ color: isDC ? '#f59e0b' : '#60a5fa' }}>{isDC ? 'DC Fast Charging' : 'AC Charging'}</strong>
+                <Zap className="h-3.5 w-3.5" style={{ color: isDC ? COLOR.WARN : '#60a5fa' }} />
+                <strong style={{ color: isDC ? COLOR.WARN : '#60a5fa' }}>{isDC ? 'DC Fast Charging' : 'AC Charging'}</strong>
               </span>
             </div>
           )}

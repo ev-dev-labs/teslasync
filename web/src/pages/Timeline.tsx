@@ -10,6 +10,7 @@ import {
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 import { type VehicleState } from '../lib/enums'
 
 
@@ -185,7 +186,7 @@ export default function Timeline() {
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Time</p>
           </div>
           <div>
-            <p className="text-lg font-bold capitalize" style={{ color: stateColors[lastState] ?? '#6b7280' }}>{lastState}</p>
+            <p className="text-lg font-bold capitalize" style={{ color: stateColors[lastState] ?? COLOR.MUTED }}>{lastState}</p>
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Last State</p>
           </div>
           <div>

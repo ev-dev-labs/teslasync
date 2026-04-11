@@ -23,6 +23,7 @@ import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; color: string; value: React.ReactNode; label: string }) {
   return (
@@ -575,8 +576,8 @@ export default function DriveDetail() {
         if (estRangeStats) legendItems.push({ color: '#a855f7', dash: true, label: `Range (est.)`, mean: `${fmtInt(estRangeStats.mean)} ${u.distanceUnit}`, max: `${fmtInt(estRangeStats.max)} ${u.distanceUnit}`, min: `${fmtInt(estRangeStats.min)} ${u.distanceUnit}` })
         if (socStats) legendItems.push({ color: '#84cc16', label: `SOC`, mean: `${fmtPercent(socStats.mean)}`, max: `${fmtPercent(socStats.max)}`, min: `${fmtPercent(socStats.min)}` })
         if (usableSocStats) legendItems.push({ color: '#22d3ee', label: `Usable SOC`, mean: `${fmtPercent(usableSocStats.mean)}`, max: `${fmtPercent(usableSocStats.max)}`, min: `${fmtPercent(usableSocStats.min)}` })
-        legendItems.push({ color: '#ef4444', dash: true, label: `Battery Heater`, mean: batteryHeaterOn ? 'On' : 'Off', max: batteryHeaterOn ? 'On' : 'Off', min: batteryHeaterOn ? 'On' : 'Off' })
-        if (powerStats) legendItems.push({ color: '#f59e0b', label: `Power`, mean: `${fmtWithUnit(powerStats.mean, 'kW')}`, max: `${fmtWithUnit(powerStats.max, 'kW')}`, min: `${fmtWithUnit(powerStats.min, 'kW')}` })
+        legendItems.push({ color: COLOR.BAD, dash: true, label: `Battery Heater`, mean: batteryHeaterOn ? 'On' : 'Off', max: batteryHeaterOn ? 'On' : 'Off', min: batteryHeaterOn ? 'On' : 'Off' })
+        if (powerStats) legendItems.push({ color: COLOR.WARN, label: `Power`, mean: `${fmtWithUnit(powerStats.mean, 'kW')}`, max: `${fmtWithUnit(powerStats.max, 'kW')}`, min: `${fmtWithUnit(powerStats.min, 'kW')}` })
 
         return (
         <>

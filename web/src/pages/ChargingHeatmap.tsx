@@ -6,6 +6,7 @@ import { BatteryCharging, Clock, Zap, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { COLOR } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -53,7 +54,7 @@ export default function ChargingHeatmap() {
     : null
 
   const locationData = useMemo(
-    () => (data?.locations ?? []).map(l => ({ ...l, fill: '#f59e0b' })),
+    () => (data?.locations ?? []).map(l => ({ ...l, fill: COLOR.WARN })),
     [data]
   )
 

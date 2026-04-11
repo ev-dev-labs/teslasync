@@ -52,7 +52,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
-import { CHARGER_COLORS, savingsColor } from '../lib/colors'
+import { CHARGER_COLORS, savingsColor, COLOR } from '../lib/colors'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -908,10 +908,10 @@ export default function CostAnalysis() {
                                 entry.avgRate === 0
                                   ? 'var(--surface-1)'
                                   : cheapestHour && entry.hour === cheapestHour.hour
-                                    ? '#10b981'
+                                    ? COLOR.GOOD
                                     : mostExpensiveHour && entry.hour === mostExpensiveHour.hour
-                                      ? '#ef4444'
-                                      : '#00f0ff'
+                                      ? COLOR.BAD
+                                      : COLOR.CYAN
                               }
                               fillOpacity={entry.avgRate === 0 ? 0.2 : 0.8}
                             />

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { COLOR } from '../lib/colors'
 
 /** Animated Tesla silhouette SVG for loading states and hero sections. */
 export function CarAnimation({ size = 120, className = '' }: { size?: number; className?: string }) {
@@ -107,7 +108,7 @@ export function ChargingBolt({ size = 32, className = '' }: { size?: number; cla
 export function BatteryFillAnimation({ level = 80, size = 48, className = '' }: { level?: number; size?: number; className?: string }) {
   const barWidth = size * 0.6
   const fillWidth = (barWidth - 4) * Math.min(level, 100) / 100
-  const color = level >= 60 ? '#10b981' : level >= 30 ? '#f59e0b' : '#ef4444'
+  const color = level >= 60 ? COLOR.GOOD : level >= 30 ? COLOR.WARN : COLOR.BAD
 
   return (
     <motion.svg width={size} height={size * 0.5} viewBox="0 0 48 24" className={className}

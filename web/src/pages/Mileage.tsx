@@ -11,6 +11,7 @@ import { formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 export default function Mileage() {
   usePageTitle('Mileage')
@@ -106,7 +107,7 @@ export default function Mileage() {
               label={card.label}
               value={card.value}
               icon={<card.icon className="h-4 w-4" />}
-              color={card.color === '#00f0ff' ? 'cyan' : card.color === '#10b981' ? 'green' : card.color === '#f59e0b' ? 'amber' : 'purple'}
+              color={card.color === COLOR.CYAN ? 'cyan' : card.color === COLOR.GOOD ? 'green' : card.color === COLOR.WARN ? 'amber' : 'purple'}
               subtitle={card.unit}
             />
           ))}

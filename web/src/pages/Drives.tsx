@@ -15,6 +15,7 @@ import { formatDateTime, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 function formatDuration(min: number): string {
   const h = Math.floor(min / 60)
@@ -227,7 +228,7 @@ export default function Drives() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
               <RadialGauge value={stats.count} max={Math.max(stats.count, 100)} label="Total Drives" unit="" color="#00f0ff" />
               <RadialGauge value={Math.round(convertDistance(stats.totalDistance))} max={Math.max(convertDistance(stats.totalDistance), 1000)} label={`Total ${distanceUnit}`} unit="" color="#10b981" />
-              <RadialGauge value={Math.round(convertEfficiency(stats.avgEff))} max={300} label={`Avg ${efficiencyUnit}`} unit="" color={stats.avgEff < 180 ? '#10b981' : '#f59e0b'} />
+              <RadialGauge value={Math.round(convertEfficiency(stats.avgEff))} max={300} label={`Avg ${efficiencyUnit}`} unit="" color={stats.avgEff < 180 ? COLOR.GOOD : COLOR.WARN} />
               <RadialGauge value={Math.round(convertEfficiency(stats.bestEff))} max={300} label={`Best ${efficiencyUnit}`} unit="" color="#a855f7" />
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={Math.round(convertSpeed(stats.topSpeed))} /></p>
