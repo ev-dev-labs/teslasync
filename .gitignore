@@ -60,3 +60,6 @@ coverage.html
 
 PROMPT_COMMANDS.txt
 
+
+# Copilot prompts
+.github/prompts/
