@@ -6,7 +6,12 @@ import {
   Activity, Lightbulb, Key, User, Monitor, Settings,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { GlassPanel, FadeIn, StaggerContainer, StaggerItem, MetricCard, Badge } from '@/components/ui'
+import { GlassPanel } from '@/components/ui/GlassPanel'
+import { Badge } from '@/components/ui/Badge'
+import { FadeIn } from '@/components/motion/FadeIn'
+import { StaggerContainer } from '@/components/motion/StaggerContainer'
+import { StaggerItem } from '@/components/motion/StaggerItem'
+import { MetricCard } from '@/components/data-display/MetricCard'
 import { useSettings } from '@/hooks/useSettings'
 import { cleanNil } from '@/lib/cleanNil'
 import { fmtNumber, fmtInt, fmtWithUnit, fmtPercent } from '@/lib/numberFormat'

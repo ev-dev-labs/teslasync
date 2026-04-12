@@ -10,35 +10,12 @@ export { StatusPill, type StatusPillProps } from './StatusPill';
 export { Toggle, type ToggleProps } from './Toggle';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
-
-// Re-export legacy components from ui.tsx monolith
-// These inline components will be split into individual files over time
-export {
-  IconBox,
-  DataTable,
-  Drawer,
-  ChartContainer as LegacyChartContainer,
-  MetricCard,
-  AlertBanner,
-  Accordion,
-  FadeIn,
-  StaggerContainer,
-  StaggerItem,
-  GlassPanel as LegacyGlassPanel,
-  StatCard as LegacyStatCard,
-  PageHeader,
-  StatusBadge as LegacyStatusBadge,
-  ProgressRing as LegacyProgressRing,
-  Sparkline,
-  Skeleton as LegacySkeleton,
-  ChartSkeleton,
-  StatSkeleton,
-  PageLoader,
-  EmptyState as LegacyEmptyState,
-  QueryError,
-  ConfirmModal,
-  TabNav,
-  DateRangeFilter,
-  Pagination,
-} from '../ui';
-export type { BadgeVariant, Column } from '../ui';
+export { IconBox } from './IconBox';
+export { TabNav } from './TabNav';
+export { Accordion } from './Accordion';
+export { Pagination } from './Pagination';
+export { DataTable, useSortToggle, type Column } from './DataTable';
+export { Drawer } from './Drawer';
+export { Breadcrumb } from './Breadcrumb';
+export { CommandPalette } from './CommandPalette';
+export { default as Logo } from './Logo';

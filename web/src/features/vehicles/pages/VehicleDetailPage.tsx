@@ -7,21 +7,21 @@ import { useSettings } from '@/hooks/useSettings'
 import { useVehicleLive } from '@/hooks/useVehicleLive'
 import { useAdaptiveInterval } from '@/hooks/useAdaptiveInterval'
 import {
-  getVehicle,
-  getVehicleState,
-  getVehiclePositions,
-  getMotorLatest,
-  getClimateLatest,
-  getSecurityLatest,
-  getLatestTirePressure,
-  getChargingTelemetryLatest,
-  getMediaLatest,
-  getLocationSnapshotLatest,
-  getVehicleConfigLatest,
-  getUserPreferenceLatest,
-} from '@/api/vehicles'
-import { getDrives } from '@/api/drives'
-import { getChargingSessions } from '@/api/charging'
+  useVehicle,
+  useVehicleState,
+  useVehiclePositions,
+  useMotorLatest,
+  useClimateLatest,
+  useSecurityLatest,
+  useLatestTirePressure,
+  useChargingTelemetryLatest,
+  useMediaLatest,
+  useLocationSnapshotLatest,
+  useVehicleConfigLatest,
+  useUserPreferenceLatest,
+} from '@/api/hooks/useVehicles'
+import { getDrives } from '@/api/hooks/useDriving'
+import { getChargingSessions } from '@/api/hooks/useCharging'
 import { VehicleHeader } from '../components/VehicleHeader'
 import { VehicleGauges } from '../components/VehicleGauges'
 import { TelemetryGrid, LiveTelemetryPanels } from '../components/TelemetryPanels'
@@ -41,25 +41,15 @@ export default function VehicleDetailPage() {
 
   /* ─── Core queries ─── */
 
-  const { data: vehicle, error: vehicleError } = useQuery({
-    queryKey: ['vehicle', vehicleId],
-    queryFn: () => getVehicle(vehicleId),
-  })
+  const { data: vehicle, error: vehicleError } = useVehicle(String(vehicleId))
 
   const {
     data: stateData,
     refetch: refetchState,
     error: stateError,
-  } = useQuery({
-    queryKey: ['vehicle-state', vehicleId],
-    queryFn: () => getVehicleState(vehicleId),
-    refetchInterval: 30_000,
-  })
+  } = useVehicleState(vehicleId)
 
-  const { data: positions, error: positionsError } = useQuery({
-    queryKey: ['vehicle-positions', vehicleId],
-    queryFn: () => getVehiclePositions(vehicleId, 200),
-  })
+  const { data: positions, error: positionsError } = useVehiclePositions(vehicleId, 200)
 
   const { data: drives, error: drivesError } = useQuery({
     queryKey: ['drives', vehicleId],
@@ -73,59 +63,23 @@ export default function VehicleDetailPage() {
 
   /* ─── Telemetry queries (adaptive interval) ─── */
 
-  const { data: motorData, error: motorError } = useQuery({
-    queryKey: ['motor-latest', vehicleId],
-    queryFn: () => getMotorLatest(vehicleId),
-    refetchInterval: pollInterval,
-  })
+  const { data: motorData, error: motorError } = useMotorLatest(vehicleId, pollInterval)
 
-  const { data: climateData, error: climateError } = useQuery({
-    queryKey: ['climate-latest', vehicleId],
-    queryFn: () => getClimateLatest(vehicleId),
-    refetchInterval: pollInterval,
-  })
+  const { data: climateData, error: climateError } = useClimateLatest(vehicleId, pollInterval)
 
-  const { data: securityData, error: securityError } = useQuery({
-    queryKey: ['security-latest', vehicleId],
-    queryFn: () => getSecurityLatest(vehicleId),
-    refetchInterval: pollInterval,
-  })
+  const { data: securityData, error: securityError } = useSecurityLatest(vehicleId, pollInterval)
 
-  const { data: tireData, error: tireError } = useQuery({
-    queryKey: ['tire-latest', vehicleId],
-    queryFn: () => getLatestTirePressure(vehicleId),
-    refetchInterval: pollInterval,
-  })
+  const { data: tireData, error: tireError } = useLatestTirePressure(vehicleId, pollInterval)
 
-  const { data: chargingTelemetry, error: chargingTelemetryError } = useQuery({
-    queryKey: ['charging-telemetry-latest', vehicleId],
-    queryFn: () => getChargingTelemetryLatest(vehicleId),
-    refetchInterval: 5000,
-  })
+  const { data: chargingTelemetry, error: chargingTelemetryError } = useChargingTelemetryLatest(vehicleId, 5000)
 
-  const { data: mediaData, error: mediaError } = useQuery({
-    queryKey: ['media-latest', vehicleId],
-    queryFn: () => getMediaLatest(vehicleId),
-    refetchInterval: 5000,
-  })
+  const { data: mediaData, error: mediaError } = useMediaLatest(vehicleId, 5000)
 
-  const { data: locationData, error: locationError } = useQuery({
-    queryKey: ['location-latest', vehicleId],
-    queryFn: () => getLocationSnapshotLatest(vehicleId),
-    refetchInterval: 5000,
-  })
+  const { data: locationData, error: locationError } = useLocationSnapshotLatest(vehicleId, 5000)
 
-  const { data: vehicleConfigData, error: vehicleConfigError } = useQuery({
-    queryKey: ['vehicle-config-latest', vehicleId],
-    queryFn: () => getVehicleConfigLatest(vehicleId),
-    refetchInterval: 30000,
-  })
+  const { data: vehicleConfigData, error: vehicleConfigError } = useVehicleConfigLatest(vehicleId, 30000)
 
-  const { data: userPrefData, error: userPrefError } = useQuery({
-    queryKey: ['user-pref-latest', vehicleId],
-    queryFn: () => getUserPreferenceLatest(vehicleId),
-    refetchInterval: 30000,
-  })
+  const { data: userPrefData, error: userPrefError } = useUserPreferenceLatest(vehicleId, 30000)
 
   /* ─── Derived state ─── */
 

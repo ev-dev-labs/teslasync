@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
 import { ArrowLeft, Power } from 'lucide-react'
-import { FadeIn, StatusBadge, Button } from '@/components/ui'
-import { wakeVehicle, getVehicleStatus } from '@/api/vehicles'
+import { Button } from '@/components/ui/Button'
+import { FadeIn } from '@/components/motion/FadeIn'
+import { StatusBadge } from '@/components/data-display/StatusBadge'
+import { useWakeVehicle, getVehicleStatus } from '@/api/hooks/useVehicles'
 import type { Vehicle, VehicleState, VehicleStatus } from '@/api/types'
 
 interface VehicleHeaderProps {
@@ -18,12 +19,15 @@ export function VehicleHeader({ vehicle, state, onRefetchState }: VehicleHeaderP
 
   const status: VehicleStatus = vehicle ? getVehicleStatus(vehicle, state) : 'offline'
 
-  const wakeMut = useMutation({
-    mutationFn: () => wakeVehicle(vehicleId),
-    onSuccess: () => {
-      setTimeout(() => onRefetchState(), 5000)
-    },
-  })
+  const wakeMut = useWakeVehicle()
+
+  const handleWake = () => {
+    wakeMut.mutate(vehicleId, {
+      onSuccess: () => {
+        setTimeout(() => onRefetchState(), 5000)
+      },
+    })
+  }
 
   return (
     <FadeIn>
@@ -50,7 +54,7 @@ export function VehicleHeader({ vehicle, state, onRefetchState }: VehicleHeaderP
           </p>
         </div>
         <Button
-          onClick={() => wakeMut.mutate()}
+          onClick={handleWake}
           loading={wakeMut.isPending}
           icon={<Power className="h-4 w-4" />}
         >

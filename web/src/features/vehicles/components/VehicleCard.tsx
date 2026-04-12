@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, Trash2, Lock, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -8,7 +7,7 @@ import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { ProgressRing } from '@/components/data-display/ProgressRing';
 import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz';
 import { useSettings } from '@/hooks/useSettings';
-import { getVehicleState, getVehicleStatus } from '@/api/vehicles';
+import { useVehicleState, getVehicleStatus } from '@/api/hooks/useVehicles';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Vehicle } from '@/api/types';
 import type { VehicleState } from '@/api/types';
@@ -29,11 +28,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
   const { t } = useTranslation('vehicles');
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings();
 
-  const { data: stateData } = useQuery({
-    queryKey: ['vehicle-state', vehicle.id],
-    queryFn: () => getVehicleState(vehicle.id),
-    refetchInterval: 30_000,
-  });
+  const { data: stateData } = useVehicleState(vehicle.id);
 
   const state: VehicleState | undefined = stateData?.state;
   const status = getVehicleStatus(vehicle, state);

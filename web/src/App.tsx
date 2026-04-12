@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/layout/Layout'
-import { PageLoader } from './components/ui'
+import { PageLoader } from './components/feedback/PageLoader'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────

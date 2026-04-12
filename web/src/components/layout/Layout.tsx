@@ -63,7 +63,7 @@ import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdate
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
-import { GlassPanel } from '../ui'
+import { GlassPanel } from '../ui/GlassPanel'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',

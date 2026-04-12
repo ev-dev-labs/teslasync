@@ -4,8 +4,9 @@ import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
   Activity, Clock, ChevronDown,
 } from 'lucide-react'
-import { GlassPanel, Button } from '../ui'
-import { AnimatedNumber } from './Widgets'
+import { GlassPanel } from '../ui/GlassPanel'
+import { Button } from '../ui/Button'
+import { AnimatedNumber } from './AnimatedNumber'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { useState } from 'react'

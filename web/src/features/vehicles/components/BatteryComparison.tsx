@@ -3,7 +3,7 @@ import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { useSettings } from '@/hooks/useSettings';
-import { getVehicleState } from '@/api/vehicles';
+import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import type { Vehicle, VehicleState } from '@/api/types';
 
 /** Traffic-light color for battery percentage */
@@ -27,7 +27,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
       const entries = await Promise.all(
         vehicles.map(async (v) => {
           try {
-            const data = await getVehicleState(v.id);
+            const data = await fetchVehicleState(v.id);
             return { vehicle: v, state: data?.state ?? null };
           } catch {
             return { vehicle: v, state: null };

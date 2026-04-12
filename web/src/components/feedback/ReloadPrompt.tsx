@@ -1,7 +1,8 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { RefreshCw, X } from 'lucide-react'
 import { useState } from 'react'
-import { Button, GlassPanel } from '../ui'
+import { Button } from '../ui/Button'
+import { GlassPanel } from '../ui/GlassPanel'
 
 /**
  * Shows a non-intrusive banner when a new version is deployed.

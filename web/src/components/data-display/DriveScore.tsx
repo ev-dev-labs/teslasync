@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { GlassPanel } from '../ui'
+import { GlassPanel } from '../ui/GlassPanel'
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))

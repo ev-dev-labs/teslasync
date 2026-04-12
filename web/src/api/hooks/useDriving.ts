@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
   DriveDetail,
@@ -11,6 +12,14 @@ import type {
   RegenEfficiencyData,
   RouteEfficiencyData,
 } from '@/types/driving';
+
+/** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
+export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: string, end?: string) => {
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(limit), offset: String(offset) })
+  if (start) params.set('start', start)
+  if (end) params.set('end', end)
+  return request<ApiDrive[]>(`/drives?${params}`)
+}
 
 export const drivingKeys = {
   drives: (vehicleId?: string) => ['drives', vehicleId] as const,

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { RadialGauge } from '@/components/charts/RadialGauge';
-import { StatusBadge } from '@/components/ui';
+import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Grid } from '@/components/layout/Grid';

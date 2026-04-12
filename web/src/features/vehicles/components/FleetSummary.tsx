@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { useSettings } from '@/hooks/useSettings';
-import { getVehicleState } from '@/api/vehicles';
+import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import type { Vehicle } from '@/api/types';
 import type { VehicleState } from '@/api/types';
 
@@ -22,7 +22,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       const entries = await Promise.all(
         vehicles.map(async (v) => {
           try {
-            const data = await getVehicleState(v.id);
+            const data = await fetchVehicleState(v.id);
             return data?.state ?? null;
           } catch {
             return null;

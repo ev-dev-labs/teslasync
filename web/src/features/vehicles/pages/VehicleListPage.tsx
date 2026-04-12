@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Car, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
-import { useVehicles } from '@/api/hooks/useVehicles';
-import { syncVehicles, deleteVehicle } from '@/api/vehicles';
+import { useVehicles, useSyncVehicles, useDeleteVehicle } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import type { Vehicle } from '@/api/types';
@@ -27,22 +26,16 @@ export default function VehicleListPage() {
   useVehicleLive(primaryVehicleId);
 
   // --- Sync mutation ---
-  const syncMut = useMutation({
-    mutationFn: syncVehicles,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
-  });
+  const syncMut = useSyncVehicles();
 
   // --- Delete mutation ---
-  const deleteMut = useMutation({
-    mutationFn: deleteVehicle,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['vehicle-state'] });
-      queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] });
-      queryClient.invalidateQueries({ queryKey: ['fleet-battery-states'] });
-      setDeleteTarget(null);
-    },
-  });
+  const deleteMut = useDeleteVehicle();
+  const onDeleteSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['vehicle-state'] });
+    queryClient.invalidateQueries({ queryKey: ['fleet-vehicle-states'] });
+    queryClient.invalidateQueries({ queryKey: ['fleet-battery-states'] });
+    setDeleteTarget(null);
+  };
 
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
 
@@ -163,7 +156,11 @@ export default function VehicleListPage() {
         })}
         confirmLabel={t('list.deleteConfirm', 'Remove')}
         variant="danger"
-        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMut.mutate(deleteTarget.id, { onSuccess: onDeleteSuccess });
+          }
+        }}
         onCancel={() => setDeleteTarget(null)}
       />
     </PageContainer>

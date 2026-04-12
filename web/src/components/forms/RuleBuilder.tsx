@@ -11,7 +11,8 @@ import { signalCatalog, getSignalMeta } from '../../lib/signalCatalog'
 import type { SignalMeta } from '../../lib/signalCatalog'
 import { Plus, Trash2, ChevronDown, Layers, Clock, Search } from 'lucide-react'
 import clsx from 'clsx'
-import { Input, Select } from '../ui'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
 
 // ─── Operator helpers ────────────────────────────────────────────────────────
 

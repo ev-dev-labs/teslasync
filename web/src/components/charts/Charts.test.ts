@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { safe, fmt } from './Charts'
+import { safe, fmt } from './chartUtils'
 import { CHART_COLORS } from '../../lib/colors'
 
 describe('safe', () => {

@@ -4,3 +4,7 @@ export { StatusBadge } from './StatusBadge';
 export { ProgressRing } from './ProgressRing';
 export { AnimatedNumber } from './AnimatedNumber';
 export { Timeline } from './Timeline';
+export { MetricCard } from './MetricCard';
+export { InlineMetric } from './InlineMetric';
+export { MetricBar } from './MetricBar';
+export { TimelineItem } from './TimelineItem';
