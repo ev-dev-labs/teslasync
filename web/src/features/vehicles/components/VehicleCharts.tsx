@@ -1,21 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartTooltip,
+} from '@/components/charts'
 import { Navigation, Activity, Car, Settings } from 'lucide-react'
-import { MapContainer, Polyline, Marker } from 'react-leaflet'
+import { MapContainer, Polyline, Marker } from '@/components/maps'
 import { GlassPanel, FadeIn, MetricCard } from '@/components/ui'
-import { MapTileLayer, MapInvalidator } from '@/components/MapTileLayer'
-import { MapLayerSwitcher } from '@/components/MapLayerSwitcher'
-import type { MapStyle } from '@/components/MapTileLayer'
-import { ChartTooltip } from '@/components/Charts'
+import { MapTileLayer, MapInvalidator } from '@/components/maps/MapTileLayer'
+import { MapLayerSwitcher } from '@/components/maps/MapLayerSwitcher'
+import type { MapStyle } from '@/components/maps/MapTileLayer'
 import { useSettings } from '@/hooks/useSettings'
 import { cleanNil } from '@/lib/cleanNil'
 import { fmtNumber } from '@/lib/numberFormat'

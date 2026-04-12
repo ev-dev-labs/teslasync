@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GlassPanel } from '../components/ui'
+import { GlassPanel } from '../ui'
 import { Gift, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Release {

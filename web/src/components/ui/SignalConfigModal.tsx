@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
 import clsx from 'clsx'
-import { Input, Select } from './ui'
+import { Input, Select } from '.'
 
 const INTERVAL_OPTIONS = [
   { value: 0, label: '500ms', color: 'text-neon-cyan', desc: 'Real-time' },

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
-import { useTheme } from './ThemeProvider'
+import { useTheme } from '../ui/ThemeProvider'
 
 export type TeslaModel = 'model3' | 'models' | 'modely' | 'modelx' | 'cybertruck'
 

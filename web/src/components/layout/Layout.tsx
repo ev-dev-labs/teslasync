@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import InstallPrompt from './InstallPrompt'
+import InstallPrompt from '../feedback/InstallPrompt'
 import {
   LayoutDashboard,
   Car,
@@ -55,15 +55,15 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
-import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
-import { ServiceStatusBanner, SystemHealthDot } from './ServiceStatus'
-import Logo from './Logo'
-import OnboardingWizard from './OnboardingWizard'
-import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../api'
-import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
-import { useToast } from './Toast'
-import { useSettings } from '../hooks/useSettings'
-import { GlassPanel } from './ui'
+import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
+import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
+import Logo from '../ui/Logo'
+import OnboardingWizard from '../feedback/OnboardingWizard'
+import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../../api'
+import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
+import { useToast } from '../feedback/Toast'
+import { useSettings } from '../../hooks/useSettings'
+import { GlassPanel } from '../ui'
 
 const navI18nKeys: Record<string, string> = {
   'Dashboard': 'nav.dashboard',

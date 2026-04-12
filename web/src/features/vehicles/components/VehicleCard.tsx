@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { ProgressRing } from '@/components/data-display/ProgressRing';
-import { TeslaCarViz, parseModelKey } from '@/components/TeslaCarViz';
+import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz';
 import { useSettings } from '@/hooks/useSettings';
 import { getVehicleState, getVehicleStatus } from '@/api/vehicles';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';

@@ -6,10 +6,10 @@
  */
 import { CartesianGrid } from 'recharts'
 import { memo } from 'react'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber } from '../../lib/numberFormat'
 
 // ── Neon color palette used across all charts ──
-export { CHART_COLORS, CHART_COLORS as NEON_COLORS } from '../lib/colors'
+export { CHART_COLORS, CHART_COLORS as NEON_COLORS } from '../../lib/colors'
 
 // ── Theme-aware axis tick styles ──
 export const axisTick = { fill: 'var(--text-muted)', fontSize: 11 }

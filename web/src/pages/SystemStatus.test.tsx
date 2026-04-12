@@ -65,7 +65,7 @@ vi.mock('../lib/resilience', () => ({
   resilientFetch: vi.fn(),
 }))
 
-vi.mock('../components/Widgets', () => ({
+vi.mock('../components/data-display/Widgets', () => ({
   AnimatedNumber: ({ value }: { value: number }) => <span>{value}</span>,
 }))
 

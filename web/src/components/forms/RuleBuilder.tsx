@@ -6,12 +6,12 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
-import type { RuleConditionTree } from '../api'
-import { signalCatalog, getSignalMeta } from '../lib/signalCatalog'
-import type { SignalMeta } from '../lib/signalCatalog'
+import type { RuleConditionTree } from '../../api'
+import { signalCatalog, getSignalMeta } from '../../lib/signalCatalog'
+import type { SignalMeta } from '../../lib/signalCatalog'
 import { Plus, Trash2, ChevronDown, Layers, Clock, Search } from 'lucide-react'
 import clsx from 'clsx'
-import { Input, Select } from './ui'
+import { Input, Select } from '../ui'
 
 // ─── Operator helpers ────────────────────────────────────────────────────────
 

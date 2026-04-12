@@ -51,7 +51,7 @@ vi.mock('../hooks/useRealtimeEvents', () => ({
   useRealtimeEvents: vi.fn().mockReturnValue({ connected: false }),
 }))
 
-vi.mock('../components/TeslaCarViz', () => ({
+vi.mock('../components/data-display/TeslaCarViz', () => ({
   TeslaCarViz: () => <div data-testid="tesla-car-viz" />,
   TeslaCarMini: () => <div data-testid="tesla-car-mini" />,
   parseModelKey: vi.fn().mockReturnValue('model3'),

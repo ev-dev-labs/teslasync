@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { safe, fmt } from './Charts'
-import { CHART_COLORS } from '../lib/colors'
+import { CHART_COLORS } from '../../lib/colors'
 
 describe('safe', () => {
   it('converts number to number', () => expect(safe(42)).toBe(42))

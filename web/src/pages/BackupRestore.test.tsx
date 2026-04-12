@@ -45,7 +45,7 @@ vi.mock('../api', () => ({
   previewRestore: vi.fn().mockResolvedValue({ tables: [], metadata: {}, checksum_verified: true }),
 }))
 
-vi.mock('../components/Toast', () => ({
+vi.mock('../components/feedback/Toast', () => ({
   useToast: () => ({
     toast: vi.fn(),
     success: vi.fn(),

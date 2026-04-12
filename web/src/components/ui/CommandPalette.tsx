@@ -5,7 +5,7 @@ import {
   Search, LayoutDashboard, Car, Route, BatteryCharging, MapPin, Settings, Radar, Bolt,
   HeartPulse, Gamepad2, Bell, BarChart3, Command, ArrowRight
 } from 'lucide-react'
-import { Input } from './ui'
+import { Input } from '.'
 import clsx from 'clsx'
 
 interface CommandItem {

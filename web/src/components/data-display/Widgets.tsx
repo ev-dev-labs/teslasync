@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber } from '../../lib/numberFormat'
 
 interface AnimatedNumberProps {
   value: number

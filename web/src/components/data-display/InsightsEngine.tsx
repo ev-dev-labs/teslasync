@@ -3,12 +3,12 @@ import {
   Lightbulb, TrendingUp, TrendingDown, ArrowRight, DollarSign,
   Battery, BatteryCharging, Zap, Shield, Car, Clock, Leaf,
 } from 'lucide-react'
-import { GlassPanel, FadeIn } from './ui'
-import { fmtNumber } from '../lib/numberFormat'
+import { GlassPanel, FadeIn } from '../ui'
+import { fmtNumber } from '../../lib/numberFormat'
 import type {
   Drive, ChargingSession, EnergyStats, BatteryReport,
   MileageStats, VampireDrainStats,
-} from '../api'
+} from '../../api'
 
 // ─── Types ────────────────────────────────────────────────────
 

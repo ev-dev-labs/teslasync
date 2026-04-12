@@ -33,7 +33,7 @@ vi.mock('../api', () => ({
   updateGasPriceConfig: vi.fn().mockResolvedValue({}),
 }))
 
-vi.mock('../components/Toast', () => ({
+vi.mock('../components/feedback/Toast', () => ({
   useToast: vi.fn().mockReturnValue({
     toast: vi.fn(),
     success: vi.fn(),
@@ -44,7 +44,7 @@ vi.mock('../components/Toast', () => ({
   }),
 }))
 
-vi.mock('../components/ThemeProvider', () => ({
+vi.mock('../components/ui/ThemeProvider', () => ({
   useTheme: vi.fn().mockReturnValue({
     themeId: 'neon-cyan',
     modeId: 'dark',

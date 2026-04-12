@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { WifiOff } from 'lucide-react'
-import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../lib/resilience'
+import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../../lib/resilience'
 
 export function ServiceStatusBanner() {
   const [connStatus, setConnStatus] = useState<string>(getConnectionStatus())

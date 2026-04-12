@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '../api/polling'
+import { getPollingStatus, getPollingSavings, type PollEngineStatus, type CostSnapshot, type VehiclePollingStatus } from '../../api/polling'
 import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
   Activity, Clock, ChevronDown,
 } from 'lucide-react'
-import { GlassPanel, Button } from './ui'
+import { GlassPanel, Button } from '../ui'
 import { AnimatedNumber } from './Widgets'
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
@@ -77,7 +77,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
           </motion.div>
           <span className="text-sm font-mono text-white/80">{vin.slice(-8)}</span>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: color + '20', color }}>
-            {status.activity} · {profileLabel(status.profile)}
+            {status.activity} ┬╖ {profileLabel(status.profile)}
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs text-white/50">
@@ -96,12 +96,12 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
           <div>Battery: {status.battery_level}%</div>
           {status.last_decision.reasons.map((r, i) => (
             <div key={i} className="flex items-center gap-1">
-              <span className="text-white/30">→</span> {r}
+              <span className="text-white/30">ΓåÆ</span> {r}
             </div>
           ))}
           {status.last_decision.prediction && (
             <div className="mt-1 text-blue-400">
-              📊 Prediction: {status.last_decision.prediction.next_state} in{' '}
+              ≡ƒôè Prediction: {status.last_decision.prediction.next_state} in{' '}
               {formatDuration(status.last_decision.prediction.estimated_in / 1e6)}{' '}
               ({Math.round(status.last_decision.prediction.confidence * 100)}% conf)
               <br />

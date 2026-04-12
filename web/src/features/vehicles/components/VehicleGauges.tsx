@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Lock, Unlock, Shield, Wind, Cpu } from 'lucide-react'
 import { GlassPanel, FadeIn } from '@/components/ui'
-import { TeslaCarViz, parseModelKey } from '@/components/TeslaCarViz'
-import { RadialGauge, MetricBar } from '@/components/Widgets'
+import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarViz'
+import { RadialGauge, MetricBar } from '@/components/data-display/Widgets'
 import { useSettings } from '@/hooks/useSettings'
 import type { Vehicle, VehicleState } from '@/api/types'
 
