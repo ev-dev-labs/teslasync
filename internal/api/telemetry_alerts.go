@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	notifFSM "github.com/ev-dev-labs/teslasync/internal/fsm/notification"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -25,6 +27,8 @@ type TelemetryAlertEvaluator struct {
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
 	mqttClient    pahomqtt.Client
+	cooldowns     map[string]*notifFSM.CooldownFSM // keyed by "ruleID:vehicleID"
+	cooldownMu    sync.Mutex
 }
 
 // NewTelemetryAlertEvaluator creates an alert evaluator for streaming data.
@@ -38,6 +42,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		eventBus:      eventBus,
 		eventHub:      hub,
 		ruleEngine:    NewRuleEngine(),
+		cooldowns:     make(map[string]*notifFSM.CooldownFSM),
 		mqttClient:    mqttClient,
 	}
 }
@@ -104,7 +109,22 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		}
 
 		if triggered {
-			e.fireAlert(ctx, rule, vehicleID, vin, message)
+			// Check cooldown FSM — suppress if within cooldown period
+			cooldownKey := fmt.Sprintf("%d:%d", rule.ID, vehicleID)
+			e.cooldownMu.Lock()
+			cd, exists := e.cooldowns[cooldownKey]
+			if !exists {
+				cd = notifFSM.NewCooldownFSM(rule.ID, vehicleID, notifFSM.DefaultCooldownConfig())
+				e.cooldowns[cooldownKey] = cd
+			}
+			e.cooldownMu.Unlock()
+
+			if cd.ShouldFire() {
+				e.fireAlert(ctx, rule, vehicleID, vin, message)
+			} else {
+				log.Debug().Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
+					Msg("cep: alert suppressed by cooldown FSM")
+			}
 		}
 	}
 	metrics.CEPActiveRules.Set(float64(enabledCount))

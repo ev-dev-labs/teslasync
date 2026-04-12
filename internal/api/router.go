@@ -416,9 +416,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					writeJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
 					return
 				}
+				stats := fh.Stats()
 				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"enabled":         true,
-					"active_vehicles": fh.Stats(),
+					"enabled": true,
+					"stats":   stats,
 				})
 			})
 			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {
