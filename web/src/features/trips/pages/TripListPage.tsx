@@ -4,18 +4,20 @@ import { Badge } from '@/components/ui/Badge';
 import { useTrips } from '@/api/hooks/useTrips';
 import { tripStates } from '@/lib/fsm';
 import type { Trip } from '@/types/trip';
+import { useTranslation } from 'react-i18next';
 
 export default function TripListPage() {
+  const { t } = useTranslation('trips');
   const { data: trips, isLoading, error } = useTrips();
 
   return (
     <PageContainer
-      title="Trips"
-      subtitle="All driving trips across your fleet"
+      title={t('list.title', 'Trips')}
+      subtitle={t('list.subtitle', 'All driving trips across your fleet')}
       loading={isLoading}
       error={error as Error | null}
       empty={trips?.length === 0}
-      emptyMessage="No trips recorded yet."
+      emptyMessage={t('list.empty', 'No trips recorded yet.')}
     >
       <div className="space-y-3">
         {trips?.map((trip: Trip) => (

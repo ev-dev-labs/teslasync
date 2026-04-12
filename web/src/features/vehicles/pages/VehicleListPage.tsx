@@ -4,18 +4,20 @@ import { Badge } from '@/components/ui/Badge';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { vehicleStates } from '@/lib/fsm';
 import type { Vehicle } from '@/types/vehicle';
+import { useTranslation } from 'react-i18next';
 
 export default function VehicleListPage() {
+  const { t } = useTranslation('vehicles');
   const { data: vehicles, isLoading, error } = useVehicles();
 
   return (
     <PageContainer
-      title="Vehicles"
-      subtitle="Your Tesla fleet"
+      title={t('list.title', 'Vehicles')}
+      subtitle={t('list.subtitle', 'Your Tesla fleet')}
       loading={isLoading}
       error={error as Error | null}
       empty={vehicles?.length === 0}
-      emptyMessage="No vehicles found. Add your first vehicle to get started."
+      emptyMessage={t('list.empty', 'No vehicles found. Add your first vehicle to get started.')}
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {vehicles?.map((v: Vehicle) => (

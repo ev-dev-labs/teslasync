@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Grid } from '@/components/layout/Grid';
 import { Card } from '@/components/ui/Card';
@@ -10,6 +11,7 @@ import { useVehicle, useRefreshVehicle } from '@/api/hooks/useVehicles';
 import { vehicleStates } from '@/lib/fsm';
 
 export default function VehicleDetailPage() {
+  const { t } = useTranslation('vehicles');
   const { id } = useParams<{ id: string }>();
   const { data: vehicle, isLoading, error } = useVehicle(id!);
   const refresh = useRefreshVehicle();
@@ -18,7 +20,7 @@ export default function VehicleDetailPage() {
 
   return (
     <PageContainer
-      title={vehicle?.displayName ?? 'Vehicle'}
+      title={vehicle?.displayName ?? t('detail.title', 'Vehicle')}
       subtitle={vehicle ? `${vehicle.model} · ${vehicle.year} · ${vehicle.vin}` : undefined}
       loading={isLoading}
       error={error as Error | null}

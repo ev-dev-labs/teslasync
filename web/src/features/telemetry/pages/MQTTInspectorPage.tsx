@@ -92,46 +92,27 @@ export default function MQTTInspectorPage() {
 
       <Card>
         <CardHeader title={t('Vehicle Breakdown')} />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('VIN')}</th>
-                <th className="py-2 px-3 text-left">{t('State')}</th>
-                <th className="py-2 px-3 text-right">{t('Signals')}</th>
-                <th className="py-2 px-3 text-right">{t('Batches')}</th>
-                <th className="py-2 px-3 text-right">{t('Sig/sec')}</th>
-                <th className="py-2 px-3 text-right">{t('Last Received')}</th>
-                <th className="py-2 px-3 text-left">{t('Status')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vehicles.map((v) => {
-                const isStale = !v.lastReceived || Date.now() - new Date(v.lastReceived).getTime() > 120_000;
-                return (
-                  <tr key={v.vin} className="border-b border-gray-800">
-                    <td className="py-2 px-3 font-mono text-xs">{v.vin}</td>
-                    <td className="py-2 px-3">
-                      <Badge variant={v.state === 'online' ? 'success' : 'neutral'} size="sm">
-                        {v.state ?? 'unknown'}
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-3 text-right">{v.signalCount.toLocaleString()}</td>
-                    <td className="py-2 px-3 text-right">{v.batchCount.toLocaleString()}</td>
-                    <td className="py-2 px-3 text-right">{v.signalsPerSec?.toFixed(1) ?? '--'}</td>
-                    <td className="py-2 px-3 text-right text-gray-400">
-                      {v.lastReceived ? formatRelative(v.lastReceived) : '--'}
-                    </td>
-                    <td className="py-2 px-3">
-                      <Badge variant={isStale ? 'warning' : 'success'} size="sm" dot>
-                        {isStale ? t('Stale') : t('Live')}
-                      </Badge>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="divide-y divide-gray-800">
+          {vehicles.map((v) => {
+            const isStale = !v.lastReceived || Date.now() - new Date(v.lastReceived).getTime() > 120_000;
+            return (
+              <div key={v.vin} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="w-40 font-mono text-xs shrink-0">{v.vin}</span>
+                <Badge variant={v.state === 'online' ? 'success' : 'neutral'} size="sm">
+                  {v.state ?? 'unknown'}
+                </Badge>
+                <span className="w-20 text-right shrink-0">{v.signalCount.toLocaleString()}</span>
+                <span className="w-16 text-right shrink-0">{v.batchCount.toLocaleString()}</span>
+                <span className="w-16 text-right shrink-0">{v.signalsPerSec?.toFixed(1) ?? '--'}</span>
+                <span className="w-20 text-right text-gray-400 shrink-0">
+                  {v.lastReceived ? formatRelative(v.lastReceived) : '--'}
+                </span>
+                <Badge variant={isStale ? 'warning' : 'success'} size="sm" dot>
+                  {isStale ? t('Stale') : t('Live')}
+                </Badge>
+              </div>
+            );
+          })}
         </div>
       </Card>
     </PageContainer>

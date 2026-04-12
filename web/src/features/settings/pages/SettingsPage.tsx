@@ -4,8 +4,10 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCurrentUser, useUpdateUser } from '@/api/hooks/useUser';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function SettingsPage() {
+  const { t } = useTranslation('settings');
   const { data: user, isLoading, error } = useCurrentUser();
   const updateUser = useUpdateUser();
   const [displayName, setDisplayName] = useState('');
@@ -17,8 +19,8 @@ export default function SettingsPage() {
 
   return (
     <PageContainer
-      title="Settings"
-      subtitle="Manage your account and preferences"
+      title={t('title', 'Settings')}
+      subtitle={t('subtitle', 'Manage your account and preferences')}
       loading={isLoading}
       error={error as Error | null}
     >

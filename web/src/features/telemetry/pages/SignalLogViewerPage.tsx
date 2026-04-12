@@ -57,15 +57,15 @@ export default function SignalLogViewerPage() {
           </div>
           <div className="max-h-96 overflow-y-auto px-3 pb-3 space-y-1">
             {filtered.map((s) => (
-              <button
+              <Button
                 key={s}
+                size="sm"
+                variant={s === selectedSignal ? 'primary' : 'ghost'}
                 onClick={() => { setSelectedSignal(s); setPage(1); }}
-                className={`block w-full text-left text-xs font-mono px-2 py-1 rounded truncate ${
-                  s === selectedSignal ? 'bg-cyan-500/20 text-cyan-300' : 'hover:bg-gray-800 text-gray-300'
-                }`}
+                className="block w-full text-left text-xs font-mono truncate"
               >
                 {s}
-              </button>
+              </Button>
             ))}
           </div>
         </Card>
@@ -91,30 +91,18 @@ export default function SignalLogViewerPage() {
           <Card>
             <CardHeader title={selectedSignal || t('Select a signal')} />
             {logData?.data?.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs font-mono">
-                  <thead>
-                    <tr className="border-b border-gray-700 text-gray-400">
-                      <th className="py-1 px-2 text-left">#</th>
-                      <th className="py-1 px-2 text-left">{t('Timestamp')}</th>
-                      <th className="py-1 px-2 text-left">{t('Value')}</th>
-                      <th className="py-1 px-2 text-left">{t('Type')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logData.data.map((entry, i) => {
-                      const vt = valueType(entry);
-                      return (
-                        <tr key={i} className="border-b border-gray-800">
-                          <td className="py-1 px-2 text-gray-500">{(page - 1) * pageSize + i + 1}</td>
-                          <td className="py-1 px-2 text-gray-400">{new Date(entry.timestamp).toLocaleString()}</td>
-                          <td className="py-1 px-2">{formatValue(entry)}</td>
-                          <td className="py-1 px-2"><Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-gray-800">
+                {logData.data.map((entry, i) => {
+                  const vt = valueType(entry);
+                  return (
+                    <div key={i} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
+                      <span className="w-8 text-gray-500 shrink-0">{(page - 1) * pageSize + i + 1}</span>
+                      <span className="w-40 text-gray-400 shrink-0">{new Date(entry.timestamp).toLocaleString()}</span>
+                      <span className="flex-1">{formatValue(entry)}</span>
+                      <Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-gray-500 text-sm text-center py-8">{t('No data')}</p>

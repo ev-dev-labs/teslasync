@@ -44,35 +44,17 @@ export default function ApiLogsPage() {
 
       <Card>
         <CardHeader title={t('API Call Log')} />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('Time')}</th>
-                <th className="py-2 px-3 text-left">{t('Method')}</th>
-                <th className="py-2 px-3 text-left">{t('Endpoint')}</th>
-                <th className="py-2 px-3 text-left">{t('Status')}</th>
-                <th className="py-2 px-3 text-right">{t('Duration')}</th>
-                <th className="py-2 px-3 text-left">{t('Error')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs?.map((log) => (
-                <tr key={log.id} className="border-b border-gray-800">
-                  <td className="py-2 px-3 text-gray-400 text-xs">{new Date(log.createdAt).toLocaleString()}</td>
-                  <td className="py-2 px-3">
-                    <Badge variant={methodVariant[log.method] ?? 'neutral'} size="sm">{log.method}</Badge>
-                  </td>
-                  <td className="py-2 px-3 font-mono text-xs truncate max-w-[250px]">{log.url}</td>
-                  <td className="py-2 px-3">
-                    <Badge variant={statusVariant(log.statusCode)} size="sm">{log.statusCode}</Badge>
-                  </td>
-                  <td className="py-2 px-3 text-right">{log.durationMs}ms</td>
-                  <td className="py-2 px-3 text-red-400 text-xs truncate max-w-[150px]">{log.error ?? '--'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="divide-y divide-gray-800">
+          {logs?.map((log) => (
+            <div key={log.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <span className="w-36 text-gray-400 text-xs shrink-0">{new Date(log.createdAt).toLocaleString()}</span>
+              <Badge variant={methodVariant[log.method] ?? 'neutral'} size="sm">{log.method}</Badge>
+              <span className="font-mono text-xs truncate max-w-[250px] flex-1">{log.url}</span>
+              <Badge variant={statusVariant(log.statusCode)} size="sm">{log.statusCode}</Badge>
+              <span className="w-16 text-right shrink-0">{log.durationMs}ms</span>
+              <span className="text-red-400 text-xs truncate max-w-[150px]">{log.error ?? '--'}</span>
+            </div>
+          ))}
         </div>
       </Card>
 

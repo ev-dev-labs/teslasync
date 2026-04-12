@@ -46,38 +46,21 @@ export default function DataRepairPage() {
       {records.length > 0 ? (
         <Card>
           <CardHeader title={t(tab === 'charging' ? 'Stale Charging Sessions' : 'Stale Drives')} />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-700 text-gray-400">
-                  <th className="py-2 px-3 text-left">{t('ID')}</th>
-                  <th className="py-2 px-3 text-left">{t('Start Date')}</th>
-                  <th className="py-2 px-3 text-right">{t('Start Battery')}</th>
-                  <th className="py-2 px-3 text-right">{t('Hours Open')}</th>
-                  <th className="py-2 px-3 text-left">{t('Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-800">
-                    <td className="py-2 px-3 font-mono text-xs">{r.id}</td>
-                    <td className="py-2 px-3">{new Date(r.startDate).toLocaleString()}</td>
-                    <td className="py-2 px-3 text-right">{r.startBattery}%</td>
-                    <td className="py-2 px-3 text-right">
-                      <Badge variant={r.hoursOpen > 24 ? 'danger' : 'warning'} size="sm">
-                        {r.hoursOpen.toFixed(1)}h
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-3">
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline">{t('Edit')}</Button>
-                        <Button size="sm" variant="danger">{t('Close')}</Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y divide-gray-800">
+            {records.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="w-24 font-mono text-xs shrink-0">{r.id}</span>
+                <span className="w-36 shrink-0">{new Date(r.startDate).toLocaleString()}</span>
+                <span className="w-16 text-right shrink-0">{r.startBattery}%</span>
+                <Badge variant={r.hoursOpen > 24 ? 'danger' : 'warning'} size="sm">
+                  {r.hoursOpen.toFixed(1)}h
+                </Badge>
+                <div className="flex gap-1 ml-auto">
+                  <Button size="sm" variant="outline">{t('Edit')}</Button>
+                  <Button size="sm" variant="danger">{t('Close')}</Button>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       ) : (

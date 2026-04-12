@@ -4,18 +4,20 @@ import { Badge } from '@/components/ui/Badge';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { vehicleStates } from '@/lib/fsm';
 import type { Vehicle } from '@/types/vehicle';
+import { useTranslation } from 'react-i18next';
 
 export default function MapOverviewPage() {
+  const { t } = useTranslation('maps');
   const { data: vehicles, isLoading, error } = useVehicles();
 
   return (
     <PageContainer
-      title="Fleet Map"
-      subtitle="See all your vehicles on a map"
+      title={t('overview.title', 'Fleet Map')}
+      subtitle={t('overview.subtitle', 'See all your vehicles on a map')}
       loading={isLoading}
       error={error as Error | null}
       empty={vehicles?.length === 0}
-      emptyMessage="No vehicles to display on the map."
+      emptyMessage={t('overview.empty', 'No vehicles to display on the map.')}
     >
       {/* Map placeholder — full MapContainer integration requires leaflet setup */}
       <Card className="relative h-[500px] overflow-hidden">

@@ -107,35 +107,21 @@ export default function StateMachineDebuggerPage() {
 
       <Card>
         <CardHeader title={t('Transition Timeline (24h)')} />
-        <div className="overflow-x-auto max-h-64 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('State')}</th>
-                <th className="py-2 px-3 text-left">{t('Started')}</th>
-                <th className="py-2 px-3 text-left">{t('Ended')}</th>
-                <th className="py-2 px-3 text-right">{t('Duration')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transitions.map((tr, i) => (
-                <tr key={i} className="border-b border-gray-800">
-                  <td className="py-2 px-3">
-                    <Badge variant={stateColors[tr.state] ?? 'neutral'} size="sm">{tr.state}</Badge>
-                  </td>
-                  <td className="py-2 px-3 text-gray-400 text-xs">{new Date(tr.startedAt).toLocaleString()}</td>
-                  <td className="py-2 px-3 text-xs">
-                    {tr.endedAt ? (
-                      <span className="text-gray-400">{new Date(tr.endedAt).toLocaleString()}</span>
-                    ) : (
-                      <Badge variant="success" size="sm">{t('ongoing')}</Badge>
-                    )}
-                  </td>
-                  <td className="py-2 px-3 text-right">{formatDuration(tr.durationSeconds)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
+          {transitions.map((tr, i) => (
+            <div key={i} className="flex items-center gap-4 px-3 py-2 text-sm">
+              <Badge variant={stateColors[tr.state] ?? 'neutral'} size="sm">{tr.state}</Badge>
+              <span className="w-36 text-gray-400 text-xs shrink-0">{new Date(tr.startedAt).toLocaleString()}</span>
+              <span className="w-36 text-xs shrink-0">
+                {tr.endedAt ? (
+                  <span className="text-gray-400">{new Date(tr.endedAt).toLocaleString()}</span>
+                ) : (
+                  <Badge variant="success" size="sm">{t('ongoing')}</Badge>
+                )}
+              </span>
+              <span className="w-16 text-right shrink-0">{formatDuration(tr.durationSeconds)}</span>
+            </div>
+          ))}
         </div>
       </Card>
     </PageContainer>

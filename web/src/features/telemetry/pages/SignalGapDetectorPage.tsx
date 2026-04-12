@@ -91,33 +91,18 @@ export default function SignalGapDetectorPage() {
 
       <Card>
         <CardHeader title={t('Signals')} subtitle={`${filtered.length} shown`} />
-        <div className="overflow-x-auto max-h-96 overflow-y-auto">
-          <table className="w-full text-xs font-mono">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-1 px-2 text-left">{t('Status')}</th>
-                <th className="py-1 px-2 text-left">{t('Signal')}</th>
-                <th className="py-1 px-2 text-left">{t('Last Value')}</th>
-                <th className="py-1 px-2 text-left">{t('Last Updated')}</th>
-                <th className="py-1 px-2 text-right">{t('Staleness')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr key={s.name} className="border-b border-gray-800">
-                  <td className="py-1 px-2">
-                    <Badge variant={categoryVariant[s.category] ?? 'neutral'} size="sm">{s.category}</Badge>
-                  </td>
-                  <td className="py-1 px-2 truncate max-w-[200px]">{s.name}</td>
-                  <td className="py-1 px-2 truncate max-w-[120px] text-gray-400">{s.value || '--'}</td>
-                  <td className="py-1 px-2 text-gray-400">{s.timestamp ? new Date(s.timestamp).toLocaleString() : '--'}</td>
-                  <td className="py-1 px-2 text-right">
-                    {s.category === 'never' ? '--' : formatStaleness(s.staleness)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-h-96 overflow-y-auto divide-y divide-gray-800">
+          {filtered.map((s) => (
+            <div key={s.name} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
+              <Badge variant={categoryVariant[s.category] ?? 'neutral'} size="sm">{s.category}</Badge>
+              <span className="flex-1 truncate max-w-[200px]">{s.name}</span>
+              <span className="w-28 truncate text-gray-400 shrink-0">{s.value || '--'}</span>
+              <span className="w-36 text-gray-400 shrink-0">{s.timestamp ? new Date(s.timestamp).toLocaleString() : '--'}</span>
+              <span className="w-16 text-right shrink-0">
+                {s.category === 'never' ? '--' : formatStaleness(s.staleness)}
+              </span>
+            </div>
+          ))}
         </div>
       </Card>
     </PageContainer>

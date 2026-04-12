@@ -46,15 +46,15 @@ export default function SignalExplorerPage() {
           </div>
           <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1">
             {filtered.map((s) => (
-              <button
+              <Button
                 key={s}
+                size="sm"
+                variant={s === selectedSignal ? 'primary' : 'ghost'}
                 onClick={() => setSelectedSignal(s)}
-                className={`block w-full text-left text-xs font-mono px-2 py-1 rounded truncate ${
-                  s === selectedSignal ? 'bg-cyan-500/20 text-cyan-300' : 'hover:bg-gray-800 text-gray-300'
-                }`}
+                className="block w-full text-left text-xs font-mono truncate"
               >
                 {s}
-              </button>
+              </Button>
             ))}
           </div>
         </Card>
@@ -85,23 +85,13 @@ export default function SignalExplorerPage() {
 
               <Card>
                 <CardHeader title={t('History')} subtitle={`${history?.count ?? 0} points`} />
-                <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                  <table className="w-full text-xs font-mono">
-                    <thead>
-                      <tr className="border-b border-gray-700 text-gray-400">
-                        <th className="py-1 px-2 text-left">{t('Timestamp')}</th>
-                        <th className="py-1 px-2 text-left">{t('Value')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history?.data?.slice(0, 100).map((p, i) => (
-                        <tr key={i} className="border-b border-gray-800">
-                          <td className="py-1 px-2 text-gray-400">{new Date(p.timestamp).toLocaleString()}</td>
-                          <td className="py-1 px-2">{p.valueNum ?? p.valueStr ?? String(p.valueBool ?? '')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
+                  {history?.data?.slice(0, 100).map((p, i) => (
+                    <div key={i} className="flex items-center gap-4 px-2 py-1 text-xs font-mono">
+                      <span className="w-40 text-gray-400 shrink-0">{new Date(p.timestamp).toLocaleString()}</span>
+                      <span>{p.valueNum ?? p.valueStr ?? String(p.valueBool ?? '')}</span>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </>

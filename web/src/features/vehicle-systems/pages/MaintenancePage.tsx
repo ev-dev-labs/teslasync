@@ -44,29 +44,15 @@ export default function MaintenancePage() {
 
       <Card>
         <CardHeader title={t('Maintenance Schedule')} />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-left text-gray-400">
-                <th className="py-2 px-3">{t('Item')}</th>
-                <th className="py-2 px-3">{t('Category')}</th>
-                <th className="py-2 px-3">{t('Interval')}</th>
-                <th className="py-2 px-3">{t('Est. Cost')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items?.map((item) => (
-                <tr key={item.id} className="border-b border-gray-800">
-                  <td className="py-2 px-3 font-medium">{item.name}</td>
-                  <td className="py-2 px-3">
-                    <Badge variant="neutral" size="sm">{item.category}</Badge>
-                  </td>
-                  <td className="py-2 px-3">{item.intervalKm.toLocaleString()} km / {item.intervalMonths} mo</td>
-                  <td className="py-2 px-3">${item.estimatedCostUsd}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="divide-y divide-gray-800">
+          {items?.map((item) => (
+            <div key={item.id} className="flex items-center gap-4 px-3 py-2 text-sm">
+              <span className="flex-1 font-medium">{item.name}</span>
+              <Badge variant="neutral" size="sm">{item.category}</Badge>
+              <span className="w-36 shrink-0">{item.intervalKm.toLocaleString()} km / {item.intervalMonths} mo</span>
+              <span className="w-16 text-right shrink-0">${item.estimatedCostUsd}</span>
+            </div>
+          ))}
         </div>
       </Card>
 

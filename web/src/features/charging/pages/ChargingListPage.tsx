@@ -4,18 +4,20 @@ import { Badge } from '@/components/ui/Badge';
 import { useChargingSessions } from '@/api/hooks/useCharging';
 import { chargingStates } from '@/lib/fsm';
 import type { ChargingSession } from '@/types/charging';
+import { useTranslation } from 'react-i18next';
 
 export default function ChargingListPage() {
+  const { t } = useTranslation('charging');
   const { data: sessions, isLoading, error } = useChargingSessions();
 
   return (
     <PageContainer
-      title="Charging Sessions"
-      subtitle="All charging sessions across your fleet"
+      title={t('list.title', 'Charging Sessions')}
+      subtitle={t('list.subtitle', 'All charging sessions across your fleet')}
       loading={isLoading}
       error={error as Error | null}
       empty={sessions?.length === 0}
-      emptyMessage="No charging sessions found."
+      emptyMessage={t('list.empty', 'No charging sessions found.')}
     >
       <div className="space-y-3">
         {sessions?.map((s: ChargingSession) => (

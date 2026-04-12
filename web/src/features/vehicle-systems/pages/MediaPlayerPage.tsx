@@ -92,27 +92,15 @@ export default function MediaPlayerPage() {
 
       <Card>
         <CardHeader title={t('Playback History')} subtitle={`${history?.length ?? 0} records`} />
-        <div className="overflow-x-auto max-h-64 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-left text-gray-400">
-                <th className="py-2 px-3">{t('Time')}</th>
-                <th className="py-2 px-3">{t('Title')}</th>
-                <th className="py-2 px-3">{t('Artist')}</th>
-                <th className="py-2 px-3">{t('Source')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history?.slice(0, 50).map((h) => (
-                <tr key={h.id} className="border-b border-gray-800">
-                  <td className="py-2 px-3 text-gray-400">{new Date(h.timestamp).toLocaleString()}</td>
-                  <td className="py-2 px-3 truncate max-w-[200px]">{h.title || '--'}</td>
-                  <td className="py-2 px-3 truncate max-w-[150px]">{h.artist || '--'}</td>
-                  <td className="py-2 px-3"><Badge variant="neutral" size="sm">{h.source || '--'}</Badge></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
+          {history?.slice(0, 50).map((h) => (
+            <div key={h.id} className="flex items-center gap-4 px-3 py-2 text-sm">
+              <span className="w-36 text-gray-400 shrink-0">{new Date(h.timestamp).toLocaleString()}</span>
+              <span className="flex-1 truncate max-w-[200px]">{h.title || '--'}</span>
+              <span className="w-32 truncate shrink-0">{h.artist || '--'}</span>
+              <Badge variant="neutral" size="sm">{h.source || '--'}</Badge>
+            </div>
+          ))}
         </div>
       </Card>
     </PageContainer>

@@ -67,13 +67,15 @@ export default function ChatbotPage() {
               <p className="text-2xl font-bold">{t('How can I help you?')}</p>
               <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
                 {SUGGESTIONS.map((s) => (
-                  <button
+                  <Button
                     key={s}
+                    size="sm"
+                    variant="outline"
                     onClick={() => sendMessage(s)}
-                    className="text-xs px-3 py-1.5 rounded-full border border-gray-700 hover:border-cyan-400 text-gray-300 hover:text-cyan-300 transition-colors"
+                    className="rounded-full"
                   >
                     {s}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

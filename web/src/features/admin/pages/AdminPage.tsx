@@ -36,57 +36,31 @@ export default function AdminPage() {
 
       <Card>
         <CardHeader title={t('System Components')} />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('Component')}</th>
-                <th className="py-2 px-3 text-left">{t('Status')}</th>
-                <th className="py-2 px-3 text-right">{t('Failures')}</th>
-                <th className="py-2 px-3 text-left">{t('Last Error')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {componentList.map(([name, comp]) => (
-                <tr key={name} className="border-b border-gray-800">
-                  <td className="py-2 px-3 font-medium capitalize">{name}</td>
-                  <td className="py-2 px-3">
-                    <Badge variant={comp.status === 'ok' ? 'success' : comp.status === 'degraded' ? 'warning' : 'danger'} size="sm">
-                      {comp.status}
-                    </Badge>
-                  </td>
-                  <td className="py-2 px-3 text-right">{comp.consecutiveFailures}</td>
-                  <td className="py-2 px-3 text-gray-400 truncate max-w-[200px]">{comp.lastError ?? '--'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="divide-y divide-gray-800">
+          {componentList.map(([name, comp]) => (
+            <div key={name} className="flex items-center gap-4 px-3 py-2 text-sm">
+              <span className="w-32 font-medium capitalize">{name}</span>
+              <Badge variant={comp.status === 'ok' ? 'success' : comp.status === 'degraded' ? 'warning' : 'danger'} size="sm">
+                {comp.status}
+              </Badge>
+              <span className="w-16 text-right">{comp.consecutiveFailures}</span>
+              <span className="text-gray-400 truncate max-w-[200px]">{comp.lastError ?? '--'}</span>
+            </div>
+          ))}
         </div>
       </Card>
 
       <Card>
         <CardHeader title={t('Recent Audit Log')} subtitle={`${logs?.length ?? 0} entries`} />
-        <div className="overflow-x-auto max-h-64 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('Time')}</th>
-                <th className="py-2 px-3 text-left">{t('Action')}</th>
-                <th className="py-2 px-3 text-left">{t('Resource')}</th>
-                <th className="py-2 px-3 text-left">{t('Details')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs?.map((log) => (
-                <tr key={log.id} className="border-b border-gray-800">
-                  <td className="py-2 px-3 text-gray-400">{new Date(log.createdAt).toLocaleString()}</td>
-                  <td className="py-2 px-3">{log.action}</td>
-                  <td className="py-2 px-3">{log.resource}</td>
-                  <td className="py-2 px-3 text-gray-400 truncate max-w-[200px]">{log.details}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
+          {logs?.map((log) => (
+            <div key={log.id} className="flex items-center gap-4 px-3 py-2 text-sm">
+              <span className="w-40 text-gray-400 shrink-0">{new Date(log.createdAt).toLocaleString()}</span>
+              <span className="w-28 shrink-0">{log.action}</span>
+              <span className="w-28 shrink-0">{log.resource}</span>
+              <span className="text-gray-400 truncate max-w-[200px]">{log.details}</span>
+            </div>
+          ))}
         </div>
       </Card>
     </PageContainer>

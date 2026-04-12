@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Grid } from '@/components/layout/Grid';
 import { Card } from '@/components/ui/Card';
@@ -9,6 +10,7 @@ import { useTrip } from '@/api/hooks/useTrips';
 import { tripStates } from '@/lib/fsm';
 
 export default function TripDetailPage() {
+  const { t } = useTranslation('trips');
   const { id } = useParams<{ id: string }>();
   const { data: trip, isLoading, error } = useTrip(id!);
 
@@ -16,7 +18,7 @@ export default function TripDetailPage() {
 
   return (
     <PageContainer
-      title="Trip Detail"
+      title={t('detail.title', 'Trip Detail')}
       subtitle={trip ? `${trip.startAddress || 'Start'} → ${trip.endAddress || 'End'}` : undefined}
       loading={isLoading}
       error={error as Error | null}

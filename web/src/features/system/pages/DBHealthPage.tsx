@@ -66,32 +66,19 @@ export default function DBHealthPage() {
             </div>
           }
         />
-        <div className="overflow-x-auto max-h-80 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('Table')}</th>
-                <th className="py-2 px-3 text-right">{t('Rows')}</th>
-                <th className="py-2 px-3 text-right">{t('Size')}</th>
-                <th className="py-2 px-3 text-right">{t('Indexes')}</th>
-                <th className="py-2 px-3 text-left">{t('Last Vacuum')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedTables.map((table) => (
-                <tr key={table.name} className="border-b border-gray-800">
-                  <td className="py-2 px-3 font-mono text-xs">
-                    {table.sizeBytes > 100 * 1024 * 1024 && <span className="text-amber-400 mr-1">⚠</span>}
-                    {table.name}
-                  </td>
-                  <td className="py-2 px-3 text-right">{table.rowCount.toLocaleString()}</td>
-                  <td className="py-2 px-3 text-right">{formatBytes(table.sizeBytes)}</td>
-                  <td className="py-2 px-3 text-right">{table.indexCount}</td>
-                  <td className="py-2 px-3 text-gray-400">{table.lastVacuum ? new Date(table.lastVacuum).toLocaleDateString() : '--'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-h-80 overflow-y-auto divide-y divide-gray-800">
+          {sortedTables.map((table) => (
+            <div key={table.name} className="flex items-center gap-4 px-3 py-2 text-sm">
+              <span className="w-48 font-mono text-xs shrink-0">
+                {table.sizeBytes > 100 * 1024 * 1024 && <span className="text-amber-400 mr-1">⚠</span>}
+                {table.name}
+              </span>
+              <span className="w-24 text-right shrink-0">{table.rowCount.toLocaleString()}</span>
+              <span className="w-20 text-right shrink-0">{formatBytes(table.sizeBytes)}</span>
+              <span className="w-16 text-right shrink-0">{table.indexCount}</span>
+              <span className="text-gray-400">{table.lastVacuum ? new Date(table.lastVacuum).toLocaleDateString() : '--'}</span>
+            </div>
+          ))}
         </div>
       </Card>
 

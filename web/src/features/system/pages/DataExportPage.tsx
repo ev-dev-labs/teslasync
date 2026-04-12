@@ -45,15 +45,15 @@ export default function DataExportPage() {
         <div className="px-4 pb-4 space-y-3">
           <Grid cols={{ default: 2, md: 4 }} gap={3}>
             {EXPORT_TYPES.map((et) => (
-              <button
+              <Button
                 key={et}
+                size="sm"
+                variant={type === et ? 'primary' : 'outline'}
                 onClick={() => setType(et)}
-                className={`rounded border px-3 py-2 text-sm capitalize ${
-                  type === et ? 'border-cyan-400 bg-cyan-500/10 text-cyan-300' : 'border-gray-700 text-gray-400'
-                }`}
+                className="capitalize"
               >
                 {t(et)}
-              </button>
+              </Button>
             ))}
           </Grid>
 
@@ -93,32 +93,19 @@ export default function DataExportPage() {
 
       <Card>
         <CardHeader title={t('Export Jobs')} />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 px-3 text-left">{t('Type')}</th>
-                <th className="py-2 px-3 text-left">{t('Format')}</th>
-                <th className="py-2 px-3 text-left">{t('Status')}</th>
-                <th className="py-2 px-3 text-right">{t('Records')}</th>
-                <th className="py-2 px-3 text-left">{t('Created')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs?.map((job) => {
-                const cfg = statusConfig[job.status] ?? statusConfig.queued;
-                return (
-                  <tr key={job.id} className="border-b border-gray-800">
-                    <td className="py-2 px-3 capitalize">{job.type}</td>
-                    <td className="py-2 px-3"><Badge variant="neutral" size="sm">{job.format.toUpperCase()}</Badge></td>
-                    <td className="py-2 px-3"><Badge variant={cfg.variant} size="sm">{job.status}</Badge></td>
-                    <td className="py-2 px-3 text-right">{job.recordCount ?? '--'}</td>
-                    <td className="py-2 px-3 text-gray-400 text-xs">{new Date(job.createdAt).toLocaleString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="divide-y divide-gray-800">
+          {jobs?.map((job) => {
+            const cfg = statusConfig[job.status] ?? statusConfig.queued;
+            return (
+              <div key={job.id} className="flex items-center gap-4 px-3 py-2 text-sm">
+                <span className="w-24 capitalize shrink-0">{job.type}</span>
+                <Badge variant="neutral" size="sm">{job.format.toUpperCase()}</Badge>
+                <Badge variant={cfg.variant} size="sm">{job.status}</Badge>
+                <span className="w-16 text-right shrink-0">{job.recordCount ?? '--'}</span>
+                <span className="text-gray-400 text-xs">{new Date(job.createdAt).toLocaleString()}</span>
+              </div>
+            );
+          })}
         </div>
       </Card>
     </PageContainer>

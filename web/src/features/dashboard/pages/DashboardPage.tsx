@@ -2,14 +2,16 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { Grid } from '@/components/layout/Grid';
 import { StatCard } from '@/components/data-display/StatCard';
 import { useDashboardStats } from '@/api/hooks/useDashboard';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardPage() {
   const { data, isLoading, error } = useDashboardStats();
+  const { t } = useTranslation('dashboard');
 
   return (
     <PageContainer
-      title="Dashboard"
-      subtitle="Overview of your Tesla fleet"
+      title={t('title', 'Dashboard')}
+      subtitle={t('subtitle', 'Overview of your Tesla fleet')}
       loading={isLoading}
       error={error as Error | null}
     >

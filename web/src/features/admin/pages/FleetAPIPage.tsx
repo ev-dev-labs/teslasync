@@ -76,16 +76,13 @@ export default function FleetAPIPage() {
             {POLLING_ENDPOINTS.map((ep) => (
               <div key={ep} className="flex items-center justify-between px-4 py-3">
                 <span className="text-sm">{ep}</span>
-                <button
+                <Button
+                  size="sm"
+                  variant={enabled[ep] ? 'primary' : 'outline'}
                   onClick={() => toggleEndpoint(ep)}
-                  className={`w-10 h-5 rounded-full transition-colors ${
-                    enabled[ep] ? 'bg-cyan-500' : 'bg-gray-600'
-                  }`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform mx-0.5 ${
-                    enabled[ep] ? 'translate-x-5' : 'translate-x-0'
-                  }`} />
-                </button>
+                  {enabled[ep] ? 'On' : 'Off'}
+                </Button>
               </div>
             ))}
           </div>

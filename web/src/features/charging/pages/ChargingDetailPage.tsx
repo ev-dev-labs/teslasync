@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Grid } from '@/components/layout/Grid';
 import { Card } from '@/components/ui/Card';
@@ -9,6 +10,7 @@ import { useChargingSession } from '@/api/hooks/useCharging';
 import { chargingStates, chargingSubStates } from '@/lib/fsm';
 
 export default function ChargingDetailPage() {
+  const { t } = useTranslation('charging');
   const { id } = useParams<{ id: string }>();
   const { data: session, isLoading, error } = useChargingSession(id!);
 
@@ -19,7 +21,7 @@ export default function ChargingDetailPage() {
 
   return (
     <PageContainer
-      title="Charging Session"
+      title={t('detail.title', 'Charging Session')}
       subtitle={session ? `${session.chargerType.toUpperCase()} · ${new Date(session.startedAt).toLocaleDateString()}` : undefined}
       loading={isLoading}
       error={error as Error | null}
