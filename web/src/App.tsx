@@ -4,24 +4,39 @@ import Layout from './components/Layout'
 import { PageLoader } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
-// Lazy-loaded pages for optimal code splitting
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const LiveMap = lazy(() => import('./pages/LiveMap'))
-const Vehicles = lazy(() => import('./pages/Vehicles'))
-const VehicleDetail = lazy(() => import('./pages/VehicleDetail'))
+// ── Refactored pages (features/ architecture) ──────────────────────────
+const Dashboard = lazy(() => import('./features/dashboard/pages/DashboardPage'))
+const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
+const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
+const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
+const ChargeDetail = lazy(() => import('./features/charging/pages/ChargingDetailPage'))
+const Trips = lazy(() => import('./features/trips/pages/TripListPage'))
+const TripDetail = lazy(() => import('./features/trips/pages/TripDetailPage'))
+const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
+
+// ── Legacy pages (not yet migrated to features/) ──────────────────────
+// TODO(refactor): migrate to features/energy/pages/
 const Energy = lazy(() => import('./pages/Energy'))
+// TODO(refactor): migrate to features/battery/pages/
 const BatteryHealth = lazy(() => import('./pages/BatteryHealth'))
+// TODO(refactor): migrate to features/drives/pages/
 const Drives = lazy(() => import('./pages/Drives'))
-const Charging = lazy(() => import('./pages/Charging'))
-const Analytics = lazy(() => import('./pages/Analytics'))
-const Commands = lazy(() => import('./pages/Commands'))
-const Alerts = lazy(() => import('./pages/Alerts'))
-const Geofences = lazy(() => import('./pages/Geofences'))
-const Settings = lazy(() => import('./pages/Settings'))
 const DriveDetail = lazy(() => import('./pages/DriveDetail'))
-const ChargeDetail = lazy(() => import('./pages/ChargeDetail'))
+// TODO(refactor): migrate to features/analytics/pages/
+const Analytics = lazy(() => import('./pages/Analytics'))
+// TODO(refactor): migrate to features/commands/pages/
+const Commands = lazy(() => import('./pages/Commands'))
+// TODO(refactor): migrate to features/alerts/pages/
+const Alerts = lazy(() => import('./pages/Alerts'))
+const AlertStudio = lazy(() => import('./pages/AlertStudio'))
+// TODO(refactor): migrate to features/geofences/pages/
+const Geofences = lazy(() => import('./pages/Geofences'))
+// TODO(refactor): migrate to features/notifications/pages/
 const Notifications = lazy(() => import('./pages/Notifications'))
+// TODO(refactor): migrate to features/chatbot/pages/
 const Chatbot = lazy(() => import('./pages/Chatbot'))
+// TODO(refactor): migrate remaining pages to features/ architecture
 const TirePressure = lazy(() => import('./pages/TirePressure'))
 const SoftwareUpdates = lazy(() => import('./pages/SoftwareUpdates'))
 const VampireDrain = lazy(() => import('./pages/VampireDrain'))
@@ -30,7 +45,6 @@ const Timeline = lazy(() => import('./pages/Timeline'))
 const Mileage = lazy(() => import('./pages/Mileage'))
 const ProjectedRange = lazy(() => import('./pages/ProjectedRange'))
 const Efficiency = lazy(() => import('./pages/Efficiency'))
-const Trips = lazy(() => import('./pages/Trips'))
 const Statistics = lazy(() => import('./pages/Statistics'))
 const SystemStatus = lazy(() => import('./pages/SystemStatus'))
 const Roadmap = lazy(() => import('./pages/Roadmap'))
@@ -75,7 +89,6 @@ const SignalGapDetector = lazy(() => import('./pages/SignalGapDetector'))
 const DBHealthDashboard = lazy(() => import('./pages/DBHealthDashboard'))
 const MQTTInspector = lazy(() => import('./pages/MQTTInspector'))
 const FleetAPI = lazy(() => import('./pages/FleetAPI'))
-const AlertStudio = lazy(() => import('./pages/AlertStudio'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {
@@ -118,6 +131,7 @@ export default function App() {
         <Route path="projected-range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
+        <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
