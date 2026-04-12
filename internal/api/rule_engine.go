@@ -56,14 +56,27 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	key := ruleKey{RuleID: rule.ID, VehicleID: vehicleID}
 	e.mu.RLock()
 	st, hasState := e.state[key]
+	
+	// Copy state under lock to avoid concurrent map access
+	var prevSignals map[string]interface{}
+	var lastFiredAt *time.Time
+	if hasState {
+		lastFiredAt = st.LastFiredAt
+		if st.PrevSignals != nil {
+			prevSignals = make(map[string]interface{}, len(st.PrevSignals))
+			for k, v := range st.PrevSignals {
+				prevSignals[k] = v
+			}
+		}
+	}
 	e.mu.RUnlock()
 
-	if hasState && st.LastFiredAt != nil {
+	if hasState && lastFiredAt != nil {
 		cooldown := time.Duration(rule.CooldownMin) * time.Minute
 		if cooldown <= 0 {
 			cooldown = 15 * time.Minute
 		}
-		if time.Since(*st.LastFiredAt) < cooldown {
+		if time.Since(*lastFiredAt) < cooldown {
 			metrics.CEPRulesCooldownSkipped.Inc()
 			return EvalResult{} // still in cooldown
 		}
@@ -74,15 +87,6 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	if err := json.Unmarshal(rule.Conditions, &cond); err != nil {
 		log.Warn().Err(err).Int64("rule_id", rule.ID).Msg("cep: failed to parse rule conditions")
 		return EvalResult{}
-	}
-
-	// Get previous signals for this rule+vehicle (copy to avoid concurrent access)
-	var prevSignals map[string]interface{}
-	if hasState && st.PrevSignals != nil {
-		prevSignals = make(map[string]interface{}, len(st.PrevSignals))
-		for k, v := range st.PrevSignals {
-			prevSignals[k] = v
-		}
 	}
 
 	// === EVALUATE CONDITION TREE ===
