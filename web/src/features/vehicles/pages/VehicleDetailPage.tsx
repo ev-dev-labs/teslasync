@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSettings } from '@/hooks/useSettings'
 import { useVehicleLive } from '@/hooks/useVehicleLive'
@@ -147,6 +148,11 @@ export default function VehicleDetailPage() {
   const state = stateData?.state
 
   return (
+    <PageContainer
+      title={vehicle?.display_name ?? t('vehicles.detail.title', 'Vehicle Detail')}
+      loading={!vehicle && !vehicleError}
+      error={vehicleError as Error | null}
+    >
     <div className="space-y-6">
       {/* Header: Back button, name, badges, wake action */}
       <VehicleHeader
@@ -200,5 +206,6 @@ export default function VehicleDetailPage() {
         </div>
       )}
     </div>
+    </PageContainer>
   )
 }
