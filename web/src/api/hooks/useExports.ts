@@ -1,0 +1,34 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { request } from '../client';
+import type { ExportJob } from '@/types/export';
+
+export const exportKeys = {
+  all: ['exports'] as const,
+  detail: (id: string) => ['exports', id] as const,
+};
+
+export function useExports() {
+  return useQuery({
+    queryKey: exportKeys.all,
+    queryFn: () => request<ExportJob[]>('/exports'),
+  });
+}
+
+export function useExport(id: string) {
+  return useQuery({
+    queryKey: exportKeys.detail(id),
+    queryFn: () => request<ExportJob>(`/exports/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useCreateExport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { format: string; vehicleId: string; dateFrom: string; dateTo: string }) =>
+      request<ExportJob>('/exports', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: exportKeys.all });
+    },
+  });
+}
