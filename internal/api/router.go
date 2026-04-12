@@ -410,17 +410,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// FSM shadow mode stats + transition log
 		r.Route("/fsm", func(r chi.Router) {
-			r.Get("/shadow-stats", func(w http.ResponseWriter, req *http.Request) {
-				shadow := telemetryHandler.FSMShadow()
-				if shadow == nil {
+			r.Get("/stats", func(w http.ResponseWriter, req *http.Request) {
+				fh := telemetryHandler.FSMHandler()
+				if fh == nil {
 					writeJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
 					return
 				}
-				batches, discrepancies := shadow.Stats()
 				writeJSON(w, http.StatusOK, map[string]interface{}{
-					"enabled":       true,
-					"total_batches": batches,
-					"discrepancies": discrepancies,
+					"enabled":         true,
+					"active_vehicles": fh.Stats(),
 				})
 			})
 			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {

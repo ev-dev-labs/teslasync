@@ -234,11 +234,7 @@ func main() {
 		go signalHistoryWriter.FlushLoop(ctx)
 		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
 
-		// Shadow FSM — runs new FSM in parallel with old state machine, logs discrepancies
-		fsmTransRepo := database.NewFSMTransitionRepo(db)
-		fsmShadow := api.NewFSMShadow(fsmTransRepo)
-		telemetryHandler.SetFSMShadow(fsmShadow)
-		log.Info().Msg("FSM shadow mode enabled — new FSM runs in parallel, logs discrepancies")
+		log.Info().Msg("FSM vehicle state engine active — declarative transition table with 20 transitions")
 
 		// MongoDB raw telemetry capture (optional)
 		if cfg.MongoDB.Enabled {
