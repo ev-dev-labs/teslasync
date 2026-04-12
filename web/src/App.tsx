@@ -4,91 +4,107 @@ import Layout from './components/Layout'
 import { PageLoader } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
-// ── Refactored pages (features/ architecture) ──────────────────────────
+// ── ALL pages live in features/ — zero imports from pages/ ──────────────
+
+// Dashboard
 const Dashboard = lazy(() => import('./features/dashboard/pages/DashboardPage'))
+const QuickStats = lazy(() => import('./features/dashboard/pages/QuickStatsPage'))
+
+// Vehicles
 const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
 const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
+
+// Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
 const ChargeDetail = lazy(() => import('./features/charging/pages/ChargingDetailPage'))
+const ChargingCurve = lazy(() => import('./features/charging/pages/ChargingCurvePage'))
+const ChargingHeatmap = lazy(() => import('./features/charging/pages/ChargingHeatmapPage'))
+const CostAnalysis = lazy(() => import('./features/charging/pages/CostAnalysisPage'))
+
+// Trips
 const Trips = lazy(() => import('./features/trips/pages/TripListPage'))
 const TripDetail = lazy(() => import('./features/trips/pages/TripDetailPage'))
-const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
-const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
 
-// ── Legacy pages (not yet migrated to features/) ──────────────────────
-// TODO(refactor): migrate to features/energy/pages/
-const Energy = lazy(() => import('./pages/Energy'))
-// TODO(refactor): migrate to features/battery/pages/
-const BatteryHealth = lazy(() => import('./pages/BatteryHealth'))
-// TODO(refactor): migrate to features/drives/pages/
-const Drives = lazy(() => import('./pages/Drives'))
-const DriveDetail = lazy(() => import('./pages/DriveDetail'))
-// TODO(refactor): migrate to features/analytics/pages/
-const Analytics = lazy(() => import('./pages/Analytics'))
-// TODO(refactor): migrate to features/commands/pages/
-const Commands = lazy(() => import('./pages/Commands'))
-// TODO(refactor): migrate to features/alerts/pages/
-const Alerts = lazy(() => import('./pages/Alerts'))
-const AlertStudio = lazy(() => import('./pages/AlertStudio'))
-// TODO(refactor): migrate to features/geofences/pages/
-const Geofences = lazy(() => import('./pages/Geofences'))
-// TODO(refactor): migrate to features/notifications/pages/
-const Notifications = lazy(() => import('./pages/Notifications'))
-// TODO(refactor): migrate to features/chatbot/pages/
-const Chatbot = lazy(() => import('./pages/Chatbot'))
-// TODO(refactor): migrate remaining pages to features/ architecture
-const TirePressure = lazy(() => import('./pages/TirePressure'))
-const SoftwareUpdates = lazy(() => import('./pages/SoftwareUpdates'))
-const VampireDrain = lazy(() => import('./pages/VampireDrain'))
-const Locations = lazy(() => import('./pages/Locations'))
-const Timeline = lazy(() => import('./pages/Timeline'))
-const Mileage = lazy(() => import('./pages/Mileage'))
-const ProjectedRange = lazy(() => import('./pages/ProjectedRange'))
-const Efficiency = lazy(() => import('./pages/Efficiency'))
-const Statistics = lazy(() => import('./pages/Statistics'))
-const SystemStatus = lazy(() => import('./pages/SystemStatus'))
-const Roadmap = lazy(() => import('./pages/Roadmap'))
-const APIKeysPage = lazy(() => import('./pages/APIKeys'))
-const Changelog = lazy(() => import('./pages/Changelog'))
-const Compare = lazy(() => import('./pages/Compare'))
-const Admin = lazy(() => import('./pages/Admin'))
-const ApiLogs = lazy(() => import('./pages/ApiLogs'))
-const DevTools = lazy(() => import('./pages/DevTools'))
-const QuickStats = lazy(() => import('./pages/QuickStats'))
-const DrivingDynamics = lazy(() => import('./pages/DrivingDynamics'))
-const ClimateControl = lazy(() => import('./pages/ClimateControl'))
-const SecurityAccess = lazy(() => import('./pages/SecurityAccess'))
-const ChargingCurve = lazy(() => import('./pages/ChargingCurve'))
-const CostAnalysis = lazy(() => import('./pages/CostAnalysis'))
-const BatteryCells = lazy(() => import('./pages/BatteryCells'))
-const DriveScore = lazy(() => import('./pages/DriveScore'))
-const WeeklyDigest = lazy(() => import('./pages/WeeklyDigest'))
-const Maintenance = lazy(() => import('./pages/Maintenance'))
-const DataExport = lazy(() => import('./pages/DataExport'))
-const EnergyFlow = lazy(() => import('./pages/EnergyFlow'))
-const DrivetrainHealth = lazy(() => import('./pages/DrivetrainHealth'))
-const MediaPlayer = lazy(() => import('./pages/MediaPlayer'))
-const SafetySettings = lazy(() => import('./pages/SafetySettings'))
-const NavigationRoute = lazy(() => import('./pages/NavigationRoute'))
-const DataRepair = lazy(() => import('./pages/DataRepair'))
-const BackupRestore = lazy(() => import('./pages/BackupRestore'))
-const TemperatureImpact = lazy(() => import('./pages/TemperatureImpact'))
-const RouteEfficiency = lazy(() => import('./pages/RouteEfficiency'))
-const RegenEfficiency = lazy(() => import('./pages/RegenEfficiency'))
-const BatteryDegradation = lazy(() => import('./pages/BatteryDegradation'))
-const TrueCostOwnership = lazy(() => import('./pages/TrueCostOwnership'))
-const SleepEfficiency = lazy(() => import('./pages/SleepEfficiency'))
-const ChargingHeatmap = lazy(() => import('./pages/ChargingHeatmap'))
-const SpeedProfile = lazy(() => import('./pages/SpeedProfile'))
-const SignalExplorer = lazy(() => import('./pages/SignalExplorer'))
-const SignalLogViewer = lazy(() => import('./pages/SignalLogViewer'))
-const LiveSignalMonitor = lazy(() => import('./pages/LiveSignalMonitor'))
-const StateMachineDebugger = lazy(() => import('./pages/StateMachineDebugger'))
-const SignalDiff = lazy(() => import('./pages/SignalDiff'))
-const SignalGapDetector = lazy(() => import('./pages/SignalGapDetector'))
-const DBHealthDashboard = lazy(() => import('./pages/DBHealthDashboard'))
-const MQTTInspector = lazy(() => import('./pages/MQTTInspector'))
-const FleetAPI = lazy(() => import('./pages/FleetAPI'))
+// Battery & Energy
+const Energy = lazy(() => import('./features/battery/pages/EnergyPage'))
+const BatteryHealth = lazy(() => import('./features/battery/pages/BatteryHealthPage'))
+const BatteryCells = lazy(() => import('./features/battery/pages/BatteryCellsPage'))
+const BatteryDegradation = lazy(() => import('./features/battery/pages/BatteryDegradationPage'))
+const EnergyFlow = lazy(() => import('./features/battery/pages/EnergyFlowPage'))
+const VampireDrain = lazy(() => import('./features/battery/pages/VampireDrainPage'))
+const ProjectedRange = lazy(() => import('./features/battery/pages/ProjectedRangePage'))
+const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficiencyPage'))
+
+// Driving & Performance
+const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
+const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
+const DriveScore = lazy(() => import('./features/driving/pages/DriveScorePage'))
+const DrivingDynamics = lazy(() => import('./features/driving/pages/DrivingDynamicsPage'))
+const DrivetrainHealth = lazy(() => import('./features/driving/pages/DrivetrainHealthPage'))
+const Efficiency = lazy(() => import('./features/driving/pages/EfficiencyPage'))
+const SpeedProfile = lazy(() => import('./features/driving/pages/SpeedProfilePage'))
+const RegenEfficiency = lazy(() => import('./features/driving/pages/RegenEfficiencyPage'))
+const RouteEfficiency = lazy(() => import('./features/driving/pages/RouteEfficiencyPage'))
+
+// Analytics & Statistics
+const Analytics = lazy(() => import('./features/analytics/pages/AnalyticsPage'))
+const Statistics = lazy(() => import('./features/analytics/pages/StatisticsPage'))
+const Compare = lazy(() => import('./features/analytics/pages/ComparePage'))
+const Mileage = lazy(() => import('./features/analytics/pages/MileagePage'))
+const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCostPage'))
+const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
+const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
+
+// Maps & Location
+const LiveMap = lazy(() => import('./features/maps/pages/MapOverviewPage'))
+const Locations = lazy(() => import('./features/maps/pages/LocationsPage'))
+const Geofences = lazy(() => import('./features/maps/pages/GeofencesPage'))
+const NavigationRoute = lazy(() => import('./features/maps/pages/NavigationRoutePage'))
+const TemperatureImpact = lazy(() => import('./features/maps/pages/TemperatureImpactPage'))
+
+// Vehicle Systems
+const ClimateControl = lazy(() => import('./features/vehicle-systems/pages/ClimateControlPage'))
+const TirePressure = lazy(() => import('./features/vehicle-systems/pages/TirePressurePage'))
+const Maintenance = lazy(() => import('./features/vehicle-systems/pages/MaintenancePage'))
+const SoftwareUpdates = lazy(() => import('./features/vehicle-systems/pages/SoftwareUpdatesPage'))
+const SafetySettings = lazy(() => import('./features/vehicle-systems/pages/SafetySettingsPage'))
+const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPlayerPage'))
+
+// Notifications & Alerts
+const Alerts = lazy(() => import('./features/notifications/pages/AlertsPage'))
+const AlertStudio = lazy(() => import('./features/notifications/pages/AlertStudioPage'))
+const Notifications = lazy(() => import('./features/notifications/pages/NotificationsPage'))
+
+// Telemetry & Signals
+const SignalExplorer = lazy(() => import('./features/telemetry/pages/SignalExplorerPage'))
+const SignalLogViewer = lazy(() => import('./features/telemetry/pages/SignalLogViewerPage'))
+const SignalDiff = lazy(() => import('./features/telemetry/pages/SignalDiffPage'))
+const SignalGapDetector = lazy(() => import('./features/telemetry/pages/SignalGapDetectorPage'))
+const LiveSignalMonitor = lazy(() => import('./features/telemetry/pages/LiveSignalMonitorPage'))
+const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspectorPage'))
+
+// Admin & DevTools
+const Admin = lazy(() => import('./features/admin/pages/AdminPage'))
+const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
+const APIKeysPage = lazy(() => import('./features/admin/pages/APIKeysPage'))
+const ApiLogs = lazy(() => import('./features/admin/pages/ApiLogsPage'))
+const FleetAPI = lazy(() => import('./features/admin/pages/FleetAPIPage'))
+const SecurityAccess = lazy(() => import('./features/admin/pages/SecurityAccessPage'))
+const BackupRestore = lazy(() => import('./features/admin/pages/BackupRestorePage'))
+
+// System & Ops
+const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
+const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
+const DBHealthDashboard = lazy(() => import('./features/system/pages/DBHealthPage'))
+const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMachineDebuggerPage'))
+const Commands = lazy(() => import('./features/system/pages/CommandsPage'))
+const Chatbot = lazy(() => import('./features/system/pages/ChatbotPage'))
+const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
+const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
+
+// Settings
+const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 
 /** Route wrapper: Suspense for lazy loading + ErrorBoundary for crash isolation */
 function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {

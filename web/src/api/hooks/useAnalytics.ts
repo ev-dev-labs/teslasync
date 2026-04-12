@@ -1,0 +1,68 @@
+import { useQuery } from '@tanstack/react-query';
+import { request } from '../client';
+import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyStat } from '@/types/analytics';
+
+export const analyticsKeys = {
+  summary: (days: number) => ['analytics', 'summary', days] as const,
+  mileage: (vehicleId: string) => ['analytics', 'mileage', vehicleId] as const,
+  monthlyMileage: (vehicleId: string) => ['analytics', 'monthly-mileage', vehicleId] as const,
+  cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
+  timeline: (vehicleId: string) => ['analytics', 'timeline', vehicleId] as const,
+  stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
+  weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
+};
+
+export function useAnalyticsSummary(days = 30) {
+  return useQuery({
+    queryKey: analyticsKeys.summary(days),
+    queryFn: () => request<AnalyticsSummary>(`/analytics/summary?days=${days}`),
+  });
+}
+
+export function useMileageStats(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.mileage(vehicleId),
+    queryFn: () => request<MileageStats>(`/vehicles/${vehicleId}/mileage`),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useMonthlyMileage(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.monthlyMileage(vehicleId),
+    queryFn: () => request<MonthlyStat[]>(`/vehicles/${vehicleId}/mileage/monthly`),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useCostBreakdown(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.cost(vehicleId),
+    queryFn: () => request<CostBreakdown>(`/vehicles/${vehicleId}/cost-breakdown`),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useTimeline(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.timeline(vehicleId),
+    queryFn: () => request<TimelineEvent[]>(`/vehicles/${vehicleId}/timeline`),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useStateSummary(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.stateSummary(vehicleId),
+    queryFn: () => request<StateSummary[]>(`/vehicles/${vehicleId}/state-summary`),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useWeeklyDigest(vehicleId: string) {
+  return useQuery({
+    queryKey: analyticsKeys.weeklyDigest(vehicleId),
+    queryFn: () => request<WeeklyDigestData>(`/vehicles/${vehicleId}/weekly-digest`),
+    enabled: !!vehicleId,
+  });
+}

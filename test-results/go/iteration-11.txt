@@ -1,0 +1,21 @@
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/buildinfo	1.277s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/cache	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/config	1.148s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/database	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/platform/httputil	1.380s
+?   	github.com/ev-dev-labs/teslasync/internal/platform/telemetry	[no test files]
+ok  	github.com/ev-dev-labs/teslasync/internal/domain	0.854s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/charging	0.948s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/export	0.887s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/fsm	1.013s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/notification	0.893s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/trip	1.102s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/user	1.058s
+ok  	github.com/ev-dev-labs/teslasync/internal/domain/vehicle	0.986s
+ok  	github.com/ev-dev-labs/teslasync/internal/handler/middleware	0.328s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/chargingsvc	0.930s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc	0.897s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/exportsvc	0.889s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/notificationsvc	0.892s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/tripsvc	0.749s
+ok  	github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc	0.709s
