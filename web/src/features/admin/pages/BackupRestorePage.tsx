@@ -85,7 +85,7 @@ export default function BackupRestorePage() {
             const cfg = statusConfig[run.status] ?? statusConfig.queued;
             return (
               <div key={run.id} className="flex items-center gap-4 px-3 py-2 text-sm">
-                <span className="w-36 text-gray-400 text-xs shrink-0">{new Date(run.createdAt).toLocaleString()}</span>
+                <span className="w-36 text-gray-400 text-xs shrink-0">{run.createdAt ? new Date(run.createdAt).toLocaleString() : '—'}</span>
                 <Badge variant={cfg.variant} size="sm">{run.status}</Badge>
                 <span className="w-20 shrink-0">{run.backupType}</span>
                 <span className="w-20 text-right shrink-0">{run.fileSize ? formatBytes(run.fileSize) : '--'}</span>

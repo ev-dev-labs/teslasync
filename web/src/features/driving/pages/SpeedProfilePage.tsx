@@ -17,7 +17,7 @@ function BucketBar({ bucket, maxPct }: { bucket: SpeedBucket; maxPct: number }) 
           style={{ width: `${widthPct}%` }}
         />
       </div>
-      <span className="w-16 text-right text-sm font-medium">{bucket.percentage.toFixed(1)}%</span>
+      <span className="w-16 text-right text-sm font-medium">{(bucket.percentage ?? 0).toFixed(1)}%</span>
       <span className="w-12 text-right text-xs text-gray-500">{bucket.driveCount}</span>
     </div>
   );
@@ -27,7 +27,7 @@ export default function SpeedProfilePage() {
   const { t } = useTranslation();
   const { data, isLoading, error } = useSpeedProfile();
 
-  const maxPct = data ? Math.max(...data.distribution.map((b) => b.percentage), 1) : 1;
+  const maxPct = data ? Math.max(...(data.distribution ?? []).map((b) => b.percentage), 1) : 1;
 
   return (
     <PageContainer
@@ -70,7 +70,7 @@ export default function SpeedProfilePage() {
                 <span className="w-16 text-right">%</span>
                 <span className="w-12 text-right">Drives</span>
               </div>
-              {data.distribution.map((bucket) => (
+              {(data.distribution ?? []).map((bucket) => (
                 <BucketBar key={bucket.range} bucket={bucket} maxPct={maxPct} />
               ))}
             </div>

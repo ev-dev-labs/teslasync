@@ -73,7 +73,7 @@ export default function DBHealthPage() {
                 {table.sizeBytes > 100 * 1024 * 1024 && <span className="text-amber-400 mr-1">⚠</span>}
                 {table.name}
               </span>
-              <span className="w-24 text-right shrink-0">{table.rowCount.toLocaleString()}</span>
+              <span className="w-24 text-right shrink-0">{(table.rowCount ?? 0).toLocaleString()}</span>
               <span className="w-20 text-right shrink-0">{formatBytes(table.sizeBytes)}</span>
               <span className="w-16 text-right shrink-0">{table.indexCount}</span>
               <span className="text-gray-400">{table.lastVacuum ? new Date(table.lastVacuum).toLocaleDateString() : '--'}</span>

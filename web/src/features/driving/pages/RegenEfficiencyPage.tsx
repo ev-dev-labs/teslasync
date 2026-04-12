@@ -24,21 +24,21 @@ export default function RegenEfficiencyPage() {
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
             <StatCard
               label={t('regen.totalRegen', 'Total Regen')}
-              value={data.totalRegenKwh.toFixed(1)}
+              value={(data.totalRegenKwh ?? 0).toFixed(1)}
               unit="kWh"
             />
             <StatCard
               label={t('regen.regenRatio', 'Regen Ratio')}
-              value={`${data.regenRatio.toFixed(1)}%`}
+              value={`${(data.regenRatio ?? 0).toFixed(1)}%`}
             />
             <StatCard
               label={t('regen.monthlyAvg', 'Monthly Avg')}
-              value={data.monthlyAvgKw.toFixed(1)}
+              value={(data.monthlyAvgKw ?? 0).toFixed(1)}
               unit="kW"
             />
             <StatCard
               label={t('regen.freeCharges', 'Free Charges')}
-              value={data.freeCharges.toFixed(1)}
+              value={(data.freeCharges ?? 0).toFixed(1)}
             />
           </Grid>
 
@@ -47,14 +47,14 @@ export default function RegenEfficiencyPage() {
               <CardHeader title={t('regen.recoveryInsight', 'Recovery Insight')} />
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 {t('regen.insightText', "You've recovered {{kwh}} kWh through regenerative braking — equivalent to ~{{charges}} free charges.", {
-                  kwh: data.totalRegenKwh.toFixed(1),
-                  charges: data.freeCharges.toFixed(1),
+                  kwh: (data.totalRegenKwh ?? 0).toFixed(1),
+                  charges: (data.freeCharges ?? 0).toFixed(1),
                 })}
               </p>
               <KVList
                 items={[
-                  { label: t('regen.lifetimeRegen', 'Lifetime Regen'), value: `${data.totalRegenKwh.toFixed(1)} kWh` },
-                  { label: t('regen.recoveryRate', 'Recovery Rate'), value: `${data.regenRatio.toFixed(1)}%` },
+                  { label: t('regen.lifetimeRegen', 'Lifetime Regen'), value: `${(data.totalRegenKwh ?? 0).toFixed(1)} kWh` },
+                  { label: t('regen.recoveryRate', 'Recovery Rate'), value: `${(data.regenRatio ?? 0).toFixed(1)}%` },
                 ]}
               />
             </Card>
@@ -63,10 +63,10 @@ export default function RegenEfficiencyPage() {
               <CardHeader title={t('regen.summary', 'Summary')} />
               <KVList
                 items={[
-                  { label: t('regen.avgRegenPower', 'Avg Regen Power'), value: `${data.monthlyAvgKw.toFixed(1)} kW` },
-                  { label: t('regen.equivCharges', 'Equiv. Free Charges'), value: data.freeCharges.toFixed(1) },
-                  { label: t('regen.ratioLabel', 'Regen Ratio'), value: `${data.regenRatio.toFixed(1)}%` },
-                  { label: t('regen.totalRecovered', 'Total Recovered'), value: `${data.totalRegenKwh.toFixed(1)} kWh` },
+                  { label: t('regen.avgRegenPower', 'Avg Regen Power'), value: `${(data.monthlyAvgKw ?? 0).toFixed(1)} kW` },
+                  { label: t('regen.equivCharges', 'Equiv. Free Charges'), value: (data.freeCharges ?? 0).toFixed(1) },
+                  { label: t('regen.ratioLabel', 'Regen Ratio'), value: `${(data.regenRatio ?? 0).toFixed(1)}%` },
+                  { label: t('regen.totalRecovered', 'Total Recovered'), value: `${(data.totalRegenKwh ?? 0).toFixed(1)} kWh` },
                 ]}
               />
             </Card>

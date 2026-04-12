@@ -24,10 +24,10 @@ export default function NavigationRoutePage() {
       {vehicle && (
         <>
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-            <StatCard label="Current Vehicle" value={vehicle.displayName} />
-            <StatCard label="Battery" value={vehicle.batteryLevel} unit="%" />
-            <StatCard label="Range" value={vehicle.rangeMiles} unit="mi" />
-            <StatCard label="Odometer" value={vehicle.odometerMiles.toLocaleString()} unit="mi" />
+            <StatCard label="Current Vehicle" value={vehicle.displayName ?? '—'} />
+            <StatCard label="Battery" value={vehicle.batteryLevel ?? 0} unit="%" />
+            <StatCard label="Range" value={vehicle.rangeMiles ?? 0} unit="mi" />
+            <StatCard label="Odometer" value={(vehicle.odometerMiles ?? 0).toLocaleString()} unit="mi" />
           </Grid>
 
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -42,10 +42,10 @@ export default function NavigationRoutePage() {
               <CardHeader title="Location Details" />
               <KVList
                 items={[
-                  { label: 'Latitude', value: vehicle.latitude.toFixed(6) },
-                  { label: 'Longitude', value: vehicle.longitude.toFixed(6) },
-                  { label: 'Last Updated', value: new Date(vehicle.updatedAt).toLocaleString() },
-                  { label: 'State', value: vehicle.fsmState },
+                  { label: 'Latitude', value: (vehicle.latitude ?? 0).toFixed(6) },
+                  { label: 'Longitude', value: (vehicle.longitude ?? 0).toFixed(6) },
+                  { label: 'Last Updated', value: vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleString() : '—' },
+                  { label: 'State', value: vehicle.fsmState ?? '—' },
                 ]}
               />
             </Card>

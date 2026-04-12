@@ -78,7 +78,7 @@ export default function TirePressurePage() {
           items={[
             { label: t('Hard Warning'), value: data?.tpmsHardWarning ? t('Yes') : t('No') },
             { label: t('Soft Warning'), value: data?.tpmsSoftWarning ? t('Yes') : t('No') },
-            { label: t('Last Updated'), value: data?.timestamp ? new Date(data.timestamp).toLocaleString() : '--' },
+            { label: t('Last Updated'), value: data?.timestamp ? data.timestamp ? new Date(data.timestamp).toLocaleString() : '—' : '--' },
           ]}
         />
       </Card>

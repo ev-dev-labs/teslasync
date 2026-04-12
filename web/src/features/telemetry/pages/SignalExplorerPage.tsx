@@ -88,7 +88,7 @@ export default function SignalExplorerPage() {
                 <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
                   {history?.data?.slice(0, 100).map((p, i) => (
                     <div key={i} className="flex items-center gap-4 px-2 py-1 text-xs font-mono">
-                      <span className="w-40 text-gray-400 shrink-0">{new Date(p.timestamp).toLocaleString()}</span>
+                      <span className="w-40 text-gray-400 shrink-0">{p.timestamp ? new Date(p.timestamp).toLocaleString() : '—'}</span>
                       <span>{p.valueNum ?? p.valueStr ?? String(p.valueBool ?? '')}</span>
                     </div>
                   ))}

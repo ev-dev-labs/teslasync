@@ -47,7 +47,7 @@ export default function ApiLogsPage() {
         <div className="divide-y divide-gray-800">
           {logs?.map((log) => (
             <div key={log.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-              <span className="w-36 text-gray-400 text-xs shrink-0">{new Date(log.createdAt).toLocaleString()}</span>
+              <span className="w-36 text-gray-400 text-xs shrink-0">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</span>
               <Badge variant={methodVariant[log.method] ?? 'neutral'} size="sm">{log.method}</Badge>
               <span className="font-mono text-xs truncate max-w-[250px] flex-1">{log.url}</span>
               <Badge variant={statusVariant(log.statusCode)} size="sm">{log.statusCode}</Badge>

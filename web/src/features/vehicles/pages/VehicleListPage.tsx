@@ -48,11 +48,11 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
         </div>
         <div>
           <span className="text-gray-500">Range</span>
-          <p className="font-medium">{vehicle.rangeMiles.toFixed(0)} mi</p>
+          <p className="font-medium">{(vehicle.rangeMiles ?? 0).toFixed(0)} mi</p>
         </div>
         <div>
           <span className="text-gray-500">Odometer</span>
-          <p className="font-medium">{vehicle.odometerMiles.toFixed(0)} mi</p>
+          <p className="font-medium">{(vehicle.odometerMiles ?? 0).toFixed(0)} mi</p>
         </div>
         <div>
           <span className="text-gray-500">VIN</span>

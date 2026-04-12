@@ -30,10 +30,10 @@ export default function TripDetailPage() {
           </div>
 
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-            <StatCard label="Distance" value={trip.distanceMiles.toFixed(1)} unit="mi" />
-            <StatCard label="Energy Used" value={trip.energyUsedKwh.toFixed(1)} unit="kWh" />
-            <StatCard label="Efficiency" value={trip.efficiencyWhPerMile.toFixed(0)} unit="Wh/mi" />
-            <StatCard label="Max Speed" value={trip.maxSpeedMph.toFixed(0)} unit="mph" />
+            <StatCard label="Distance" value={(trip.distanceMiles ?? 0).toFixed(1)} unit="mi" />
+            <StatCard label="Energy Used" value={(trip.energyUsedKwh ?? 0).toFixed(1)} unit="kWh" />
+            <StatCard label="Efficiency" value={(trip.efficiencyWhPerMile ?? 0).toFixed(0)} unit="Wh/mi" />
+            <StatCard label="Max Speed" value={(trip.maxSpeedMph ?? 0).toFixed(0)} unit="mph" />
           </Grid>
 
           <Card className="mt-6">
@@ -41,7 +41,7 @@ export default function TripDetailPage() {
               { label: 'Trip ID', value: trip.id },
               { label: 'From', value: trip.startAddress || 'Unknown' },
               { label: 'To', value: trip.endAddress || 'Unknown' },
-              { label: 'Started', value: new Date(trip.startedAt).toLocaleString() },
+              { label: 'Started', value: trip.startedAt ? new Date(trip.startedAt).toLocaleString() : '—' },
               { label: 'Completed', value: trip.completedAt ? new Date(trip.completedAt).toLocaleString() : '—' },
             ]} />
           </Card>

@@ -35,16 +35,16 @@ function ChargingRow({ session }: { session: ChargingSession }) {
     <Card hover className="flex items-center justify-between">
       <div className="flex items-center gap-4">
         <div>
-          <p className="font-medium">{session.chargerType.toUpperCase()}</p>
+          <p className="font-medium">{(session.chargerType ?? '').toUpperCase()}</p>
           <p className="text-xs text-gray-500">
-            {new Date(session.startedAt).toLocaleDateString()}
+            {session.startedAt ? new Date(session.startedAt).toLocaleDateString() : '—'}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-6 text-sm">
         <div className="text-right">
-          <p className="font-medium">{session.energyAddedKwh.toFixed(1)} kWh</p>
+          <p className="font-medium">{(session.energyAddedKwh ?? 0).toFixed(1)} kWh</p>
           <p className="text-xs text-gray-500">
             {session.startBatteryLevel}% → {session.endBatteryLevel}%
           </p>

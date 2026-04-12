@@ -87,7 +87,7 @@ export default function BatteryCellsPage() {
               columns={2}
               items={data.cells.map((cell) => ({
                 label: `${t('Cell')} ${cell.cell_id} (M${cell.module})`,
-                value: `${cell.voltage.toFixed(3)} V / ${cell.temperature.toFixed(1)}°C`,
+                value: `${(cell.voltage ?? 0).toFixed(3)} V / ${(cell.temperature ?? 0).toFixed(1)}°C`,
               }))}
             />
           </div>

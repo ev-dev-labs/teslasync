@@ -22,7 +22,7 @@ export default function ChargingDetailPage() {
   return (
     <PageContainer
       title={t('detail.title', 'Charging Session')}
-      subtitle={session ? `${session.chargerType.toUpperCase()} · ${new Date(session.startedAt).toLocaleDateString()}` : undefined}
+      subtitle={session ? `${(session.chargerType ?? '').toUpperCase()} · ${session.startedAt ? new Date(session.startedAt).toLocaleDateString() : '—'}` : undefined}
       loading={isLoading}
       error={error as Error | null}
     >
@@ -36,8 +36,8 @@ export default function ChargingDetailPage() {
           </div>
 
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-            <StatCard label="Energy Added" value={session.energyAddedKwh.toFixed(1)} unit="kWh" />
-            <StatCard label="Max Power" value={session.maxPowerKw.toFixed(1)} unit="kW" />
+            <StatCard label="Energy Added" value={(session.energyAddedKwh ?? 0).toFixed(1)} unit="kWh" />
+            <StatCard label="Max Power" value={(session.maxPowerKw ?? 0).toFixed(1)} unit="kW" />
             <StatCard label="Cost" value={`$${(session.costCents / 100).toFixed(2)}`} />
             <StatCard
               label="Battery"
@@ -49,7 +49,7 @@ export default function ChargingDetailPage() {
             <KVList items={[
               { label: 'Session ID', value: session.id },
               { label: 'Charger Type', value: session.chargerType },
-              { label: 'Started', value: new Date(session.startedAt).toLocaleString() },
+              { label: 'Started', value: session.startedAt ? new Date(session.startedAt).toLocaleString() : '—' },
               { label: 'Completed', value: session.completedAt ? new Date(session.completedAt).toLocaleString() : '—' },
             ]} />
           </Card>

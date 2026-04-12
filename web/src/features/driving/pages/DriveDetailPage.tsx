@@ -21,14 +21,14 @@ export default function DriveDetailPage() {
   return (
     <PageContainer
       title={t('driveDetail.title', 'Drive Detail')}
-      subtitle={drive ? `${new Date(drive.startDate).toLocaleDateString()} — ${drive.startAddress ?? '?'} → ${drive.endAddress ?? '?'}` : undefined}
+      subtitle={drive ? `${drive.startDate ? new Date(drive.startDate).toLocaleDateString() : '—'} — ${drive.startAddress ?? '?'} → ${drive.endAddress ?? '?'}` : undefined}
       loading={isLoading}
       error={error as Error | null}
     >
       {drive && (
         <>
           <Grid cols={{ default: 2, md: 4 }} gap={4}>
-            <StatCard label={t('driveDetail.distance', 'Distance')} value={drive.distance.toFixed(1)} unit="km" />
+            <StatCard label={t('driveDetail.distance', 'Distance')} value={(drive.distance ?? 0).toFixed(1)} unit="km" />
             <StatCard label={t('driveDetail.duration', 'Duration')} value={formatDuration(drive.durationMin)} />
             <StatCard
               label={t('driveDetail.avgSpeed', 'Avg Speed')}
@@ -49,7 +49,7 @@ export default function DriveDetailPage() {
                 items={[
                   { label: t('driveDetail.from', 'From'), value: drive.startAddress ?? '—' },
                   { label: t('driveDetail.to', 'To'), value: drive.endAddress ?? '—' },
-                  { label: t('driveDetail.startTime', 'Start Time'), value: new Date(drive.startDate).toLocaleTimeString() },
+                  { label: t('driveDetail.startTime', 'Start Time'), value: drive.startDate ? new Date(drive.startDate).toLocaleTimeString() : '—' },
                   { label: t('driveDetail.endTime', 'End Time'), value: drive.endDate ? new Date(drive.endDate).toLocaleTimeString() : '—' },
                 ]}
               />

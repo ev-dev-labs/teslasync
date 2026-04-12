@@ -30,14 +30,14 @@ function DriveRow({ drive }: { drive: Drive }) {
     <Link to={`/drives/${drive.id}`}>
       <Card hover className="flex items-center justify-between">
         <div>
-          <p className="font-medium">{new Date(drive.startDate).toLocaleDateString()}</p>
+          <p className="font-medium">{drive.startDate ? new Date(drive.startDate).toLocaleDateString() : '—'}</p>
           <p className="text-xs text-gray-500">
             {drive.startAddress ?? '—'} → {drive.endAddress ?? '—'}
           </p>
         </div>
         <div className="flex items-center gap-6 text-sm">
           <div className="text-right">
-            <p className="font-medium">{drive.distance.toFixed(1)} km</p>
+            <p className="font-medium">{(drive.distance ?? 0).toFixed(1)} km</p>
             <p className="text-xs text-gray-500">{formatDuration(drive.durationMin)}</p>
           </div>
           {drive.speedAvg !== null && (

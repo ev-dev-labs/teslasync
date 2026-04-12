@@ -24,26 +24,26 @@ function RouteCard({ route }: { route: RouteSummary }) {
             {route.startLocation} → {route.endLocation}
           </p>
           <p className="text-xs text-gray-500">
-            {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {route.avgDistanceKm.toFixed(1)} km avg
+            {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {(route.avgDistanceKm ?? 0).toFixed(1)} km avg
           </p>
         </div>
         <Badge variant={efficiencyVariant(route.avgEfficiency)}>
-          {route.avgEfficiency.toFixed(1)}%
+          {(route.avgEfficiency ?? 0).toFixed(1)}%
         </Badge>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div>
           <p className="text-gray-500">{t('routeEfficiency.best', 'Best')}</p>
-          <p className="font-semibold text-green-600 dark:text-green-400">{route.bestEfficiency.toFixed(1)}</p>
+          <p className="font-semibold text-green-600 dark:text-green-400">{(route.bestEfficiency ?? 0).toFixed(1)}</p>
         </div>
         <div>
           <p className="text-gray-500">{t('routeEfficiency.avg', 'Avg')}</p>
-          <p className="font-semibold">{route.avgEfficiency.toFixed(1)}</p>
+          <p className="font-semibold">{(route.avgEfficiency ?? 0).toFixed(1)}</p>
         </div>
         <div>
           <p className="text-gray-500">{t('routeEfficiency.worst', 'Worst')}</p>
-          <p className="font-semibold text-red-600 dark:text-red-400">{route.worstEfficiency.toFixed(1)}</p>
+          <p className="font-semibold text-red-600 dark:text-red-400">{(route.worstEfficiency ?? 0).toFixed(1)}</p>
         </div>
       </div>
     </Card>

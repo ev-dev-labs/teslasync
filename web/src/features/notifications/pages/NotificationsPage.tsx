@@ -66,7 +66,7 @@ export default function NotificationsPage() {
         <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
           {logs?.map((log) => (
             <div key={log.id} className="flex items-center gap-4 px-3 py-2 text-sm">
-              <span className="w-36 text-gray-400 text-xs shrink-0">{new Date(log.createdAt).toLocaleString()}</span>
+              <span className="w-36 text-gray-400 text-xs shrink-0">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</span>
               <span className="flex-1 truncate">{log.title}</span>
               <span className="w-24 shrink-0">{log.channelId}</span>
               <Badge variant={log.status === 'sent' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">

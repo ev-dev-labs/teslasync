@@ -65,7 +65,7 @@ export default function ComparePage() {
                   { label: 'Vehicle', value: v.displayName },
                   { label: 'Model', value: v.model },
                   { label: 'Battery', value: `${v.batteryLevel}%` },
-                  { label: 'Odometer', value: `${v.odometerMiles.toLocaleString()} mi` },
+                  { label: 'Odometer', value: `${(v.odometerMiles ?? 0).toLocaleString()} mi` },
                 ]}
                 className="mb-4"
               />

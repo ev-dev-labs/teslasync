@@ -32,7 +32,7 @@ export default function SignalLogViewerPage() {
   }
 
   function formatValue(entry: { valueNum?: number; valueStr?: string; valueBool?: boolean }): string {
-    if (entry.valueNum !== undefined) return entry.valueNum.toFixed(4);
+    if (entry.valueNum !== undefined) return (entry.valueNum ?? 0).toFixed(4);
     if (entry.valueBool !== undefined) return String(entry.valueBool);
     return entry.valueStr ?? '';
   }
@@ -97,7 +97,7 @@ export default function SignalLogViewerPage() {
                   return (
                     <div key={i} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
                       <span className="w-8 text-gray-500 shrink-0">{(page - 1) * pageSize + i + 1}</span>
-                      <span className="w-40 text-gray-400 shrink-0">{new Date(entry.timestamp).toLocaleString()}</span>
+                      <span className="w-40 text-gray-400 shrink-0">{entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—'}</span>
                       <span className="flex-1">{formatValue(entry)}</span>
                       <Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge>
                     </div>

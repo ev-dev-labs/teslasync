@@ -42,8 +42,8 @@ export default function VehicleDetailPage() {
 
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
             <StatCard label="Battery" value={`${vehicle.batteryLevel}%`} />
-            <StatCard label="Range" value={vehicle.rangeMiles.toFixed(0)} unit="mi" />
-            <StatCard label="Odometer" value={vehicle.odometerMiles.toFixed(0)} unit="mi" />
+            <StatCard label="Range" value={(vehicle.rangeMiles ?? 0).toFixed(0)} unit="mi" />
+            <StatCard label="Odometer" value={(vehicle.odometerMiles ?? 0).toFixed(0)} unit="mi" />
             <StatCard
               label="Charging"
               value={vehicle.isCharging ? 'Yes' : 'No'}
@@ -55,8 +55,8 @@ export default function VehicleDetailPage() {
               { label: 'VIN', value: vehicle.vin },
               { label: 'Model', value: vehicle.model },
               { label: 'Year', value: String(vehicle.year) },
-              { label: 'Last Updated', value: new Date(vehicle.updatedAt).toLocaleString() },
-              { label: 'Location', value: `${vehicle.latitude.toFixed(4)}, ${vehicle.longitude.toFixed(4)}` },
+              { label: 'Last Updated', value: vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleString() : '—' },
+              { label: 'Location', value: `${(vehicle.latitude ?? 0).toFixed(4)}, ${(vehicle.longitude ?? 0).toFixed(4)}` },
             ]} />
           </Card>
         </>

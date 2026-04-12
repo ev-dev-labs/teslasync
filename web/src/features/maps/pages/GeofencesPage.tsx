@@ -53,8 +53,8 @@ export default function GeofencesPage() {
                   <div>
                     <p className="text-sm font-medium">{g.name}</p>
                     <p className="text-xs text-gray-500">
-                      {g.latitude.toFixed(4)}, {g.longitude.toFixed(4)} · {g.radius}m
-                      {g.costPerKwh !== null && ` · $${g.costPerKwh.toFixed(2)}/kWh`}
+                      {(g.latitude ?? 0).toFixed(4)}, {(g.longitude ?? 0).toFixed(4)} · {g.radius}m
+                      {g.costPerKwh !== null && ` · $${(g.costPerKwh ?? 0).toFixed(2)}/kWh`}
                     </p>
                   </div>
                   <KVList

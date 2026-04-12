@@ -71,7 +71,7 @@ export default function StateMachineDebuggerPage() {
             {state?.state?.toUpperCase() ?? '--'}
           </Badge>
           <p className="text-sm text-gray-400">
-            {state?.since ? `${t('Since')} ${new Date(state.since).toLocaleString()}` : ''}
+            {state?.since ? `${t('Since')} ${state.since ? new Date(state.since).toLocaleString() : '—'}` : ''}
           </p>
         </div>
       </Card>
@@ -108,10 +108,10 @@ export default function StateMachineDebuggerPage() {
           {transitions.map((tr, i) => (
             <div key={i} className="flex items-center gap-4 px-3 py-2 text-sm">
               <Badge variant={stateColors[tr.state] ?? 'neutral'} size="sm">{tr.state}</Badge>
-              <span className="w-36 text-gray-400 text-xs shrink-0">{new Date(tr.startedAt).toLocaleString()}</span>
+              <span className="w-36 text-gray-400 text-xs shrink-0">{tr.startedAt ? new Date(tr.startedAt).toLocaleString() : '—'}</span>
               <span className="w-36 text-xs shrink-0">
                 {tr.endedAt ? (
-                  <span className="text-gray-400">{new Date(tr.endedAt).toLocaleString()}</span>
+                  <span className="text-gray-400">{tr.endedAt ? new Date(tr.endedAt).toLocaleString() : '—'}</span>
                 ) : (
                   <Badge variant="success" size="sm">{t('ongoing')}</Badge>
                 )}

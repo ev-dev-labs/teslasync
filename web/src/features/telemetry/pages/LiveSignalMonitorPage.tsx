@@ -82,7 +82,7 @@ export default function LiveSignalMonitorPage() {
         <div className="max-h-96 overflow-y-auto divide-y divide-gray-800">
           {filtered.slice(0, 200).map((e) => (
             <div key={e.id} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
-              <span className="w-20 text-gray-400 shrink-0">{new Date(e.timestamp).toLocaleTimeString()}</span>
+              <span className="w-20 text-gray-400 shrink-0">{e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '—'}</span>
               <span className="flex-1 truncate max-w-[200px]">{e.name}</span>
               <span className="w-24 shrink-0">{e.value}</span>
               <Badge variant={typeVariant[e.type] ?? 'neutral'} size="sm">{e.type}</Badge>

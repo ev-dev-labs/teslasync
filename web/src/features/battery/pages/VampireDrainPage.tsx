@@ -48,12 +48,12 @@ export default function VampireDrainPage() {
         <Grid cols={{ default: 1, md: 2 }} gap={4}>
           <StatCard
             label={t('Sentry Mode ON')}
-            value={`${stats.avg_sentry_drain.toFixed(2)}%/hr`}
+            value={`${(stats.avg_sentry_drain ?? 0).toFixed(2)}%/hr`}
             icon={<Badge variant="danger" size="sm">{t('Higher drain')}</Badge>}
           />
           <StatCard
             label={t('Sentry Mode OFF')}
-            value={`${stats.avg_nosentry_drain.toFixed(2)}%/hr`}
+            value={`${(stats.avg_nosentry_drain ?? 0).toFixed(2)}%/hr`}
             icon={<Badge variant="success" size="sm">{t('Lower drain')}</Badge>}
           />
         </Grid>
@@ -70,8 +70,8 @@ export default function VampireDrainPage() {
           <div className="max-h-96 overflow-y-auto">
             <KVList
               items={events.slice(0, 20).map((e) => ({
-                label: new Date(e.start_date).toLocaleDateString(),
-                value: `${e.battery_lost}% lost · ${e.drain_rate_pct_per_hour.toFixed(2)}%/hr · ${e.duration_hours.toFixed(1)}h${e.sentry_mode ? ' · Sentry' : ''}`,
+                label: e.start_date ? new Date(e.start_date).toLocaleDateString() : '—',
+                value: `${e.battery_lost}% lost · ${(e.drain_rate_pct_per_hour ?? 0).toFixed(2)}%/hr · ${(e.duration_hours ?? 0).toFixed(1)}h${e.sentry_mode ? ' · Sentry' : ''}`,
               }))}
             />
           </div>

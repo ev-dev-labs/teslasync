@@ -31,17 +31,17 @@ export default function DrivingDynamicsPage() {
           <Grid cols={{ default: 2, md: 3 }} gap={4}>
             <StatCard
               label={t('dynamics.maxAccel', 'Max Acceleration')}
-              value={dynamics.maxAccelerationG.toFixed(2)}
+              value={(dynamics.maxAccelerationG ?? 0).toFixed(2)}
               unit="g"
             />
             <StatCard
               label={t('dynamics.maxBraking', 'Max Braking')}
-              value={dynamics.maxBrakingG.toFixed(2)}
+              value={(dynamics.maxBrakingG ?? 0).toFixed(2)}
               unit="g"
             />
             <StatCard
               label={t('dynamics.maxCornering', 'Max Cornering')}
-              value={dynamics.maxCorneringG.toFixed(2)}
+              value={(dynamics.maxCorneringG ?? 0).toFixed(2)}
               unit="g"
             />
           </Grid>
@@ -53,11 +53,11 @@ export default function DrivingDynamicsPage() {
                 items={[
                   {
                     label: t('dynamics.avgAccel', 'Avg Acceleration'),
-                    value: `${dynamics.avgAccelerationG.toFixed(2)} g (${gForceLabel(dynamics.avgAccelerationG)})`,
+                    value: `${(dynamics.avgAccelerationG ?? 0).toFixed(2)} g (${gForceLabel(dynamics.avgAccelerationG)})`,
                   },
                   {
                     label: t('dynamics.avgBraking', 'Avg Braking'),
-                    value: `${dynamics.avgBrakingG.toFixed(2)} g (${gForceLabel(dynamics.avgBrakingG)})`,
+                    value: `${(dynamics.avgBrakingG ?? 0).toFixed(2)} g (${gForceLabel(dynamics.avgBrakingG)})`,
                   },
                 ]}
               />

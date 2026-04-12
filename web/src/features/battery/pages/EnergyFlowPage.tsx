@@ -60,7 +60,7 @@ export default function EnergyFlowPage() {
       <Grid cols={{ default: 2, lg: 4 }} gap={4}>
         <StatCard label={t('Pack Voltage')} value={data?.pack_voltage?.toFixed(1) ?? '—'} unit="V" />
         <StatCard label={t('Pack Current')} value={data?.pack_current?.toFixed(1) ?? '—'} unit="A" />
-        <StatCard label={t('State of Charge')} value={data?.soc != null ? `${data.soc.toFixed(0)}%` : '—'} />
+        <StatCard label={t('State of Charge')} value={data?.soc != null ? `${(data.soc ?? 0).toFixed(0)}%` : '—'} />
         <StatCard label={t('Energy Remaining')} value={data?.energy_remaining?.toFixed(1) ?? '—'} unit="kWh" />
       </Grid>
 

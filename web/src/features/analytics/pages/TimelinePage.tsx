@@ -83,7 +83,7 @@ export default function TimelinePage() {
                   <span className="text-sm">{formatDuration(event.durationMin)}</span>
                 </div>
                 <span className="text-xs text-gray-500">
-                  {new Date(event.startDate).toLocaleString()}
+                  {event.startDate ? new Date(event.startDate).toLocaleString() : '—'}
                 </span>
               </div>
             ))}

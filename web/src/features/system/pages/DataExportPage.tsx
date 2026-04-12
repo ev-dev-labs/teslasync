@@ -98,10 +98,10 @@ export default function DataExportPage() {
             return (
               <div key={job.id} className="flex items-center gap-4 px-3 py-2 text-sm">
                 <span className="w-24 capitalize shrink-0">{job.type}</span>
-                <Badge variant="neutral" size="sm">{job.format.toUpperCase()}</Badge>
+                <Badge variant="neutral" size="sm">{(job.format ?? '').toUpperCase()}</Badge>
                 <Badge variant={cfg.variant} size="sm">{job.status}</Badge>
                 <span className="w-16 text-right shrink-0">{job.recordCount ?? '--'}</span>
-                <span className="text-gray-400 text-xs">{new Date(job.createdAt).toLocaleString()}</span>
+                <span className="text-gray-400 text-xs">{job.createdAt ? new Date(job.createdAt).toLocaleString() : '—'}</span>
               </div>
             );
           })}

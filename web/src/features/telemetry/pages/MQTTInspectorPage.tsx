@@ -101,8 +101,8 @@ export default function MQTTInspectorPage() {
                 <Badge variant={v.state === 'online' ? 'success' : 'neutral'} size="sm">
                   {v.state ?? 'unknown'}
                 </Badge>
-                <span className="w-20 text-right shrink-0">{v.signalCount.toLocaleString()}</span>
-                <span className="w-16 text-right shrink-0">{v.batchCount.toLocaleString()}</span>
+                <span className="w-20 text-right shrink-0">{(v.signalCount ?? 0).toLocaleString()}</span>
+                <span className="w-16 text-right shrink-0">{(v.batchCount ?? 0).toLocaleString()}</span>
                 <span className="w-16 text-right shrink-0">{v.signalsPerSec?.toFixed(1) ?? '--'}</span>
                 <span className="w-20 text-right text-gray-400 shrink-0">
                   {v.lastReceived ? formatRelative(v.lastReceived) : '--'}

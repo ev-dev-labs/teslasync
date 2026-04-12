@@ -102,8 +102,8 @@ export default function SleepEfficiencyPage() {
           <div className="max-h-96 overflow-y-auto">
             <KVList
               items={data.recent_events.slice(0, 20).map((e) => ({
-                label: new Date(e.start_date).toLocaleDateString(),
-                value: `${e.battery_lost.toFixed(1)}% lost · ${e.drain_rate.toFixed(2)}%/hr · ${e.duration_hours.toFixed(1)}h${e.sentry_mode ? ' · Sentry' : ''}`,
+                label: e.start_date ? new Date(e.start_date).toLocaleDateString() : '—',
+                value: `${(e.battery_lost ?? 0).toFixed(1)}% lost · ${(e.drain_rate ?? 0).toFixed(2)}%/hr · ${(e.duration_hours ?? 0).toFixed(1)}h${e.sentry_mode ? ' · Sentry' : ''}`,
               }))}
             />
           </div>

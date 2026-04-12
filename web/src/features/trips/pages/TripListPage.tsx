@@ -38,17 +38,17 @@ function TripRow({ trip }: { trip: Trip }) {
           {trip.startAddress || 'Unknown'} → {trip.endAddress || 'Unknown'}
         </p>
         <p className="text-xs text-gray-500">
-          {new Date(trip.startedAt).toLocaleDateString()}
+          {trip.startedAt ? new Date(trip.startedAt).toLocaleDateString() : '—'}
         </p>
       </div>
 
       <div className="flex items-center gap-6 text-sm">
         <div className="text-right">
-          <p className="font-medium">{trip.distanceMiles.toFixed(1)} mi</p>
-          <p className="text-xs text-gray-500">{trip.efficiencyWhPerMile.toFixed(0)} Wh/mi</p>
+          <p className="font-medium">{(trip.distanceMiles ?? 0).toFixed(1)} mi</p>
+          <p className="text-xs text-gray-500">{(trip.efficiencyWhPerMile ?? 0).toFixed(0)} Wh/mi</p>
         </div>
         <div className="text-right">
-          <p className="font-medium">{trip.energyUsedKwh.toFixed(1)} kWh</p>
+          <p className="font-medium">{(trip.energyUsedKwh ?? 0).toFixed(1)} kWh</p>
         </div>
         <Badge variant={stateConfig.variant}>{stateConfig.label}</Badge>
       </div>

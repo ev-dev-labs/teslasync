@@ -51,7 +51,7 @@ export default function ProjectedRangePage() {
           label={t('Days of Range')}
           value={daysOfRange != null ? String(daysOfRange) : '–'}
           trend={data && data.avg_daily_km > 0
-            ? { direction: 'flat', value: `${data.avg_daily_km.toFixed(0)} km/day avg` }
+            ? { direction: 'flat', value: `${(data.avg_daily_km ?? 0).toFixed(0)} km/day avg` }
             : undefined
           }
         />

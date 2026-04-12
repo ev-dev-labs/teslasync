@@ -119,8 +119,8 @@ export default function SignalDiffPage() {
             return (
               <div key={r.label} className="flex items-center gap-4 px-3 py-2 text-sm">
                 <span className="w-20 font-medium shrink-0">{t(r.label)}</span>
-                <span className="w-24 text-right shrink-0">{r.a.toFixed(2)}</span>
-                <span className="w-24 text-right shrink-0">{r.b.toFixed(2)}</span>
+                <span className="w-24 text-right shrink-0">{(r.a ?? 0).toFixed(2)}</span>
+                <span className="w-24 text-right shrink-0">{(r.b ?? 0).toFixed(2)}</span>
                 <Badge variant={diff > 0 ? 'success' : diff < 0 ? 'danger' : 'neutral'} size="sm">
                   {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                 </Badge>

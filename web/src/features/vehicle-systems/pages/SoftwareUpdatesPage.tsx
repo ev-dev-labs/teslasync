@@ -67,10 +67,10 @@ export default function SoftwareUpdatesPage() {
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
                     {u.installedAt
-                      ? t('Installed') + ': ' + new Date(u.installedAt).toLocaleString()
+                      ? t('Installed') + ': ' + u.installedAt ? new Date(u.installedAt).toLocaleString() : '—'
                       : u.scheduledAt
-                        ? t('Scheduled') + ': ' + new Date(u.scheduledAt).toLocaleString()
-                        : t('Created') + ': ' + new Date(u.createdAt).toLocaleString()}
+                        ? t('Scheduled') + ': ' + u.scheduledAt ? new Date(u.scheduledAt).toLocaleString() : '—'
+                        : t('Created') + ': ' + u.createdAt ? new Date(u.createdAt).toLocaleString() : '—'}
                   </p>
                 </div>
               </div>

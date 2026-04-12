@@ -32,7 +32,7 @@ export default function MapOverviewPage() {
                     <Badge variant={stateConfig.variant} size="sm">{stateConfig.label}</Badge>
                     <span>{v.displayName}</span>
                     <span className="text-gray-400 font-mono text-xs">
-                      {v.latitude.toFixed(4)}, {v.longitude.toFixed(4)}
+                      {(v.latitude ?? 0).toFixed(4)}, {(v.longitude ?? 0).toFixed(4)}
                     </span>
                   </div>
                 );

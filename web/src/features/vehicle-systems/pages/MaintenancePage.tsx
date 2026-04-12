@@ -49,7 +49,7 @@ export default function MaintenancePage() {
             <div key={item.id} className="flex items-center gap-4 px-3 py-2 text-sm">
               <span className="flex-1 font-medium">{item.name}</span>
               <Badge variant="neutral" size="sm">{item.category}</Badge>
-              <span className="w-36 shrink-0">{item.intervalKm.toLocaleString()} km / {item.intervalMonths} mo</span>
+              <span className="w-36 shrink-0">{(item.intervalKm ?? 0).toLocaleString()} km / {item.intervalMonths} mo</span>
               <span className="w-16 text-right shrink-0">${item.estimatedCostUsd}</span>
             </div>
           ))}
@@ -66,8 +66,8 @@ export default function MaintenancePage() {
                 columns={2}
                 items={[
                   { label: t('Service'), value: r.itemId },
-                  { label: t('Date'), value: new Date(r.date).toLocaleDateString() },
-                  { label: t('Odometer'), value: `${r.odometerKm.toLocaleString()} km` },
+                  { label: t('Date'), value: r.date ? new Date(r.date).toLocaleDateString() : '—' },
+                  { label: t('Odometer'), value: `${(r.odometerKm ?? 0).toLocaleString()} km` },
                   { label: t('Notes'), value: r.notes || '--' },
                 ]}
               />

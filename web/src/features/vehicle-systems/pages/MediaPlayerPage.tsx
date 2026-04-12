@@ -92,7 +92,7 @@ export default function MediaPlayerPage() {
         <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
           {history?.slice(0, 50).map((h) => (
             <div key={h.id} className="flex items-center gap-4 px-3 py-2 text-sm">
-              <span className="w-36 text-gray-400 shrink-0">{new Date(h.timestamp).toLocaleString()}</span>
+              <span className="w-36 text-gray-400 shrink-0">{h.timestamp ? new Date(h.timestamp).toLocaleString() : '—'}</span>
               <span className="flex-1 truncate max-w-[200px]">{h.title || '--'}</span>
               <span className="w-32 truncate shrink-0">{h.artist || '--'}</span>
               <Badge variant="neutral" size="sm">{h.source || '--'}</Badge>

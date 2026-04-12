@@ -55,7 +55,7 @@ export default function AdminPage() {
         <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
           {logs?.map((log) => (
             <div key={log.id} className="flex items-center gap-4 px-3 py-2 text-sm">
-              <span className="w-40 text-gray-400 shrink-0">{new Date(log.createdAt).toLocaleString()}</span>
+              <span className="w-40 text-gray-400 shrink-0">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</span>
               <span className="w-28 shrink-0">{log.action}</span>
               <span className="w-28 shrink-0">{log.resource}</span>
               <span className="text-gray-400 truncate max-w-[200px]">{log.details}</span>

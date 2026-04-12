@@ -103,7 +103,7 @@ export default function APIKeysPage() {
                 </div>
               </div>
               <div className="px-4 pb-3 text-xs text-gray-500">
-                {t('Created')}: {new Date(key.createdAt).toLocaleDateString()}
+                {t('Created')}: {key.createdAt ? new Date(key.createdAt).toLocaleDateString() : '—'}
                 {key.lastUsedAt && <> · {t('Last used')}: {new Date(key.lastUsedAt).toLocaleDateString()}</>}
               </div>
             </Card>
