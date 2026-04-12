@@ -1,11 +1,18 @@
+import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Cpu } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, DataTable, type Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
+import { getVehicles } from '../api/vehicles'
 import { formatDateTime, formatRelative } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
+import {
+  DateTimeRangeControls,
+  QueryControls,
+  toLocalDatetimeStr,
+} from '../components/SignalQueryControls'
 import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { getStateBadgeColor } from '../lib/enums'
@@ -27,6 +34,13 @@ interface TimelineResponse {
   vehicle_id: number
   days: number
   transitions: StateTransition[]
+}
+
+interface Vehicle {
+  id: number
+  display_name: string
+  vin: string
+  state: string
 }
 
 const stateColors: Record<string, { bg: string; text: string; dot: string; hex: string }> = {
@@ -52,21 +66,45 @@ function formatDuration(seconds: number): string {
 }
 
 export default function StateMachineDebugger() {
-  usePageTitle('State Debugger')
-  const vehicleId = 1
+  usePageTitle('FSM Debugger')
 
+  // Vehicle selector
+  const { data: vehicles } = useQuery<Vehicle[]>({
+    queryKey: ['vehicles'],
+    queryFn: getVehicles,
+    staleTime: 60_000,
+  })
+  const [vehicleId, setVehicleId] = useState<number>(0)
+
+  // Auto-select first vehicle
+  const selectedVehicleId = vehicleId || (vehicles?.[0]?.id ?? 0)
+
+  // DateTime range — default last 1 hour
+  const [fromStr, setFromStr] = useState(() => toLocalDatetimeStr(new Date(Date.now() - 3600_000)))
+  const [toStr, setToStr] = useState(() => toLocalDatetimeStr(new Date()))
+  const [queryKey, setQueryKey] = useState<number>(Date.now())
+
+  const applyPreset = useCallback((hours: number) => {
+    const end = new Date()
+    setFromStr(toLocalDatetimeStr(new Date(end.getTime() - hours * 3600_000)))
+    setToStr(toLocalDatetimeStr(end))
+  }, [])
+
+  // Queries
   const { data: stateResponse, isLoading: stateLoading } = useQuery<{ state?: VehicleState; live?: boolean }>({
-    queryKey: ['vehicle-state', vehicleId],
-    queryFn: () => request(`/vehicles/${vehicleId}/state`),
+    queryKey: ['vehicle-state', selectedVehicleId],
+    queryFn: () => request(`/vehicles/${selectedVehicleId}/state`),
     refetchInterval: 3_000,
+    enabled: selectedVehicleId > 0,
   })
 
   const currentState = stateResponse?.state
 
   const { data: timeline, isLoading: timelineLoading } = useQuery<TimelineResponse>({
-    queryKey: ['state-timeline', vehicleId],
-    queryFn: () => request(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=1`),
+    queryKey: ['state-timeline', selectedVehicleId, queryKey],
+    queryFn: () => request(`/vehicle-states/timeline?vehicle_id=${selectedVehicleId}&days=7`),
     refetchInterval: 10_000,
+    enabled: selectedVehicleId > 0,
   })
 
   const transitions = timeline?.transitions ?? []
@@ -126,10 +164,44 @@ export default function StateMachineDebugger() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
-        title="State Machine Debugger"
+        title="FSM Debugger"
         subtitle="Vehicle state transitions and duration analysis"
         icon={<Cpu className="h-6 w-6 text-neon-cyan" />}
       />
+
+      {/* ── Controls ── */}
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-4 sm:p-5 space-y-4 !overflow-visible">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="metric-label">Vehicle</label>
+              <select
+                value={selectedVehicleId}
+                onChange={e => setVehicleId(Number(e.target.value))}
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-mono text-[var(--text-primary)] outline-none focus:border-neon-cyan/40"
+              >
+                {(vehicles ?? []).map(v => (
+                  <option key={v.id} value={v.id}>{v.display_name || v.vin} (ID: {v.id})</option>
+                ))}
+                {(!vehicles || vehicles.length === 0) && <option value={0}>Loading...</option>}
+              </select>
+            </div>
+          </div>
+          <DateTimeRangeControls
+            fromStr={fromStr}
+            toStr={toStr}
+            onFromChange={setFromStr}
+            onToChange={setToStr}
+            onPreset={applyPreset}
+          />
+          <QueryControls
+            perPage={50}
+            onPerPageChange={() => {}}
+            onQuery={() => setQueryKey(Date.now())}
+            label="Refresh"
+          />
+        </GlassPanel>
+      </FadeIn>
 
       {/* Current State Hero */}
       <FadeIn delay={0.1}>
