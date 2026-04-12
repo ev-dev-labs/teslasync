@@ -408,6 +408,63 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
 		})
 
+		// FSM shadow mode stats + transition log
+		r.Route("/fsm", func(r chi.Router) {
+			r.Get("/shadow-stats", func(w http.ResponseWriter, req *http.Request) {
+				shadow := telemetryHandler.FSMShadow()
+				if shadow == nil {
+					writeJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
+					return
+				}
+				batches, discrepancies := shadow.Stats()
+				writeJSON(w, http.StatusOK, map[string]interface{}{
+					"enabled":       true,
+					"total_batches": batches,
+					"discrepancies": discrepancies,
+				})
+			})
+			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {
+				fsmTransRepo := database.NewFSMTransitionRepo(db)
+				vehicleID, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
+				if vehicleID == 0 {
+					writeError(w, http.StatusBadRequest, "vehicle_id required")
+					return
+				}
+				fsmType := req.URL.Query().Get("fsm_type")
+				hours := 1
+				if h := req.URL.Query().Get("hours"); h != "" {
+					if v, err := strconv.Atoi(h); err == nil && v > 0 {
+						hours = v
+					}
+				}
+				from := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+				to := time.Now().UTC()
+				page := 1
+				if p := req.URL.Query().Get("page"); p != "" {
+					if v, err := strconv.Atoi(p); err == nil && v > 0 {
+						page = v
+					}
+				}
+				perPage := 50
+				if pp := req.URL.Query().Get("per_page"); pp != "" {
+					if v, err := strconv.Atoi(pp); err == nil && v > 0 {
+						perPage = v
+					}
+				}
+				records, total, err := fsmTransRepo.Query(req.Context(), vehicleID, fsmType, nil, from, to, perPage, (page-1)*perPage)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "query failed")
+					return
+				}
+				writeJSON(w, http.StatusOK, map[string]interface{}{
+					"data":  records,
+					"total": total,
+					"page":  page,
+					"per_page": perPage,
+				})
+			})
+		})
+
 		// Real-time SSE stream
 		if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
 			if cfg.Auth.AuthentikURL == "" || cfg.Auth.AuthentikHMACKey == "" {

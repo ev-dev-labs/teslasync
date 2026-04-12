@@ -79,6 +79,9 @@ type TelemetryHandler struct {
 
 	// Per-signal history to Postgres (signal_history table)
 	signalHistoryWriter *database.SignalHistoryWriter
+
+	// Shadow FSM — runs new FSM in parallel, logs discrepancies without affecting production
+	fsmShadow *FSMShadow
 }
 
 // vehicleStateMachine tracks vehicle state transitions.
@@ -204,6 +207,16 @@ func (h *TelemetryHandler) SetSignalHistoryWriter(w *database.SignalHistoryWrite
 	h.signalHistoryWriter = w
 }
 
+// SetFSMShadow enables the shadow FSM for parallel state validation.
+func (h *TelemetryHandler) SetFSMShadow(shadow *FSMShadow) {
+	h.fsmShadow = shadow
+}
+
+// FSMShadow returns the shadow FSM instance for status/stats queries.
+func (h *TelemetryHandler) FSMShadow() *FSMShadow {
+	return h.fsmShadow
+}
+
 // SetCaptureEnabled toggles raw telemetry capture on or off.
 func (h *TelemetryHandler) SetCaptureEnabled(enabled bool) {
 	h.captureEnabled.Store(enabled)
@@ -263,6 +276,11 @@ func (h *TelemetryHandler) cleanupStaleEntries() {
 			var vehicleID int64
 			if err := h.db.Pool.QueryRow(ctx, "SELECT id FROM vehicles WHERE vin = $1", vin).Scan(&vehicleID); err == nil {
 				h.MarkVehicleOffline(ctx, vehicleID)
+				// Shadow FSM timeout comparison
+				if h.fsmShadow != nil {
+					oldState := h.getCurrentOldState(vehicleID)
+					h.fsmShadow.HandleTimeout(ctx, vehicleID, oldState)
+				}
 			}
 		}
 	}
@@ -514,6 +532,18 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 				h.trackStateTransition(bgCtx, vehicleID, signals)
 			})
 		}
+	}
+
+	// --- Shadow FSM (parallel validation, no DB writes) ---
+	// Runs the new FSM on every signal batch and logs discrepancies with
+	// the old state machine. Once zero discrepancies for 24h, we can switch.
+	if vehicleID > 0 && h.fsmShadow != nil {
+		oldState := h.getCurrentOldState(vehicleID)
+		safeGo("fsm-shadow", func() {
+			bgCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
+			defer cancel()
+			h.fsmShadow.ProcessSignals(bgCtx, vehicleID, signals, oldState)
+		})
 	}
 
 	// --- Async writes: state tracking, mileage, tire pressure, vehicle health ---
@@ -832,6 +862,19 @@ func (h *TelemetryHandler) trackStateTransition(ctx context.Context, vehicleID i
 	sm.pendingSince = time.Time{}
 	h.vehicleStateMu.Unlock()
 	h.commitStateTransition(ctx, vehicleID, candidateState)
+}
+
+// getCurrentOldState returns the old state machine's current state for shadow comparison.
+func (h *TelemetryHandler) getCurrentOldState(vehicleID int64) string {
+	h.vehicleStateMu.Lock()
+	sm, exists := h.vehicleStates[vehicleID]
+	if !exists {
+		h.vehicleStateMu.Unlock()
+		return enums.StateOnline
+	}
+	state := sm.currentState
+	h.vehicleStateMu.Unlock()
+	return state
 }
 
 func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID int64, newState string) {
