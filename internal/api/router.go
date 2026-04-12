@@ -26,6 +26,15 @@ import (
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+
+	// New hexagonal architecture packages
+	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/tripsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
+	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 )
 
 // RouterOptions holds optional parameters for NewRouter.
@@ -599,6 +608,47 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
 		})
+
+		// ──────────────────────────────────────────────────────────
+		// NEW ARCHITECTURE: Hexagonal handlers (adapters → services → v1 handlers)
+		// These complement the existing routes above.
+		// ──────────────────────────────────────────────────────────
+		pool := db.Pool
+
+		// Adapters
+		vehicleRepo := pgadapter.NewVehicleRepository(pool)
+		chargingRepo := pgadapter.NewChargingSessionRepository(pool)
+		tripRepo := pgadapter.NewTripRepository(pool)
+		exportRepo := pgadapter.NewExportJobRepository(pool)
+		fsmHistoryRepo := pgadapter.NewFSMHistoryRepository(pool)
+
+		// Services
+		vehicleSvc := vehiclesvc.New(vehicleRepo, fsmHistoryRepo, nil)
+		chargingSvc := chargingsvc.New(chargingRepo, fsmHistoryRepo)
+		tripSvc := tripsvc.New(tripRepo, fsmHistoryRepo, nil)
+		exportSvc := exportsvc.New(exportRepo, fsmHistoryRepo, nil)
+		dashboardSvc := dashboardsvc.New(vehicleRepo, chargingRepo, tripRepo)
+
+		// Handlers
+		v1VehicleHandler := v1handlers.NewVehicleHandler(vehicleSvc)
+		v1ChargingHandler := v1handlers.NewChargingHandler(chargingSvc)
+		v1TripHandler := v1handlers.NewTripHandler(tripSvc)
+		v1ExportHandler := v1handlers.NewExportHandler(exportSvc)
+		v1DashboardHandler := v1handlers.NewDashboardHandler(dashboardSvc)
+		v1UserHandler := v1handlers.NewUserHandler()
+
+		// Register new routes (paths that DON'T exist in the legacy router above)
+		v1DashboardHandler.Register(r)    // /dashboard/stats — NEW
+		v1ChargingHandler.Register(r)     // /charging-sessions — NEW (old uses /charging)
+		v1ExportHandler.Register(r)       // /exports — NEW (old uses /export/jobs)
+		v1UserHandler.Register(r)         // /users/me — NEW
+		// NOTE: /trips conflicts with legacy tripHandler above; skip new trip handler.
+		// NOTE: /vehicles conflicts with legacy vehicleHandler above; skip new vehicle handler.
+
+		// Suppress unused warnings
+		_ = vehicleSvc
+		_ = v1VehicleHandler
+		_ = v1TripHandler
 	})
 
 	// Tesla public key (.well-known path required by Tesla Fleet API)
