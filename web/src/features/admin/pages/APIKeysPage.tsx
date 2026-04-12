@@ -5,6 +5,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useApiKeys, useCreateApiKey, useDeleteApiKey } from '@/api/hooks/useAdmin';
 
@@ -60,14 +61,16 @@ export default function APIKeysPage() {
             ) : (
               <>
                 <Input label={t('Name')} value={name} onChange={(e) => setName(e.target.value)} placeholder="My integration" />
-                <div>
-                  <label className="text-sm text-gray-400 block mb-1">{t('Permissions')}</label>
-                  <select className="w-full rounded border px-2 py-1 text-sm bg-transparent" value={permissions} onChange={(e) => setPermissions(e.target.value)}>
-                    <option value="read">Read</option>
-                    <option value="read-write">Read-Write</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
+                <Select
+                  options={[
+                    { value: 'read', label: t('Read') },
+                    { value: 'read-write', label: t('Read-Write') },
+                    { value: 'admin', label: t('Admin') },
+                  ]}
+                  label={t('Permissions')}
+                  value={permissions}
+                  onChange={(e) => setPermissions(e.target.value)}
+                />
                 <div className="flex gap-2">
                   <Button variant="primary" size="sm" loading={createMutation.isPending} onClick={handleCreate}>{t('Generate')}</Button>
                   <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>{t('Cancel')}</Button>

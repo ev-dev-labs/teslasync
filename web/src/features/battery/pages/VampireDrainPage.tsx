@@ -5,6 +5,7 @@ import { Grid } from '@/components/layout/Grid';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Select } from '@/components/ui';
 import { KVList } from '@/components/data-display/KVList';
 import { useVampireDrainStats, useVampireDrainEvents } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -28,15 +29,11 @@ export default function VampireDrainPage() {
       emptyMessage={t('No vampire drain data recorded yet.')}
       actions={
         vehicles && vehicles.length > 1 ? (
-          <select
-            className="rounded border px-2 py-1 text-sm"
-            value={activeId ?? ''}
+          <Select
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
-          >
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>{v.displayName || v.vin}</option>
-            ))}
-          </select>
+          />
         ) : undefined
       }
     >

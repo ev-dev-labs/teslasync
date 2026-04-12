@@ -6,6 +6,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui';
 import { StatCard } from '@/components/data-display/StatCard';
 import { useSignals, useSignalDiff } from '@/api/hooks/useTelemetry';
 import type { RangeStats } from '@/types/telemetry';
@@ -76,14 +77,14 @@ export default function SignalDiffPage() {
       <Card>
         <CardHeader title={t('Configuration')} />
         <div className="px-4 pb-4 space-y-3">
-          <select
-            className="w-full rounded border px-2 py-1 text-sm bg-transparent"
+          <Select
+            options={[
+              { value: '', label: t('Select signal...') },
+              ...(signals ?? []).map((s) => ({ value: s, label: s })),
+            ]}
             value={signal}
             onChange={(e) => setSignal(e.target.value)}
-          >
-            <option value="">{t('Select signal...')}</option>
-            {signals?.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          />
 
           <Grid cols={{ default: 1, md: 2 }} gap={4}>
             <div className="space-y-2">

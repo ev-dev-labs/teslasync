@@ -5,6 +5,7 @@ import { Grid } from '@/components/layout/Grid';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui';
 import { StatCard } from '@/components/data-display/StatCard';
 import { useExportJobs, useCreateExport } from '@/api/hooks/useAdmin';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -66,16 +67,14 @@ export default function DataExportPage() {
           </div>
 
           {vehicles && vehicles.length > 1 && (
-            <select
-              className="rounded border px-2 py-1 text-sm bg-transparent w-full"
+            <Select
+              options={[
+                { value: '', label: t('All Vehicles') },
+                ...(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin })),
+              ]}
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-            >
-              <option value="">{t('All Vehicles')}</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>{v.displayName || v.vin}</option>
-              ))}
-            </select>
+            />
           )}
 
           <Button variant="primary" loading={createExport.isPending} onClick={handleExport}>

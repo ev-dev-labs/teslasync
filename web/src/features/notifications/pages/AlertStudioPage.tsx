@@ -6,6 +6,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui';
 import { StatCard } from '@/components/data-display/StatCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useAlertRules, useSaveAlertRule, useDeleteAlertRule, useNotificationChannels } from '@/api/hooks/useNotifications';
@@ -61,14 +62,16 @@ export default function AlertStudioPage() {
           <CardHeader title={t('New Alert Rule')} />
           <div className="px-4 pb-4 space-y-3">
             <Input label={t('Rule Name')} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Low Battery Alert" />
-            <div>
-              <label className="text-sm text-gray-400 block mb-1">{t('Severity')}</label>
-              <select className="w-full rounded border px-2 py-1 text-sm bg-transparent" value={severity} onChange={(e) => setSeverity(e.target.value)}>
-                <option value="info">Info</option>
-                <option value="warning">Warning</option>
-                <option value="critical">Critical</option>
-              </select>
-            </div>
+            <Select
+              options={[
+                { value: 'info', label: t('Info') },
+                { value: 'warning', label: t('Warning') },
+                { value: 'critical', label: t('Critical') },
+              ]}
+              label={t('Severity')}
+              value={severity}
+              onChange={(e) => setSeverity(e.target.value)}
+            />
             <Input label={t('Cooldown (min)')} type="number" value={String(cooldown)} onChange={(e) => setCooldown(Number(e.target.value))} />
             <Input label={t('Message Template')} value={msgTemplate} onChange={(e) => setMsgTemplate(e.target.value)} placeholder="Battery is at {{battery_level}}%" />
             <div className="flex gap-2">

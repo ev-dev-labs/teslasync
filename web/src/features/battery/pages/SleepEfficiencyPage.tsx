@@ -5,6 +5,7 @@ import { Grid } from '@/components/layout/Grid';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Select } from '@/components/ui';
 import { KVList } from '@/components/data-display/KVList';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -28,26 +29,22 @@ export default function SleepEfficiencyPage() {
       emptyMessage={t('No sleep data available. Data will appear after sleep/wake events.')}
       actions={
         <div className="flex items-center gap-2">
-          <select
-            className="rounded border px-2 py-1 text-sm"
-            value={days}
+          <Select
+            options={[
+              { value: '7', label: `7 ${t('days')}` },
+              { value: '30', label: `30 ${t('days')}` },
+              { value: '90', label: `90 ${t('days')}` },
+              { value: '180', label: `180 ${t('days')}` },
+            ]}
+            value={String(days)}
             onChange={(e) => setDays(Number(e.target.value))}
-          >
-            <option value={7}>7 {t('days')}</option>
-            <option value={30}>30 {t('days')}</option>
-            <option value={90}>90 {t('days')}</option>
-            <option value={180}>180 {t('days')}</option>
-          </select>
+          />
           {vehicles && vehicles.length > 1 && (
-            <select
-              className="rounded border px-2 py-1 text-sm"
-              value={activeId ?? ''}
+            <Select
+              options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+              value={String(activeId ?? '')}
               onChange={(e) => setVehicleId(e.target.value)}
-            >
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>{v.displayName || v.vin}</option>
-              ))}
-            </select>
+            />
           )}
         </div>
       }

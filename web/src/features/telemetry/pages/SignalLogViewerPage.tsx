@@ -6,6 +6,7 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui';
 import { StatCard } from '@/components/data-display/StatCard';
 import { useSignals, useSignalLog } from '@/api/hooks/useTelemetry';
 
@@ -77,13 +78,12 @@ export default function SignalLogViewerPage() {
                 {h < 48 ? `${h}h` : `${h / 24}d`}
               </Button>
             ))}
-            <select
-              className="ml-auto rounded border px-2 py-1 text-xs bg-transparent"
-              value={pageSize}
+            <Select
+              options={PAGE_SIZES.map((s) => ({ value: String(s), label: `${s}/page` }))}
+              className="ml-auto"
+              value={String(pageSize)}
               onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            >
-              {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}/page</option>)}
-            </select>
+            />
           </div>
 
           <StatCard label={t('Total Records')} value={logData?.count ?? 0} />
