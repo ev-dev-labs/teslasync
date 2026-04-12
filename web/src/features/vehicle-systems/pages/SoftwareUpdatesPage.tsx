@@ -23,7 +23,7 @@ export default function SoftwareUpdatesPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? '';
 
-  const { data: updates, isLoading, error } = useSoftwareUpdates(activeId);
+  const { data: updates, isLoading, error } = useSoftwareUpdates(String(activeId));
 
   const installed = updates?.filter((u) => u.status === 'installed') ?? [];
   const current = installed[0]?.version ?? '--';
@@ -39,7 +39,7 @@ export default function SoftwareUpdatesPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId)}
             onChange={(e) => setVehicleId(e.target.value)}
           />

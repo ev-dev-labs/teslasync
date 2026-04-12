@@ -15,7 +15,7 @@ export default function EnergyPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data: stats, isLoading, error } = useEnergyStats(activeId);
+  const { data: stats, isLoading, error } = useEnergyStats(activeId != null ? String(activeId) : null);
 
   const savings = (stats?.gas_equivalent_cost ?? 0) - (stats?.total_cost ?? 0);
 
@@ -30,7 +30,7 @@ export default function EnergyPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

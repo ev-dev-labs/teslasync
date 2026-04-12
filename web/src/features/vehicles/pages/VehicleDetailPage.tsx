@@ -16,12 +16,12 @@ export default function VehicleDetailPage() {
   const { data: vehicle, isLoading, error } = useVehicle(id!);
   const refresh = useRefreshVehicle();
 
-  const stateConfig = vehicleStates[vehicle?.fsmState ?? 'unknown'] ?? vehicleStates.unknown;
+  const stateConfig = vehicleStates[vehicle?.state ?? 'unknown'] ?? vehicleStates.unknown;
 
   return (
     <PageContainer
-      title={vehicle?.displayName ?? t('detail.title', 'Vehicle')}
-      subtitle={vehicle ? `${vehicle.model} · ${vehicle.year} · ${vehicle.vin}` : undefined}
+      title={vehicle?.display_name ?? t('detail.title', 'Vehicle')}
+      subtitle={vehicle ? `${vehicle.model} · ${vehicle.vin}` : undefined}
       loading={isLoading}
       error={error as Error | null}
       actions={
@@ -41,12 +41,12 @@ export default function VehicleDetailPage() {
           </div>
 
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-            <StatCard label="Battery" value={`${vehicle.batteryLevel}%`} />
-            <StatCard label="Range" value={(vehicle.rangeMiles ?? 0).toFixed(0)} unit="mi" />
-            <StatCard label="Odometer" value={(vehicle.odometerMiles ?? 0).toFixed(0)} unit="mi" />
+            <StatCard label="Battery" value={`${vehicle.battery_level}%`} />
+            <StatCard label="Range" value={(vehicle.battery_range ?? 0).toFixed(0)} unit="mi" />
+            <StatCard label="Odometer" value={(vehicle.odometer ?? 0).toFixed(0)} unit="mi" />
             <StatCard
               label="Charging"
-              value={vehicle.isCharging ? 'Yes' : 'No'}
+              value={vehicle.charging_state === 'Charging' ? 'Yes' : 'No'}
             />
           </Grid>
 
@@ -54,8 +54,7 @@ export default function VehicleDetailPage() {
             <KVList items={[
               { label: 'VIN', value: vehicle.vin },
               { label: 'Model', value: vehicle.model },
-              { label: 'Year', value: String(vehicle.year) },
-              { label: 'Last Updated', value: vehicle.updatedAt ? new Date(vehicle.updatedAt).toLocaleString() : '—' },
+              { label: 'Last Updated', value: vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : '—' },
               { label: 'Location', value: `${(vehicle.latitude ?? 0).toFixed(4)}, ${(vehicle.longitude ?? 0).toFixed(4)}` },
             ]} />
           </Card>

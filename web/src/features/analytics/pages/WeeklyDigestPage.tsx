@@ -16,7 +16,7 @@ function trendFor(current: number, previous: number) {
 export default function WeeklyDigestPage() {
   const { t } = useTranslation();
   const { data: vehicles } = useVehicles();
-  const vehicleId = vehicles?.[0]?.id ?? '';
+  const vehicleId = String(vehicles?.[0]?.id ?? '');
 
   const { data: digest, isLoading, error } = useWeeklyDigest(vehicleId);
 

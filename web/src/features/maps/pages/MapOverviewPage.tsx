@@ -26,11 +26,11 @@ export default function MapOverviewPage() {
             <p className="text-gray-500 mb-4">Map view requires Leaflet integration</p>
             <div className="space-y-2">
               {vehicles?.map((v: Vehicle) => {
-                const stateConfig = vehicleStates[v.fsmState] ?? vehicleStates.unknown;
+                const stateConfig = vehicleStates[v.state] ?? vehicleStates.unknown;
                 return (
                   <div key={v.id} className="flex items-center gap-2 text-sm">
                     <Badge variant={stateConfig.variant} size="sm">{stateConfig.label}</Badge>
-                    <span>{v.displayName}</span>
+                    <span>{v.display_name}</span>
                     <span className="text-gray-400 font-mono text-xs">
                       {(v.latitude ?? 0).toFixed(4)}, {(v.longitude ?? 0).toFixed(4)}
                     </span>

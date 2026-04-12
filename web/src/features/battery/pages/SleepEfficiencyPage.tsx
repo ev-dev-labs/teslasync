@@ -17,7 +17,7 @@ export default function SleepEfficiencyPage() {
   const [days, setDays] = useState(30);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data, isLoading, error } = useSleepEfficiency(activeId, days);
+  const { data, isLoading, error } = useSleepEfficiency(activeId != null ? String(activeId) : null, days);
 
   return (
     <PageContainer
@@ -41,7 +41,7 @@ export default function SleepEfficiencyPage() {
           />
           {vehicles && vehicles.length > 1 && (
             <Select
-              options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+              options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
               value={String(activeId ?? '')}
               onChange={(e) => setVehicleId(e.target.value)}
             />

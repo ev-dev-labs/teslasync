@@ -32,8 +32,8 @@ export default function StateMachineDebuggerPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? '';
 
-  const { data: state, isLoading, error } = useVehicleStateMachine(activeId);
-  const { data: timeline } = useStateTimeline(activeId);
+  const { data: state, isLoading, error } = useVehicleStateMachine(String(activeId));
+  const { data: timeline } = useStateTimeline(String(activeId));
   const transitions = timeline?.transitions ?? [];
 
   const durationByState = useMemo(() => {
@@ -57,7 +57,7 @@ export default function StateMachineDebuggerPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId)}
             onChange={(e) => setVehicleId(e.target.value)}
           />

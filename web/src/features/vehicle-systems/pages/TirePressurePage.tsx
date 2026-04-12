@@ -22,7 +22,7 @@ export default function TirePressurePage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? '';
 
-  const { data, isLoading, error } = useTirePressure(activeId);
+  const { data, isLoading, error } = useTirePressure(String(activeId));
 
   const tires: { label: string; value: number }[] = data
     ? [
@@ -44,7 +44,7 @@ export default function TirePressurePage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId)}
             onChange={(e) => setVehicleId(e.target.value)}
           />

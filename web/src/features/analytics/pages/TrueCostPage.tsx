@@ -10,7 +10,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 export default function TrueCostPage() {
   const { t } = useTranslation();
   const { data: vehicles } = useVehicles();
-  const vehicleId = vehicles?.[0]?.id ?? '';
+  const vehicleId = String(vehicles?.[0]?.id ?? '');
 
   const { data: cost, isLoading, error } = useCostBreakdown(vehicleId);
 

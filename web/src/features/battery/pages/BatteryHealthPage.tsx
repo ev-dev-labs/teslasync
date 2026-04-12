@@ -21,7 +21,7 @@ export default function BatteryHealthPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data, isLoading, error } = useBatteryHealth(activeId);
+  const { data, isLoading, error } = useBatteryHealth(activeId != null ? String(activeId) : null);
 
   const badge = healthBadge(data?.health_score ?? 0);
 
@@ -36,7 +36,7 @@ export default function BatteryHealthPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

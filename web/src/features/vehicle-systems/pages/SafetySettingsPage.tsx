@@ -16,7 +16,7 @@ export default function SafetySettingsPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? '';
 
-  const { data, isLoading, error } = useSafety(activeId);
+  const { data, isLoading, error } = useSafety(String(activeId));
 
   const safetyScore = useMemo(() => {
     if (!data) return 0;
@@ -43,7 +43,7 @@ export default function SafetySettingsPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId)}
             onChange={(e) => setVehicleId(e.target.value)}
           />

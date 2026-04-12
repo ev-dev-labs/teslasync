@@ -16,8 +16,8 @@ export default function VampireDrainPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data: stats, isLoading, error } = useVampireDrainStats(activeId);
-  const { data: events } = useVampireDrainEvents(activeId);
+  const { data: stats, isLoading, error } = useVampireDrainStats(activeId != null ? String(activeId) : null);
+  const { data: events } = useVampireDrainEvents(activeId != null ? String(activeId) : null);
 
   return (
     <PageContainer
@@ -30,7 +30,7 @@ export default function VampireDrainPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

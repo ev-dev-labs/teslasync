@@ -15,7 +15,7 @@ export default function BatteryDegradationPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data, isLoading, error } = useBatteryDegradation(activeId);
+  const { data, isLoading, error } = useBatteryDegradation(activeId != null ? String(activeId) : null);
 
   const stressVariant = data?.stress_level === 'Low' ? 'success' as const
     : data?.stress_level === 'Medium' ? 'warning' as const
@@ -32,7 +32,7 @@ export default function BatteryDegradationPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

@@ -22,7 +22,7 @@ export default function BatteryCellsPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data, isLoading, error } = useBatteryCells(activeId);
+  const { data, isLoading, error } = useBatteryCells(activeId != null ? String(activeId) : null);
 
   const voltageStatus = spreadStatus(data?.voltage_spread ?? 0);
   const tempStatus = spreadStatus(data?.temp_spread ?? 0);
@@ -38,7 +38,7 @@ export default function BatteryCellsPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

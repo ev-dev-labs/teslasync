@@ -58,7 +58,7 @@ export default function CommandsPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId)}
             onChange={(e) => setVehicleId(e.target.value)}
           />
@@ -67,10 +67,10 @@ export default function CommandsPage() {
     >
       {vehicle && (
         <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-          <StatCard label={t('Vehicle')} value={vehicle.displayName || vehicle.vin} />
-          <StatCard label={t('Battery')} value={`${vehicle.batteryLevel}%`} />
-          <StatCard label={t('Range')} value={`${vehicle.rangeMiles} mi`} />
-          <StatCard label={t('State')} value={vehicle.fsmState} />
+          <StatCard label={t('Vehicle')} value={vehicle.display_name || vehicle.vin} />
+          <StatCard label={t('Battery')} value={`${vehicle.battery_level}%`} />
+          <StatCard label={t('Range')} value={`${vehicle.battery_range} mi`} />
+          <StatCard label={t('State')} value={vehicle.state} />
         </Grid>
       )}
 

@@ -24,8 +24,8 @@ export default function QuickStatsPage() {
       {vehicle && (
         <Card>
           <CardHeader
-            title={vehicle.displayName || vehicle.vin}
-            subtitle={`${vehicle.model} ${vehicle.year}`}
+            title={vehicle.display_name || vehicle.vin}
+            subtitle={vehicle.model}
           />
         </Card>
       )}

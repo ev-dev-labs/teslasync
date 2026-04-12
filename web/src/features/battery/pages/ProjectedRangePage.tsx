@@ -14,7 +14,7 @@ export default function ProjectedRangePage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data, isLoading, error } = useProjectedRange(activeId);
+  const { data, isLoading, error } = useProjectedRange(activeId != null ? String(activeId) : null);
 
   const daysOfRange = data && data.avg_daily_km > 0
     ? Math.round(data.current_range_km / data.avg_daily_km)
@@ -31,7 +31,7 @@ export default function ProjectedRangePage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

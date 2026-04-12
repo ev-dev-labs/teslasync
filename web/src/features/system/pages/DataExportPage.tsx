@@ -70,7 +70,7 @@ export default function DataExportPage() {
             <Select
               options={[
                 { value: '', label: t('All Vehicles') },
-                ...(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin })),
+                ...(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin })),
               ]}
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}

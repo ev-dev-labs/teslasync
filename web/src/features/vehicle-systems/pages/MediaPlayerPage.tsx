@@ -21,8 +21,8 @@ export default function MediaPlayerPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? '';
 
-  const { data: current, isLoading, error } = useMedia(activeId);
-  const { data: history } = useMediaHistory(activeId);
+  const { data: current, isLoading, error } = useMedia(String(activeId));
+  const { data: history } = useMediaHistory(String(activeId));
 
   const stats = useMemo(() => {
     if (!history?.length) return { uniqueTracks: 0, topSource: '--', avgVolume: 0 };
@@ -49,7 +49,7 @@ export default function MediaPlayerPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId)}
             onChange={(e) => setVehicleId(e.target.value)}
           />

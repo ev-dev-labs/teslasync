@@ -29,30 +29,30 @@ export default function VehicleListPage() {
 }
 
 function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
-  const stateConfig = vehicleStates[vehicle.fsmState] ?? vehicleStates.unknown;
+  const stateConfig = vehicleStates[vehicle.state] ?? vehicleStates.unknown;
 
   return (
     <Card hover className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold">{vehicle.displayName}</h3>
-          <p className="text-xs text-gray-500">{vehicle.model} · {vehicle.year}</p>
+          <h3 className="font-semibold">{vehicle.display_name}</h3>
+          <p className="text-xs text-gray-500">{vehicle.model} · {vehicle.trim_badging}</p>
         </div>
         <Badge variant={stateConfig.variant} dot>{stateConfig.label}</Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>
-          <span className="text-gray-500">Battery</span>
-          <p className="font-medium">{vehicle.batteryLevel}%</p>
+          <span className="text-gray-500">State</span>
+          <p className="font-medium">{vehicle.state}</p>
         </div>
         <div>
-          <span className="text-gray-500">Range</span>
-          <p className="font-medium">{(vehicle.rangeMiles ?? 0).toFixed(0)} mi</p>
+          <span className="text-gray-500">Color</span>
+          <p className="font-medium">{vehicle.exterior_color}</p>
         </div>
         <div>
-          <span className="text-gray-500">Odometer</span>
-          <p className="font-medium">{(vehicle.odometerMiles ?? 0).toFixed(0)} mi</p>
+          <span className="text-gray-500">Wheels</span>
+          <p className="font-medium">{vehicle.wheel_type}</p>
         </div>
         <div>
           <span className="text-gray-500">VIN</span>

@@ -15,7 +15,7 @@ export default function EnergyFlowPage() {
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
-  const { data, isLoading, error } = useEnergyFlow(activeId);
+  const { data, isLoading, error } = useEnergyFlow(activeId != null ? String(activeId) : null);
 
   const isCharging = (data?.dc_charging_power ?? 0) > 0 || (data?.ac_charging_power ?? 0) > 0;
   const activePower = (data?.dc_charging_power ?? 0) > 0
@@ -34,7 +34,7 @@ export default function EnergyFlowPage() {
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
-            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.displayName || v.vin }))}
+            options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
             value={String(activeId ?? '')}
             onChange={(e) => setVehicleId(e.target.value)}
           />

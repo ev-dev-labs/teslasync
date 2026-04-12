@@ -26,7 +26,7 @@ function formatDuration(min: number): string {
 export default function TimelinePage() {
   const { t } = useTranslation();
   const { data: vehicles } = useVehicles();
-  const vehicleId = vehicles?.[0]?.id ?? '';
+  const vehicleId = String(vehicles?.[0]?.id ?? '');
 
   const { data: events, isLoading, error } = useTimeline(vehicleId);
   const { data: summary } = useStateSummary(vehicleId);
