@@ -176,7 +176,7 @@ func (w *SignalHistoryWriter) Query(ctx context.Context, vehicleID int64, signal
 	}
 	defer rows.Close()
 
-	var entries []SignalHistoryEntry
+	entries := make([]SignalHistoryEntry, 0)
 	for rows.Next() {
 		var e SignalHistoryEntry
 		if err := rows.Scan(&e.Signal, &e.ValueNum, &e.ValueStr, &e.ValueBool, &e.CreatedAt); err != nil {
@@ -197,7 +197,7 @@ func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID in
 	}
 	defer rows.Close()
 
-	var signals []string
+	signals := make([]string, 0)
 	for rows.Next() {
 		var s string
 		if err := rows.Scan(&s); err != nil {
@@ -230,7 +230,7 @@ func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signal
 	}
 	defer rows.Close()
 
-	var stats []SignalStats
+	stats := make([]SignalStats, 0)
 	for rows.Next() {
 		var s SignalStats
 		if err := rows.Scan(&s.Signal, &s.Min, &s.Max, &s.Avg, &s.Count); err != nil {

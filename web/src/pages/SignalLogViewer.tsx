@@ -93,7 +93,7 @@ export default function SignalLogViewer() {
       />
 
       {/* ── Controls ── */}
-      <GlassPanel className="p-4 mb-4 space-y-4">
+      <GlassPanel className="p-4 mb-4 space-y-4 !overflow-visible">
         <SignalMultiSelect
           vehicleId={vehicleId}
           selected={selectedSignals}

@@ -10,7 +10,11 @@ import (
 
 // CleanupOldPositions deletes positions older than the given number of days.
 // Uses batched deletes to avoid long-running locks.
+// If days <= 0, cleanup is skipped (opt-in only — 0 means no automatic cleanup).
 func (db *DB) CleanupOldPositions(ctx context.Context, days int) (int64, error) {
+	if days <= 0 {
+		return 0, nil
+	}
 	cutoff := time.Now().UTC().AddDate(0, 0, -days)
 	log.Info().Time("cutoff", cutoff).Int("retention_days", days).Msg("cleaning up old positions")
 
@@ -47,7 +51,11 @@ func (db *DB) CleanupOldPositions(ctx context.Context, days int) (int64, error) 
 
 // CleanupOldStates deletes vehicle state records older than the given number of days.
 // Uses batched deletes to avoid long-running locks.
+// If days <= 0, cleanup is skipped (opt-in only — 0 means no automatic cleanup).
 func (db *DB) CleanupOldStates(ctx context.Context, days int) (int64, error) {
+	if days <= 0 {
+		return 0, nil
+	}
 	cutoff := time.Now().UTC().AddDate(0, 0, -days)
 	log.Info().Time("cutoff", cutoff).Int("retention_days", days).Msg("cleaning up old vehicle states")
 

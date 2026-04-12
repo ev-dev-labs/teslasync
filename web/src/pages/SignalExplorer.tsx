@@ -128,7 +128,7 @@ export default function SignalExplorer() {
       />
 
       {/* ── Controls ── */}
-      <GlassPanel className="p-4 sm:p-5 mb-6 space-y-4">
+      <GlassPanel className="p-4 sm:p-5 mb-6 space-y-4 !overflow-visible">
         <SignalMultiSelect
           vehicleId={vehicleId}
           selected={selectedSignals}
@@ -170,7 +170,7 @@ export default function SignalExplorer() {
               <h2 className="section-title">Signal Chart</h2>
               {chartResponse && (
                 <span className="ml-auto text-[10px] text-[var(--text-muted)]">
-                  {fmtInt(chartResponse.data.length)} points loaded
+                  {fmtInt((chartResponse.data ?? []).length)} points loaded
                 </span>
               )}
             </div>
@@ -257,8 +257,8 @@ export default function SignalExplorer() {
           <SignalDataTable
             rows={tableResponse?.data ?? []}
             page={page}
-            totalPages={tableResponse?.pagination.total_pages ?? 1}
-            total={tableResponse?.pagination.total ?? 0}
+            totalPages={tableResponse?.pagination?.total_pages ?? 1}
+            total={tableResponse?.pagination?.total ?? 0}
             perPage={perPage}
             onPageChange={setPage}
             loading={tableLoading}
