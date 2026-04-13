@@ -345,8 +345,8 @@ export default function DriveDetailPage() {
                   size={110}
                 />
                 <RadialGauge
-                  value={drive.durationMin}
-                  max={Math.max(drive.durationMin * 1.5, 60)}
+                  value={Math.round(drive.durationMin ?? 0)}
+                  max={Math.max((drive.durationMin ?? 0) * 1.5, 60)}
                   label={t('driveDetail.duration', 'Duration')}
                   unit="min"
                   color="#f59e0b"
@@ -415,12 +415,23 @@ export default function DriveDetailPage() {
               <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
                 <Activity className="h-4 w-4 text-cyan-400" /> {t('driveDetail.moreDetails', 'More Details')}
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.odometer', 'Odometer (From → To)')}</p>
                   <p className="text-lg font-bold text-cyan-400">
                     {drive.startOdometer && drive.endOdometer
                       ? `${Math.round(convertDistance(drive.startOdometer))} → ${Math.round(convertDistance(drive.endOdometer))}`
+                      : '—'}{' '}
+                    <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">
+                    {t('driveDetail.rangeStartEnd', 'Range (Start → End)')}
+                  </p>
+                  <p className="text-lg font-bold text-green-400">
+                    {stats.startRange != null
+                      ? `${Math.round(stats.startRange)} → ${stats.endRange != null ? Math.round(stats.endRange) : '?'}`
                       : '—'}{' '}
                     <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
                   </p>
@@ -451,18 +462,29 @@ export default function DriveDetailPage() {
                     <span className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</span>
                   </p>
                 </div>
-                {stats.avgOutsideTemp !== null && (
-                  <div className="text-center">
-                    <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.avgOutsideTemp', 'Avg Outside Temp')}</p>
-                    <p className="text-lg font-bold text-blue-400">{fmtNumber(stats.avgOutsideTemp)}{tempUnit}</p>
-                  </div>
-                )}
+
               </div>
               <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.avgPower', 'Avg Power')}</p>
                   <p className="text-lg font-bold text-amber-400">{fmtNumber(stats.avgPower)} <span className="text-xs text-[var(--text-muted)]">kW</span></p>
                 </div>
+                {stats.avgOutsideTemp !== null && (
+                  <div className="text-center">
+                    <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.avgOutsideTemp', 'Avg Outside Temp')}</p>
+                    <p className="text-lg font-bold text-blue-400">{fmtNumber(stats.avgOutsideTemp)}{tempUnit}</p>
+                  </div>
+                )}
+                {stats.avgInsideTemp !== null && (
+                  <div className="text-center">
+                    <p className="text-[10px] text-[var(--text-muted)] mb-1">
+                      {t('driveDetail.avgInsideTemp', 'Avg Inside Temp')}
+                    </p>
+                    <p className="text-lg font-bold text-orange-400">
+                      {fmtNumber(stats.avgInsideTemp)}{tempUnit}
+                    </p>
+                  </div>
+                )}
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.minSpeed', 'Min Speed')}</p>
                   <p className="text-lg font-bold text-[var(--text-secondary)]">{fmtInt(stats.minSpd)} {speedUnit}</p>
@@ -530,53 +552,60 @@ export default function DriveDetailPage() {
           </FadeIn>
 
           {/* Route Map */}
-          {trail.length > 0 && (
-            <FadeIn>
-              <GlassPanel className="overflow-hidden">
-                <div className="p-4 pb-0">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-3">
-                    <MapPin className="h-4 w-4 text-cyan-400" /> {t('driveDetail.route', 'Route')}
-                  </h3>
-                </div>
-                <div className="h-64 sm:h-80 lg:h-96 relative">
-                  <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
-                  <MapContainer center={centerPos} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
-                    <MapTileLayer style={mapStyle} />
-                    <MapInvalidator />
-                    <FitBounds trail={trail} />
-                    {speedSegments.map((seg, i) => (
-                      <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
-                    ))}
-                    {startPos && (
-                      <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
-                        <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startDate)}</span></Popup>
-                      </CircleMarker>
+          <FadeIn>
+            <GlassPanel className="overflow-hidden">
+              <div className="p-4 pb-0">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-3">
+                  <MapPin className="h-4 w-4 text-cyan-400" /> {t('driveDetail.route', 'Route')}
+                </h3>
+              </div>
+              {trail.length > 0 ? (
+                <>
+                  <div className="h-64 sm:h-80 lg:h-96 relative">
+                    <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+                    <MapContainer center={centerPos} zoom={trail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
+                      <MapTileLayer style={mapStyle} />
+                      <MapInvalidator />
+                      <FitBounds trail={trail} />
+                      {speedSegments.map((seg, i) => (
+                        <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
+                      ))}
+                      {startPos && (
+                        <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
+                          <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startDate)}</span></Popup>
+                        </CircleMarker>
+                      )}
+                      {endPos && (
+                        <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
+                          <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><span className="text-xs">{drive.endDate ? formatDateTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}</span></Popup>
+                        </CircleMarker>
+                      )}
+                    </MapContainer>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3 text-xs">
+                    <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startDate)}</span>
+                    {trail.length > 1 && (
+                      <div className="flex items-center gap-3 text-[var(--text-muted)]">
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{Math.round(convertSpeed(30))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {Math.round(convertSpeed(30))}–{Math.round(convertSpeed(60))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {Math.round(convertSpeed(60))}–{Math.round(convertSpeed(100))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{Math.round(convertSpeed(100))}</span>
+                        <span>{speedUnit}</span>
+                      </div>
                     )}
-                    {endPos && (
-                      <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
-                        <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><span className="text-xs">{drive.endDate ? formatDateTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}</span></Popup>
-                      </CircleMarker>
+                    {drive.endDate && (
+                      <span className="flex items-center gap-1.5 text-red-400"><Flag className="h-3 w-3" /> {t('driveDetail.end', 'End')}: {formatTime(drive.endDate)}</span>
                     )}
-                  </MapContainer>
+                  </div>
+                </>
+              ) : (
+                <div className="h-64 sm:h-80 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]">
+                  <MapPin className="h-10 w-10 opacity-30" />
+                  <p className="text-sm">{t('driveDetail.noRouteData', 'No route data available for this drive')}</p>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 text-xs">
-                  <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startDate)}</span>
-                  {trail.length > 1 && (
-                    <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{Math.round(convertSpeed(30))}</span>
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {Math.round(convertSpeed(30))}–{Math.round(convertSpeed(60))}</span>
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {Math.round(convertSpeed(60))}–{Math.round(convertSpeed(100))}</span>
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{Math.round(convertSpeed(100))}</span>
-                      <span>{speedUnit}</span>
-                    </div>
-                  )}
-                  {drive.endDate && (
-                    <span className="flex items-center gap-1.5 text-red-400"><Flag className="h-3 w-3" /> {t('driveDetail.end', 'End')}: {formatTime(drive.endDate)}</span>
-                  )}
-                </div>
-              </GlassPanel>
-            </FadeIn>
-          )}
+              )}
+            </GlassPanel>
+          </FadeIn>
 
           {/* Journey Details */}
           <FadeIn>
@@ -589,10 +618,19 @@ export default function DriveDetailPage() {
                   <div className="flex items-center gap-2 text-green-400 mb-1">
                     <MapPin className="h-4 w-4" /> {t('driveDetail.start', 'Start')}
                   </div>
-                  <p className="font-bold text-[var(--text-primary)] text-sm">{drive.startAddress || t('driveDetail.noAddress', 'No address data')}</p>
+                  <p className="font-bold text-[var(--text-primary)] text-sm">
+                    {drive.startAddress
+                      ? drive.startAddress
+                      : drive.startLatitude && drive.startLongitude
+                        ? <span className="font-mono">{fmtNumber(drive.startLatitude)}°{drive.startLatitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.startLongitude))}°{drive.startLongitude >= 0 ? 'E' : 'W'}</span>
+                        : t('driveDetail.noAddress', 'No address data')}
+                  </p>
                   <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.startDate)}</p>
                   <p className="text-xs text-[var(--text-secondary)]">
                     {t('driveDetail.battery', 'Battery')}: {drive.startBatteryLevel ?? '?'}%
+                    {drive.startRangeKm != null && (
+                      <> · {t('driveDetail.range', 'Range')}: {Math.round(convertDistance(drive.startRangeKm))} {distanceUnit}</>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -600,11 +638,18 @@ export default function DriveDetailPage() {
                     <Flag className="h-4 w-4" /> {t('driveDetail.destination', 'Destination')}
                   </div>
                   <p className="font-bold text-[var(--text-primary)] text-sm">
-                    {drive.endAddress || (drive.endDate ? t('driveDetail.noAddress', 'No address data') : t('driveDetail.inProgress', 'In progress'))}
+                    {drive.endAddress
+                      ? drive.endAddress
+                      : drive.endLatitude && drive.endLongitude
+                        ? <span className="font-mono">{fmtNumber(drive.endLatitude)}°{drive.endLatitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.endLongitude))}°{drive.endLongitude >= 0 ? 'E' : 'W'}</span>
+                        : drive.endDate ? t('driveDetail.noAddress', 'No address data') : t('driveDetail.inProgress', 'In progress')}
                   </p>
                   <p className="text-xs text-[var(--text-muted)]">{drive.endDate ? formatDateTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}</p>
                   <p className="text-xs text-[var(--text-secondary)]">
                     {t('driveDetail.battery', 'Battery')}: {drive.endBatteryLevel ?? '?'}%
+                    {drive.endRangeKm != null && (
+                      <> · {t('driveDetail.range', 'Range')}: {Math.round(convertDistance(drive.endRangeKm))} {distanceUnit}</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -612,11 +657,10 @@ export default function DriveDetailPage() {
           </FadeIn>
 
           {/* === Charts === */}
-          {chartData.length > 1 && (
-            <>
               {/* Comprehensive drive chart */}
               <FadeIn>
                 <ChartContainer title={t('driveDetail.driveChart', 'Drive Overview')} height={320}>
+                  {chartData.length > 1 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -639,9 +683,15 @@ export default function DriveDetailPage() {
                       <Line yAxisId="power" type="monotone" dataKey="power" stroke="#f59e0b" strokeWidth={2} dot={false} name={`${t('driveDetail.power', 'Power')} kW`} />
                     </ComposedChart>
                   </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                      <Activity className="h-8 w-8 opacity-20" />
+                      <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                    </div>
+                  )}
                 </ChartContainer>
                 {/* Rich legend with Mean/Max/Min stats */}
-                {(() => {
+                {chartData.length > 1 && (() => {
                   const statFn = (vals: (number | null)[]) => {
                     const v = vals.filter((x): x is number => x != null);
                     if (v.length === 0) return null;
@@ -676,6 +726,7 @@ export default function DriveDetailPage() {
                 {/* SOC over time */}
                 <FadeIn>
                   <ChartContainer title={t('driveDetail.socOverTime', 'SOC % Over Time')} height={220}>
+                    {chartData.length > 1 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -686,12 +737,20 @@ export default function DriveDetailPage() {
                         <Area type="monotone" dataKey="battery" stroke="#10b981" fill="url(#socGrad)" strokeWidth={2} name={`${t('driveDetail.soc', 'SOC')} %`} />
                       </AreaChart>
                     </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                        <Activity className="h-8 w-8 opacity-20" />
+                        <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                      </div>
+                    )}
                   </ChartContainer>
                 </FadeIn>
 
                 {/* Elevation profile */}
                 <FadeIn>
                   <ChartContainer title={t('driveDetail.elevProfile', 'Elevation Profile')} height={220}>
+                    {chartData.length > 1 ? (
+                    <>
                     <div className="flex items-center gap-4 mb-2 text-xs">
                       <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" />{Math.round(stats.elevGain)} m {t('driveDetail.gain', 'gain')}</span>
                       <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" />{Math.round(stats.elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
@@ -709,19 +768,26 @@ export default function DriveDetailPage() {
                         <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} />
                       </ComposedChart>
                     </ResponsiveContainer>
+                    </>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                        <Activity className="h-8 w-8 opacity-20" />
+                        <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                      </div>
+                    )}
                   </ChartContainer>
                 </FadeIn>
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Temperature chart */}
-                {stats.hasAnyTemp && (
-                  <FadeIn>
-                    <GlassPanel className="p-6">
-                      <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-                        <Thermometer className="h-4 w-4 text-orange-400" /> {t('driveDetail.temperatures', 'Temperatures')}
-                      </h3>
-                      <div className="grid grid-cols-3 gap-3 mb-4">
+                <FadeIn>
+                  <GlassPanel className="p-6">
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+                      <Thermometer className="h-4 w-4 text-orange-400" /> {t('driveDetail.temperatures', 'Temperatures')}
+                    </h3>
+                    {stats.hasAnyTemp && (
+                    <div className="grid grid-cols-3 gap-3 mb-4">
                         {stats.avgOutsideTemp != null && (
                           <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                             <p className="text-[9px] text-[var(--text-muted)]">{t('driveDetail.outsideTemp', 'Outside Temperature')}</p>
@@ -759,7 +825,9 @@ export default function DriveDetailPage() {
                           </div>
                         )}
                       </div>
-                      <div className="h-56">
+                    )}
+                    <div className="h-56">
+                      {chartData.length > 1 && stats.hasAnyTemp ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -781,14 +849,20 @@ export default function DriveDetailPage() {
                             )}
                           </LineChart>
                         </ResponsiveContainer>
-                      </div>
-                    </GlassPanel>
-                  </FadeIn>
-                )}
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                          <Activity className="h-8 w-8 opacity-20" />
+                          <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                        </div>
+                      )}
+                    </div>
+                  </GlassPanel>
+                </FadeIn>
 
                 {/* Speed histogram */}
                 <FadeIn>
                   <ChartContainer title={t('driveDetail.speedHistogram', 'Speed Histogram')} height={220}>
+                    {speedHistData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={speedHistData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -798,6 +872,12 @@ export default function DriveDetailPage() {
                         <Bar dataKey="pct" fill="#a855f7" name={`% ${t('driveDetail.ofDrive', 'of drive')}`} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                        <Activity className="h-8 w-8 opacity-20" />
+                        <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                      </div>
+                    )}
                   </ChartContainer>
                 </FadeIn>
               </div>
@@ -805,6 +885,7 @@ export default function DriveDetailPage() {
               {/* Power Profile */}
               <FadeIn>
                 <ChartContainer title={t('driveDetail.powerProfile', 'Power Profile')} height={220}>
+                  {chartData.length > 1 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -816,16 +897,24 @@ export default function DriveDetailPage() {
                       <Area type="monotone" dataKey="power" stroke="#f59e0b" fill="url(#powerGrad)" strokeWidth={2} name={`${t('driveDetail.power', 'Power')} kW`} />
                     </AreaChart>
                   </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                      <Activity className="h-8 w-8 opacity-20" />
+                      <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                    </div>
+                  )}
                 </ChartContainer>
+                {chartData.length > 1 && (
                 <div className="mt-3 flex items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
                   <span>{t('driveDetail.maxPower', 'Max Power')}: <strong className="text-amber-400">{fmtInt(stats.powerMax)} kW</strong></span>
                   <span>{t('driveDetail.maxRegen', 'Max Regen')}: <strong className="text-cyan-400">{fmtInt(stats.powerMin)} kW</strong></span>
                   <span>{t('driveDetail.avgLabel', 'Avg')}: <strong className="text-[var(--text-primary)]">{fmtNumber(stats.avgPower)} kW</strong></span>
                 </div>
+                )}
               </FadeIn>
 
               {/* Tire Pressure During Drive */}
-              {stats.hasTirePressure && (() => {
+              {(() => {
                 const tpVals = (key: 'tireFl' | 'tireFr' | 'tireRl' | 'tireRr') => {
                   const vals = chartData.map((d) => d[key]).filter((v): v is number => v != null && v > 0);
                   return { min: vals.length > 0 ? Math.min(...vals) : null, max: vals.length > 0 ? Math.max(...vals) : null };
@@ -843,45 +932,52 @@ export default function DriveDetailPage() {
                       <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
                         <Activity className="h-4 w-4 text-cyan-400" /> {t('driveDetail.tirePressure', 'Tire Pressure During Drive')}
                       </h3>
-                      <div className="grid grid-cols-4 gap-3 mb-4">
-                        {tpStats.map((tp) => (
-                          <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
-                            <p className="text-[9px] text-[var(--text-muted)]">{tp.label}</p>
-                            <p className="text-sm font-bold" style={{ color: tp.color }}>
-                              {tp.min != null ? `${fmtNumber(tp.min)}–${fmtNumber(tp.max!)}` : '—'}
-                            </p>
+                      {stats.hasTirePressure ? (
+                        <>
+                          <div className="grid grid-cols-4 gap-3 mb-4">
+                            {tpStats.map((tp) => (
+                              <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
+                                <p className="text-[9px] text-[var(--text-muted)]">{tp.label}</p>
+                                <p className="text-sm font-bold" style={{ color: tp.color }}>
+                                  {tp.min != null ? `${fmtNumber(tp.min)}–${fmtNumber(tp.max!)}` : '—'}
+                                </p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                      <div className="h-56">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                            <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                            <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                            <Tooltip content={<ChartTooltip />} />
-                            <Legend wrapperStyle={LEGEND_STYLE} />
-                            {chartData.some((d) => d.tireFl !== null) && (
-                              <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={t('driveDetail.frontLeft', 'Front Left')} connectNulls />
-                            )}
-                            {chartData.some((d) => d.tireFr !== null) && (
-                              <Line type="monotone" dataKey="tireFr" stroke="#10b981" strokeWidth={2} dot={false} name={t('driveDetail.frontRight', 'Front Right')} connectNulls />
-                            )}
-                            {chartData.some((d) => d.tireRl !== null) && (
-                              <Line type="monotone" dataKey="tireRl" stroke="#f59e0b" strokeWidth={2} dot={false} name={t('driveDetail.rearLeft', 'Rear Left')} connectNulls />
-                            )}
-                            {chartData.some((d) => d.tireRr !== null) && (
-                              <Line type="monotone" dataKey="tireRr" stroke="#ef4444" strokeWidth={2} dot={false} name={t('driveDetail.rearRight', 'Rear Right')} connectNulls />
-                            )}
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
+                          <div className="h-56">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={chartData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
+                                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                                <Tooltip content={<ChartTooltip />} />
+                                <Legend wrapperStyle={LEGEND_STYLE} />
+                                {chartData.some((d) => d.tireFl !== null) && (
+                                  <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={t('driveDetail.frontLeft', 'Front Left')} connectNulls />
+                                )}
+                                {chartData.some((d) => d.tireFr !== null) && (
+                                  <Line type="monotone" dataKey="tireFr" stroke="#10b981" strokeWidth={2} dot={false} name={t('driveDetail.frontRight', 'Front Right')} connectNulls />
+                                )}
+                                {chartData.some((d) => d.tireRl !== null) && (
+                                  <Line type="monotone" dataKey="tireRl" stroke="#f59e0b" strokeWidth={2} dot={false} name={t('driveDetail.rearLeft', 'Rear Left')} connectNulls />
+                                )}
+                                {chartData.some((d) => d.tireRr !== null) && (
+                                  <Line type="monotone" dataKey="tireRr" stroke="#ef4444" strokeWidth={2} dot={false} name={t('driveDetail.rearRight', 'Rear Right')} connectNulls />
+                                )}
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-56 flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+                          <Activity className="h-8 w-8 opacity-20" />
+                          <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+                        </div>
+                      )}
                     </GlassPanel>
                   </FadeIn>
                 );
               })()}
-            </>
-          )}
         </>
       )}
     </PageContainer>
