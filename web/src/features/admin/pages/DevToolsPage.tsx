@@ -295,27 +295,33 @@ function CopyButton({ text }: { text: string }) {
 
 interface ResultPanelProps {
   title: string
-  data: unknown
+  data?: unknown
   error?: string
+  idle?: boolean
+  idleMessage?: string
 }
 
-function ResultPanel({ title, data, error }: ResultPanelProps) {
-  if (!data && !error) return null
-
-  const stringifiedData = JSON.stringify(data, null, 2)
+function ResultPanel({ title, data, error, idleMessage }: ResultPanelProps) {
   const hasData = data != null
+  const stringifiedData = hasData ? JSON.stringify(data, null, 2) : ''
 
   return (
-    <div className={cn('mt-3 rounded-lg p-3', error ? 'bg-neon-red/5' : 'bg-neon-green/5')}>
+    <div className={cn(
+      'mt-3 rounded-lg p-3',
+      error ? 'bg-neon-red/5' : hasData ? 'bg-neon-green/5' : 'bg-white/[0.02]',
+    )}>
       <div className="mb-1 flex items-center justify-between">
         <span className="text-xs font-medium text-white/70">{title}</span>
-        {hasData && <CopyButton text={stringifiedData} />}
+        {hasData ? <CopyButton text={stringifiedData} /> : null}
       </div>
-      {error && <p className="text-sm text-neon-red">{error}</p>}
-      {hasData && (
+      {error ? (
+        <p className="text-sm text-neon-red">{error}</p>
+      ) : hasData ? (
         <pre className="max-h-64 overflow-auto rounded bg-black/30 p-2 text-xs text-white/80">
           {stringifiedData}
         </pre>
+      ) : (
+        <p className="text-sm italic text-white/30">{idleMessage ?? 'No result yet'}</p>
       )}
     </div>
   )
@@ -605,8 +611,8 @@ function PublicKeySetupTool() {
           </Button>
         </div>
 
-        {generateMut.data && <ResultPanel title={t('Generate Keypair')} data={generateMut.data.error ? undefined : generateMut.data} error={typeof generateMut.data.error === 'string' ? generateMut.data.error : undefined} />}
-        {deleteMut.data && <ResultPanel title={t('Delete Keypair')} data={deleteMut.data.error ? undefined : deleteMut.data} error={typeof deleteMut.data.error === 'string' ? deleteMut.data.error : undefined} />}
+        <ResultPanel title={t('Generate Keypair')} data={generateMut.data?.error ? undefined : generateMut.data} error={typeof generateMut.data?.error === 'string' ? generateMut.data.error : undefined} idle={!generateMut.data} idleMessage={t('devtools.keypairIdle', 'Generate or delete a keypair to see results')} />
+        <ResultPanel title={t('Delete Keypair')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
 
         <div className="space-y-2">
           <span className="text-xs font-medium text-white/70">{t('Upload Pem')}</span>
@@ -619,7 +625,7 @@ function PublicKeySetupTool() {
           <Button variant="secondary" size="sm" loading={uploadMut.isPending} onClick={() => uploadMut.mutate()} icon={<Upload className="h-3.5 w-3.5" />}>
             {t('Upload Key')}
           </Button>
-          {uploadMut.data && <ResultPanel title={t('Upload Key')} data={uploadMut.data.error ? undefined : uploadMut.data} error={typeof uploadMut.data.error === 'string' ? uploadMut.data.error : undefined} />}
+          <ResultPanel title={t('Upload Key')} data={uploadMut.data?.error ? undefined : uploadMut.data} error={typeof uploadMut.data?.error === 'string' ? uploadMut.data.error : undefined} idle={!uploadMut.data} idleMessage={t('devtools.uploadIdle', 'Upload a public key to see results')} />
         </div>
       </div>
     </ToolCard>
@@ -821,8 +827,8 @@ function FleetTelemetryConfigTool() {
             {t('Delete Config')}
           </Button>
         </div>
-        {configQuery.data && <ResultPanel title={t('Telemetry Config')} data={configQuery.data.error ? undefined : configQuery.data} error={typeof configQuery.data.error === 'string' ? configQuery.data.error : undefined} />}
-        {deleteMut.data && <ResultPanel title={t('Delete Config')} data={deleteMut.data.error ? undefined : deleteMut.data} error={typeof deleteMut.data.error === 'string' ? deleteMut.data.error : undefined} />}
+        <ResultPanel title={t('Telemetry Config')} data={configQuery.data?.error ? undefined : configQuery.data} error={typeof configQuery.data?.error === 'string' ? configQuery.data.error : undefined} idle={!configQuery.data} idleMessage={t('devtools.configIdle', 'Fetch config to see results')} />
+        <ResultPanel title={t('Delete Config')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
         {errorData.length > 0 && (
           <div className="space-y-2">
             <DataTable columns={errorColumns} data={errorData} keyExtractor={(r) => r.id} compact />
