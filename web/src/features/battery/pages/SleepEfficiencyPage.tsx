@@ -1,243 +1,329 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { Moon, BatteryWarning, Clock, Activity, Lightbulb, Zap } from 'lucide-react';
-import clsx from 'clsx';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column, useSortToggle } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { RadialGauge } from '@/components/charts/RadialGauge';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { Moon, Eye, Clock, Zap, DollarSign, Thermometer } from 'lucide-react';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select, DataTable, Badge, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { EmptyState } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend,
+  ChartContainer, ChartTooltip, chartGrid, axisTick,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { chartMargin, axisTick } from '@/components/charts';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDate, formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
-import { request } from '@/api/client';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSleepEfficiency } from '@/api/hooks/useEnergy';
+import { formatDateShort, formatTime } from '@/lib/dateFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import type { SleepDrainEvent } from '@/types/energy';
 
-/* ── Types ── */
+/* ── Constants ── */
 
-interface SleepSession {
-  id: number;
-  vehicle_id: number;
-  start_date: string;
-  end_date: string;
-  duration_hours: number;
-  start_battery: number;
-  end_battery: number;
-  drain_pct: number;
-  drain_rate_pct_hr: number;
-}
+const STATE_COLORS: Record<string, string> = {
+  asleep: '#a855f7',
+  online: '#00f0ff',
+  driving: '#10b981',
+  charging: '#f59e0b',
+  updating: '#ec4899',
+  suspended: '#6366f1',
+};
 
-interface DailySleep {
-  date: string;
-  sleep_hours: number;
-  drain_pct: number;
-}
-
-interface SleepStats {
-  avg_drain_rate: number;
-  total_sleep_hours: number;
-  session_count: number;
-  efficiency_score: number;
-  sessions: SleepSession[];
-  daily: DailySleep[];
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
-}
+const DAYS_OPTIONS = [
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '90', label: '90 days' },
+  { value: '180', label: '180 days' },
+];
 
 /* ── Component ── */
 
 export default function SleepEfficiencyPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Sleep Efficiency'));
+  usePageTitle(t('sleep.title', 'Sleep Efficiency'));
 
-  const [vehicleId, setVehicleId] = useState<string>('');
+  const { data: vehicles } = useVehicles();
+  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
+  const [days, setDays] = useState(30);
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
-  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+  const { data: sleep, isLoading, error } = useSleepEfficiency(vehicleIdStr, days);
 
-  const { data, isLoading, error } = useQuery<SleepStats>({
-    queryKey: ['sleep-stats', activeId],
-    queryFn: () => request<SleepStats>(`/vampire-drain/stats?vehicle_id=${activeId}`),
-    enabled: activeId !== '',
-  });
+  /* ── Derived data ── */
 
-  const { sortKey, sortDir, onSort, sortFn } = useSortToggle('start_date');
+  const pieData = useMemo(() =>
+    (sleep?.state_distribution ?? []).map((s) => ({
+      name: STATE_LABELS[s.state] ?? s.state,
+      value: Math.round(s.total_minutes),
+      color: STATE_COLORS[s.state] ?? CHART_COLORS[0],
+      hours: fmtNumber(s.total_minutes / 60),
+    })),
+    [sleep?.state_distribution],
+  );
 
-  const sortedSessions = useMemo(() => {
-    if (!data?.sessions) return [];
-    return sortFn(data.sessions, (row, key) => {
-      const val = row[key as keyof SleepSession];
-      return typeof val === 'number' ? val : String(val);
-    });
-  }, [data?.sessions, sortFn]);
+  const sentryOn = sleep?.sentry_comparison?.find((s) => s.sentry_mode);
+  const sentryOff = sleep?.sentry_comparison?.find((s) => !s.sentry_mode);
 
-  const columns: Column<SleepSession>[] = useMemo(() => [
-    { key: 'start_date', header: t('Time'), sortable: true, render: (r) => formatDateTime(r.start_date) },
-    { key: 'duration_hours', header: t('Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours, 1)}h` },
-    { key: 'start_battery', header: t('Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery, 0)}%` },
-    { key: 'end_battery', header: t('End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery, 0)}%` },
-    { key: 'drain_pct', header: t('Drain %'), sortable: true, render: (r) => (
-      <Badge variant={r.drain_pct > 3 ? 'danger' : r.drain_pct > 1 ? 'warning' : 'success'}>
-        {fmtNumber(r.drain_pct, 1)}%
-      </Badge>
-    )},
-    { key: 'drain_rate_pct_hr', header: t('Rate %/hr'), sortable: true, render: (r) => fmtNumber(r.drain_rate_pct_hr, 2) },
-  ], [t]);
+  const comparisonData = useMemo(() => [
+    {
+      name: t('sleep.drainRate', 'Drain Rate (%/hr)'),
+      sentry_on: sentryOn?.avg_drain_rate ?? 0,
+      sentry_off: sentryOff?.avg_drain_rate ?? 0,
+    },
+    {
+      name: t('sleep.avgBatteryLost', 'Avg Battery Lost (%)'),
+      sentry_on: sentryOn?.avg_battery_lost ?? 0,
+      sentry_off: sentryOff?.avg_battery_lost ?? 0,
+    },
+  ], [sentryOn, sentryOff, t]);
 
-  const efficiencyColor = (data?.efficiency_score ?? 0) >= 90
-    ? CHART_COLORS[1] : (data?.efficiency_score ?? 0) >= 70 ? CHART_COLORS[3] : CHART_COLORS[5];
+  const recentEvents = sleep?.recent_events ?? [];
 
-  const tips = useMemo(() => [
-    { icon: <Zap className="h-4 w-4" />, text: t('Disable Sentry Mode when parked at home to save 1-2% per day.') },
-    { icon: <Moon className="h-4 w-4" />, text: t('Reduce third-party app polling intervals to let the car sleep faster.') },
-    { icon: <BatteryWarning className="h-4 w-4" />, text: t('Avoid opening the app frequently — each wake cycle costs battery.') },
-    { icon: <Activity className="h-4 w-4" />, text: t('Enable energy saving mode in vehicle settings for better standby.') },
+  /* ── Drain events table columns ── */
+
+  const drainColumns: Column<SleepDrainEvent>[] = useMemo(() => [
+    {
+      key: 'date',
+      header: t('sleep.date', 'Date'),
+      render: (event) => (
+        <span className="text-xs">
+          {formatDateShort(event.start_date)}
+          <span className="text-white/40 ml-1">{formatTime(event.start_date)}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'duration',
+      header: t('sleep.duration', 'Duration'),
+      render: (event) => <>{fmtNumber(event.duration_hours)}h</>,
+    },
+    {
+      key: 'batteryLost',
+      header: t('sleep.batteryLost', 'Battery Lost'),
+      render: (event) => <span className="text-neon-red">{fmtNumber(event.battery_lost)}%</span>,
+    },
+    {
+      key: 'drainRate',
+      header: t('sleep.drainRateCol', 'Drain Rate'),
+      render: (event) => (
+        <span className={event.drain_rate > 1.5 ? 'text-neon-red' : 'text-neon-green'}>
+          {fmtNumber(event.drain_rate)}%/hr
+        </span>
+      ),
+    },
+    {
+      key: 'sentry',
+      header: t('sleep.sentry', 'Sentry'),
+      render: (event) => event.sentry_mode ? (
+        <Badge variant="warning" size="sm"><Eye className="h-3 w-3 mr-1" />{t('common.on', 'On')}</Badge>
+      ) : (
+        <Badge variant="info" size="sm"><Moon className="h-3 w-3 mr-1" />{t('common.off', 'Off')}</Badge>
+      ),
+    },
+    {
+      key: 'temp',
+      header: t('sleep.temp', 'Temp'),
+      render: (event) => event.outside_temp != null ? (
+        <span className="flex items-center gap-1">
+          <Thermometer className="h-3 w-3 text-white/40" />
+          {fmtNumber(event.outside_temp)}°C
+        </span>
+      ) : (
+        <span className="text-white/40">—</span>
+      ),
+    },
   ], [t]);
 
   return (
     <PageContainer
-      title={t('Sleep Efficiency')}
-      subtitle={t('Vampire drain analysis and sleep session tracking')}
+      title={t('sleep.title', 'Sleep Efficiency')}
+      subtitle={t('sleep.subtitle', 'Analyze vehicle sleep patterns, vampire drain, and sentry mode costs')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
-      empty={!data}
-      emptyMessage={t('No sleep data available. Data will appear after sleep/wake events.')}
       actions={
-        vehicles && vehicles.length > 1 ? (
+        <div className="flex items-center gap-3">
           <Select
-            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-            value={activeId}
-            onChange={(e) => setVehicleId(e.target.value)}
+            value={String(days)}
+            onChange={(e) => setDays(Number(e.target.value))}
+            options={DAYS_OPTIONS}
           />
-        ) : undefined
+          {vehicles && vehicles.length > 1 && (
+            <Select
+              value={vehicleId != null ? String(vehicleId) : ''}
+              onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+              options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            />
+          )}
+        </div>
       }
     >
-      {/* Summary Metrics */}
-      <FadeIn>
-        <div className={clsx('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
-          <MetricCard label={t('Avg Vampire Drain')} value={`${fmtNumber(data?.avg_drain_rate, 2)}%/hr`} icon={<BatteryWarning className="h-4 w-4" />} color="purple" />
-          <MetricCard label={t('Total Sleep Time')} value={`${fmtNumber(data?.total_sleep_hours, 0)}h`} icon={<Moon className="h-4 w-4" />} color="cyan" />
-          <MetricCard label={t('Sleep Sessions')} value={fmtNumber(data?.session_count, 0)} icon={<Clock className="h-4 w-4" />} color="green" />
-          <MetricCard label={t('Sleep Efficiency')} value={`${fmtNumber(data?.efficiency_score, 1)}%`} icon={<Activity className="h-4 w-4" />} color="cyan" />
-        </div>
-      </FadeIn>
-
-      {/* Gauge + Drain Trend */}
-      <FadeIn delay={0.1}>
-        <div className={clsx('grid gap-4 grid-cols-1 md:grid-cols-3')}>
-          <GlassPanel className="flex flex-col items-center justify-center p-6">
-            {data ? (
-              <RadialGauge
-                value={Math.round(data.efficiency_score)}
-                max={100}
-                label={t('Efficiency')}
-                unit="%"
-                color={efficiencyColor}
-                size={160}
+      {sleep ? (
+        <>
+          {/* Key metric cards */}
+          <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StaggerItem>
+              <MetricCard
+                icon={<Moon className="h-4 w-4" />}
+                label={t('sleep.efficiency', 'Sleep Efficiency')}
+                value={`${fmtNumber(sleep.sleep_efficiency_pct)}%`}
+                color="purple"
               />
-            ) : (
-              <Skeleton width="160px" height={160} rounded />
-            )}
-          </GlassPanel>
+            </StaggerItem>
+            <StaggerItem>
+              <MetricCard
+                icon={<Clock className="h-4 w-4" />}
+                label={t('sleep.avgTimeToSleep', 'Avg Time to Sleep')}
+                value={`${fmtInt(sleep.time_to_sleep_avg_min)} min`}
+                color="cyan"
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <MetricCard
+                icon={<Eye className="h-4 w-4" />}
+                label={t('sleep.sentryDrainRate', 'Sentry Drain Rate')}
+                value={`${fmtNumber(sleep.sentry_on_drain_rate)}%/hr`}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <MetricCard
+                icon={<DollarSign className="h-4 w-4" />}
+                label={t('sleep.sentryMonthlyCost', 'Sentry Monthly Cost')}
+                value={`$${fmtNumber(sleep.sentry_monthly_cost)}`}
+                color="red"
+              />
+            </StaggerItem>
+          </StaggerContainer>
 
-          <GlassPanel className="col-span-1 md:col-span-2 p-4">
-            <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">{t('Vampire Drain Trend')}</span>
-            {data?.daily && data.daily.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={data.daily} margin={chartMargin}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
-                  <YAxis tick={axisTick} unit="%/hr" width={55} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Line type="monotone" dataKey="drain_pct" name={t('Drain %')} stroke={CHART_COLORS[2]} strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <Skeleton height={220} />
-            )}
-          </GlassPanel>
-        </div>
-      </FadeIn>
+          {/* State Distribution Donut + Sentry Comparison */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <FadeIn>
+              <ChartContainer title={t('sleep.stateDistribution', 'State Distribution')} height={264}>
+                {pieData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                          nameKey="name"
+                          animationDuration={800}
+                        >
+                          {pieData.map((entry, i) => (
+                            <Cell key={`cell-${i}`} fill={entry.color} stroke="transparent" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ChartTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-center gap-3 mt-2">
+                      {pieData.map((entry) => (
+                        <div key={entry.name} className="flex items-center gap-1.5 text-xs">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                          <span className="text-white/60">{entry.name}</span>
+                          <span className="text-white/40">{entry.hours}h</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState message={t('sleep.noStateData', 'No state distribution data available')} />
+                )}
+              </ChartContainer>
+            </FadeIn>
 
-      {/* Daily Sleep Stats */}
-      <FadeIn delay={0.2}>
-        <GlassPanel className="p-4">
-          <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">{t('Daily Sleep Stats')}</span>
-          {data?.daily && data.daily.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data.daily} margin={chartMargin}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
-                <YAxis yAxisId="left" tick={axisTick} unit="h" width={40} />
-                <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="%" width={40} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="sleep_hours" name={t('Sleep Hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="drain_pct" name={t('Drain %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Skeleton height={260} />
-          )}
-        </GlassPanel>
-      </FadeIn>
+            <FadeIn delay={0.1}>
+              <ChartContainer title={t('sleep.sentryComparison', 'Sentry vs No-Sentry')} height={224}>
+                {comparisonData.some((d) => d.sentry_on > 0 || d.sentry_off > 0) ? (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={comparisonData}>
+                      {chartGrid}
+                      <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="sentry_on" name={t('sleep.sentryOn', 'Sentry On')} fill="#f59e0b" radius={[4, 4, 0, 0]} animationDuration={800} />
+                      <Bar dataKey="sentry_off" name={t('sleep.sentryOff', 'Sentry Off')} fill="#a855f7" radius={[4, 4, 0, 0]} animationDuration={800} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <EmptyState message={t('sleep.noSentryData', 'No sentry comparison data available')} />
+                )}
 
-      {/* Sleep Sessions Table */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-4">
-          <div className={clsx('mb-3 flex items-center justify-between')}>
-            <span className="text-sm font-medium text-[var(--text-secondary)]">{t('Sleep Sessions')}</span>
-            <Badge variant="neutral">{data?.session_count ?? 0} {t('sessions')}</Badge>
+                {/* Sentry cost callout */}
+                <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Eye className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-medium text-amber-300">
+                      {t('sleep.monthlySentryImpact', 'Monthly Sentry Mode Impact')}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_drain_rate)}%</p>
+                      <p className="text-xs text-white/40">{t('sleep.extraDrainHr', 'Extra drain/hr')}</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-amber-400">{fmtNumber(sleep.sentry_extra_monthly_kwh)} kWh</p>
+                      <p className="text-xs text-white/40">{t('sleep.extraMonthly', 'Extra monthly')}</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-neon-red">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
+                      <p className="text-xs text-white/40">{t('sleep.extraCostMo', 'Extra cost/mo')}</p>
+                    </div>
+                  </div>
+                </div>
+              </ChartContainer>
+            </FadeIn>
           </div>
-          <DataTable<SleepSession>
-            columns={columns}
-            data={sortedSessions}
-            keyExtractor={(r) => r.id}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={onSort}
-            emptyMessage={t('No sleep sessions recorded yet.')}
-            compact
+
+          {/* Recent drain events table */}
+          <FadeIn delay={0.2}>
+            <GlassPanel className="p-6">
+              <h3 className="text-base font-semibold text-white/90 mb-4 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-neon-cyan" />
+                {t('sleep.recentDrainEvents', 'Recent Drain Events')}
+              </h3>
+              {recentEvents.length > 0 ? (
+                <DataTable<SleepDrainEvent>
+                  columns={drainColumns}
+                  data={recentEvents}
+                  keyExtractor={(event) => event.id}
+                  emptyMessage={t('sleep.noDrainEvents', 'No drain events recorded yet')}
+                  compact
+                />
+              ) : (
+                <EmptyState message={t('sleep.noDrainEvents', 'No drain events recorded yet')} />
+              )}
+            </GlassPanel>
+          </FadeIn>
+        </>
+      ) : !isLoading ? (
+        <GlassPanel className="p-8">
+          <EmptyState
+            icon={<Moon className="h-10 w-10 text-white/30" />}
+            message={t('sleep.noData', 'No sleep data available. Data will appear after your vehicle records sleep/wake events.')}
           />
         </GlassPanel>
-      </FadeIn>
-
-      {/* Tips */}
-      <FadeIn delay={0.4}>
-        <GlassPanel glow="green" className="p-5">
-          <div className={clsx('mb-3 flex items-center gap-2')}>
-            <Lightbulb className="h-5 w-5 text-neon-green" />
-            <span className="text-sm font-semibold text-[var(--text-primary)]">{t('Tips to Reduce Vampire Drain')}</span>
-          </div>
-          <ul className="space-y-2">
-            {tips.map((tip, i) => (
-              <li key={i} className={clsx('flex items-start gap-2 text-sm text-[var(--text-secondary)]')}>
-                <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{tip.icon}</span>
-                <span>{tip.text}</span>
-              </li>
-            ))}
-          </ul>
-        </GlassPanel>
-      </FadeIn>
+      ) : null}
     </PageContainer>
   );
 }
+
+/* ── State labels ── */
+
+const STATE_LABELS: Record<string, string> = {
+  asleep: 'Sleeping',
+  online: 'Online/Idle',
+  driving: 'Driving',
+  charging: 'Charging',
+  updating: 'Updating',
+  suspended: 'Suspended',
+};
