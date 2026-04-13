@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyStat } from '@/types/analytics';
 
 export const analyticsKeys = {
@@ -32,6 +33,7 @@ export function useMonthlyMileage(vehicleId: string) {
     queryKey: analyticsKeys.monthlyMileage(vehicleId),
     queryFn: () => request<MonthlyStat[]>(`/mileage/monthly?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -48,6 +50,7 @@ export function useTimeline(vehicleId: string) {
     queryKey: analyticsKeys.timeline(vehicleId),
     queryFn: () => request<TimelineEvent[]>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -56,6 +59,7 @@ export function useStateSummary(vehicleId: string) {
     queryKey: analyticsKeys.stateSummary(vehicleId),
     queryFn: () => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 

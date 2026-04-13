@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
@@ -39,6 +40,7 @@ export function useDrives(vehicleId?: string) {
     queryFn: () =>
       request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives'),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 

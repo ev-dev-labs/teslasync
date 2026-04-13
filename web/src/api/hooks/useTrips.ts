@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { Trip } from '@/types/trip';
 
 export const tripKeys = {
@@ -12,6 +13,7 @@ export function useTrips(vehicleId?: string) {
     queryKey: vehicleId ? [...tripKeys.all, vehicleId] : tripKeys.all,
     queryFn: () => request<Trip[]>(vehicleId ? `/trips?vehicle_id=${vehicleId}` : '/trips'),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 

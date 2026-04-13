@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot, MediaSnapshot } from '@/types/vehicle-systems';
 
 export const vehicleSystemsKeys = {
@@ -30,6 +31,7 @@ export function useClimateHistory(vehicleId: string) {
     queryKey: vehicleSystemsKeys.climateHistory(vehicleId),
     queryFn: () => request<ClimateState[]>(`/climate?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -47,6 +49,7 @@ export function useTirePressureHistory(vehicleId: string) {
     queryKey: vehicleSystemsKeys.tirePressureHistory(vehicleId),
     queryFn: () => request<TirePressureReading[]>(`/tire-pressure?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -56,6 +59,7 @@ export function useMaintenance() {
     queryFn: () => request<MaintenanceItem[]>('/maintenance'),
     retry: false,
     staleTime: Infinity,
+    select: safeArray,
   });
 }
 
@@ -65,6 +69,7 @@ export function useServiceRecords() {
     queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
     retry: false,
     staleTime: Infinity,
+    select: safeArray,
   });
 }
 
@@ -73,6 +78,7 @@ export function useSoftwareUpdates(vehicleId: string) {
     queryKey: vehicleSystemsKeys.softwareUpdates(vehicleId),
     queryFn: () => request<SoftwareUpdate[]>('/software-updates'),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -90,6 +96,7 @@ export function useSafetyHistory(vehicleId: string) {
     queryKey: vehicleSystemsKeys.safetyHistory(vehicleId),
     queryFn: () => request<SafetySnapshot[]>(`/safety?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -107,5 +114,6 @@ export function useMediaHistory(vehicleId: string) {
     queryKey: vehicleSystemsKeys.mediaHistory(vehicleId),
     queryFn: () => request<MediaSnapshot[]>(`/media?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }

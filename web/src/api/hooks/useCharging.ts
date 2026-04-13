@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { ChargingSession } from '@/types/charging';
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
 
@@ -26,6 +27,7 @@ export function useChargingSessions(vehicleId?: string) {
       vehicleId ? `/charging-sessions?vehicle_id=${vehicleId}` : '/charging-sessions',
     ),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -52,6 +54,7 @@ export function useChargeTelemetry(sessionId: number | null) {
     queryKey: chargingKeys.telemetry(sessionId!),
     queryFn: () => request<ChargeTelemetryReading[]>(`/charging/${sessionId}/telemetry`),
     enabled: sessionId != null,
+    select: safeArray,
   });
 }
 
@@ -68,5 +71,6 @@ export function useChargingSessionsPaginated(
     queryKey: ['charging', vehicleId, start, end, limit, offset] as const,
     queryFn: () => getChargingSessions(vehicleId!, limit, offset, start, end),
     enabled: vehicleId !== null,
+    select: safeArray,
   });
 }

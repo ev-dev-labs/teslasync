@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { ExportJob } from '@/types/export';
 
 export const exportKeys = {
@@ -11,6 +12,7 @@ export function useExports() {
   return useQuery({
     queryKey: exportKeys.all,
     queryFn: () => request<ExportJob[]>('/exports'),
+    select: safeArray,
   });
 }
 

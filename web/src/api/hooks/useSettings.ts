@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { AppSettings, GasPriceStatus } from '@/api/types';
 
 export const settingsKeys = {
@@ -80,9 +81,9 @@ export function useVehicles() {
   return useQuery({
     queryKey: settingsKeys.vehicles,
     queryFn: () => request<Vehicle[]>('/vehicles'),
+    select: safeArray,
   });
 }
-
 export function useSyncVehicles() {
   const qc = useQueryClient();
   return useMutation({

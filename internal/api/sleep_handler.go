@@ -154,7 +154,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	eventRows, err := h.db.Pool.Query(ctx,
 		`SELECT id, start_date, end_date, duration_hours, battery_lost,
 		        drain_rate_pct_per_hour, sentry_mode, outside_temp_avg,
-		        start_battery_level, end_battery_level
+		        start_battery, end_battery
 		 FROM vampire_drain_events
 		 WHERE vehicle_id = $1 ORDER BY start_date DESC LIMIT 20`, vehicleID)
 	if err != nil {

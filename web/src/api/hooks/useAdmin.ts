@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
@@ -27,6 +28,7 @@ export function useApiKeys() {
   return useQuery({
     queryKey: adminKeys.apiKeys,
     queryFn: () => request<APIKey[]>('/api-keys'),
+    select: safeArray,
   });
 }
 
@@ -63,6 +65,7 @@ export function useApiLogs(page: number) {
   return useQuery({
     queryKey: adminKeys.apiLogs(page),
     queryFn: () => request<APICallLog[]>(`/api-logs?page=${page}&limit=25`),
+    select: safeArray,
   });
 }
 
@@ -78,6 +81,7 @@ export function useBackupConfigs() {
   return useQuery({
     queryKey: adminKeys.backupConfigs,
     queryFn: () => request<BackupConfig[]>('/system/backup/stats'),
+    select: safeArray,
   });
 }
 
@@ -86,6 +90,7 @@ export function useBackupRuns() {
     queryKey: adminKeys.backupRuns,
     queryFn: () => request<BackupRun[]>('/system/backup'),
     refetchInterval: 10_000,
+    select: safeArray,
   });
 }
 
@@ -101,6 +106,7 @@ export function useAuditLogs() {
   return useQuery({
     queryKey: adminKeys.auditLogs,
     queryFn: () => request<AuditLogEntry[]>('/system/audit'),
+    select: safeArray,
   });
 }
 
@@ -109,6 +115,7 @@ export function useSecurityEvents(vehicleId: string) {
     queryKey: adminKeys.securityEvents(vehicleId),
     queryFn: () => request<SecurityEvent[]>(`/security?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
+    select: safeArray,
   });
 }
 
@@ -140,6 +147,7 @@ export function useExportJobs() {
   return useQuery({
     queryKey: adminKeys.exportJobs,
     queryFn: () => request<ExportJob[]>('/export/jobs'),
+    select: safeArray,
   });
 }
 

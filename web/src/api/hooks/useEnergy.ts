@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type {
   EnergyStats,
   BatteryHealth,
@@ -70,6 +71,7 @@ export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {
     queryKey: ['vampire-drain-events', vehicleId, limit],
     queryFn: () => request<VampireDrainEvent[]>(`/vampire-drain?vehicle_id=${vehicleId}&limit=${limit}`),
     enabled: vehicleId !== null,
+    select: safeArray,
   });
 }
 

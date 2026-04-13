@@ -194,7 +194,8 @@ async function _doFetch<T>(
         throw apiErr
       }
 
-      return camelCaseKeys(await res.json()) as T
+      const parsed = camelCaseKeys(await res.json())
+      return parsed as T
     } catch (err) {
       if (err instanceof ApiError) throw err
 

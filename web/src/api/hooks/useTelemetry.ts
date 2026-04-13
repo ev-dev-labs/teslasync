@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
 
 export const telemetryKeys = {
@@ -18,6 +19,7 @@ export function useSignals(vehicleId: number) {
     queryFn: () => request<string[]>(`/signals/${vehicleId}/available`),
     enabled: vehicleId > 0,
     staleTime: 60_000,
+    select: safeArray,
   });
 }
 

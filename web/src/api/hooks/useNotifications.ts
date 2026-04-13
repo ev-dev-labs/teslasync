@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { Alert, AlertRule, NotificationChannel, NotificationLog, NotificationStats, RuleConditionTree } from '@/api/types';
 
 export type { Alert, AlertRule, RuleConditionTree, NotificationLog, NotificationStats };
@@ -17,6 +18,7 @@ export function useAlerts() {
     queryKey: notificationKeys.alerts,
     queryFn: () => request<Alert[]>('/alerts'),
     refetchInterval: 30_000,
+    select: safeArray,
   });
 }
 
@@ -33,6 +35,7 @@ export function useAlertRules() {
   return useQuery({
     queryKey: notificationKeys.alertRules,
     queryFn: () => request<AlertRule[]>('/alerts/rules'),
+    select: safeArray,
   });
 }
 
@@ -86,6 +89,7 @@ export function useNotificationChannels() {
   return useQuery({
     queryKey: notificationKeys.channels,
     queryFn: () => request<NotificationChannel[]>('/notifications'),
+    select: safeArray,
   });
 }
 
@@ -93,6 +97,7 @@ export function useNotificationLogs() {
   return useQuery({
     queryKey: notificationKeys.logs,
     queryFn: () => request<NotificationLog[]>('/notifications/logs'),
+    select: safeArray,
   });
 }
 

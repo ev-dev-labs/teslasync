@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState, VehicleStatus } from '../types';
 
@@ -24,6 +25,7 @@ export function useVehicles() {
     queryKey: vehicleKeys.all,
     queryFn: () => request<Vehicle[]>('/vehicles'),
     staleTime: 30_000,
+    select: safeArray,
   });
 }
 
@@ -81,6 +83,7 @@ export function useVehiclePositions(vehicleId: number, limit = 100) {
     queryKey: vehicleKeys.positions(vehicleId),
     queryFn: () => request<import('../types').Position[]>(`/vehicles/${vehicleId}/positions?limit=${limit}`),
     enabled: vehicleId > 0,
+    select: safeArray,
   });
 }
 
@@ -136,6 +139,7 @@ export function useMotorHistory(vehicleId: number, limit = 200) {
     queryKey: ['motor-history', vehicleId, limit],
     queryFn: () => request<import('../types').MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}`),
     enabled: vehicleId > 0,
+    select: safeArray,
   });
 }
 
