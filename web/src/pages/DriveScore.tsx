@@ -6,6 +6,7 @@ import { Trophy, Zap, Gauge, ShieldCheck, Star, AlertTriangle, Lightbulb, Target
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
+import { COLOR } from '../lib/colors'
 import { formatDate, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
@@ -38,8 +39,7 @@ const GRADE_COLORS: Record<string, string> = {
 }
 
 function gradeColor(grade: string): string {
-  usePageTitle('Drive Score')
-  return GRADE_COLORS[grade] ?? '#6b7280'
+  return GRADE_COLORS[grade] ?? COLOR.MUTED
 }
 
 function scoreColor(score: number): string {
@@ -292,6 +292,7 @@ function getImprovementTips(avgBreakdown: ScoreBreakdown): Tip[] {
 /* ─── Main Component ────────────────────────────────────────────────── */
 
 export default function DriveScore() {
+  usePageTitle('Drive Score')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null

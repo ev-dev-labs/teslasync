@@ -10,9 +10,10 @@ import {
   MapPin, FileText,
 } from 'lucide-react'
 import { PageHeader, GlassPanel, Badge, Button, Input, Select, DataTable, type Column } from '../components/ui'
-import { getApiBase } from '../lib/resilience'
+import { request } from '../api/client'
 import clsx from 'clsx'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
+import { fmtNumber } from '../lib/numberFormat'
 import SignalConfigModal from '../components/SignalConfigModal'
 import { motion } from 'framer-motion'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -20,7 +21,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 // ─── Shared helpers ──────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
-  usePageTitle('Dev Tools')
   const [copied, setCopied] = useState(false)
   const handleCopy = () => {
     navigator.clipboard.writeText(text)
@@ -134,15 +134,15 @@ const textareaClasses= 'w-full bg-white/[0.04] border border-white/[0.08] rounde
 
 // ─── Backend API helpers ─────────────────────────────────────────
 
-async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: unknown) {
-  const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } }
-  if (body) opts.body = JSON.stringify(body)
-  const res = await fetch(`${getApiBase()}/api/v1/dev-tools/${endpoint}`, opts)
-  const text = await res.text()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function apiFetch(endpoint: string, method: 'GET' | 'POST' | 'DELETE' = 'GET', body?: unknown): Promise<any> {
   try {
-    return JSON.parse(text)
-  } catch {
-    return { error: `Unexpected response (HTTP ${res.status})`, details: text.substring(0, 500) }
+    return await request<unknown>(`/dev-tools/${endpoint}`, {
+      method,
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Request failed' }
   }
 }
 
@@ -435,12 +435,15 @@ function PublicKeySetupTool() {
           </p>
           <pre className="text-[10px] font-mono text-[var(--text-primary)] bg-black/30 p-3 rounded-lg whitespace-pre-wrap break-all mb-3">{showPrivateKey}</pre>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => downloadPrivateKey(showPrivateKey)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-neon-green/20 text-neon-green ring-1 ring-neon-green/30 hover:bg-neon-green/30 transition-colors"
+              className="bg-neon-green/20 text-neon-green ring-1 ring-neon-green/30 hover:bg-neon-green/30"
+              icon={<Download className="h-4 w-4" />}
             >
-              <Download className="h-4 w-4" /> Download Private Key
-            </button>
+              Download Private Key
+            </Button>
             <CopyButton text={showPrivateKey} />
           </div>
         </div>
@@ -453,23 +456,26 @@ function PublicKeySetupTool() {
         </Button>
 
         {status?.configured && !confirmDelete && (
-          <button
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => setConfirmDelete(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-neon-red bg-neon-red/5 ring-1 ring-neon-red/20 hover:bg-neon-red/10 transition-colors"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
           >
-            <Trash2 className="h-3.5 w-3.5" /> Delete Key
-          </button>
+            Delete Key
+          </Button>
         )}
         {confirmDelete && (
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() => deleteMut.mutate()}
-              disabled={deleteMut.isPending}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-neon-red/80 hover:bg-neon-red transition-colors"
+              loading={deleteMut.isPending}
+              icon={<Trash2 className="h-3.5 w-3.5" />}
             >
-              {deleteMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
               Confirm Delete
-            </button>
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
           </div>
         )}
@@ -551,9 +557,11 @@ const TELEMETRY_FIELDS = [
 
 function FleetTelemetrySubscribeTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [selectedVins, setSelectedVins] = useState<string[]>([])
   const [hostname, setHostname] = useState('')
@@ -640,11 +648,10 @@ function FleetTelemetrySubscribeTool() {
 
       {/* Signal Configuration */}
       <div className="mb-3">
-        <button onClick={() => setShowSignalModal(true)} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-neon-cyan transition-colors w-full px-3 py-2 rounded-lg border border-white/[0.06] hover:border-neon-cyan/30 bg-white/[0.02]">
-          <Settings className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="sm" onClick={() => setShowSignalModal(true)} className="w-full !justify-start border border-white/[0.06] hover:border-neon-cyan/30 bg-white/[0.02] hover:text-neon-cyan" icon={<Settings className="h-3.5 w-3.5" />}>
           <span className="font-medium">Configure Signals</span>
           <span className="text-[10px] text-[var(--text-muted)] ml-auto">{selectedFields.length} selected</span>
-        </button>
+        </Button>
       </div>
 
       <SignalConfigModal
@@ -671,9 +678,11 @@ function FleetTelemetrySubscribeTool() {
 
 function FleetTelemetryConfigTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [selectedVin, setSelectedVin] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -840,9 +849,11 @@ function FleetTelemetryConfigTool() {
 
 function FleetStatusTool() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
 
@@ -864,9 +875,11 @@ function FleetStatusTool() {
 
 function VehicleDataTools() {
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/vehicles`)
-    if (!res.ok) return []
-    return res.json() as Promise<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>
+    try {
+      return await request<{ id: number; vehicle_id: number; display_name: string; vin: string }[]>('/vehicles')
+    } catch {
+      return []
+    }
   }})
   const [selectedVin, setSelectedVin] = useState('')
   const [result, setResult] = useState<Record<string, unknown> | null>(null)
@@ -1018,10 +1031,7 @@ function OnboardingWorkflow() {
   // Fetch live status checks for auto-detection
   const { data: keyStatus } = useQuery({ queryKey: ['onboard-key-status'], queryFn: () => apiFetch('public-key-status'), refetchInterval: 30000 })
   const { data: fleetInfo } = useQuery({ queryKey: ['onboard-fleet-info'], queryFn: () => apiFetch('fleet-api-info'), refetchInterval: 30000 })
-  const { data: authStatus } = useQuery({ queryKey: ['onboard-auth-status'], queryFn: async () => {
-    const res = await fetch(`${getApiBase()}/api/v1/auth/status`)
-    return res.json()
-  }, refetchInterval: 30000 })
+  const { data: authStatus } = useQuery({ queryKey: ['onboard-auth-status'], queryFn: () => request<Record<string, unknown>>('/auth/status'), refetchInterval: 30000 })
 
   return (
     <div className="space-y-4">
@@ -1217,22 +1227,27 @@ function OnboardingWorkflow() {
 
         {/* Step actions footer */}
         <div className="p-4 border-t border-white/[0.06] flex items-center justify-between">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
+            icon={<ArrowLeft className="h-3.5 w-3.5" />}
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Previous
-          </button>
+            Previous
+          </Button>
 
           <div className="flex items-center gap-2">
             {completedSteps.has(currentStep) ? (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => markIncomplete(currentStep)}
-                className="text-xs text-[var(--text-muted)] hover:text-neon-amber transition-colors flex items-center gap-1.5"
+                className="hover:text-neon-amber"
+                icon={<RefreshCw className="h-3 w-3" />}
               >
-                <RefreshCw className="h-3 w-3" /> Mark Incomplete
-              </button>
+                Mark Incomplete
+              </Button>
             ) : (
               <Button variant="secondary" size="sm" onClick={() => markComplete(currentStep)} icon={<CheckCircle className="h-3.5 w-3.5" />}>
                 Mark Complete {currentStep < ONBOARDING_STEPS.length - 1 ? '& Continue' : ''}
@@ -1240,13 +1255,14 @@ function OnboardingWorkflow() {
             )}
           </div>
 
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCurrentStep(Math.min(ONBOARDING_STEPS.length - 1, currentStep + 1))}
             disabled={currentStep === ONBOARDING_STEPS.length - 1}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
           >
             Next <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1473,9 +1489,9 @@ function Base64Tool() {
     <ToolCard icon={FileCode} color="amber" title="Base64 Encode/Decode" description="Text ↔ Base64 converter">
       <div className="flex gap-2 mb-2">
         {(['encode', 'decode'] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)} className={clsx('px-3 py-1 rounded-lg text-xs font-medium transition-colors', mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
+          <Button key={m} variant="ghost" size="sm" onClick={() => setMode(m)} className={clsx(mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
             {m.charAt(0).toUpperCase() + m.slice(1)}
-          </button>
+          </Button>
         ))}
       </div>
       <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 to decode...'} className={textareaClasses} rows={3} />
@@ -1509,9 +1525,9 @@ function UrlEncoderTool() {
     <ToolCard icon={Link} color="cyan" title="URL Encoder/Decoder" description="Encode/decode URL components">
       <div className="flex gap-2 mb-2">
         {(['encode', 'decode'] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)} className={clsx('px-3 py-1 rounded-lg text-xs font-medium transition-colors', mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
+          <Button key={m} variant="ghost" size="sm" onClick={() => setMode(m)} className={clsx(mode === m ? 'bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20' : 'bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.06]')}>
             {m.charAt(0).toUpperCase() + m.slice(1)}
-          </button>
+          </Button>
         ))}
       </div>
       <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={mode === 'encode' ? 'Enter URL to encode...' : 'Enter encoded URL to decode...'} className={textareaClasses} rows={2} />
@@ -1629,7 +1645,7 @@ function ByteSizeTool() {
     const unitIdx = BYTE_UNITS.indexOf(unit as typeof BYTE_UNITS[number])
     if (unitIdx === -1) return null
     const bytes = num * Math.pow(1024, unitIdx)
-    return Object.fromEntries(BYTE_UNITS.map((u, i) => [u, (bytes / Math.pow(1024, i)).toLocaleString(undefined, { maximumFractionDigits: 6 })]))
+    return Object.fromEntries(BYTE_UNITS.map((u, i) => [u, fmtNumber(bytes / Math.pow(1024, i))]))
   }, [value, unit])
 
   return (
@@ -1759,9 +1775,9 @@ function CronParserTool() {
           { label: 'Daily midnight', val: '0 0 * * *' },
           { label: 'Weekly Monday', val: '0 0 * * 1' },
         ].map(p => (
-          <button key={p.val} onClick={() => setCron(p.val)} className="px-2 py-0.5 text-[10px] rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] transition-colors">
+          <Button key={p.val} variant="ghost" size="sm" onClick={() => setCron(p.val)} className="!px-2 !py-0.5 !text-[10px] !rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08]">
             {p.label}
-          </button>
+          </Button>
         ))}
       </div>
       {result && (
@@ -2073,9 +2089,9 @@ function UnixPermTool() {
       <Input type="text" value={input} onChange={e => setInput(e.target.value)} placeholder="755 or rwxr-xr-x" />
       <div className="flex flex-wrap gap-1.5 mt-2">
         {['755', '644', '700', '777', '600', '444'].map(p => (
-          <button key={p} onClick={() => setInput(p)} className="px-2 py-0.5 text-[10px] rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] transition-colors font-mono">
+          <Button key={p} variant="ghost" size="sm" onClick={() => setInput(p)} className="!px-2 !py-0.5 !text-[10px] !rounded bg-white/[0.04] text-[var(--text-muted)] hover:bg-white/[0.08] font-mono">
             {p}
-          </button>
+          </Button>
         ))}
       </div>
       {result && (
@@ -2137,6 +2153,7 @@ function ClientUtilitiesSection() {
 // ─── Main Page Component ─────────────────────────────────────────
 
 export default function DevTools() {
+  usePageTitle('Dev Tools')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
   const toggle = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
 

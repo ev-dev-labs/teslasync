@@ -10,6 +10,8 @@ import {
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
+import { type VehicleState } from '../lib/enums'
 
 
 const stateColors: Record<string, string> = {
@@ -32,7 +34,6 @@ const stateIcons: Record<string, typeof Car> = {
 
 interface TimelineTooltipPayload { name: string; value: number; color?: string; fill?: string }
 function TimelineTooltip({ active, payload, label }: { active?: boolean; payload?: TimelineTooltipPayload[]; label?: string }) {
-  usePageTitle('Timeline')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -54,6 +55,7 @@ function formatDuration(min: number): string {
 }
 
 export default function Timeline() {
+  usePageTitle('Timeline')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [startDate, setStartDate] = useState(() => {
@@ -68,13 +70,13 @@ export default function Timeline() {
     enabled: vehicleId !== null,
   })
 
-  const { data: summary } = useQuery({
+  const { data: summary, error: summaryError } = useQuery({
     queryKey: ['state-summary', vehicleId, startDate],
     queryFn: () => getStateSummary(vehicleId!, 30, startDate),
     enabled: vehicleId !== null,
   })
 
-  const { data: dailyBreakdown } = useQuery({
+  const { data: dailyBreakdown, error: breakdownError } = useQuery({
     queryKey: ['state-daily', vehicleId, startDate],
     queryFn: () => getDailyStateBreakdown(vehicleId!, 30, startDate),
     enabled: vehicleId !== null,
@@ -84,7 +86,7 @@ export default function Timeline() {
   const pieData = (summary ?? []).map(s => ({
     name: s.state.charAt(0).toUpperCase() + s.state.slice(1),
     value: Math.round(s.total_min),
-    fill: stateColors[s.state] ?? '#4b5563',
+    fill: stateColors[s.state] ?? COLOR.MUTED,
   }))
 
   // Aggregate daily breakdown into stacked bar: each day → { day, driving, charging, asleep, online, ... }
@@ -103,9 +105,9 @@ export default function Timeline() {
   const totalMinutes = (summary ?? []).reduce((s, item) => s + item.total_min, 0)
 
   // Derived key stats
-  const parkedMin = (summary ?? []).find(s => s.state === 'asleep')?.total_min ?? 0
-  const drivingMin = (summary ?? []).find(s => s.state === 'driving')?.total_min ?? 0
-  const chargingMin = (summary ?? []).find(s => s.state === 'charging')?.total_min ?? 0
+  const parkedMin = (summary ?? []).find(s => s.state === ('asleep' as VehicleState))?.total_min ?? 0
+  const drivingMin = (summary ?? []).find(s => s.state === ('driving' as VehicleState))?.total_min ?? 0
+  const chargingMin = (summary ?? []).find(s => s.state === ('charging' as VehicleState))?.total_min ?? 0
   const parkedPct = totalMinutes > 0 ? (parkedMin / totalMinutes * 100) : 0
   const drivingPct = totalMinutes > 0 ? (drivingMin / totalMinutes * 100) : 0
   const chargingPct = totalMinutes > 0 ? (chargingMin / totalMinutes * 100) : 0
@@ -134,6 +136,11 @@ export default function Timeline() {
       </div>
 
       {timelineError && <QueryError error={timelineError} onRetry={refetch} />}
+      {!timelineError && (summaryError || breakdownError) && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {((summaryError || breakdownError) as Error).message}
+        </div>
+      )}
 
       {/* State Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6 sm:mb-8">
@@ -179,7 +186,7 @@ export default function Timeline() {
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Time</p>
           </div>
           <div>
-            <p className="text-lg font-bold capitalize" style={{ color: stateColors[lastState] ?? '#6b7280' }}>{lastState}</p>
+            <p className="text-lg font-bold capitalize" style={{ color: stateColors[lastState] ?? COLOR.MUTED }}>{lastState}</p>
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Last State</p>
           </div>
           <div>
@@ -191,7 +198,7 @@ export default function Timeline() {
         <div className="mt-4 h-3 rounded-full bg-white/5 overflow-hidden flex">
           {(summary ?? []).map(s => {
             const pct = totalMinutes > 0 ? (s.total_min / totalMinutes * 100) : 0
-            return pct > 0.5 ? <div key={s.state} className="h-full" style={{ width: `${pct}%`, background: stateColors[s.state] ?? '#4b5563' }} title={`${s.state}: ${fmtNumber(pct)}%`} /> : null
+            return pct > 0.5 ? <div key={s.state} className="h-full" style={{ width: `${pct}%`, background: stateColors[s.state] ?? COLOR.MUTED }} title={`${s.state}: ${fmtNumber(pct)}%`} /> : null
           })}
         </div>
       </GlassPanel>
@@ -227,7 +234,7 @@ export default function Timeline() {
                 <Tooltip content={<TimelineTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 {allStates.map(state => (
-                  <Bar key={state} dataKey={state} stackId="a" fill={stateColors[state] ?? '#4b5563'} name={state.charAt(0).toUpperCase() + state.slice(1)} />
+                  <Bar key={state} dataKey={state} stackId="a" fill={stateColors[state] ?? COLOR.MUTED} name={state.charAt(0).toUpperCase() + state.slice(1)} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
@@ -246,7 +253,7 @@ export default function Timeline() {
             <div className="space-y-2">
               {timeline.slice(0, 50).map(s => {
                 const Icon = stateIcons[s.state] ?? Activity
-                const color = stateColors[s.state] ?? '#4b5563'
+                const color = stateColors[s.state] ?? COLOR.MUTED
                 return (
                   <div key={s.id} className="relative pl-14">
                     <div className="absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]" style={{ background: `${color}20` }}>

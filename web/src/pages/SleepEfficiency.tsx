@@ -169,7 +169,7 @@ export default function SleepEfficiency() {
               <MetricCard
                 icon={<DollarSign className="h-4 w-4" />}
                 label="Sentry Monthly Cost"
-                value={`$${fmtNumber(sleep.sentry_monthly_cost, 2)}`}
+                value={`$${fmtNumber(sleep.sentry_monthly_cost)}`}
                 color="red"
                 subtitle={`${fmtNumber(sleep.sentry_monthly_kwh)} kWh/month`}
               />
@@ -242,7 +242,7 @@ export default function SleepEfficiency() {
                       <p className="text-xs text-[var(--text-muted)]">Extra monthly</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-neon-red">${fmtNumber(sleep.sentry_extra_monthly_cost, 2)}</p>
+                      <p className="text-lg font-bold text-neon-red">${fmtNumber(sleep.sentry_extra_monthly_cost)}</p>
                       <p className="text-xs text-[var(--text-muted)]">Extra cost/mo</p>
                     </div>
                   </div>

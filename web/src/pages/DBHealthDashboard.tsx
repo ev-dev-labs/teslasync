@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Database, ArrowUpDown, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Button, DataTable } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Button, DataTable, AlertBanner } from '../components/ui'
 import type { Column } from '../components/ui'
 import { ChartTooltip } from '../components/Charts'
 import { request } from '../api/client'
@@ -47,7 +47,6 @@ interface MigrationStatus {
 type SortKey = 'size' | 'rows' | 'name'
 
 function formatBytes(bytes: number): string {
-  usePageTitle('DB Health')
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -57,19 +56,22 @@ function formatBytes(bytes: number): string {
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024 // 100MB
 
 export default function DBHealthDashboard() {
+  usePageTitle('DB Health')
   const [sortKey, setSortKey] = useState<SortKey>('size')
 
-  const { data: dbStats, isLoading: statsLoading } = useQuery<DBStats>({
+  const { data: dbStats, isLoading: statsLoading, error: statsError } = useQuery<DBStats>({
     queryKey: ['db-stats'],
     queryFn: () => request('/dev-tools/db-stats'),
     refetchInterval: 30_000,
   })
 
-  const { data: migrationStatus, isLoading: migrationLoading } = useQuery<MigrationStatus>({
+  const { data: migrationStatus, isLoading: migrationLoading, error: migrationError } = useQuery<MigrationStatus>({
     queryKey: ['migration-status'],
     queryFn: () => request('/dev-tools/migration-status'),
     refetchInterval: 60_000,
   })
+
+  const queryError = statsError || migrationError
 
   const tables = dbStats?.tables ?? []
 
@@ -131,6 +133,12 @@ export default function DBHealthDashboard() {
         }
       />
 
+      {queryError && (
+        <AlertBanner variant="danger" title="Error loading data">
+          {(queryError as Error).message}
+        </AlertBanner>
+      )}
+
       {/* Summary Cards */}
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -172,7 +180,7 @@ export default function DBHealthDashboard() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickFormatter={v => `${fmtNumber(v, 1)} MB`} />
+                <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickFormatter={v => `${fmtNumber(v)} MB`} />
                 <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} width={140} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="rows" name="Rows" fill="#00f0ff" radius={[0, 4, 4, 0]} barSize={16} />
@@ -279,7 +287,7 @@ export default function DBHealthDashboard() {
                     { label: 'In Use', value: pool.in_use },
                     { label: 'Idle', value: pool.idle },
                     { label: 'Wait Count', value: pool.wait_count },
-                    { label: 'Wait Duration', value: `${fmtNumber(pool.wait_duration_ms, 0)}ms` },
+                    { label: 'Wait Duration', value: `${fmtInt(pool.wait_duration_ms)}ms` },
                   ].map(item => (
                     <div key={item.label} className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)]">{item.label}</span>

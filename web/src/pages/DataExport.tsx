@@ -9,6 +9,7 @@ import {
   getChargingSessions,
 } from '../api'
 import type { ExportJobSummary, ExportJobSubmitRequest } from '../api'
+import { fmtInt } from '../lib/numberFormat'
 import { PageHeader, GlassPanel, FadeIn, Skeleton, StatCard, Badge, Button, MetricCard, Select, Input } from '../components/ui'
 import { useToast } from '../components/Toast'
 import {
@@ -71,7 +72,6 @@ const DATE_PRESETS = [
 /* ------------------------------------------------------------------ */
 
 function formatFileSize(bytes: number): string {
-  usePageTitle('Data Export')
   if (!bytes || bytes === 0) return '—'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -283,7 +283,7 @@ function JobRow({
         {job.record_count > 0 && (
           <span className="flex items-center gap-1">
             <Database className="h-3 w-3" />
-            {job.record_count.toLocaleString()} records
+            {fmtInt(job.record_count)} records
           </span>
         )}
         {job.file_size > 0 && (
@@ -389,6 +389,7 @@ function DataOverviewCard({
 /* ------------------------------------------------------------------ */
 
 export default function DataExport() {
+  usePageTitle('Data Export')
   const queryClient = useQueryClient()
   const { success, error: showError } = useToast()
 
@@ -798,19 +799,19 @@ export default function DataExport() {
           <DataOverviewCard
             icon={Car}
             label="Total Drives"
-            value={drives?.length?.toLocaleString() ?? '—'}
+            value={drives?.length != null ? fmtInt(drives.length) : '—'}
             sublabel="Drive records available"
           />
           <DataOverviewCard
             icon={Zap}
             label="Charging Sessions"
-            value={chargingSessions?.length?.toLocaleString() ?? '—'}
+            value={chargingSessions?.length != null ? fmtInt(chargingSessions.length) : '—'}
             sublabel="Charge sessions recorded"
           />
           <DataOverviewCard
             icon={Database}
             label="Vehicles"
-            value={vehicles?.length?.toLocaleString() ?? '—'}
+            value={vehicles?.length != null ? fmtInt(vehicles.length) : '—'}
             sublabel="Tracked vehicles"
           />
           <DataOverviewCard

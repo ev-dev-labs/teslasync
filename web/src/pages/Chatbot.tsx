@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Send, User, Sparkles, MessageSquare, Clock, Loader2 } from 'lucide-react'
-import { Button, GlassPanel } from '../components/ui'
+import { Button, GlassPanel, Input } from '../components/ui'
 import clsx from 'clsx'
 import { sendChatMessage, getChatHistory, getChatSessions, ChatMessage } from '../api'
 import { formatTime } from '../lib/dateFormat'
@@ -255,14 +255,14 @@ export default function Chatbot() {
           {/* Input */}
           <div className="p-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
             <div className="flex items-center gap-3">
-              <input
+              <Input
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about your fleet..."
-                className="flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition-colors focus:border-neon-purple/50"
-                style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)', color: 'var(--text-primary)' }}
+                aria-label="Type a message"
+                className="flex-1"
               />
               <Button
                 onClick={handleSend}

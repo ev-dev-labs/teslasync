@@ -2,19 +2,19 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getTirePressure } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, AlertBanner, ChartContainer, Select } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, AlertBanner, ChartContainer, Select, Button } from '../components/ui'
 import { Gauge, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Clock, Zap, ShieldAlert } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort, formatDateTime } from '../lib/dateFormat'
-import { STATUS_COLORS } from '../lib/colors'
+import { STATUS_COLORS, boolColor } from '../lib/colors'
 import { fmtNumber } from '../lib/numberFormat'
+import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 interface PressureTooltipPayload { name: string; value: number; color?: string }
 function PressureTooltip({ active, payload, label, unit = 'PSI' }: { active?: boolean; payload?: PressureTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Tire Pressure')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -251,10 +251,10 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
       {/* Center HUD */}
       <rect x="160" y="272" width="80" height="56" rx="12" fill="#0f172a" fillOpacity="0.9" stroke="#22d3ee" strokeWidth="1" />
       <text x="200" y="292" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#22d3ee" fontFamily="system-ui,sans-serif" letterSpacing="2">TPMS</text>
-      <text x="200" y="308" textAnchor="middle" fontSize="8" fontWeight="600" fill={allNormal ? '#10b981' : '#f59e0b'} fontFamily="system-ui,sans-serif">
+      <text x="200" y="308" textAnchor="middle" fontSize="8" fontWeight="600" fill={boolColor(allNormal)} fontFamily="system-ui,sans-serif">
         {allNormal ? 'ALL NORMAL' : 'ATTENTION'}
       </text>
-      <circle cx="200" cy="320" r="3" fill={allNormal ? '#10b981' : '#f59e0b'}>
+      <circle cx="200" cy="320" r="3" fill={boolColor(allNormal)}>
         <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
       </circle>
 
@@ -275,6 +275,7 @@ function TireCarVisualization({ fl, fr, rl, rr, unit = 'PSI', timestamps }: {
 }
 
 export default function TirePressure() {
+  usePageTitle('Tire Pressure')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -284,8 +285,8 @@ export default function TirePressure() {
   const { state: live } = useVehicleLive(vehicleId ?? undefined)
 
   // Parse TPMS warnings — format is "TireLocationFl:Warning,TireLocationFr:Warning,..."
-  const hasHardWarning = live.tpmsHardWarnings !== '' && !live.tpmsHardWarnings.toLowerCase().includes('none')
-  const hasSoftWarning = live.tpmsSoftWarnings !== '' && !live.tpmsSoftWarnings.toLowerCase().includes('none')
+  const hasHardWarning = parseEnumBool(live.tpmsHardWarnings) && !live.tpmsHardWarnings.toLowerCase().includes('none')
+  const hasSoftWarning = parseEnumBool(live.tpmsSoftWarnings) && !live.tpmsSoftWarnings.toLowerCase().includes('none')
 
   // Thresholds in the display unit
   const lowThreshold = convertPressure(2.4)   // ~35 PSI
@@ -343,14 +344,14 @@ export default function TirePressure() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {TIME_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => setTimeRange(opt.value)}
-                className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+              <Button key={opt.value} variant="ghost" size="sm" onClick={() => setTimeRange(opt.value)}
+                className={clsx('border',
                   timeRange === opt.value
                     ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
                     : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 )}>
                 {opt.label}
-              </button>
+              </Button>
             ))}
           </div>
           {vehicles && vehicles.length > 1 && (

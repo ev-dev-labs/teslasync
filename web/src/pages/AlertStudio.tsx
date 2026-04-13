@@ -27,6 +27,7 @@ import {
 import clsx from 'clsx'
 import { formatDateTime } from '../lib/dateFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { request } from '../api/client'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -141,7 +142,6 @@ interface EditorState {
 }
 
 function freshEditor(): EditorState {
-  usePageTitle('Alert Studio')
   return {
     name: '',
     type: 'custom',
@@ -171,6 +171,7 @@ function ruleToEditor(rule: AlertRule): EditorState {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function AlertStudio() {
+  usePageTitle('Alert Studio')
   const queryClient = useQueryClient()
   const toast = useToast()
 
@@ -248,10 +249,12 @@ export default function AlertStudio() {
     setEditor(ruleToEditor(rule))
   }, [])
 
+  const allChannelIds = useMemo(() => (channels ?? []).map(ch => ch.id), [channels])
+
   const handleNewRule = useCallback(() => {
     setSelectedId(null)
-    setEditor(freshEditor())
-  }, [])
+    setEditor({ ...freshEditor(), notify_channels: allChannelIds })
+  }, [allChannelIds])
 
   const handleCloneTemplate = useCallback((tpl: RuleTemplate) => {
     setSelectedId(null)
@@ -262,11 +265,11 @@ export default function AlertStudio() {
       cooldown_min: tpl.cooldown_min,
       msg_template: tpl.msg_template,
       conditions: JSON.parse(JSON.stringify(tpl.conditions)),
-      notify_channels: [],
+      notify_channels: allChannelIds,
       enabled: true,
     })
     setShowTemplates(false)
-  }, [])
+  }, [allChannelIds])
 
   // Filter CEP rules (have conditions)
   const cepRules = useMemo(() => (rules ?? []).filter(r => r.conditions), [rules])
@@ -308,22 +311,26 @@ export default function AlertStudio() {
 
             {/* Category tabs */}
             <div className="flex flex-wrap gap-1.5 mb-4">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setTemplateCategory(null)}
-                className={clsx('px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors',
+                className={clsx('!text-[11px] border',
                   templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 )}
-              >All ({ruleTemplates.length})</button>
+              >All ({ruleTemplates.length})</Button>
               {templateCategories.map(cat => {
                 const count = ruleTemplates.filter(t => t.category === cat).length
                 return (
-                  <button
+                  <Button
                     key={cat}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
-                    className={clsx('px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors',
+                    className={clsx('!text-[11px] border',
                       templateCategory === cat ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
-                  >{cat} ({count})</button>
+                  >{cat} ({count})</Button>
                 )
               })}
             </div>
@@ -590,11 +597,11 @@ export default function AlertStudio() {
                 icon={<Bell className="h-3.5 w-3.5" />}
                 onClick={async () => {
                   try {
-                    await fetch('/api/v1/alerts/test', {
+                    await request('/alerts/test', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ name: editor.name || 'Test Rule', severity: editor.severity, msg_template: editor.msg_template || 'Test notification from Alert Studio', notify_channels: editor.notify_channels }),
-                    }).then(r => { if (r.ok) toast.success('Test sent!', 'Check your browser toast and Discord/Slack'); else throw new Error() })
+                    })
+                    toast.success('Test sent!', 'Check your browser toast and Discord/Slack')
                   } catch { toast.error('Test failed', 'Could not send test notification') }
                 }}
                 disabled={!editor.name.trim()}

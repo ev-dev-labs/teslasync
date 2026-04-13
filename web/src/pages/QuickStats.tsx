@@ -1,16 +1,43 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSettings } from '../hooks/useSettings'
 import { getVehicles, getFleetAnalytics } from '../api'
-import { GlassPanel, MetricCard } from '../components/ui'
+import { GlassPanel, MetricCard, Skeleton } from '../components/ui'
 import { Car } from 'lucide-react'
 import { fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function QuickStats() {
   usePageTitle('Quick Stats')
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
-  const { data: analytics } = useQuery({ queryKey: ['fleet-analytics'], queryFn: () => getFleetAnalytics(30) })
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({ queryKey: ['fleet-analytics'], queryFn: () => getFleetAnalytics(30) })
   const { convertDistance, distanceUnit } = useSettings()
+
+  const isLoading = vehiclesLoading || analyticsLoading
+  const error = vehiclesError || analyticsError
+
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background: 'var(--bg)'}}>
+      <div className="w-full max-w-md space-y-4">
+        <Skeleton className="h-16 rounded-xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+      </div>
+    </div>
+  )
+
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background: 'var(--bg)'}}>
+      <div className="w-full max-w-md">
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(error as Error).message}
+        </div>
+      </div>
+    </div>
+  )
 
   const vehicle = vehicles?.[0]
 

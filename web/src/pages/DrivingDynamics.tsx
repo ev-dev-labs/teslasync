@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getMotorData, getMotorLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, MetricCard } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, MetricCard, Select } from '../components/ui'
 import { Activity, Gauge, Thermometer, Zap, Circle, ArrowUp, ArrowDown, Disc } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -18,14 +18,13 @@ import { usePageTitle } from '../hooks/usePageTitle'
 /* ---------- Tooltip ---------- */
 interface DynamicsTooltipPayload { name: string; value: number; color?: string; fill?: string; stroke?: string }
 function DynamicsTooltip({ active, payload, label, unit }: { active?: boolean; payload?: DynamicsTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Driving Dynamics')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? fmtNumber(p.value, 2) : p.value}{unit ? ` ${unit}` : ''}
+          <span style={{ color: p.color || p.fill || p.stroke }}>●</span> {p.name}: {typeof p.value === 'number' ? fmtNumber(p.value) : p.value}{unit ? ` ${unit}` : ''}
         </p>
       ))}
     </div>
@@ -98,6 +97,7 @@ function GForceDot({ latG, lonG }: { latG: number; lonG: number }) {
 
 /* ========== MAIN COMPONENT ========== */
 export default function DrivingDynamics() {
+  usePageTitle('Driving Dynamics')
   const { convertSpeed, convertTemp, speedUnit, tempUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -222,14 +222,12 @@ export default function DrivingDynamics() {
           icon={<Activity className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            label="Vehicle"
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -296,26 +294,26 @@ export default function DrivingDynamics() {
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Lateral G</p>
             <p className="text-3xl font-bold text-neon-amber">
-              {latest?.lateral_accel !== undefined ? fmtNumber(latest.lateral_accel, 3) : '--'}
+              {latest?.lateral_accel !== undefined ? fmtNumber(latest.lateral_accel) : '--'}
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>g</span>
             </p>
             {stats && (
               <div className="flex gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span>Peak L: {fmtNumber(stats.peakLatGNeg, 3)}g</span>
-                <span>Peak R: {fmtNumber(stats.peakLatG, 3)}g</span>
+                <span>Peak L: {fmtNumber(stats.peakLatGNeg)}g</span>
+                <span>Peak R: {fmtNumber(stats.peakLatG)}g</span>
               </div>
             )}
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>Longitudinal G</p>
             <p className="text-3xl font-bold text-neon-cyan">
-              {latest?.longitudinal_accel !== undefined ? fmtNumber(latest.longitudinal_accel, 3) : '--'}
+              {latest?.longitudinal_accel !== undefined ? fmtNumber(latest.longitudinal_accel) : '--'}
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>g</span>
             </p>
             {stats && (
               <div className="flex gap-3 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <span>Peak Brake: {fmtNumber(stats.peakLonGNeg, 3)}g</span>
-                <span>Peak Accel: {fmtNumber(stats.peakLonG, 3)}g</span>
+                <span>Peak Brake: {fmtNumber(stats.peakLonGNeg)}g</span>
+                <span>Peak Accel: {fmtNumber(stats.peakLonG)}g</span>
               </div>
             )}
           </div>
@@ -335,14 +333,14 @@ export default function DrivingDynamics() {
             <div className="space-y-3 flex-1 flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Lateral</span>
-                <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.maxLatG, 3)}g</span>
+                <span className="text-sm font-bold text-neon-amber">{fmtNumber(stats.maxLatG)}g</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/5">
                 <div className="h-full rounded-full bg-neon-amber/60" style={{ width: `${Math.min(100, stats.maxLatG * 100)}%` }} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Max Longitudinal</span>
-                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(stats.maxLonG, 3)}g</span>
+                <span className="text-sm font-bold text-neon-cyan">{fmtNumber(stats.maxLonG)}g</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/5">
                 <div className="h-full rounded-full bg-neon-cyan/60" style={{ width: `${Math.min(100, stats.maxLonG * 100)}%` }} />
@@ -350,7 +348,7 @@ export default function DrivingDynamics() {
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Combined Peak</span>
                 <span className="text-sm font-bold text-neon-green">
-                  {fmtNumber(Math.sqrt(stats.maxLatG ** 2 + stats.maxLonG ** 2), 3)}g
+                  {fmtNumber(Math.sqrt(stats.maxLatG ** 2 + stats.maxLonG ** 2))}g
                 </span>
               </div>
             </div>
@@ -419,7 +417,7 @@ export default function DrivingDynamics() {
           <div className="flex gap-2 mt-2">
             {['P', 'R', 'N', 'D'].map(g => {
               const isActive = gear.text === g
-              const gColor = g === 'D' ? 'text-neon-green' : g === 'R' ? 'text-neon-red' : g === 'P' ? 'text-neon-cyan' : 'text-neon-amber'
+              const gColor = GEAR_COLORS[g] ?? 'text-[var(--text-muted)]'
               return (
                 <div
                   key={g}
@@ -616,13 +614,13 @@ export default function DrivingDynamics() {
           />
           <MetricCard
             label="Max Lateral G"
-            value={`${fmtNumber(stats.maxLatG, 3)} g`}
+            value={`${fmtNumber(stats.maxLatG)} g`}
             icon={<ArrowUp className="h-4 w-4" />}
             color="amber"
           />
           <MetricCard
             label="Max Longitudinal G"
-            value={`${fmtNumber(stats.maxLonG, 3)} g`}
+            value={`${fmtNumber(stats.maxLonG)} g`}
             icon={<ArrowDown className="h-4 w-4" />}
             color="cyan"
           />

@@ -113,7 +113,7 @@ function SSEStatusDot({ state }: { state: SSEState }) {
   )
 }
 
-const navSections = [
+export const navSections = [
   {
     title: 'Overview',
     items: [
@@ -207,7 +207,7 @@ const navSections = [
       { to: '/system-status', icon: Activity, label: 'Status', color: 'text-emerald-400' },
       { to: '/api-logs', icon: FileText, label: 'API Logs', color: 'text-amber-400' },
       { to: '/fleet-api', icon: Zap, label: 'Fleet API', color: 'text-sky-400' },
-      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-gray-400' },
+      { to: '/settings', icon: Settings, label: 'Settings', color: 'text-[var(--text-muted)]' },
       { to: '/admin', icon: Shield, label: 'Admin', color: 'text-red-400' },
     ],
   },
@@ -349,14 +349,16 @@ export default function Layout() {
           </span>
         </NavLink>
 
+        {/* Sticky search trigger */}
+        <div className="px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
+          <CommandPaletteTrigger />
+        </div>
+
         {/* Navigation */}
         <nav 
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-4 px-3 space-y-6 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
-        >          {/* Search trigger */}
-          <div className="px-1 mb-2">
-            <CommandPaletteTrigger />
-          </div>
+        >
 
           {navSections.map(section => (
             <div key={section.title}>

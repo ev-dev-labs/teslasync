@@ -13,10 +13,10 @@ import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
+import { COLOR } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; evCost: number; gasCost: number; icon: React.ReactNode }) {
-  usePageTitle('Energy')
   const savings = (gasCost ?? 0) - (evCost ?? 0)
   const savingsPct = gasCost > 0 ? (savings / gasCost * 100) : 0
   return (
@@ -28,16 +28,16 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
       <div className="flex items-center gap-4 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>EV Cost</p>
-          <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0, 2)}</p>
+          <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0)}</p>
         </div>
         <ArrowRight className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
         <div>
           <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Gas Equivalent</p>
-          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>${fmtNumber(gasCost ?? 0, 2)}</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>${fmtNumber(gasCost ?? 0)}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-neon-green">Saving ${fmtNumber(savings ?? 0, 2)}</span>
+        <span className="text-sm font-bold text-neon-green">Saving ${fmtNumber(savings ?? 0)}</span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">{fmtPercent(savingsPct ?? 0)} less</span>
       </div>
     </GlassPanel>
@@ -45,6 +45,7 @@ function CostComparisonCard({ label, evCost, gasCost, icon }: { label: string; e
 }
 
 export default function Energy() {
+  usePageTitle('Energy')
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -105,8 +106,8 @@ export default function Energy() {
       types[label].energy += s.charge_energy_added
       types[label].cost += s.cost ?? 0
     })
-    const colors: Record<string, string> = { Supercharger: '#ef4444', 'DC Fast': '#f59e0b', 'Home/AC': '#10b981' }
-    return Object.entries(types).map(([name, data]) => ({ name, ...data, fill: colors[name] ?? '#00f0ff' }))
+    const colors: Record<string, string> = { Supercharger: COLOR.BAD, 'DC Fast': COLOR.WARN, 'Home/AC': COLOR.GOOD }
+    return Object.entries(types).map(([name, data]) => ({ name, ...data, fill: colors[name] ?? COLOR.CYAN }))
   }, [sessions])
 
   // Monthly projection
@@ -155,16 +156,16 @@ export default function Energy() {
       {/* Quick metrics strip */}
       <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {[
-          { label: `Cost per ${distanceUnit}`, value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0, 3)}`, color: 'text-neon-cyan' },
-          { label: 'Cost per kWh', value: `$${fmtNumber(costPerKwh ?? 0, 3)}`, color: 'text-neon-green' },
+          { label: `Cost per ${distanceUnit}`, value: `$${fmtNumber(totalDistance > 0 ? totalCost / convertDistance(totalDistance) : 0)}`, color: 'text-neon-cyan' },
+          { label: 'Cost per kWh', value: `$${fmtNumber(costPerKwh ?? 0)}`, color: 'text-neon-green' },
           { label: 'Total Distance', value: `${fmtInt(convertDistance(totalDistance ?? 0))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
           { label: 'Sessions', value: `${sessions?.length ?? 0}`, color: 'text-neon-purple' },
-          { label: 'Monthly Est.', value: `$${fmtNumber(monthlyProjectedCost ?? 0, 2)}`, color: 'text-neon-amber' },
-          { label: 'Yearly Est.', value: `$${fmtNumber(yearlyProjectedCost ?? 0, 2)}`, color: 'text-neon-red' },
+          { label: 'Monthly Est.', value: `$${fmtNumber(monthlyProjectedCost ?? 0)}`, color: 'text-neon-amber' },
+          { label: 'Yearly Est.', value: `$${fmtNumber(yearlyProjectedCost ?? 0)}`, color: 'text-neon-red' },
         ].map(m => (
           <StaggerItem key={m.label}>
             <GlassPanel className="p-3 text-center">
-              <p className="text-[10px] text-gray-600 uppercase tracking-wider">{m.label}</p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">{m.label}</p>
               <p className={`text-lg font-bold ${m.color}`}>{m.value}</p>
             </GlassPanel>
           </StaggerItem>
@@ -305,14 +306,14 @@ export default function Energy() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="flex items-center gap-2 text-sm">
                               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: b.fill }} />
-                              <span className="text-gray-300">{b.name}</span>
+                              <span className="text-[var(--text-secondary)]">{b.name}</span>
                             </span>
                             <span className="text-xs text-[var(--text-muted)]">{b.count} sessions</span>
                           </div>
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-neon-cyan">{fmtNumber(b.energy ?? 0, 1)} kWh</span>
-                            <span className="text-neon-green">${fmtNumber(b.cost ?? 0, 2)}</span>
-                            <span className="text-gray-600">${b.energy > 0 ? fmtNumber(b.cost / b.energy, 3) : '0'}/kWh</span>
+                            <span className="text-neon-cyan">{fmtNumber(b.energy ?? 0)} kWh</span>
+                            <span className="text-neon-green">${fmtNumber(b.cost ?? 0)}</span>
+                            <span className="text-[var(--text-muted)]">${b.energy > 0 ? fmtNumber(b.cost / b.energy) : '0'}/kWh</span>
                           </div>
                         </div>
                       ))}
@@ -324,6 +325,19 @@ export default function Energy() {
           </div>
 
           {/* Recent Charging Sessions (enhanced) */}
+          {sessions && sessions.length === 0 && (
+            <FadeIn delay={0.3}>
+              <GlassPanel className="p-6">
+                <h3 className="section-title mb-4 flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-neon-amber" /> Recent Charging Sessions
+                </h3>
+                <div className="text-center py-12 text-[var(--text-muted)]">
+                  <p className="text-lg">No charging sessions recorded</p>
+                  <p className="text-sm mt-1">Charging data will appear here once your vehicle completes a session.</p>
+                </div>
+              </GlassPanel>
+            </FadeIn>
+          )}
           {sessions && sessions.length > 0 && (
             <FadeIn delay={0.3}>
               <GlassPanel className="p-6">
@@ -333,12 +347,12 @@ export default function Energy() {
                 <DataTable
                   columns={[
                     { key: 'date', header: 'Date', render: (s) => <Link to={`/charging/${s.id}`} className="hover:text-neon-cyan transition-colors">{formatDateShort(s.start_date)}</Link> },
-                    { key: 'energy', header: 'Energy', render: (s) => <span className="text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0, 1)} kWh</span> },
+                    { key: 'energy', header: 'Energy', render: (s) => <span className="text-neon-cyan font-medium">{fmtNumber(s.charge_energy_added ?? 0)} kWh</span> },
                     { key: 'battery', header: 'Battery', render: (s) => <><span className="text-[var(--text-muted)]">{s.start_battery_level}%</span><span className="text-gray-700 mx-1">→</span><span className="text-neon-green">{s.end_battery_level ?? '—'}%</span></> },
-                    { key: 'power', header: 'Power', render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power, 1)} kW` : '—'}</> },
+                    { key: 'power', header: 'Power', render: (s) => <>{s.charger_power != null ? `${fmtNumber(s.charger_power)} kW` : '—'}</> },
                     { key: 'type', header: 'Type', render: (s) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${s.fast_charger_type?.toLowerCase().includes('tesla') ? 'bg-neon-red/10 text-neon-red ring-neon-red/20' : s.fast_charger_type ? 'bg-neon-amber/10 text-neon-amber ring-neon-amber/20' : 'bg-neon-green/10 text-neon-green ring-neon-green/20'}`}>{s.fast_charger_type?.toLowerCase().includes('tesla') ? 'Supercharger' : s.fast_charger_type || 'AC'}</span> },
-                    { key: 'cost', header: 'Cost', render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : '—'}</> },
-                    { key: 'perKwh', header: '$/kWh', render: (s) => <span className="text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added, 3)}` : '—'}</span> },
+                    { key: 'cost', header: 'Cost', render: (s) => <>{typeof s.cost === 'number' ? `$${fmtNumber(s.cost)}` : '—'}</> },
+                    { key: 'perKwh', header: '$/kWh', render: (s) => <span className="text-[var(--text-muted)]">{typeof s.cost === 'number' && s.charge_energy_added > 0 ? `$${fmtNumber(s.cost / s.charge_energy_added)}` : '—'}</span> },
                   ] satisfies Column<(typeof sessions)[number]>[]}
                   data={sessions.slice(0, 15)}
                   keyExtractor={(s) => s.id}

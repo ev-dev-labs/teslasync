@@ -9,19 +9,20 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber, fmtWithUnit, fmtInt } from '../lib/numberFormat'
+import { COLOR } from '../lib/colors'
+import { parseEnumBool } from '../lib/parseEnums'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ─── Chart tooltip (matches TirePressure pattern) ─── */
 interface EnergyTooltipPayload { name: string; value: number; color?: string }
 function EnergyTooltip({ active, payload, label, unit = '' }: { active?: boolean; payload?: EnergyTooltipPayload[]; label?: string; unit?: string }) {
-  usePageTitle('Energy Flow')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value, 2)} {unit}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmtNumber(p.value)} {unit}
         </p>
       ))}
     </div>
@@ -81,7 +82,7 @@ function BmsIndicator({ label, active, icon: Icon }: { label: string; active: bo
 function PowerFlowArrow({ dcPower, acPower, energyRemaining }: { dcPower?: number | null; acPower?: number | null; energyRemaining?: number | null }) {
   const hasDc = dcPower != null && dcPower > 0
   const hasAc = acPower != null && acPower > 0
-  const activeColor = hasDc ? '#00f0ff' : hasAc ? '#a855f7' : '#334155'
+  const activeColor = hasDc ? COLOR.CYAN : hasAc ? COLOR.PURPLE : COLOR.DARK
   const powerLabel = hasDc ? `DC ${fmtWithUnit(dcPower, 'kW')}` : hasAc ? `AC ${fmtWithUnit(acPower, 'kW')}` : 'No Charge'
   return (
     <svg viewBox="0 0 480 120" className="w-full" style={{ maxWidth: 480 }}>
@@ -133,6 +134,7 @@ function StatCard({ label, value, unit, color = 'text-neon-cyan' }: { label: str
    Main Component
    ═══════════════════════════════════════════════════════ */
 export default function EnergyFlow() {
+  usePageTitle('Energy Flow')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -271,7 +273,7 @@ export default function EnergyFlow() {
     : null
   const cellHealthy = cellSpread != null && cellSpread < 30
 
-  const hasPowershare = latest?.powershare_status != null && latest.powershare_status !== ''
+  const hasPowershare = parseEnumBool(latest?.powershare_status)
 
   const noData = !isLoading && (!history || history.length === 0)
 
@@ -421,7 +423,7 @@ export default function EnergyFlow() {
             <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Max</p>
               <p className="text-2xl font-bold text-neon-cyan">
-                {latest?.brick_voltage_max != null ? `${fmtWithUnit(latest.brick_voltage_max, 'V', 3)}` : '--'}
+                {latest?.brick_voltage_max != null ? `${fmtWithUnit(latest.brick_voltage_max, 'V')}` : '--'}
               </p>
               {latest?.num_brick_voltage_max != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_max}</p>
@@ -430,7 +432,7 @@ export default function EnergyFlow() {
             <GlassPanel className="p-4 text-center">
               <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Brick Min</p>
               <p className="text-2xl font-bold text-purple-400">
-                {latest?.brick_voltage_min != null ? `${fmtWithUnit(latest.brick_voltage_min, 'V', 3)}` : '--'}
+                {latest?.brick_voltage_min != null ? `${fmtWithUnit(latest.brick_voltage_min, 'V')}` : '--'}
               </p>
               {latest?.num_brick_voltage_min != null && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Brick #{latest.num_brick_voltage_min}</p>
@@ -540,7 +542,7 @@ export default function EnergyFlow() {
               <div>
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Isolation Ω</p>
                 <p className="text-sm font-semibold text-yellow-400">
-                  {latest?.isolation_resistance != null ? `${latest.isolation_resistance.toLocaleString()} kΩ` : '--'}
+                  {latest?.isolation_resistance != null ? `${fmtNumber(latest.isolation_resistance)} kΩ` : '--'}
                 </p>
               </div>
             </GlassPanel>

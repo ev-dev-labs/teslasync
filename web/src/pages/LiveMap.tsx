@@ -14,11 +14,11 @@ import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { formatDateShort } from '../lib/dateFormat'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { stateHexColor, COLOR } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function createVehicleIcon(status: string, heading: number = 0) {
-  usePageTitle('Live Map')
-  const color = status === 'driving' ? '#00f0ff' : status === 'charging' ? '#10b981' : status === 'online' ? '#10b981' : '#6b7280'
+  const color = stateHexColor(status)
   return divIcon({
     className: '',
     iconSize: [40, 40],
@@ -60,13 +60,13 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
       <div className="flex items-center justify-between mb-2.5">
         <div>
           <span className="text-sm font-semibold text-[var(--text-primary)] block">{vehicle.display_name || vehicle.vin}</span>
-          <span className="text-[10px] text-gray-600">{vehicle.model} {vehicle.trim_badging}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{vehicle.model} {vehicle.trim_badging}</span>
         </div>
         <StatusBadge status={status} size="sm" />
       </div>
       {state && (
         <>
-          <MetricBar label="Battery" value={state.battery_level} max={100} color={state.battery_level > 20 ? '#10b981' : '#ef4444'} />
+          <MetricBar label="Battery" value={state.battery_level} max={100} color={state.battery_level > 20 ? COLOR.GOOD : COLOR.BAD} />
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Gauge className="h-3 w-3 text-neon-cyan" />{Math.round(convertSpeed(state.speed))} {speedUnit}</span>
             <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><Navigation className="h-3 w-3 text-neon-cyan" />{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span>
@@ -89,6 +89,7 @@ function VehiclePanel({ vehicle, state, selected, onClick }: {
 }
 
 export default function LiveMap() {
+  usePageTitle('Live Map')
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { convertSpeed, convertDistance, convertTemp, speedUnit, distanceUnit, tempUnit } = useSettings()
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -198,7 +199,7 @@ export default function LiveMap() {
                 <div className="h-2 w-2 rounded-full bg-neon-green" style={{ boxShadow: '0 0 6px rgba(16,185,129,0.5)' }} />
                 <span className="text-[var(--text-secondary)]">{markers.length} tracked</span>
               </div>
-              <span className="text-[10px] text-gray-600 font-mono">Refresh 15s</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-mono">Refresh 15s</span>
             </div>
           </GlassPanel>
 
@@ -236,7 +237,7 @@ export default function LiveMap() {
             <GlassPanel className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-[var(--text-secondary)]">Drive Replay</span>
-                <span className="text-[10px] text-gray-600">{trailPositions.length} points</span>
+                <span className="text-[10px] text-[var(--text-muted)]">{trailPositions.length} points</span>
               </div>
               <div className="flex items-center gap-2">
                 {!replayMode ? (
@@ -271,7 +272,7 @@ export default function LiveMap() {
                   <div key={d.id} className="flex items-center justify-between text-[11px]">
                     <span className="text-[var(--text-secondary)]">{formatDateShort(d.start_date)}</span>
                     <span className="text-neon-cyan font-medium">{fmtNumber(convertDistance(d.distance))} {distanceUnit}</span>
-                    <span className="text-gray-600">{d.duration_min}m</span>
+                    <span className="text-[var(--text-muted)]">{d.duration_min}m</span>
                   </div>
                 ))}
               </div>

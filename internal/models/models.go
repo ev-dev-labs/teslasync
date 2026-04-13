@@ -850,7 +850,7 @@ type ClimateSnapshot struct {
 	HvacLeftTempRequest  *float64  `json:"hvac_left_temp_request,omitempty" db:"hvac_left_temp_request"`
 	HvacRightTempRequest *float64  `json:"hvac_right_temp_request,omitempty" db:"hvac_right_temp_request"`
 	CabinOverheatMode    *string   `json:"cabin_overheat_mode,omitempty" db:"cabin_overheat_mode"`
-	DefrostMode          *bool     `json:"defrost_mode,omitempty" db:"defrost_mode"`
+	DefrostMode          *string   `json:"defrost_mode,omitempty" db:"defrost_mode"`
 	BatteryHeaterOn      *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
 	HvacACEnabled        *bool     `json:"hvac_ac_enabled,omitempty" db:"hvac_ac_enabled"`
 	HvacAutoMode         *string   `json:"hvac_auto_mode,omitempty" db:"hvac_auto_mode"`

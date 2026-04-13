@@ -6,6 +6,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -103,8 +104,32 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	// Marshal params for logging
 	paramsJSON, _ := json.Marshal(body.Params)
 
+	// Track command lifecycle via FSM
+	fsm := cmdFSM.NewExecutionFSM(0, vehicleID, body.Command)
+
+	// Check if vehicle is awake (state from DB)
+	if vehicle.State == "asleep" || vehicle.State == "offline" {
+		fsm.MarkVehicleAsleep()
+		// Tesla client handles wake internally, but we track the lifecycle
+		fsm.MarkWakeConfirmed()
+		fsm.StartSending()
+	} else {
+		fsm.MarkVehicleAwake()
+	}
+
 	// Execute command via Tesla API
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
+
+	if cmdErr != nil {
+		category := "network"
+		fsm.MarkFailed(&cmdFSM.CommandError{
+			StatusCode: 500,
+			Message:    cmdErr.Error(),
+			Category:   category,
+		})
+	} else {
+		fsm.MarkSucceeded()
+	}
 
 	status := "success"
 	errMsg := ""
@@ -112,6 +137,10 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		status = "failed"
 		errMsg = cmdErr.Error()
 	}
+
+	log.Info().Str("command", body.Command).Int64("vehicle_id", vehicleID).
+		Str("fsm_state", string(fsm.State())).Str("status_msg", fsm.StatusMessage()).
+		Msg("command executed via FSM")
 
 	// Log the command
 	cl := &models.CommandLog{

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getLocationSnapshots, getLocationSnapshotLatest } from '../api'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, Badge, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, MetricCard, Badge, DataTable, type Column, Select } from '../components/ui'
 import { Navigation, MapPin, Home, Building, Star, Clock, AlertTriangle, TrendingUp, Route, Compass, Timer, TrafficCone, Satellite, Map, CircleDot, LocateFixed } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import clsx from 'clsx'
@@ -17,7 +17,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 interface NavTooltipPayload { name: string; value: number; color?: string }
 function NavTooltip({ active, payload, label }: { active?: boolean; payload?: NavTooltipPayload[]; label?: string }) {
-  usePageTitle('Navigation')
   if (!active || !payload?.length) return null
   return (
     <div className="glass-panel p-3 text-xs" style={{ background: 'var(--surface-2)', borderColor: 'var(--glass-border)' }}>
@@ -105,6 +104,7 @@ function TrafficDelayBadge({ minutes }: { minutes: number | null | undefined }) 
 /* ------------------------------------------------------------------ */
 
 export default function NavigationRoute() {
+  usePageTitle('Navigation')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -186,7 +186,7 @@ export default function NavigationRoute() {
       className: 'text-right',
       render: (row) => (
         <span className="whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-          {row.miles != null ? `${fmtNumber(convertDistance(row.miles * 1.60934))} ${distanceUnit}` : '—'}
+          {row.miles != null ? `${fmtNumber(convertDistance(row.miles))} ${distanceUnit}` : '—'}
         </span>
       ),
     },
@@ -275,14 +275,12 @@ export default function NavigationRoute() {
           icon={<Compass className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            label="Vehicle"
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -313,7 +311,7 @@ export default function NavigationRoute() {
                   <div className="flex items-center gap-1.5">
                     <Route className="h-4 w-4 text-neon-cyan" />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {fmtNumber(convertDistance(latest!.miles_to_arrival * 1.60934))} {distanceUnit}
+                      {fmtNumber(convertDistance(latest!.miles_to_arrival))} {distanceUnit}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>remaining</span>
                   </div>
@@ -668,7 +666,7 @@ export default function NavigationRoute() {
             <MetricCard
               icon={<Route className="h-4 w-4" />}
               label="Avg Trip Distance"
-              value={stats.avgDistance > 0 ? `${fmtNumber(convertDistance(stats.avgDistance * 1.60934))} ${distanceUnit}` : '—'}
+              value={stats.avgDistance > 0 ? `${fmtNumber(convertDistance(stats.avgDistance))} ${distanceUnit}` : '—'}
               subtitle={`${distanceUnit} to arrival average`}
               color="green"
             />

@@ -13,6 +13,7 @@ import {
   PieChart, Pie, Cell, Legend, RadialBarChart, RadialBar
 } from 'recharts'
 import { useSettings } from '../hooks/useSettings'
+import { COLOR } from '../lib/colors'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -20,7 +21,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const COLORS = ['#00f0ff', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#3b82f6']
 
 function formatDuration(min: number): string {
-  usePageTitle('Statistics')
   if (min < 60) return `${Math.round(min)}m`
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
@@ -28,6 +28,7 @@ function formatDuration(min: number): string {
 }
 
 export default function Statistics() {
+  usePageTitle('Statistics')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings()
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -87,7 +88,7 @@ export default function Statistics() {
 
   // Battery health radial
   const healthScore = battery?.health_score ?? 0
-  const radialData = [{ name: 'Health', value: healthScore, fill: healthScore >= 80 ? '#10b981' : healthScore >= 60 ? '#f59e0b' : '#ef4444' }]
+  const radialData = [{ name: 'Health', value: healthScore, fill: healthScore >= 80 ? COLOR.GOOD : healthScore >= 60 ? COLOR.WARN : COLOR.BAD }]
 
   return (
     <FadeIn>
@@ -120,13 +121,13 @@ export default function Statistics() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6 sm:mb-8">
           <MetricCard label="Vehicles" value={`${analytics?.total_vehicles ?? 0}`} icon={<Car className="h-3.5 w-3.5" />} color="cyan" />
-          <MetricCard label="Distance" value={`${fmtNumber(convertDistance(analytics?.total_distance_km ?? 0) / 1000, 1)}k ${distanceUnit}`} icon={<MapPin className="h-3.5 w-3.5" />} color="green" />
+          <MetricCard label="Distance" value={`${fmtNumber(convertDistance(analytics?.total_distance_km ?? 0) / 1000)}k ${distanceUnit}`} icon={<MapPin className="h-3.5 w-3.5" />} color="green" />
           <MetricCard label="Drives" value={`${analytics?.total_drives ?? 0}`} icon={<TrendingUp className="h-3.5 w-3.5" />} color="cyan" />
           <MetricCard label="Charges" value={`${analytics?.total_charging_sessions ?? 0}`} icon={<Battery className="h-3.5 w-3.5" />} color="amber" />
-          <MetricCard label="Energy" value={fmtWithUnit(analytics?.total_energy_kwh ?? 0, 'kWh', 0)} icon={<Zap className="h-3.5 w-3.5" />} color="purple" />
+          <MetricCard label="Energy" value={fmtWithUnit(analytics?.total_energy_kwh ?? 0, 'kWh')} icon={<Zap className="h-3.5 w-3.5" />} color="purple" />
           <MetricCard label="Cost" value={`$${fmtInt(analytics?.total_cost ?? 0)}`} icon={<Fuel className="h-3.5 w-3.5" />} color="red" />
           <MetricCard label="Efficiency" value={`${fmtInt(convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0))} ${efficiencyUnit}`} icon={<Gauge className="h-3.5 w-3.5" />} color="amber" />
-          <MetricCard label="CO₂ Saved" value={fmtWithUnit(energy?.co2_saved_kg ?? 0, 'kg', 0)} icon={<Clock className="h-3.5 w-3.5" />} color="cyan" />
+          <MetricCard label="CO₂ Saved" value={fmtWithUnit(energy?.co2_saved_kg ?? 0, 'kg')} icon={<Clock className="h-3.5 w-3.5" />} color="cyan" />
         </div>
       )}
 
@@ -141,12 +142,12 @@ export default function Statistics() {
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="-mt-16 text-center">
-              <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{healthScore}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>{fmtNumber(healthScore)}</p>
               <p className="text-xs text-[var(--text-muted)]">of 100</p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4 text-center w-full">
               <div>
-                <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{fmtPercent(battery?.degradation_pct ?? 0, 1)}</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{fmtPercent(battery?.degradation_pct ?? 0)}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">Degradation</p>
               </div>
               <div>
@@ -179,12 +180,12 @@ export default function Statistics() {
           <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Mileage Summary</h3>
           <div className="space-y-4">
             {[
-              { label: 'Total Distance', value: `${fmtInt(convertDistance(mileage?.total_distance ?? 0))} ${distanceUnit}`, color: '#00f0ff' },
-              { label: 'Daily Average', value: `${fmtNumber(convertDistance(mileage?.avg_daily ?? 0), 1)} ${distanceUnit}`, color: '#10b981' },
-              { label: 'Best Day', value: `${fmtInt(convertDistance(mileage?.max_daily ?? 0))} ${distanceUnit}`, color: '#f59e0b' },
-              { label: 'Total Energy', value: fmtWithUnit(mileage?.total_energy ?? 0, 'kWh', 0), color: '#8b5cf6' },
-              { label: 'Total Drives', value: `${mileage?.total_drives ?? 0}`, color: '#ec4899' },
-              { label: 'Days Tracked', value: `${mileage?.days_tracked ?? 0}`, color: '#3b82f6' },
+              { label: 'Total Distance', value: `${fmtInt(convertDistance(mileage?.total_distance ?? 0))} ${distanceUnit}`, color: COLOR.CYAN },
+              { label: 'Daily Average', value: `${fmtNumber(convertDistance(mileage?.avg_daily ?? 0))} ${distanceUnit}`, color: COLOR.GOOD },
+              { label: 'Best Day', value: `${fmtInt(convertDistance(mileage?.max_daily ?? 0))} ${distanceUnit}`, color: COLOR.WARN },
+              { label: 'Total Energy', value: fmtWithUnit(mileage?.total_energy ?? 0, 'kWh'), color: COLOR.PURPLE },
+              { label: 'Total Drives', value: `${mileage?.total_drives ?? 0}`, color: COLOR.CYAN },
+              { label: 'Days Tracked', value: `${mileage?.days_tracked ?? 0}`, color: COLOR.GOOD },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

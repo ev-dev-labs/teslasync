@@ -8,9 +8,11 @@ import {
   getMediaLatest, getLocationSnapshotLatest,
 } from '../api'
 import { cleanNil } from '../lib/cleanNil'
+import { GEAR_BADGE_COLORS } from '../lib/gear'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { formatDateShort } from '../lib/dateFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
+import { batteryColor, boolColor, boolColorMuted, powerColor, COLOR } from '../lib/colors'
 import {
   Car, AlertCircle, Activity, Radio, Shield, Lock, Unlock,
   ArrowUpRight, ChevronRight, Zap, Route, BatteryCharging, Bell, Clock,
@@ -28,10 +30,10 @@ import { useSettings } from '../hooks/useSettings'
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { ChartTooltip } from '../components/Charts'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { type VehicleState as VehicleStateValue } from '../lib/enums'
 
 /* ---------- small hero vehicle card in the fleet strip ---------- */
 function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: VehicleState | null }) {
-  usePageTitle('Dashboard')
   const status = getVehicleStatus(vehicle, state)
   const { convertDistance, convertTemp, distanceUnit } = useSettings()
   return (
@@ -48,7 +50,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-xs text-[var(--text-muted)]">Battery</p>
-              <p className="text-sm font-bold" style={{ color: state.battery_level > 50 ? '#10b981' : '#f59e0b' }}>{state.battery_level}%</p>
+              <p className="text-sm font-bold" style={{ color: batteryColor(state.battery_level) }}>{state.battery_level}%</p>
             </div>
             <div>
               <p className="text-xs text-[var(--text-muted)]">Range</p>
@@ -60,7 +62,7 @@ function FleetVehicleStrip({ vehicle, state }: { vehicle: Vehicle; state?: Vehic
             </div>
           </div>
         ) : (
-          <p className="text-xs text-gray-600 text-center">Asleep</p>
+          <p className="text-xs text-[var(--text-muted)] text-center">Asleep</p>
         )}
       </GlassPanel>
     </Link>
@@ -82,18 +84,19 @@ function formatTimeAgo(date: Date): string {
 
 /* ---------- Main Dashboard ---------- */
 export default function Dashboard() {
+  usePageTitle('Dashboard')
   const queryClient = useQueryClient()
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery({
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useQuery({
     queryKey: ['vehicles'], queryFn: getVehicles,
   })
   const { data: auth } = useQuery({
     queryKey: ['auth-status'], queryFn: getAuthStatus,
   })
-  const { data: analytics } = useQuery({
+  const { data: analytics, error: analyticsError } = useQuery({
     queryKey: ['fleet-analytics', '30'], queryFn: () => getFleetAnalytics(30),
   })
-  const { data: alerts } = useQuery({
+  const { data: alerts, error: alertsError } = useQuery({
     queryKey: ['alerts'], queryFn: () => getAlerts(10),
   })
   const { convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure, isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit } = useSettings()
@@ -104,7 +107,7 @@ export default function Dashboard() {
 
   // Get state for the primary (first) vehicle
   const primaryVehicle = vehicles?.[0]
-  const { data: primaryStateData, dataUpdatedAt } = useQuery({
+  const { data: primaryStateData, dataUpdatedAt, error: stateError } = useQuery({
     queryKey: ['vehicle-state', primaryVehicle?.id],
     queryFn: () => getVehicleState(primaryVehicle!.id),
     enabled: !!primaryVehicle,
@@ -119,12 +122,12 @@ export default function Dashboard() {
   const firmwareVersion = live.version || live.swUpdateVersion || primaryState?.software_version || '—'
 
   // Get recent drives and charges for the primary vehicle
-  const { data: recentDrives } = useQuery({
+  const { data: recentDrives, error: drivesError } = useQuery({
     queryKey: ['drives', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getDrives(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
   })
-  const { data: recentCharges } = useQuery({
+  const { data: recentCharges, error: chargesError } = useQuery({
     queryKey: ['charging', primaryVehicle?.id, 'recent-5'],
     queryFn: () => getChargingSessions(primaryVehicle!.id, 5),
     enabled: !!primaryVehicle,
@@ -147,48 +150,50 @@ export default function Dashboard() {
   })
 
   // Live telemetry queries for primary vehicle
-  const { data: motorData } = useQuery({
+  const { data: motorData, error: motorError } = useQuery({
     queryKey: ['motor-latest', primaryVehicle?.id],
     queryFn: () => getMotorLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: climateData } = useQuery({
+  const { data: climateData, error: climateError } = useQuery({
     queryKey: ['climate-latest', primaryVehicle?.id],
     queryFn: () => getClimateLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: securityData } = useQuery({
+  const { data: securityData, error: securityError } = useQuery({
     queryKey: ['security-latest', primaryVehicle?.id],
     queryFn: () => getSecurityLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: tireData } = useQuery({
+  const { data: tireData, error: tireError } = useQuery({
     queryKey: ['tire-latest', primaryVehicle?.id],
     queryFn: () => getLatestTirePressure(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: mediaData } = useQuery({
+  const { data: mediaData, error: mediaError } = useQuery({
     queryKey: ['media-latest', primaryVehicle?.id],
     queryFn: () => getMediaLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
-  const { data: locationData } = useQuery({
+  const { data: locationData, error: locationError } = useQuery({
     queryKey: ['location-latest', primaryVehicle?.id],
     queryFn: () => getLocationSnapshotLatest(primaryVehicle!.id),
     enabled: !!primaryVehicle,
     refetchInterval: 5000,
     staleTime: 30_000,
   })
+
+  const anyError = vehiclesError || analyticsError || alertsError || stateError || drivesError || chargesError || motorError || climateError || securityError || tireError || mediaError || locationError
 
   const onlineCount= vehicles?.filter(v => v.state === 'online').length ?? 0
   const totalCount = vehicles?.length ?? 0
@@ -231,14 +236,14 @@ export default function Dashboard() {
   const activityItems: { type: string; title: string; subtitle: string; time: Date }[] = []
   recentDrives?.forEach(d => activityItems.push({
     type: 'drive',
-    title: `${fmtNumber(convertDistance(d.distance ?? 0), 1)} ${distanceUnit} drive`,
+    title: `${fmtNumber(convertDistance(d.distance ?? 0))} ${distanceUnit} drive`,
     subtitle: `${Math.floor((d.duration_min ?? 0) / 60)}h ${Math.round((d.duration_min ?? 0) % 60)}m · ${d.start_battery_level ?? '?'}% → ${d.end_battery_level ?? '?'}%`,
     time: new Date(d.start_date),
   }))
   recentCharges?.forEach(s => activityItems.push({
     type: 'charge',
-    title: `${fmtNumber(s.charge_energy_added ?? 0, 1)} kWh charged`,
-    subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}% · ${typeof s.cost === 'number' ? `$${fmtNumber(s.cost, 2)}` : ''}`,
+    title: `${fmtNumber(s.charge_energy_added ?? 0)} kWh charged`,
+    subtitle: `${s.start_battery_level ?? '?'}% → ${s.end_battery_level ?? '?'}% · ${typeof s.cost === 'number' ? `$${fmtNumber(s.cost)}` : ''}`,
     time: new Date(s.start_date),
   }))
   activityItems.sort((a, b) => b.time.getTime() - a.time.getTime())
@@ -275,13 +280,20 @@ export default function Dashboard() {
                 </span>
               </Link>
             )}
-            <StatusPill color={connected ? '#10b981' : '#6b7280'} pulse={connected}>
+            <StatusPill color={boolColorMuted(connected)} pulse={connected}>
               <Radio className="h-3 w-3" />
               {connected ? 'LIVE' : 'OFFLINE'}
             </StatusPill>
           </div>
         }
       />
+
+      {/* Data error banner */}
+      {anyError && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(anyError as Error).message}
+        </div>
+      )}
 
       {/* Auth warning */}
       {auth && !auth.authenticated && (
@@ -337,15 +349,15 @@ export default function Dashboard() {
                     <div className="mt-4 sm:mt-6">
                       {/* Context-aware radial gauges — show what's relevant to current state */}
                       <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
-                        <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={primaryState.battery_level > 50 ? '#10b981' : '#f59e0b'} size={70} />
-                        <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color="#00f0ff" size={70} />
+                        <RadialGauge value={primaryState.battery_level} max={100} label="Battery" unit="%" color={batteryColor(primaryState.battery_level)} size={70} />
+                        <RadialGauge value={Math.round(convertDistance(primaryState.rated_range))} max={600} label="Range" unit={distanceUnit} color={COLOR.CYAN} size={70} />
                         {/* Show Speed gauge only when driving */}
-                        {(primaryVehicle?.state === 'driving' || primaryState.speed > 0) && (
-                          <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color="#a855f7" size={70} />
+                        {((primaryVehicle?.state as VehicleStateValue) === 'driving' || primaryState.speed > 0) && (
+                          <RadialGauge value={Math.round(convertSpeed(primaryState.speed))} max={250} label="Speed" unit={speedUnit} color={COLOR.PURPLE} size={70} />
                         )}
                         {/* Show Charge Power gauge when charging */}
                         {primaryState.is_charging && (
-                          <RadialGauge value={Math.round(primaryState.charger_power ?? 0)} max={250} label="Power" unit="kW" color="#10b981" size={70} />
+                          <RadialGauge value={Math.round(primaryState.charger_power ?? 0)} max={250} label="Power" unit="kW" color={COLOR.GOOD} size={70} />
                         )}
                         <RadialGauge value={Math.round(convertTemp(primaryState.inside_temp))} max={isFahrenheit ? 122 : 50} label="Inside" unit={tempUnit} color="#f97316" size={70} />
                         <RadialGauge value={Math.round(convertTemp(primaryState.outside_temp))} max={isFahrenheit ? 122 : 50} label="Outside" unit={tempUnit} color="#3b82f6" size={70} />
@@ -371,7 +383,7 @@ export default function Dashboard() {
                               <p className="text-[var(--text-muted)]">Time to Full</p>
                               <p className="text-sm font-bold text-[var(--text-primary)]">
                                 {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0
-                                  ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h`
+                                  ? `${fmtNumber(primaryState.time_to_full_charge)}h`
                                   : '—'}
                               </p>
                               {primaryState.time_to_full_charge != null && primaryState.time_to_full_charge > 0 && (
@@ -387,7 +399,7 @@ export default function Dashboard() {
                       {/* Context-aware telemetry grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {(() => {
-                          const isDriving = primaryVehicle?.state === 'driving' || primaryState.speed > 0
+                          const isDriving = primaryVehicle?.state === ('driving' as VehicleStateValue) || primaryState.speed > 0
                           const isCharging = primaryState.is_charging
 
                           // Build cards based on current state
@@ -397,34 +409,34 @@ export default function Dashboard() {
                             // Driving: speed, power, odometer, heading
                             cards.push(
                               { icon: Gauge, label: 'Speed', value: `${Math.round(convertSpeed(primaryState.speed))} ${speedUnit}`, color: '#a855f7' },
-                              { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
-                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: powerColor(primaryState.power) },
+                              { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )
                           } else if (isCharging) {
                             // Charging: charge rate, energy, charge limit, cable
                             cards.push(
-                              { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: '#10b981' },
-                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
+                              { icon: Zap, label: 'Charge Rate', value: `${fmtInt(convertDistance(primaryState.charge_rate ?? 0))} ${distanceUnit}/h`, color: COLOR.GOOD },
+                              { icon: Clock, label: 'Time to Full', value: primaryState.time_to_full_charge > 0 ? `${fmtNumber(primaryState.time_to_full_charge)}h` : '—', color: COLOR.WARN },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
-                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                             )
                           } else {
                             // Parked/Online: temps, odometer, range
                             cards.push(
-                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp), 1) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: '#f97316' },
-                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp), 1) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: '#3b82f6' },
-                              { icon: Navigation, label: 'Odometer', value: `${Math.round(convertDistance(primaryState.odometer)).toLocaleString()} ${distanceUnit}`, color: '#a855f7' },
+                              { icon: Thermometer, label: 'Inside', value: `${primaryState.inside_temp != null ? fmtNumber(convertTemp(primaryState.inside_temp)) : '—'}${primaryState.inside_temp != null ? tempUnit : ''}`, color: COLOR.WARN },
+                              { icon: Thermometer, label: 'Outside', value: `${primaryState.outside_temp != null ? fmtNumber(convertTemp(primaryState.outside_temp)) : '—'}${primaryState.outside_temp != null ? tempUnit : ''}`, color: COLOR.CYAN },
+                              { icon: Navigation, label: 'Odometer', value: `${fmtInt(convertDistance(primaryState.odometer))} ${distanceUnit}`, color: '#a855f7' },
                               { icon: Activity, label: 'Ideal Range', value: `${Math.round(convertDistance(primaryState.ideal_range))} ${distanceUnit}`, color: '#00f0ff' },
                             )
                           }
 
                           // Always show lock and sentry
                           cards.push(
-                            { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: primaryState.is_locked ? '#10b981' : '#f59e0b' },
-                            { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? '#ef4444' : '#374151' },
+                            { icon: primaryState.is_locked ? Lock : Unlock, label: 'Status', value: primaryState.is_locked ? 'Locked' : 'Unlocked', color: boolColor(primaryState.is_locked) },
+                            { icon: Shield, label: 'Sentry', value: primaryState.sentry_mode ? 'Active' : 'Off', color: primaryState.sentry_mode ? COLOR.BAD : COLOR.DARK },
                             { icon: Gauge, label: 'Firmware', value: firmwareVersion, color: '#6366f1' },
-                            { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: primaryState.power > 0 ? '#f59e0b' : primaryState.power < 0 ? '#10b981' : '#374151' },
+                            { icon: Zap, label: 'Power', value: `${fmtNumber(primaryState.power)} kW`, color: powerColor(primaryState.power) },
                           )
 
                           return cards.map(item => (
@@ -483,7 +495,7 @@ export default function Dashboard() {
               <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Fleet Size</p>
                 <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={totalCount} /></p>
-                <p className="text-[10px] text-gray-600 mt-1">{onlineCount} online</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{onlineCount} online</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
@@ -506,16 +518,16 @@ export default function Dashboard() {
                 <p className="text-xl sm:text-2xl font-bold text-neon-amber">
                   <AnimatedNumber value={convertEfficiency(analytics?.avg_efficiency_wh_km ?? 0)} suffix={` ${efficiencyUnit}`} />
                 </p>
-                <p className="text-[10px] text-gray-600 mt-1">fleet average</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">fleet average</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
               <GlassPanel className="p-3 sm:p-4 text-center h-full flex flex-col justify-center">
                 <p className="metric-label mb-1 text-[10px] sm:text-xs">Alerts</p>
-                <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? '#ef4444' : '#10b981' }}>
+                <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? COLOR.BAD : COLOR.GOOD }}>
                   <AnimatedNumber value={unreadAlerts} />
                 </p>
-                <p className="text-[10px] text-gray-600 mt-1">unread</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">unread</p>
               </GlassPanel>
             </StaggerItem>
           </StaggerContainer>
@@ -543,14 +555,14 @@ export default function Dashboard() {
                         title={item.title}
                         subtitle={item.subtitle}
                         time={formatTimeAgo(item.time)}
-                        color={item.type === 'drive' ? '#00f0ff' : '#10b981'}
+                        color={item.type === 'drive' ? COLOR.CYAN : COLOR.GOOD}
                         isLast={i === Math.min(activityItems.length, 8) - 1}
                       />
                     ))}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Clock className="h-6 w-6 text-gray-600 mb-2" />
+                    <Clock className="h-6 w-6 text-[var(--text-muted)] mb-2" />
                     <p className="text-xs text-[var(--text-muted)]">No activity yet. Start driving!</p>
                   </div>
                 )}
@@ -585,7 +597,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="h-36 sm:h-48 flex items-center justify-center">
-                      <p className="text-xs text-gray-600">Charge data will appear here</p>
+                      <p className="text-xs text-[var(--text-muted)]">Charge data will appear here</p>
                     </div>
                   )}
                 </GlassPanel>
@@ -606,7 +618,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Total Cost</span>
-                      <span className="text-sm font-bold text-neon-amber">${fmtNumber((analytics?.total_cost ?? 0), 2)}</span>
+                      <span className="text-sm font-bold text-neon-amber">${fmtNumber((analytics?.total_cost ?? 0))}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">CO2 Saved</span>
@@ -704,7 +716,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Gear</span>
                       {cleanNil(motorData.gear) ? (
-                        <Badge color={motorData.gear === 'D' ? 'green' : motorData.gear === 'R' ? 'red' : motorData.gear === 'N' ? 'amber' : 'neutral'}>
+                        <Badge color={GEAR_BADGE_COLORS[motorData.gear ?? ''] ?? 'neutral'}>
                           {cleanNil(motorData.gear)}
                         </Badge>
                       ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
@@ -713,7 +725,7 @@ export default function Dashboard() {
                       <span className="text-xs text-[var(--text-secondary)]">G-Force</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
                         {motorData.lateral_accel != null || motorData.longitudinal_accel != null
-                          ? `${fmtNumber(Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)), 2)}g`
+                          ? `${fmtNumber(Math.max(Math.abs(motorData.lateral_accel ?? 0), Math.abs(motorData.longitudinal_accel ?? 0)))}g`
                           : '—'}
                       </span>
                     </div>
@@ -747,7 +759,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">HVAC Power</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {climateData.hvac_power != null ? `${fmtNumber(climateData.hvac_power, 1)} kW` : '—'}
+                        {climateData.hvac_power != null ? `${fmtNumber(climateData.hvac_power)} kW` : '—'}
                       </span>
                     </div>
                     <div>
@@ -867,7 +879,7 @@ export default function Dashboard() {
                           <div key={t.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
                             <p className="text-[10px] text-[var(--text-muted)] uppercase">{t.label}</p>
                             <p className={`text-sm font-bold ${getPressureColor(t.value)}`}>
-                              {t.value != null ? fmtNumber(convertPressure(t.value), 1) : '—'}
+                              {t.value != null ? fmtNumber(convertPressure(t.value)) : '—'}
                             </p>
                             <p className="text-[9px] text-[var(--text-muted)]">{pressureUnit}</p>
                           </div>
@@ -953,7 +965,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-secondary)]">Distance</span>
                       <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934), 1)} ${distanceUnit}` : '—'}
+                        {locationData.miles_to_arrival != null ? `${fmtNumber(convertDistance(locationData.miles_to_arrival))} ${distanceUnit}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -1038,7 +1050,7 @@ export default function Dashboard() {
                 ].map(f => (
                   <GlassPanel key={f.label} className="p-3 text-center">
                     <f.icon className="h-6 w-6 mx-auto mb-2" style={{ color: f.color }} />
-                    <p className="text-xs font-medium text-gray-300">{f.label}</p>
+                    <p className="text-xs font-medium text-[var(--text-secondary)]">{f.label}</p>
                   </GlassPanel>
                 ))}
               </div>

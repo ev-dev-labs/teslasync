@@ -6,13 +6,13 @@ import { BatteryCharging, Clock, Zap, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { COLOR } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function heatColor(count: number, max: number): string {
-  usePageTitle('Charging Heatmap')
   if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)'
   const ratio = count / max
   if (ratio < 0.25) return 'rgba(0, 240, 255, 0.15)'
@@ -22,6 +22,7 @@ function heatColor(count: number, max: number): string {
 }
 
 export default function ChargingHeatmap() {
+  usePageTitle('Charging Heatmap')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -53,7 +54,7 @@ export default function ChargingHeatmap() {
     : null
 
   const locationData = useMemo(
-    () => (data?.locations ?? []).map(l => ({ ...l, fill: '#f59e0b' })),
+    () => (data?.locations ?? []).map(l => ({ ...l, fill: COLOR.WARN })),
     [data]
   )
 
@@ -83,7 +84,7 @@ export default function ChargingHeatmap() {
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StaggerItem><MetricCard label="Total Sessions" value={data?.summary.total_sessions ?? 0} icon={<BatteryCharging className="h-4 w-4" />} color="cyan" /></StaggerItem>
             <StaggerItem><MetricCard label="Total kWh" value={`${fmtNumber(data?.summary.total_kwh ?? 0)}`} icon={<Zap className="h-4 w-4" />} color="green" /></StaggerItem>
-            <StaggerItem><MetricCard label="Total Cost" value={`$${fmtNumber(data?.summary.total_cost ?? 0, 2)}`} icon={<DollarSign className="h-4 w-4" />} color="amber" /></StaggerItem>
+            <StaggerItem><MetricCard label="Total Cost" value={`$${fmtNumber(data?.summary.total_cost ?? 0)}`} icon={<DollarSign className="h-4 w-4" />} color="amber" /></StaggerItem>
             <StaggerItem><MetricCard label="Avg Duration" value={`${fmtInt(data?.summary.avg_duration ?? 0)} min`} icon={<Clock className="h-4 w-4" />} color="purple" /></StaggerItem>
           </StaggerContainer>
 

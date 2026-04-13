@@ -21,7 +21,6 @@ type SortKey = 'date' | 'energy' | 'cost' | 'duration' | 'power'
 type ChargerFilter = 'all' | 'supercharger' | 'dc' | 'home'
 
 function formatDuration(min: number): string {
-  usePageTitle('Charging')
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
@@ -37,7 +36,7 @@ const chargerLabels = { supercharger: 'Supercharger', dc: 'DC Fast', home: 'Home
 
 function SessionCard({ session, convertDistance, distanceUnit }: { session: ChargingSession; convertDistance: (km: number) => number; distanceUnit: string }) {
   const batteryGain = (session.end_battery_level ?? session.start_battery_level) - session.start_battery_level
-  const avgRate = session.duration_min > 0 ? fmtNumber(session.charge_energy_added / (session.duration_min / 60), 1) : null
+  const avgRate = session.duration_min > 0 ? fmtNumber(session.charge_energy_added / (session.duration_min / 60)) : null
   const cat = getChargerCategory(session.fast_charger_type)
   const costPerKwh = session.cost && session.charge_energy_added > 0 ? session.cost / session.charge_energy_added : null
   const efficiency = session.charge_energy_added > 0 && session.charge_energy_used && session.charge_energy_used > 0
@@ -76,13 +75,13 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
               {batteryGain > 0 && <span className="text-xs text-neon-green font-medium">+{batteryGain}%</span>}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <InlineMetric icon={<Zap className="h-3 w-3" />} value={fmtWithUnit(session.charge_energy_added ?? 0, 'kWh', 1)} />
+              <InlineMetric icon={<Zap className="h-3 w-3" />} value={fmtWithUnit(session.charge_energy_added ?? 0, 'kWh')} />
               <InlineMetric icon={<Clock className="h-3 w-3" />} value={formatDuration(session.duration_min)} />
-              {session.charger_power != null && <InlineMetric icon={<TrendingUp className="h-3 w-3" />} value={`${fmtNumber(session.charger_power, 1)} kW peak`} />}
+              {session.charger_power != null && <InlineMetric icon={<TrendingUp className="h-3 w-3" />} value={`${fmtNumber(session.charger_power)} kW peak`} />}
               {avgRate && <InlineMetric icon={<Plug className="h-3 w-3" />} value={`~${avgRate} kW avg`} />}
-              {typeof session.cost === 'number' && <InlineMetric icon={<DollarSign className="h-3 w-3" />} value={`$${fmtNumber(session.cost, 2)}`} className="text-neon-green" />}
-              {typeof costPerKwh === 'number' && <span className="text-gray-600">(${fmtNumber(costPerKwh, 3)}/kWh)</span>}
-              {typeof efficiency === 'number' && <InlineMetric icon={<Activity className="h-3 w-3" />} value={`${fmtPercent(efficiency, 1)} eff`} className="text-neon-cyan" />}
+              {typeof session.cost === 'number' && <InlineMetric icon={<DollarSign className="h-3 w-3" />} value={`$${fmtNumber(session.cost)}`} className="text-neon-green" />}
+              {typeof costPerKwh === 'number' && <span className="text-[var(--text-muted)]">(${fmtNumber(costPerKwh)}/kWh)</span>}
+              {typeof efficiency === 'number' && <InlineMetric icon={<Activity className="h-3 w-3" />} value={`${fmtPercent(efficiency)} eff`} className="text-neon-cyan" />}
               {typeof rangeGained === 'number' && rangeGained > 0 && <span className="flex items-center gap-1 text-neon-purple">+{fmtInt(rangeGained)} {distanceUnit}</span>}
             </div>
             {chargerSpec && (
@@ -106,6 +105,7 @@ function SessionCard({ session, convertDistance, distanceUnit }: { session: Char
 }
 
 export default function Charging() {
+  usePageTitle('Charging')
   const { convertDistance, distanceUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -374,7 +374,7 @@ export default function Charging() {
                 <p className="text-[10px] text-[var(--text-muted)]">Monthly Avg</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtWithUnit(stats.totalEnergy / stats.count, 'kWh', 1)}</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtWithUnit(stats.totalEnergy / stats.count, 'kWh')}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">Per Session</p>
               </div>
             </div>
@@ -433,12 +433,12 @@ export default function Charging() {
                   {costByType.map(ct => (
                     <div key={ct.name}>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-300">{ct.name}</span>
-                        <span className="text-[var(--text-primary)] font-medium">{fmtWithUnit(ct.energy, 'kWh', 0)}</span>
+                        <span className="text-[var(--text-secondary)]">{ct.name}</span>
+                        <span className="text-[var(--text-primary)] font-medium">{fmtWithUnit(ct.energy, 'kWh')}</span>
                       </div>
                       <div className="flex justify-between text-xs text-[var(--text-muted)]">
-                        <span>${fmtNumber(ct.cost, 2)} total</span>
-                        <span>${fmtNumber(ct.perKwh, 3)}/kWh</span>
+                        <span>${fmtNumber(ct.cost)} total</span>
+                        <span>${fmtNumber(ct.perKwh)}/kWh</span>
                       </div>
                     </div>
                   ))}
@@ -478,9 +478,9 @@ export default function Charging() {
                 )}
               </div>
               <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
-                <span>AC: {acDcBreakdown.ac.energy >= 1000 ? fmtWithUnit(acDcBreakdown.ac.energy / 1000, 'MWh', 2) : fmtWithUnit(acDcBreakdown.ac.energy, 'kWh', 1)}</span>
-                <span>Total: {acDcBreakdown.total.energy >= 1000 ? fmtWithUnit(acDcBreakdown.total.energy / 1000, 'MWh', 2) : fmtWithUnit(acDcBreakdown.total.energy, 'kWh', 1)}</span>
-                <span>DC: {acDcBreakdown.dc.energy >= 1000 ? fmtWithUnit(acDcBreakdown.dc.energy / 1000, 'MWh', 2) : fmtWithUnit(acDcBreakdown.dc.energy, 'kWh', 1)}</span>
+                <span>AC: {acDcBreakdown.ac.energy >= 1000 ? fmtWithUnit(acDcBreakdown.ac.energy / 1000, 'MWh') : fmtWithUnit(acDcBreakdown.ac.energy, 'kWh')}</span>
+                <span>Total: {acDcBreakdown.total.energy >= 1000 ? fmtWithUnit(acDcBreakdown.total.energy / 1000, 'MWh') : fmtWithUnit(acDcBreakdown.total.energy, 'kWh')}</span>
+                <span>DC: {acDcBreakdown.dc.energy >= 1000 ? fmtWithUnit(acDcBreakdown.dc.energy / 1000, 'MWh') : fmtWithUnit(acDcBreakdown.dc.energy, 'kWh')}</span>
               </div>
             </div>
             {/* Stats Table */}
@@ -489,12 +489,12 @@ export default function Charging() {
                 columns={[
                   { key: 'type', header: 'Type', render: (r) => <span className="font-medium" style={{ color: r.color }}>{r.label}</span> },
                   { key: 'sessions', header: 'Sessions', render: (r) => <span className="text-[var(--text-primary)]">{r.count}</span>, className: 'text-right' },
-                  { key: 'energy', header: 'Energy', render: (r) => <span className="text-[var(--text-primary)]">{r.energy >= 1000 ? fmtWithUnit(r.energy / 1000, 'MWh', 2) : fmtWithUnit(r.energy, 'kWh', 1)}</span>, className: 'text-right' },
-                  { key: 'cost', header: 'Cost', render: (r) => <span className="text-neon-amber">${fmtNumber(r.cost, 2)}</span>, className: 'text-right' },
-                  { key: 'perKwh', header: '$/kWh', render: (r) => <span className="text-gray-300">${r.energy > 0 ? fmtNumber(r.cost / r.energy, 3) : '—'}</span>, className: 'text-right' },
-                  { key: 'avgEnergy', header: 'Avg Energy', render: (r) => <span className="text-gray-300">{fmtWithUnit(r.energy / r.count, 'kWh', 1)}</span>, className: 'text-right' },
-                  { key: 'avgTime', header: 'Avg Time', render: (r) => <span className="text-gray-300">{formatDuration(r.totalDuration / r.count)}</span>, className: 'text-right' },
-                  { key: 'free', header: 'Free', render: (r) => <span className="text-neon-green">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh', 1)})` : '—'}</span>, className: 'text-right' },
+                  { key: 'energy', header: 'Energy', render: (r) => <span className="text-[var(--text-primary)]">{r.energy >= 1000 ? fmtWithUnit(r.energy / 1000, 'MWh') : fmtWithUnit(r.energy, 'kWh')}</span>, className: 'text-right' },
+                  { key: 'cost', header: 'Cost', render: (r) => <span className="text-neon-amber">${fmtNumber(r.cost)}</span>, className: 'text-right' },
+                  { key: 'perKwh', header: '$/kWh', render: (r) => <span className="text-[var(--text-secondary)]">${r.energy > 0 ? fmtNumber(r.cost / r.energy) : '—'}</span>, className: 'text-right' },
+                  { key: 'avgEnergy', header: 'Avg Energy', render: (r) => <span className="text-[var(--text-secondary)]">{fmtWithUnit(r.energy / r.count, 'kWh')}</span>, className: 'text-right' },
+                  { key: 'avgTime', header: 'Avg Time', render: (r) => <span className="text-[var(--text-secondary)]">{formatDuration(r.totalDuration / r.count)}</span>, className: 'text-right' },
+                  { key: 'free', header: 'Free', render: (r) => <span className="text-neon-green">{r.freeCount > 0 ? `${r.freeCount} (${fmtWithUnit(r.freeEnergy, 'kWh')})` : '—'}</span>, className: 'text-right' },
                 ] as Column<{ label: string; color: string; count: number; energy: number; cost: number; totalDuration: number; freeCount: number; freeEnergy: number }>[]}
                 data={[{ label: 'AC Charging', color: '#3b82f6', ...acDcBreakdown.ac }, { label: 'DC Charging', color: '#f59e0b', ...acDcBreakdown.dc }].filter(r => r.count > 0)}
                 keyExtractor={(r) => r.label}
@@ -505,7 +505,7 @@ export default function Charging() {
             {acDcBreakdown.total.freeCount > 0 && (
               <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-center gap-4 text-xs text-[var(--text-secondary)]">
                 <span>Free charged: <strong className="text-neon-green">{acDcBreakdown.total.freeCount} sessions</strong></span>
-                <span>Free energy: <strong className="text-neon-green">{fmtWithUnit(acDcBreakdown.total.freeEnergy, 'kWh', 1)}</strong></span>
+                <span>Free energy: <strong className="text-neon-green">{fmtWithUnit(acDcBreakdown.total.freeEnergy, 'kWh')}</strong></span>
               </div>
             )}
           </GlassPanel>
@@ -552,7 +552,7 @@ export default function Charging() {
                 <p className="text-[10px] text-[var(--text-muted)]">Avg Duration</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-neon-purple">{fmtWithUnit(stats.avgPower, 'kW', 1)}</p>
+                <p className="text-lg font-bold text-neon-purple">{fmtWithUnit(stats.avgPower, 'kW')}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">Avg Power</p>
               </div>
               <div>
@@ -560,11 +560,11 @@ export default function Charging() {
                 <p className="text-[10px] text-[var(--text-muted)]">Top Charger ({enhancedStats.mostCommonType[1]}×)</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-neon-amber">${fmtNumber(stats.totalCost, 2)}</p>
+                <p className="text-lg font-bold text-neon-amber">${fmtNumber(stats.totalCost)}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">Total Cost</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-neon-green">${fmtNumber(stats.avgCostPerKwh, 3)}</p>
+                <p className="text-lg font-bold text-neon-green">${fmtNumber(stats.avgCostPerKwh)}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">Avg $/kWh</p>
               </div>
             </div>
@@ -582,26 +582,26 @@ export default function Charging() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <GlassPanel className="p-5 text-center">
-                <p className="text-2xl font-bold text-neon-cyan">{fmtPercent(efficiencyStats.avgEfficiency, 1)}</p>
+                <p className="text-2xl font-bold text-neon-cyan">{fmtPercent(efficiencyStats.avgEfficiency)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Average Efficiency</p>
                 <div className="mt-2 h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
                   <div className="h-full rounded-full bg-neon-cyan" style={{ width: `${Math.min(efficiencyStats.avgEfficiency, 100)}%` }} />
                 </div>
               </GlassPanel>
               <GlassPanel className="p-5 text-center">
-                <p className="text-2xl font-bold text-neon-green">{fmtPercent(efficiencyStats.best.efficiency, 1)}</p>
+                <p className="text-2xl font-bold text-neon-green">{fmtPercent(efficiencyStats.best.efficiency)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Best Session</p>
                 <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(efficiencyStats.best.date)}</p>
               </GlassPanel>
               <GlassPanel className="p-5 text-center">
-                <p className="text-2xl font-bold text-neon-red">{fmtPercent(efficiencyStats.worst.efficiency, 1)}</p>
+                <p className="text-2xl font-bold text-neon-red">{fmtPercent(efficiencyStats.worst.efficiency)}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Worst Session</p>
                 <p className="text-[9px] text-[var(--text-muted)]">{formatDateTime(efficiencyStats.worst.date)}</p>
               </GlassPanel>
               <GlassPanel className="p-5 text-center">
-                <p className="text-2xl font-bold text-neon-amber">{fmtWithUnit(efficiencyStats.wallLoss, 'kWh', 1)}</p>
+                <p className="text-2xl font-bold text-neon-amber">{fmtWithUnit(efficiencyStats.wallLoss, 'kWh')}</p>
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">Wall-to-Battery Loss</p>
-                <p className="text-[9px] text-[var(--text-muted)]">{fmtNumber(efficiencyStats.totalUsed, 1)} kWh drawn → {fmtNumber(efficiencyStats.totalAdded, 1)} kWh stored</p>
+                <p className="text-[9px] text-[var(--text-muted)]">{fmtNumber(efficiencyStats.totalUsed)} kWh drawn → {fmtNumber(efficiencyStats.totalAdded)} kWh stored</p>
               </GlassPanel>
             </div>
           </GlassPanel>
@@ -624,7 +624,7 @@ export default function Charging() {
                     {chargerSpecsBreakdown.voltage.map(v => (
                       <div key={v.name} className="flex justify-between items-center text-xs">
                         <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh', 0)}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
                       </div>
                     ))}
                   </div>
@@ -638,7 +638,7 @@ export default function Charging() {
                     {chargerSpecsBreakdown.phase.map(v => (
                       <div key={v.name} className="flex justify-between items-center text-xs">
                         <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh', 0)}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
                       </div>
                     ))}
                   </div>
@@ -652,7 +652,7 @@ export default function Charging() {
                     {chargerSpecsBreakdown.cable.map(v => (
                       <div key={v.name} className="flex justify-between items-center text-xs">
                         <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh', 0)}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
                       </div>
                     ))}
                   </div>
@@ -666,7 +666,7 @@ export default function Charging() {
                     {chargerSpecsBreakdown.brand.map(v => (
                       <div key={v.name} className="flex justify-between items-center text-xs">
                         <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} · {v.avgPower != null ? `${fmtInt(v.avgPower)} kW avg` : fmtWithUnit(v.energy, 'kWh', 0)}</span>
+                        <span className="text-[var(--text-muted)]">{v.count} · {v.avgPower != null ? `${fmtInt(v.avgPower)} kW avg` : fmtWithUnit(v.energy, 'kWh')}</span>
                       </div>
                     ))}
                   </div>
@@ -687,17 +687,17 @@ export default function Charging() {
             <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-3">
               <h3 className="section-title flex items-center gap-2 flex-1">
                 <BatteryCharging className="h-4 w-4 text-neon-green" /> All Sessions
-                <span className="text-xs text-gray-600 font-normal ml-1">({filteredSessions.length})</span>
+                <span className="text-xs text-[var(--text-muted)] font-normal ml-1">({filteredSessions.length})</span>
               </h3>
               {/* Charger filter */}
               <div className="flex items-center gap-1 rounded-lg bg-white/[0.02] p-1 border border-white/[0.06]">
-                <Filter className="h-3 w-3 text-gray-600 ml-1" />
+                <Filter className="h-3 w-3 text-[var(--text-muted)] ml-1" />
                 {(['all', 'home', 'supercharger', 'dc'] as ChargerFilter[]).map(f => (
                   <button
                     key={f}
                     onClick={() => setChargerFilter(f)}
                     className={clsx('px-2.5 py-1 rounded-md text-[11px] font-medium transition-all',
-                      chargerFilter === f ? 'bg-white/[0.08] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-gray-300'
+                      chargerFilter === f ? 'bg-white/[0.08] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                     )}
                   >
                     {f === 'all' ? 'All' : f === 'home' ? 'Home' : f === 'supercharger' ? 'SC' : 'DC'}
@@ -706,13 +706,13 @@ export default function Charging() {
               </div>
               {/* Sort controls */}
               <div className="flex items-center gap-1 rounded-lg bg-white/[0.02] p-1 border border-white/[0.06]">
-                <ArrowUpDown className="h-3 w-3 text-gray-600 ml-1" />
+                <ArrowUpDown className="h-3 w-3 text-[var(--text-muted)] ml-1" />
                 {(['date', 'energy', 'cost', 'duration', 'power'] as SortKey[]).map(k => (
                   <button
                     key={k}
                     onClick={() => { if (sortBy === k) setSortDesc(!sortDesc); else { setSortBy(k); setSortDesc(true) } }}
                     className={clsx('px-2.5 py-1 rounded-md text-[11px] font-medium transition-all',
-                      sortBy === k ? 'bg-white/[0.08] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-gray-300'
+                      sortBy === k ? 'bg-white/[0.08] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                     )}
                   >
                     {k === 'date' ? 'Date' : k === 'energy' ? 'kWh' : k === 'cost' ? 'Cost' : k === 'duration' ? 'Time' : 'Power'}

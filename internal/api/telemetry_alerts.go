@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	notifFSM "github.com/ev-dev-labs/teslasync/internal/fsm/notification"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -20,10 +22,13 @@ type TelemetryAlertEvaluator struct {
 	alertRepo     *database.AlertRepo
 	notifRepo     *database.NotificationRepo
 	settingsRepo  *database.SettingsRepo
+	vehicleRepo   *database.VehicleRepo
 	eventBus      *events.Bus
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
 	mqttClient    pahomqtt.Client
+	cooldowns     map[string]*notifFSM.CooldownFSM // keyed by "ruleID:vehicleID"
+	cooldownMu    sync.Mutex
 }
 
 // NewTelemetryAlertEvaluator creates an alert evaluator for streaming data.
@@ -33,9 +38,11 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		alertRepo:     database.NewAlertRepo(db),
 		notifRepo:     database.NewNotificationRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
+		vehicleRepo:   database.NewVehicleRepo(db),
 		eventBus:      eventBus,
 		eventHub:      hub,
 		ruleEngine:    NewRuleEngine(),
+		cooldowns:     make(map[string]*notifFSM.CooldownFSM),
 		mqttClient:    mqttClient,
 	}
 }
@@ -51,13 +58,31 @@ func (e *TelemetryAlertEvaluator) LoadState(ctx context.Context) {
 	log.Info().Int("rules", len(rules)).Msg("cep: loaded rule cooldown state from DB")
 }
 
+// RuleEngine returns the underlying rule engine for state recovery.
+func (e *TelemetryAlertEvaluator) RuleEngine() *RuleEngine {
+	return e.ruleEngine
+}
+
 // Evaluate checks all alert rules against the given signals for a vehicle.
-func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}) {
+// accumulatedSignals contains last-known values from recent batches — used as
+// fallback for legacy rules when a signal isn't in the current sparse batch.
+func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64, vin string, signals, accumulatedSignals map[string]interface{}) {
 	evalStart := time.Now()
 	rules, err := e.alertRuleRepo.GetAll(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("cep: failed to load alert rules, skipping evaluation")
 		return
+	}
+
+	// Build enriched signal map: accumulated (last-known) values overlaid with
+	// current batch so legacy rules can evaluate even when the target signal
+	// wasn't in this specific sparse batch.
+	enriched := make(map[string]interface{}, len(accumulatedSignals)+len(signals))
+	for k, v := range accumulatedSignals {
+		enriched[k] = v
+	}
+	for k, v := range signals {
+		enriched[k] = v // current batch takes precedence
 	}
 
 	enabledCount := 0
@@ -80,11 +105,26 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 			message = result.Message
 		} else {
 			metrics.AlertsEvaluated.Inc()
-			triggered, message = e.evaluateLegacy(rule, signals)
+			triggered, message = e.evaluateLegacy(rule, enriched)
 		}
 
 		if triggered {
-			e.fireAlert(ctx, rule, vehicleID, vin, message)
+			// Check cooldown FSM — suppress if within cooldown period
+			cooldownKey := fmt.Sprintf("%d:%d", rule.ID, vehicleID)
+			e.cooldownMu.Lock()
+			cd, exists := e.cooldowns[cooldownKey]
+			if !exists {
+				cd = notifFSM.NewCooldownFSM(rule.ID, vehicleID, notifFSM.DefaultCooldownConfig())
+				e.cooldowns[cooldownKey] = cd
+			}
+			e.cooldownMu.Unlock()
+
+			if cd.ShouldFire() {
+				e.fireAlert(ctx, rule, vehicleID, vin, message)
+			} else {
+				log.Debug().Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
+					Msg("cep: alert suppressed by cooldown FSM")
+			}
 		}
 	}
 	metrics.CEPActiveRules.Set(float64(enabledCount))
@@ -135,13 +175,28 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		severity = "warning"
 	}
 
+	// Resolve vehicle display name for context
+	vehicleName := ""
+	if v, err := e.vehicleRepo.GetByID(ctx, vehicleID); err == nil && v != nil && v.DisplayName != "" {
+		vehicleName = v.DisplayName
+	} else if vin != "" {
+		vehicleName = vin
+	}
+
+	// Prefix message with vehicle name so users know which vehicle triggered it
+	title := rule.Name
+	if vehicleName != "" {
+		title = fmt.Sprintf("[%s] %s", vehicleName, rule.Name)
+		message = fmt.Sprintf("%s — %s", vehicleName, message)
+	}
+
 	// 1. Create alert in DB (always — even during quiet hours)
 	vid := vehicleID
 	alert := &models.Alert{
 		VehicleID: &vid,
 		Type:      rule.Type,
 		Severity:  severity,
-		Title:     rule.Name,
+		Title:     title,
 		Message:   message,
 	}
 	if err := e.alertRepo.Create(ctx, alert); err != nil {
@@ -183,10 +238,11 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 		e.eventHub.Broadcast("alert", map[string]interface{}{
 			"id":              alert.ID,
 			"vehicle_id":      vehicleID,
+			"vehicle_name":    vehicleName,
 			"vin":             vin,
 			"type":            rule.Type,
 			"severity":        severity,
-			"title":           rule.Name,
+			"title":           title,
 			"message":         message,
 			"rule_id":         rule.ID,
 			"timestamp":       now,
@@ -212,7 +268,9 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 
 	// 4. Dispatch to notification channels (skip during quiet hours for non-critical)
 	if len(rule.NotifyChannels) > 0 && !quietSuppressed {
-		go e.dispatchNotifications(rule, message)
+		safeGo("notification-dispatch", func() {
+			e.dispatchNotifications(rule, title, message)
+		})
 	}
 
 	// 5. Prometheus metric
@@ -222,7 +280,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 // dispatchNotifications publishes alert to the notification worker via MQTT.
 // The worker handles delivery, retry, rate limiting, and metrics — fully decoupled.
 // Falls back to direct send if MQTT is unavailable.
-func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, message string) {
+func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, title, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -235,7 +293,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(rule *models.AlertRule, 
 		req := &notification.Request{
 			ChannelType: ch.Type,
 			Config:      ch.Config,
-			Title:       rule.Name,
+			Title:       title,
 			Message:     message,
 			ChannelID:   ch.ID,
 		}

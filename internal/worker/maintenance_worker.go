@@ -56,8 +56,10 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	}
 
 	// Clean up old partitions beyond retention period
-	if err := cleanOldPartitions(maintCtx, db, "positions", cfg.Retention.PositionRetentionDays); err != nil {
-		log.Error().Err(err).Msg("partition cleanup failed")
+	if cfg.Retention.PositionRetentionDays > 0 {
+		if err := cleanOldPartitions(maintCtx, db, "positions", cfg.Retention.PositionRetentionDays); err != nil {
+			log.Error().Err(err).Msg("partition cleanup failed")
+		}
 	}
 
 	// Compress old positions into hourly summaries before deletion
@@ -66,15 +68,23 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	}
 
 	// Clean up old positions that may remain in the default partition
-	posDeleted, err := db.CleanupOldPositions(maintCtx, cfg.Retention.PositionRetentionDays)
-	if err != nil {
-		log.Error().Err(err).Msg("position cleanup failed")
+	var posDeleted int64
+	if cfg.Retention.PositionRetentionDays > 0 {
+		var err error
+		posDeleted, err = db.CleanupOldPositions(maintCtx, cfg.Retention.PositionRetentionDays)
+		if err != nil {
+			log.Error().Err(err).Msg("position cleanup failed")
+		}
 	}
 
 	// Clean up old vehicle states
-	statesDeleted, err := db.CleanupOldStates(maintCtx, cfg.Retention.DataRetentionDays)
-	if err != nil {
-		log.Error().Err(err).Msg("vehicle state cleanup failed")
+	var statesDeleted int64
+	if cfg.Retention.DataRetentionDays > 0 {
+		var err error
+		statesDeleted, err = db.CleanupOldStates(maintCtx, cfg.Retention.DataRetentionDays)
+		if err != nil {
+			log.Error().Err(err).Msg("vehicle state cleanup failed")
+		}
 	}
 
 	// Clean up old API call logs (keep 30 days)

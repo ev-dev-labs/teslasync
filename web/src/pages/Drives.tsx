@@ -15,9 +15,9 @@ import { formatDateTime, formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 function formatDuration(min: number): string {
-  usePageTitle('Drives')
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
@@ -60,7 +60,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
           {/* Efficiency score badge */}
           <div className="flex flex-col items-center shrink-0 w-12">
             <span className="text-lg font-bold" style={{ color: score.color }}>{score.label}</span>
-            <span className="text-[9px] text-gray-600 uppercase">score</span>
+            <span className="text-[9px] text-[var(--text-muted)] uppercase">score</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
@@ -117,6 +117,7 @@ function DriveCard({ drive, convertDistance, convertSpeed, convertEfficiency, di
 }
 
 export default function Drives() {
+  usePageTitle('Drives')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState<'date' | 'distance' | 'efficiency'>('date')
@@ -227,12 +228,12 @@ export default function Drives() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
               <RadialGauge value={stats.count} max={Math.max(stats.count, 100)} label="Total Drives" unit="" color="#00f0ff" />
               <RadialGauge value={Math.round(convertDistance(stats.totalDistance))} max={Math.max(convertDistance(stats.totalDistance), 1000)} label={`Total ${distanceUnit}`} unit="" color="#10b981" />
-              <RadialGauge value={Math.round(convertEfficiency(stats.avgEff))} max={300} label={`Avg ${efficiencyUnit}`} unit="" color={stats.avgEff < 180 ? '#10b981' : '#f59e0b'} />
+              <RadialGauge value={Math.round(convertEfficiency(stats.avgEff))} max={300} label={`Avg ${efficiencyUnit}`} unit="" color={stats.avgEff < 180 ? COLOR.GOOD : COLOR.WARN} />
               <RadialGauge value={Math.round(convertEfficiency(stats.bestEff))} max={300} label={`Best ${efficiencyUnit}`} unit="" color="#a855f7" />
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={Math.round(convertSpeed(stats.topSpeed))} /></p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Top Speed</p>
-                <p className="text-[10px] text-gray-600">{speedUnit}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{speedUnit}</p>
               </div>
             </div>
           </GlassPanel>
@@ -246,19 +247,19 @@ export default function Drives() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <div>
                 <MetricBar label="Total Drive Time" value={stats.totalDuration} max={Math.max(stats.totalDuration, 600)} color="#00f0ff" />
-                <p className="text-[10px] text-gray-600 mt-1">{formatDuration(stats.totalDuration)}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDuration(stats.totalDuration)}</p>
               </div>
               <div>
                 <MetricBar label="Avg Trip Distance" value={stats.totalDistance / stats.count} max={100} color="#10b981" />
-                <p className="text-[10px] text-gray-600 mt-1">{fmtNumber(convertDistance(stats.totalDistance / stats.count))} {distanceUnit}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertDistance(stats.totalDistance / stats.count))} {distanceUnit}</p>
               </div>
               <div>
                 <MetricBar label="Longest Drive" value={stats.longestDrive.distance} max={Math.max(stats.longestDrive.distance, 200)} color="#a855f7" />
-                <p className="text-[10px] text-gray-600 mt-1">{fmtNumber(convertDistance(stats.longestDrive.distance))} {distanceUnit}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertDistance(stats.longestDrive.distance))} {distanceUnit}</p>
               </div>
               <div>
                 <MetricBar label="Avg Duration" value={stats.totalDuration / stats.count} max={120} color="#f59e0b" />
-                <p className="text-[10px] text-gray-600 mt-1">{formatDuration(stats.totalDuration / stats.count)}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{formatDuration(stats.totalDuration / stats.count)}</p>
               </div>
             </div>
           </GlassPanel>
@@ -343,10 +344,10 @@ export default function Drives() {
             <div className="flex items-center gap-2">
               <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
               {(['date', 'distance', 'efficiency'] as const).map(s => (
-                <button key={s} onClick={() => setSortBy(s)}
-                  className={clsx('text-xs px-2.5 py-1 rounded-lg transition-colors', sortBy === s ? 'bg-neon-cyan/10 text-neon-cyan' : 'text-[var(--text-muted)] hover:text-gray-300')}>
+                <Button key={s} variant="ghost" size="sm" onClick={() => setSortBy(s)}
+                  className={clsx(sortBy === s ? 'bg-neon-cyan/10 text-neon-cyan' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]')}>
                   {s === 'date' ? 'Recent' : s === 'distance' ? 'Distance' : 'Efficiency'}
-                </button>
+                </Button>
               ))}
               <span className="mx-1 h-4 w-px bg-white/10" />
               <a

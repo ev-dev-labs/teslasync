@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import clsx from 'clsx'
 import { useTheme } from './ThemeProvider'
+import { batteryColor, boolColor } from '../lib/colors'
 
 export type TeslaModel = 'model3' | 'models' | 'modely' | 'modelx' | 'cybertruck'
 
@@ -77,6 +78,9 @@ function useSvgPalette() {
       text: isLight ? 'rgba(0,0,0,0.7)' : 'white',
     },
     shadow: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.3)',
+    headlightOn: '#ffffff',
+    projectorOn: '#fffbe6',
+    turnSignalOn: '#fbbf24',
     headlightOff: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)',
     falconWing: {
       main: isLight ? 'rgba(0,120,200,0.15)' : 'rgba(0,240,255,0.08)',
@@ -201,7 +205,7 @@ export function TeslaCarViz({
   model = 'model3',
 }: TeslaCarVizProps) {
   const palette = useSvgPalette()
-  const batteryColor = batteryLevel > 60 ? '#10b981' : batteryLevel > 25 ? '#f59e0b' : '#ef4444'
+  const batClr = batteryColor(batteryLevel)
   const driving = speed > 0
   const sizeMap = { sm: 180, md: 280, lg: 380 }
   const w = sizeMap[size]
@@ -324,7 +328,7 @@ export function TeslaCarViz({
               ? `M${WHEEL_POS[model].headX} ${WHEEL_POS[model].headY - 3} L${WHEEL_POS[model].headX + 20} ${WHEEL_POS[model].headY - 5}`
               : `M${WHEEL_POS[model].headX - 2} ${WHEEL_POS[model].headY - 14} Q${WHEEL_POS[model].headX - 6} ${WHEEL_POS[model].headY} ${WHEEL_POS[model].headX - 2} ${WHEEL_POS[model].headY + 14}`}
             fill="none"
-            stroke={driving ? '#ffffff' : palette.headlightOff}
+            stroke={driving ? palette.headlightOn : palette.headlightOff}
             strokeWidth={model === 'cybertruck' ? 3 : 2.5}
             strokeLinecap="round"
             animate={driving ? { opacity: [0.85, 1, 0.85] } : {}}
@@ -337,7 +341,7 @@ export function TeslaCarViz({
             cy={WHEEL_POS[model].headY}
             rx={model === 'cybertruck' ? 3 : 4}
             ry={model === 'cybertruck' ? 2.5 : 6}
-            fill={driving ? '#fffbe6' : palette.headlightOff}
+            fill={driving ? palette.projectorOn : palette.headlightOff}
             opacity={driving ? 0.9 : 0.5}
             style={driving ? { filter: 'drop-shadow(0 0 10px rgba(255,251,230,0.8))' } : {}}
           />
@@ -347,7 +351,7 @@ export function TeslaCarViz({
             cy={WHEEL_POS[model].headY + (model === 'cybertruck' ? 0 : 12)}
             rx={model === 'cybertruck' ? 2 : 3}
             ry={model === 'cybertruck' ? 1.5 : 2}
-            fill={driving ? '#fbbf24' : palette.headlightOff}
+            fill={driving ? palette.turnSignalOn : palette.headlightOff}
             opacity={driving ? 0.5 : 0.2}
           />
         </g>
@@ -413,11 +417,11 @@ export function TeslaCarViz({
           x={WHEEL_POS[model].batX} y={WHEEL_POS[model].batY}
           rx="4"
           height="8"
-          fill={batteryColor}
+          fill={batClr}
           initial={{ width: 0 }}
           animate={{ width: (batteryLevel / 100) * 260 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
-          style={{ filter: `drop-shadow(0 0 6px ${batteryColor})` }}
+          style={{ filter: `drop-shadow(0 0 6px ${batClr})` }}
         />
         <text x={WHEEL_POS[model].batX + 135} y={WHEEL_POS[model].batY + 8} textAnchor="middle" fill={palette.battery.text} fontSize="6" fontWeight="bold" opacity="0.7">
           {batteryLevel}%
@@ -549,7 +553,7 @@ export function TeslaCarViz({
         />
         <StatusDot
           active={isLocked}
-          color={isLocked ? '#10b981' : '#f59e0b'}
+          color={boolColor(isLocked)}
           label={isLocked ? 'Locked' : 'Unlocked'}
           palette={palette}
         />
@@ -578,7 +582,7 @@ function StatusDot({ active, color, label, palette }: { active: boolean; color: 
 /** Mini version for cards/lists */
 export function TeslaCarMini({ batteryLevel, isCharging, model }: { batteryLevel: number; isCharging: boolean; model?: TeslaModel }) {
   const palette = useSvgPalette()
-  const color = batteryLevel > 60 ? '#10b981' : batteryLevel > 25 ? '#f59e0b' : '#ef4444'
+  const color = batteryColor(batteryLevel)
   const m = model ?? 'model3'
   const miniPaths: Record<TeslaModel, string> = {
     model3:     'M8 22 C8 22 9 18 13 16 L20 12 C22 11 26 9 30 8.5 C34 8 40 7.8 44 8 C48 8.2 51 9.5 53 11 L57 14 C58.5 15 59.5 16.5 59.8 18 L60 22 L8 22 Z',

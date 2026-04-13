@@ -8,11 +8,11 @@ import { AnimatedNumber } from '../components/Widgets'
 import { TeslaCarViz } from '../components/TeslaCarViz'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
-import { fmtNumber } from '../lib/numberFormat'
+import { batteryColor } from '../lib/colors'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Vehicle) => void }) {
-  usePageTitle('Vehicles')
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { data: stateData } = useQuery({
     queryKey: ['vehicle-state', vehicle.id],
@@ -23,7 +23,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
   const state = stateData?.state
   const status = getVehicleStatus(vehicle, state)
 
-  const batteryColor = state && state.battery_level > 50 ? '#10b981' : state && state.battery_level > 20 ? '#f59e0b' : '#ef4444'
+  const batColor = batteryColor(state?.battery_level ?? 0)
 
   return (
     <GlassPanel hover glow="cyan" className="p-0 overflow-hidden transition-all duration-300 group">
@@ -59,14 +59,14 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
               <StatusBadge status={status} />
             </div>
             <p className="text-xs text-[var(--text-muted)] mb-3">
-              {vehicle.model} {vehicle.trim_badging} · <span className="font-mono text-gray-600">{vehicle.vin}</span>
+              {vehicle.model} {vehicle.trim_badging} · <span className="font-mono text-[var(--text-muted)]">{vehicle.vin}</span>
             </p>
 
             {/* Stats row */}
             {state && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <div className="flex items-center gap-2">
-                  <ProgressRing value={state.battery_level} size={36} strokeWidth={3} color={batteryColor} label="" />
+                  <ProgressRing value={state.battery_level} size={36} strokeWidth={3} color={batColor} label="" />
                   <div>
                     <p className="text-sm font-bold text-[var(--text-primary)]">{state.battery_level}%</p>
                     <p className="text-[10px] text-[var(--text-muted)]">{Math.round(convertDistance(state.rated_range))} {distanceUnit}</p>
@@ -77,7 +77,7 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
                   <p className="text-[10px] text-[var(--text-muted)]">Interior</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{Math.round(convertDistance(state.odometer)).toLocaleString()}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{fmtInt(convertDistance(state.odometer))}</p>
                   <p className="text-[10px] text-[var(--text-muted)]">{distanceUnit}</p>
                 </div>
                 {state.is_charging && (
@@ -98,14 +98,14 @@ function VehicleCard({ vehicle, onDelete }: { vehicle: Vehicle; onDelete: (v: Ve
           <div className="flex flex-col items-center gap-1 shrink-0">
             <Link
               to={`/vehicles/${vehicle.id}`}
-              className="rounded-lg p-2 text-gray-600 hover:bg-neon-cyan/10 hover:text-neon-cyan transition-all"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-neon-cyan/10 hover:text-neon-cyan transition-all"
               title="View details"
             >
               <ExternalLink className="h-4 w-4" />
             </Link>
             <button
               onClick={() => onDelete(vehicle)}
-              className="rounded-lg p-2 text-gray-600 hover:bg-neon-red/10 hover:text-neon-red transition-all"
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-neon-red/10 hover:text-neon-red transition-all"
               title="Remove vehicle"
             >
               <Trash2 className="h-4 w-4" />
@@ -208,7 +208,7 @@ function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
         <div className="space-y-3">
           {bars.map(({ vehicle, state }) => {
             const level = state?.battery_level ?? 0
-            const color = level > 50 ? '#10b981' : level > 20 ? '#f59e0b' : '#ef4444'
+            const color = batteryColor(level)
             return (
               <div key={vehicle.id} className="flex items-center gap-3">
                 <span className="text-xs text-[var(--text-secondary)] w-24 truncate">{vehicle.display_name || vehicle.vin}</span>
@@ -219,7 +219,7 @@ function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
                   />
                 </div>
                 <span className="text-xs font-medium text-[var(--text-primary)] w-10 text-right">{level}%</span>
-                <span className="text-[10px] text-gray-600 w-16 text-right">{Math.round(convertDistance(state?.rated_range ?? 0))} {distanceUnit}</span>
+                <span className="text-[10px] text-[var(--text-muted)] w-16 text-right">{Math.round(convertDistance(state?.rated_range ?? 0))} {distanceUnit}</span>
               </div>
             )
           })}
@@ -230,6 +230,7 @@ function BatteryComparison({ vehicles }: { vehicles: Vehicle[] }) {
 }
 
 export default function Vehicles() {
+  usePageTitle('Vehicles')
   const queryClient = useQueryClient()
   const { data: vehicles, isLoading, error } = useQuery({
     queryKey: ['vehicles'],

@@ -2,9 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSettings, toggleAPISuspend, getPollingConfig, updatePollingConfig, getCaptureStats, getVersionInfo, PollingConfig } from '../api'
 import { useCallback } from 'react'
 import { Shield, Pause, Play, Globe, Link } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, IconBox, Toggle } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, IconBox, Toggle, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { fmtInt } from '../lib/numberFormat'
 
 export default function FleetAPI() {
   usePageTitle('Fleet API')
@@ -193,7 +194,7 @@ export default function FleetAPI() {
                     enabled={!!pollingConfig.telemetry_capture}
                     onToggle={() => toggleEndpoint('telemetry_capture')}
                     disabled={pollingConfigMut.isPending || (captureStats != null && !captureStats.mongodb_enabled)}
-                    iconColor={captureStats?.mongodb_enabled ? undefined : 'text-gray-500'}
+                    iconColor={captureStats?.mongodb_enabled ? undefined : 'text-[var(--text-muted)]'}
                   />
                   {pollingConfig.telemetry_capture && captureStats?.mongodb_enabled && (
                     <>
@@ -202,26 +203,28 @@ export default function FleetAPI() {
                           <p className="text-xs font-medium text-[var(--text-primary)]">Retention Period</p>
                           <p className="text-[10px] text-[var(--text-muted)]">Auto-delete captured signals after this many days</p>
                         </div>
-                        <select
-                          value={pollingConfig.telemetry_capture_retention_days || 7}
+                        <Select
+                          label="Retention"
+                          value={String(pollingConfig.telemetry_capture_retention_days || 7)}
                           onChange={(e) => {
                             const updated = { ...pollingConfig, telemetry_capture_retention_days: parseInt(e.target.value) }
                             pollingConfigMut.mutate(updated)
                           }}
                           disabled={pollingConfigMut.isPending}
-                          className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-neon-cyan/50"
-                        >
-                          <option value={1}>1 day</option>
-                          <option value={3}>3 days</option>
-                          <option value={7}>7 days</option>
-                          <option value={14}>14 days</option>
-                          <option value={30}>30 days</option>
-                        </select>
+                          options={[
+                            { value: '1', label: '1 day' },
+                            { value: '3', label: '3 days' },
+                            { value: '7', label: '7 days' },
+                            { value: '14', label: '14 days' },
+                            { value: '30', label: '30 days' },
+                          ]}
+                          className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs"
+                        />
                       </div>
                       {captureStats.total_documents > 0 && (
                         <div className="flex items-center gap-3 p-2.5 rounded-lg bg-neon-cyan/5 border border-neon-cyan/10">
                           <p className="text-[10px] text-neon-cyan">
-                            {captureStats.total_documents.toLocaleString()} signals captured from {captureStats.distinct_vins.length} vehicle{captureStats.distinct_vins.length !== 1 ? 's' : ''}
+                            {fmtInt(captureStats.total_documents)} signals captured from {captureStats.distinct_vins.length} vehicle{captureStats.distinct_vins.length !== 1 ? 's' : ''}
                           </p>
                         </div>
                       )}

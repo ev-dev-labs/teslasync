@@ -295,11 +295,11 @@ interface MetricCardProps {
 export function MetricCard({ label, value, icon, color = 'cyan', change, subtitle, className }: MetricCardProps) {
   const c = neonColorMap[color]
   return (
-    <div className={cn('p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] transition-colors hover:border-white/[0.08]', className)}>
+    <div className={cn('p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] transition-colors hover:border-white/[0.08] h-full', className)}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="metric-label mb-1 text-[10px] truncate">{label}</p>
-          <p className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{value}</p>
+          <p className="text-xl font-bold tracking-tight text-[var(--text-primary)] truncate" title={String(value)}>{value}</p>
           {subtitle && <p className="mt-0.5 text-[10px] text-[var(--text-muted)] truncate">{subtitle}</p>}
           {change && (
             <p className={cn('mt-1 text-[10px] font-medium', change.positive ? 'text-neon-green' : 'text-neon-red')}>

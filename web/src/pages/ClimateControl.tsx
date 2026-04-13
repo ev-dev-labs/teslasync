@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getClimateData, getClimateLatest } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, ChartContainer, Select } from '../components/ui'
 import { Thermometer, Wind, Snowflake, Sun, Fan, Flame, Shield, Zap, Activity, Car } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,6 +14,7 @@ import { useSettings } from '../hooks/useSettings'
 import { formatDateTime } from '../lib/dateFormat'
 import { fmtNumber } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 // ---------------------------------------------------------------------------
 // Custom chart tooltip
@@ -29,7 +30,7 @@ function ClimateTooltip({ active, payload, label, unit }: {
       <p style={{ color: 'var(--text-secondary)' }} className="mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: p.color }}>●</span> {p.name}: {p.value != null ? fmtNumber(p.value, 1) : ''}{unit ? ` ${unit}` : ''}
+          <span style={{ color: p.color }}>●</span> {p.name}: {p.value != null ? fmtNumber(p.value) : ''}{unit ? ` ${unit}` : ''}
         </p>
       ))}
     </div>
@@ -67,11 +68,11 @@ function CircularGauge({ label, value, displayValue, unit, min, max, icon, color
             strokeDasharray={`${pct * 2.64} 264`} strokeLinecap="round" className={colorClass} />
         </svg>
         <span className={clsx('text-2xl font-bold', colorClass)}>
-          {hasData ? (displayValue ?? fmtNumber(v, 1)) : '--'}
+          {hasData ? (displayValue ?? fmtNumber(v)) : '--'}
         </span>
       </div>
       <span className={clsx('text-[10px] px-2 py-0.5 rounded-full font-medium', bgClass, colorClass)}>
-        {hasData ? `${displayValue ?? fmtNumber(v, 1)} ${unit ?? ''}` : 'N/A'}
+        {hasData ? `${displayValue ?? fmtNumber(v)} ${unit ?? ''}` : 'N/A'}
       </span>
     </GlassPanel>
   )
@@ -263,14 +264,12 @@ export default function ClimateControl() {
           icon={<Thermometer className="h-7 w-7 text-neon-cyan" />}
         />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            label="Vehicle"
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 
@@ -287,10 +286,10 @@ export default function ClimateControl() {
           <CircularGauge
             label="Cabin Temp"
             value={latest?.inside_temp != null ? convertTemp(latest.inside_temp) : null}
-            displayValue={latest?.inside_temp != null ? fmtNumber(convertTemp(latest.inside_temp), 1) : undefined}
+            displayValue={latest?.inside_temp != null ? fmtNumber(convertTemp(latest.inside_temp)) : undefined}
             unit={tempUnit}
             min={convertTemp(0)} max={convertTemp(50)}
-            icon={<Thermometer className="h-4 w-4" style={{ color: insideColor.cls.includes('cyan') ? '#22d3ee' : insideColor.cls.includes('green') ? '#10b981' : insideColor.cls.includes('amber') ? '#f59e0b' : insideColor.cls.includes('red') ? '#ef4444' : '#9ca3af' }} />}
+            icon={<Thermometer className="h-4 w-4" style={{ color: insideColor.cls.includes('cyan') ? COLOR.CYAN : insideColor.cls.includes('green') ? COLOR.GOOD : insideColor.cls.includes('amber') ? COLOR.WARN : insideColor.cls.includes('red') ? COLOR.BAD : COLOR.MUTED }} />}
             colorClass={insideColor.cls}
             bgClass={insideColor.bg}
           />
@@ -302,7 +301,7 @@ export default function ClimateControl() {
               <CircularGauge
                 label="Outside Temp"
                 value={latest?.outside_temp != null ? convertTemp(latest.outside_temp) : null}
-                displayValue={latest?.outside_temp != null ? fmtNumber(convertTemp(latest.outside_temp), 1) : undefined}
+                displayValue={latest?.outside_temp != null ? fmtNumber(convertTemp(latest.outside_temp)) : undefined}
                 unit={tempUnit}
                 min={convertTemp(-10)} max={convertTemp(50)}
                 icon={<Sun className="h-4 w-4 text-neon-amber" />}
@@ -316,7 +315,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="HVAC Power"
             value={latest?.hvac_power ?? null}
-            displayValue={latest?.hvac_power != null ? fmtNumber(latest.hvac_power, 1) : undefined}
+            displayValue={latest?.hvac_power != null ? fmtNumber(latest.hvac_power) : undefined}
             unit="kW"
             min={0} max={6}
             icon={<Zap className="h-4 w-4 text-neon-purple" />}
@@ -331,7 +330,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="Left Zone"
             value={latest?.hvac_left_temp_request != null ? convertTemp(latest.hvac_left_temp_request) : null}
-            displayValue={latest?.hvac_left_temp_request != null ? fmtNumber(convertTemp(latest.hvac_left_temp_request), 1) : undefined}
+            displayValue={latest?.hvac_left_temp_request != null ? fmtNumber(convertTemp(latest.hvac_left_temp_request)) : undefined}
             unit={tempUnit}
             min={convertTemp(15)} max={convertTemp(30)}
             icon={<Thermometer className="h-4 w-4 text-neon-cyan" />}
@@ -343,7 +342,7 @@ export default function ClimateControl() {
           <CircularGauge
             label="Right Zone"
             value={latest?.hvac_right_temp_request != null ? convertTemp(latest.hvac_right_temp_request) : null}
-            displayValue={latest?.hvac_right_temp_request != null ? fmtNumber(convertTemp(latest.hvac_right_temp_request), 1) : undefined}
+            displayValue={latest?.hvac_right_temp_request != null ? fmtNumber(convertTemp(latest.hvac_right_temp_request)) : undefined}
             unit={tempUnit}
             min={convertTemp(15)} max={convertTemp(30)}
             icon={<Thermometer className="h-4 w-4 text-neon-amber" />}
@@ -378,7 +377,7 @@ export default function ClimateControl() {
                 tempDelta == null ? 'bg-white/5' : tempDelta > 2 ? 'bg-neon-red/20' : tempDelta < -2 ? 'bg-neon-cyan/20' : 'bg-neon-green/20')}>
                 <span className={clsx('text-2xl font-bold',
                   tempDelta == null ? 'text-[var(--text-muted)]' : tempDelta > 2 ? 'text-neon-red' : tempDelta < -2 ? 'text-neon-cyan' : 'text-neon-green')}>
-                  {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${convertTemp(tempDelta + 20 ) - convertTemp(20) > 0 ? '+' : ''}${fmtNumber(convertTemp(tempDelta + 20) - convertTemp(20), 1)}` : '--'}
+                  {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${convertTemp(tempDelta + 20 ) - convertTemp(20) > 0 ? '+' : ''}${fmtNumber(convertTemp(tempDelta + 20) - convertTemp(20))}` : '--'}
                 </span>
               </div>
               <span className="text-[10px] px-3 py-1 rounded-full font-medium bg-white/5" style={{ color: 'var(--text-secondary)' }}>
@@ -497,19 +496,19 @@ export default function ClimateControl() {
             {/* Average HVAC Power */}
             <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Power</p>
-              <span className="text-2xl font-bold text-neon-cyan">{avgPower != null ? fmtNumber(avgPower, 2) : '--'}</span>
+              <span className="text-2xl font-bold text-neon-cyan">{avgPower != null ? fmtNumber(avgPower) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-cyan/20 text-neon-cyan">kW</span>
             </GlassPanel>
             {/* Peak HVAC Power */}
             <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Peak Power</p>
-              <span className="text-2xl font-bold text-neon-purple">{peakPower != null ? fmtNumber(peakPower, 2) : '--'}</span>
+              <span className="text-2xl font-bold text-neon-purple">{peakPower != null ? fmtNumber(peakPower) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-purple/20 text-neon-purple">kW</span>
             </GlassPanel>
             {/* Total Energy */}
             <GlassPanel className="p-4 flex flex-col items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Est. Energy Used</p>
-              <span className="text-2xl font-bold text-neon-amber">{totalEnergy != null ? fmtNumber(totalEnergy, 2) : '--'}</span>
+              <span className="text-2xl font-bold text-neon-amber">{totalEnergy != null ? fmtNumber(totalEnergy) : '--'}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-neon-amber/20 text-neon-amber">kWh</span>
             </GlassPanel>
             {/* Temp Differential Efficiency */}
@@ -529,28 +528,28 @@ export default function ClimateControl() {
         <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Cabin</p>
           <span className="text-lg font-bold text-neon-cyan">
-            {avgInside != null ? fmtNumber(convertTemp(avgInside), 1) : '--'}
+            {avgInside != null ? fmtNumber(convertTemp(avgInside)) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{tempUnit}</span>
         </GlassPanel>
         <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg Outside</p>
           <span className="text-lg font-bold text-neon-green">
-            {avgOutside != null ? fmtNumber(convertTemp(avgOutside), 1) : '--'}
+            {avgOutside != null ? fmtNumber(convertTemp(avgOutside)) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{tempUnit}</span>
         </GlassPanel>
         <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Avg HVAC</p>
           <span className="text-lg font-bold text-neon-purple">
-            {avgPower != null ? fmtNumber(avgPower, 2) : '--'}
+            {avgPower != null ? fmtNumber(avgPower) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>kW</span>
         </GlassPanel>
         <GlassPanel className="p-4 flex flex-col items-center gap-1">
           <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Max HVAC</p>
           <span className="text-lg font-bold text-neon-amber">
-            {maxPower != null ? fmtNumber(maxPower, 2) : '--'}
+            {maxPower != null ? fmtNumber(maxPower) : '--'}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>kW</span>
         </GlassPanel>

@@ -12,7 +12,8 @@ import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { formatDate } from '../lib/dateFormat'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
+import { UNITS } from '../lib/constants'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 /* ────────────────────────────── Types ────────────────────────────── */
@@ -54,7 +55,6 @@ const ICE_ANNUAL_COST = 1200
 /* ────────────────────────── Helpers ────────────────────────── */
 
 function monthsFromNow(iso: string): number {
-  usePageTitle('Maintenance')
   const d = new Date(iso)
   const now = new Date()
   return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
@@ -131,6 +131,7 @@ function CategoryBadge({ category }: { category: string }) {
 /* ────────────────────────── Main component ────────────────────────── */
 
 export default function Maintenance() {
+  usePageTitle('Maintenance')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -301,7 +302,7 @@ export default function Maintenance() {
     const record: ServiceRecord = {
       itemId: formItemId,
       date: formDate,
-      odometerKm: isMiles ? odomKm / 0.621371 : odomKm,
+      odometerKm: isMiles ? odomKm : odomKm / UNITS.MI_TO_KM,
       notes: formNotes.trim(),
     }
     setServiceLog(prev => [...prev, record])
@@ -347,7 +348,7 @@ export default function Maintenance() {
               <Skeleton className="h-8 w-40 mt-1 rounded" />
             ) : (
               <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {convertDistance(currentOdometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {fmtInt(convertDistance(currentOdometerKm))}
                 <span className="text-base font-normal ml-1" style={{ color: 'var(--text-secondary)' }}>{distanceUnit}</span>
               </p>
             )}
@@ -446,7 +447,7 @@ export default function Maintenance() {
                   ) : (
                     <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                       {progress.kmRemaining !== null && progress.kmRemaining > 0
-                        ? `${convertDistance(progress.kmRemaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${distanceUnit}`
+                        ? `${fmtInt(convertDistance(progress.kmRemaining))} ${distanceUnit}`
                         : ''}
                       {progress.kmRemaining !== null && progress.kmRemaining > 0 && progress.monthsRemaining !== null && progress.monthsRemaining > 0
                         ? ' / '
@@ -476,10 +477,10 @@ export default function Maintenance() {
               return <div className="flex items-center gap-2"><item.icon className={clsx('h-4 w-4 shrink-0', cfg.color)} /><span className="font-medium">{item.name}</span></div>
             }},
             { key: 'category', header: 'Category', sortable: true, render: ({ item }) => <CategoryBadge category={item.category} /> },
-            { key: 'interval', header: 'Interval', sortable: true, render: ({ item }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item.intervalKm !== null && <span>{convertDistance(item.intervalKm).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span>}{item.intervalKm !== null && item.intervalMonths !== null && ' / '}{item.intervalMonths !== null && <span>{item.intervalMonths} mo</span>}</span> },
+            { key: 'interval', header: 'Interval', sortable: true, render: ({ item }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item.intervalKm !== null && <span>{fmtInt(convertDistance(item.intervalKm))} {distanceUnit}</span>}{item.intervalKm !== null && item.intervalMonths !== null && ' / '}{item.intervalMonths !== null && <span>{item.intervalMonths} mo</span>}</span> },
             { key: 'status', header: 'Status', sortable: true, render: ({ status }) => <Badge color={status === 'overdue' ? 'red' : status === 'soon' ? 'amber' : 'green'}>{statusConfig[status].label}</Badge> },
             { key: 'lastService', header: 'Last Service', render: ({ lastRecord }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{lastRecord ? formatDate(lastRecord.date) : '—'}</span> },
-            { key: 'nextDue', header: 'Next Due', render: ({ status, progress }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{status === 'overdue' ? <span className="text-neon-red font-semibold">Now</span> : progress.kmRemaining !== null && progress.kmRemaining > 0 ? <span>{convertDistance(progress.kmRemaining).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}</span> : progress.monthsRemaining !== null && progress.monthsRemaining > 0 ? <span>{progress.monthsRemaining} months</span> : '—'}</span> },
+            { key: 'nextDue', header: 'Next Due', render: ({ status, progress }) => <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{status === 'overdue' ? <span className="text-neon-red font-semibold">Now</span> : progress.kmRemaining !== null && progress.kmRemaining > 0 ? <span>{fmtInt(convertDistance(progress.kmRemaining))} {distanceUnit}</span> : progress.monthsRemaining !== null && progress.monthsRemaining > 0 ? <span>{progress.monthsRemaining} months</span> : '—'}</span> },
           ] as Column<(typeof sortedItems)[number]>[]}
           data={sortedItems}
           keyExtractor={({ item }) => item.id}
@@ -536,7 +537,7 @@ export default function Maintenance() {
               </label>
               <Input
                 type="number"
-                placeholder={convertDistance(currentOdometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                placeholder={fmtInt(convertDistance(currentOdometerKm))}
                 value={formOdometer}
                 onChange={e => setFormOdometer(e.target.value)}
                 className="w-full"
@@ -590,7 +591,7 @@ export default function Maintenance() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{item.name}</p>
                     <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                      {formatDate(record.date)} · {convertDistance(record.odometerKm).toLocaleString(undefined, { maximumFractionDigits: 0 })} {distanceUnit}
+                      {formatDate(record.date)} · {fmtInt(convertDistance(record.odometerKm))} {distanceUnit}
                       {record.notes && ` · ${record.notes}`}
                     </p>
                   </div>
@@ -639,7 +640,7 @@ export default function Maintenance() {
           </div>
           <div className="mt-3 p-3 rounded-lg bg-neon-green/5 border border-neon-green/20">
             <p className="text-xs text-neon-green">
-              <span className="font-bold">{savingsVsIce}% cheaper</span> than average ICE vehicle (${ICE_ANNUAL_COST.toLocaleString()}/year)
+              <span className="font-bold">{savingsVsIce}% cheaper</span> than average ICE vehicle (${fmtInt(ICE_ANNUAL_COST)}/year)
             </p>
           </div>
         </GlassPanel>
@@ -681,7 +682,7 @@ export default function Maintenance() {
                     </GlassPanel>
                   )
                 })}
-              {projections.filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0).length === 0 && (
+              {projections && projections.filter(p => p.daysUntilDue !== null && p.daysUntilDue > 0).length === 0 && (
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   All items are overdue or have no mileage interval.
                 </p>

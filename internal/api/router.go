@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -35,6 +36,7 @@ type RouterOptions struct {
 	TelemetryHandler *TelemetryHandler       // If set, reuses existing handler (for hybrid mode wiring)
 	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
 	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
+	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -169,6 +171,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Health check
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
+
+	// Internal: PreStop flush endpoint for Kubernetes lifecycle hooks
+	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
+		if opt.SignalStore != nil {
+			flushCtx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
+			defer cancel()
+			opt.SignalStore.FlushAll(flushCtx)
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
+	})
 
 	// Metrics
 	r.Handle("/metrics", MetricsHandler())
@@ -396,6 +408,62 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/daily", vehicleStateHandler.DailyBreakdown)
 		})
 
+		// FSM shadow mode stats + transition log
+		r.Route("/fsm", func(r chi.Router) {
+			r.Get("/stats", func(w http.ResponseWriter, req *http.Request) {
+				fh := telemetryHandler.FSMHandler()
+				if fh == nil {
+					writeJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
+					return
+				}
+				stats := fh.Stats()
+				writeJSON(w, http.StatusOK, map[string]interface{}{
+					"enabled": true,
+					"stats":   stats,
+				})
+			})
+			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {
+				fsmTransRepo := database.NewFSMTransitionRepo(db)
+				vehicleID, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
+				if vehicleID == 0 {
+					writeError(w, http.StatusBadRequest, "vehicle_id required")
+					return
+				}
+				fsmType := req.URL.Query().Get("fsm_type")
+				hours := 1
+				if h := req.URL.Query().Get("hours"); h != "" {
+					if v, err := strconv.Atoi(h); err == nil && v > 0 {
+						hours = v
+					}
+				}
+				from := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+				to := time.Now().UTC()
+				page := 1
+				if p := req.URL.Query().Get("page"); p != "" {
+					if v, err := strconv.Atoi(p); err == nil && v > 0 {
+						page = v
+					}
+				}
+				perPage := 50
+				if pp := req.URL.Query().Get("per_page"); pp != "" {
+					if v, err := strconv.Atoi(pp); err == nil && v > 0 {
+						perPage = v
+					}
+				}
+				records, total, err := fsmTransRepo.Query(req.Context(), vehicleID, fsmType, nil, from, to, perPage, (page-1)*perPage)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "query failed")
+					return
+				}
+				writeJSON(w, http.StatusOK, map[string]interface{}{
+					"data":  records,
+					"total": total,
+					"page":  page,
+					"per_page": perPage,
+				})
+			})
+		})
+
 		// Real-time SSE stream
 		if cfg.Auth.AuthentikURL != "" || cfg.Auth.AuthentikHMACKey != "" {
 			if cfg.Auth.AuthentikURL == "" || cfg.Auth.AuthentikHMACKey == "" {
@@ -512,7 +580,68 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Signal History (MongoDB-backed per-signal log)
+		// Signal History (Postgres-backed — always available)
+		if telemetryHandler != nil && telemetryHandler.signalHistoryWriter != nil {
+			shw := telemetryHandler.signalHistoryWriter
+			r.Route("/signals/history", func(r chi.Router) {
+				// GET /api/v1/signals/history?vehicle_id=1&signals=BatteryLevel,Gear&from=...&to=...&page=1&per_page=50
+				r.Get("/", func(w http.ResponseWriter, req *http.Request) {
+					vid, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
+					if vid == 0 { vid = 1 }
+					signalNames := strings.Split(req.URL.Query().Get("signals"), ",")
+					if len(signalNames) == 0 || signalNames[0] == "" {
+						writeError(w, http.StatusBadRequest, "signals parameter required")
+						return
+					}
+					from, _ := time.Parse(time.RFC3339, req.URL.Query().Get("from"))
+					to, _ := time.Parse(time.RFC3339, req.URL.Query().Get("to"))
+					if from.IsZero() { from = time.Now().UTC().Add(-1 * time.Hour) }
+					if to.IsZero() { to = time.Now().UTC() }
+					page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+					perPage, _ := strconv.Atoi(req.URL.Query().Get("per_page"))
+					entries, total, err := shw.Query(req.Context(), vid, signalNames, from, to, page, perPage)
+					if err != nil {
+						writeError(w, http.StatusInternalServerError, "query failed")
+						return
+					}
+					totalPages := (total + int64(perPage) - 1) / int64(perPage)
+					if perPage == 0 { totalPages = 0 }
+					writeJSON(w, http.StatusOK, map[string]interface{}{
+						"data": entries,
+						"pagination": map[string]interface{}{
+							"page": page, "per_page": perPage, "total": total, "total_pages": totalPages,
+						},
+					})
+				})
+			})
+			r.Get("/signals/available", func(w http.ResponseWriter, req *http.Request) {
+				vid, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
+				if vid == 0 { vid = 1 }
+				signals, err := shw.AvailableSignals(req.Context(), vid)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "query failed")
+					return
+				}
+				writeJSON(w, http.StatusOK, signals)
+			})
+			r.Get("/signals/stats", func(w http.ResponseWriter, req *http.Request) {
+				vid, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
+				if vid == 0 { vid = 1 }
+				signalNames := strings.Split(req.URL.Query().Get("signals"), ",")
+				from, _ := time.Parse(time.RFC3339, req.URL.Query().Get("from"))
+				to, _ := time.Parse(time.RFC3339, req.URL.Query().Get("to"))
+				if from.IsZero() { from = time.Now().UTC().Add(-1 * time.Hour) }
+				if to.IsZero() { to = time.Now().UTC() }
+				stats, err := shw.Stats(req.Context(), vid, signalNames, from, to)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "query failed")
+					return
+				}
+				writeJSON(w, http.StatusOK, stats)
+			})
+		}
+
+		// Signal History (MongoDB-backed per-signal log — legacy, optional)
 		if telemetryHandler != nil && telemetryHandler.signalLogRepo != nil {
 			signalHandler := NewSignalHandler(telemetryHandler.signalLogRepo)
 			r.Route("/signals/{vehicleID}", func(r chi.Router) {

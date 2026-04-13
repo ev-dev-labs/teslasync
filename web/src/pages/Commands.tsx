@@ -15,6 +15,7 @@ import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { type VehicleState as VehicleStateValue } from '../lib/enums'
 
 interface CommandButtonProps {
   icon: React.ReactNode
@@ -28,7 +29,6 @@ interface CommandButtonProps {
 }
 
 function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'default', disabled, active }: CommandButtonProps) {
-  usePageTitle('Commands')
   const variants = {
     default: 'hover:border-neon-cyan/30 hover:shadow-[0_0_15px_rgba(0,240,255,0.08)]',
     danger: 'hover:border-neon-red/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.08)]',
@@ -124,7 +124,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
     cmd.mutate({ command, params })
   }
 
-  const isAsleep = status === 'asleep' || status === 'offline'
+  const isAsleep = status === ('asleep' as VehicleStateValue) || status === ('offline' as VehicleStateValue)
 
   return (
     <GlassPanel className="p-6">
@@ -148,7 +148,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
                   { icon: Battery, label: 'Battery', value: `${battery}%`, color: battery > 50 ? 'text-neon-green' : battery > 20 ? 'text-neon-amber' : 'text-neon-red' },
                   { icon: Zap, label: 'Range', value: `${Math.round(convertDistance(range))} ${distanceUnit}`, color: 'text-[var(--text-primary)]' },
                   { icon: Thermometer, label: 'Inside', value: `${fmtNumber(convertTemp(insideTemp))}${tempUnit}`, color: insideTemp > 30 ? 'text-neon-red' : 'text-neon-cyan' },
-                  { icon: Wifi, label: 'Status', value: status, color: status === 'online' || status === 'driving' ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
+                  { icon: Wifi, label: 'Status', value: status, color: status === ('online' as VehicleStateValue) || status === ('driving' as VehicleStateValue) ? 'text-neon-green' : 'text-[var(--text-secondary)]' },
                   { icon: Cpu, label: 'Firmware', value: liveState.version || 'N/A', color: 'text-[var(--text-primary)]' },
                 ]
               })().map(item => (
@@ -311,6 +311,7 @@ function VehicleCommandCenter({ vehicle, state }: { vehicle: Vehicle; state?: Ve
 }
 
 export default function Commands() {
+  usePageTitle('Commands')
   const { data: vehicles, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
 
   const vehicleStates = useQuery({
@@ -337,7 +338,7 @@ export default function Commands() {
   const statesError = vehicleStates.error
   const onlineCount = vehicles?.filter(v => {
     const s = states[v.id]
-    return s && getVehicleStatus(v, s) !== 'offline' && getVehicleStatus(v, s) !== 'asleep'
+    return s && getVehicleStatus(v, s) !== ('offline' as VehicleStateValue) && getVehicleStatus(v, s) !== ('asleep' as VehicleStateValue)
   }).length ?? 0
 
   return (

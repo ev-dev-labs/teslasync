@@ -57,3 +57,4 @@ docs/.vitepress/dist/
 # Test artifacts
 coverage.out
 coverage.html
+web/svg-compare.html

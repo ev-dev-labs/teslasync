@@ -13,10 +13,10 @@ import {
 import clsx from 'clsx'
 import { ChartTooltip, axisTickSm, chartGrid } from '../components/Charts'
 import { fmtNumber, fmtPercent, fmtWithUnit } from '../lib/numberFormat'
+import { healthColor, degradationColor } from '../lib/colors'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function InsightCard({ icon, title, description, status }: { icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }) {
-  usePageTitle('Battery Health')
   const colors = { good: 'border-neon-green/20 bg-neon-green/5', warning: 'border-neon-amber/20 bg-neon-amber/5', critical: 'border-neon-red/20 bg-neon-red/5' }
   const iconColors = { good: 'text-neon-green', warning: 'text-neon-amber', critical: 'text-neon-red' }
   return (
@@ -33,6 +33,7 @@ function InsightCard({ icon, title, description, status }: { icon: React.ReactNo
 }
 
 export default function BatteryHealth() {
+  usePageTitle('Battery Health')
   const { convertDistance, distanceUnit } = useSettings()
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
@@ -153,12 +154,12 @@ export default function BatteryHealth() {
       }
     }
     const ratePerYear = (degradation / 12) * 12
-    if (ratePerYear < 3) items.push({ icon: <Target className="h-4 w-4" />, title: 'Low Degradation Rate', description: `${fmtPercent(ratePerYear, 1)} per year — well below industry average of 3-5%.`, status: 'good' })
+    if (ratePerYear < 3) items.push({ icon: <Target className="h-4 w-4" />, title: 'Low Degradation Rate', description: `${fmtPercent(ratePerYear)} per year — well below industry average of 3-5%.`, status: 'good' })
     return items
   }, [healthScore, chargingHabits, degradation])
 
   // Years until 70% capacity
-  const yearsTo70 = degradation > 0 ? fmtNumber((currentCapacity - 70) / (degradation / (trendData.length / 12)), 1) : '20+'
+  const yearsTo70 = degradation > 0 ? fmtNumber((currentCapacity - 70) / (degradation / (trendData.length / 12))) : '20+'
 
   return (
     <div className="space-y-8">
@@ -185,15 +186,15 @@ export default function BatteryHealth() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
                 <div className="col-span-2 sm:col-span-1 flex flex-col items-center">
                   <RadialGauge value={healthScore} max={100} label="Health Score" unit="/100" size={130}
-                    color={healthScore >= 90 ? '#10b981' : healthScore >= 70 ? '#f59e0b' : '#ef4444'} />
+                    color={healthColor(healthScore)} />
                 </div>
                 <RadialGauge value={currentCapacity} max={100} label="Capacity" unit="%" color="#00f0ff" />
-                <RadialGauge value={degradation} max={30} label="Degradation" unit="%" color={degradation < 10 ? '#10b981' : '#f59e0b'} />
+                <RadialGauge value={degradation} max={30} label="Degradation" unit="%" color={degradationColor(degradation)} />
                 <RadialGauge value={cycles} max={1500} label="Cycles" unit="" color="#a855f7" />
                 <div className="flex flex-col items-center text-center">
                   <p className="text-3xl font-bold text-[var(--text-primary)]">{yearsTo70}</p>
                   <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Years to 70%</p>
-                  <p className="text-[10px] text-gray-600">warranty threshold</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">warranty threshold</p>
                 </div>
               </div>
             </GlassPanel>
@@ -205,15 +206,15 @@ export default function BatteryHealth() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
                   <MetricBar label="Current Capacity" value={currentCapacity} max={100} color="#00f0ff" />
-                  <p className="text-[10px] text-gray-600 mt-1">{report?.estimated_range_current_km ? `${Math.round(convertDistance(report.estimated_range_current_km))} ${distanceUnit} current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(convertDistance(report.estimated_range_new_km))} ${distanceUnit} when new` : ''}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{report?.estimated_range_current_km ? `${Math.round(convertDistance(report.estimated_range_current_km))} ${distanceUnit} current` : ''} {report?.estimated_range_new_km ? `/ ${Math.round(convertDistance(report.estimated_range_new_km))} ${distanceUnit} when new` : ''}</p>
                 </div>
                 <div>
-                  <MetricBar label="Degradation" value={degradation} max={30} color={degradation < 10 ? '#10b981' : '#f59e0b'} />
-                  <p className="text-[10px] text-gray-600 mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12, 2)} per year</p>
+                  <MetricBar label="Degradation" value={degradation} max={30} color={degradationColor(degradation)} />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Rate: {fmtPercent(degradation / Math.max(1, trendData.length) * 12)} per year</p>
                 </div>
                 <div>
                   <MetricBar label="Charge Cycles" value={cycles} max={1500} color="#a855f7" />
-                  <p className="text-[10px] text-gray-600 mt-1">Tesla warranty: 1,500 cycles / 70%</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Tesla warranty: 1,500 cycles / 70%</p>
                 </div>
               </div>
             </GlassPanel>
@@ -338,8 +339,8 @@ export default function BatteryHealth() {
                 </div>
                 <div className="text-center p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Capacity Now</p>
-                  <p className="text-2xl font-bold text-neon-cyan">{fmtNumber(currentCapacity, 1)}<span className="text-sm text-[var(--text-muted)]">%</span></p>
-                  <p className="text-[10px] text-neon-red mt-1">-{fmtNumber(degradation, 1)}%</p>
+                  <p className="text-2xl font-bold text-neon-cyan">{fmtNumber(currentCapacity)}<span className="text-sm text-[var(--text-muted)]">%</span></p>
+                  <p className="text-[10px] text-neon-red mt-1">-{fmtNumber(degradation)}%</p>
                 </div>
                 <div className="text-center p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Range When New</p>
@@ -391,9 +392,9 @@ export default function BatteryHealth() {
                       { label: 'Total Sessions', value: energyBreakdown.totalSessions.toString() },
                       { label: 'AC Sessions', value: energyBreakdown.acCount.toString() },
                       { label: 'DC / Supercharger Sessions', value: energyBreakdown.dcCount.toString() },
-                      { label: 'Total Energy Added', value: fmtWithUnit(energyBreakdown.totalEnergy, 'kWh', 1) },
-                      { label: 'Total Energy Used (from grid)', value: fmtWithUnit(energyBreakdown.totalEnergyUsed, 'kWh', 1) },
-                      { label: 'Charging Efficiency', value: fmtPercent(energyBreakdown.efficiency, 1) },
+                      { label: 'Total Energy Added', value: fmtWithUnit(energyBreakdown.totalEnergy, 'kWh') },
+                      { label: 'Total Energy Used (from grid)', value: fmtWithUnit(energyBreakdown.totalEnergyUsed, 'kWh') },
+                      { label: 'Charging Efficiency', value: fmtPercent(energyBreakdown.efficiency) },
                       { label: 'Charge Cycles', value: cycles.toString() },
                     ].map(row => (
                       <div key={row.label} className="flex justify-between items-center py-2 border-b border-white/5">

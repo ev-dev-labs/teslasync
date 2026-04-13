@@ -304,7 +304,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS time, CASE WHEN hvac_ac_enabled THEN 1 ELSE 0 END AS \"AC Enabled\", CASE WHEN defrost_mode THEN 1 ELSE 0 END AS \"Defrost\", CASE WHEN rear_defrost_enabled THEN 1 ELSE 0 END AS \"Rear Defrost\", CASE WHEN wiper_heat_enabled THEN 1 ELSE 0 END AS \"Wiper Heat\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
+          "rawSql": "SELECT created_at AS time, CASE WHEN hvac_ac_enabled THEN 1 ELSE 0 END AS \"AC Enabled\", CASE WHEN defrost_mode IS NOT NULL AND defrost_mode != '' THEN 1 ELSE 0 END AS \"Defrost\", CASE WHEN rear_defrost_enabled THEN 1 ELSE 0 END AS \"Rear Defrost\", CASE WHEN wiper_heat_enabled THEN 1 ELSE 0 END AS \"Wiper Heat\" FROM climate_snapshots WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at) ORDER BY created_at",
           "refId": "A"
         }
       ],

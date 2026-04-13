@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Activity, Pause, Play, Trash2, ArrowDown, ArrowDownUp } from 'lucide-react'
-import { PageHeader, GlassPanel, FadeIn, StatCard, Badge, Button, DataTable, type Column } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, StatCard, Badge, Button, Input, DataTable, type Column } from '../components/ui'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { formatTime } from '../lib/dateFormat'
 import clsx from 'clsx'
@@ -62,13 +62,13 @@ const signalColumns: Column<SignalEntry>[] = [
 ]
 
 function detectType(value: unknown): 'number' | 'string' | 'boolean' {
-  usePageTitle('Live Monitor')
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
   return 'string'
 }
 
 export default function LiveSignalMonitor() {
+  usePageTitle('Live Monitor')
   const [entries, setEntries] = useState<SignalEntry[]>([])
   const [paused, setPaused] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)
@@ -162,12 +162,13 @@ export default function LiveSignalMonitor() {
         <GlassPanel className="p-4">
           {/* Controls */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
-            <input
+            <Input
               type="text"
               placeholder="Filter by signal name..."
               value={filter}
               onChange={e => setFilter(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] outline-none focus:border-neon-cyan/50"
+              aria-label="Filter signals"
+              className="w-full sm:w-64"
             />
             <div className="flex items-center gap-2">
               <Button

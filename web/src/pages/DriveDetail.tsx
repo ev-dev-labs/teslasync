@@ -23,9 +23,9 @@ import { formatDate, formatTime, formatDateTime } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '../lib/colors'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Route; color: string; value: React.ReactNode; label: string }) {
-  usePageTitle('Drive Detail')
   return (
     <GlassPanel className="p-4 text-center">
       <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
@@ -54,6 +54,7 @@ function FitBounds({ trail }: { trail: LatLngExpression[] }) {
 }
 
 export default function DriveDetail() {
+  usePageTitle('Drive Detail')
   const { id } = useParams<{ id: string }>()
   const driveId = Number(id)
   const u = useUnits()
@@ -342,7 +343,7 @@ export default function DriveDetail() {
         <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={maxSpeed} suffix={' ' + u.speedUnit} />} label="Max Speed" /></StaggerItem>
         <StaggerItem><StatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={drive.speed_avg != null ? u.speedVal(drive.speed_avg) : avgSpeed} decimals={0} suffix={' ' + u.speedUnit} />} label="Avg Speed" /></StaggerItem>
         <StaggerItem><StatCard icon={Battery} color="#10b981" value={`${drive.soc_start ?? drive.start_battery_level ?? '?'}% → ${drive.soc_end ?? drive.end_battery_level ?? '?'}%`} label="SOC" /></StaggerItem>
-        <StaggerItem><StatCard icon={Zap} color="#f59e0b" value={`${fmtWithUnit(powerMax, 'kW', 0)}`} label="Max Power" /></StaggerItem>
+        <StaggerItem><StatCard icon={Zap} color="#f59e0b" value={`${fmtWithUnit(powerMax, 'kW')}`} label="Max Power" /></StaggerItem>
         <StaggerItem><StatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={drive.elevation_gain ?? elevGain} decimals={0} suffix=" m ↑" />} label="Elev. Gain" /></StaggerItem>
         <StaggerItem><StatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={drive.elevation_loss ?? elevLoss} decimals={0} suffix=" m ↓" />} label="Elev. Loss" /></StaggerItem>
       </StaggerContainer>
@@ -390,11 +391,11 @@ export default function DriveDetail() {
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Consumed (net)</p>
-              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${fmtWithUnit((energyConsumedWh / 1000), 'kWh', 2)}` : `${Math.round(energyConsumedWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${fmtWithUnit((energyConsumedWh / 1000), 'kWh')}` : `${Math.round(energyConsumedWh)} Wh`}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Recovered</p>
-              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${fmtWithUnit((energyRecoveredWh / 1000), 'kWh', 2)}` : `${Math.round(energyRecoveredWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${fmtWithUnit((energyRecoveredWh / 1000), 'kWh')}` : `${Math.round(energyRecoveredWh)} Wh`}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Consumption</p>
@@ -406,13 +407,13 @@ export default function DriveDetail() {
               {(drive.outside_temp_avg ?? avgOutsideTemp) !== null && (
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Outside Temp</p>
-                  <p className="text-lg font-bold text-blue-400">{drive.outside_temp_avg != null ? u.temp(drive.outside_temp_avg) : `${fmtNumber(avgOutsideTemp!, 1)}${u.tempUnit}`}</p>
+                  <p className="text-lg font-bold text-blue-400">{drive.outside_temp_avg != null ? u.temp(drive.outside_temp_avg) : `${fmtNumber(avgOutsideTemp!)}${u.tempUnit}`}</p>
                 </div>
               )}
               {(drive.inside_temp_avg ?? avgInsideTemp) !== null && (
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">Avg Inside Temp</p>
-                  <p className="text-lg font-bold text-orange-400">{drive.inside_temp_avg != null ? u.temp(drive.inside_temp_avg) : `${fmtNumber(avgInsideTemp!, 1)}${u.tempUnit}`}</p>
+                  <p className="text-lg font-bold text-orange-400">{drive.inside_temp_avg != null ? u.temp(drive.inside_temp_avg) : `${fmtNumber(avgInsideTemp!)}${u.tempUnit}`}</p>
                 </div>
               )}
               <div className="text-center">
@@ -421,7 +422,7 @@ export default function DriveDetail() {
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-[var(--text-muted)] mb-1">Min Speed</p>
-                <p className="text-lg font-bold text-gray-300">{minSpeed > 0 ? `${fmtInt(minSpeed)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
+                <p className="text-lg font-bold text-[var(--text-secondary)]">{minSpeed > 0 ? `${fmtInt(minSpeed)} ${u.speedUnit}` : `0 ${u.speedUnit}`}</p>
               </div>
             </div>
           )}
@@ -437,15 +438,15 @@ export default function DriveDetail() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Consumed</p>
-              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${fmtWithUnit((energyConsumedWh / 1000), 'kWh', 2)}` : `${Math.round(energyConsumedWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-amber">{energyConsumedWh > 1000 ? `${fmtWithUnit((energyConsumedWh / 1000), 'kWh')}` : `${Math.round(energyConsumedWh)} Wh`}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Energy Recovered</p>
-              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${fmtWithUnit((energyRecoveredWh / 1000), 'kWh', 2)}` : `${Math.round(energyRecoveredWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-green">{energyRecoveredWh > 1000 ? `${fmtWithUnit((energyRecoveredWh / 1000), 'kWh')}` : `${Math.round(energyRecoveredWh)} Wh`}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Net Consumption</p>
-              <p className="text-lg font-bold text-neon-cyan">{(energyConsumedWh - energyRecoveredWh) > 1000 ? `${fmtWithUnit(((energyConsumedWh - energyRecoveredWh) / 1000), 'kWh', 2)}` : `${Math.round(energyConsumedWh - energyRecoveredWh)} Wh`}</p>
+              <p className="text-lg font-bold text-neon-cyan">{(energyConsumedWh - energyRecoveredWh) > 1000 ? `${fmtWithUnit(((energyConsumedWh - energyRecoveredWh) / 1000), 'kWh')}` : `${Math.round(energyConsumedWh - energyRecoveredWh)} Wh`}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--text-muted)] mb-1">Efficiency</p>
@@ -525,9 +526,9 @@ export default function DriveDetail() {
               {drive.start_address
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.start_address}</p>
                 : startPos
-                  ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(startPos[0], 4)}°{startPos[0] >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(startPos[1]), 4)}°{startPos[1] >= 0 ? 'E' : 'W'}</p>
+                  ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(startPos[0])}°{startPos[0] >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(startPos[1]))}°{startPos[1] >= 0 ? 'E' : 'W'}</p>
                   : drive.start_latitude && drive.start_longitude
-                    ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(drive.start_latitude, 4)}°{drive.start_latitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.start_longitude), 4)}°{drive.start_longitude >= 0 ? 'E' : 'W'}</p>
+                    ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(drive.start_latitude)}°{drive.start_latitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.start_longitude))}°{drive.start_longitude >= 0 ? 'E' : 'W'}</p>
                     : <p className="text-sm text-[var(--text-muted)]">No position data</p>
               }
               <p className="text-xs text-[var(--text-muted)]">{formatDateTime(drive.start_date)}</p>
@@ -540,9 +541,9 @@ export default function DriveDetail() {
               {drive.end_address
                 ? <p className="font-bold text-[var(--text-primary)] text-sm">{drive.end_address}</p>
                 : endPos
-                  ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(endPos[0], 4)}°{endPos[0] >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(endPos[1]), 4)}°{endPos[1] >= 0 ? 'E' : 'W'}</p>
+                  ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(endPos[0])}°{endPos[0] >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(endPos[1]))}°{endPos[1] >= 0 ? 'E' : 'W'}</p>
                   : drive.end_latitude && drive.end_longitude
-                    ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(drive.end_latitude, 4)}°{drive.end_latitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.end_longitude), 4)}°{drive.end_longitude >= 0 ? 'E' : 'W'}</p>
+                    ? <p className="font-mono text-sm text-[var(--text-primary)]">{fmtNumber(drive.end_latitude)}°{drive.end_latitude >= 0 ? 'N' : 'S'}, {fmtNumber(Math.abs(drive.end_longitude))}°{drive.end_longitude >= 0 ? 'E' : 'W'}</p>
                     : <p className="text-sm text-[var(--text-muted)]">{drive.end_date ? 'No position data' : 'In progress'}</p>
               }
               <p className="text-xs text-[var(--text-muted)]">{drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</p>
@@ -575,8 +576,8 @@ export default function DriveDetail() {
         if (estRangeStats) legendItems.push({ color: '#a855f7', dash: true, label: `Range (est.)`, mean: `${fmtInt(estRangeStats.mean)} ${u.distanceUnit}`, max: `${fmtInt(estRangeStats.max)} ${u.distanceUnit}`, min: `${fmtInt(estRangeStats.min)} ${u.distanceUnit}` })
         if (socStats) legendItems.push({ color: '#84cc16', label: `SOC`, mean: `${fmtPercent(socStats.mean)}`, max: `${fmtPercent(socStats.max)}`, min: `${fmtPercent(socStats.min)}` })
         if (usableSocStats) legendItems.push({ color: '#22d3ee', label: `Usable SOC`, mean: `${fmtPercent(usableSocStats.mean)}`, max: `${fmtPercent(usableSocStats.max)}`, min: `${fmtPercent(usableSocStats.min)}` })
-        legendItems.push({ color: '#ef4444', dash: true, label: `Battery Heater`, mean: batteryHeaterOn ? 'On' : 'Off', max: batteryHeaterOn ? 'On' : 'Off', min: batteryHeaterOn ? 'On' : 'Off' })
-        if (powerStats) legendItems.push({ color: '#f59e0b', label: `Power`, mean: `${fmtWithUnit(powerStats.mean, 'kW', 2)}`, max: `${fmtWithUnit(powerStats.max, 'kW', 0)}`, min: `${fmtWithUnit(powerStats.min, 'kW', 0)}` })
+        legendItems.push({ color: COLOR.BAD, dash: true, label: `Battery Heater`, mean: batteryHeaterOn ? 'On' : 'Off', max: batteryHeaterOn ? 'On' : 'Off', min: batteryHeaterOn ? 'On' : 'Off' })
+        if (powerStats) legendItems.push({ color: COLOR.WARN, label: `Power`, mean: `${fmtWithUnit(powerStats.mean, 'kW')}`, max: `${fmtWithUnit(powerStats.max, 'kW')}`, min: `${fmtWithUnit(powerStats.min, 'kW')}` })
 
         return (
         <>
@@ -700,7 +701,7 @@ export default function DriveDetail() {
                     {climateStatus != null && (
                       <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                         <p className="text-[9px] text-[var(--text-muted)]">Climate</p>
-                        <p className={`text-sm font-bold ${climateStatus === 'On' ? 'text-neon-green' : 'text-gray-400'}`}>{climateStatus}</p>
+                        <p className={`text-sm font-bold ${climateStatus === 'On' ? 'text-neon-green' : 'text-[var(--text-muted)]'}`}>{climateStatus}</p>
                       </div>
                     )}
                     {maxFanSpeed != null && (

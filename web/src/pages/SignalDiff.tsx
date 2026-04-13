@@ -33,7 +33,6 @@ interface RangeStats {
 }
 
 function computeStats(data: SignalPoint[]): RangeStats {
-  usePageTitle('Signal Diff')
   const nums = data.map(d => d.value_num).filter((v): v is number => v != null)
   if (nums.length === 0) return { min: 0, max: 0, avg: 0, count: 0 }
   const min = Math.min(...nums)
@@ -60,6 +59,7 @@ function endOfDay(d: Date): Date {
 }
 
 export default function SignalDiff() {
+  usePageTitle('Signal Diff')
   const vehicleId = 1
   const [selectedSignal, setSelectedSignal] = useState('')
 
@@ -136,7 +136,7 @@ export default function SignalDiff() {
       <div className="flex items-center gap-1.5 text-xs">
         <span className="text-[var(--text-muted)]">{label}:</span>
         <span className={clsx('flex items-center gap-0.5 font-mono font-medium', color)}>
-          {icon} {fmtNumber(Math.abs(diff), 2)}
+          {icon} {fmtNumber(Math.abs(diff))}
         </span>
       </div>
     )
@@ -153,8 +153,8 @@ export default function SignalDiff() {
 
   const comparisonColumns: Column<ComparisonRow>[] = [
     { key: 'metric', header: 'Metric', render: (row) => <span className="text-[var(--text-secondary)]">{row.label}</span> },
-    { key: 'rangeA', header: 'Range A', className: 'text-right', render: (row) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(row.a, 2)}</span> },
-    { key: 'rangeB', header: 'Range B', className: 'text-right', render: (row) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(row.b, 2)}</span> },
+    { key: 'rangeA', header: 'Range A', className: 'text-right', render: (row) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(row.a)}</span> },
+    { key: 'rangeB', header: 'Range B', className: 'text-right', render: (row) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(row.b)}</span> },
     { key: 'diff', header: 'Diff', className: 'text-right', render: (row) => <DiffIndicator label="" a={row.a} b={row.b} /> },
   ]
 

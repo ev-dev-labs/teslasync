@@ -12,6 +12,7 @@ import {
   ComposedChart, Line,
 } from 'recharts'
 import { useState } from 'react'
+import { COLOR } from '../lib/colors'
 import { MapContainer, CircleMarker, Popup } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
 import { MapLayerSwitcher } from '../components/MapLayerSwitcher'
@@ -24,7 +25,6 @@ import { fmtNumber } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color: string; value: React.ReactNode; label: string }) {
-  usePageTitle('Charge Detail')
   return (
     <GlassPanel className="p-4 text-center">
       <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
@@ -35,6 +35,7 @@ function StatCard({ icon: Icon, color, value, label }: { icon: typeof Zap; color
 }
 
 export default function ChargeDetail() {
+  usePageTitle('Charge Detail')
   const { convertDistance, convertTemp, distanceUnit, tempUnit } = useSettings()
   const { id } = useParams<{ id: string }>()
   const sessionId = Number(id)
@@ -84,7 +85,7 @@ export default function ChargeDetail() {
   const estimatedCost = session.cost ?? (session.charge_energy_added > 0 ? session.charge_energy_added * electricityRate : null)
   
   const costPerKwh = estimatedCost && session.charge_energy_added > 0
-    ? fmtNumber(estimatedCost / session.charge_energy_added, 3)
+    ? fmtNumber(estimatedCost / session.charge_energy_added)
     : null
 
   // Charging efficiency
@@ -210,7 +211,7 @@ export default function ChargeDetail() {
             <span>+{Math.round(batteryGain)}% gained</span>
             <span>{fmtNumber(session.charge_energy_added)} kWh added</span>
             {rangeGained != null && <span className="text-neon-green">+{Math.round(convertDistance(rangeGained))} {distanceUnit} range</span>}
-            {estimatedCost != null && <span className="text-neon-amber">${fmtNumber(estimatedCost, 2)} cost</span>}
+            {estimatedCost != null && <span className="text-neon-amber">${fmtNumber(estimatedCost)} cost</span>}
           </div>
         </GlassPanel>
       </FadeIn>
@@ -219,9 +220,9 @@ export default function ChargeDetail() {
       <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         <StaggerItem><StatCard icon={Zap} color="#10b981" value={<AnimatedNumber value={session.charge_energy_added} decimals={1} suffix=" kWh" />} label="Energy Added" /></StaggerItem>
         <StaggerItem><StatCard icon={Clock} color="#f59e0b" value={`${Math.floor(session.duration_min / 60)}h ${Math.round(session.duration_min % 60)}m`} label="Duration" /></StaggerItem>
-        <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={session.charger_power != null ? `${fmtNumber(session.charger_power, 2)} kW` : '—'} label="Peak Power" /></StaggerItem>
+        <StaggerItem><StatCard icon={Gauge} color="#a855f7" value={session.charger_power != null ? `${fmtNumber(session.charger_power)} kW` : '—'} label="Peak Power" /></StaggerItem>
         <StaggerItem><StatCard icon={TrendingUp} color="#00f0ff" value={`${session.start_battery_level}% → ${session.end_battery_level ?? '?'}%`} label="SoC Range" /></StaggerItem>
-        <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={estimatedCost != null ? `$${fmtNumber(estimatedCost, 2)}` : '—'} label="Total Cost" /></StaggerItem>
+        <StaggerItem><StatCard icon={DollarSign} color="#f59e0b" value={estimatedCost != null ? `$${fmtNumber(estimatedCost)}` : '—'} label="Total Cost" /></StaggerItem>
         <StaggerItem><StatCard icon={Timer} color="#6b7280" value={costPerKwh ? `$${costPerKwh}` : '—'} label="Per kWh" /></StaggerItem>
         <StaggerItem><StatCard icon={ArrowUpRight} color="#10b981" value={rangeGained != null ? `+${Math.round(convertDistance(rangeGained))} ${distanceUnit}` : '—'} label="Range Gained" /></StaggerItem>
         <StaggerItem><StatCard icon={Activity} color="#06b6d4" value={chargeSpeedKwhH ? `${chargeSpeedKwhH}` : '—'} label="kWh/h Avg" /></StaggerItem>
@@ -291,8 +292,8 @@ export default function ChargeDetail() {
                 </span>
               )}
               <span className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-                <Zap className="h-3.5 w-3.5" style={{ color: isDC ? '#f59e0b' : '#60a5fa' }} />
-                <strong style={{ color: isDC ? '#f59e0b' : '#60a5fa' }}>{isDC ? 'DC Fast Charging' : 'AC Charging'}</strong>
+                <Zap className="h-3.5 w-3.5" style={{ color: isDC ? COLOR.WARN : '#60a5fa' }} />
+                <strong style={{ color: isDC ? COLOR.WARN : '#60a5fa' }}>{isDC ? 'DC Fast Charging' : 'AC Charging'}</strong>
               </span>
             </div>
           )}
@@ -328,7 +329,7 @@ export default function ChargeDetail() {
                       <div className="text-xs">
                         <strong>{session.location_name || 'Charge Location'}</strong>
                         <br />
-                        {fmtNumber(session.latitude!, 5)}, {fmtNumber(session.longitude!, 5)}
+                        {fmtNumber(session.latitude!)}, {fmtNumber(session.longitude!)}
                       </div>
                     </Popup>
                   </CircleMarker>
@@ -380,7 +381,7 @@ export default function ChargeDetail() {
                 <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
                   <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">Coordinates</p>
                   <p className="text-xs font-mono text-[var(--text-secondary)]">
-                    {fmtNumber(session.latitude!, 6)}, {fmtNumber(session.longitude!, 6)}
+                    {fmtNumber(session.latitude!)}, {fmtNumber(session.longitude!)}
                   </p>
                 </div>
               </div>

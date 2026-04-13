@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { getVehicle, getVehicleState, getVehiclePositions, wakeVehicle, getDrives, getChargingSessions, getVehicleStatus, getMotorLatest, getClimateLatest, getSecurityLatest, getLatestTirePressure, getChargingTelemetryLatest, getMediaLatest, getLocationSnapshotLatest, getVehicleConfigLatest, getUserPreferenceLatest } from '../api'
 import { cleanNil } from '../lib/cleanNil'
+import { batteryColor, boolColor, boolColorMuted, COLOR } from '../lib/colors'
 import { useState } from 'react'
 import { MapContainer, Polyline, Marker } from 'react-leaflet'
 import { MapTileLayer, MapInvalidator } from '../components/MapTileLayer'
@@ -36,13 +37,13 @@ function InfoTile({ icon: Icon, label, value, color = 'text-[var(--text-primary)
 }) {
   const display = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value
   return (
-    <GlassPanel className="p-4">
-      <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs mb-1.5">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
+    <GlassPanel className="p-4 overflow-hidden">
+      <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs mb-1.5 min-w-0">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
       </div>
-      <p className={clsx('text-lg font-semibold', color)}>{display}</p>
-      {sub && <p className="text-[10px] text-gray-600 mt-0.5">{sub}</p>}
+      <p className={clsx('text-lg font-semibold truncate', color)} title={String(display)}>{display}</p>
+      {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{sub}</p>}
     </GlassPanel>
   )
 }
@@ -58,28 +59,28 @@ export default function VehicleDetail() {
   const { state: live, connected: sseConnected } = useVehicleLive(vehicleId)
   const pollInterval = useAdaptiveInterval()
 
-  const { data: vehicle } = useQuery({
+  const { data: vehicle, error: vehicleError } = useQuery({
     queryKey: ['vehicle', vehicleId],
     queryFn: () => getVehicle(vehicleId),
   })
 
-  const { data: stateData, refetch: refetchState } = useQuery({
+  const { data: stateData, refetch: refetchState, error: stateError } = useQuery({
     queryKey: ['vehicle-state', vehicleId],
     queryFn: () => getVehicleState(vehicleId),
     refetchInterval: 30_000,
   })
 
-  const { data: positions } = useQuery({
+  const { data: positions, error: positionsError } = useQuery({
     queryKey: ['vehicle-positions', vehicleId],
     queryFn: () => getVehiclePositions(vehicleId, 200),
   })
 
-  const { data: drives } = useQuery({
+  const { data: drives, error: drivesError } = useQuery({
     queryKey: ['drives', vehicleId],
     queryFn: () => getDrives(vehicleId, 5),
   })
 
-  const { data: sessions } = useQuery({
+  const { data: sessions, error: sessionsError } = useQuery({
     queryKey: ['charging', vehicleId],
     queryFn: () => getChargingSessions(vehicleId, 5),
   })
@@ -89,54 +90,56 @@ export default function VehicleDetail() {
     onSuccess: () => { setTimeout(() => refetchState(), 5000) },
   })
 
-  const { data: motorData } = useQuery({
+  const { data: motorData, error: motorError } = useQuery({
     queryKey: ['motor-latest', vehicleId],
     queryFn: () => getMotorLatest(vehicleId),
     refetchInterval: pollInterval,
   })
 
-  const { data: climateData } = useQuery({
+  const { data: climateData, error: climateError } = useQuery({
     queryKey: ['climate-latest', vehicleId],
     queryFn: () => getClimateLatest(vehicleId),
     refetchInterval: pollInterval,
   })
 
-  const { data: securityData } = useQuery({
+  const { data: securityData, error: securityError } = useQuery({
     queryKey: ['security-latest', vehicleId],
     queryFn: () => getSecurityLatest(vehicleId),
     refetchInterval: pollInterval,
   })
 
-  const { data: tireData } = useQuery({
+  const { data: tireData, error: tireError } = useQuery({
     queryKey: ['tire-latest', vehicleId],
     queryFn: () => getLatestTirePressure(vehicleId),
     refetchInterval: pollInterval,
   })
-  const { data: chargingTelemetry } = useQuery({
+  const { data: chargingTelemetry, error: chargingTelemetryError } = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],
     queryFn: () => getChargingTelemetryLatest(vehicleId),
     refetchInterval: 5000,
   })
-  const { data: mediaData } = useQuery({
+  const { data: mediaData, error: mediaError } = useQuery({
     queryKey: ['media-latest', vehicleId],
     queryFn: () => getMediaLatest(vehicleId),
     refetchInterval: 5000,
   })
-  const { data: locationData } = useQuery({
+  const { data: locationData, error: locationError } = useQuery({
     queryKey: ['location-latest', vehicleId],
     queryFn: () => getLocationSnapshotLatest(vehicleId),
     refetchInterval: 5000,
   })
-  const { data: vehicleConfigData } = useQuery({
+  const { data: vehicleConfigData, error: vehicleConfigError } = useQuery({
     queryKey: ['vehicle-config-latest', vehicleId],
     queryFn: () => getVehicleConfigLatest(vehicleId),
     refetchInterval: 30000,
   })
-  const { data: userPrefData } = useQuery({
+  const { data: userPrefData, error: userPrefError } = useQuery({
     queryKey: ['user-pref-latest', vehicleId],
     queryFn: () => getUserPreferenceLatest(vehicleId),
     refetchInterval: 30000,
   })
+
+  const anyError = vehicleError || stateError || positionsError || drivesError || sessionsError || motorError || climateError || securityError || tireError || chargingTelemetryError || mediaError || locationError || vehicleConfigError || userPrefError
 
   const state = stateData?.state
   const status = vehicle ? getVehicleStatus(vehicle, state) : 'offline'
@@ -179,6 +182,12 @@ export default function VehicleDetail() {
         </div>
       </FadeIn>
 
+      {anyError && (
+        <div className="p-4 rounded-lg border border-neon-red/30 bg-neon-red/5 text-neon-red text-sm">
+          Failed to load data: {(anyError as Error).message}
+        </div>
+      )}
+
       {state ? (
         <>
           {/* ============ HERO: Car Viz + Gauges ============ */}
@@ -207,7 +216,7 @@ export default function VehicleDetail() {
                     <RadialGauge
                       value={state.battery_level} max={100}
                       label="Battery" unit="%"
-                      color={state.battery_level > 50 ? '#10b981' : state.battery_level > 20 ? '#f59e0b' : '#ef4444'}
+                      color={batteryColor(state.battery_level)}
                       size={110}
                     />
                     <RadialGauge
@@ -218,20 +227,20 @@ export default function VehicleDetail() {
                     <RadialGauge
                       value={Math.round(convertSpeed(state.speed))} max={Math.round(convertSpeed(250))}
                       label="Speed" unit={speedUnit}
-                      color={state.speed > 0 ? '#a855f7' : '#374151'}
+                      color={state.speed > 0 ? COLOR.PURPLE : COLOR.DARK}
                       size={110}
                     />
                     <RadialGauge
                       value={state.charger_power} max={250}
                       label="Power" unit="kW"
-                      color={state.is_charging ? '#10b981' : '#374151'}
+                      color={boolColorMuted(state.is_charging)}
                       size={110}
                     />
                   </div>
 
                   {/* Metric bars */}
                   <div className="space-y-3">
-                    <MetricBar value={state.battery_level} max={100} color={state.battery_level > 50 ? '#10b981' : '#f59e0b'} label="Battery Level" sublabel={`${state.battery_level}%`} />
+                    <MetricBar value={state.battery_level} max={100} color={batteryColor(state.battery_level)} label="Battery Level" sublabel={`${state.battery_level}%`} />
                     <MetricBar value={convertDistance(state.rated_range)} max={convertDistance(600)} color="#00f0ff" label="Estimated Range" sublabel={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`} />
                     {state.is_charging && (
                       <MetricBar value={convertSpeed(state.charge_rate)} max={state.charger_power || 100} color="#10b981" label="Charge Rate" sublabel={`${Math.round(convertSpeed(state.charge_rate))} ${speedUnit} added`} />
@@ -241,14 +250,14 @@ export default function VehicleDetail() {
                   {/* Quick info chips */}
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { icon: state.is_locked ? Lock : Unlock, label: state.is_locked ? 'Locked' : 'Unlocked', color: state.is_locked ? '#10b981' : '#f59e0b' },
-                      { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? '#ef4444' : '#4b5563' },
-                      { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? '#00f0ff' : '#4b5563' },
+                      { icon: state.is_locked ? Lock : Unlock, label: state.is_locked ? 'Locked' : 'Unlocked', color: boolColor(state.is_locked) },
+                      { icon: Shield, label: state.sentry_mode ? 'Sentry ON' : 'Sentry OFF', color: state.sentry_mode ? COLOR.BAD : COLOR.MUTED },
+                      { icon: Wind, label: state.is_climate_on ? 'Climate ON' : 'Climate OFF', color: state.is_climate_on ? COLOR.CYAN : COLOR.MUTED },
                       { icon: Cpu, label: state.software_version || 'N/A', color: '#a855f7' },
                     ].map(chip => (
                       <span key={chip.label} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border border-white/[0.06] bg-white/[0.02]">
                         <chip.icon className="h-3 w-3" style={{ color: chip.color }} />
-                        <span className="text-gray-300">{chip.label}</span>
+                        <span className="text-[var(--text-secondary)]">{chip.label}</span>
                       </span>
                     ))}
                   </div>
@@ -273,7 +282,7 @@ export default function VehicleDetail() {
                 sub={`Outside: ${fmtNumber(convertTemp(state.outside_temp))}${tempUnit}`} />
             </StaggerItem>
             <StaggerItem>
-              <InfoTile icon={Navigation} label="Odometer" value={`${Math.round(convertDistance(state.odometer)).toLocaleString()} ${distanceUnit}`} />
+              <InfoTile icon={Navigation} label="Odometer" value={`${fmtInt(convertDistance(state.odometer))} ${distanceUnit}`} />
             </StaggerItem>
             <StaggerItem>
               <InfoTile icon={BatteryCharging} label="Charger" value={state.is_charging ? `${state.charger_power} kW` : 'Not charging'}
@@ -313,7 +322,7 @@ export default function VehicleDetail() {
                         'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
                         motorData.di_state === 'Enabled' ? 'border-green-500/30 bg-green-500/10 text-green-400'
                           : motorData.di_state === 'Standby' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-                          : 'border-gray-500/30 bg-gray-500/10 text-gray-400',
+                          : 'border-gray-500/30 bg-gray-500/10 text-[var(--text-muted)]',
                       )}>
                         <CircleDot className="h-3 w-3" />
                         {cleanNil(motorData.di_state) ?? 'Unknown'}
@@ -374,7 +383,7 @@ export default function VehicleDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)]">Brake</span>
                       <span className={clsx('inline-flex items-center gap-1 text-xs font-semibold',
-                        motorData.brake_pedal ? 'text-red-400' : 'text-gray-500')}>
+                        motorData.brake_pedal ? 'text-red-400' : 'text-[var(--text-muted)]')}>
                         <span className={clsx('h-2 w-2 rounded-full', motorData.brake_pedal ? 'bg-red-400' : 'bg-gray-600')} />
                         {motorData.brake_pedal ? 'Active' : 'Inactive'}
                       </span>
@@ -384,16 +393,16 @@ export default function VehicleDetail() {
                     <div className="grid grid-cols-2 gap-3">
                       <MetricCard
                         label="Lateral G"
-                        value={motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel, 2)}g` : '—'}
+                        value={motorData.lateral_accel != null ? `${motorData.lateral_accel > 0 ? '+' : ''}${fmtNumber(motorData.lateral_accel)}g` : '—'}
                       />
                       <MetricCard
                         label="Longitudinal G"
-                        value={motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel, 2)}g` : '—'}
+                        value={motorData.longitudinal_accel != null ? `${motorData.longitudinal_accel > 0 ? '+' : ''}${fmtNumber(motorData.longitudinal_accel)}g` : '—'}
                       />
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center py-6">No motor data available</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No motor data available</p>
                 )}
               </GlassPanel>
             </FadeIn>
@@ -465,22 +474,22 @@ export default function VehicleDetail() {
                     {/* System badges */}
                     <div className="flex flex-wrap gap-2 pt-1">
                       <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
-                        climateData.defrost_mode ? 'border-blue-400/30 bg-blue-400/10 text-blue-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        climateData.defrost_mode ? 'border-blue-400/30 bg-blue-400/10 text-blue-400' : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]')}>
                         <Snowflake className="h-3 w-3" /> Defrost {climateData.defrost_mode ? 'ON' : 'OFF'}
                       </span>
                       <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
-                        climateData.battery_heater_on ? 'border-amber-400/30 bg-amber-400/10 text-amber-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        climateData.battery_heater_on ? 'border-amber-400/30 bg-amber-400/10 text-amber-400' : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]')}>
                         <Zap className="h-3 w-3" /> Battery Heater {climateData.battery_heater_on ? 'ON' : 'OFF'}
                       </span>
                       <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
                         climateData.cabin_overheat_mode && climateData.cabin_overheat_mode !== 'Off'
-                          ? 'border-red-400/30 bg-red-400/10 text-red-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                          ? 'border-red-400/30 bg-red-400/10 text-red-400' : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]')}>
                         <ShieldAlert className="h-3 w-3" /> Overheat Protection {climateData.cabin_overheat_mode ?? 'Off'}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center py-6">No climate data available</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No climate data available</p>
                 )}
               </GlassPanel>
             </FadeIn>
@@ -513,7 +522,7 @@ export default function VehicleDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Eye className="h-3 w-3" /> Sentry Mode</span>
                       <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
-                        securityData.sentry_mode ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                        securityData.sentry_mode ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]')}>
                         <ShieldAlert className="h-3 w-3" />
                         {securityData.sentry_mode ? 'Active' : 'Inactive'}
                       </span>
@@ -538,7 +547,7 @@ export default function VehicleDetail() {
                           <div key={label} className="flex items-center justify-between rounded-lg bg-white/[0.02] border border-white/[0.06] px-3 py-2">
                             <span className="text-[11px] text-[var(--text-muted)]">{label}</span>
                             <span className={clsx('text-[11px] font-semibold',
-                              val === 'Closed' ? 'text-green-400' : val ? 'text-amber-400' : 'text-gray-500')}>
+                              val === 'Closed' ? 'text-green-400' : val ? 'text-amber-400' : 'text-[var(--text-muted)]')}>
                               {val ?? '—'}
                             </span>
                           </div>
@@ -550,20 +559,20 @@ export default function VehicleDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> HomeLink</span>
                       <span className={clsx('text-xs font-medium',
-                        securityData.homelink_nearby ? 'text-green-400' : 'text-gray-500')}>
+                        securityData.homelink_nearby ? 'text-green-400' : 'text-[var(--text-muted)]')}>
                         {securityData.homelink_nearby ? 'Nearby' : 'Not detected'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Shield className="h-3 w-3" /> Guest Mode</span>
                       <span className={clsx('text-xs font-medium',
-                        securityData.guest_mode ? 'text-amber-400' : 'text-gray-500')}>
+                        securityData.guest_mode ? 'text-amber-400' : 'text-[var(--text-muted)]')}>
                         {securityData.guest_mode ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center py-6">No security data available</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No security data available</p>
                 )}
               </GlassPanel>
             </FadeIn>
@@ -584,19 +593,19 @@ export default function VehicleDetail() {
                   {/* Lights */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Lightbulb className="h-3 w-3" /> High Beams</span>
-                    <span className={clsx('text-xs font-medium', live.lightsHighBeams ? 'text-neon-cyan' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.lightsHighBeams ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
                       {live.lightsHighBeams ? 'On' : 'Off'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> Turn Signal</span>
-                    <span className={clsx('text-xs font-medium', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.lightsTurnSignal && live.lightsTurnSignal !== 'Off' ? 'text-neon-amber' : 'text-[var(--text-muted)]')}>
                       {live.lightsTurnSignal || 'Off'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Hazards</span>
-                    <span className={clsx('text-xs font-medium', live.lightsHazards ? 'text-neon-red' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.lightsHazards ? 'text-neon-red' : 'text-[var(--text-muted)]')}>
                       {live.lightsHazards ? 'Active' : 'Off'}
                     </span>
                   </div>
@@ -607,7 +616,7 @@ export default function VehicleDetail() {
                   {/* Driver & Keys */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><User className="h-3 w-3" /> Driver Seat</span>
-                    <span className={clsx('text-xs font-medium', live.driverSeatOccupied ? 'text-green-400' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.driverSeatOccupied ? 'text-green-400' : 'text-[var(--text-muted)]')}>
                       {live.driverSeatOccupied ? 'Occupied' : 'Empty'}
                     </span>
                   </div>
@@ -622,19 +631,19 @@ export default function VehicleDetail() {
                   {/* Access Modes */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Car className="h-3 w-3" /> Valet Mode</span>
-                    <span className={clsx('text-xs font-medium', live.valetMode ? 'text-purple-400' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.valetMode ? 'text-purple-400' : 'text-[var(--text-muted)]')}>
                       {live.valetMode ? 'Enabled' : 'Off'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Settings className="h-3 w-3" /> Service Mode</span>
-                    <span className={clsx('text-xs font-medium', live.serviceMode ? 'text-amber-400' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.serviceMode ? 'text-amber-400' : 'text-[var(--text-muted)]')}>
                       {live.serviceMode ? 'Active' : 'Off'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--text-muted)] flex items-center gap-1"><Gauge className="h-3 w-3" /> Speed Limit</span>
-                    <span className={clsx('text-xs font-medium', live.speedLimitMode ? 'text-neon-cyan' : 'text-gray-500')}>
+                    <span className={clsx('text-xs font-medium', live.speedLimitMode ? 'text-neon-cyan' : 'text-[var(--text-muted)]')}>
                       {live.speedLimitMode ? `${Math.round(live.currentSpeedLimit)} mph` : 'Off'}
                     </span>
                   </div>
@@ -665,7 +674,7 @@ export default function VehicleDetail() {
                     { label: 'RR', pressure: toDisplay(tireData.rear_right) },
                   ]
                   const getColor = (val: number | null) => {
-                    if (val == null) return 'text-gray-500'
+                    if (val == null) return 'text-[var(--text-muted)]'
                     const psi = val // already in display unit; thresholds converted below
                     const lowCrit = convertPressure(2.068) // ~30 PSI
                     const lowWarn = convertPressure(2.413) // ~35 PSI
@@ -715,7 +724,7 @@ export default function VehicleDetail() {
                     </div>
                   )
                 })() : (
-                  <p className="text-xs text-gray-600 text-center py-6">No tire pressure data available</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No tire pressure data available</p>
                 )}
               </GlassPanel>
             </FadeIn>
@@ -758,7 +767,7 @@ export default function VehicleDetail() {
                         chargingTelemetry.bms_state === 'Standby' ? 'border-green-500/30 bg-green-500/10 text-green-400'
                           : chargingTelemetry.bms_state === 'Charging' ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400'
                           : chargingTelemetry.bms_state === 'Fault' ? 'border-red-500/30 bg-red-500/10 text-red-400'
-                          : 'border-gray-500/30 bg-gray-500/10 text-gray-400',
+                          : 'border-gray-500/30 bg-gray-500/10 text-[var(--text-muted)]',
                       )}>
                         {chargingTelemetry.bms_state ?? 'Unknown'}
                       </span>
@@ -772,7 +781,7 @@ export default function VehicleDetail() {
                           && (chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) > 0.05
                           ? 'text-amber-400' : 'text-[var(--text-primary)]')}>
                         {chargingTelemetry.brick_voltage_max != null && chargingTelemetry.brick_voltage_min != null
-                          ? `${fmtWithUnit(((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000), 'mV', 0)}`
+                          ? `${fmtWithUnit(((chargingTelemetry.brick_voltage_max - chargingTelemetry.brick_voltage_min) * 1000), 'mV')}`
                           : '—'}
                       </span>
                     </div>
@@ -783,13 +792,13 @@ export default function VehicleDetail() {
                       <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
                         chargingTelemetry.battery_heater_on
                           ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
-                          : 'border-white/[0.06] bg-white/[0.02] text-gray-500')}>
+                          : 'border-white/[0.06] bg-white/[0.02] text-[var(--text-muted)]')}>
                         <Zap className="h-3 w-3" /> {chargingTelemetry.battery_heater_on ? 'Active' : 'Off'}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center py-6">No charging telemetry available</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No charging telemetry available</p>
                 )}
               </GlassPanel>
             </FadeIn>
@@ -830,7 +839,7 @@ export default function VehicleDetail() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-600">No media data</p>
+                      <p className="text-xs text-[var(--text-muted)]">No media data</p>
                     )}
                   </div>
 
@@ -849,7 +858,7 @@ export default function VehicleDetail() {
                             </p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                               {locationData.miles_to_arrival != null && (
-                                <span>{fmtNumber(convertDistance(locationData.miles_to_arrival * 1.60934))} {distanceUnit}</span>
+                                <span>{fmtNumber(convertDistance(locationData.miles_to_arrival))} {distanceUnit}</span>
                               )}
                               {locationData.minutes_to_arrival != null && (
                                 <span>{Math.round(locationData.minutes_to_arrival)} min</span>
@@ -857,7 +866,7 @@ export default function VehicleDetail() {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-xs text-gray-500">No active destination</p>
+                          <p className="text-xs text-[var(--text-muted)]">No active destination</p>
                         )}
                         <div className="flex items-center gap-2 flex-wrap">
                           {locationData.located_at_home && (
@@ -878,7 +887,7 @@ export default function VehicleDetail() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-600">No location data</p>
+                      <p className="text-xs text-[var(--text-muted)]">No location data</p>
                     )}
                   </div>
                 </div>
@@ -910,7 +919,7 @@ export default function VehicleDetail() {
                   </div>
                   <div className="p-3 text-center">
                     <p className="text-[10px] text-[var(--text-muted)] font-mono">
-                      {fmtNumber(state.latitude, 5)}, {fmtNumber(state.longitude, 5)}
+                      {fmtNumber(state.latitude)}, {fmtNumber(state.longitude)}
                     </p>
                   </div>
                 </GlassPanel>
@@ -925,7 +934,7 @@ export default function VehicleDetail() {
                     <Car className="h-4 w-4 text-neon-purple" />
                     Vehicle Configuration
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
                       { label: 'Model', value: cleanNil(vehicleConfigData.car_type) },
                       { label: 'Trim', value: cleanNil(vehicleConfigData.trim) },
@@ -1002,7 +1011,7 @@ export default function VehicleDetail() {
                   </div>
                 ) : (
                   <div className="h-64 flex items-center justify-center">
-                    <p className="text-xs text-gray-600">Position data will appear here</p>
+                    <p className="text-xs text-[var(--text-muted)]">Position data will appear here</p>
                   </div>
                 )}
               </GlassPanel>
@@ -1037,14 +1046,14 @@ export default function VehicleDetail() {
                         <div className="text-right">
                           <InlineMetric icon={<Clock />} value={`${Math.floor(d.duration_min / 60)}h ${Math.round(d.duration_min % 60)}m`} />
                           {d.start_battery_level != null && d.end_battery_level != null && (
-                            <span className="text-[10px] text-gray-600">{d.start_battery_level}% → {d.end_battery_level}%</span>
+                            <span className="text-[10px] text-[var(--text-muted)]">{d.start_battery_level}% → {d.end_battery_level}%</span>
                           )}
                         </div>
                       </Link>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center py-6">No drives recorded yet</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No drives recorded yet</p>
                 )}
               </GlassPanel>
             </FadeIn>
@@ -1075,14 +1084,14 @@ export default function VehicleDetail() {
                         <div className="text-right">
                           <span className="text-xs text-[var(--text-muted)]">{s.start_battery_level}% → {s.end_battery_level ?? '—'}%</span>
                           {s.cost != null && s.cost > 0 && (
-                            <p className="text-[10px] text-neon-amber">${fmtNumber(s.cost, 2)}</p>
+                            <p className="text-[10px] text-neon-amber">${fmtNumber(s.cost)}</p>
                           )}
                         </div>
                       </Link>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-600 text-center py-6">No charge sessions yet</p>
+                  <p className="text-xs text-[var(--text-muted)] text-center py-6">No charge sessions yet</p>
                 )}
               </GlassPanel>
             </FadeIn>

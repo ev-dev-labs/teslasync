@@ -4,14 +4,13 @@ import { getAPICallLogs, getAPICallLogStats } from '../api'
 import { PageHeader, GlassPanel, FadeIn, StatCard, Button, Select, Input } from '../components/ui'
 import { formatDateTime } from '../lib/dateFormat'
 import { FileText, Clock, AlertTriangle, Activity, Download, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X } from 'lucide-react'
-import { fmtNumber } from '../lib/numberFormat'
+import { fmtNumber, fmtInt } from '../lib/numberFormat'
 import { tableTokens } from '../lib/tokens'
 import clsx from 'clsx'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatusBadge({ code }: { code: number | null }) {
-  usePageTitle('API Logs')
-  if (!code) return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-400">N/A</span>
+  if (!code) return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-[var(--text-muted)]">N/A</span>
   const color = code < 300 ? 'text-emerald-400 bg-emerald-400/10' : code < 400 ? 'text-blue-400 bg-blue-400/10' : code < 500 ? 'text-amber-400 bg-amber-400/10' : 'text-red-400 bg-red-400/10'
   return <span className={clsx('text-xs font-mono px-2 py-0.5 rounded-full', color)}>{code}</span>
 }
@@ -25,7 +24,7 @@ function MethodBadge({ method }: { method: string }) {
     DELETE: 'text-red-400 bg-red-400/10 ring-red-400/20',
   }
   return (
-    <span className={clsx('text-[10px] font-bold font-mono px-2 py-0.5 rounded-md ring-1', colors[method] || 'text-gray-400 bg-gray-400/10 ring-gray-400/20')}>
+    <span className={clsx('text-[10px] font-bold font-mono px-2 py-0.5 rounded-md ring-1', colors[method] || 'text-[var(--text-muted)] bg-gray-400/10 ring-gray-400/20')}>
       {method}
     </span>
   )
@@ -48,6 +47,7 @@ function JsonViewer({ data, label }: { data: string | null; label: string }) {
 }
 
 export default function ApiLogs() {
+  usePageTitle('API Logs')
   const [page, setPage] = useState(0)
   const [method, setMethod] = useState('')
   const [status, setStatus] = useState('')
@@ -108,10 +108,10 @@ export default function ApiLogs() {
       {/* Stats */}
       <FadeIn>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={<FileText className="h-5 w-5" />} label="Total Calls" value={stats?.total_calls?.toLocaleString() ?? '—'} color="cyan" />
+          <StatCard icon={<FileText className="h-5 w-5" />} label="Total Calls" value={stats?.total_calls != null ? fmtInt(stats.total_calls) : '—'} color="cyan" />
           <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Error Rate" value={stats ? `${fmtNumber(stats.error_rate)}%` : '—'} color="amber" change={stats && stats.error_rate > 5 ? { value: String(stats.error_count), positive: false } : undefined} />
           <StatCard icon={<Clock className="h-5 w-5" />} label="Avg Duration" value={stats ? `${Math.round(stats.avg_duration_ms)}ms` : '—'} color="green" />
-          <StatCard icon={<Activity className="h-5 w-5" />} label="Last 24h" value={stats?.last_24h?.toLocaleString() ?? '—'} color="purple" />
+          <StatCard icon={<Activity className="h-5 w-5" />} label="Last 24h" value={stats?.last_24h != null ? fmtInt(stats.last_24h) : '—'} color="purple" />
         </div>
       </FadeIn>
 
@@ -150,7 +150,7 @@ export default function ApiLogs() {
           {/* Header with export */}
           <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--glass-border)' }}>
             <p className="text-sm text-[var(--text-secondary)]">
-              {total > 0 ? `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${total.toLocaleString()}` : 'No logs found'}
+              {total > 0 ? `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}` : 'No logs found'}
             </p>
             <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExport} disabled={logs.length === 0}>Export JSON</Button>
           </div>

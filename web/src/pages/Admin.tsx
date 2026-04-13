@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { fmtInt } from '../lib/numberFormat'
 import {
   Shield,
   Clock,
@@ -18,6 +19,7 @@ import {
 import { FadeIn, GlassPanel, PageHeader, Skeleton, Button, DataTable, Badge } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { formatDate, formatDateTime } from '../lib/dateFormat'
+import { usePageTitle } from '../hooks/usePageTitle'
 import {
   getAPIUsage,
   getBackupStats,
@@ -29,10 +31,8 @@ import {
   type APIUsage,
   type ExtendedHealthResponse,
 } from '../api'
-import { usePageTitle } from '../hooks/usePageTitle'
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
-  usePageTitle('Admin')
   return (
     <GlassPanel className="p-4">
       <div className="flex items-center gap-3">
@@ -49,6 +49,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 }
 
 export default function Admin() {
+  usePageTitle('Admin')
   const toast = useToast()
   const queryClient = useQueryClient()
 
@@ -123,7 +124,7 @@ export default function Admin() {
             <StatCard
               icon={Activity}
               label="API Requests"
-              value={apiUsage?.total_requests?.toLocaleString() ?? '—'}
+              value={apiUsage?.total_requests != null ? fmtInt(apiUsage.total_requests) : '—'}
               color="from-blue-600 to-blue-800"
             />
             <StatCard
@@ -219,7 +220,7 @@ export default function Admin() {
                   {Object.entries(backupStats.row_counts).map(([table, count]) => (
                     <div key={table} className="flex items-center justify-between text-xs">
                       <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{table}</span>
-                      <span className="font-mono text-white">{(count as number).toLocaleString()}</span>
+                      <span className="font-mono text-white">{fmtInt(count as number)}</span>
                     </div>
                   ))}
                 </div>

@@ -52,7 +52,7 @@ import {
 } from 'recharts'
 import clsx from 'clsx'
 import { useSettings } from '../hooks/useSettings'
-import { CHARGER_COLORS } from '../lib/colors'
+import { CHARGER_COLORS, savingsColor, COLOR } from '../lib/colors'
 import { fmtNumber, fmtWithUnit, fmtPercent, fmtInt } from '../lib/numberFormat'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -60,7 +60,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 const DEFAULT_GAS_PRICE = 3.5        // $/gal
 const DEFAULT_MPG = 30               // miles per gallon
-const KM_PER_MILE = 1.60934
 const CO2_PER_GAL_KG = 8.887         // kg CO₂ per gallon of gasoline
 const KG_CO2_PER_TREE_YEAR = 22      // kg CO₂ absorbed per tree per year
 
@@ -98,7 +97,7 @@ function CostTooltip({
       {payload.map(p => (
         <p key={p.name} style={{ color: 'var(--text-primary)' }}>
           <span style={{ color: p.color || p.fill || p.stroke }}>●</span>{' '}
-          {p.name}: {prefix}{typeof p.value === 'number' ? fmtNumber(p.value, 2) : p.value}{suffix}
+          {p.name}: {prefix}{typeof p.value === 'number' ? fmtNumber(p.value) : p.value}{suffix}
         </p>
       ))}
     </div>
@@ -120,11 +119,10 @@ function categorizeCharger(type: string | null, cable: string | null): string {
 }
 
 function gasEquivalentCost(
-  distanceKm: number,
+  distanceMiles: number,
   gasPriceDollar: number,
   mpg: number,
 ): number {
-  const distanceMiles = distanceKm / KM_PER_MILE
   const gallonsNeeded = distanceMiles / mpg
   return gallonsNeeded * gasPriceDollar
 }
@@ -408,8 +406,7 @@ export default function CostAnalysis() {
   /* ── lifetime / CO₂ ────────────────────────────── */
   const co2SavedKg = useMemo(() => {
     if (energy?.co2_saved_kg) return energy.co2_saved_kg
-    const distMiles = totalDistanceKm / KM_PER_MILE
-    const gallonsSaved = distMiles / mpg
+    const gallonsSaved = totalDistanceKm / mpg  // totalDistanceKm is actually miles now
     return gallonsSaved * CO2_PER_GAL_KG
   }, [energy, totalDistanceKm, mpg])
 
@@ -518,42 +515,42 @@ export default function CostAnalysis() {
               {([
                 {
                   label: 'Total Charging Cost',
-                  value: `$${fmtNumber(totalCost, 2)}`,
+                  value: `$${fmtNumber(totalCost)}`,
                   icon: DollarSign,
                   color: 'cyan' as const,
                   subtitle: `${(sessions ?? []).length} sessions`,
                 },
                 {
                   label: `Cost per ${distanceUnit}`,
-                  value: `$${fmtNumber(costPerUnit, 3)}`,
+                  value: `$${fmtNumber(costPerUnit)}`,
                   icon: TrendingDown,
                   color: 'green' as const,
                   subtitle: `${fmtInt(convertDistance(totalDistanceKm))} ${distanceUnit} driven`,
                 },
                 {
                   label: 'Avg Cost per kWh',
-                  value: `$${fmtNumber(costPerKwh, 3)}`,
+                  value: `$${fmtNumber(costPerKwh)}`,
                   icon: Zap,
                   color: 'amber' as const,
                   subtitle: `${fmtWithUnit(totalEnergy, 'kWh')} total`,
                 },
                 {
                   label: 'Gas Equivalent',
-                  value: `$${fmtNumber(gasEquiv, 2)}`,
+                  value: `$${fmtNumber(gasEquiv)}`,
                   icon: Fuel,
                   color: 'red' as const,
-                  subtitle: `at $${fmtNumber(gasPrice, 2)}/gal, ${mpg} mpg`,
+                  subtitle: `at $${fmtNumber(gasPrice)}/gal, ${mpg} mpg`,
                 },
                 {
                   label: 'Total Savings',
-                  value: `$${fmtNumber(totalSavings, 2)}`,
+                  value: `$${fmtNumber(totalSavings)}`,
                   icon: PiggyBank,
                   color: totalSavings >= 0 ? 'green' as const : 'red' as const,
                   subtitle: `vs gasoline`,
                 },
                 {
                   label: 'Savings %',
-                  value: `${fmtPercent(savingsPct, 1)}`,
+                  value: `${fmtPercent(savingsPct)}`,
                   icon: TrendingUp,
                   color: savingsPct >= 0 ? 'green' as const : 'red' as const,
                   subtitle: `cheaper than gas`,
@@ -719,7 +716,7 @@ export default function CostAnalysis() {
                                 {b.type}
                               </span>
                               <span style={{ color: 'var(--text-secondary)' }}>
-                                ${fmtNumber(b.cost, 2)} · {b.sessions} sessions · ${fmtNumber(b.avgCostKwh, 3)}/kWh
+                                ${fmtNumber(b.cost)} · {b.sessions} sessions · ${fmtNumber(b.avgCostKwh)}/kWh
                               </span>
                             </div>
                             <div className="w-full h-2 rounded-full" style={{ background: 'var(--surface-1)' }}>
@@ -786,7 +783,7 @@ export default function CostAnalysis() {
                       className="w-full"
                     />
                     <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                      Default from settings: ${fmtNumber(settings.base_cost_per_kwh, 2)}/kWh
+                      Default from settings: ${fmtNumber(settings.base_cost_per_kwh)}/kWh
                     </span>
                   </div>
                 </div>
@@ -806,13 +803,13 @@ export default function CostAnalysis() {
                     <p
                       className="text-4xl sm:text-5xl font-black tracking-tight"
                       style={{
-                        color: totalSavings >= 0 ? '#10b981' : '#ef4444',
+                        color: savingsColor(totalSavings),
                         textShadow: totalSavings >= 0
                           ? '0 0 20px rgba(16,185,129,0.4)'
                           : '0 0 20px rgba(239,68,68,0.4)',
                       }}
                     >
-                      ${fmtNumber(Math.abs(totalSavings), 2)}
+                      ${fmtNumber(Math.abs(totalSavings))}
                     </p>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       {totalSavings >= 0 ? 'compared to gasoline' : 'more than gasoline (check your rates!)'}
@@ -822,19 +819,19 @@ export default function CostAnalysis() {
                     <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Monthly</p>
                       <p className="text-sm font-bold" style={{ color: '#00f0ff' }}>
-                        ${fmtNumber(monthlySavings, 2)}
+                        ${fmtNumber(monthlySavings)}
                       </p>
                     </GlassPanel>
                     <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Annual (est.)</p>
                       <p className="text-sm font-bold" style={{ color: '#10b981' }}>
-                        ${fmtNumber(annualSavings, 2)}
+                        ${fmtNumber(annualSavings)}
                       </p>
                     </GlassPanel>
                     <GlassPanel className="rounded-lg p-3">
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Lifetime</p>
                       <p className="text-sm font-bold" style={{ color: '#a855f7' }}>
-                        ${fmtNumber(lifetimeSavings, 2)}
+                        ${fmtNumber(lifetimeSavings)}
                       </p>
                     </GlassPanel>
                   </div>
@@ -864,10 +861,10 @@ export default function CostAnalysis() {
                     }},
                     { key: 'energy', header: 'Energy (kWh)', sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>{fmtNumber(row.energy)}</span> },
                     { key: 'distance', header: `Distance (${distanceUnit})`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>{fmtNumber(row.distance)}</span> },
-                    { key: 'cost', header: 'Cost ($)', sortable: true, render: (row) => <span className="font-medium" style={{ color: '#00f0ff' }}>${fmtNumber(row.cost, 2)}</span> },
-                    { key: 'perUnit', header: `$/${distanceUnit}`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>${fmtNumber(row.perUnit, 3)}</span> },
-                    { key: 'gasCost', header: 'Gas Would Be', sortable: true, render: (row) => <span style={{ color: '#f59e0b' }}>${fmtNumber(row.gasCost, 2)}</span> },
-                    { key: 'saved', header: 'Saved', sortable: true, render: (row) => <span className="font-medium" style={{ color: row.saved >= 0 ? '#10b981' : '#ef4444' }}>{row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved, 2)}</span> },
+                    { key: 'cost', header: 'Cost ($)', sortable: true, render: (row) => <span className="font-medium" style={{ color: '#00f0ff' }}>${fmtNumber(row.cost)}</span> },
+                    { key: 'perUnit', header: `$/${distanceUnit}`, sortable: true, render: (row) => <span style={{ color: 'var(--text-primary)' }}>${fmtNumber(row.perUnit)}</span> },
+                    { key: 'gasCost', header: 'Gas Would Be', sortable: true, render: (row) => <span style={{ color: '#f59e0b' }}>${fmtNumber(row.gasCost)}</span> },
+                    { key: 'saved', header: 'Saved', sortable: true, render: (row) => <span className="font-medium" style={{ color: savingsColor(row.saved) }}>{row.saved >= 0 ? '+' : ''}${fmtNumber(row.saved)}</span> },
                   ] as Column<(typeof tableData)[number]>[]}
                   data={tableData}
                   keyExtractor={(row) => row.month}
@@ -911,10 +908,10 @@ export default function CostAnalysis() {
                                 entry.avgRate === 0
                                   ? 'var(--surface-1)'
                                   : cheapestHour && entry.hour === cheapestHour.hour
-                                    ? '#10b981'
+                                    ? COLOR.GOOD
                                     : mostExpensiveHour && entry.hour === mostExpensiveHour.hour
-                                      ? '#ef4444'
-                                      : '#00f0ff'
+                                      ? COLOR.BAD
+                                      : COLOR.CYAN
                               }
                               fillOpacity={entry.avgRate === 0 ? 0.2 : 0.8}
                             />
@@ -936,7 +933,7 @@ export default function CostAnalysis() {
                         Cheapest Time
                       </p>
                       <p className="text-sm font-bold" style={{ color: '#10b981' }}>
-                        {cheapestHour.hour} — ${fmtNumber(cheapestHour.avgRate, 3)}/kWh
+                        {cheapestHour.hour} — ${fmtNumber(cheapestHour.avgRate)}/kWh
                       </p>
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {cheapestHour.sessions} sessions
@@ -952,7 +949,7 @@ export default function CostAnalysis() {
                         Most Expensive Time
                       </p>
                       <p className="text-sm font-bold" style={{ color: '#ef4444' }}>
-                        {mostExpensiveHour.hour} — ${fmtNumber(mostExpensiveHour.avgRate, 3)}/kWh
+                        {mostExpensiveHour.hour} — ${fmtNumber(mostExpensiveHour.avgRate)}/kWh
                       </p>
                       <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {mostExpensiveHour.sessions} sessions
@@ -968,7 +965,7 @@ export default function CostAnalysis() {
                         Best Rate by Type
                       </p>
                       <p className="text-sm font-bold" style={{ color: cheapestChargerType.fill }}>
-                        {cheapestChargerType.type} — ${fmtNumber(cheapestChargerType.avgCostKwh, 3)}/kWh
+                        {cheapestChargerType.type} — ${fmtNumber(cheapestChargerType.avgCostKwh)}/kWh
                       </p>
                     </GlassPanel>
                   )}
@@ -1013,26 +1010,26 @@ export default function CostAnalysis() {
                   },
                   {
                     label: 'Charging Cost',
-                    value: `$${fmtNumber(totalCost, 2)}`,
+                    value: `$${fmtNumber(totalCost)}`,
                     color: '#00f0ff',
                     icon: DollarSign,
                   },
                   {
                     label: 'Gas Equivalent',
-                    value: `$${fmtNumber(gasEquiv, 2)}`,
+                    value: `$${fmtNumber(gasEquiv)}`,
                     color: '#ef4444',
                     icon: Fuel,
                   },
                   {
                     label: 'Total Savings',
-                    value: `$${fmtNumber(totalSavings, 2)}`,
-                    color: totalSavings >= 0 ? '#10b981' : '#ef4444',
+                    value: `$${fmtNumber(totalSavings)}`,
+                    color: savingsColor(totalSavings),
                     icon: PiggyBank,
                   },
                   {
                     label: 'CO₂ Saved',
                     value: co2SavedKg >= 1000
-                      ? `${fmtWithUnit((co2SavedKg / 1000), 'tons', 2)}`
+                      ? `${fmtWithUnit((co2SavedKg / 1000), 'tons')}`
                       : `${fmtWithUnit(co2SavedKg, 'kg')}`,
                     color: '#10b981',
                     icon: Leaf,
@@ -1071,7 +1068,7 @@ export default function CostAnalysis() {
                   By driving electric, you&apos;ve prevented{' '}
                   <span className="font-bold text-neon-green">
                     {co2SavedKg >= 1000
-                      ? `${fmtNumber((co2SavedKg / 1000), 2)} metric tons`
+                      ? `${fmtNumber((co2SavedKg / 1000))} metric tons`
                       : `${fmtWithUnit(co2SavedKg, 'kg')}`}
                   </span>{' '}
                   of CO₂ emissions — equivalent to planting{' '}

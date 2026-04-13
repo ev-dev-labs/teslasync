@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getVehicles, getSecurityEvents, getSecurityLatest, SecurityEvent } from '../api'
 import { useVehicleLive } from '../hooks/useVehicleLive'
 import { useAdaptiveInterval } from '../hooks/useAdaptiveInterval'
-import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, AlertBanner } from '../components/ui'
+import { PageHeader, GlassPanel, FadeIn, Skeleton, Badge, AlertBanner, Select } from '../components/ui'
 import {
   Lock, Unlock, Shield, ShieldCheck, ShieldAlert, Eye,
   DoorOpen, DoorClosed, Home, UserCheck, AlertTriangle, CheckCircle,
@@ -13,6 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import clsx from 'clsx'
+import { boolColorMuted, COLOR } from '../lib/colors'
 import { formatDateShort } from '../lib/dateFormat'
 import { ChartTooltip } from '../components/Charts'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -22,7 +23,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 type WindowState = 'Closed' | 'Venting' | 'Open' | 'Unknown'
 
 function parseWindowState(val?: string): WindowState {
-  usePageTitle('Security & Access')
   if (!val) return 'Unknown'
   const v = val.toLowerCase()
   if (v === 'closed' || v === 'close') return 'Closed'
@@ -87,9 +87,9 @@ function SecurityCarVisualization({
   locked, sentryMode, doorState, fdWindow, fpWindow, rdWindow, rpWindow, homelinkNearby, guestMode,
 }: CarVisualizationProps) {
   const isDoorClosed = doorClosed(doorState)
-  const doorColor = isDoorClosed ? '#10b981' : '#ef4444'
-  const lockColor = locked ? '#10b981' : '#ef4444'
-  const sentryColor = sentryMode ? '#3b82f6' : '#64748b'
+  const doorColor = isDoorClosed ? COLOR.GOOD : COLOR.BAD
+  const lockColor = locked ? COLOR.GOOD : COLOR.BAD
+  const sentryColor = boolColorMuted(!!sentryMode)
 
   const windows = [
     { label: 'FD', state: parseWindowState(fdWindow), cx: 145, cy: 180 },
@@ -106,7 +106,7 @@ function SecurityCarVisualization({
   ]
 
   const isSecure = locked && isDoorClosed && windows.every(w => w.state === 'Closed')
-  const statusColor = isSecure ? '#10b981' : '#ef4444'
+  const statusColor = isSecure ? COLOR.GOOD : COLOR.BAD
 
   return (
     <svg viewBox="0 0 400 620" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', maxWidth: '100%' }} role="img" aria-label="Vehicle security visualization">
@@ -287,7 +287,7 @@ function describeEvent(event: SecurityEvent, prev?: SecurityEvent): EventChange[
       changes.push({
         type: 'lock',
         label: event.locked ? 'Vehicle Locked' : 'Vehicle Unlocked',
-        color: event.locked ? '#10b981' : '#ef4444',
+        color: event.locked ? COLOR.GOOD : COLOR.BAD,
         icon: event.locked ? 'lock' : 'unlock',
       })
     }
@@ -295,7 +295,7 @@ function describeEvent(event: SecurityEvent, prev?: SecurityEvent): EventChange[
       changes.push({
         type: 'sentry',
         label: event.sentry_mode ? 'Sentry Mode Activated' : 'Sentry Mode Deactivated',
-        color: event.sentry_mode ? '#3b82f6' : '#64748b',
+        color: boolColorMuted(!!event.sentry_mode),
         icon: event.sentry_mode ? 'shield-on' : 'shield-off',
       })
     }
@@ -366,6 +366,7 @@ function EventIcon({ icon, className }: { icon: EventChange['icon']; className?:
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export default function SecurityAccess() {
+  usePageTitle('Security & Access')
   const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null)
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null
@@ -458,14 +459,12 @@ export default function SecurityAccess() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
         <PageHeader title="Security & Access" subtitle="Vehicle lock status, sentry mode monitoring, and access events" icon={<Shield className="h-7 w-7 text-neon-cyan" />} />
         {vehicles && vehicles.length > 1 && (
-          <select
-            value={vehicleId ?? ''}
+          <Select
+            label="Vehicle"
+            value={String(vehicleId ?? '')}
             onChange={e => setSelectedVehicle(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-lg border-0 focus:ring-1 focus:ring-neon-cyan/50"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-primary)' }}
-          >
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.display_name || v.vin}</option>)}
-          </select>
+            options={vehicles.map(v => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
         )}
       </div>
 

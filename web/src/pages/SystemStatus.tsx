@@ -18,6 +18,8 @@ import { formatDateTime, formatTime } from '../lib/dateFormat'
 import { fmtNumber, fmtInt, fmtPercent } from '../lib/numberFormat'
 import { tableTokens } from '../lib/tokens'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { COLOR } from '@/lib/colors'
+import { request } from '../api/client'
 
 interface ComponentInfo {
   status: string
@@ -41,7 +43,6 @@ interface SystemStatus {
 }
 
 function getStatusColor(status: string): string {
-  usePageTitle('System Status')
   switch (status.toLowerCase()) {
     case 'ok': case 'healthy': case 'authenticated': case 'connected': case 'enabled': return '#10b981'
     case 'degraded': case 'disconnected': return '#f59e0b'
@@ -281,9 +282,9 @@ function ComponentCard({ name, info }: { name: string; info: ComponentInfo }) {
 }
 
 function CostColor({ cost }: { cost: number }) {
-  if (cost < 5) return <span className="text-neon-green">${fmtNumber(cost, 2)}</span>
-  if (cost < 8) return <span className="text-neon-amber">${fmtNumber(cost, 2)}</span>
-  return <span className="text-neon-red">${fmtNumber(cost, 2)}</span>
+  if (cost < 5) return <span className="text-neon-green">${fmtNumber(cost)}</span>
+  if (cost < 8) return <span className="text-neon-amber">${fmtNumber(cost)}</span>
+  return <span className="text-neon-red">${fmtNumber(cost)}</span>
 }
 
 function ComponentHealthPanel() {
@@ -309,7 +310,7 @@ function ComponentHealthPanel() {
   )
 
   const statusDot = (status: string) => {
-    const color = status === 'healthy' ? '#10b981' : status === 'degraded' ? '#f59e0b' : status === 'unhealthy' ? '#ef4444' : '#6b7280'
+    const color = status === 'healthy' ? COLOR.GOOD : status === 'degraded' ? COLOR.WARN : status === 'unhealthy' ? COLOR.BAD : COLOR.MUTED
     return <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
   }
 
@@ -463,7 +464,7 @@ function APIUsageDashboard() {
 
   const remaining = Math.max(0, usage.monthly_credit - usage.estimated_cost)
   const costPct = Math.min((usage.estimated_cost / usage.monthly_credit) * 100, 100)
-  const costColor = usage.estimated_cost < 5 ? '#10b981' : usage.estimated_cost < 8 ? '#f59e0b' : '#ef4444'
+  const costColor = usage.estimated_cost < 5 ? COLOR.GOOD : usage.estimated_cost < 8 ? COLOR.WARN : COLOR.BAD
 
   // Rate limit gauge: estimate current minute usage from total / session uptime
   const rateLimit = 60
@@ -503,7 +504,7 @@ function APIUsageDashboard() {
             <p className="text-2xl font-bold">
               <CostColor cost={usage.estimated_cost} />
             </p>
-            <p className="text-[10px] text-[var(--text-muted)]">${fmtNumber(usage.cost_per_request, 4)}/req</p>
+            <p className="text-[10px] text-[var(--text-muted)]">${fmtNumber(usage.cost_per_request)}/req</p>
           </div>
 
           {/* Remaining credit */}
@@ -604,8 +605,8 @@ function CompressionStatsPanel() {
 
   const formatBytes = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024, 1)} KB`
-    return `${fmtNumber(bytes / (1024 * 1024), 1)} MB`
+    if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024)} KB`
+    return `${fmtNumber(bytes / (1024 * 1024))} MB`
   }
 
   const savingsPct = stats.total_positions > 0
@@ -684,10 +685,10 @@ function AuditLogTable() {
   const { data: logs, isLoading } = useQuery({ queryKey: ['audit-logs'], queryFn: () => getAuditLogs(30), refetchInterval: 30_000 })
 
   const actionColor: Record<string, string> = {
-    create: '#10b981',
-    update: '#f59e0b',
-    delete: '#ef4444',
-    command: '#a855f7',
+    create: COLOR.GOOD,
+    update: COLOR.WARN,
+    delete: COLOR.BAD,
+    command: COLOR.PURPLE,
   }
 
   return (
@@ -704,7 +705,7 @@ function AuditLogTable() {
           <DataTable
             columns={[
               { key: 'time', header: 'Time', render: (l: AuditLog) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(l.created_at)}</span> },
-              { key: 'action', header: 'Action', render: (l: AuditLog) => <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${actionColor[l.action] ?? '#6b7280'}15`, color: actionColor[l.action] ?? '#6b7280' }}>{l.action}</span> },
+              { key: 'action', header: 'Action', render: (l: AuditLog) => <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: `${actionColor[l.action] ?? COLOR.MUTED}15`, color: actionColor[l.action] ?? COLOR.MUTED }}>{l.action}</span> },
               { key: 'resource', header: 'Resource', render: (l: AuditLog) => <span className="text-[var(--text-secondary)]">{l.resource}</span> },
               { key: 'details', header: 'Details', render: (l: AuditLog) => <span className="text-[var(--text-muted)] max-w-xs truncate">{l.details}</span> },
               { key: 'ip', header: 'IP', render: (l: AuditLog) => <span className="text-[var(--text-muted)] font-mono">{l.ip}</span> },
@@ -741,7 +742,7 @@ const SIGNAL_GROUPS: { label: string; color: string; signals: string[] }[] = [
 function formatSignalValue(value: unknown): string {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'boolean') return value ? '✓' : '✗'
-  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : fmtNumber(value, 2)
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : fmtNumber(value)
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
@@ -875,11 +876,11 @@ function TelemetryLivePanel() {
         {/* Overview stats */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
           {[
-            { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? '#10b981' : '#f59e0b' },
-            { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? '#10b981' : '#6b7280' },
-            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec, 1) : '0', color: '#00f0ff' },
-            { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? '#10b981' : avgLatency < 5000 ? '#f59e0b' : '#ef4444' },
-            { label: 'Total Signals', value: totalSignals.toLocaleString(), color: '#8b5cf6' },
+            { label: 'Data Source', value: anyActive ? 'Fleet Telemetry' : 'Fleet API', color: anyActive ? COLOR.GOOD : COLOR.WARN },
+            { label: 'Streaming Vehicles', value: `${activeVehicles} / ${vehicles.length}`, color: activeVehicles > 0 ? COLOR.GOOD : COLOR.MUTED },
+            { label: 'Signals/sec', value: totalSignalsPerSec > 0 ? fmtNumber(totalSignalsPerSec) : '0', color: COLOR.CYAN },
+            { label: 'Latency', value: anyActive ? `${avgLatency}ms` : 'N/A', color: avgLatency < 1000 ? COLOR.GOOD : avgLatency < 5000 ? COLOR.WARN : COLOR.BAD },
+            { label: 'Total Signals', value: fmtInt(totalSignals), color: '#8b5cf6' },
           ].map(item => (
             <div key={item.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">{item.label}</p>
@@ -949,7 +950,7 @@ function TelemetryLivePanel() {
                               </span>
                             </span>
                             <span className="px-4 py-3 text-right font-mono text-xs text-neon-cyan">
-                              {v.signals_per_second > 0 ? fmtNumber(v.signals_per_second, 1) : '—'}
+                              {v.signals_per_second > 0 ? fmtNumber(v.signals_per_second) : '—'}
                             </span>
                             <span className={clsx(
                               'px-4 py-3 text-right font-mono text-xs',
@@ -975,8 +976,8 @@ function TelemetryLivePanel() {
                             <div className="px-4 pb-4 pt-1 border-t border-white/[0.04]">
                               <div className="flex items-center gap-4 text-[10px] text-[var(--text-muted)] mb-2">
                                 <span>Batch: {signalCount} signal{signalCount !== 1 ? 's' : ''}</span>
-                                {v.batch_count > 0 && <span>Batches: {v.batch_count.toLocaleString()}</span>}
-                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${fmtNumber(v.uptime_seconds / 3600, 1)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
+                                {v.batch_count > 0 && <span>Batches: {fmtInt(v.batch_count)}</span>}
+                                {v.uptime_seconds > 0 && <span>Uptime: {v.uptime_seconds >= 3600 ? `${fmtNumber(v.uptime_seconds / 3600)}h` : v.uptime_seconds >= 60 ? `${Math.round(v.uptime_seconds / 60)}m` : `${Math.round(v.uptime_seconds)}s`}</span>}
                               </div>
                               {v.last_signals ? (
                                 <SignalGrid signals={v.last_signals as Record<string, unknown>} />
@@ -1171,7 +1172,7 @@ function NotificationDeliveryPanel() {
   if (!stats) return null
 
   const successRateNum = stats.total_sent > 0 ? (stats.sent / stats.total_sent) * 100 : null
-  const successRate = successRateNum !== null ? fmtPercent(successRateNum, 1) : '—'
+  const successRate = successRateNum !== null ? fmtPercent(successRateNum) : '—'
 
   return (
     <FadeIn delay={0.14}>
@@ -1258,8 +1259,8 @@ function ExportJobQueuePanel() {
   const formatSize = (bytes: number) => {
     if (!bytes) return '—'
     if (bytes < 1024) return `${bytes}B`
-    if (bytes < 1048576) return `${fmtNumber(bytes / 1024, 1)}KB`
-    return `${fmtNumber(bytes / 1048576, 1)}MB`
+    if (bytes < 1048576) return `${fmtNumber(bytes / 1024)}KB`
+    return `${fmtNumber(bytes / 1048576)}MB`
   }
 
   return (
@@ -1297,7 +1298,7 @@ function ExportJobQueuePanel() {
                   {job.type} <span className="text-[var(--text-muted)]">({job.format})</span>
                 </span>
                 {job.record_count > 0 && (
-                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">{job.record_count.toLocaleString()} rows</span>
+                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">{fmtInt(job.record_count)} rows</span>
                 )}
                 {job.file_size > 0 && (
                   <span className="text-[10px] text-[var(--text-muted)] shrink-0">{formatSize(job.file_size)}</span>
@@ -1320,6 +1321,7 @@ function ExportJobQueuePanel() {
 }
 
 export default function SystemStatus() {
+  usePageTitle('System Status')
   const [refreshing, setRefreshing] = useState(false)
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
   const [, setTick] = useState(0)
@@ -1327,12 +1329,11 @@ export default function SystemStatus() {
   const { data: status, isLoading, refetch, dataUpdatedAt } = useQuery<SystemStatus>({
     queryKey: ['system-status'],
     queryFn: async () => {
-      const res = await fetch(`${getApiBase()}/api/v1/system/status`)
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        return body as SystemStatus
+      try {
+        return await request<SystemStatus>('/system/status')
+      } catch {
+        return {} as SystemStatus
       }
-      return res.json()
     },
     refetchInterval: 30_000,
   })

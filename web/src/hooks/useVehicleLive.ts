@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { useRealtimeEvents } from './useRealtimeEvents'
+import { parseEnumBool } from '../lib/parseEnums'
 
 /**
  * Vehicle live state from the in-memory SignalStore via SSE.
@@ -213,12 +214,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
     const v = raw[key]
     return typeof v === 'string' ? v : ''
   }
-  const bool = (key: string): boolean => {
-    const v = raw[key]
-    if (typeof v === 'boolean') return v
-    if (typeof v === 'string') return !v.includes('Off') && v !== 'false' && v !== ''
-    return false
-  }
+  const bool = (key: string): boolean => parseEnumBool(raw[key])
 
   // Driving
   if (raw['VehicleSpeed'] != null) s.speed = n('VehicleSpeed')
