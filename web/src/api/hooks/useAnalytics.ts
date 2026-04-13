@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyStat } from '@/types/analytics';
+import type { FleetAnalytics } from '@/api/types';
 
 export const analyticsKeys = {
   summary: (days: number) => ['analytics', 'summary', days] as const,
+  fleet: (days: number, start?: string) => ['analytics', 'fleet', days, start] as const,
   mileage: (vehicleId: string) => ['analytics', 'mileage', vehicleId] as const,
   monthlyMileage: (vehicleId: string) => ['analytics', 'monthly-mileage', vehicleId] as const,
   cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
@@ -17,6 +19,15 @@ export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
     queryFn: () => request<AnalyticsSummary>(`/analytics/fleet?days=${days}`),
+  });
+}
+
+/** Full fleet analytics with drive/charging/battery deep analytics. */
+export function useFleetAnalytics(days = 30, start?: string) {
+  const qs = start ? `start=${start}` : `days=${days}`;
+  return useQuery({
+    queryKey: analyticsKeys.fleet(days, start),
+    queryFn: () => request<FleetAnalytics>(`/analytics/fleet?${qs}`),
   });
 }
 
