@@ -37,7 +37,8 @@ export function useDrives(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.drives(vehicleId),
     queryFn: () =>
-      request<Drive[]>(vehicleId ? `/drives?vehicleId=${vehicleId}` : '/drives'),
+      request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives'),
+    enabled: !!vehicleId,
   });
 }
 
@@ -54,8 +55,9 @@ export function useDriveScore(vehicleId?: string) {
     queryKey: drivingKeys.score(vehicleId),
     queryFn: () =>
       request<DriveScore>(
-        vehicleId ? `/drives/score?vehicleId=${vehicleId}` : '/drives/score',
+        vehicleId ? `/drives/score?vehicle_id=${vehicleId}` : '/drives/score',
       ),
+    enabled: !!vehicleId,
   });
 }
 
@@ -64,8 +66,9 @@ export function useDrivingStats(vehicleId?: string) {
     queryKey: drivingKeys.stats(vehicleId),
     queryFn: () =>
       request<DrivingStats>(
-        vehicleId ? `/drives/stats?vehicleId=${vehicleId}` : '/drives/stats',
+        vehicleId ? `/drives/stats?vehicle_id=${vehicleId}` : '/drives/stats',
       ),
+    enabled: !!vehicleId,
   });
 }
 
@@ -74,8 +77,9 @@ export function useDrivingDynamics(vehicleId?: string) {
     queryKey: drivingKeys.dynamics(vehicleId),
     queryFn: () =>
       request<DrivingDynamicsData>(
-        vehicleId ? `/drives/dynamics?vehicleId=${vehicleId}` : '/drives/dynamics',
+        vehicleId ? `/drives/dynamics?vehicle_id=${vehicleId}` : '/drives/dynamics',
       ),
+    enabled: !!vehicleId,
   });
 }
 
@@ -85,9 +89,10 @@ export function useDrivetrainHealth(vehicleId?: string) {
     queryFn: () =>
       request<DrivetrainHealthData>(
         vehicleId
-          ? `/drivetrain/health?vehicleId=${vehicleId}`
+          ? `/drivetrain/health?vehicle_id=${vehicleId}`
           : '/drivetrain/health',
       ),
+    enabled: !!vehicleId,
   });
 }
 
@@ -96,8 +101,9 @@ export function useSpeedProfile(vehicleId?: string) {
     queryKey: drivingKeys.speedProfile(vehicleId),
     queryFn: () =>
       request<SpeedProfileData>(
-        vehicleId ? `/drives/speed-profile?vehicleId=${vehicleId}` : '/drives/speed-profile',
+        vehicleId ? `/analytics/speed-profile?vehicle_id=${vehicleId}` : '/analytics/speed-profile',
       ),
+    enabled: !!vehicleId,
   });
 }
 
@@ -106,8 +112,9 @@ export function useRegenEfficiency(vehicleId?: string) {
     queryKey: drivingKeys.regenEfficiency(vehicleId),
     queryFn: () =>
       request<RegenEfficiencyData>(
-        vehicleId ? `/drives/regen?vehicleId=${vehicleId}` : '/drives/regen',
+        vehicleId ? `/analytics/regen?vehicle_id=${vehicleId}` : '/analytics/regen',
       ),
+    enabled: !!vehicleId,
   });
 }
 
@@ -117,8 +124,9 @@ export function useRouteEfficiency(vehicleId?: string) {
     queryFn: () =>
       request<RouteEfficiencyData>(
         vehicleId
-          ? `/drives/route-efficiency?vehicleId=${vehicleId}`
-          : '/drives/route-efficiency',
+          ? `/analytics/route-efficiency?vehicle_id=${vehicleId}`
+          : '/analytics/route-efficiency',
       ),
+    enabled: !!vehicleId,
   });
 }

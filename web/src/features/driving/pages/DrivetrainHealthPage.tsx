@@ -177,6 +177,12 @@ export default function DrivetrainHealthPage() {
   const overallHealth: HealthStatus = health?.overallHealth ?? 'good';
   const healthScore = HEALTH_SCORE[overallHealth];
   const healthColor = HEALTH_COLOR[overallHealth];
+  const healthTextClass =
+    overallHealth === 'good'
+      ? 'text-emerald-500'
+      : overallHealth === 'warning'
+        ? 'text-amber-500'
+        : 'text-red-500';
 
   /* ---- Temperature sensors ---- */
   const sensors: TempSensor[] = useMemo(() => {
@@ -436,13 +442,11 @@ export default function DrivetrainHealthPage() {
                 <div className="flex items-center gap-4">
                   {overallHealth === 'good' ? (
                     <CheckCircle
-                      className="h-10 w-10 shrink-0"
-                      style={{ color: healthColor }}
+                      className={cn('h-10 w-10 shrink-0', healthTextClass)}
                     />
                   ) : (
                     <AlertTriangle
-                      className="h-10 w-10 shrink-0"
-                      style={{ color: healthColor }}
+                      className={cn('h-10 w-10 shrink-0', healthTextClass)}
                     />
                   )}
                   <div>
@@ -480,8 +484,7 @@ export default function DrivetrainHealthPage() {
                     )}
                   </Badge>
                   <span
-                    className="text-2xl font-bold"
-                    style={{ color: healthColor }}
+                    className={cn('text-2xl font-bold', healthTextClass)}
                   >
                     <AnimatedNumber value={healthScore} suffix="%" />
                   </span>

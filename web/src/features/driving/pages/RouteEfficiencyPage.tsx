@@ -77,12 +77,14 @@ function RouteCard({ route, efficiencyUnit, distanceUnit, convertDistance, conve
 
       {/* Efficiency bar */}
       <div className="flex items-center gap-2 mt-3">
-        <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-          <div className="h-full flex">
-            <div className="h-full rounded-l-full" style={{ width: `${(bestEff / Math.max(worstEff, 1)) * 100}%`, background: '#10b981' }} />
-            <div className="h-full" style={{ width: `${((avgEff - bestEff) / Math.max(worstEff, 1)) * 100}%`, background: '#00f0ff' }} />
-            <div className="h-full rounded-r-full" style={{ width: `${((worstEff - avgEff) / Math.max(worstEff, 1)) * 100}%`, background: '#ef4444' }} />
-          </div>
+        <div className="flex-1 h-3 rounded-full overflow-hidden bg-[var(--surface-2)]">
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: '100%',
+              background: `linear-gradient(to right, #10b981 ${(bestEff / Math.max(worstEff, 1)) * 100}%, #00f0ff ${(bestEff / Math.max(worstEff, 1)) * 100}% ${(avgEff / Math.max(worstEff, 1)) * 100}%, #ef4444 ${(avgEff / Math.max(worstEff, 1)) * 100}%)`,
+            }}
+          />
         </div>
         <div className="flex gap-3 text-[10px] shrink-0">
           <span className="text-green-400 font-bold">{fmtInt(bestEff)}</span>

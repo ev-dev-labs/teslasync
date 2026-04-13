@@ -314,8 +314,8 @@ export default function DriveDetailPage() {
                   <Flag className="h-3 w-3" />{drive.endDate ? formatTime(drive.endDate) : t('driveDetail.inProgress', 'In progress')}
                 </span>
               </div>
-              <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-                <div className="h-full rounded-full" style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #00f0ff)' }} />
+              <div className="h-3 rounded-full overflow-hidden bg-[var(--surface-2)]">
+                <div className="h-full w-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" />
               </div>
             </GlassPanel>
           </FadeIn>
@@ -444,10 +444,10 @@ export default function DriveDetailPage() {
                   <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startDate)}</span>
                   {trail.length > 1 && (
                     <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#10b981' }} /> &lt;{Math.round(convertSpeed(30))}</span>
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#00f0ff' }} /> {Math.round(convertSpeed(30))}–{Math.round(convertSpeed(60))}</span>
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#f59e0b' }} /> {Math.round(convertSpeed(60))}–{Math.round(convertSpeed(100))}</span>
-                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded" style={{ background: '#ef4444' }} /> &gt;{Math.round(convertSpeed(100))}</span>
+                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{Math.round(convertSpeed(30))}</span>
+                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {Math.round(convertSpeed(30))}–{Math.round(convertSpeed(60))}</span>
+                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {Math.round(convertSpeed(60))}–{Math.round(convertSpeed(100))}</span>
+                      <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{Math.round(convertSpeed(100))}</span>
                       <span>{speedUnit}</span>
                     </div>
                   )}
@@ -546,7 +546,7 @@ export default function DriveDetailPage() {
                         <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                         <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                         <Tooltip content={<ChartTooltip />} />
-                        <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
                         <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} />
                         <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} />
                       </ComposedChart>

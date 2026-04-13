@@ -17,6 +17,7 @@ import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { cn } from '@/lib/cn';
 import type { Drive } from '@/types/driving';
 
 /* ------------------------------------------------------------------ */
@@ -28,6 +29,20 @@ function bucketColor(range: string): string {
   if (range.startsWith('30') || range.includes('45')) return '#00f0ff';
   if (range.startsWith('60') || range.includes('75')) return '#f59e0b';
   return '#ef4444';
+}
+
+function bucketTextClass(range: string): string {
+  if (range.startsWith('0') || range.includes('15')) return 'text-emerald-500';
+  if (range.startsWith('30') || range.includes('45')) return 'text-cyan-400';
+  if (range.startsWith('60') || range.includes('75')) return 'text-amber-500';
+  return 'text-red-500';
+}
+
+function bucketBgClass(range: string): string {
+  if (range.startsWith('0') || range.includes('15')) return 'bg-emerald-500/20';
+  if (range.startsWith('30') || range.includes('45')) return 'bg-cyan-400/20';
+  if (range.startsWith('60') || range.includes('75')) return 'bg-amber-500/20';
+  return 'bg-red-500/20';
 }
 
 function categoryIcon(range: string): React.ReactNode {
@@ -148,15 +163,15 @@ export default function SpeedProfilePage() {
                   </div>
                   <div className="flex items-end justify-between">
                     <div>
-                      <p className="text-lg font-bold" style={{ color: bucketColor(bucket.range) }}>
+                      <p className={cn('text-lg font-bold', bucketTextClass(bucket.range))}>
                         {bucket.percentage.toFixed(1)}%
                       </p>
                       <p className="text-[10px] text-[var(--text-muted)]">
                         {bucket.driveCount} {t('speedProfile.drives', 'drives')}
                       </p>
                     </div>
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: `${bucketColor(bucket.range)}20` }}>
-                      <span className="text-xs font-bold" style={{ color: bucketColor(bucket.range) }}>
+                    <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', bucketBgClass(bucket.range))}>
+                      <span className={cn('text-xs font-bold', bucketTextClass(bucket.range))}>
                         {Math.round(bucket.percentage)}
                       </span>
                     </div>
