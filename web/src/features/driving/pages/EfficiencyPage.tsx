@@ -1,83 +1,382 @@
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card, CardHeader } from '@/components/ui/Card';
-import { StatCard } from '@/components/data-display/StatCard';
-import { KVList } from '@/components/data-display/KVList';
-import { useDrivingStats } from '@/api/hooks/useDriving';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { Select } from '@/components/ui/Select';
+import { MetricBar } from '@/components/data-display/MetricBar';
+import {
+  ChartContainer, ChartTooltip, ChartGradient,
+  AreaChart, Area, BarChart, Bar, ScatterChart, Scatter,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from '@/components/charts';
+import { RadialGauge } from '@/components/charts/RadialGauge';
+import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
+import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { StaggerContainer } from '@/components/motion/StaggerContainer';
+import { StaggerItem } from '@/components/motion/StaggerItem';
+import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSettings } from '@/hooks/useSettings';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { formatDateShort } from '@/lib/dateFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import type { Drive } from '@/types/driving';
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                           */
+/* ------------------------------------------------------------------ */
+
+function efficiencyColor(wh: number): string {
+  if (wh < 140) return '#39ff14';
+  if (wh < 170) return '#10b981';
+  if (wh < 200) return '#00f0ff';
+  if (wh < 240) return '#f59e0b';
+  return '#ef4444';
+}
+
+function getEfficiency(drive: Drive): number | null {
+  const battUsed = (drive.startBatteryLevel ?? 0) - (drive.endBatteryLevel ?? 0);
+  if (drive.distance > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / drive.distance;
+  return null;
+}
+
+/* ------------------------------------------------------------------ */
+/*  EfficiencyPage                                                    */
+/* ------------------------------------------------------------------ */
 
 export default function EfficiencyPage() {
   const { t } = useTranslation();
-  const { data: stats, isLoading, error } = useDrivingStats();
+  usePageTitle(t('efficiency.title', 'Efficiency'));
 
+  const { data: vehicles } = useVehicles();
+  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
+  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+
+  const { data: stats, error } = useDrivingStats(vehicleIdStr);
+  const { data: drives } = useDrives(vehicleIdStr);
+
+  const {
+    convertDistance, convertSpeed, convertTemp, convertEfficiency,
+    distanceUnit, speedUnit, tempUnit, efficiencyUnit,
+  } = useSettings();
+
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  /* ---- Filtered drives ---- */
+  const filteredDrives = useMemo(() => {
+    if (!drives) return [];
+    return drives.filter((d) => {
+      const driveDate = d.startDate?.split('T')[0];
+      if (!driveDate) return true;
+      if (startDate && driveDate < startDate) return false;
+      if (endDate && driveDate > endDate) return false;
+      return true;
+    });
+  }, [drives, startDate, endDate]);
+
+  /* ---- Daily efficiency trend ---- */
+  const dailyTrend = useMemo(() => {
+    return filteredDrives
+      .filter((d) => getEfficiency(d) !== null)
+      .slice(0, 30)
+      .reverse()
+      .map((d) => ({
+        date: formatDateShort(d.startDate),
+        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
+        distance: parseFloat(convertDistance(d.distance).toFixed(1)),
+      }));
+  }, [filteredDrives, convertEfficiency, convertDistance]);
+
+  /* ---- Speed vs Efficiency scatter ---- */
+  const speedVsEff = useMemo(() => {
+    return filteredDrives
+      .filter((d) => d.speedAvg && getEfficiency(d))
+      .map((d) => ({
+        speed: Math.round(convertSpeed(d.speedAvg!)),
+        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
+      }));
+  }, [filteredDrives, convertSpeed, convertEfficiency]);
+
+  /* ---- Temp vs Efficiency scatter ---- */
+  const tempVsEff = useMemo(() => {
+    return filteredDrives
+      .filter((d) => d.outsideTempAvg !== null && getEfficiency(d))
+      .map((d) => ({
+        temp: Math.round(convertTemp(d.outsideTempAvg!)),
+        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
+      }));
+  }, [filteredDrives, convertTemp, convertEfficiency]);
+
+  /* ---- Speed distribution ---- */
+  const speedDist = useMemo(() => {
+    const buckets = [
+      { range: `0–30`, min: 0, max: 30, count: 0, totalEff: 0 },
+      { range: `30–60`, min: 30, max: 60, count: 0, totalEff: 0 },
+      { range: `60–90`, min: 60, max: 90, count: 0, totalEff: 0 },
+      { range: `90–120`, min: 90, max: 120, count: 0, totalEff: 0 },
+      { range: `120+`, min: 120, max: 999, count: 0, totalEff: 0 },
+    ];
+    filteredDrives.forEach((d) => {
+      if (d.speedAvg == null) return;
+      const eff = getEfficiency(d);
+      if (!eff) return;
+      const b = buckets.find((bk) => d.speedAvg! >= bk.min && d.speedAvg! < bk.max);
+      if (b) { b.count++; b.totalEff += eff; }
+    });
+    return buckets.filter((b) => b.count > 0).map((b) => ({
+      range: `${b.range} ${speedUnit}`,
+      avgEff: Math.round(convertEfficiency(b.totalEff / b.count)),
+      count: b.count,
+    }));
+  }, [filteredDrives, speedUnit, convertEfficiency]);
+
+  /* ---- Computed metrics ---- */
   const costPerKm = stats && stats.totalDistanceKm > 0
     ? ((stats.avgEfficiencyWhKm / 1000) * 0.12).toFixed(3)
     : '—';
-
   const kmPerKwh = stats && stats.avgEfficiencyWhKm > 0
     ? (1000 / stats.avgEfficiencyWhKm).toFixed(1)
     : '—';
+
+  const vehicleOptions = (vehicles ?? []).map((v) => ({
+    value: String(v.id), label: v.display_name || v.vin,
+  }));
 
   return (
     <PageContainer
       title={t('efficiency.title', 'Efficiency')}
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
-      loading={isLoading}
       error={error as Error | null}
-      empty={!stats}
-      emptyMessage={t('efficiency.empty', 'No efficiency data available.')}
+      actions={vehicleOptions.length > 0 ? (
+        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
+      ) : undefined}
     >
+      {/* Date filter */}
+      <FadeIn>
+        <DateRangeFilter
+          startDate={startDate} endDate={endDate}
+          onStartDateChange={setStartDate} onEndDateChange={setEndDate}
+        />
+      </FadeIn>
+
+      {/* Hero gauges */}
       {stats && (
-        <>
-          <Grid cols={{ default: 2, md: 4 }} gap={4}>
-            <StatCard
-              label={t('efficiency.avgConsumption', 'Avg Consumption')}
-              value={Math.round(stats.avgEfficiencyWhKm)}
-              unit="Wh/km"
-            />
-            <StatCard
-              label={t('efficiency.kmPerKwh', 'Efficiency')}
-              value={kmPerKwh}
-              unit="km/kWh"
-            />
-            <StatCard
-              label={t('efficiency.totalDistance', 'Total Distance')}
-              value={Math.round(stats.totalDistanceKm)}
-              unit="km"
-            />
-            <StatCard
-              label={t('efficiency.co2Saved', 'CO₂ Saved')}
-              value={Math.round(stats.co2SavedKg)}
-              unit="kg"
-            />
-          </Grid>
-
-          <Grid cols={{ default: 1, md: 2 }} gap={4}>
-            <Card>
-              <CardHeader title={t('efficiency.consumptionSummary', 'Consumption Summary')} />
-              <KVList
-                items={[
-                  { label: t('efficiency.drivesAnalyzed', 'Drives Analyzed'), value: String(stats.totalDrives) },
-                  { label: t('efficiency.totalDistLabel', 'Total Distance'), value: `${Math.round(stats.totalDistanceKm)} km` },
-                  { label: t('efficiency.avgWhKm', 'Avg Consumption'), value: `${Math.round(stats.avgEfficiencyWhKm)} Wh/km` },
-                  { label: t('efficiency.avgKmKwh', 'Avg Efficiency'), value: `${kmPerKwh} km/kWh` },
-                ]}
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
+              <RadialGauge
+                value={Math.round(convertEfficiency(stats.avgEfficiencyWhKm))}
+                max={300}
+                label={`${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`}
+                color={efficiencyColor(stats.avgEfficiencyWhKm)}
               />
-            </Card>
+              <div className="flex flex-col items-center text-center">
+                <p className="text-2xl font-bold text-[var(--text-primary)]">
+                  <AnimatedNumber value={Number(kmPerKwh) || 0} decimals={1} />
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
+                  {t('efficiency.kmPerKwh', 'km/kWh')}
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <p className="text-2xl font-bold text-green-400">
+                  <AnimatedNumber value={Math.round(stats.co2SavedKg)} />
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
+                  {t('efficiency.co2Saved', 'CO₂ Saved (kg)')}
+                </p>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <p className="text-2xl font-bold text-cyan-400">
+                  <AnimatedNumber value={Math.round(convertDistance(stats.totalDistanceKm))} />
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
+                  {t('efficiency.totalDistance', 'Total')} {distanceUnit}
+                </p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
 
-            <Card>
-              <CardHeader title={t('efficiency.energySummary', 'Energy Summary')} />
-              <KVList
-                items={[
-                  { label: t('efficiency.avgSpeed', 'Avg Speed'), value: `${Math.round(stats.avgSpeedKmh)} km/h` },
-                  { label: t('efficiency.costPerKm', 'Est. Cost/km'), value: `$${costPerKm}` },
-                  { label: t('efficiency.co2Label', 'CO₂ Saved vs ICE'), value: `${Math.round(stats.co2SavedKg)} kg` },
-                  { label: t('efficiency.totalDuration', 'Total Drive Time'), value: `${Math.round(stats.totalDurationMin / 60)} h` },
-                ]}
-              />
-            </Card>
-          </Grid>
-        </>
+      {/* Stat cards */}
+      {stats && (
+        <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StaggerItem>
+            <GlassPanel className="p-4 text-center">
+              <Zap className="h-4 w-4 mx-auto mb-1 text-amber-400" />
+              <p className="text-lg font-bold text-[var(--text-primary)]">{Math.round(convertEfficiency(stats.avgEfficiencyWhKm))}</p>
+              <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.avgConsumption', 'Avg')} {efficiencyUnit}</p>
+            </GlassPanel>
+          </StaggerItem>
+          <StaggerItem>
+            <GlassPanel className="p-4 text-center">
+              <TrendingUp className="h-4 w-4 mx-auto mb-1 text-green-400" />
+              <p className="text-lg font-bold text-[var(--text-primary)]">{Math.round(convertSpeed(stats.avgSpeedKmh))}</p>
+              <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.avgSpeed', 'Avg Speed')} {speedUnit}</p>
+            </GlassPanel>
+          </StaggerItem>
+          <StaggerItem>
+            <GlassPanel className="p-4 text-center">
+              <Fuel className="h-4 w-4 mx-auto mb-1 text-cyan-400" />
+              <p className="text-lg font-bold text-[var(--text-primary)]">${costPerKm}</p>
+              <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.costPerKm', 'Est. Cost/km')}</p>
+            </GlassPanel>
+          </StaggerItem>
+          <StaggerItem>
+            <GlassPanel className="p-4 text-center">
+              <Gauge className="h-4 w-4 mx-auto mb-1 text-purple-400" />
+              <p className="text-lg font-bold text-[var(--text-primary)]">{stats.totalDrives}</p>
+              <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.drivesAnalyzed', 'Drives Analyzed')}</p>
+            </GlassPanel>
+          </StaggerItem>
+        </StaggerContainer>
+      )}
+
+      {/* Charts row 1 */}
+      {dailyTrend.length > 2 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <FadeIn>
+            <ChartContainer title={t('efficiency.dailyTrend', `Daily Efficiency (${efficiencyUnit})`)} height={240}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dailyTrend}>
+                  <defs><ChartGradient id="effGrad" color="#00f0ff" /></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" strokeWidth={2} name={efficiencyUnit} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </FadeIn>
+
+          <FadeIn>
+            <ChartContainer title={t('efficiency.speedDist', 'Efficiency by Speed Range')} height={240}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={speedDist}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="avgEff" name={`${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`} radius={[4, 4, 0, 0]}>
+                    {speedDist.map((entry, i) => (
+                      <Cell key={i} fill={efficiencyColor(entry.avgEff)} fillOpacity={0.7} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </FadeIn>
+        </div>
+      )}
+
+      {/* Charts row 2: scatter plots */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {speedVsEff.length > 3 && (
+          <FadeIn>
+            <ChartContainer title={t('efficiency.speedVsEfficiency', 'Speed vs Efficiency')} height={220}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="speed" name={t('efficiency.speed', 'Speed')} unit={` ${speedUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis dataKey="efficiency" name={efficiencyUnit} unit={` ${efficiencyUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Scatter data={speedVsEff} fill="#f59e0b" fillOpacity={0.6} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </FadeIn>
+        )}
+
+        {tempVsEff.length > 3 && (
+          <FadeIn>
+            <ChartContainer title={t('efficiency.tempVsEfficiency', 'Temperature vs Efficiency')} height={220}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="temp" name={t('efficiency.temp', 'Temp')} unit={` ${tempUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis dataKey="efficiency" name={efficiencyUnit} unit={` ${efficiencyUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Scatter data={tempVsEff} fill="#a855f7" fillOpacity={0.6} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </FadeIn>
+        )}
+      </div>
+
+      {/* Metric bars summary */}
+      {stats && (
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-6">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+              <Zap className="h-4 w-4 text-amber-400" /> {t('efficiency.summary', 'Efficiency Summary')}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={convertEfficiency(stats.avgEfficiencyWhKm)} max={300} color="#00f0ff" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertEfficiency(stats.avgEfficiencyWhKm))} {efficiencyUnit}</p>
+              </div>
+              <div>
+                <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={convertSpeed(stats.avgSpeedKmh)} max={150} color="#10b981" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertSpeed(stats.avgSpeedKmh))} {speedUnit}</p>
+              </div>
+              <div>
+                <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={stats.regenRatio * 100} max={100} color="#a855f7" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(stats.regenRatio * 100)}%</p>
+              </div>
+              <div>
+                <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationMin} max={Math.max(stats.totalDurationMin, 600)} color="#f59e0b" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{Math.round(stats.totalDurationMin / 60)} {t('efficiency.hours', 'h')}</p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* Energy insights */}
+      {stats && (
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-6">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+              <Thermometer className="h-4 w-4 text-orange-400" /> {t('efficiency.insights', 'Energy Insights')}
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+              <div>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalRegen', 'Total Regen')}</p>
+                <p className="text-lg font-bold text-green-400">{fmtNumber(stats.totalRegenKwh)} <span className="text-xs text-[var(--text-muted)]">kWh</span></p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.regenRatioLabel', 'Regen Ratio')}</p>
+                <p className="text-lg font-bold text-cyan-400">{fmtNumber(stats.regenRatio * 100)}%</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.co2Label', 'CO₂ Saved')}</p>
+                <p className="text-lg font-bold text-green-400">{fmtInt(stats.co2SavedKg)} <span className="text-xs text-[var(--text-muted)]">kg</span></p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalDistLabel', 'Total Distance')}</p>
+                <p className="text-lg font-bold text-cyan-400">{fmtInt(convertDistance(stats.totalDistanceKm))} <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span></p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.topSpeed', 'Top Speed')}</p>
+                <p className="text-lg font-bold text-purple-400">{fmtInt(convertSpeed(stats.topSpeedKmh))} <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span></p>
+              </div>
+              <div>
+                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.costPerKmLabel', 'Est. Cost/km')}</p>
+                <p className="text-lg font-bold text-amber-400">${costPerKm}</p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
       )}
     </PageContainer>
   );

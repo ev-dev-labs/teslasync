@@ -1,102 +1,247 @@
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MapPin, ArrowRight, TrendingUp } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card } from '@/components/ui/Card';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { StatCard } from '@/components/data-display/StatCard';
+import { Select } from '@/components/ui/Select';
+import { IconBox } from '@/components/ui/IconBox';
+import {
+  ChartContainer, ChartTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from '@/components/charts';
+import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
+import { MetricBar } from '@/components/data-display/MetricBar';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { StaggerContainer } from '@/components/motion/StaggerContainer';
+import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSettings } from '@/hooks/useSettings';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { RouteSummary } from '@/types/driving';
 
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                           */
+/* ------------------------------------------------------------------ */
+
+function efficiencyColor(eff: number): string {
+  if (eff < 140) return '#10b981';
+  if (eff < 180) return '#00f0ff';
+  if (eff < 220) return '#f59e0b';
+  return '#ef4444';
+}
+
 function efficiencyVariant(eff: number): 'success' | 'info' | 'warning' | 'danger' {
-  if (eff < 5) return 'success';
-  if (eff < 10) return 'info';
-  if (eff < 15) return 'warning';
+  if (eff < 140) return 'success';
+  if (eff < 180) return 'info';
+  if (eff < 220) return 'warning';
   return 'danger';
 }
 
-function RouteCard({ route }: { route: RouteSummary }) {
+/* ------------------------------------------------------------------ */
+/*  RouteCard                                                         */
+/* ------------------------------------------------------------------ */
+
+function RouteCard({ route, efficiencyUnit, distanceUnit, convertDistance, convertEfficiency }: {
+  route: RouteSummary;
+  efficiencyUnit: string;
+  distanceUnit: string;
+  convertDistance: (v: number) => number;
+  convertEfficiency: (v: number) => number;
+}) {
   const { t } = useTranslation();
+  const avgEff = convertEfficiency(route.avgEfficiency);
+  const bestEff = convertEfficiency(route.bestEfficiency);
+  const worstEff = convertEfficiency(route.worstEfficiency);
+
   return (
-    <Card>
+    <GlassPanel hover glow="cyan" className="p-5 cursor-pointer transition-all">
       <div className="flex items-start justify-between mb-3">
-        <div>
-          <p className="text-sm font-medium">
-            {route.startLocation} → {route.endLocation}
-          </p>
-          <p className="text-xs text-gray-500">
-            {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {(route.avgDistanceKm ?? 0).toFixed(1)} km avg
-          </p>
+        <div className="flex items-center gap-2">
+          <IconBox color="cyan"><MapPin className="h-4 w-4" /></IconBox>
+          <div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              {route.startLocation} <ArrowRight className="h-3 w-3 inline mx-1 text-[var(--text-muted)]" /> {route.endLocation}
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)]">
+              {route.tripCount} {t('routeEfficiency.trips', 'trips')} · {fmtNumber(convertDistance(route.avgDistanceKm))} {distanceUnit} {t('routeEfficiency.avg', 'avg')}
+            </p>
+          </div>
         </div>
         <Badge variant={efficiencyVariant(route.avgEfficiency)}>
-          {(route.avgEfficiency ?? 0).toFixed(1)}%
+          {fmtInt(avgEff)} {efficiencyUnit}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div>
-          <p className="text-gray-500">{t('routeEfficiency.best', 'Best')}</p>
-          <p className="font-semibold text-green-600 dark:text-green-400">{(route.bestEfficiency ?? 0).toFixed(1)}</p>
+      {/* Efficiency bar */}
+      <div className="flex items-center gap-2 mt-3">
+        <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+          <div className="h-full flex">
+            <div className="h-full rounded-l-full" style={{ width: `${(bestEff / Math.max(worstEff, 1)) * 100}%`, background: '#10b981' }} />
+            <div className="h-full" style={{ width: `${((avgEff - bestEff) / Math.max(worstEff, 1)) * 100}%`, background: '#00f0ff' }} />
+            <div className="h-full rounded-r-full" style={{ width: `${((worstEff - avgEff) / Math.max(worstEff, 1)) * 100}%`, background: '#ef4444' }} />
+          </div>
         </div>
-        <div>
-          <p className="text-gray-500">{t('routeEfficiency.avg', 'Avg')}</p>
-          <p className="font-semibold">{(route.avgEfficiency ?? 0).toFixed(1)}</p>
-        </div>
-        <div>
-          <p className="text-gray-500">{t('routeEfficiency.worst', 'Worst')}</p>
-          <p className="font-semibold text-red-600 dark:text-red-400">{(route.worstEfficiency ?? 0).toFixed(1)}</p>
+        <div className="flex gap-3 text-[10px] shrink-0">
+          <span className="text-green-400 font-bold">{fmtInt(bestEff)}</span>
+          <span className="text-cyan-400 font-bold">{fmtInt(avgEff)}</span>
+          <span className="text-red-400 font-bold">{fmtInt(worstEff)}</span>
         </div>
       </div>
-    </Card>
+      <div className="flex gap-3 text-[9px] text-[var(--text-muted)] mt-1 justify-end">
+        <span>{t('routeEfficiency.best', 'Best')}</span>
+        <span>{t('routeEfficiency.avgLabel', 'Avg')}</span>
+        <span>{t('routeEfficiency.worst', 'Worst')}</span>
+      </div>
+    </GlassPanel>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  RouteEfficiencyPage                                               */
+/* ------------------------------------------------------------------ */
+
 export default function RouteEfficiencyPage() {
   const { t } = useTranslation();
-  const { data, isLoading, error } = useRouteEfficiency();
+  usePageTitle(t('routeEfficiency.title', 'Route Efficiency'));
+
+  const { data: vehicles } = useVehicles();
+  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
+  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+
+  const { data, isLoading, error } = useRouteEfficiency(vehicleIdStr);
+  const {
+    convertDistance, convertEfficiency,
+    distanceUnit, efficiencyUnit,
+  } = useSettings();
 
   const routes = data?.routes ?? [];
   const totalTrips = routes.reduce((sum, r) => sum + r.tripCount, 0);
   const bestEff = routes.length > 0 ? Math.min(...routes.map((r) => r.bestEfficiency)) : 0;
+  const worstEff = routes.length > 0 ? Math.max(...routes.map((r) => r.worstEfficiency)) : 0;
+  const avgEff = routes.length > 0 ? routes.reduce((s, r) => s + r.avgEfficiency, 0) / routes.length : 0;
+
+  /* ---- Chart data for route comparison ---- */
+  const chartData = useMemo(() => {
+    return routes
+      .sort((a, b) => a.avgEfficiency - b.avgEfficiency)
+      .slice(0, 10)
+      .map((r) => ({
+        name: `${r.startLocation.substring(0, 10)}→${r.endLocation.substring(0, 10)}`,
+        avg: Math.round(convertEfficiency(r.avgEfficiency)),
+        best: Math.round(convertEfficiency(r.bestEfficiency)),
+        worst: Math.round(convertEfficiency(r.worstEfficiency)),
+        trips: r.tripCount,
+      }));
+  }, [routes, convertEfficiency]);
+
+  const vehicleOptions = (vehicles ?? []).map((v) => ({
+    value: String(v.id), label: v.display_name || v.vin,
+  }));
 
   return (
     <PageContainer
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
-      loading={isLoading}
       error={error as Error | null}
+      actions={vehicleOptions.length > 0 ? (
+        <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
+      ) : undefined}
+      loading={isLoading}
       empty={routes.length === 0}
       emptyMessage={t('routeEfficiency.empty', 'No route data yet. Routes appear once you have drives with geocoded addresses.')}
     >
-      <Grid cols={{ default: 2, md: 4 }} gap={4}>
-        <StatCard
-          label={t('routeEfficiency.routes', 'Routes')}
-          value={routes.length}
-        />
-        <StatCard
-          label={t('routeEfficiency.totalTrips', 'Total Trips')}
-          value={totalTrips}
-        />
-        <StatCard
-          label={t('routeEfficiency.bestEfficiency', 'Best Efficiency')}
-          value={bestEff.toFixed(1)}
-          unit="%"
-        />
-        {routes.length > 0 && (
-          <StatCard
-            label={t('routeEfficiency.mostDriven', 'Most Driven')}
-            value={`${routes[0].tripCount}x`}
-          />
-        )}
-      </Grid>
+      {/* Summary stats */}
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-cyan-400"><AnimatedNumber value={routes.length} /></p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.routes', 'Routes')}</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[var(--text-primary)]"><AnimatedNumber value={totalTrips} /></p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.totalTrips', 'Total Trips')}</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-400"><AnimatedNumber value={Math.round(convertEfficiency(bestEff))} /></p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.bestEfficiency', 'Best')} {efficiencyUnit}</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-amber-400"><AnimatedNumber value={Math.round(convertEfficiency(avgEff))} /></p>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase">{t('routeEfficiency.avgEfficiency', 'Avg')} {efficiencyUnit}</p>
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
 
-      <Grid cols={{ default: 1, md: 2 }} gap={4}>
+      {/* Route efficiency comparison chart */}
+      {chartData.length > 1 && (
+        <FadeIn>
+          <ChartContainer title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')} height={260}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} width={120} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${efficiencyUnit}`} radius={[0, 4, 4, 0]}>
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={efficiencyColor(entry.avg)} fillOpacity={0.7} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </FadeIn>
+      )}
+
+      {/* Route cards */}
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {routes.map((route) => (
-          <RouteCard
-            key={`${route.startLocation}-${route.endLocation}`}
-            route={route}
-          />
+          <StaggerItem key={`${route.startLocation}-${route.endLocation}`}>
+            <RouteCard
+              route={route}
+              efficiencyUnit={efficiencyUnit}
+              distanceUnit={distanceUnit}
+              convertDistance={convertDistance}
+              convertEfficiency={convertEfficiency}
+            />
+          </StaggerItem>
         ))}
-      </Grid>
+      </StaggerContainer>
+
+      {/* Metric bars */}
+      {routes.length > 0 && (
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+              <TrendingUp className="h-4 w-4 text-cyan-400" /> {t('routeEfficiency.metrics', 'Route Metrics')}
+            </h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+              <div>
+                <MetricBar label={t('routeEfficiency.bestLabel', 'Best Efficiency')} value={convertEfficiency(bestEff)} max={300} color="#10b981" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertEfficiency(bestEff))} {efficiencyUnit}</p>
+              </div>
+              <div>
+                <MetricBar label={t('routeEfficiency.avgLabel', 'Avg Efficiency')} value={convertEfficiency(avgEff)} max={300} color="#00f0ff" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertEfficiency(avgEff))} {efficiencyUnit}</p>
+              </div>
+              <div>
+                <MetricBar label={t('routeEfficiency.worstLabel', 'Worst Efficiency')} value={convertEfficiency(worstEff)} max={400} color="#ef4444" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertEfficiency(worstEff))} {efficiencyUnit}</p>
+              </div>
+              <div>
+                <MetricBar label={t('routeEfficiency.mostDrivenLabel', 'Most Driven Route')} value={routes[0]?.tripCount ?? 0} max={Math.max(routes[0]?.tripCount ?? 1, 20)} color="#a855f7" />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">{routes[0]?.tripCount ?? 0} {t('routeEfficiency.trips', 'trips')}</p>
+              </div>
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
     </PageContainer>
   );
 }
