@@ -16,6 +16,9 @@ import {
   Activity,
   ChevronUp,
   ChevronDown,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -627,6 +630,74 @@ export default function DriveScorePage() {
     setCurrentPage(1);
   }, []);
 
+  /* ---- best & worst drives ---- */
+  const bestDrive = useMemo(
+    () => scoredDrives.length > 0 ? [...scoredDrives].sort((a, b) => b.score.total - a.score.total)[0] : null,
+    [scoredDrives],
+  );
+  const worstDrive = useMemo(
+    () => scoredDrives.length > 0 ? [...scoredDrives].sort((a, b) => a.score.total - b.score.total)[0] : null,
+    [scoredDrives],
+  );
+
+  /* ---- score distribution histogram ---- */
+  const histogramData = useMemo(() => {
+    const ranges = [
+      { range: '0–20', min: 0, max: 20, color: '#f87171' },
+      { range: '20–40', min: 20, max: 40, color: '#fb923c' },
+      { range: '40–60', min: 40, max: 60, color: '#fbbf24' },
+      { range: '60–80', min: 60, max: 80, color: '#22d3ee' },
+      { range: '80–100', min: 80, max: 101, color: '#4ade80' },
+    ];
+    return ranges.map((r) => ({
+      ...r,
+      count: allScores.filter((s) => s.total >= r.min && s.total < r.max).length,
+    }));
+  }, [allScores]);
+
+  /* ---- weekly / monthly averages ---- */
+  const periodStats = useMemo(() => {
+    if (scoredDrives.length === 0) return null;
+    const now = new Date();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+    const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const avg = (items: typeof scoredDrives) => items.length > 0 ? Math.round(items.reduce((s, d) => s + d.score.total, 0) / items.length) : null;
+
+    const thisWeekDrives = scoredDrives.filter((sd) => new Date(sd.drive.startDate) >= weekStart);
+    const lastWeekDrives = scoredDrives.filter((sd) => { const d = new Date(sd.drive.startDate); return d >= lastWeekStart && d < weekStart; });
+    const thisMonthDrives = scoredDrives.filter((sd) => new Date(sd.drive.startDate) >= monthStart);
+    const lastMonthDrives = scoredDrives.filter((sd) => { const d = new Date(sd.drive.startDate); return d >= lastMonthStart && d <= lastMonthEnd; });
+
+    const weekMap = new Map<string, typeof scoredDrives>();
+    const monthMap = new Map<string, typeof scoredDrives>();
+    scoredDrives.forEach((sd) => {
+      const d = new Date(sd.drive.startDate);
+      const wk = `${d.getFullYear()}-W${Math.ceil((d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7)}`;
+      const mo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!weekMap.has(wk)) weekMap.set(wk, []);
+      weekMap.get(wk)!.push(sd);
+      if (!monthMap.has(mo)) monthMap.set(mo, []);
+      monthMap.get(mo)!.push(sd);
+    });
+
+    let bestWeek = { avg: 0, label: '—' };
+    weekMap.forEach((items, label) => { const a = avg(items); if (a != null && a > bestWeek.avg) bestWeek = { avg: a, label }; });
+    let bestMonth = { avg: 0, label: '—' };
+    monthMap.forEach((items, label) => { const a = avg(items); if (a != null && a > bestMonth.avg) bestMonth = { avg: a, label }; });
+
+    const aOrBetter = allScores.filter((s) => s.grade === 'A+' || s.grade === 'A').length;
+
+    return {
+      thisWeekAvg: avg(thisWeekDrives), lastWeekAvg: avg(lastWeekDrives),
+      thisMonthAvg: avg(thisMonthDrives), lastMonthAvg: avg(lastMonthDrives),
+      bestWeek, bestMonth, totalDrives: scoredDrives.length, aOrBetter,
+    };
+  }, [scoredDrives, allScores]);
+
   /* ---- loading state ---- */
   const isLoading = drivesLoading;
 
@@ -1024,6 +1095,27 @@ export default function DriveScorePage() {
             </GlassPanel>
           </StaggerItem>
 
+          {/* -------- Section 5b: Score Distribution Histogram -------- */}
+          <StaggerItem>
+            <GlassPanel>
+              <ChartContainer title={t('driveScore.scoreDistribution', 'Score Distribution')} height={220}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={histogramData} barCategoryGap="20%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} vertical={false} />
+                    <XAxis dataKey="range" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Bar dataKey="count" name={t('driveScore.drives', 'Drives')} radius={[6, 6, 0, 0]}>
+                      {histogramData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.color} fillOpacity={0.8} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </GlassPanel>
+          </StaggerItem>
+
           {/* -------- Section 6: Tips / Recommendations -------- */}
           <StaggerItem>
             <GlassPanel>
@@ -1054,6 +1146,99 @@ export default function DriveScorePage() {
                 </div>
               </div>
             </GlassPanel>
+          </StaggerItem>
+
+          {/* -------- Section 6b: Best & Worst Drives -------- */}
+          <StaggerItem>
+            <Grid cols={{ default: 1, sm: 2 }} gap={4}>
+              <GlassPanel className="p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Star className="h-5 w-5 text-green-400" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('driveScore.bestDrive', 'Best Drive')}</h3>
+                </div>
+                {bestDrive ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">{formatDateShort(bestDrive.drive.startDate)}</span>
+                      <Badge variant={gradeVariant(bestDrive.score.grade)} size="sm">{bestDrive.score.grade}</Badge>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <RadialGauge value={bestDrive.score.total} max={100} label={t('driveScore.score', 'Score')} color="#4ade80" size={72} />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-muted)]">{t('driveScore.distance', 'Distance')}</span>
+                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance(bestDrive.drive.distance))} {distanceUnit}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
+                          <span className="text-[var(--text-primary)]">{formatDuration(bestDrive.drive.durationMin)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
+                          <span className="text-[var(--text-primary)]">{fmtInt(convertEfficiency(bestDrive.score.whPerKm))} {efficiencyUnit}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3">
+                      <p className="text-xs text-green-400">
+                        <Star className="inline h-3 w-3 mr-1" />
+                        {bestDrive.score.efficiency >= 35
+                          ? t('driveScore.tipBestEff', 'Outstanding energy efficiency — minimal energy wasted!')
+                          : bestDrive.score.smoothness >= 25
+                            ? t('driveScore.tipBestSmooth', 'Exceptionally smooth driving with controlled acceleration.')
+                            : t('driveScore.tipBestSpeed', 'Great speed discipline, staying in the optimal range.')}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--text-muted)]">{t('driveScore.noDrives', 'No drives available')}</p>
+                )}
+              </GlassPanel>
+
+              <GlassPanel className="p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t('driveScore.worstDrive', 'Worst Drive')}</h3>
+                </div>
+                {worstDrive ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-muted)]">{formatDateShort(worstDrive.drive.startDate)}</span>
+                      <Badge variant={gradeVariant(worstDrive.score.grade)} size="sm">{worstDrive.score.grade}</Badge>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <RadialGauge value={worstDrive.score.total} max={100} label={t('driveScore.score', 'Score')} color="#f87171" size={72} />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-muted)]">{t('driveScore.distance', 'Distance')}</span>
+                          <span className="text-[var(--text-primary)]">{fmtNumber(convertDistance(worstDrive.drive.distance))} {distanceUnit}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-muted)]">{t('driveScore.durationLabel', 'Duration')}</span>
+                          <span className="text-[var(--text-primary)]">{formatDuration(worstDrive.drive.durationMin)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--text-muted)]">{t('driveScore.consumption', 'Consumption')}</span>
+                          <span className="text-[var(--text-primary)]">{fmtInt(convertEfficiency(worstDrive.score.whPerKm))} {efficiencyUnit}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-red-500/5 border border-red-500/20 p-3">
+                      <p className="text-xs text-red-400">
+                        <AlertTriangle className="inline h-3 w-3 mr-1" />
+                        {worstDrive.score.efficiency < 15
+                          ? t('driveScore.tipWorstEff', 'High energy consumption — possibly high speeds or cold weather.')
+                          : worstDrive.score.smoothness < 10
+                            ? t('driveScore.tipWorstSmooth', 'Aggressive acceleration and braking detected.')
+                            : t('driveScore.tipWorstSpeed', 'Excessive highway speed reduced the overall score.')}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--text-muted)]">{t('driveScore.noDrives', 'No drives available')}</p>
+                )}
+              </GlassPanel>
+            </Grid>
           </StaggerItem>
 
           {/* -------- Section 7: Drive history table -------- */}
@@ -1225,6 +1410,97 @@ export default function DriveScorePage() {
               />
             </Grid>
           </StaggerItem>
+
+          {/* -------- Section 9: Weekly / Monthly Averages -------- */}
+          {periodStats && (
+            <StaggerItem>
+              <Grid cols={{ default: 2, sm: 3, lg: 6 }} gap={3}>
+                <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('driveScore.thisWeek', 'This Week')}
+                  </span>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: periodStats.thisWeekAvg != null ? GRADE_COLORS[periodStats.thisWeekAvg >= 80 ? 'A' : periodStats.thisWeekAvg >= 60 ? 'C' : 'F'] : 'var(--text-muted)' }}>
+                      {periodStats.thisWeekAvg ?? '—'}
+                    </span>
+                    {periodStats.thisWeekAvg != null && periodStats.lastWeekAvg != null && (
+                      <span className={cn('text-xs flex items-center', periodStats.thisWeekAvg >= periodStats.lastWeekAvg ? 'text-green-400' : 'text-red-400')}>
+                        {periodStats.thisWeekAvg >= periodStats.lastWeekAvg ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                        {Math.abs(periodStats.thisWeekAvg - periodStats.lastWeekAvg)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {t('driveScore.vsLastWeek', 'vs {{val}} last week', { val: periodStats.lastWeekAvg ?? '—' })}
+                  </span>
+                </GlassPanel>
+
+                <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('driveScore.thisMonth', 'This Month')}
+                  </span>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: periodStats.thisMonthAvg != null ? GRADE_COLORS[periodStats.thisMonthAvg >= 80 ? 'A' : periodStats.thisMonthAvg >= 60 ? 'C' : 'F'] : 'var(--text-muted)' }}>
+                      {periodStats.thisMonthAvg ?? '—'}
+                    </span>
+                    {periodStats.thisMonthAvg != null && periodStats.lastMonthAvg != null && (
+                      <span className={cn('text-xs flex items-center', periodStats.thisMonthAvg >= periodStats.lastMonthAvg ? 'text-green-400' : 'text-red-400')}>
+                        {periodStats.thisMonthAvg >= periodStats.lastMonthAvg ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                        {Math.abs(periodStats.thisMonthAvg - periodStats.lastMonthAvg)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {t('driveScore.vsLastMonth', 'vs {{val}} last month', { val: periodStats.lastMonthAvg ?? '—' })}
+                  </span>
+                </GlassPanel>
+
+                <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('driveScore.bestWeek', 'Best Week')}
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums" style={{ color: GRADE_COLORS[periodStats.bestWeek.avg >= 80 ? 'A' : periodStats.bestWeek.avg >= 60 ? 'C' : 'F'] }}>
+                    {periodStats.bestWeek.avg || '—'}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{periodStats.bestWeek.label}</span>
+                </GlassPanel>
+
+                <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('driveScore.bestMonth', 'Best Month')}
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums" style={{ color: GRADE_COLORS[periodStats.bestMonth.avg >= 80 ? 'A' : periodStats.bestMonth.avg >= 60 ? 'C' : 'F'] }}>
+                    {periodStats.bestMonth.avg || '—'}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{periodStats.bestMonth.label}</span>
+                </GlassPanel>
+
+                <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('driveScore.totalDrivesLabel', 'Total Drives')}
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums text-[var(--text-primary)]">
+                    {periodStats.totalDrives}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {t('driveScore.drivesScored', 'drives scored')}
+                  </span>
+                </GlassPanel>
+
+                <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {t('driveScore.ratedAPlus', 'Rated A+/A')}
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums text-green-400">
+                    {periodStats.aOrBetter}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {periodStats.totalDrives > 0 ? `${Math.round((periodStats.aOrBetter / periodStats.totalDrives) * 100)}% ${t('driveScore.ofDrives', 'of drives')}` : t('driveScore.noDrives', 'no drives')}
+                  </span>
+                </GlassPanel>
+              </Grid>
+            </StaggerItem>
+          )}
 
           {/* -------- Section 10: Achievement badges -------- */}
           <StaggerItem>

@@ -7,15 +7,30 @@ export interface Drive {
   durationMin: number;
   speedMax: number | null;
   speedAvg: number | null;
+  speedMin: number | null;
   startBatteryLevel: number | null;
   endBatteryLevel: number | null;
   startAddress: string | null;
   endAddress: string | null;
   outsideTempAvg: number | null;
+  insideTempAvg: number | null;
+  driverTempAvg: number | null;
+  passengerTempAvg: number | null;
   powerMax: number | null;
   powerMin: number | null;
   startOdometer: number | null;
   endOdometer: number | null;
+  startRangeKm: number | null;
+  endRangeKm: number | null;
+  elevationGain: number | null;
+  elevationLoss: number | null;
+  socStart: number | null;
+  socEnd: number | null;
+  batteryHeaterOn: boolean | null;
+  startLatitude: number | null;
+  startLongitude: number | null;
+  endLatitude: number | null;
+  endLongitude: number | null;
 }
 
 export interface DriveDetail extends Drive {
@@ -30,6 +45,14 @@ export interface DrivePosition {
   power: number | null;
   batteryLevel: number;
   timestamp: string;
+  insideTemp: number | null;
+  outsideTemp: number | null;
+  idealRange: number | null;
+  ratedRange: number | null;
+  odometer: number | null;
+  elevation: number | null;
+  fanStatus: number | null;
+  isClimateOn: boolean | null;
 }
 
 export interface DriveTelemetryPoint {
@@ -38,7 +61,24 @@ export interface DriveTelemetryPoint {
   power: number | null;
   batteryLevel: number | null;
   outsideTemp: number | null;
+  insideTemp: number | null;
+  driverTemp: number | null;
+  passengerTemp: number | null;
   elevation: number | null;
+  idealRange: number | null;
+  ratedRange: number | null;
+  estRange: number | null;
+  odometer: number | null;
+  soc: number | null;
+  usableSoc: number | null;
+  tirePressureFl: number | null;
+  tirePressureFr: number | null;
+  tirePressureRl: number | null;
+  tirePressureRr: number | null;
+  isClimateOn: boolean | null;
+  fanStatus: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface DriveScore {

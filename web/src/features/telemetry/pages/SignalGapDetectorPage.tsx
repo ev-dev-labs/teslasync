@@ -1,110 +1,255 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle, ArrowUpDown, Filter, RefreshCw } from 'lucide-react';
+
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card, CardHeader } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { StatCard } from '@/components/data-display/StatCard';
+import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
+import { Skeleton } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { useSignalGaps } from '@/api/hooks/useTelemetry';
-import type { SignalRow } from '@/types/telemetry';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+interface SignalRow {
+  name: string;
+  value: string;
+  timestamp: string | null;
+  staleness: number;
+  category: 'active' | 'stale' | 'never';
+}
 
 type SortMode = 'staleness' | 'alpha' | 'category';
 type FilterMode = 'all' | 'stale' | 'active';
 
-function formatStaleness(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h`;
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function getStalenessColor(seconds: number, hasTimestamp: boolean) {
+  if (!hasTimestamp) return { label: 'Never received', text: 'text-[var(--text-muted)]' };
+  if (seconds < 30) return { label: 'Active', text: 'text-green-400' };
+  if (seconds < 300) return { label: 'Aging', text: 'text-amber-400' };
+  return { label: 'Stale', text: 'text-red-400' };
 }
+
+function formatStaleness(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s ago`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.round((seconds % 3600) / 60);
+  return `${h}h ${m}m ago`;
+}
+
+function statusVariant(row: SignalRow): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (!row.timestamp) return 'neutral';
+  if (row.staleness < 30) return 'success';
+  if (row.staleness < 300) return 'warning';
+  return 'danger';
+}
+
+/* ------------------------------------------------------------------ */
+/*  Table columns                                                      */
+/* ------------------------------------------------------------------ */
+
+function buildColumns(t: (k: string, d: string) => string): Column<SignalRow>[] {
+  return [
+    {
+      key: 'status',
+      header: t('signalGap.status', 'Status'),
+      render: (signal) => {
+        const style = getStalenessColor(signal.staleness, !!signal.timestamp);
+        return <Badge variant={statusVariant(signal)} size="sm" dot>{style.label}</Badge>;
+      },
+    },
+    {
+      key: 'signal',
+      header: t('signalGap.signal', 'Signal'),
+      render: (signal) => <span className="font-mono text-[var(--text-primary)]">{signal.name}</span>,
+    },
+    {
+      key: 'value',
+      header: t('signalGap.lastValue', 'Last Value'),
+      render: (signal) => <span className="font-mono text-[var(--text-secondary)] max-w-[200px] truncate block">{signal.value}</span>,
+    },
+    {
+      key: 'lastUpdated',
+      header: t('signalGap.lastUpdated', 'Last Updated'),
+      render: (signal) => <span className="text-[var(--text-secondary)] whitespace-nowrap">{signal.timestamp ? formatDateTime(signal.timestamp) : '—'}</span>,
+    },
+    {
+      key: 'timeSince',
+      header: t('signalGap.timeSince', 'Time Since'),
+      className: 'text-right',
+      render: (signal) => {
+        const style = getStalenessColor(signal.staleness, !!signal.timestamp);
+        return <span className={cn('font-mono whitespace-nowrap', style.text)}>{signal.timestamp ? formatStaleness(signal.staleness) : '—'}</span>;
+      },
+    },
+  ];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
 
 export default function SignalGapDetectorPage() {
   const { t } = useTranslation();
-  const [sort, setSort] = useState<SortMode>('staleness');
-  const [filter, setFilter] = useState<FilterMode>('all');
+  usePageTitle(t('signalGap.title', 'Signal Gaps'));
+
+  const [sortMode, setSortMode] = useState<SortMode>('staleness');
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [search, setSearch] = useState('');
 
-  const { data: liveSignals, isLoading, error } = useSignalGaps();
+  const { data: liveData, isLoading, dataUpdatedAt } = useSignalGaps();
+
+  const now = Date.now();
 
   const signals: SignalRow[] = useMemo(() => {
-    if (!liveSignals) return [];
-    const now = Date.now();
-    return Object.entries(liveSignals).map(([name, info]) => {
-      const ts = info.timestamp ? new Date(info.timestamp).getTime() : 0;
-      const staleness = ts ? Math.floor((now - ts) / 1000) : Infinity;
+    if (!liveData) return [];
+    return Object.entries(liveData).map(([name, entry]) => {
+      const raw = entry && typeof entry === 'object' ? entry : { value: entry, timestamp: null };
+      const ts = raw.timestamp ?? null;
+      const staleness = ts ? (now - new Date(ts).getTime()) / 1000 : Infinity;
       const category: SignalRow['category'] = !ts ? 'never' : staleness > 300 ? 'stale' : 'active';
-      return { name, value: String(info.value ?? ''), timestamp: info.timestamp ?? null, staleness, category };
+      return { name, value: raw.value != null ? String(raw.value) : '—', timestamp: ts, staleness, category };
     });
-  }, [liveSignals]);
+  }, [liveData, now]);
 
   const filtered = useMemo(() => {
-    let result = signals;
-    if (search) result = result.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
-    if (filter === 'stale') result = result.filter((s) => s.category === 'stale' || s.category === 'never');
-    if (filter === 'active') result = result.filter((s) => s.category === 'active');
-    if (sort === 'staleness') result = [...result].sort((a, b) => b.staleness - a.staleness);
-    else if (sort === 'alpha') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    else result = [...result].sort((a, b) => a.category.localeCompare(b.category));
-    return result;
-  }, [signals, search, filter, sort]);
+    let list = signals;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((s) => s.name.toLowerCase().includes(q));
+    }
+    if (filterMode === 'stale') list = list.filter((s) => s.category === 'stale' || s.category === 'never');
+    if (filterMode === 'active') list = list.filter((s) => s.category === 'active');
+    list = [...list].sort((a, b) => {
+      if (sortMode === 'staleness') return b.staleness - a.staleness;
+      if (sortMode === 'alpha') return a.name.localeCompare(b.name);
+      const order = { never: 0, stale: 1, active: 2 };
+      return order[a.category] - order[b.category];
+    });
+    return list;
+  }, [signals, search, filterMode, sortMode]);
 
   const activeCount = signals.filter((s) => s.category === 'active').length;
   const staleCount = signals.filter((s) => s.category === 'stale').length;
   const neverCount = signals.filter((s) => s.category === 'never').length;
 
-  const categoryVariant: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
-    active: 'success', stale: 'warning', never: 'danger',
-  };
+  const gapColumns = useMemo(() => buildColumns(t), [t]);
 
   return (
     <PageContainer
-      title={t('Signal Gap Detector')}
-      subtitle={t('Identify stale, inactive, or missing signals — refreshes every 5s')}
-      loading={isLoading}
-      error={error as Error | null}
-      empty={!signals.length}
-      emptyMessage={t('No signals found.')}
+      title={t('signalGap.title', 'Signal Gap Detector')}
+      subtitle={t('signalGap.subtitle', 'Identify signals that have stopped arriving or have gaps')}
+      actions={
+        <span className="text-xs text-[var(--text-muted)]">
+          <RefreshCw className="inline h-3 w-3 mr-1" />
+          {t('signalGap.refreshInterval', 'Refreshes every 5s')}
+        </span>
+      }
     >
-      <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-        <StatCard label={t('Total Signals')} value={signals.length} />
-        <StatCard label={t('Active (<30s)')} value={activeCount} />
-        <StatCard label={t('Stale (>5min)')} value={staleCount} />
-        <StatCard label={t('Never Received')} value={neverCount} />
-      </Grid>
-
-      <div className="flex gap-2 flex-wrap items-center">
-        <Input placeholder={t('Search...')} value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        {(['all', 'stale', 'active'] as FilterMode[]).map((f) => (
-          <Button key={f} size="sm" variant={filter === f ? 'primary' : 'outline'} onClick={() => setFilter(f)}>
-            {t(f === 'all' ? 'All' : f === 'stale' ? 'Stale Only' : 'Active Only')}
-          </Button>
-        ))}
-        <div className="ml-auto flex gap-2">
-          {(['staleness', 'alpha', 'category'] as SortMode[]).map((s) => (
-            <Button key={s} size="sm" variant={sort === s ? 'primary' : 'outline'} onClick={() => setSort(s)}>
-              {t(s === 'staleness' ? 'Most Stale' : s === 'alpha' ? 'A-Z' : 'Category')}
-            </Button>
-          ))}
+      {/* Summary Cards */}
+      <FadeIn delay={0.1}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard label={t('signalGap.totalSignals', 'Total Signals')} value={signals.length} icon={<ArrowUpDown className="h-4 w-4" />} />
+          <StatCard label={t('signalGap.active', 'Active (<30s)')} value={activeCount} icon={<RefreshCw className="h-4 w-4" />} />
+          <StatCard label={t('signalGap.stale', 'Stale (>5min)')} value={staleCount} icon={<AlertTriangle className="h-4 w-4" />} />
+          <StatCard label={t('signalGap.neverReceived', 'Never Received')} value={neverCount} icon={<AlertTriangle className="h-4 w-4" />} />
         </div>
-      </div>
+      </FadeIn>
 
-      <Card>
-        <CardHeader title={t('Signals')} subtitle={`${filtered.length} shown`} />
-        <div className="max-h-96 overflow-y-auto divide-y divide-gray-800">
-          {filtered.map((s) => (
-            <div key={s.name} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
-              <Badge variant={categoryVariant[s.category] ?? 'neutral'} size="sm">{s.category}</Badge>
-              <span className="flex-1 truncate max-w-[200px]">{s.name}</span>
-              <span className="w-28 truncate text-gray-400 shrink-0">{s.value || '--'}</span>
-              <span className="w-36 text-gray-400 shrink-0">{s.timestamp ? new Date(s.timestamp).toLocaleString() : '--'}</span>
-              <span className="w-16 text-right shrink-0">
-                {s.category === 'never' ? '--' : formatStaleness(s.staleness)}
-              </span>
+      {/* Controls */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Input
+              type="text"
+              placeholder={t('signalGap.filterPlaceholder', 'Filter by signal name...')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label={t('signalGap.filterLabel', 'Filter signals')}
+              className="w-full sm:w-64"
+            />
+            <div className="flex items-center gap-2">
+              <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+              {(['all', 'stale', 'active'] as FilterMode[]).map((mode) => (
+                <Button
+                  key={mode}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFilterMode(mode)}
+                  className={cn(
+                    'border',
+                    filterMode === mode
+                      ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                      : 'text-[var(--text-muted)] border-white/10 hover:text-[var(--text-primary)]',
+                  )}
+                >
+                  {mode === 'all' ? t('signalGap.all', 'All') : mode === 'stale' ? t('signalGap.staleOnly', 'Stale Only') : t('signalGap.activeOnly', 'Active Only')}
+                </Button>
+              ))}
             </div>
-          ))}
-        </div>
-      </Card>
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+              {(['staleness', 'alpha', 'category'] as SortMode[]).map((mode) => (
+                <Button
+                  key={mode}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSortMode(mode)}
+                  className={cn(
+                    'border',
+                    sortMode === mode
+                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                      : 'text-[var(--text-muted)] border-white/10 hover:text-[var(--text-primary)]',
+                  )}
+                >
+                  {mode === 'staleness' ? t('signalGap.mostStale', 'Most Stale') : mode === 'alpha' ? t('signalGap.az', 'A-Z') : t('signalGap.category', 'Category')}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Signal Table */}
+      <FadeIn delay={0.3}>
+        <GlassPanel className="p-4">
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12" />)}
+            </div>
+          ) : filtered.length > 0 ? (
+            <DataTable<SignalRow>
+              columns={gapColumns}
+              data={filtered}
+              keyExtractor={(signal) => signal.name}
+              compact
+              className="max-h-[65vh] overflow-auto border border-white/5"
+              emptyMessage={t('signalGap.noMatch', 'No signals match current filters')}
+            />
+          ) : (
+            <p className="text-center py-12 text-[var(--text-muted)]">
+              {signals.length === 0
+                ? t('signalGap.noData', 'No signal data available')
+                : t('signalGap.noMatch', 'No signals match current filters')}
+            </p>
+          )}
+
+          {dataUpdatedAt > 0 && (
+            <p className="mt-3 text-[10px] text-[var(--text-muted)] text-right">
+              {t('signalGap.lastRefreshed', 'Last refreshed')}: {formatRelative(new Date(dataUpdatedAt))}
+            </p>
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

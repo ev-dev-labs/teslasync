@@ -1,95 +1,240 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Activity, Pause, Play, Trash2, ArrowDown, ArrowDownUp } from 'lucide-react';
+
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card, CardHeader } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { StatCard } from '@/components/data-display/StatCard';
+import { GlassPanel, Badge, Button, Input, DataTable, type Column } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
+import { FadeIn } from '@/components/motion';
+import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { formatTime } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
 import type { SignalEntry } from '@/types/telemetry';
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
 
 const MAX_BUFFER = 500;
 
+const TYPE_COLOR: Record<string, string> = {
+  number: 'text-cyan-400',
+  string: 'text-green-400',
+  boolean: 'text-amber-400',
+};
+
+/* ------------------------------------------------------------------ */
+/*  Signal table columns                                               */
+/* ------------------------------------------------------------------ */
+
+function buildSignalColumns(t: (k: string, d: string) => string): Column<SignalEntry>[] {
+  return [
+    {
+      key: 'time',
+      header: t('liveMonitor.time', 'Time'),
+      render: (entry) => (
+        <span className="font-mono text-[var(--text-muted)] whitespace-nowrap">
+          {formatTime(entry.timestamp)}
+        </span>
+      ),
+    },
+    {
+      key: 'signal',
+      header: t('liveMonitor.signal', 'Signal'),
+      render: (entry) => (
+        <span className="font-mono text-[var(--text-primary)] whitespace-nowrap">
+          {entry.name}
+        </span>
+      ),
+    },
+    {
+      key: 'value',
+      header: t('liveMonitor.value', 'Value'),
+      render: (entry) => (
+        <span className={cn('font-mono whitespace-nowrap', TYPE_COLOR[entry.type])}>
+          {entry.value}
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: t('liveMonitor.type', 'Type'),
+      render: (entry) => (
+        <Badge
+          variant={entry.type === 'number' ? 'info' : entry.type === 'boolean' ? 'warning' : 'success'}
+          size="sm"
+        >
+          {entry.type}
+        </Badge>
+      ),
+    },
+  ];
+}
+
+function detectType(value: unknown): 'number' | 'string' | 'boolean' {
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'number') return 'number';
+  return 'string';
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
 export default function LiveSignalMonitorPage() {
   const { t } = useTranslation();
+  usePageTitle(t('liveMonitor.title', 'Live Monitor'));
+
   const [entries, setEntries] = useState<SignalEntry[]>([]);
   const [paused, setPaused] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const [filter, setFilter] = useState('');
+  const [rate, setRate] = useState(0);
   const idRef = useRef(0);
+  const tableRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
+  const rateRef = useRef<number[]>([]);
 
-  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  pausedRef.current = paused;
 
-  const handleSignal = useCallback((name: string, value: unknown) => {
+  /* ---- SSE handler ---- */
+  const handleVehicleUpdate = useCallback((data: unknown) => {
     if (pausedRef.current) return;
-    const type: SignalEntry['type'] =
-      typeof value === 'boolean' ? 'boolean' : typeof value === 'number' ? 'number' : 'string';
-    const entry: SignalEntry = {
-      id: ++idRef.current,
-      timestamp: new Date().toISOString(),
-      name,
-      value: String(value),
-      type,
-    };
-    setEntries((prev) => [entry, ...prev].slice(0, MAX_BUFFER));
+    const payload = data as Record<string, unknown>;
+    const signals = (payload?.signals ?? payload) as Record<string, unknown> | undefined;
+    if (!signals || typeof signals !== 'object') return;
+
+    const now = new Date().toISOString();
+    const newEntries: SignalEntry[] = [];
+
+    for (const [name, value] of Object.entries(signals)) {
+      if (name === 'timestamp' || name === 'vehicle_id') continue;
+      idRef.current += 1;
+      newEntries.push({ id: idRef.current, timestamp: now, name, value: String(value), type: detectType(value) });
+    }
+
+    rateRef.current.push(newEntries.length);
+    setEntries((prev) => [...newEntries, ...prev].slice(0, MAX_BUFFER));
   }, []);
 
-  // Simulated signal stream for demonstration
+  /* ---- Rate counter ---- */
   useEffect(() => {
     const interval = setInterval(() => {
-      handleSignal('demo_signal', Math.random() * 100);
-    }, 2000);
+      setRate(rateRef.current.reduce((a, b) => a + b, 0));
+      rateRef.current = [];
+    }, 1000);
     return () => clearInterval(interval);
-  }, [handleSignal]);
+  }, []);
 
-  const filtered = useMemo(
+  const { connected } = useRealtimeEvents({ onVehicleUpdate: handleVehicleUpdate });
+
+  /* ---- Auto-scroll ---- */
+  useEffect(() => {
+    if (autoScroll && tableRef.current) tableRef.current.scrollTop = 0;
+  }, [entries, autoScroll]);
+
+  const filteredEntries = useMemo(
     () => (filter ? entries.filter((e) => e.name.toLowerCase().includes(filter.toLowerCase())) : entries),
     [entries, filter],
   );
 
   const uniqueSignals = useMemo(() => new Set(entries.map((e) => e.name)).size, [entries]);
-
-  const typeVariant: Record<string, 'info' | 'success' | 'warning'> = {
-    number: 'info', string: 'success', boolean: 'warning',
-  };
+  const signalColumns = useMemo(() => buildSignalColumns(t), [t]);
 
   return (
     <PageContainer
-      title={t('Live Signal Monitor')}
-      subtitle={t('Real-time scrolling view of incoming signals')}
-      actions={<Badge variant={paused ? 'warning' : 'success'} dot>{paused ? t('Paused') : t('Live')}</Badge>}
+      title={t('liveMonitor.title', 'Live Signal Monitor')}
+      subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
+      actions={
+        <Badge variant={connected ? 'success' : 'danger'} dot>
+          {connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
+        </Badge>
+      }
     >
-      <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-        <StatCard label={t('Buffer Size')} value={`${entries.length}/${MAX_BUFFER}`} />
-        <StatCard label={t('Unique Signals')} value={uniqueSignals} />
-        <StatCard label={t('Filtered')} value={filtered.length} />
-        <StatCard label={t('Status')} value={paused ? t('Paused') : t('Streaming')} />
-      </Grid>
-
-      <div className="flex gap-2 flex-wrap items-center">
-        <Input placeholder={t('Filter signals...')} value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />
-        <Button size="sm" variant={paused ? 'primary' : 'outline'} onClick={() => setPaused(!paused)}>
-          {paused ? t('Resume') : t('Pause')}
-        </Button>
-        <Button size="sm" variant="danger" onClick={() => { setEntries([]); idRef.current = 0; }}>
-          {t('Clear')}
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader title={t('Signal Stream')} subtitle={`${filtered.length} entries`} />
-        <div className="max-h-96 overflow-y-auto divide-y divide-gray-800">
-          {filtered.slice(0, 200).map((e) => (
-            <div key={e.id} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
-              <span className="w-20 text-gray-400 shrink-0">{e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '—'}</span>
-              <span className="flex-1 truncate max-w-[200px]">{e.name}</span>
-              <span className="w-24 shrink-0">{e.value}</span>
-              <Badge variant={typeVariant[e.type] ?? 'neutral'} size="sm">{e.type}</Badge>
-            </div>
-          ))}
+      {/* Stats */}
+      <FadeIn delay={0.1}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            label={t('liveMonitor.sigPerSec', 'Signals / sec')}
+            value={rate}
+            icon={<Activity className="h-4 w-4" />}
+          />
+          <StatCard
+            label={t('liveMonitor.bufferSize', 'Buffer Size')}
+            value={entries.length}
+            unit={`/ ${MAX_BUFFER}`}
+            icon={<ArrowDownUp className="h-4 w-4" />}
+          />
+          <StatCard
+            label={t('liveMonitor.uniqueSignals', 'Unique Signals')}
+            value={uniqueSignals}
+            icon={<Activity className="h-4 w-4" />}
+          />
+          <StatCard
+            label={t('liveMonitor.filtered', 'Filtered')}
+            value={filteredEntries.length}
+            icon={<Activity className="h-4 w-4" />}
+          />
         </div>
-      </Card>
+      </FadeIn>
+
+      {/* Controls + Table */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+            <Input
+              type="text"
+              placeholder={t('liveMonitor.filterPlaceholder', 'Filter by signal name...')}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              aria-label={t('liveMonitor.filterLabel', 'Filter signals')}
+              className="w-full sm:w-64"
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setPaused((p) => !p)}
+                variant="secondary"
+                size="sm"
+                icon={paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              >
+                {paused ? t('liveMonitor.resume', 'Resume') : t('liveMonitor.pause', 'Pause')}
+              </Button>
+              <Button
+                onClick={() => setAutoScroll((a) => !a)}
+                variant="secondary"
+                size="sm"
+                icon={<ArrowDown className="h-3.5 w-3.5" />}
+                className={autoScroll ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : ''}
+              >
+                {t('liveMonitor.autoScroll', 'Auto-scroll')}
+              </Button>
+              <Button
+                onClick={() => { setEntries([]); idRef.current = 0; }}
+                variant="danger"
+                size="sm"
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+              >
+                {t('liveMonitor.clear', 'Clear')}
+              </Button>
+            </div>
+          </div>
+
+          <div ref={tableRef} className="overflow-auto max-h-[65vh] rounded-lg border border-white/5">
+            <DataTable<SignalEntry>
+              columns={signalColumns}
+              data={filteredEntries}
+              keyExtractor={(entry) => entry.id}
+              compact
+              emptyMessage={
+                entries.length === 0
+                  ? t('liveMonitor.waiting', 'Waiting for signals…')
+                  : t('liveMonitor.noMatch', 'No signals match filter')
+              }
+            />
+          </div>
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }
