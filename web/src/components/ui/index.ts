@@ -18,4 +18,6 @@ export { DataTable, useSortToggle, type Column } from './DataTable';
 export { Drawer } from './Drawer';
 export { Breadcrumb } from './Breadcrumb';
 export { CommandPalette } from './CommandPalette';
+export { Textarea } from './Textarea';
+export type { TextareaProps } from './Textarea';
 export { default as Logo } from './Logo';

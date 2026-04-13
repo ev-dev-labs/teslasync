@@ -1,122 +1,315 @@
-import { useState } from 'react';
+/**
+ * SignalLogViewerPage — query signal history from Postgres.
+ *
+ * Select signals, set date range, click Query to browse paginated signal history.
+ */
+
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui';
-import { StatCard } from '@/components/data-display/StatCard';
-import { useSignals, useSignalLog } from '@/api/hooks/useTelemetry';
+import { Select } from '@/components/ui/Select';
+import { Pagination } from '@/components/ui/Pagination';
+import { DataTable, type Column } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSignals } from '@/api/hooks/useTelemetry';
+import { request } from '@/api/client';
+import { CHART_COLORS } from '@/lib/colors';
+import { Database, Search, Clock, Activity, Filter } from 'lucide-react';
 
-const PAGE_SIZES = [25, 50, 100, 200];
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface SignalRow {
+  created_at: string;
+  signal: string;
+  value_num: number | null;
+  value_str: string | null;
+  value_bool: boolean | null;
+}
+
+interface SignalHistoryResp {
+  data: SignalRow[];
+  pagination?: { total: number; total_pages: number; page: number; per_page: number };
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toLocalDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatValue(row: SignalRow): string {
+  if (row.value_num !== null && row.value_num !== undefined) return row.value_num.toFixed(4);
+  if (row.value_bool !== null && row.value_bool !== undefined) return String(row.value_bool);
+  return row.value_str ?? '';
+}
+
+function valueType(row: SignalRow): string {
+  if (row.value_num !== null && row.value_num !== undefined) return 'number';
+  if (row.value_bool !== null && row.value_bool !== undefined) return 'boolean';
+  return 'string';
+}
+
+const typeVariant: Record<string, 'info' | 'success' | 'warning'> = {
+  number: 'info', string: 'success', boolean: 'warning',
+};
+
+const PRESETS = [
+  { label: '1h', hours: 1 },
+  { label: '6h', hours: 6 },
+  { label: '24h', hours: 24 },
+  { label: '7d', hours: 168 },
+  { label: '30d', hours: 720 },
+];
+
+// ─── Page component ──────────────────────────────────────────────────────────
 
 export default function SignalLogViewerPage() {
   const { t } = useTranslation();
-  const [selectedSignal, setSelectedSignal] = useState('');
-  const [search, setSearch] = useState('');
-  const [hours, setHours] = useState(24);
+  usePageTitle(t('Signal Log'));
+  const vehicleId = 1;
+
+  // Signal selection
+  const { data: availableSignals } = useSignals();
+  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
+  const [signalSearch, setSignalSearch] = useState('');
+
+  // DateTime range
+  const [fromStr, setFromStr] = useState(() => toLocalDatetime(new Date(Date.now() - 3600_000)));
+  const [toStr, setToStr] = useState(() => toLocalDatetime(new Date()));
+
+  // Pagination
+  const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
 
-  const { data: signals, isLoading, error } = useSignals();
-  const { data: logData } = useSignalLog(selectedSignal, hours, page, pageSize);
+  // Query trigger — only fetch when user clicks "Query"
+  const [queryKey, setQueryKey] = useState<number | null>(null);
 
-  const filtered = signals?.filter((s) => s.toLowerCase().includes(search.toLowerCase())) ?? [];
+  const applyPreset = useCallback((hours: number) => {
+    const end = new Date();
+    setFromStr(toLocalDatetime(new Date(end.getTime() - hours * 3600_000)));
+    setToStr(toLocalDatetime(end));
+  }, []);
 
-  function valueType(entry: { valueNum?: number; valueStr?: string; valueBool?: boolean }): string {
-    if (entry.valueNum !== undefined) return 'number';
-    if (entry.valueBool !== undefined) return 'boolean';
-    return 'string';
-  }
+  const canQuery = selectedSignals.length > 0 && fromStr && toStr;
 
-  function formatValue(entry: { valueNum?: number; valueStr?: string; valueBool?: boolean }): string {
-    if (entry.valueNum !== undefined) return (entry.valueNum ?? 0).toFixed(4);
-    if (entry.valueBool !== undefined) return String(entry.valueBool);
-    return entry.valueStr ?? '';
-  }
+  const handleQuery = useCallback(() => {
+    if (!canQuery) return;
+    setPage(1);
+    setQueryKey(Date.now());
+  }, [canQuery]);
 
-  const typeVariant: Record<string, 'info' | 'success' | 'warning'> = {
-    number: 'info', string: 'success', boolean: 'warning',
-  };
+  const toggleSignal = useCallback((sig: string) => {
+    setSelectedSignals(prev =>
+      prev.includes(sig) ? prev.filter(s => s !== sig) : [...prev, sig],
+    );
+  }, []);
+
+  const signalsCsv = selectedSignals.join(',');
+  const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
+  const toIso = toStr ? new Date(toStr).toISOString() : '';
+
+  // ── Data query ──
+  const { data: historyResp, isLoading, isFetching } = useQuery<SignalHistoryResp>({
+    queryKey: ['signal-log', queryKey, page, perPage],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        signals: signalsCsv,
+        from: fromIso,
+        to: toIso,
+        page: String(page),
+        per_page: String(perPage),
+      });
+      return request(`/signals/history?${params}`);
+    },
+    enabled: queryKey !== null,
+  });
+
+  const rows = historyResp?.data ?? [];
+  const totalRecords = historyResp?.pagination?.total ?? 0;
+  const hasQueried = queryKey !== null;
+
+  // Signal search filter
+  const filteredSignals = useMemo(() => {
+    if (!availableSignals) return [];
+    if (!signalSearch) return availableSignals;
+    const q = signalSearch.toLowerCase();
+    return availableSignals.filter(s => s.toLowerCase().includes(q));
+  }, [availableSignals, signalSearch]);
+
+  // Table columns
+  const logColumns: Column<SignalRow>[] = useMemo(() => [
+    { key: 'row', header: '#', render: (r) => {
+      const idx = rows.indexOf(r);
+      return <span className="text-xs text-[var(--text-muted)] font-mono">{(page - 1) * perPage + idx + 1}</span>;
+    }},
+    { key: 'time', header: t('Timestamp'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
+    { key: 'signal', header: t('Signal'), render: (r) => {
+      const idx = selectedSignals.indexOf(r.signal);
+      return <span className="font-mono text-xs" style={{ color: idx >= 0 ? CHART_COLORS[idx % CHART_COLORS.length] : 'var(--text-primary)' }}>{r.signal}</span>;
+    }},
+    { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{formatValue(r)}</span> },
+    { key: 'type', header: t('Type'), render: (r) => {
+      const vt = valueType(r);
+      return <Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge>;
+    }},
+  ], [rows, page, perPage, selectedSignals, t]);
 
   return (
     <PageContainer
       title={t('Signal Log Viewer')}
-      subtitle={t('Browse raw telemetry signal recordings')}
-      loading={isLoading}
-      error={error as Error | null}
-      empty={!signals?.length}
-      emptyMessage={t('No signals available.')}
+      subtitle={t('Query signal history from Postgres')}
+      loading={false}
     >
-      <Grid cols={{ default: 1, md: 5 }} gap={4}>
-        <Card className="md:col-span-1">
-          <CardHeader title={t('Signals')} />
-          <div className="px-3 pb-2">
-            <Input placeholder={t('Filter...')} value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="max-h-96 overflow-y-auto px-3 pb-3 space-y-1">
-            {filtered.map((s) => (
+      {/* ── Controls ──────────────────────────────────────────────── */}
+      <GlassPanel className="p-4 sm:p-5 space-y-4">
+        {/* Signal picker */}
+        <div>
+          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+            <Filter className="inline h-3 w-3 mr-1" />{t('Signals')} ({selectedSignals.length})
+          </span>
+          <Input
+            icon={<Search className="h-3.5 w-3.5" />}
+            placeholder={t('Search signals…')}
+            value={signalSearch}
+            onChange={e => setSignalSearch(e.target.value)}
+            className="mb-2"
+          />
+          {selectedSignals.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedSignals.map((sig, i) => (
+                <Badge
+                  key={sig}
+                  variant="info"
+                  size="sm"
+                  className="cursor-pointer"
+                  style={{ borderColor: CHART_COLORS[i % CHART_COLORS.length], color: CHART_COLORS[i % CHART_COLORS.length] }}
+                  onClick={() => toggleSignal(sig)}
+                >
+                  {sig} ×
+                </Badge>
+              ))}
+            </div>
+          )}
+          <div className="max-h-48 overflow-y-auto space-y-0.5">
+            {filteredSignals.slice(0, 100).map(sig => (
               <Button
-                key={s}
+                key={sig}
                 size="sm"
-                variant={s === selectedSignal ? 'primary' : 'ghost'}
-                onClick={() => { setSelectedSignal(s); setPage(1); }}
-                className="block w-full text-left text-xs font-mono truncate"
+                variant={selectedSignals.includes(sig) ? 'primary' : 'ghost'}
+                onClick={() => toggleSignal(sig)}
+                className="w-full text-left text-xs font-mono truncate justify-start"
               >
-                {s}
+                {sig}
               </Button>
             ))}
-          </div>
-        </Card>
-
-        <div className="md:col-span-4 space-y-4">
-          <div className="flex gap-2 flex-wrap items-center">
-            {[1, 6, 24, 168, 720].map((h) => (
-              <Button key={h} size="sm" variant={hours === h ? 'primary' : 'outline'} onClick={() => { setHours(h); setPage(1); }}>
-                {h < 48 ? `${h}h` : `${h / 24}d`}
-              </Button>
-            ))}
-            <Select
-              options={PAGE_SIZES.map((s) => ({ value: String(s), label: `${s}/page` }))}
-              className="ml-auto"
-              value={String(pageSize)}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            />
-          </div>
-
-          <StatCard label={t('Total Records')} value={logData?.count ?? 0} />
-
-          <Card>
-            <CardHeader title={selectedSignal || t('Select a signal')} />
-            {logData?.data?.length ? (
-              <div className="divide-y divide-gray-800">
-                {logData.data.map((entry, i) => {
-                  const vt = valueType(entry);
-                  return (
-                    <div key={i} className="flex items-center gap-3 px-2 py-1 text-xs font-mono">
-                      <span className="w-8 text-gray-500 shrink-0">{(page - 1) * pageSize + i + 1}</span>
-                      <span className="w-40 text-gray-400 shrink-0">{entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—'}</span>
-                      <span className="flex-1">{formatValue(entry)}</span>
-                      <Badge variant={typeVariant[vt] ?? 'neutral'} size="sm">{vt}</Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm text-center py-8">{t('No data')}</p>
-            )}
-          </Card>
-
-          <div className="flex justify-center gap-2">
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(1)}>{t('First')}</Button>
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t('Prev')}</Button>
-            <span className="text-sm text-gray-400 self-center">{t('Page')} {page}</span>
-            <Button size="sm" variant="outline" onClick={() => setPage(page + 1)}>{t('Next')}</Button>
           </div>
         </div>
-      </Grid>
+
+        {/* DateTime range */}
+        <div>
+          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+            <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
+          </span>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {PRESETS.map(p => (
+              <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
+                {p.label}
+              </Button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label={t('From')} type="datetime-local" value={fromStr} onChange={e => setFromStr(e.target.value)} />
+            <Input label={t('To')} type="datetime-local" value={toStr} onChange={e => setToStr(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Query controls */}
+        <div className="flex items-center gap-3">
+          <Select
+            label={t('Per Page')}
+            value={String(perPage)}
+            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+            options={[
+              { value: '25', label: '25' },
+              { value: '50', label: '50' },
+              { value: '100', label: '100' },
+              { value: '500', label: '500' },
+            ]}
+            className="w-24"
+          />
+          <Button
+            variant="primary"
+            icon={<Database className="h-4 w-4" />}
+            onClick={handleQuery}
+            disabled={!canQuery}
+            loading={isFetching}
+            className="mt-5"
+          >
+            {t('Query')}
+          </Button>
+          {hasQueried && (
+            <span className="text-xs text-[var(--text-muted)] mt-5">
+              {totalRecords} {t('records')}
+            </span>
+          )}
+        </div>
+      </GlassPanel>
+
+      {/* ── Results ───────────────────────────────────────────────── */}
+      {!hasQueried ? (
+        <EmptyState
+          icon={<Database className="h-10 w-10" />}
+          title={t('Select signals and click Query')}
+          message={t('Choose one or more signals, set a date range, then hit Query to browse signal history.')}
+        />
+      ) : (
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="h-4 w-4 text-neon-cyan" />
+              <span className="section-title">{t('Signal Data')}</span>
+              <span className="ml-auto text-[10px] text-[var(--text-muted)]">
+                {t('Page')} {page} · {totalRecords} {t('total')}
+              </span>
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-8" />)}</div>
+            ) : rows.length > 0 ? (
+              <>
+                <DataTable
+                  columns={logColumns}
+                  data={rows}
+                  keyExtractor={(r) => `${r.created_at}-${r.signal}`}
+                  compact
+                />
+                <Pagination
+                  page={page}
+                  pageSize={perPage}
+                  total={totalRecords}
+                  onPageChange={setPage}
+                />
+              </>
+            ) : (
+              <EmptyState
+                icon={<Database className="h-8 w-8" />}
+                title={t('No data')}
+                message={t('No signal data found for this query.')}
+              />
+            )}
+          </GlassPanel>
+        </FadeIn>
+      )}
     </PageContainer>
   );
 }

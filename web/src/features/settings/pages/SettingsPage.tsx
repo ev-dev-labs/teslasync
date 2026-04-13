@@ -1,13 +1,12 @@
-import { useState, useEffect, type ReactNode } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AppSettings } from '@/api/types'
 import {
-  getSettings, updateSettings,
-  getAuthURL, getAuthStatus, refreshAuth, disconnectAuth,
-  syncVehicles, getVehicles, getUserPreferenceLatest,
-  getGasPriceStatus, pollGasPrice, toggleGasPrice, updateGasPriceConfig,
-} from '@/api'
-import type { AppSettings } from '@/api'
+  useSettings, useSaveSettings, useAuthStatus, useAuthURL,
+  useRefreshAuth, useDisconnectAuth, useSyncVehicles, useVehicles,
+  useCarPreferences, useGasPriceStatus, usePollGasPrice,
+  useToggleGasPrice, useUpdateGasPriceConfig,
+} from '@/api/hooks/useSettings'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { GlassPanel, Button, Input, Select, IconBox } from '@/components/ui'
 import { Skeleton } from '@/components/feedback'
@@ -47,15 +46,12 @@ function SettingField({ label, children }: { label: string; children: ReactNode 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
-  const queryClient = useQueryClient()
   const toast = useToast()
 
   // ── Data queries ──
-  const { data: settings, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings })
-  const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: getAuthStatus })
-  const { data: gasPriceStatus, refetch: refetchGasPrice } = useQuery({
-    queryKey: ['gas-price-status'], queryFn: getGasPriceStatus, retry: false, refetchInterval: 30_000,
-  })
+  const { data: settings, isLoading } = useSettings()
+  const { data: auth } = useAuthStatus()
+  const { data: gasPriceStatus } = useGasPriceStatus()
   const { themeId, modeId, setTheme, setMode, setCustomColors, themes: allThemes, modes: allModes } = useTheme()
 
   // ── Form state ──
@@ -83,68 +79,26 @@ export default function SettingsPage() {
   const [customPrimary, setCustomPrimary] = useState(() => localStorage.getItem('teslasync-custom-primary') || '#00b4d8')
   const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('teslasync-custom-accent') || '#e63946')
 
-  useEffect(() => {
-    if (settings) setForm(settings)
-  }, [settings])
+  const [formInited, setFormInited] = useState(false)
+  if (settings && !formInited) {
+    setForm(settings)
+    setFormInited(true)
+  }
 
   // ── Mutations ──
-  const settingsMut = useMutation({
-    mutationFn: (data: AppSettings) => updateSettings(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] })
-      toast.success(t('toast.saved', 'Settings saved'), t('toast.savedDesc', 'Your preferences have been updated'))
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    },
-    onError: () => {
-      toast.error(t('toast.saveFailed', 'Failed to save'), t('toast.saveFailedDesc', 'Could not update settings'))
-    },
-  })
-
-  const authUrlMut = useMutation({
-    mutationFn: getAuthURL,
-    onError: (err: Error) => {
-      toast.error(t('toast.authFailed', 'Authentication failed'), err.message || t('toast.authFailedDesc', 'Could not generate login URL'))
-    },
-  })
-  const refreshMut = useMutation({
-    mutationFn: refreshAuth,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auth-status'] })
-      toast.success(t('toast.tokenRefreshed', 'Token refreshed'))
-    },
-    onError: (err: Error) => {
-      toast.error(t('toast.tokenRefreshFailed', 'Token refresh failed'), err.message || t('toast.tokenRefreshFailedDesc', 'Could not refresh authentication token'))
-    },
-  })
-  const disconnectMut = useMutation({
-    mutationFn: disconnectAuth,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auth-status'] })
-      toast.success(t('toast.disconnected', 'Tesla account disconnected'))
-    },
-    onError: (err: Error) => {
-      toast.error(t('toast.disconnectFailed', 'Disconnect failed'), err.message || t('toast.disconnectFailedDesc', 'Could not disconnect'))
-    },
-  })
-  const syncMut = useMutation({
-    mutationFn: syncVehicles,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] })
-    },
-    onError: (err: Error) => {
-      toast.error(t('toast.syncFailed', 'Vehicle sync failed'), err.message || t('toast.syncFailedDesc', 'Could not sync vehicles from Tesla'))
-    },
-  })
+  const settingsMut = useSaveSettings()
+  const authUrlMut = useAuthURL()
+  const refreshMut = useRefreshAuth()
+  const disconnectMut = useDisconnectAuth()
+  const syncMut = useSyncVehicles()
+  const gasPollMut = usePollGasPrice()
+  const gasToggleMut = useToggleGasPrice()
+  const gasConfigMut = useUpdateGasPriceConfig()
 
   // ── Vehicle user preferences for "Sync from Car" feature ──
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: getVehicles })
+  const { data: vehicles } = useVehicles()
   const firstVehicleId = vehicles?.[0]?.id ?? null
-  const { data: carPrefs } = useQuery({
-    queryKey: ['car-prefs', firstVehicleId],
-    queryFn: () => getUserPreferenceLatest(firstVehicleId!),
-    enabled: firstVehicleId !== null,
-  })
+  const { data: carPrefs } = useCarPreferences(firstVehicleId)
 
   function syncUnitsFromCar() {
     if (!carPrefs) return
@@ -228,16 +182,24 @@ export default function SettingsPage() {
               </Button>
             ) : (
               <>
-                <Button variant="secondary" icon={<RefreshCw className={cn('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
+                <Button variant="secondary" icon={<RefreshCw className={cn('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.tokenRefreshed', 'Token refreshed')),
+                  onError: (err: Error) => toast.error(t('toast.tokenRefreshFailed', 'Token refresh failed'), err.message),
+                })} disabled={refreshMut.isPending}>
                   {t('tesla.refreshToken', 'Refresh Token')}
                 </Button>
-                <Button variant="secondary" icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
+                <Button variant="secondary" icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate(undefined, {
+                  onError: (err: Error) => toast.error(t('toast.syncFailed', 'Vehicle sync failed'), err.message),
+                })} disabled={syncMut.isPending}>
                   {t('tesla.syncVehicles', 'Sync Vehicles')}
                 </Button>
                 <Button variant="secondary" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending} className="!border-neon-cyan/30 !text-neon-cyan hover:!bg-neon-cyan/5">
                   {t('tesla.reauthorize', 'Re-authorize')}
                 </Button>
-                <Button variant="danger" icon={<XCircle className="h-4 w-4" />} onClick={() => { if (confirm(t('tesla.disconnectConfirm', 'Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.'))) disconnectMut.mutate() }} disabled={disconnectMut.isPending}>
+                <Button variant="danger" icon={<XCircle className="h-4 w-4" />} onClick={() => { if (confirm(t('tesla.disconnectConfirm', 'Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.'))) disconnectMut.mutate(undefined, {
+                  onSuccess: () => toast.success(t('toast.disconnected', 'Tesla account disconnected')),
+                  onError: (err: Error) => toast.error(t('toast.disconnectFailed', 'Disconnect failed'), err.message),
+                }) }} disabled={disconnectMut.isPending}>
                   {t('tesla.disconnect', 'Disconnect')}
                 </Button>
               </>
@@ -428,7 +390,10 @@ export default function SettingsPage() {
           )}
 
           <div className="flex items-center gap-4">
-            <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form)} loading={settingsMut.isPending}>
+            <Button variant="primary" icon={<Save className="h-4 w-4" />} onClick={() => settingsMut.mutate(form, {
+              onSuccess: () => { toast.success(t('toast.saved', 'Settings saved'), t('toast.savedDesc', 'Your preferences have been updated')); setSaved(true); setTimeout(() => setSaved(false), 3000) },
+              onError: () => toast.error(t('toast.saveFailed', 'Failed to save'), t('toast.saveFailedDesc', 'Could not update settings')),
+            })} loading={settingsMut.isPending}>
               {t('app.save', 'Save Settings')}
             </Button>
             {saved && (
@@ -458,8 +423,9 @@ export default function SettingsPage() {
               <Button
                 variant="ghost"
                 onClick={() => {
-                  const next = !gasPriceStatus?.enabled
-                  toggleGasPrice(next).then(() => { refetchGasPrice(); toast.info(next ? t('gas.enabled', 'Auto-poll enabled') : t('gas.disabled', 'Auto-poll disabled')) })
+                  gasToggleMut.mutate(!gasPriceStatus?.enabled, {
+                    onSuccess: () => toast.info(!gasPriceStatus?.enabled ? t('gas.enabled', 'Auto-poll enabled') : t('gas.disabled', 'Auto-poll disabled')),
+                  })
                 }}
                 className={cn(
                   'flex items-center gap-3 w-full rounded-xl border p-3.5 h-auto transition-all duration-200',
@@ -476,7 +442,7 @@ export default function SettingsPage() {
             <Select
               label={t('gas.pollInterval', 'Poll Interval')}
               value={gasPriceStatus?.poll_interval || '7d'}
-              onChange={e => { updateGasPriceConfig(e.target.value).then(() => { refetchGasPrice(); toast.info(t('gas.intervalUpdated', 'Poll interval updated')) }) }}
+              onChange={e => gasConfigMut.mutate(e.target.value, { onSuccess: () => toast.info(t('gas.intervalUpdated', 'Poll interval updated')) })}
               options={[
                 { value: 'daily', label: t('gas.daily', 'Daily') },
                 { value: '7d', label: t('gas.weekly', 'Weekly') },
@@ -504,7 +470,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="primary" icon={<Zap className="h-4 w-4" />} onClick={() => { pollGasPrice().then(() => { toast.info(t('gas.pollTriggered', 'Gas price poll triggered')); setTimeout(() => refetchGasPrice(), 3000) }) }}>
+            <Button variant="primary" icon={<Zap className="h-4 w-4" />} onClick={() => gasPollMut.mutate(undefined, { onSuccess: () => toast.info(t('gas.pollTriggered', 'Gas price poll triggered')) })} loading={gasPollMut.isPending}>
               {t('gas.pollNow', 'Poll Now')}
             </Button>
             <p className="text-[10px] text-[var(--text-muted)]">

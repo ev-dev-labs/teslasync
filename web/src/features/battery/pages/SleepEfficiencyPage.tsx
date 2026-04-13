@@ -1,114 +1,243 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { Moon, BatteryWarning, Clock, Activity, Lightbulb, Zap } from 'lucide-react';
+import clsx from 'clsx';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { StatCard } from '@/components/data-display/StatCard';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui';
-import { KVList } from '@/components/data-display/KVList';
-import { useSleepEfficiency } from '@/api/hooks/useEnergy';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { Select } from '@/components/ui/Select';
+import { DataTable, type Column, useSortToggle } from '@/components/ui/DataTable';
+import { MetricCard } from '@/components/data-display/MetricCard';
+import { RadialGauge } from '@/components/charts/RadialGauge';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { FadeIn } from '@/components/motion/FadeIn';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from '@/components/charts';
+import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { chartMargin, axisTick } from '@/components/charts';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
+import { CHART_COLORS } from '@/lib/colors';
+import { request } from '@/api/client';
+
+/* ── Types ── */
+
+interface SleepSession {
+  id: number;
+  vehicle_id: number;
+  start_date: string;
+  end_date: string;
+  duration_hours: number;
+  start_battery: number;
+  end_battery: number;
+  drain_pct: number;
+  drain_rate_pct_hr: number;
+}
+
+interface DailySleep {
+  date: string;
+  sleep_hours: number;
+  drain_pct: number;
+}
+
+interface SleepStats {
+  avg_drain_rate: number;
+  total_sleep_hours: number;
+  session_count: number;
+  efficiency_score: number;
+  sessions: SleepSession[];
+  daily: DailySleep[];
+}
+
+interface Vehicle {
+  id: number;
+  vin: string;
+  display_name: string;
+}
+
+/* ── Component ── */
 
 export default function SleepEfficiencyPage() {
   const { t } = useTranslation();
-  const { data: vehicles } = useVehicles();
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const [days, setDays] = useState(30);
-  const activeId = vehicleId ?? vehicles?.[0]?.id ?? null;
+  usePageTitle(t('Sleep Efficiency'));
 
-  const { data, isLoading, error } = useSleepEfficiency(activeId != null ? String(activeId) : null, days);
+  const [vehicleId, setVehicleId] = useState<string>('');
+
+  const { data: vehicles } = useQuery<Vehicle[]>({
+    queryKey: ['vehicles'],
+    queryFn: () => request<Vehicle[]>('/vehicles'),
+  });
+
+  const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
+
+  const { data, isLoading, error } = useQuery<SleepStats>({
+    queryKey: ['sleep-stats', activeId],
+    queryFn: () => request<SleepStats>(`/vampire-drain/stats?vehicle_id=${activeId}`),
+    enabled: activeId !== '',
+  });
+
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle('start_date');
+
+  const sortedSessions = useMemo(() => {
+    if (!data?.sessions) return [];
+    return sortFn(data.sessions, (row, key) => {
+      const val = row[key as keyof SleepSession];
+      return typeof val === 'number' ? val : String(val);
+    });
+  }, [data?.sessions, sortFn]);
+
+  const columns: Column<SleepSession>[] = useMemo(() => [
+    { key: 'start_date', header: t('Time'), sortable: true, render: (r) => formatDateTime(r.start_date) },
+    { key: 'duration_hours', header: t('Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours, 1)}h` },
+    { key: 'start_battery', header: t('Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery, 0)}%` },
+    { key: 'end_battery', header: t('End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery, 0)}%` },
+    { key: 'drain_pct', header: t('Drain %'), sortable: true, render: (r) => (
+      <Badge variant={r.drain_pct > 3 ? 'danger' : r.drain_pct > 1 ? 'warning' : 'success'}>
+        {fmtNumber(r.drain_pct, 1)}%
+      </Badge>
+    )},
+    { key: 'drain_rate_pct_hr', header: t('Rate %/hr'), sortable: true, render: (r) => fmtNumber(r.drain_rate_pct_hr, 2) },
+  ], [t]);
+
+  const efficiencyColor = (data?.efficiency_score ?? 0) >= 90
+    ? CHART_COLORS[1] : (data?.efficiency_score ?? 0) >= 70 ? CHART_COLORS[3] : CHART_COLORS[5];
+
+  const tips = useMemo(() => [
+    { icon: <Zap className="h-4 w-4" />, text: t('Disable Sentry Mode when parked at home to save 1-2% per day.') },
+    { icon: <Moon className="h-4 w-4" />, text: t('Reduce third-party app polling intervals to let the car sleep faster.') },
+    { icon: <BatteryWarning className="h-4 w-4" />, text: t('Avoid opening the app frequently — each wake cycle costs battery.') },
+    { icon: <Activity className="h-4 w-4" />, text: t('Enable energy saving mode in vehicle settings for better standby.') },
+  ], [t]);
 
   return (
     <PageContainer
       title={t('Sleep Efficiency')}
-      subtitle={t('Vehicle sleep patterns, vampire drain and sentry mode costs')}
+      subtitle={t('Vampire drain analysis and sleep session tracking')}
       loading={isLoading}
-      error={error as Error | null}
+      error={error instanceof Error ? error : null}
       empty={!data}
       emptyMessage={t('No sleep data available. Data will appear after sleep/wake events.')}
       actions={
-        <div className="flex items-center gap-2">
+        vehicles && vehicles.length > 1 ? (
           <Select
-            options={[
-              { value: '7', label: `7 ${t('days')}` },
-              { value: '30', label: `30 ${t('days')}` },
-              { value: '90', label: `90 ${t('days')}` },
-              { value: '180', label: `180 ${t('days')}` },
-            ]}
-            value={String(days)}
-            onChange={(e) => setDays(Number(e.target.value))}
+            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+            value={activeId}
+            onChange={(e) => setVehicleId(e.target.value)}
           />
-          {vehicles && vehicles.length > 1 && (
-            <Select
-              options={(vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-              value={String(activeId ?? '')}
-              onChange={(e) => setVehicleId(e.target.value)}
-            />
-          )}
-        </div>
+        ) : undefined
       }
     >
-      <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-        <StatCard label={t('Sleep Efficiency')} value={`${data?.sleep_efficiency_pct?.toFixed(1) ?? '0'}%`} />
-        <StatCard label={t('Avg Time to Sleep')} value={`${data?.time_to_sleep_avg_min?.toFixed(0) ?? '0'} min`} />
-        <StatCard
-          label={t('Sentry Drain Rate')}
-          value={`${data?.sentry_on_drain_rate?.toFixed(2) ?? '0'}%/hr`}
-          trend={{ direction: 'down', value: `vs ${data?.sentry_off_drain_rate?.toFixed(2) ?? '0'}%/hr without`, positive: false }}
-        />
-        <StatCard label={t('Sentry Monthly Cost')} value={`$${data?.sentry_monthly_cost?.toFixed(2) ?? '0'}`} />
-      </Grid>
+      {/* Summary Metrics */}
+      <FadeIn>
+        <div className={clsx('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
+          <MetricCard label={t('Avg Vampire Drain')} value={`${fmtNumber(data?.avg_drain_rate, 2)}%/hr`} icon={<BatteryWarning className="h-4 w-4" />} color="purple" />
+          <MetricCard label={t('Total Sleep Time')} value={`${fmtNumber(data?.total_sleep_hours, 0)}h`} icon={<Moon className="h-4 w-4" />} color="cyan" />
+          <MetricCard label={t('Sleep Sessions')} value={fmtNumber(data?.session_count, 0)} icon={<Clock className="h-4 w-4" />} color="green" />
+          <MetricCard label={t('Sleep Efficiency')} value={`${fmtNumber(data?.efficiency_score, 1)}%`} icon={<Activity className="h-4 w-4" />} color="cyan" />
+        </div>
+      </FadeIn>
 
-      <Grid cols={{ default: 1, md: 2 }} gap={4}>
-        <Card>
-          <CardHeader title={t('State Distribution')} />
-          {/* TODO: wrap in ChartContainer */}
-          {data?.state_distribution && data.state_distribution.length > 0 && (
-            <KVList
-              items={data.state_distribution.map((s) => ({
-                label: s.state,
-                value: `${(s.total_minutes / 60).toFixed(1)} hrs`,
-              }))}
-            />
+      {/* Gauge + Drain Trend */}
+      <FadeIn delay={0.1}>
+        <div className={clsx('grid gap-4 grid-cols-1 md:grid-cols-3')}>
+          <GlassPanel className="flex flex-col items-center justify-center p-6">
+            {data ? (
+              <RadialGauge
+                value={Math.round(data.efficiency_score)}
+                max={100}
+                label={t('Efficiency')}
+                unit="%"
+                color={efficiencyColor}
+                size={160}
+              />
+            ) : (
+              <Skeleton width="160px" height={160} rounded />
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="col-span-1 md:col-span-2 p-4">
+            <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">{t('Vampire Drain Trend')}</span>
+            {data?.daily && data.daily.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={data.daily} margin={chartMargin}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
+                  <YAxis tick={axisTick} unit="%/hr" width={55} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Line type="monotone" dataKey="drain_pct" name={t('Drain %')} stroke={CHART_COLORS[2]} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <Skeleton height={220} />
+            )}
+          </GlassPanel>
+        </div>
+      </FadeIn>
+
+      {/* Daily Sleep Stats */}
+      <FadeIn delay={0.2}>
+        <GlassPanel className="p-4">
+          <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">{t('Daily Sleep Stats')}</span>
+          {data?.daily && data.daily.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={data.daily} margin={chartMargin}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
+                <YAxis yAxisId="left" tick={axisTick} unit="h" width={40} />
+                <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="%" width={40} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend />
+                <Bar yAxisId="left" dataKey="sleep_hours" name={t('Sleep Hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="drain_pct" name={t('Drain %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <Skeleton height={260} />
           )}
-        </Card>
+        </GlassPanel>
+      </FadeIn>
 
-        <Card>
-          <CardHeader title={t('Sentry Mode Impact')} />
-          <Grid cols={{ default: 3 }} gap={2}>
-            <div className="text-center">
-              <p className="text-lg font-bold">{data?.sentry_extra_drain_rate?.toFixed(2) ?? '0'}%</p>
-              <p className="text-xs text-gray-500">{t('Extra drain/hr')}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-bold">{data?.sentry_extra_monthly_kwh?.toFixed(1) ?? '0'} kWh</p>
-              <p className="text-xs text-gray-500">{t('Extra monthly')}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-bold">${data?.sentry_extra_monthly_cost?.toFixed(2) ?? '0'}</p>
-              <p className="text-xs text-gray-500">{t('Extra cost/mo')}</p>
-            </div>
-          </Grid>
-        </Card>
-      </Grid>
-
-      {data?.recent_events && data.recent_events.length > 0 && (
-        <Card>
-          <CardHeader
-            title={t('Recent Drain Events')}
-            action={<Badge variant="neutral">{data.recent_events.length} {t('events')}</Badge>}
-          />
-          <div className="max-h-96 overflow-y-auto">
-            <KVList
-              items={data.recent_events.slice(0, 20).map((e) => ({
-                label: e.start_date ? new Date(e.start_date).toLocaleDateString() : '—',
-                value: `${(e.battery_lost ?? 0).toFixed(1)}% lost · ${(e.drain_rate ?? 0).toFixed(2)}%/hr · ${(e.duration_hours ?? 0).toFixed(1)}h${e.sentry_mode ? ' · Sentry' : ''}`,
-              }))}
-            />
+      {/* Sleep Sessions Table */}
+      <FadeIn delay={0.3}>
+        <GlassPanel className="p-4">
+          <div className={clsx('mb-3 flex items-center justify-between')}>
+            <span className="text-sm font-medium text-[var(--text-secondary)]">{t('Sleep Sessions')}</span>
+            <Badge variant="neutral">{data?.session_count ?? 0} {t('sessions')}</Badge>
           </div>
-        </Card>
-      )}
+          <DataTable<SleepSession>
+            columns={columns}
+            data={sortedSessions}
+            keyExtractor={(r) => r.id}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={onSort}
+            emptyMessage={t('No sleep sessions recorded yet.')}
+            compact
+          />
+        </GlassPanel>
+      </FadeIn>
+
+      {/* Tips */}
+      <FadeIn delay={0.4}>
+        <GlassPanel glow="green" className="p-5">
+          <div className={clsx('mb-3 flex items-center gap-2')}>
+            <Lightbulb className="h-5 w-5 text-neon-green" />
+            <span className="text-sm font-semibold text-[var(--text-primary)]">{t('Tips to Reduce Vampire Drain')}</span>
+          </div>
+          <ul className="space-y-2">
+            {tips.map((tip, i) => (
+              <li key={i} className={clsx('flex items-start gap-2 text-sm text-[var(--text-secondary)]')}>
+                <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{tip.icon}</span>
+                <span>{tip.text}</span>
+              </li>
+            ))}
+          </ul>
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

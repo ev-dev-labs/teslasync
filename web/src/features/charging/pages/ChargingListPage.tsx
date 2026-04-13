@@ -712,18 +712,20 @@ export default function ChargingListPage() {
                   { key: 'supercharger' as const, label: t('charging.sessions.filterSC', 'SC') },
                   { key: 'dc' as const, label: t('charging.sessions.filterDC', 'DC') },
                 ] as const).map((f) => (
-                  <button
+                  <Button
                     key={f.key}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setChargerFilter(f.key)}
                     className={cn(
-                      'px-2.5 py-1 rounded-md text-[11px] font-medium transition-all',
+                      'px-2.5 py-1 h-auto rounded-md text-[11px] font-medium transition-all',
                       chargerFilter === f.key
                         ? 'bg-white/[0.08] text-[var(--text-primary)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-transparent',
                     )}
                   >
                     {f.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
               {/* Sort controls */}
@@ -736,22 +738,24 @@ export default function ChargingListPage() {
                   { key: 'duration' as const, label: t('charging.sessions.sortTime', 'Time') },
                   { key: 'power' as const, label: t('charging.sessions.sortPower', 'Power') },
                 ] as const).map((k) => (
-                  <button
+                  <Button
                     key={k.key}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       if (sortBy === k.key) setSortDesc(!sortDesc);
                       else { setSortBy(k.key); setSortDesc(true); }
                     }}
                     className={cn(
-                      'px-2.5 py-1 rounded-md text-[11px] font-medium transition-all',
+                      'px-2.5 py-1 h-auto rounded-md text-[11px] font-medium transition-all',
                       sortBy === k.key
                         ? 'bg-white/[0.08] text-[var(--text-primary)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-transparent',
                     )}
                   >
                     {k.label}
                     {sortBy === k.key && <span className="ml-0.5">{sortDesc ? '↓' : '↑'}</span>}
-                  </button>
+                  </Button>
                 ))}
               </div>
               {/* Export buttons */}

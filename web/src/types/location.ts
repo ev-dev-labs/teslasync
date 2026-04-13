@@ -14,5 +14,9 @@ export interface Geofence {
   latitude: number;
   longitude: number;
   radius: number;
+  alertOnEntry: boolean;
+  alertOnExit: boolean;
+  enabled: boolean;
   costPerKwh: number | null;
+  createdAt: string;
 }

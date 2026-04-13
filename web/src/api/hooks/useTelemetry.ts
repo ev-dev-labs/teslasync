@@ -15,7 +15,7 @@ export const telemetryKeys = {
 export function useSignals() {
   return useQuery({
     queryKey: telemetryKeys.signals,
-    queryFn: () => request<string[]>('/api/v1/signals/available'),
+    queryFn: () => request<string[]>('/signals/available'),
     staleTime: 60_000,
   });
 }
@@ -23,7 +23,7 @@ export function useSignals() {
 export function useSignalStats(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signalStats(vehicleId),
-    queryFn: () => request<SignalStats>(`/api/v1/signals/stats?vehicle_id=${vehicleId}`),
+    queryFn: () => request<SignalStats>(`/signals/stats?vehicle_id=${vehicleId}`),
     enabled: vehicleId > 0,
   });
 }
@@ -31,7 +31,7 @@ export function useSignalStats(vehicleId: number) {
 export function useSignalHistory(signal: string, hours: number) {
   return useQuery({
     queryKey: telemetryKeys.signalHistory(signal, hours),
-    queryFn: () => request<SignalHistoryResponse>(`/api/v1/signals/history?signal=${signal}&hours=${hours}`),
+    queryFn: () => request<SignalHistoryResponse>(`/signals/history?signal=${signal}&hours=${hours}`),
     enabled: !!signal,
     refetchInterval: 30_000,
   });
@@ -42,7 +42,7 @@ export function useSignalLog(signal: string, hours: number, page: number, pageSi
     queryKey: telemetryKeys.signalLog(signal, hours, page),
     queryFn: () =>
       request<SignalHistoryResponse>(
-        `/api/v1/signals/history?signal=${signal}&hours=${hours}&page=${page}&page_size=${pageSize}`
+        `/signals/history?signal=${signal}&hours=${hours}&page=${page}&page_size=${pageSize}`
       ),
     enabled: !!signal,
   });
@@ -52,7 +52,7 @@ export function useSignalDiff(signal: string, from: string, to: string) {
   return useQuery({
     queryKey: telemetryKeys.signalDiff(signal, from, to),
     queryFn: () =>
-      request<SignalHistoryResponse>(`/api/v1/signals/history?signal=${signal}&from=${from}&to=${to}`),
+      request<SignalHistoryResponse>(`/signals/history?signal=${signal}&from=${from}&to=${to}`),
     enabled: !!signal && !!from && !!to,
   });
 }
@@ -60,7 +60,7 @@ export function useSignalDiff(signal: string, from: string, to: string) {
 export function useSignalGaps() {
   return useQuery({
     queryKey: telemetryKeys.signalGaps,
-    queryFn: () => request<Record<string, { value: unknown; timestamp: string }>>('/api/v1/signals/live'),
+    queryFn: () => request<Record<string, { value: unknown; timestamp: string }>>('/signals/live'),
     refetchInterval: 5_000,
   });
 }
@@ -68,7 +68,7 @@ export function useSignalGaps() {
 export function useMQTTStatus() {
   return useQuery({
     queryKey: telemetryKeys.mqttStatus,
-    queryFn: () => request<TelemetryStatus>('/api/v1/telemetry/status'),
+    queryFn: () => request<TelemetryStatus>('/telemetry'),
     refetchInterval: 5_000,
   });
 }

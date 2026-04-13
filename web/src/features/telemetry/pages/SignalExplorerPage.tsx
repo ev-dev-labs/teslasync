@@ -1,15 +1,66 @@
-import { useState } from 'react';
+/**
+ * SignalExplorerPage — multi-signal explorer with chart, stats, and data table.
+ *
+ * Select up to 5 signals, set a time range, click Explore to visualise
+ * signal history with dual-axis support and paginated data tables.
+ */
+
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card, CardHeader } from '@/components/ui/Card';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { StatCard } from '@/components/data-display/StatCard';
-import { useSignals, useSignalHistory } from '@/api/hooks/useTelemetry';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Pagination } from '@/components/ui/Pagination';
+import { DataTable, type Column } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from '@/components/charts';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSignals } from '@/api/hooks/useTelemetry';
+import { request } from '@/api/client';
+import { CHART_COLORS } from '@/lib/colors';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { Activity, BarChart3, Search, Clock } from 'lucide-react';
 
-const TIME_RANGES = [
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface SignalRow {
+  created_at: string;
+  signal: string;
+  value_num: number | null;
+  value_str: string | null;
+  value_bool: boolean | null;
+}
+
+interface SignalHistoryResp {
+  data: SignalRow[];
+  pagination?: { total: number; total_pages: number; page: number; per_page: number };
+}
+
+interface SignalStat {
+  signal: string;
+  min: number;
+  max: number;
+  avg: number;
+  count: number;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toLocalDatetime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const PRESETS = [
   { label: '1h', hours: 1 },
   { label: '6h', hours: 6 },
   { label: '24h', hours: 24 },
@@ -17,91 +68,334 @@ const TIME_RANGES = [
   { label: '30d', hours: 720 },
 ];
 
+// ─── Page component ──────────────────────────────────────────────────────────
+
 export default function SignalExplorerPage() {
   const { t } = useTranslation();
-  const [selectedSignal, setSelectedSignal] = useState('');
-  const [search, setSearch] = useState('');
-  const [hours, setHours] = useState(24);
+  usePageTitle(t('Signal Explorer'));
+  const vehicleId = 1;
 
-  const { data: signals, isLoading, error } = useSignals();
-  const { data: history } = useSignalHistory(selectedSignal, hours);
+  // Signal selection
+  const { data: availableSignals } = useSignals();
+  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
+  const [signalSearch, setSignalSearch] = useState('');
 
-  const filtered = signals?.filter((s) => s.toLowerCase().includes(search.toLowerCase())) ?? [];
+  // DateTime range
+  const [fromStr, setFromStr] = useState(() => toLocalDatetime(new Date(Date.now() - 3600_000)));
+  const [toStr, setToStr] = useState(() => toLocalDatetime(new Date()));
+
+  // Explore trigger key
+  const [exploreKey, setExploreKey] = useState<number | null>(null);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+
+  const applyPreset = useCallback((hours: number) => {
+    const end = new Date();
+    setFromStr(toLocalDatetime(new Date(end.getTime() - hours * 3600_000)));
+    setToStr(toLocalDatetime(end));
+  }, []);
+
+  const canExplore = selectedSignals.length > 0 && fromStr && toStr;
+
+  const handleExplore = useCallback(() => {
+    if (!canExplore) return;
+    setPage(1);
+    setExploreKey(Date.now());
+  }, [canExplore]);
+
+  const toggleSignal = useCallback((sig: string) => {
+    setSelectedSignals(prev =>
+      prev.includes(sig) ? prev.filter(s => s !== sig) : prev.length < 5 ? [...prev, sig] : prev,
+    );
+  }, []);
+
+  const signalsCsv = selectedSignals.join(',');
+  const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
+  const toIso = toStr ? new Date(toStr).toISOString() : '';
+
+  // ── Chart data query ──
+  const { data: chartResponse, isLoading: chartLoading } = useQuery<SignalHistoryResp>({
+    queryKey: ['explorer-chart', exploreKey],
+    queryFn: () => request(`/signals/history?vehicle_id=${vehicleId}&signals=${signalsCsv}&from=${fromIso}&to=${toIso}&page=1&per_page=1000`),
+    enabled: exploreKey !== null,
+  });
+
+  // ── Stats query ──
+  const { data: statsData, isLoading: statsLoading } = useQuery<SignalStat[]>({
+    queryKey: ['explorer-stats', exploreKey],
+    queryFn: () => request(`/signals/stats?vehicle_id=${vehicleId}&signals=${signalsCsv}&from=${fromIso}&to=${toIso}`),
+    enabled: exploreKey !== null,
+  });
+
+  // ── Paginated table query ──
+  const { data: tableResponse, isLoading: tableLoading } = useQuery<SignalHistoryResp>({
+    queryKey: ['explorer-table', exploreKey, page, perPage],
+    queryFn: () => request(`/signals/history?vehicle_id=${vehicleId}&signals=${signalsCsv}&from=${fromIso}&to=${toIso}&page=${page}&per_page=${perPage}`),
+    enabled: exploreKey !== null,
+  });
+
+  const hasData = exploreKey !== null;
+
+  // ── Chart data transform ──
+  const chartData = useMemo(() => {
+    if (!chartResponse?.data?.length) return [];
+    const map = new Map<string, Record<string, unknown>>();
+    for (const row of chartResponse.data) {
+      const ts = row.created_at;
+      let entry = map.get(ts);
+      if (!entry) { entry = { timestamp: ts }; map.set(ts, entry); }
+      entry[row.signal] = row.value_num ?? (row.value_bool === true ? 1 : row.value_bool === false ? 0 : null);
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(a.timestamp as string).getTime() - new Date(b.timestamp as string).getTime(),
+    );
+  }, [chartResponse]);
+
+  // Dual Y-axis when scales differ significantly
+  const useRightAxis = useMemo(() => {
+    if (!statsData || statsData.length < 2) return false;
+    const ranges = statsData.map(s => Math.abs(s.max - s.min) || 1);
+    return ranges[0] / ranges[1] > 10 || ranges[1] / ranges[0] > 10;
+  }, [statsData]);
+
+  // Signal search filter
+  const filteredSignals = useMemo(() => {
+    if (!availableSignals) return [];
+    if (!signalSearch) return availableSignals;
+    const q = signalSearch.toLowerCase();
+    return availableSignals.filter(s => s.toLowerCase().includes(q));
+  }, [availableSignals, signalSearch]);
+
+  // Table columns
+  const tableColumns: Column<SignalRow>[] = useMemo(() => [
+    { key: 'time', header: t('Time'), render: (r) => <span className="whitespace-nowrap text-xs text-[var(--text-muted)]">{new Date(r.created_at).toLocaleString()}</span> },
+    { key: 'signal', header: t('Signal'), render: (r) => <span className="font-mono text-xs text-neon-cyan">{r.signal}</span> },
+    { key: 'value', header: t('Value'), render: (r) => <span className="font-mono text-xs text-[var(--text-primary)]">{r.value_num ?? r.value_str ?? String(r.value_bool ?? '')}</span> },
+  ], [t]);
 
   return (
     <PageContainer
       title={t('Signal Explorer')}
-      subtitle={t('Browse vehicle signals and historical values')}
-      loading={isLoading}
-      error={error as Error | null}
-      empty={!signals?.length}
-      emptyMessage={t('No signals available.')}
-      actions={<Badge variant="info">{signals?.length ?? 0} {t('signals')}</Badge>}
+      subtitle={t('Explore signal history — multi-signal charts, stats & data')}
+      loading={false}
     >
-      <Grid cols={{ default: 1, md: 4 }} gap={4}>
-        <Card className="md:col-span-1">
-          <CardHeader title={t('Signals')} />
-          <div className="px-3 pb-2">
-            <Input placeholder={t('Search signals...')} value={search} onChange={(e) => setSearch(e.target.value)} />
+      {/* ── Controls ──────────────────────────────────────────────── */}
+      <GlassPanel className="p-4 sm:p-5 space-y-4">
+        {/* Signal picker */}
+        <div>
+          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+            {t('Signals')} ({selectedSignals.length}/5)
+          </span>
+          <div className="flex items-center gap-2 mb-2">
+            <Input
+              icon={<Search className="h-3.5 w-3.5" />}
+              placeholder={t('Search signals…')}
+              value={signalSearch}
+              onChange={e => setSignalSearch(e.target.value)}
+              className="flex-1"
+            />
           </div>
-          <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1">
-            {filtered.map((s) => (
+          {selectedSignals.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedSignals.map((sig, i) => (
+                <Badge
+                  key={sig}
+                  variant="info"
+                  size="sm"
+                  className="cursor-pointer"
+                  style={{ borderColor: CHART_COLORS[i % CHART_COLORS.length], color: CHART_COLORS[i % CHART_COLORS.length] }}
+                  onClick={() => toggleSignal(sig)}
+                >
+                  {sig} ×
+                </Badge>
+              ))}
+            </div>
+          )}
+          <div className="max-h-48 overflow-y-auto space-y-0.5">
+            {filteredSignals.slice(0, 100).map(sig => (
               <Button
-                key={s}
+                key={sig}
                 size="sm"
-                variant={s === selectedSignal ? 'primary' : 'ghost'}
-                onClick={() => setSelectedSignal(s)}
-                className="block w-full text-left text-xs font-mono truncate"
+                variant={selectedSignals.includes(sig) ? 'primary' : 'ghost'}
+                onClick={() => toggleSignal(sig)}
+                className="w-full text-left text-xs font-mono truncate justify-start"
               >
-                {s}
+                {sig}
               </Button>
             ))}
           </div>
-        </Card>
-
-        <div className="md:col-span-3 space-y-4">
-          {selectedSignal ? (
-            <>
-              <Card>
-                <CardHeader title={selectedSignal} subtitle={t('Signal Detail')} />
-                <div className="flex gap-2 px-4 pb-3 flex-wrap">
-                  {TIME_RANGES.map((r) => (
-                    <Button
-                      key={r.label}
-                      size="sm"
-                      variant={hours === r.hours ? 'primary' : 'outline'}
-                      onClick={() => setHours(r.hours)}
-                    >
-                      {r.label}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-
-              <Grid cols={{ default: 2 }} gap={4}>
-                <StatCard label={t('Data Points')} value={history?.count ?? 0} />
-                <StatCard label={t('Time Range')} value={`${hours}h`} />
-              </Grid>
-
-              <Card>
-                <CardHeader title={t('History')} subtitle={`${history?.count ?? 0} points`} />
-                <div className="max-h-64 overflow-y-auto divide-y divide-gray-800">
-                  {history?.data?.slice(0, 100).map((p, i) => (
-                    <div key={i} className="flex items-center gap-4 px-2 py-1 text-xs font-mono">
-                      <span className="w-40 text-gray-400 shrink-0">{p.timestamp ? new Date(p.timestamp).toLocaleString() : '—'}</span>
-                      <span>{p.valueNum ?? p.valueStr ?? String(p.valueBool ?? '')}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </>
-          ) : (
-            <Card className="flex items-center justify-center py-16">
-              <p className="text-gray-500">{t('Select a signal to explore')}</p>
-            </Card>
-          )}
         </div>
-      </Grid>
+
+        {/* DateTime range */}
+        <div>
+          <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+            <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
+          </span>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {PRESETS.map(p => (
+              <Button key={p.label} size="sm" variant="ghost" onClick={() => applyPreset(p.hours)}>
+                {p.label}
+              </Button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label={t('From')} type="datetime-local" value={fromStr} onChange={e => setFromStr(e.target.value)} />
+            <Input label={t('To')} type="datetime-local" value={toStr} onChange={e => setToStr(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Query controls */}
+        <div className="flex items-center gap-3">
+          <Select
+            label={t('Per Page')}
+            value={String(perPage)}
+            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+            options={[
+              { value: '25', label: '25' },
+              { value: '50', label: '50' },
+              { value: '100', label: '100' },
+              { value: '500', label: '500' },
+            ]}
+            className="w-24"
+          />
+          <Button
+            variant="primary"
+            icon={<Activity className="h-4 w-4" />}
+            onClick={handleExplore}
+            disabled={!canExplore}
+            loading={hasData && (chartLoading || statsLoading || tableLoading)}
+            className="mt-5"
+          >
+            {t('Explore')}
+          </Button>
+        </div>
+      </GlassPanel>
+
+      {/* ── Content ───────────────────────────────────────────────── */}
+      {!hasData ? (
+        <GlassPanel className="p-4">
+          <EmptyState
+            icon={<Activity className="h-10 w-10" />}
+            title={t('Select signals and click Explore')}
+            message={t('Choose up to 5 signals, set a time range, and click Explore to visualise signal history.')}
+          />
+        </GlassPanel>
+      ) : (
+        <div className="space-y-5">
+          {/* ── Chart ─────────────────────────────────────────────── */}
+          <FadeIn>
+            <GlassPanel className="p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="h-4 w-4 text-neon-cyan" />
+                <span className="section-title">{t('Signal Chart')}</span>
+                {chartResponse && (
+                  <span className="ml-auto text-[10px] text-[var(--text-muted)]">
+                    {fmtInt((chartResponse.data ?? []).length)} {t('points loaded')}
+                  </span>
+                )}
+              </div>
+
+              {chartLoading ? (
+                <Skeleton className="h-[350px] w-full" />
+              ) : chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={chartData} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis
+                      dataKey="timestamp"
+                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                      tickFormatter={(v: string) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    />
+                    <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    {useRightAxis && (
+                      <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    )}
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 11, cursor: 'pointer' }} iconType="circle" />
+                    {selectedSignals.map((sig, i) => (
+                      <Line
+                        key={sig}
+                        type="monotone"
+                        dataKey={sig}
+                        stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                        strokeWidth={1.5}
+                        dot={false}
+                        name={sig}
+                        yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
+                        connectNulls
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[350px] flex items-center justify-center">
+                  <span className="text-[var(--text-muted)]">{t('No data for this time range')}</span>
+                </div>
+              )}
+            </GlassPanel>
+          </FadeIn>
+
+          {/* ── Stats summary ─────────────────────────────────────── */}
+          <FadeIn>
+            <GlassPanel className="p-4 sm:p-5">
+              <span className="section-title mb-3 block">{t('Stats Summary')}</span>
+              {statsLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}
+                </div>
+              ) : statsData && statsData.length > 0 ? (
+                <DataTable
+                  columns={[
+                    { key: 'signal', header: t('Signal'), render: (s) => <span className="font-mono font-semibold" style={{ color: CHART_COLORS[statsData.indexOf(s) % CHART_COLORS.length] }}>{s.signal}</span> },
+                    { key: 'min', header: t('Min'), render: (s) => <span className="font-mono text-[var(--text-secondary)]">{fmtNumber(s.min)}</span> },
+                    { key: 'max', header: t('Max'), render: (s) => <span className="font-mono text-[var(--text-secondary)]">{fmtNumber(s.max)}</span> },
+                    { key: 'avg', header: t('Avg'), render: (s) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(s.avg)}</span> },
+                    { key: 'count', header: t('Count'), render: (s) => <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span> },
+                  ] satisfies Column<SignalStat>[]}
+                  data={statsData}
+                  keyExtractor={(s) => s.signal}
+                  compact
+                />
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">{t('No stats available')}</span>
+              )}
+            </GlassPanel>
+          </FadeIn>
+
+          {/* ── Data table ─────────────────────────────────────────── */}
+          <FadeIn>
+            <GlassPanel className="p-4 sm:p-5">
+              <span className="section-title mb-3 block">{t('Signal Data')}</span>
+              {tableLoading ? (
+                <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-8" />)}</div>
+              ) : (tableResponse?.data ?? []).length > 0 ? (
+                <>
+                  <DataTable
+                    columns={tableColumns}
+                    data={tableResponse?.data ?? []}
+                    keyExtractor={(r) => `${r.created_at}-${r.signal}`}
+                    compact
+                  />
+                  <Pagination
+                    page={page}
+                    pageSize={perPage}
+                    total={tableResponse?.pagination?.total ?? 0}
+                    onPageChange={setPage}
+                  />
+                </>
+              ) : (
+                <EmptyState
+                  icon={<Activity className="h-8 w-8" />}
+                  title={t('No data')}
+                  message={t('No signal data found for this time range.')}
+                />
+              )}
+            </GlassPanel>
+          </FadeIn>
+        </div>
+      )}
     </PageContainer>
   );
 }
