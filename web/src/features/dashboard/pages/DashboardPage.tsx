@@ -4,13 +4,17 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshCw, Bell, Radio, ArrowUpRight, Car, Activity,
-  Route, BatteryCharging, Shield,
+  Route, BatteryCharging, Shield, AlertCircle,
 } from 'lucide-react';
 import { request } from '@/api/client';
+import { useAuthStatus } from '@/api/hooks/useSettings';
+import { useSyncVehicles } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { FadeIn } from '@/components/motion';
+import { AlertBanner } from '@/components/feedback';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useSettings } from '@/hooks/useSettings';
@@ -37,6 +41,10 @@ export default function DashboardPage() {
     isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit,
   } = useSettings();
 
+  /* ——— Auth status ——— */
+  const { data: auth } = useAuthStatus();
+  const syncVehicles = useSyncVehicles();
+
   /* ——— SSE real-time connection ——— */
   const { connected } = useRealtimeEvents({
     onVehicleUpdate: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
@@ -44,22 +52,22 @@ export default function DashboardPage() {
   });
 
   /* ——— Core data queries ——— */
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery({
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-  const { data: analytics } = useQuery({
+  const { data: analytics, error: analyticsError } = useQuery({
     queryKey: ['fleet-analytics', '30'],
     queryFn: () => request<FleetAnalytics>('/analytics/fleet?days=30'),
   });
-  const { data: alerts } = useQuery({
+  const { data: alerts, error: alertsError } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => request<Alert[]>('/alerts?limit=10'),
   });
 
   /* ——— Primary vehicle state ——— */
   const primaryVehicle = vehicles?.[0];
-  const { data: primaryStateData, dataUpdatedAt } = useQuery({
+  const { data: primaryStateData, dataUpdatedAt, error: stateError } = useQuery({
     queryKey: ['vehicle-state', primaryVehicle?.id],
     queryFn: () => request<{ state: VehicleState }>(`/vehicles/${primaryVehicle!.id}/state`),
     enabled: !!primaryVehicle,
@@ -111,6 +119,7 @@ export default function DashboardPage() {
   /* ——— Derived values ——— */
   const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
   const unreadAlerts = alerts?.filter((a) => !a.is_read).length ?? 0;
+  const anyError = [vehiclesError, analyticsError, alertsError, stateError].find(Boolean) as Error | undefined;
 
   /* ——— Refresh logic ——— */
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -167,29 +176,53 @@ export default function DashboardPage() {
       title={t('title', 'Command Center')}
       subtitle={t('subtitle', 'Real-time fleet intelligence and control')}
       loading={vehiclesLoading}
-      empty={!vehiclesLoading && (vehicles ?? []).length === 0}
-      emptyMessage={t('empty', 'No vehicles found. Connect your Tesla account to get started.')}
       actions={headerActions}
     >
       <div className="space-y-6">
+        {/* Error banner */}
+        {anyError && (
+          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+            {t('error.loadFailed', 'Failed to load data')}: {anyError.message}
+          </AlertBanner>
+        )}
+
+        {/* Auth warning */}
+        {auth && !auth.authenticated && (
+          <FadeIn>
+            <AlertBanner
+              variant="warning"
+              icon={<AlertCircle className="h-5 w-5" />}
+              title={t('auth.notConnected', 'Tesla account not connected')}
+            >
+              {t('auth.connectPrompt', 'Connect your account in')}{' '}
+              <Link to="/settings" className="text-neon-cyan hover:underline">
+                {t('auth.settings', 'Settings')}
+              </Link>{' '}
+              {t('auth.toStart', 'to start tracking.')}
+            </AlertBanner>
+          </FadeIn>
+        )}
+
         {vehiclesLoading ? (
           <LoadingSkeleton />
         ) : vehicles && vehicles.length > 0 ? (
           <>
             {/* Primary Vehicle Hero */}
             {primaryVehicle && (
-              <VehicleHero
-                vehicle={primaryVehicle}
-                state={primaryState}
-                firmwareVersion={firmwareVersion}
-                convertDistance={convertDistance}
-                convertSpeed={convertSpeed}
-                convertTemp={convertTemp}
-                isFahrenheit={isFahrenheit}
-                distanceUnit={distanceUnit}
-                speedUnit={speedUnit}
-                tempUnit={tempUnit}
-              />
+              <FadeIn>
+                <VehicleHero
+                  vehicle={primaryVehicle}
+                  state={primaryState}
+                  firmwareVersion={firmwareVersion}
+                  convertDistance={convertDistance}
+                  convertSpeed={convertSpeed}
+                  convertTemp={convertTemp}
+                  isFahrenheit={isFahrenheit}
+                  distanceUnit={distanceUnit}
+                  speedUnit={speedUnit}
+                  tempUnit={tempUnit}
+                />
+              </FadeIn>
             )}
 
             {/* Fleet Stats Bar */}
@@ -207,48 +240,62 @@ export default function DashboardPage() {
             />
 
             {/* Activity + Charts Grid */}
-            <RecentActivity
-              recentDrives={recentDrives}
-              recentCharges={recentCharges}
-              analytics={analytics}
-              convertDistance={convertDistance}
-              convertEfficiency={convertEfficiency}
-              distanceUnit={distanceUnit}
-              efficiencyUnit={efficiencyUnit}
-            />
+            <FadeIn delay={0.1}>
+              <RecentActivity
+                recentDrives={recentDrives}
+                recentCharges={recentCharges}
+                analytics={analytics}
+                convertDistance={convertDistance}
+                convertEfficiency={convertEfficiency}
+                distanceUnit={distanceUnit}
+                efficiencyUnit={efficiencyUnit}
+              />
+            </FadeIn>
 
             {/* Other Vehicles Strip */}
             {otherVehicles.length > 0 && (
-              <OtherVehiclesStrip
-                vehicles={otherVehicles}
-                states={otherStates}
-                convertDistance={convertDistance}
-                convertTemp={convertTemp}
-                distanceUnit={distanceUnit}
-              />
+              <FadeIn delay={0.15}>
+                <OtherVehiclesStrip
+                  vehicles={otherVehicles}
+                  states={otherStates}
+                  convertDistance={convertDistance}
+                  convertTemp={convertTemp}
+                  distanceUnit={distanceUnit}
+                />
+              </FadeIn>
             )}
 
             {/* Quick Navigation */}
-            <QuickNav />
+            <FadeIn delay={0.2}>
+              <QuickNav />
+            </FadeIn>
 
             {/* Live Telemetry */}
-            <LiveTelemetry
-              motorData={motorData}
-              climateData={climateData}
-              securityData={securityData}
-              tireData={tireData}
-              mediaData={mediaData}
-              locationData={locationData}
-              convertTemp={convertTemp}
-              convertDistance={convertDistance}
-              convertPressure={convertPressure}
-              tempUnit={tempUnit}
-              distanceUnit={distanceUnit}
-              pressureUnit={pressureUnit}
-            />
+            <FadeIn delay={0.25}>
+              <LiveTelemetry
+                motorData={motorData}
+                climateData={climateData}
+                securityData={securityData}
+                tireData={tireData}
+                mediaData={mediaData}
+                locationData={locationData}
+                convertTemp={convertTemp}
+                convertDistance={convertDistance}
+                convertPressure={convertPressure}
+                tempUnit={tempUnit}
+                distanceUnit={distanceUnit}
+                pressureUnit={pressureUnit}
+              />
+            </FadeIn>
           </>
         ) : (
-          <EmptyOnboarding />
+          <FadeIn>
+            <EmptyOnboarding
+              authenticated={auth?.authenticated ?? false}
+              onSync={() => syncVehicles.mutate()}
+              isSyncing={syncVehicles.isPending}
+            />
+          </FadeIn>
         )}
       </div>
     </PageContainer>
@@ -314,23 +361,39 @@ function OtherVehiclesStrip({ vehicles, states, convertDistance, convertTemp, di
 }
 
 /* ——— Empty / Onboarding State ——— */
-function EmptyOnboarding() {
+function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
+  authenticated: boolean;
+  onSync: () => void;
+  isSyncing: boolean;
+}) {
   const { t } = useTranslation('dashboard');
   return (
     <GlassPanel className="p-12 text-center relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.02] via-transparent to-neon-purple/[0.02]" />
       <div className="relative">
         <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
-          {t('onboarding.title', 'Welcome to TeslaSync')}
+          {authenticated
+            ? t('onboarding.syncTitle', 'Sync Your Vehicles')
+            : t('onboarding.title', 'Welcome to TeslaSync')}
         </h2>
         <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-8">
-          {t('onboarding.desc', 'The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.')}
+          {authenticated
+            ? t('onboarding.syncDesc', 'Your Tesla account is connected. Sync your vehicles to start tracking.')
+            : t('onboarding.desc', 'The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.')}
         </p>
-        <Link to="/settings">
-          <Button variant="primary">
-            {t('onboarding.connect', 'Connect Tesla Account')} <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
-          </Button>
-        </Link>
+        <div className="flex items-center justify-center gap-4">
+          {authenticated ? (
+            <Button onClick={onSync} loading={isSyncing} icon={<RefreshCw className="h-4 w-4" />}>
+              {t('onboarding.sync', 'Sync Vehicles')}
+            </Button>
+          ) : (
+            <Link to="/settings">
+              <Button variant="primary">
+                {t('onboarding.connect', 'Connect Tesla Account')} <ArrowUpRight className="h-4 w-4 ml-1 inline-block" />
+              </Button>
+            </Link>
+          )}
+        </div>
         <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
           {[
             { icon: Activity, label: t('onboarding.tracking', 'Real-time Tracking'), color: '#00f0ff' },
