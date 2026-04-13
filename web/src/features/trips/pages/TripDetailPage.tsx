@@ -1,51 +1,69 @@
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { StatCard } from '@/components/data-display/StatCard';
-import { KVList } from '@/components/data-display/KVList';
+import { PageContainer } from '@/components/layout';
+import { Grid } from '@/components/layout';
+import { GlassPanel } from '@/components/ui';
+import { StatCard, KVList } from '@/components/data-display';
+import { EmptyState } from '@/components/feedback';
 import { useTrip } from '@/api/hooks/useTrips';
-import { tripStates } from '@/lib/fsm';
+import { useSettings } from '@/hooks/useSettings';
+import { formatDate } from '@/lib/dateFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 
 export default function TripDetailPage() {
-  const { t } = useTranslation('trips');
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: trip, isLoading, error } = useTrip(id!);
+  const { convertDistance, convertEfficiency, distanceUnit, efficiencyUnit } = useSettings();
 
-  const stateConfig = tripStates[trip?.fsmState ?? 'started'] ?? tripStates.started;
+  const whPerKm = trip && trip.total_distance_km > 0
+    ? (trip.total_energy_kwh / trip.total_distance_km) * 1000
+    : 0;
 
   return (
     <PageContainer
-      title={t('detail.title', 'Trip Detail')}
-      subtitle={trip ? `${trip.startAddress || 'Start'} → ${trip.endAddress || 'End'}` : undefined}
+      title={t('trips.detail.title', 'Trip Detail')}
+      subtitle={trip ? (trip.name ?? `Trip #${trip.id}`) : undefined}
       loading={isLoading}
-      error={error as Error | null}
+      error={error instanceof Error ? error : null}
     >
-      {trip && (
+      {trip ? (
         <>
-          <div className="flex items-center gap-2 mb-4">
-            <Badge variant={stateConfig.variant} dot>{stateConfig.label}</Badge>
-          </div>
-
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-            <StatCard label="Distance" value={(trip.distanceMiles ?? 0).toFixed(1)} unit="mi" />
-            <StatCard label="Energy Used" value={(trip.energyUsedKwh ?? 0).toFixed(1)} unit="kWh" />
-            <StatCard label="Efficiency" value={(trip.efficiencyWhPerMile ?? 0).toFixed(0)} unit="Wh/mi" />
-            <StatCard label="Max Speed" value={(trip.maxSpeedMph ?? 0).toFixed(0)} unit="mph" />
+            <StatCard
+              label={t('trips.detail.distance', 'Distance')}
+              value={fmtInt(convertDistance(trip.total_distance_km))}
+              unit={distanceUnit}
+            />
+            <StatCard
+              label={t('trips.detail.energy', 'Energy Used')}
+              value={fmtNumber(trip.total_energy_kwh)}
+              unit="kWh"
+            />
+            <StatCard
+              label={t('trips.detail.efficiency', 'Efficiency')}
+              value={fmtInt(convertEfficiency(whPerKm))}
+              unit={efficiencyUnit}
+            />
+            <StatCard
+              label={t('trips.detail.cost', 'Cost')}
+              value={`$${fmtNumber(trip.total_cost)}`}
+            />
           </Grid>
 
-          <Card className="mt-6">
+          <GlassPanel className="mt-6 p-4 sm:p-6">
             <KVList items={[
-              { label: 'Trip ID', value: trip.id },
-              { label: 'From', value: trip.startAddress || 'Unknown' },
-              { label: 'To', value: trip.endAddress || 'Unknown' },
-              { label: 'Started', value: trip.startedAt ? new Date(trip.startedAt).toLocaleString() : '—' },
-              { label: 'Completed', value: trip.completedAt ? new Date(trip.completedAt).toLocaleString() : '—' },
+              { label: t('trips.detail.tripId', 'Trip ID'), value: String(trip.id) },
+              { label: t('trips.detail.name', 'Name'), value: trip.name ?? '—' },
+              { label: t('trips.detail.started', 'Started'), value: formatDate(trip.start_date) },
+              { label: t('trips.detail.ended', 'Ended'), value: trip.end_date ? formatDate(trip.end_date) : '—' },
+              { label: t('trips.detail.drives', 'Drives'), value: String(trip.drive_count) },
+              { label: t('trips.detail.charges', 'Charges'), value: String(trip.charge_count) },
             ]} />
-          </Card>
+          </GlassPanel>
         </>
+      ) : (
+        <EmptyState message={t('trips.detail.notFound', 'Trip not found')} />
       )}
     </PageContainer>
   );
