@@ -118,8 +118,21 @@ function getStatusColor(status: string): string {
   }
 }
 
+function statusTextClass(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'healthy': case 'ok': case 'online': case 'connected': case 'ready': case 'sent': case 'completed':
+      return 'text-green-400';
+    case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
+      return 'text-amber-400';
+    case 'unhealthy': case 'offline': case 'error': case 'down': case 'failed':
+      return 'text-red-400';
+    default:
+      return 'text-gray-400';
+  }
+}
+
 function getStatusIcon(status: string): JSX.Element {
-  const color = getStatusColor(status);
+  const cls = statusTextClass(status);
   switch (status.toLowerCase()) {
     case 'healthy':
     case 'ok':
@@ -128,21 +141,21 @@ function getStatusIcon(status: string): JSX.Element {
     case 'ready':
     case 'sent':
     case 'completed':
-      return <CheckCircle className="h-4 w-4" style={{ color }} />;
+      return <CheckCircle className={`h-4 w-4 ${cls}`} />;
     case 'degraded':
     case 'warning':
     case 'pending':
     case 'queued':
     case 'processing':
-      return <AlertTriangle className="h-4 w-4" style={{ color }} />;
+      return <AlertTriangle className={`h-4 w-4 ${cls}`} />;
     case 'unhealthy':
     case 'offline':
     case 'error':
     case 'down':
     case 'failed':
-      return <XCircle className="h-4 w-4" style={{ color }} />;
+      return <XCircle className={`h-4 w-4 ${cls}`} />;
     default:
-      return <AlertTriangle className="h-4 w-4" style={{ color }} />;
+      return <AlertTriangle className={`h-4 w-4 ${cls}`} />;
   }
 }
 
@@ -449,7 +462,7 @@ function BackendStatusSection() {
       render: (row) => (
         <div className="flex items-center gap-2">
           {getStatusIcon(row.status)}
-          <span style={{ color: getStatusColor(row.status) }}>
+          <span className={statusTextClass(row.status)}>
             {row.status}
           </span>
         </div>
@@ -933,7 +946,7 @@ function DataPipelineSection() {
       render: (row) => (
         <div className="flex items-center gap-2">
           {getStatusIcon(row.status)}
-          <span style={{ color: getStatusColor(row.status) }}>
+          <span className={statusTextClass(row.status)}>
             {row.status}
           </span>
         </div>
@@ -1144,7 +1157,7 @@ function OperationsSection() {
       render: (row) => (
         <div className="flex items-center gap-2">
           {getStatusIcon(row.status)}
-          <span style={{ color: getStatusColor(row.status) }}>
+          <span className={statusTextClass(row.status)}>
             {row.status}
           </span>
         </div>
@@ -1608,7 +1621,7 @@ export default function SystemStatusPage() {
                     boxShadow: `0 0 40px ${getStatusColor(overallStatus)}44`,
                   }}
                 >
-                  <div style={{ color: getStatusColor(overallStatus) }}>
+                  <div className={statusTextClass(overallStatus)}>
                     {overallStatus === 'healthy' ? (
                       <CheckCircle className="h-10 w-10" />
                     ) : overallStatus === 'degraded' ? (
@@ -1619,8 +1632,7 @@ export default function SystemStatusPage() {
                   </div>
                 </div>
                 <span
-                  className="text-lg font-bold uppercase tracking-wider"
-                  style={{ color: getStatusColor(overallStatus) }}
+                  className={cn('text-lg font-bold uppercase tracking-wider', statusTextClass(overallStatus))}
                 >
                   {overallStatus}
                 </span>

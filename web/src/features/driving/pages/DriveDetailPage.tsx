@@ -69,6 +69,8 @@ function formatDuration(min: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+const LEGEND_STYLE = { fontSize: 10, color: '#9ca3af' } as const;
+
 /* ------------------------------------------------------------------ */
 /*  DriveDetailPage                                                   */
 /* ------------------------------------------------------------------ */
@@ -705,7 +707,7 @@ export default function DriveDetailPage() {
                         <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                         <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                         <Tooltip content={<ChartTooltip />} />
-                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Legend wrapperStyle={LEGEND_STYLE} />
                         <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} />
                         <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} />
                       </ComposedChart>
@@ -767,7 +769,7 @@ export default function DriveDetailPage() {
                             <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                             <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                             <Tooltip content={<ChartTooltip />} />
-                            <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                            <Legend wrapperStyle={LEGEND_STYLE} />
                             {stats.outsideTemps.length > 0 && (
                               <Line type="monotone" dataKey="outsideTemp" stroke="#3b82f6" strokeWidth={2} dot={false} name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} connectNulls />
                             )}
@@ -861,7 +863,7 @@ export default function DriveDetailPage() {
                             <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                             <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                             <Tooltip content={<ChartTooltip />} />
-                            <Legend wrapperStyle={{ fontSize: 10, color: '#9ca3af' }} />
+                            <Legend wrapperStyle={LEGEND_STYLE} />
                             {chartData.some((d) => d.tireFl !== null) && (
                               <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={t('driveDetail.frontLeft', 'Front Left')} connectNulls />
                             )}

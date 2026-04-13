@@ -40,21 +40,21 @@ function CostComparisonCard({
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon-green/10 text-neon-green">
           {icon}
         </div>
-        <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+        <p className="text-sm font-medium text-[var(--text-secondary)]">{label}</p>
       </div>
       <div className="flex items-center gap-4 mb-3">
         <div>
-          <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
             EV Cost
           </p>
           <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0)}</p>
         </div>
-        <ArrowRight className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+        <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
         <div>
-          <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
             Gas Equivalent
           </p>
-          <p className="text-lg font-bold" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-lg font-bold text-[var(--text-secondary)]">
             ${fmtNumber(gasCost ?? 0)}
           </p>
         </div>

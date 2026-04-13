@@ -170,6 +170,26 @@ function gradeColor(grade: string): string {
   return GRADE_COLORS[grade] ?? '#94a3b8';
 }
 
+const GRADE_TEXT_CLASS: Record<string, string> = {
+  'A+': 'text-[#39ff14]',
+  A: 'text-green-400',
+  B: 'text-cyan-400',
+  C: 'text-amber-400',
+  D: 'text-orange-400',
+  F: 'text-red-400',
+};
+
+function gradeTextClass(grade: string): string {
+  return GRADE_TEXT_CLASS[grade] ?? 'text-gray-400';
+}
+
+function scoreTextClass(score: number | null): string {
+  if (score == null) return 'text-[var(--text-muted)]';
+  if (score >= 80) return 'text-green-400';
+  if (score >= 60) return 'text-amber-400';
+  return 'text-red-400';
+}
+
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
@@ -1328,8 +1348,7 @@ export default function DriveScorePage() {
 
                       {/* Score */}
                       <span
-                        className="text-sm font-semibold"
-                        style={{ color: gradeColor(ds.grade) }}
+                        className={cn('text-sm font-semibold', gradeTextClass(ds.grade))}
                       >
                         {ds.total}/100
                       </span>
@@ -1420,7 +1439,7 @@ export default function DriveScorePage() {
                     {t('driveScore.thisWeek', 'This Week')}
                   </span>
                   <div className="flex items-end gap-2">
-                    <span className="text-2xl font-bold tabular-nums" style={{ color: periodStats.thisWeekAvg != null ? GRADE_COLORS[periodStats.thisWeekAvg >= 80 ? 'A' : periodStats.thisWeekAvg >= 60 ? 'C' : 'F'] : 'var(--text-muted)' }}>
+                    <span className={cn('text-2xl font-bold tabular-nums', scoreTextClass(periodStats.thisWeekAvg))}>
                       {periodStats.thisWeekAvg ?? '—'}
                     </span>
                     {periodStats.thisWeekAvg != null && periodStats.lastWeekAvg != null && (
@@ -1440,7 +1459,7 @@ export default function DriveScorePage() {
                     {t('driveScore.thisMonth', 'This Month')}
                   </span>
                   <div className="flex items-end gap-2">
-                    <span className="text-2xl font-bold tabular-nums" style={{ color: periodStats.thisMonthAvg != null ? GRADE_COLORS[periodStats.thisMonthAvg >= 80 ? 'A' : periodStats.thisMonthAvg >= 60 ? 'C' : 'F'] : 'var(--text-muted)' }}>
+                    <span className={cn('text-2xl font-bold tabular-nums', scoreTextClass(periodStats.thisMonthAvg))}>
                       {periodStats.thisMonthAvg ?? '—'}
                     </span>
                     {periodStats.thisMonthAvg != null && periodStats.lastMonthAvg != null && (
@@ -1459,7 +1478,7 @@ export default function DriveScorePage() {
                   <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                     {t('driveScore.bestWeek', 'Best Week')}
                   </span>
-                  <span className="text-2xl font-bold tabular-nums" style={{ color: GRADE_COLORS[periodStats.bestWeek.avg >= 80 ? 'A' : periodStats.bestWeek.avg >= 60 ? 'C' : 'F'] }}>
+                  <span className={cn('text-2xl font-bold tabular-nums', scoreTextClass(periodStats.bestWeek.avg))}>
                     {periodStats.bestWeek.avg || '—'}
                   </span>
                   <span className="text-[10px] text-[var(--text-muted)]">{periodStats.bestWeek.label}</span>
@@ -1469,7 +1488,7 @@ export default function DriveScorePage() {
                   <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                     {t('driveScore.bestMonth', 'Best Month')}
                   </span>
-                  <span className="text-2xl font-bold tabular-nums" style={{ color: GRADE_COLORS[periodStats.bestMonth.avg >= 80 ? 'A' : periodStats.bestMonth.avg >= 60 ? 'C' : 'F'] }}>
+                  <span className={cn('text-2xl font-bold tabular-nums', scoreTextClass(periodStats.bestMonth.avg))}>
                     {periodStats.bestMonth.avg || '—'}
                   </span>
                   <span className="text-[10px] text-[var(--text-muted)]">{periodStats.bestMonth.label}</span>

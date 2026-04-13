@@ -205,7 +205,7 @@ export default function ApiLogsPage() {
       <FadeIn delay={0.1}>
         <GlassPanel className="overflow-hidden">
           {/* Header with export */}
-          <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--glass-border)' }}>
+          <div className="flex items-center justify-between p-4 border-b border-[var(--glass-border)]">
             <p className="text-sm text-[var(--text-secondary)]">
               {total > 0
                 ? t('apiLogs.showing', { from: page * limit + 1, to: Math.min((page + 1) * limit, total), total: fmtInt(total), defaultValue: `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}` })
@@ -236,7 +236,7 @@ export default function ApiLogsPage() {
           ) : (
             <>
               {/* Log entries */}
-              <div className="divide-y" style={{ borderColor: 'var(--glass-border)' }}>
+              <div className="divide-y divide-[var(--glass-border)]">
                 {logs.map((log: APICallLog) => (
                   <div key={log.id}>
                     <div
@@ -272,7 +272,7 @@ export default function ApiLogsPage() {
 
                     {/* Expanded detail */}
                     {expandedId === log.id && (
-                      <div className="p-4 space-y-3" style={{ background: 'var(--surface-2)' }}>
+                      <div className="p-4 space-y-3 bg-[var(--surface-2)]">
                         <div className="sm:hidden mb-2">
                           <p className="text-[10px] text-[var(--text-muted)]">{formatDateTime(log.created_at)}</p>
                           {log.error && <p className="text-xs text-red-400 mt-1">{log.error}</p>}
@@ -291,7 +291,7 @@ export default function ApiLogsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+            <div className="flex items-center justify-between p-4 border-t border-[var(--glass-border)]">
               <Button
                 variant="secondary"
                 size="sm"

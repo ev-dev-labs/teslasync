@@ -385,7 +385,7 @@ export default function RoadmapPage() {
                     <Badge variant={config.variant} size="sm">{count}</Badge>
                   </div>
                   {i < phases.length - 1 && (
-                    <div className="w-8 sm:w-16 h-px" style={{ backgroundColor: 'var(--glass-border)' }} />
+                    <div className="w-8 sm:w-16 h-px bg-[var(--glass-border)]" />
                   )}
                 </div>
               );

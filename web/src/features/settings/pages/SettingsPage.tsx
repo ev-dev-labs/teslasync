@@ -302,10 +302,10 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-3">
                     <Car className="h-5 w-5 text-neon-cyan shrink-0" />
                     <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
                         {t('app.carUses', 'Car uses')} {parseSettingEnum(carPrefs.setting_distance_unit, 'distance')} / {parseSettingEnum(carPrefs.setting_temperature_unit, 'temperature')} / {parseSettingEnum(carPrefs.setting_tire_pressure_unit, 'pressure')}
                       </p>
-                      <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-[11px] text-[var(--text-muted)]">
                         {t('app.syncHint', "Sync your app's units to match your vehicle's display settings")}
                       </p>
                     </div>
@@ -448,8 +448,8 @@ export default function SettingsPage() {
               <Fuel className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{t('gas.title', 'Gas Price Auto-Poll')}</h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('gas.subtitle', 'Automatically fetch US average gas prices from EIA')}</p>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('gas.title', 'Gas Price Auto-Poll')}</h2>
+              <p className="text-xs text-[var(--text-muted)]">{t('gas.subtitle', 'Automatically fetch US average gas prices from EIA')}</p>
             </div>
           </div>
 
@@ -488,14 +488,14 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
-              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('gas.currentPrice', 'Current Price')}</p>
-              <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <p className="text-xs font-medium uppercase tracking-wider mb-1 text-[var(--text-muted)]">{t('gas.currentPrice', 'Current Price')}</p>
+              <p className="text-lg font-semibold text-[var(--text-primary)]">
                 {gasPriceStatus?.current_price ? `$${fmtNumber(gasPriceStatus.current_price)}/gal` : '—'}
               </p>
             </div>
             <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-3.5">
-              <p className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('gas.lastPolled', 'Last Polled')}</p>
-              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+              <p className="text-xs font-medium uppercase tracking-wider mb-1 text-[var(--text-muted)]">{t('gas.lastPolled', 'Last Polled')}</p>
+              <p className="text-sm text-[var(--text-primary)]">
                 {gasPriceStatus?.last_poll_time && gasPriceStatus.last_poll_time !== '0001-01-01T00:00:00Z'
                   ? formatDateTime(gasPriceStatus.last_poll_time)
                   : t('gas.never', 'Never')}
@@ -507,7 +507,7 @@ export default function SettingsPage() {
             <Button variant="primary" icon={<Zap className="h-4 w-4" />} onClick={() => { pollGasPrice().then(() => { toast.info(t('gas.pollTriggered', 'Gas price poll triggered')); setTimeout(() => refetchGasPrice(), 3000) }) }}>
               {t('gas.pollNow', 'Poll Now')}
             </Button>
-            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-[10px] text-[var(--text-muted)]">
               {t('gas.source', 'Source: U.S. Energy Information Administration')}
             </p>
           </div>
@@ -522,14 +522,14 @@ export default function SettingsPage() {
               <Palette className="h-5 w-5" />
             </IconBox>
             <div>
-              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{t('theme.title', 'Appearance')}</h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('theme.subtitle', 'Customize colors and display mode')}</p>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('theme.title', 'Appearance')}</h2>
+              <p className="text-xs text-[var(--text-muted)]">{t('theme.subtitle', 'Customize colors and display mode')}</p>
             </div>
           </div>
 
           {/* Mode Selector */}
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>{t('theme.displayMode', 'Display Mode')}</p>
+            <p className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--text-muted)]">{t('theme.displayMode', 'Display Mode')}</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Object.values(allModes).map(m => (
                 <Button
@@ -554,7 +554,7 @@ export default function SettingsPage() {
                     <span style={{ color: m.textPrimary }}>{modeIcons[m.id]}</span>
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{m.name}</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{m.name}</p>
                     <div className="flex gap-1 mt-1">
                       {[m.bg, m.surface1, m.surface2, m.surface3].map((c, i) => (
                         <div key={i} className="h-2 w-4 rounded-sm border border-[var(--glass-border)]" style={{ background: c }} />
@@ -562,7 +562,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   {modeId === m.id && (
-                    <CheckCircle className="h-4 w-4 ml-auto" style={{ color: 'var(--theme-primary)' }} />
+                    <CheckCircle className="h-4 w-4 ml-auto text-[var(--theme-primary)]" />
                   )}
                 </Button>
               ))}
@@ -571,7 +571,7 @@ export default function SettingsPage() {
 
           {/* Accent Color */}
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>{t('theme.accentColor', 'Accent Color')}</p>
+            <p className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--text-muted)]">{t('theme.accentColor', 'Accent Color')}</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {Object.values(allThemes).filter(thm => thm.id !== 'custom').map(thm => (
                 <Button
@@ -593,7 +593,7 @@ export default function SettingsPage() {
                       boxShadow: themeId === thm.id ? `0 0 12px ${thm.primary}` : 'none',
                     }}
                   />
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{thm.name}</p>
+                  <p className="text-xs font-medium text-[var(--text-primary)]">{thm.name}</p>
                   {themeId === thm.id && (
                     <div className="absolute top-2.5 right-2.5">
                       <CheckCircle className="h-4 w-4" style={{ color: thm.primary }} />
@@ -621,7 +621,7 @@ export default function SettingsPage() {
                     boxShadow: themeId === 'custom' ? `0 0 12px ${customPrimary}` : 'none',
                   }}
                 />
-                <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{t('theme.custom', 'Custom')}</p>
+                <p className="text-xs font-medium text-[var(--text-primary)]">{t('theme.custom', 'Custom')}</p>
                 {themeId === 'custom' && (
                   <div className="absolute top-2.5 right-2.5">
                     <CheckCircle className="h-4 w-4" style={{ color: customPrimary }} />
@@ -634,24 +634,24 @@ export default function SettingsPage() {
             {themeId === 'custom' && (
               <div className="flex flex-wrap gap-6 mt-4 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--glass-border)] animate-in fade-in">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{t('theme.primary', 'Primary')}</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.primary', 'Primary')}</span>
                   <Input
                     type="color"
                     value={customPrimary}
                     onChange={e => { setCustomPrimary(e.target.value); setCustomColors(e.target.value, customAccent) }}
                     className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
                   />
-                  <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{customPrimary}</span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)]">{customPrimary}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{t('theme.accent', 'Accent')}</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">{t('theme.accent', 'Accent')}</span>
                   <Input
                     type="color"
                     value={customAccent}
                     onChange={e => { setCustomAccent(e.target.value); setCustomColors(customPrimary, e.target.value) }}
                     className="h-8 w-10 rounded-lg border border-[var(--glass-border)] bg-transparent cursor-pointer p-0"
                   />
-                  <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{customAccent}</span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)]">{customAccent}</span>
                 </div>
               </div>
             )}
