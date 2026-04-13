@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Car } from 'lucide-react';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
@@ -22,35 +23,13 @@ export default function QuickStatsPage() {
   const isLoading = vehiclesLoading || analyticsLoading;
   const vehicle = vehicles?.[0];
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-4">
-          <Skeleton className="h-16 rounded-xl" />
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <EmptyState
-            message={t('quickStats.error', 'Failed to load quick stats. Please try again later.')}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <PageContainer
+      title={t('quickStats.title', 'Quick Stats')}
+      loading={isLoading}
+      error={error instanceof Error ? error : null}
+      className="min-h-screen flex flex-col items-center justify-center p-4"
+    >
       <div className="w-full max-w-md space-y-4">
         {/* Vehicle card */}
         <FadeIn>
@@ -111,6 +90,6 @@ export default function QuickStatsPage() {
           </p>
         </FadeIn>
       </div>
-    </div>
+    </PageContainer>
   );
 }
