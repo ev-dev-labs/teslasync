@@ -1,81 +1,249 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { Grid } from '@/components/layout/Grid';
-import { Card, CardHeader } from '@/components/ui/Card';
-import { StatCard } from '@/components/data-display/StatCard';
-import { KVList } from '@/components/data-display/KVList';
-import { useCostBreakdown } from '@/api/hooks/useAnalytics';
+import { DollarSign, Fuel, Zap, TrendingUp, Leaf } from 'lucide-react';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
+  Tooltip, ResponsiveContainer, Legend,
+  ChartContainer, ChartTooltip, ChartGradient, chartGrid, axisTick,
+} from '@/components/charts';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import { useCostBreakdown } from '@/api/hooks/useAnalytics';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
+/* ── Component ── */
 
 export default function TrueCostPage() {
   const { t } = useTranslation();
-  const { data: vehicles } = useVehicles();
-  const vehicleId = String(vehicles?.[0]?.id ?? '');
+  usePageTitle(t('tco.title', 'Total Cost of Ownership'));
 
-  const { data: cost, isLoading, error } = useCostBreakdown(vehicleId);
+  const { data: vehicles } = useVehicles();
+  const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
+  const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
+  const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
+
+  const { data: tco, isLoading, error } = useCostBreakdown(vehicleIdStr);
+
+  const fmtCurrency = (v: number) => `$${fmtNumber(v)}`;
+
+  const monthlyBreakdown = tco?.monthly_breakdown ?? [];
 
   return (
     <PageContainer
-      title={t('True Cost of Ownership')}
-      subtitle="Compare EV running costs against an equivalent gas vehicle"
+      title={t('tco.title', 'True Cost of Ownership')}
+      subtitle={t('tco.subtitle', 'Compare your EV running costs against an equivalent gas vehicle')}
       loading={isLoading}
-      error={error as Error | null}
-      empty={!cost}
-      emptyMessage="No cost data available. Start charging to see your analysis."
+      error={error instanceof Error ? error : null}
+      actions={
+        vehicles && vehicles.length > 1 ? (
+          <Select
+            value={String(vehicleId ?? '')}
+            onChange={(e) => setSelectedVehicle(Number(e.target.value))}
+            options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
+          />
+        ) : undefined
+      }
     >
-      <Grid cols={{ default: 2, lg: 4 }} gap={4}>
-        <StatCard
-          label="Total EV Cost"
-          value={`$${(cost?.totalChargingCost ?? 0).toFixed(2)}`}
-        />
-        <StatCard
-          label="Equiv. Gas Cost"
-          value={`$${(cost?.equivalentGasCost ?? 0).toFixed(2)}`}
-        />
-        <StatCard
-          label="Total Savings"
-          value={`$${(cost?.totalSavings ?? 0).toFixed(2)}`}
-          trend={{ direction: 'up', value: 'vs gas', positive: true }}
-        />
-        <StatCard
-          label="Monthly Savings"
-          value={`$${(cost?.monthlySavings ?? 0).toFixed(2)}`}
-        />
-      </Grid>
+      {tco ? (
+        <>
+          {/* Hero stat cards */}
+          <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StaggerItem>
+              <GlassPanel className="p-5" glow="cyan" hover>
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="h-4 w-4 text-neon-cyan" />
+                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                    {t('tco.totalEvCost', 'Total EV Cost')}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-neon-cyan">{fmtCurrency(tco.total_charging_cost)}</p>
+                <p className="text-xs text-white/40 mt-1">
+                  {fmtNumber(tco.total_kwh)} kWh · {tco.total_sessions} {t('tco.sessions', 'sessions')}
+                </p>
+              </GlassPanel>
+            </StaggerItem>
 
-      <Card className="mt-6">
-        <CardHeader title="Cumulative Savings Over Time" subtitle="Chart placeholder" />
-        <div className="flex h-48 items-center justify-center text-sm text-gray-400">
-          Cumulative savings area chart
-        </div>
-      </Card>
+            <StaggerItem>
+              <GlassPanel className="p-5" hover>
+                <div className="flex items-center gap-2 mb-3">
+                  <Fuel className="h-4 w-4 text-neon-red" />
+                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                    {t('tco.equivGasCost', 'Equiv. Gas Cost')}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-neon-red">{fmtCurrency(tco.equivalent_gas_cost)}</p>
+                <p className="text-xs text-white/40 mt-1">
+                  @ ${tco.gas_price}/{t('tco.gal', 'gal')} · {tco.gas_efficiency_mpg} MPG
+                </p>
+              </GlassPanel>
+            </StaggerItem>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Cost per Kilometer" subtitle="Chart placeholder" />
-          <KVList
-            items={[
-              { label: 'EV Cost/km', value: `$${(cost?.costPerKmEv ?? 0).toFixed(4)}` },
-              { label: 'Gas Cost/km', value: `$${(cost?.costPerKmIce ?? 0).toFixed(4)}` },
-            ]}
+            <StaggerItem>
+              <GlassPanel className="p-5" glow="green" hover>
+                <div className="flex items-center gap-2 mb-3">
+                  <Leaf className="h-4 w-4 text-neon-green" />
+                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                    {t('tco.totalSavings', 'Total Savings')}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
+                <p className="text-xs text-white/40 mt-1">
+                  {t('tco.overMonths', 'Over {{months}} months', { months: fmtNumber(tco.months_of_ownership) })}
+                </p>
+              </GlassPanel>
+            </StaggerItem>
+
+            <StaggerItem>
+              <GlassPanel className="p-5" glow="green" hover>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-neon-green" />
+                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                    {t('tco.monthlySavings', 'Monthly Savings')}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-neon-green">{fmtCurrency(tco.monthly_savings)}</p>
+                <p className="text-xs text-white/40 mt-1">
+                  {t('tco.plusMaintenance', '+ ~$50/mo maintenance savings')}
+                </p>
+              </GlassPanel>
+            </StaggerItem>
+          </StaggerContainer>
+
+          {/* Cumulative savings chart */}
+          <FadeIn>
+            <ChartContainer title={t('tco.cumulativeSavings', 'Cumulative Savings Over Time')} >
+              {monthlyBreakdown.length > 0 ? (
+                <div className="h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={monthlyBreakdown}>
+                      <defs>
+                        <ChartGradient id="savingsGrad" color="#10b981" opacity={0.4} />
+                      </defs>
+                      {chartGrid}
+                      <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="cumulative_savings"
+                        stroke="#10b981"
+                        fill="url(#savingsGrad)"
+                        strokeWidth={2}
+                        name={t('tco.cumulativeSavings', 'Cumulative Savings')}
+                        animationDuration={800}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <EmptyState message={t('tco.noMonthlyData', 'No monthly data available yet')} />
+              )}
+            </ChartContainer>
+          </FadeIn>
+
+          {/* Cost per km comparison + Monthly EV vs Gas */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <FadeIn delay={0.1}>
+              <ChartContainer title={t('tco.costPerKm', 'Cost per Kilometer')} >
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[
+                      { name: t('tco.evElectric', 'EV (Electric)'), cost: tco.cost_per_km_ev, fill: '#00f0ff' },
+                      { name: t('tco.iceGas', 'ICE (Gas)'), cost: tco.cost_per_km_ice, fill: '#ef4444' },
+                    ]}>
+                      {chartGrid}
+                      <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v.toFixed(3)}`} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar dataKey="cost" name={t('tco.costKm', 'Cost/km')} radius={[6, 6, 0, 0]} animationDuration={800} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 text-center">
+                  <div className="rounded-xl bg-neon-cyan/10 p-3 border border-neon-cyan/20">
+                    <p className="text-lg font-bold text-neon-cyan">${fmtNumber(tco.cost_per_km_ev)}</p>
+                    <p className="text-xs text-white/40">{t('tco.perKmEv', 'per km (EV)')}</p>
+                  </div>
+                  <div className="rounded-xl bg-neon-red/10 p-3 border border-neon-red/20">
+                    <p className="text-lg font-bold text-neon-red">${fmtNumber(tco.cost_per_km_ice)}</p>
+                    <p className="text-xs text-white/40">{t('tco.perKmGas', 'per km (Gas)')}</p>
+                  </div>
+                </div>
+              </ChartContainer>
+            </FadeIn>
+
+            <FadeIn delay={0.2}>
+              <ChartContainer title={t('tco.monthlyEvVsGas', 'Monthly EV vs Gas Cost')} >
+                {monthlyBreakdown.length > 0 ? (
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={monthlyBreakdown}>
+                        {chartGrid}
+                        <XAxis dataKey="month" tick={axisTick} tickLine={false} axisLine={false} />
+                        <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="ev_cost" name={t('tco.evCost', 'EV Cost')} fill="#00f0ff" radius={[4, 4, 0, 0]} animationDuration={800} />
+                        <Bar dataKey="equiv_gas_cost" name={t('tco.gasEquiv', 'Gas Equiv.')} fill="#ef4444" radius={[4, 4, 0, 0]} animationDuration={800} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyState message={t('tco.noMonthlyData', 'No monthly data available yet')} />
+                )}
+              </ChartContainer>
+            </FadeIn>
+          </div>
+
+          {/* Breakdown summary */}
+          <FadeIn delay={0.3}>
+            <GlassPanel className="p-6">
+              <h3 className="text-base font-semibold text-white/90 mb-6 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-neon-green" />
+                {t('tco.savingsBreakdown', 'Savings Breakdown')}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
+                    {t('tco.fuelSavings', 'Fuel Savings')}
+                  </p>
+                  <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.total_savings)}</p>
+                  <p className="text-xs text-white/40 mt-1">{t('tco.electricityVsGas', 'Electricity vs gasoline')}</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
+                    {t('tco.maintenanceSavings', 'Maintenance Savings (Est.)')}
+                  </p>
+                  <p className="text-xl font-bold text-neon-green">{fmtCurrency(tco.maintenance_savings_estimate)}</p>
+                  <p className="text-xs text-white/40 mt-1">{t('tco.noOilChanges', 'No oil changes, less brake wear')}</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">
+                    {t('tco.totalEstSavings', 'Total Estimated Savings')}
+                  </p>
+                  <p className="text-xl font-bold text-neon-green">
+                    {fmtCurrency(tco.total_savings + tco.maintenance_savings_estimate)}
+                  </p>
+                  <p className="text-xs text-white/40 mt-1">
+                    {fmtInt(tco.total_km)} km · {tco.first_date} → {tco.last_date}
+                  </p>
+                </div>
+              </div>
+            </GlassPanel>
+          </FadeIn>
+        </>
+      ) : !isLoading ? (
+        <GlassPanel className="p-8">
+          <EmptyState
+            icon={<DollarSign className="h-10 w-10 text-white/30" />}
+            message={t('tco.noData', 'No data available. Start charging to see your cost analysis.')}
           />
-        </Card>
-
-        <Card>
-          <CardHeader title="Savings Breakdown" />
-          <KVList
-            items={[
-              { label: 'Fuel Savings', value: `$${(cost?.totalSavings ?? 0).toFixed(2)}` },
-              { label: 'Maintenance Savings (Est.)', value: `$${(cost?.maintenanceSavingsEstimate ?? 0).toFixed(2)}` },
-              {
-                label: 'Total Estimated Savings',
-                value: `$${((cost?.totalSavings ?? 0) + (cost?.maintenanceSavingsEstimate ?? 0)).toFixed(2)}`,
-              },
-              { label: 'Ownership Period', value: `${cost?.monthsOfOwnership ?? 0} months` },
-            ]}
-          />
-        </Card>
-      </div>
+        </GlassPanel>
+      ) : null}
     </PageContainer>
   );
 }

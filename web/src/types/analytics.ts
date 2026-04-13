@@ -34,23 +34,29 @@ export interface MonthlyStat {
 }
 
 export interface CostBreakdown {
-  totalChargingCost: number;
-  totalKwh: number;
-  equivalentGasCost: number;
-  totalSavings: number;
-  monthlySavings: number;
-  costPerKmEv: number;
-  costPerKmIce: number;
-  maintenanceSavingsEstimate: number;
-  monthsOfOwnership: number;
-  monthlyBreakdown: MonthlyCostEntry[];
+  total_charging_cost: number;
+  total_kwh: number;
+  total_sessions: number;
+  total_km: number;
+  first_date: string;
+  last_date: string;
+  equivalent_gas_cost: number;
+  total_savings: number;
+  monthly_savings: number;
+  cost_per_km_ev: number;
+  cost_per_km_ice: number;
+  maintenance_savings_estimate: number;
+  months_of_ownership: number;
+  gas_price: number;
+  gas_efficiency_mpg: number;
+  monthly_breakdown: MonthlyCostEntry[];
 }
 
 export interface MonthlyCostEntry {
   month: string;
-  evCost: number;
-  equivGasCost: number;
-  cumulativeSavings: number;
+  ev_cost: number;
+  equiv_gas_cost: number;
+  cumulative_savings: number;
 }
 
 export interface TimelineEvent {
