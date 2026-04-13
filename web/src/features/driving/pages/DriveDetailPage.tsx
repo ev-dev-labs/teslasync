@@ -27,6 +27,7 @@ import {
   type MapStyle,
 } from '@/components/maps';
 import { useDrive } from '@/api/hooks/useDriving';
+import { useVehicle } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatTime, formatDateTime } from '@/lib/dateFormat';
@@ -82,10 +83,11 @@ export default function DriveDetailPage() {
 
   const { data: drive, isLoading, error } = useDrive(id ?? '');
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
 
   const {
-    convertDistance, convertSpeed, convertTemp, convertEfficiency,
-    distanceUnit, speedUnit, tempUnit, efficiencyUnit,
+    convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure,
+    distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit, isMiles,
   } = useSettings();
 
   /* ---- Route data ---- */
@@ -145,10 +147,10 @@ export default function DriveDetailPage() {
         odometer: tp.odometer != null ? convertDistance(tp.odometer) : null,
         soc: tp.soc,
         usableSoc: tp.usableSoc,
-        tireFl: tp.tirePressureFl,
-        tireFr: tp.tirePressureFr,
-        tireRl: tp.tirePressureRl,
-        tireRr: tp.tirePressureRr,
+        tireFl: tp.tirePressureFl != null ? convertPressure(tp.tirePressureFl) : null,
+        tireFr: tp.tirePressureFr != null ? convertPressure(tp.tirePressureFr) : null,
+        tireRl: tp.tirePressureRl != null ? convertPressure(tp.tirePressureRl) : null,
+        tireRr: tp.tirePressureRr != null ? convertPressure(tp.tirePressureRr) : null,
         climateOn: tp.isClimateOn ?? null,
         fanStatus: tp.fanStatus ?? null,
       }));
@@ -176,7 +178,7 @@ export default function DriveDetailPage() {
       climateOn: p.isClimateOn ?? null,
       fanStatus: p.fanStatus ?? null,
     }));
-  }, [drive, convertSpeed, convertTemp, convertDistance]);
+  }, [drive, convertSpeed, convertTemp, convertDistance, convertPressure]);
 
   /* ---- Computed stats ---- */
   const stats = useMemo(() => {
@@ -229,6 +231,10 @@ export default function DriveDetailPage() {
 
     const hasTirePressure = chartData.some((d) => d.tireFl !== null || d.tireFr !== null || d.tireRl !== null || d.tireRr !== null);
 
+    const efficiencyPctPer100 = drive.distance > 0 && drive.startBatteryLevel != null && drive.endBatteryLevel != null
+      ? (drive.startBatteryLevel - drive.endBatteryLevel) / convertDistance(drive.distance) * 10
+      : null;
+
     return {
       maxSpd, avgSpd, minSpd, powerMax, powerMin, avgPower,
       energyWh, regenWh, consumptionWhKm, elevGain, elevLoss,
@@ -236,7 +242,7 @@ export default function DriveDetailPage() {
       insideTemps, outsideTemps, driverTemps, passengerTemps,
       climateStatus, avgFanSpeed, maxFanSpeed,
       startRange, endRange, odometerStart, odometerEnd,
-      hasTirePressure,
+      hasTirePressure, efficiencyPctPer100,
     };
   }, [drive, chartData, convertSpeed, convertDistance]);
 
@@ -313,7 +319,7 @@ export default function DriveDetailPage() {
                     : t('driveDetail.title', 'Drive Details')}
                 </h1>
                 <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                  {formatDate(drive.startDate)} · {formatTime(drive.startDate)}
+                  {vehicle?.display_name || t('driveDetail.vehicle', 'Vehicle')} · {formatDate(drive.startDate)} · {formatTime(drive.startDate)}
                   {drive.endDate && ` → ${formatTime(drive.endDate)}`}
                 </p>
               </div>
@@ -360,6 +366,16 @@ export default function DriveDetailPage() {
                   color="#ef4444"
                   size={110}
                 />
+                {stats.efficiencyPctPer100 != null && (
+                  <RadialGauge
+                    value={Number(fmtNumber(stats.efficiencyPctPer100))}
+                    max={30}
+                    label={t('driveDetail.efficiency', 'Efficiency')}
+                    unit={isMiles ? '%/100mi' : '%/100km'}
+                    color="#10b981"
+                    size={110}
+                  />
+                )}
               </div>
             </GlassPanel>
           </FadeIn>
@@ -388,7 +404,7 @@ export default function DriveDetailPage() {
             <StaggerItem><IconStatCard icon={Clock} color="#f59e0b" value={formatDuration(drive.durationMin)} label={t('driveDetail.duration', 'Duration')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={stats.maxSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.maxSpeed', 'Max Speed')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={stats.avgSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.avgSpeed', 'Avg Speed')} /></StaggerItem>
-            <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={`${drive.startBatteryLevel ?? '?'}% → ${drive.endBatteryLevel ?? '?'}%`} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
+            <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={`${drive.socStart ?? drive.startBatteryLevel ?? '?'}% → ${drive.socEnd ?? drive.endBatteryLevel ?? '?'}%`} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Zap} color="#f59e0b" value={fmtWithUnit(stats.powerMax, 'kW')} label={t('driveDetail.maxPower', 'Max Power')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={Math.round(stats.elevGain)} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={Math.round(stats.elevLoss)} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>
@@ -698,12 +714,18 @@ export default function DriveDetailPage() {
                     return { mean: v.reduce((a, b) => a + b, 0) / v.length, max: Math.max(...v), min: Math.min(...v) };
                   };
                   const speedS = statFn(chartData.map((d) => d.speed));
+                  const idealRangeS = statFn(chartData.map((d) => d.idealRange));
+                  const estRangeS = statFn(chartData.map((d) => d.estRange ?? d.ratedRange));
                   const powerS = statFn(chartData.map((d) => d.power));
                   const socS = statFn(chartData.map((d) => d.battery > 0 ? d.battery : null));
+                  const usableSocS = statFn(chartData.map((d) => d.usableSoc));
                   type LegendItem = { color: string; dash?: boolean; label: string; mean: string; max: string; min: string };
                   const items: LegendItem[] = [];
                   if (speedS) items.push({ color: '#3b82f6', label: t('driveDetail.speed', 'Speed'), mean: `${fmtNumber(speedS.mean)} ${speedUnit}`, max: `${fmtNumber(speedS.max)} ${speedUnit}`, min: `${fmtInt(speedS.min)} ${speedUnit}` });
+                  if (idealRangeS) items.push({ color: '#c084fc', dash: true, label: t('driveDetail.rangeIdeal', 'Range (ideal)'), mean: `${fmtInt(idealRangeS.mean)} ${distanceUnit}`, max: `${fmtInt(idealRangeS.max)} ${distanceUnit}`, min: `${fmtInt(idealRangeS.min)} ${distanceUnit}` });
+                  if (estRangeS) items.push({ color: '#a855f7', dash: true, label: t('driveDetail.rangeEst', 'Range (est.)'), mean: `${fmtInt(estRangeS.mean)} ${distanceUnit}`, max: `${fmtInt(estRangeS.max)} ${distanceUnit}`, min: `${fmtInt(estRangeS.min)} ${distanceUnit}` });
                   if (socS) items.push({ color: '#84cc16', label: t('driveDetail.soc', 'SOC'), mean: fmtPercent(socS.mean), max: fmtPercent(socS.max), min: fmtPercent(socS.min) });
+                  if (usableSocS) items.push({ color: '#22d3ee', label: t('driveDetail.usableSoc', 'Usable SOC'), mean: fmtPercent(usableSocS.mean), max: fmtPercent(usableSocS.max), min: fmtPercent(usableSocS.min) });
                   if (powerS) items.push({ color: '#f59e0b', label: t('driveDetail.power', 'Power'), mean: fmtWithUnit(powerS.mean, 'kW'), max: fmtWithUnit(powerS.max, 'kW'), min: fmtWithUnit(powerS.min, 'kW') });
                   if (drive.batteryHeaterOn != null) items.push({ color: '#ef4444', dash: true, label: t('driveDetail.batteryHeater', 'Battery Heater'), mean: drive.batteryHeaterOn ? 'On' : 'Off', max: drive.batteryHeaterOn ? 'On' : 'Off', min: drive.batteryHeaterOn ? 'On' : 'Off' });
                   return items.length > 0 ? (
@@ -939,7 +961,7 @@ export default function DriveDetailPage() {
                               <div key={tp.label} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2 text-center">
                                 <p className="text-[9px] text-[var(--text-muted)]">{tp.label}</p>
                                 <p className="text-sm font-bold" style={{ color: tp.color }}>
-                                  {tp.min != null ? `${fmtNumber(tp.min)}–${fmtNumber(tp.max!)}` : '—'}
+                                  {tp.min != null ? `${fmtNumber(tp.min)}–${fmtNumber(tp.max!)} ${pressureUnit}` : '—'}
                                 </p>
                               </div>
                             ))}
@@ -953,16 +975,16 @@ export default function DriveDetailPage() {
                                 <Tooltip content={<ChartTooltip />} />
                                 <Legend wrapperStyle={LEGEND_STYLE} />
                                 {chartData.some((d) => d.tireFl !== null) && (
-                                  <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={t('driveDetail.frontLeft', 'Front Left')} connectNulls />
+                                  <Line type="monotone" dataKey="tireFl" stroke="#3b82f6" strokeWidth={2} dot={false} name={`FL (${pressureUnit})`} connectNulls />
                                 )}
                                 {chartData.some((d) => d.tireFr !== null) && (
-                                  <Line type="monotone" dataKey="tireFr" stroke="#10b981" strokeWidth={2} dot={false} name={t('driveDetail.frontRight', 'Front Right')} connectNulls />
+                                  <Line type="monotone" dataKey="tireFr" stroke="#10b981" strokeWidth={2} dot={false} name={`FR (${pressureUnit})`} connectNulls />
                                 )}
                                 {chartData.some((d) => d.tireRl !== null) && (
-                                  <Line type="monotone" dataKey="tireRl" stroke="#f59e0b" strokeWidth={2} dot={false} name={t('driveDetail.rearLeft', 'Rear Left')} connectNulls />
+                                  <Line type="monotone" dataKey="tireRl" stroke="#f59e0b" strokeWidth={2} dot={false} name={`RL (${pressureUnit})`} connectNulls />
                                 )}
                                 {chartData.some((d) => d.tireRr !== null) && (
-                                  <Line type="monotone" dataKey="tireRr" stroke="#ef4444" strokeWidth={2} dot={false} name={t('driveDetail.rearRight', 'Rear Right')} connectNulls />
+                                  <Line type="monotone" dataKey="tireRr" stroke="#ef4444" strokeWidth={2} dot={false} name={`RR (${pressureUnit})`} connectNulls />
                                 )}
                               </LineChart>
                             </ResponsiveContainer>
