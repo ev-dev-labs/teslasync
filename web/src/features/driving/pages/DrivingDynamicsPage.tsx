@@ -149,7 +149,6 @@ export default function DrivingDynamicsPage() {
   const {
     data: dynamics,
     isLoading: dynLoading,
-    error: dynError,
   } = useDrivingDynamics(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
   const { data: stats } = useDrivingStats(vehicleIdStr);
@@ -296,7 +295,7 @@ export default function DrivingDynamicsPage() {
         'Acceleration, braking & cornering analysis',
       )}
       loading={isLoading}
-      error={dynError as Error | null}
+      error={null}
       empty={!dynamics}
       emptyMessage={t('dynamics.empty', 'No dynamics data available.')}
       actions={

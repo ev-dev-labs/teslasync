@@ -58,6 +58,7 @@ export function useDriveScore(vehicleId?: string) {
         vehicleId ? `/drives/score?vehicle_id=${vehicleId}` : '/drives/score',
       ),
     enabled: !!vehicleId,
+    retry: false,
   });
 }
 
@@ -69,6 +70,7 @@ export function useDrivingStats(vehicleId?: string) {
         vehicleId ? `/drives/stats?vehicle_id=${vehicleId}` : '/drives/stats',
       ),
     enabled: !!vehicleId,
+    retry: false,
   });
 }
 
@@ -80,6 +82,7 @@ export function useDrivingDynamics(vehicleId?: string) {
         vehicleId ? `/drives/dynamics?vehicle_id=${vehicleId}` : '/drives/dynamics',
       ),
     enabled: !!vehicleId,
+    retry: false,
   });
 }
 
@@ -93,6 +96,7 @@ export function useDrivetrainHealth(vehicleId?: string) {
           : '/drivetrain/health',
       ),
     enabled: !!vehicleId,
+    retry: false,
   });
 }
 

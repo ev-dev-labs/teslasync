@@ -403,8 +403,6 @@ export default function DriveScorePage() {
   /* ---- queries ---- */
   const {
     data: apiScore,
-    isLoading: scoreLoading,
-    error: scoreError,
   } = useDriveScore(vehicleIdStr);
   const {
     data: drives,
@@ -630,7 +628,7 @@ export default function DriveScorePage() {
   }, []);
 
   /* ---- loading state ---- */
-  const isLoading = scoreLoading || drivesLoading;
+  const isLoading = drivesLoading;
 
   /* ---- vehicle selector actions ---- */
   const vehicleOptions = useMemo(
@@ -705,7 +703,6 @@ export default function DriveScorePage() {
       title={t('driveScore.title', 'Drive Score')}
       subtitle={t('driveScore.subtitle', 'Your driving rating and breakdown')}
       loading={isLoading}
-      error={scoreError as Error | null}
       actions={vehicleSelector}
     >
       {/* -------- Section 9: Date range filter -------- */}

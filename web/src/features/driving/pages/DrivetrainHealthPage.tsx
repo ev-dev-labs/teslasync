@@ -148,7 +148,6 @@ export default function DrivetrainHealthPage() {
   const {
     data: health,
     isLoading: healthLoading,
-    error: healthError,
   } = useDrivetrainHealth(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
   const { data: stats } = useDrivingStats(vehicleIdStr);
@@ -376,7 +375,7 @@ export default function DrivetrainHealthPage() {
         'Motor, inverter, and battery thermal status',
       )}
       loading={healthLoading}
-      error={healthError as Error | null}
+      error={null}
       empty={!health}
       emptyMessage={t('drivetrain.empty', 'No drivetrain data available.')}
       actions={

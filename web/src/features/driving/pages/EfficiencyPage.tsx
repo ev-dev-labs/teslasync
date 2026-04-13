@@ -55,7 +55,7 @@ export default function EfficiencyPage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { data: stats, error } = useDrivingStats(vehicleIdStr);
+  const { data: stats } = useDrivingStats(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
 
   const {
@@ -153,7 +153,7 @@ export default function EfficiencyPage() {
     <PageContainer
       title={t('efficiency.title', 'Efficiency')}
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
-      error={error as Error | null}
+      error={null}
       actions={vehicleOptions.length > 0 ? (
         <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
       ) : undefined}
