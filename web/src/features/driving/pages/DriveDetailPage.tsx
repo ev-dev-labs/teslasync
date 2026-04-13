@@ -95,12 +95,8 @@ export default function DriveDetailPage() {
     const pos = drive.positions ?? [];
     if (tele.length > 0) {
       return tele
-        .filter((tp) => tp.speed != null || tp.power != null)
-        .map((tp, i) => {
-          const p = pos[i] ?? pos[0];
-          return { lat: p?.latitude ?? 0, lng: p?.longitude ?? 0, speed: tp.speed ?? 0 };
-        })
-        .filter((p) => p.lat !== 0 || p.lng !== 0);
+        .filter((tp) => tp.latitude != null && tp.longitude != null && (tp.latitude !== 0 || tp.longitude !== 0))
+        .map((tp) => ({ lat: tp.latitude!, lng: tp.longitude!, speed: tp.speed ?? 0 }));
     }
     return pos
       .filter((p) => p.latitude !== 0 || p.longitude !== 0)
@@ -110,7 +106,8 @@ export default function DriveDetailPage() {
   const trail: LatLngExpression[] = useMemo(() => routeSource.map((p) => [p.lat, p.lng]), [routeSource]);
   const startPos = trail[0] as [number, number] | undefined;
   const endPos = trail.length > 1 ? (trail[trail.length - 1] as [number, number]) : undefined;
-  const centerPos: [number, number] = startPos ?? [47.6, -122.3];
+  const centerPos: [number, number] = startPos
+    ?? (drive?.startLatitude && drive?.startLongitude ? [drive.startLatitude, drive.startLongitude] : [47.6, -122.3]);
 
   /* Speed-colored segments */
   const speedSegments = useMemo(() => {
