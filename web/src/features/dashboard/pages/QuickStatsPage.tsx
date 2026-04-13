@@ -16,11 +16,12 @@ export default function QuickStatsPage() {
   const { t } = useTranslation();
   usePageTitle(t('quickStats.title', 'Quick Stats'));
 
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const { data: analytics, isLoading: analyticsLoading, error } = useAnalyticsSummary(30);
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useAnalyticsSummary(30);
   const { convertDistance, distanceUnit } = useSettings();
 
   const isLoading = vehiclesLoading || analyticsLoading;
+  const error = vehiclesError || analyticsError;
   const vehicle = vehicles?.[0];
 
   return (

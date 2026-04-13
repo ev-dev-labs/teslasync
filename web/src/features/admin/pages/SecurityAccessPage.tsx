@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import {
   Lock,
   Unlock,
+  Eye,
   ShieldCheck,
   ShieldAlert,
   DoorClosed,
@@ -15,6 +16,7 @@ import {
   Activity,
   Clock,
   BarChart3,
+  Car,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -219,6 +221,22 @@ export default function SecurityAccessPage() {
   const lastLockChange = useMemo(() => findLastLockChange(history), [history]);
 
   const sentryBuckets = useMemo(() => buildSentryBuckets(history), [history]);
+
+  /* ---- Security aggregate statistics ---- */
+  const securityStats = useMemo(() => {
+    if (history.length === 0) return null;
+    let lockEvents = 0;
+    for (let i = 1; i < history.length; i++) {
+      if (history[i].locked !== history[i - 1].locked) lockEvents++;
+    }
+    const doorOpenCount = history.filter((e) => !doorClosed(e.doorState)).length;
+    const windowOpenCount = history.filter(
+      (e) => !allWindowsClosed(e),
+    ).length;
+    const homelinkCount = history.filter((e) => e.homelinkNearby).length;
+    const guestCount = history.filter((e) => e.guestMode).length;
+    return { lockEvents, doorOpenCount, windowOpenCount, homelinkCount, guestCount, total: history.length };
+  }, [history]);
 
   /* ---- Vehicle selector options ---- */
   const vehicleOptions = useMemo(
@@ -626,6 +644,72 @@ export default function SecurityAccessPage() {
                   />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ---- Security Statistics ---- */}
+      <FadeIn delay={350}>
+        <GlassPanel className="p-4 mb-6">
+          <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            {t('admin.security.statsTitle', 'Security Statistics')}
+          </h2>
+          {loadingHistory ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} height={80} />
+              ))}
+            </div>
+          ) : securityStats ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <MetricCard
+                label={t('admin.security.stats.lockEvents', 'Lock/Unlock Events')}
+                value={securityStats.lockEvents}
+                icon={<Lock className="h-4 w-4" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('admin.security.stats.sentryUptime', 'Sentry Uptime')}
+                value={`${sentryUptime}%`}
+                icon={<Eye className="h-4 w-4" />}
+                color="blue"
+              />
+              <MetricCard
+                label={t('admin.security.stats.doorOpens', 'Door Open Events')}
+                value={securityStats.doorOpenCount}
+                icon={<DoorOpen className="h-4 w-4" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('admin.security.stats.windowOpens', 'Window Open Events')}
+                value={securityStats.windowOpenCount}
+                icon={<Car className="h-4 w-4" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('admin.security.stats.homelink', 'HomeLink Detections')}
+                value={securityStats.homelinkCount}
+                icon={<Home className="h-4 w-4" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('admin.security.stats.guestMode', 'Guest Mode Usage')}
+                value={securityStats.guestCount}
+                icon={<UserCheck className="h-4 w-4" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('admin.security.stats.totalEvents', 'Total Events')}
+                value={securityStats.total}
+                icon={<Activity className="h-4 w-4" />}
+                color="cyan"
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">

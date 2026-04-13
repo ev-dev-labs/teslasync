@@ -20,7 +20,7 @@ import {
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, ScatterChart, Scatter,
-  Legend, ZAxis,
+  Legend, ZAxis, RadarChart, Radar, PolarGrid, PolarAngleAxis,
 } from '@/components/charts';
 
 /* ─── Feedback & animation ────────────────────────────────────────── */
@@ -173,6 +173,27 @@ function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
     return sorted.map((v) => ({ ...v, pct: maxEff > 0 ? (safe(v.efficiency) / maxEff) * 100 : 0 }));
   }, [vehicles]);
 
+  /* Vehicle radar comparison (needs ≥ 2 vehicles) */
+  const radarData = useMemo(() => {
+    if (vehicles.length < 2) return [];
+    const maxDist = Math.max(...vehicles.map((v) => safe(v.distance)), 1);
+    const maxEnergy = Math.max(...vehicles.map((v) => safe(v.energy)), 1);
+    const maxDrives = Math.max(...vehicles.map((v) => safe(v.drives)), 1);
+    const maxEff = Math.max(...vehicles.map((v) => safe(v.efficiency)), 1);
+    return ['Distance', 'Energy', 'Drives', 'Efficiency'].map((metric) => {
+      const row: Record<string, string | number> = { metric };
+      vehicles.forEach((v) => {
+        switch (metric) {
+          case 'Distance': row[v.name] = (safe(v.distance) / maxDist) * 100; break;
+          case 'Energy': row[v.name] = (safe(v.energy) / maxEnergy) * 100; break;
+          case 'Drives': row[v.name] = (safe(v.drives) / maxDrives) * 100; break;
+          case 'Efficiency': row[v.name] = ((maxEff - safe(v.efficiency)) / maxEff) * 100; break;
+        }
+      });
+      return row;
+    });
+  }, [vehicles]);
+
   return (
     <FadeIn className="space-y-4 mt-4">
       {/* 1 — Distance by Vehicle */}
@@ -249,6 +270,54 @@ function OverviewTab({ data }: { data: FleetAnalytics | undefined }) {
             </div>
           ) : (
             <EmptyState message={t('analytics.overview.noEfficiency', 'No efficiency data')} />
+          )}
+        </GlassPanel>
+      </div>
+
+      {/* Radar Vehicle Comparison + Energy & Activity */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <GlassPanel className="p-4">
+          <SectionTitle>{t('analytics.overview.vehicleComparison', 'Vehicle Comparison')}</SectionTitle>
+          {radarData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <PolarAngleAxis dataKey="metric" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                {vehicles.map((v, i) => (
+                  <Radar
+                    key={v.id}
+                    name={v.name}
+                    dataKey={v.name}
+                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                    fill={CHART_COLORS[i % CHART_COLORS.length]}
+                    fillOpacity={0.15}
+                    strokeWidth={2}
+                  />
+                ))}
+                <Tooltip content={<ChartTooltip />} />
+              </RadarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState message={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')} />
+          )}
+        </GlassPanel>
+
+        <GlassPanel className="p-4">
+          <SectionTitle>{t('analytics.overview.energyActivity', 'Energy & Activity')}</SectionTitle>
+          {vehicles.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={vehicles} margin={chartMarginLabeled} {...chartAnimation}>
+                {chartGrid}
+                <XAxis dataKey="name" tick={axisTickSm} />
+                <YAxis tick={axisTick} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend />
+                <Bar dataKey="energy" name={t('analytics.overview.energykWh', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState message={t('analytics.overview.noVehicles', 'No vehicle data')} />
           )}
         </GlassPanel>
       </div>
@@ -817,6 +886,35 @@ function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
           </div>
         ) : (
           <EmptyState message={t('analytics.charging.noCostStats', 'No cost statistics')} />
+        )}
+      </GlassPanel>
+
+      {/* 8 — Cost by Charger Type */}
+      <GlassPanel className="p-4">
+        <SectionTitle>{t('analytics.charging.costByType', 'Cost by Charger Type')}</SectionTitle>
+        {chargerTypes.length > 0 ? (
+          <div className="mt-3 space-y-3">
+            {chargerTypes.map((ct, i) => {
+              const totalSessions = chargerTypes.reduce((s, x) => s + safe(x.count), 0);
+              const pct = totalSessions > 0 ? Math.round((safe(ct.count) / totalSessions) * 100) : 0;
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="w-28 text-xs text-right font-medium text-white/60">{ct.type}</span>
+                  <div className="flex-1 h-3 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                    />
+                  </div>
+                  <span className="w-20 text-xs font-mono text-right text-white/80">
+                    {safe(ct.count)} ({pct}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState message={t('analytics.charging.noCostByType', 'No charger type data')} />
         )}
       </GlassPanel>
     </FadeIn>

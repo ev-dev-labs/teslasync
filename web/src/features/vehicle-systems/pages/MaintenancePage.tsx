@@ -28,6 +28,7 @@ import { request } from '@/api/client';
 import {
   Wrench, AlertTriangle, CheckCircle, Clock, ListChecks,
   CalendarPlus, Filter, ArrowUpDown, Gauge, Tag,
+  DollarSign, TrendingUp,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -419,6 +420,39 @@ export default function MaintenancePage() {
 
   const serviceColumns = useMemo(() => buildServiceColumns(t), [t]);
 
+  // ── Cost summary from service records ──────────────────────────────────
+  const costStats = useMemo(() => {
+    if (!records || records.length === 0) return null;
+    const totalCost = records.reduce((s, r) => s + (r.cost ?? 0), 0);
+    const dates = records.map((r) => new Date(r.date).getTime()).filter((d) => !isNaN(d));
+    if (dates.length < 2) return { totalCost, annualCost: totalCost, avgPerService: totalCost / records.length };
+    const spanYears = Math.max((Math.max(...dates) - Math.min(...dates)) / (365.25 * 24 * 3600000), 0.1);
+    return {
+      totalCost,
+      annualCost: totalCost / spanYears,
+      avgPerService: totalCost / records.length,
+    };
+  }, [records]);
+
+  // ── Service projections ────────────────────────────────────────────────
+  const projections = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    return items
+      .filter((i) => i.status !== 'completed' && (i.interval_miles || i.interval_months))
+      .map((item) => {
+        const milesRemaining =
+          item.due_mileage != null ? Math.max(item.due_mileage - item.current_mileage, 0) : null;
+        const dueDate = item.due_date ? formatDate(item.due_date) : null;
+        return { name: item.name, category: item.category, milesRemaining, dueDate, status: item.status };
+      })
+      .sort((a, b) => {
+        if (a.status === 'overdue' && b.status !== 'overdue') return -1;
+        if (b.status === 'overdue' && a.status !== 'overdue') return 1;
+        return (a.milesRemaining ?? Infinity) - (b.milesRemaining ?? Infinity);
+      })
+      .slice(0, 8);
+  }, [items]);
+
   // ── Schedule handler ───────────────────────────────────────────────────
   const handleSchedule = useCallback(() => {
     // placeholder — would open scheduling modal
@@ -534,6 +568,91 @@ export default function MaintenancePage() {
             ))}
           </div>
         )}
+      </FadeIn>
+
+      {/* ── Cost Summary & Service Projections ────────────────────── */}
+      <FadeIn delay={120}>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Estimated Annual Cost */}
+          <GlassPanel className="p-6">
+            <span className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+              <DollarSign className="h-4 w-4 text-green-400" />
+              {t('Estimated Annual Cost')}
+            </span>
+            {loadingRecords && !records ? (
+              <Skeleton height={80} />
+            ) : costStats ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <MetricCard
+                    label={t('Total Spent')}
+                    value={`$${fmtNumber(costStats.totalCost, 0)}`}
+                    color="green"
+                  />
+                  <MetricCard
+                    label={t('Annual Est.')}
+                    value={`$${fmtNumber(costStats.annualCost, 0)}/yr`}
+                    color="cyan"
+                  />
+                  <MetricCard
+                    label={t('Avg / Service')}
+                    value={`$${fmtNumber(costStats.avgPerService, 0)}`}
+                    color="purple"
+                  />
+                </div>
+                <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+                  <p className="text-xs text-green-400">
+                    {t(
+                      'EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.',
+                    )}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <EmptyState message={t('No cost data available yet. Log service records to see cost estimates.')} />
+            )}
+          </GlassPanel>
+
+          {/* Service Projections */}
+          <GlassPanel className="p-6">
+            <span className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+              <TrendingUp className="h-4 w-4 text-purple-400" />
+              {t('Service Projections')}
+            </span>
+            {loadingItems && !items ? (
+              <Skeleton height={80} />
+            ) : projections.length > 0 ? (
+              <div className="space-y-2.5">
+                {projections.map((p) => {
+                  const badge = STATUS_BADGE_MAP[p.status as MaintenanceStatus] ?? STATUS_BADGE_MAP.good;
+                  return (
+                    <div key={p.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Wrench className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+                        <span className="truncate text-white/60">{p.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {p.milesRemaining != null && (
+                          <span className="text-xs text-white/40">
+                            {fmtNumber(p.milesRemaining, 0)} mi
+                          </span>
+                        )}
+                        {p.dueDate && (
+                          <span className="text-xs text-white/40">{p.dueDate}</span>
+                        )}
+                        <Badge variant={badge.variant} size="sm">
+                          {t(badge.label)}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState message={t('No upcoming service projections available.')} />
+            )}
+          </GlassPanel>
+        </div>
       </FadeIn>
 
       {/* ── Service records table ────────────────────────────────── */}

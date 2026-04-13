@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Activity,
+  TrendingUp,
+  TrafficCone,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -31,6 +33,8 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import {
   AreaChart,
   Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -266,6 +270,50 @@ export default function NavigationRoutePage() {
     const total = history.reduce((sum, s) => sum + s.speed, 0);
     return total / history.length;
   }, [history]);
+
+  /* ---- recent destinations (unique, from history with active routes) ---- */
+  const recentDestinations = useMemo(() => {
+    if (!history?.length) return [];
+    const seen = new Set<string>();
+    const result: { time: string; destination: string; location: string; distance: number; eta: number }[] = [];
+    for (const s of history) {
+      if (!s.destination_name || seen.has(s.destination_name)) continue;
+      seen.add(s.destination_name);
+      result.push({
+        time: formatDateTime(s.created_at),
+        destination: s.destination_name,
+        location: s.destination_location || '—',
+        distance: s.destination_miles_remaining,
+        eta: s.destination_minutes_remaining,
+      });
+    }
+    return result.slice(0, 20);
+  }, [history]);
+
+  /* ---- presence chart (home / work over time) ---- */
+  const presenceChartData = useMemo(() => {
+    if (!history?.length) return [];
+    return [...history]
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .map((s) => ({
+        time: formatDateTime(s.created_at),
+        home: s.located_at_home ? 1 : 0,
+        work: s.located_at_work ? 1 : 0,
+        homelink: s.homelink_nearby ? 1 : 0,
+      }));
+  }, [history]);
+
+  /* ---- destination table columns ---- */
+  const destColumns: Column<typeof recentDestinations[number]>[] = useMemo(
+    () => [
+      { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-gray-400 whitespace-nowrap">{row.time}</span> },
+      { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-white/80">{row.destination}</span> },
+      { key: 'location', header: t('nav.col.location', 'Location'), render: (row) => <span className="text-xs text-gray-400 truncate max-w-[200px] block">{row.location}</span> },
+      { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.distance, 1)} mi</span> },
+      { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.eta, 0)} min</span> },
+    ],
+    [t],
+  );
 
   /* ---- table columns ---- */
   const historyColumns: Column<LocationSnapshot>[] = useMemo(
@@ -738,6 +786,96 @@ export default function NavigationRoutePage() {
               </GlassPanel>
             </FadeIn>
           )}
+
+          {/* ─────── Route Traffic Delay ─────── */}
+          <FadeIn delay={0.22}>
+            <GlassPanel className="mb-6 p-5">
+              <span className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                <TrafficCone className="h-4 w-4 text-amber-400" />
+                {t('nav.trafficDelay', 'Route Traffic Delay')}
+              </span>
+              {latestLoading ? (
+                <Skeleton height={64} />
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={clsx(
+                        'text-3xl font-bold',
+                        (latest?.destination_traffic_minutes_delay ?? 0) === 0
+                          ? 'text-green-400'
+                          : (latest?.destination_traffic_minutes_delay ?? 0) <= 5
+                            ? 'text-amber-400'
+                            : 'text-red-400',
+                      )}
+                    >
+                      {latest?.destination_traffic_minutes_delay ?? 0}
+                    </span>
+                    <span className="text-sm text-white/40">{t('nav.min', 'min')}</span>
+                  </div>
+                  <TrafficDelayBadge
+                    minutes={latest?.destination_traffic_minutes_delay ?? 0}
+                    t={t}
+                  />
+                </div>
+              )}
+            </GlassPanel>
+          </FadeIn>
+
+          {/* ─────── Recent Destinations ─────── */}
+          <FadeIn delay={0.25}>
+            <GlassPanel className="mb-6 p-5">
+              <span className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                <Clock className="h-4 w-4 text-cyan-400" />
+                {t('nav.recentDestinations', 'Recent Destinations')}
+              </span>
+              {historyLoading ? (
+                <Skeleton lines={6} />
+              ) : recentDestinations.length === 0 ? (
+                <EmptyState message={t('nav.noDestinations', 'No destination history available.')} />
+              ) : (
+                <DataTable
+                  columns={destColumns}
+                  data={recentDestinations}
+                  keyExtractor={(row) => `${row.time}-${row.destination}`}
+                  compact
+                />
+              )}
+            </GlassPanel>
+          </FadeIn>
+
+          {/* ─────── Home / Work Presence Chart ─────── */}
+          <FadeIn delay={0.28}>
+            <GlassPanel className="mb-6 p-5">
+              <span className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                <TrendingUp className="h-4 w-4 text-cyan-400" />
+                {t('nav.presenceChart', 'Home / Work Presence')}
+              </span>
+              {historyLoading ? (
+                <Skeleton height={300} />
+              ) : presenceChartData.length === 0 ? (
+                <EmptyState message={t('nav.noPresence', 'No presence history available.')} />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={presenceChartData} margin={chartMargin}>
+                    {chartGrid}
+                    <XAxis dataKey="time" tick={axisTick} />
+                    <YAxis
+                      domain={[0, 1]}
+                      ticks={[0, 1]}
+                      tick={axisTick}
+                      tickFormatter={(v: number) => (v === 1 ? 'Yes' : 'No')}
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    <Line type="stepAfter" dataKey="home" name={t('nav.atHome', 'At Home')} stroke={CHART_COLORS[1]} strokeWidth={2} dot={false} />
+                    <Line type="stepAfter" dataKey="work" name={t('nav.atWork', 'At Work')} stroke={CHART_COLORS[3]} strokeWidth={2} dot={false} />
+                    <Line type="stepAfter" dataKey="homelink" name={t('nav.homelinkNearby', 'HomeLink')} stroke={CHART_COLORS[4]} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+          </FadeIn>
 
           {/* ─────── Location History Table ─────── */}
           <FadeIn delay={0.3}>

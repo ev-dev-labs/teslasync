@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { RadialGauge } from '@/components/charts/RadialGauge';
@@ -316,8 +315,6 @@ export default function MediaPlayerPage() {
       subtitle={t('Now playing, volume, and listening history')}
       loading={isLoading}
       error={latestError as Error | null}
-      empty={!latest && !isLoading}
-      emptyMessage={t('No media data available.')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select
@@ -422,18 +419,14 @@ export default function MediaPlayerPage() {
       <FadeIn delay={100}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GlassPanel className="flex items-center justify-center p-4">
-            {latest ? (
-              <RadialGauge
-                value={latest.audio_volume}
-                max={latest.audio_volume_max || 11}
-                label={t('Volume')}
-                unit=""
-                color={CHART_COLORS[0]}
-                size={120}
-              />
-            ) : (
-              <Skeleton height={120} width="120px" rounded />
-            )}
+            <RadialGauge
+              value={latest?.audio_volume ?? 0}
+              max={latest?.audio_volume_max || 11}
+              label={t('Volume')}
+              unit=""
+              color={CHART_COLORS[0]}
+              size={120}
+            />
           </GlassPanel>
 
           <MetricCard

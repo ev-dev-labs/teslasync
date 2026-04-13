@@ -5,6 +5,7 @@ import {
   Thermometer,
   Wind,
   Snowflake,
+  Sun,
   Power,
   Flame,
   CircleGauge,
@@ -13,6 +14,8 @@ import {
   RefreshCw,
   ShieldCheck,
   BatteryCharging,
+  Zap,
+  Activity,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -29,6 +32,8 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import {
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -285,6 +290,41 @@ export default function ClimateControlPage() {
   const frontSeats = SEATS.filter((s) => s.row === 'front');
   const rearSeats = SEATS.filter((s) => s.row === 'rear');
 
+  /* ─── Chronological history (backend returns newest-first) ─── */
+  const chronoHistory = useMemo(() => {
+    if (!history || history.length === 0) return [];
+    return [...history].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
+  }, [history]);
+
+  /* ─── Comfort score & temp delta ─── */
+  const comfortScore = useMemo(() => {
+    if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
+    const delta = Math.abs(latest.insideTemp - latest.driverTempSetting);
+    return Math.max(0, Math.round(100 - delta * 10));
+  }, [latest?.insideTemp, latest?.driverTempSetting]);
+
+  const tempDelta = useMemo(() => {
+    if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
+    return +(latest.insideTemp - latest.driverTempSetting).toFixed(1);
+  }, [latest?.insideTemp, latest?.driverTempSetting]);
+
+  /* ─── Climate efficiency stats (from real power samples only) ─── */
+  const efficiencyStats = useMemo(() => {
+    if (chronoHistory.length === 0) return null;
+    const withPower = chronoHistory.filter((h) => h.hvacPower != null && h.hvacPower > 0);
+    if (withPower.length === 0) return null;
+    const powers = withPower.map((h) => h.hvacPower);
+    const avg = powers.reduce((s, v) => s + v, 0) / powers.length;
+    const peak = Math.max(...powers);
+    const firstTs = new Date(chronoHistory[0].timestamp).getTime();
+    const lastTs = new Date(chronoHistory[chronoHistory.length - 1].timestamp).getTime();
+    const hours = Math.max((lastTs - firstTs) / 3_600_000, 0.01);
+    const energy = avg * hours;
+    return { avg, peak, energy };
+  }, [chronoHistory]);
+
   /* ═══════════════════════════════════════════════════════
      Render
      ═══════════════════════════════════════════════════════ */
@@ -517,6 +557,183 @@ export default function ClimateControlPage() {
         </div>
       </FadeIn>
 
+      {/* ─── Thermal Comfort Indicator ─── */}
+      <FadeIn delay={0.27}>
+        <GlassPanel className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Thermometer className="h-5 w-5 text-cyan-400" />
+            <span className="text-base font-semibold text-[var(--text-primary)]">
+              {t('Thermal Comfort')}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Comfort Score */}
+            <GlassPanel className="flex flex-col items-center gap-2 p-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/50">
+                {t('Comfort Score')}
+              </span>
+              <div
+                className={clsx(
+                  'flex h-20 w-20 items-center justify-center rounded-full',
+                  comfortScore != null && comfortScore >= 80
+                    ? 'bg-green-500/20'
+                    : comfortScore != null && comfortScore >= 50
+                      ? 'bg-amber-500/20'
+                      : 'bg-red-500/20',
+                )}
+              >
+                <span
+                  className={clsx(
+                    'text-2xl font-bold',
+                    comfortScore != null && comfortScore >= 80
+                      ? 'text-green-400'
+                      : comfortScore != null && comfortScore >= 50
+                        ? 'text-amber-400'
+                        : 'text-red-400',
+                  )}
+                >
+                  {comfortScore ?? '—'}
+                </span>
+              </div>
+              <Badge
+                variant={
+                  comfortScore != null && comfortScore >= 80
+                    ? 'success'
+                    : comfortScore != null && comfortScore >= 50
+                      ? 'warning'
+                      : 'danger'
+                }
+                size="sm"
+              >
+                {comfortScore != null && comfortScore >= 80
+                  ? t('Excellent')
+                  : comfortScore != null && comfortScore >= 50
+                    ? t('Moderate')
+                    : t('Poor')}
+              </Badge>
+            </GlassPanel>
+
+            {/* Temp Delta */}
+            <GlassPanel className="flex flex-col items-center gap-2 p-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/50">
+                {t('Temp Delta')}
+              </span>
+              <div
+                className={clsx(
+                  'flex h-20 w-20 items-center justify-center rounded-full',
+                  tempDelta == null
+                    ? 'bg-white/5'
+                    : Math.abs(tempDelta) <= 1
+                      ? 'bg-green-500/20'
+                      : Math.abs(tempDelta) <= 3
+                        ? 'bg-amber-500/20'
+                        : 'bg-red-500/20',
+                )}
+              >
+                <span
+                  className={clsx(
+                    'text-2xl font-bold',
+                    tempDelta == null
+                      ? 'text-white/30'
+                      : Math.abs(tempDelta) <= 1
+                        ? 'text-green-400'
+                        : Math.abs(tempDelta) <= 3
+                          ? 'text-amber-400'
+                          : 'text-red-400',
+                  )}
+                >
+                  {tempDelta != null
+                    ? `${tempDelta > 0 ? '+' : ''}${tempDelta}`
+                    : '—'}
+                </span>
+              </div>
+              <span className="text-[10px] rounded-full bg-white/5 px-3 py-1 font-medium text-white/50">
+                {tempDelta != null
+                  ? Math.abs(tempDelta) <= 1
+                    ? t('Near Target')
+                    : tempDelta > 0
+                      ? t('Above Target')
+                      : t('Below Target')
+                  : t('N/A')}
+              </span>
+            </GlassPanel>
+
+            {/* Comfort Status */}
+            <GlassPanel className="flex flex-col items-center gap-2 p-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/50">
+                {t('Status')}
+              </span>
+              <div
+                className={clsx(
+                  'flex h-20 w-20 items-center justify-center rounded-full',
+                  comfortScore != null && comfortScore >= 80
+                    ? 'bg-green-500/20'
+                    : comfortScore != null && comfortScore >= 50
+                      ? 'bg-amber-500/20'
+                      : 'bg-red-500/20',
+                )}
+              >
+                {tempDelta != null && tempDelta > 2 ? (
+                  <Sun className="h-8 w-8 text-amber-400" />
+                ) : tempDelta != null && tempDelta < -2 ? (
+                  <Snowflake className="h-8 w-8 text-cyan-400" />
+                ) : (
+                  <Wind className="h-8 w-8 text-green-400" />
+                )}
+              </div>
+              <Badge variant={comfort.variant} size="sm">
+                {tempDelta != null && tempDelta > 2
+                  ? t('Too Warm')
+                  : tempDelta != null && tempDelta < -2
+                    ? t('Too Cold')
+                    : t('Comfortable')}
+              </Badge>
+            </GlassPanel>
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ─── Climate Efficiency Panel ─── */}
+      <FadeIn delay={0.28}>
+        <GlassPanel className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Activity className="h-5 w-5 text-cyan-400" />
+            <span className="text-base font-semibold text-[var(--text-primary)]">
+              {t('Climate Efficiency')}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <MetricCard
+              label={t('Avg Power')}
+              value={efficiencyStats ? fmtNumber(efficiencyStats.avg, 1) : '—'}
+              subtitle="kW"
+              icon={<Zap className="h-4 w-4" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('Peak Power')}
+              value={efficiencyStats ? fmtNumber(efficiencyStats.peak, 1) : '—'}
+              subtitle="kW"
+              icon={<Zap className="h-4 w-4" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('Est. Energy Used')}
+              value={efficiencyStats ? fmtNumber(efficiencyStats.energy, 2) : '—'}
+              subtitle="kWh"
+              icon={<Zap className="h-4 w-4" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('Comfort Score')}
+              value={comfortScore != null ? `${comfortScore}%` : '—'}
+              icon={<Thermometer className="h-4 w-4" />}
+              color={comfortScore != null && comfortScore >= 80 ? 'green' : 'amber'}
+            />
+          </div>
+        </GlassPanel>
+      </FadeIn>
+
       {/* ─── Seat Heater Grid ─── */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-6">
@@ -584,7 +801,7 @@ export default function ClimateControlPage() {
             />
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={history} margin={chartMarginLabeled}>
+              <LineChart data={chronoHistory} margin={chartMarginLabeled}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--glass-border)"
@@ -627,6 +844,88 @@ export default function ClimateControlPage() {
                   {...chartAnimation}
                 />
               </LineChart>
+            </ResponsiveContainer>
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ─── HVAC Power & Fan Speed History ─── */}
+      <FadeIn delay={0.45}>
+        <GlassPanel className="p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Wind className="h-5 w-5 text-purple-400" />
+            <span className="text-base font-semibold text-[var(--text-primary)]">
+              {t('HVAC Power & Fan Speed')}
+            </span>
+          </div>
+
+          {historyLoading ? (
+            <Skeleton height={300} />
+          ) : chronoHistory.length === 0 ? (
+            <EmptyState
+              icon={<Wind className="h-10 w-10 text-[var(--text-muted)]" />}
+              message={t('No HVAC history available.')}
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={chronoHistory} margin={chartMarginLabeled}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--glass-border)"
+                  strokeOpacity={0.4}
+                />
+                <XAxis
+                  dataKey="timestamp"
+                  tick={axisTick}
+                  tickFormatter={(v: string) => formatTime(v)}
+                />
+                <YAxis
+                  yAxisId="power"
+                  tick={axisTick}
+                  label={{
+                    value: 'kW',
+                    angle: -90,
+                    position: 'insideLeft',
+                    style: { fontSize: 10, fill: 'var(--text-muted)' },
+                  }}
+                />
+                <YAxis
+                  yAxisId="fan"
+                  orientation="right"
+                  domain={[0, 10]}
+                  tick={axisTick}
+                  label={{
+                    value: t('Fan Level'),
+                    angle: 90,
+                    position: 'insideRight',
+                    style: { fontSize: 10, fill: 'var(--text-muted)' },
+                  }}
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend />
+                <Area
+                  yAxisId="power"
+                  type="monotone"
+                  dataKey="hvacPower"
+                  name={t('HVAC Power (kW)')}
+                  stroke={CHART_COLORS[0]}
+                  fill={CHART_COLORS[0]}
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                  dot={false}
+                  {...chartAnimation}
+                />
+                <Line
+                  yAxisId="fan"
+                  type="stepAfter"
+                  dataKey="fanSpeed"
+                  name={t('Fan Speed')}
+                  stroke={CHART_COLORS[3]}
+                  strokeWidth={2}
+                  dot={false}
+                  {...chartAnimation}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </GlassPanel>
