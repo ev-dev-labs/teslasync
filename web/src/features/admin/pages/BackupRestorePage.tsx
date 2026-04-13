@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,27 +17,22 @@ import {
   XCircle,
   Loader2,
   Timer,
+  AlertCircle,
+  FolderOpen,
+  Cloud,
+  Archive,
 } from 'lucide-react';
-import clsx from 'clsx';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Modal } from '@/components/ui/Modal';
-import { Toggle } from '@/components/ui/Toggle';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, DataTable, Textarea, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
-import { request } from '@/api/client';
+import { cn } from '@/lib/cn';
+import { request, getApiBase } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -47,53 +42,73 @@ interface BackupConfig {
   id: number;
   name: string;
   enabled: boolean;
-  backup_type: 'full' | 'incremental';
+  backup_type: string;
   frequency_days: number;
   max_retention: number;
-  provider: 'local' | 's3' | 'azure' | 'gcs';
+  provider: string;
   provider_config: Record<string, string>;
+  include_tables?: string[];
   compress: boolean;
   encrypt: boolean;
+  last_run_at?: string | null;
+  next_run_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface BackupRun {
   id: number;
-  config_id: number;
-  config_name?: string;
-  status: 'completed' | 'failed' | 'running' | 'queued';
+  config_id: number | null;
+  run_type: string;
   backup_type: string;
+  status: string;
+  provider: string;
+  file_name?: string | null;
+  file_path?: string | null;
   file_size: number;
+  record_count: number;
+  table_count: number;
+  checksum?: string | null;
+  duration_ms: number;
+  error_message?: string | null;
+  metadata?: Record<string, unknown>;
+  started_at?: string | null;
+  completed_at?: string | null;
   created_at: string;
-  completed_at: string | null;
-  duration_ms: number | null;
-  error?: string;
-}
-
-interface BackupStats {
-  total_configs: number;
-  total_runs: number;
-  last_backup: string | null;
-  total_size: number;
 }
 
 interface RestorePreview {
-  tables: { name: string; row_count: number }[];
-  metadata: Record<string, string>;
+  tables: { name: string; rows: number }[];
+  metadata: Record<string, unknown> | null;
   checksum_verified: boolean;
 }
 
-type ConfigFormData = Omit<BackupConfig, 'id'>;
+type ConfigFormData = Omit<BackupConfig, 'id' | 'last_run_at' | 'next_run_at' | 'created_at' | 'updated_at'>;
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const PROVIDERS: { value: string; label: string; color: string }[] = [
-  { value: 'local', label: 'Local', color: 'bg-gray-500/15 text-[var(--text-muted)] border-gray-500/30' },
-  { value: 's3', label: 'Amazon S3', color: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
-  { value: 'azure', label: 'Azure Blob', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
-  { value: 'gcs', label: 'Google Cloud', color: 'bg-green-500/15 text-green-400 border-green-500/30' },
+const PROVIDERS: { value: string; label: string }[] = [
+  { value: 'local', label: 'Local' },
+  { value: 's3', label: 'Amazon S3' },
+  { value: 'azure', label: 'Azure Blob' },
+  { value: 'gcs', label: 'Google Cloud' },
 ];
+
+const PROVIDER_BADGE_VARIANT: Record<string, 'neutral' | 'warning' | 'info' | 'success'> = {
+  local: 'neutral',
+  s3: 'warning',
+  azure: 'info',
+  gcs: 'success',
+};
+
+const PROVIDER_ICON: Record<string, typeof FolderOpen> = {
+  local: FolderOpen,
+  s3: Cloud,
+  azure: Cloud,
+  gcs: Cloud,
+};
 
 const STATUS_CONFIG: Record<
   string,
@@ -102,7 +117,7 @@ const STATUS_CONFIG: Record<
   completed: { color: 'text-neon-green', bg: 'bg-neon-green/15', icon: CheckCircle2, variant: 'success' },
   failed: { color: 'text-neon-red', bg: 'bg-neon-red/15', icon: XCircle, variant: 'danger' },
   running: { color: 'text-neon-cyan', bg: 'bg-neon-cyan/15', icon: Loader2, variant: 'info' },
-  queued: { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/15', icon: Timer, variant: 'neutral' },
+  queued: { color: 'text-white/40', bg: 'bg-gray-500/15', icon: Timer, variant: 'neutral' },
 };
 
 const EMPTY_FORM: ConfigFormData = {
@@ -112,7 +127,7 @@ const EMPTY_FORM: ConfigFormData = {
   frequency_days: 1,
   max_retention: 7,
   provider: 'local',
-  provider_config: {},
+  provider_config: { path: '/backups' },
   compress: true,
   encrypt: false,
 };
@@ -141,28 +156,30 @@ function formatDuration(ms: number): string {
   return `${(ms / 60_000).toFixed(1)}m`;
 }
 
-function providerFields(provider: string): { key: string; label: string }[] {
-  switch (provider) {
-    case 's3':
-      return [
-        { key: 'bucket', label: 'Bucket' },
-        { key: 'prefix', label: 'Prefix' },
-        { key: 'region', label: 'Region' },
-      ];
-    case 'azure':
-      return [
-        { key: 'container', label: 'Container' },
-        { key: 'prefix', label: 'Prefix' },
-      ];
-    case 'gcs':
-      return [
-        { key: 'bucket', label: 'Bucket' },
-        { key: 'prefix', label: 'Prefix' },
-      ];
-    default:
-      return [{ key: 'path', label: 'Path' }];
-  }
-}
+const PROVIDER_FIELDS: Record<string, { key: string; label: string; type?: string; required?: boolean; placeholder?: string }[]> = {
+  local: [
+    { key: 'path', label: 'Path', required: true, placeholder: '/backups' },
+  ],
+  s3: [
+    { key: 'bucket', label: 'Bucket', required: true, placeholder: 'my-backup-bucket' },
+    { key: 'region', label: 'Region', required: true, placeholder: 'us-east-1' },
+    { key: 'access_key', label: 'Access Key', required: true },
+    { key: 'secret_key', label: 'Secret Key', required: true, type: 'password' },
+    { key: 'endpoint', label: 'Endpoint (optional)', placeholder: 'https://s3.amazonaws.com' },
+    { key: 'prefix', label: 'Prefix (optional)', placeholder: 'backups/' },
+  ],
+  azure: [
+    { key: 'account_name', label: 'Account Name', required: true },
+    { key: 'account_key', label: 'Account Key', required: true, type: 'password' },
+    { key: 'container_name', label: 'Container Name', required: true },
+    { key: 'prefix', label: 'Prefix (optional)', placeholder: 'backups/' },
+  ],
+  gcs: [
+    { key: 'bucket', label: 'Bucket', required: true, placeholder: 'my-backup-bucket' },
+    { key: 'credentials_json', label: 'Credentials JSON', required: true, type: 'textarea' },
+    { key: 'prefix', label: 'Prefix (optional)', placeholder: 'backups/' },
+  ],
+};
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -172,7 +189,7 @@ export default function BackupRestorePage() {
   const { t } = useTranslation();
   const toast = useToast();
   const qc = useQueryClient();
-  usePageTitle(t('Backup & Restore'));
+  usePageTitle(t('backup.title', 'Backup & Restore'));
 
   /* ---- state ---- */
   const [modalOpen, setModalOpen] = useState(false);
@@ -183,94 +200,106 @@ export default function BackupRestorePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   /* ---- queries ---- */
-  const { data: stats, isLoading: loadingStats } = useQuery<BackupStats>({
-    queryKey: ['backup-stats'],
-    queryFn: () => request<BackupStats>('/system/backup/stats'),
-  });
-
   const {
     data: configs = [],
     isLoading: loadingConfigs,
     error: configsError,
   } = useQuery<BackupConfig[]>({
     queryKey: ['backup-configs'],
-    queryFn: () => request<BackupConfig[]>('/system/backup/configs'),
+    queryFn: () => request<BackupConfig[]>('/backup/configs'),
   });
 
   const { data: runs = [], isLoading: loadingRuns } = useQuery<BackupRun[]>({
     queryKey: ['backup-runs'],
-    queryFn: () => request<BackupRun[]>('/system/backup'),
+    queryFn: () => request<BackupRun[]>('/backup/runs'),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.some((r) => r.status === 'queued' || r.status === 'running')) return 5000;
+      return 30000;
+    },
   });
 
-  const loading = loadingStats || loadingConfigs || loadingRuns;
+  const loading = loadingConfigs || loadingRuns;
+
+  /* ---- derived stats ---- */
+  const stats = useMemo(() => {
+    const totalBackups = runs.length;
+    const lastBackup = runs.find((r) => r.status === 'completed');
+    const totalSize = runs.reduce((sum, r) => sum + (r.file_size || 0), 0);
+    return { totalBackups, lastBackup, totalSize };
+  }, [runs]);
+
+  const failedRuns = useMemo(
+    () => runs.filter((r) => r.status === 'failed' && r.error_message).slice(0, 5),
+    [runs],
+  );
 
   /* ---- mutations ---- */
   const invalidateAll = () => {
-    qc.invalidateQueries({ queryKey: ['backup-stats'] });
     qc.invalidateQueries({ queryKey: ['backup-configs'] });
     qc.invalidateQueries({ queryKey: ['backup-runs'] });
   };
 
   const createMutation = useMutation({
     mutationFn: (body: ConfigFormData) =>
-      request<BackupConfig>('/system/backup/configs', { method: 'POST', body: JSON.stringify(body) }),
+      request<BackupConfig>('/backup/configs', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       invalidateAll();
-      toast.success(t('Config created'));
+      toast.success(t('backup.configCreated', 'Config created'));
       closeModal();
     },
-    onError: () => toast.error(t('Failed to create config')),
+    onError: () => toast.error(t('backup.configCreateFailed', 'Failed to create config')),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: number; body: ConfigFormData }) =>
-      request<BackupConfig>(`/system/backup/configs/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      request<BackupConfig>(`/backup/configs/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: () => {
       invalidateAll();
-      toast.success(t('Config updated'));
+      toast.success(t('backup.configUpdated', 'Config updated'));
       closeModal();
     },
-    onError: () => toast.error(t('Failed to update config')),
+    onError: () => toast.error(t('backup.configUpdateFailed', 'Failed to update config')),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
-      request<void>(`/system/backup/configs/${id}`, { method: 'DELETE' }),
+      request<void>(`/backup/configs/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       invalidateAll();
-      toast.success(t('Config deleted'));
+      toast.success(t('backup.configDeleted', 'Config deleted'));
       setDeleteTarget(null);
     },
-    onError: () => toast.error(t('Failed to delete config')),
+    onError: () => toast.error(t('backup.configDeleteFailed', 'Failed to delete config')),
   });
 
   const triggerMutation = useMutation({
     mutationFn: (configId: number) =>
-      request<void>(`/system/backup/trigger/${configId}`, { method: 'POST' }),
+      request<void>(`/backup/configs/${configId}/trigger`, { method: 'POST' }),
     onSuccess: () => {
       invalidateAll();
-      toast.success(t('Backup triggered'));
+      toast.success(t('backup.triggered', 'Backup triggered'));
     },
-    onError: () => toast.error(t('Failed to trigger backup')),
+    onError: () => toast.error(t('backup.triggerFailed', 'Failed to trigger backup')),
   });
 
   const quickBackupMutation = useMutation({
-    mutationFn: () => request<void>('/system/backup/quick', { method: 'POST' }),
+    mutationFn: () => request<void>('/backup/quick', { method: 'POST' }),
     onSuccess: () => {
       invalidateAll();
-      toast.success(t('Quick backup started'));
+      toast.success(t('backup.quickStarted', 'Quick backup started'));
     },
-    onError: () => toast.error(t('Quick backup failed')),
+    onError: () => toast.error(t('backup.quickFailed', 'Quick backup failed')),
   });
 
   const verifyMutation = useMutation({
     mutationFn: (runId: number) =>
-      request<{ verified: boolean }>(`/system/backup/${runId}/verify`, { method: 'POST' }),
+      request<{ verified: boolean }>(`/backup/runs/${runId}/verify`, { method: 'POST' }),
     onSuccess: (data) => {
-      if (data.verified) toast.success(t('Checksum verified'));
-      else toast.warning(t('Checksum mismatch'));
+      if (data.verified) toast.success(t('backup.checksumVerified', 'Checksum verified'));
+      else toast.warning(t('backup.checksumMismatch', 'Checksum mismatch'));
     },
-    onError: () => toast.error(t('Verification failed')),
+    onError: () => toast.error(t('backup.verifyFailed', 'Verification failed')),
   });
 
   /* ---- callbacks ---- */
@@ -311,16 +340,16 @@ export default function BackupRestorePage() {
   }, [editingConfig, form, updateMutation, createMutation]);
 
   const handleDownload = useCallback((runId: number) => {
-    window.open(`/api/system/backup/${runId}/download`, '_blank');
+    window.open(`${getApiBase()}/api/v1/backup/runs/${runId}/download`, '_blank');
   }, []);
 
   const handlePreview = useCallback(async (runId: number) => {
     try {
-      const data = await request<RestorePreview>(`/system/backup/${runId}/preview`);
+      const data = await request<RestorePreview>(`/backup/runs/${runId}/preview`);
       setPreviewData(data);
       setPreviewOpen(true);
     } catch {
-      toast.error(t('Failed to load preview'));
+      toast.error(t('backup.previewFailed', 'Failed to load preview'));
     }
   }, [t, toast]);
 
@@ -339,53 +368,65 @@ export default function BackupRestorePage() {
   const configColumns: Column<BackupConfig>[] = [
     {
       key: 'name',
-      header: t('Name'),
+      header: t('backup.name', 'Name'),
       render: (row) => (
         <div className="flex items-center gap-2">
           <span className="font-medium">{row.name}</span>
           {!row.enabled && (
-            <Badge variant="neutral" size="sm">{t('Disabled')}</Badge>
+            <Badge variant="neutral" size="sm">{t('backup.disabled', 'Disabled')}</Badge>
           )}
         </div>
       ),
     },
     {
       key: 'backup_type',
-      header: t('Type'),
+      header: t('backup.type', 'Type'),
       render: (row) => (
-        <Badge variant="info" size="sm">
-          {row.backup_type === 'full' ? t('Full') : t('Incremental')}
+        <Badge variant={row.backup_type === 'full' ? 'info' : 'warning'} size="sm">
+          {row.backup_type === 'full' ? t('backup.full', 'Full') : t('backup.incremental', 'Incremental')}
         </Badge>
       ),
     },
     {
       key: 'provider',
-      header: t('Provider'),
+      header: t('backup.provider', 'Provider'),
       render: (row) => {
         const p = PROVIDERS.find((pr) => pr.value === row.provider);
+        const ProvIcon = PROVIDER_ICON[row.provider] ?? Cloud;
         return (
-          <span className={clsx('inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium', p?.color)}>
+          <Badge variant={PROVIDER_BADGE_VARIANT[row.provider] ?? 'neutral'} size="sm">
+            <ProvIcon className="h-3 w-3 mr-1" />
             {p?.label ?? row.provider}
-          </span>
+          </Badge>
         );
       },
     },
     {
       key: 'frequency',
-      header: t('Frequency'),
+      header: t('backup.frequency', 'Frequency'),
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
-          {t('Every')} {row.frequency_days}{row.frequency_days === 1 ? t('d') : t('d')}
+        <span className="text-sm text-white/60">
+          {row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', `Every ${row.frequency_days}d`, { count: row.frequency_days })}
         </span>
       ),
     },
     {
+      key: 'schedule',
+      header: t('backup.schedule', 'Schedule'),
+      render: (row) => (
+        <div className="space-y-0.5 text-xs text-white/40">
+          <p>{t('backup.lastRun', 'Last')}: <span className="text-white/60">{row.last_run_at ? formatRelative(row.last_run_at) : '—'}</span></p>
+          <p>{t('backup.nextRun', 'Next')}: <span className="text-white/60">{row.next_run_at ? formatRelative(row.next_run_at) : '—'}</span></p>
+        </div>
+      ),
+    },
+    {
       key: 'options',
-      header: t('Options'),
+      header: t('backup.options', 'Options'),
       render: (row) => (
         <div className="flex gap-1.5">
-          {row.compress && <Badge variant="neutral" size="sm">{t('Compress')}</Badge>}
-          {row.encrypt && <Badge variant="warning" size="sm">{t('Encrypt')}</Badge>}
+          {row.compress && <Badge variant="neutral" size="sm">{t('backup.compress', 'Compress')}</Badge>}
+          {row.encrypt && <Badge variant="warning" size="sm">{t('backup.encrypt', 'Encrypt')}</Badge>}
         </div>
       ),
     },
@@ -401,18 +442,21 @@ export default function BackupRestorePage() {
             icon={<Play className="h-3.5 w-3.5" />}
             onClick={() => triggerMutation.mutate(row.id)}
             loading={triggerMutation.isPending}
+            aria-label={t('backup.triggerNow', 'Trigger now')}
           />
           <Button
             size="sm"
             variant="ghost"
             icon={<Pencil className="h-3.5 w-3.5" />}
             onClick={() => openEdit(row)}
+            aria-label={t('backup.edit', 'Edit')}
           />
           <Button
             size="sm"
             variant="ghost"
             icon={<Trash2 className="h-3.5 w-3.5 text-neon-red" />}
             onClick={() => setDeleteTarget(row)}
+            aria-label={t('backup.delete', 'Delete')}
           />
         </div>
       ),
@@ -423,53 +467,85 @@ export default function BackupRestorePage() {
   const runColumns: Column<BackupRun>[] = [
     {
       key: 'created_at',
-      header: t('Time'),
+      header: t('backup.time', 'Time'),
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-[var(--text-secondary)]">
+        <span className="text-sm text-white/60">
           {formatDateTime(row.created_at)}
         </span>
       ),
     },
     {
-      key: 'config_name',
-      header: t('Config'),
-      render: (row) => <span className="font-medium">{row.config_name ?? `#${row.config_id}`}</span>,
+      key: 'run_type',
+      header: t('backup.runType', 'Run Type'),
+      render: (row) => (
+        <Badge
+          variant={({ backup: 'info', restore: 'success', quick: 'warning' } as Record<string, 'info' | 'success' | 'warning'>)[row.run_type] ?? 'neutral'}
+          size="sm"
+        >
+          {row.run_type}
+        </Badge>
+      ),
     },
     {
       key: 'status',
-      header: t('Status'),
+      header: t('backup.status', 'Status'),
       sortable: true,
       render: (row) => {
         const s = STATUS_CONFIG[row.status] ?? STATUS_CONFIG.queued;
         const Icon = s.icon;
         return (
           <div className="flex items-center gap-1.5">
-            <Icon className={clsx('h-4 w-4', s.color, row.status === 'running' && 'animate-spin')} />
-            <Badge variant={s.variant} size="sm">{t(row.status)}</Badge>
+            <Icon className={cn('h-4 w-4', s.color, row.status === 'running' && 'animate-spin')} />
+            <Badge variant={s.variant} size="sm">{t(`backup.status.${row.status}`, row.status)}</Badge>
           </div>
         );
       },
     },
     {
-      key: 'backup_type',
-      header: t('Type'),
-      render: (row) => <Badge variant="info" size="sm">{row.backup_type}</Badge>,
+      key: 'provider',
+      header: t('backup.provider', 'Provider'),
+      render: (row) => {
+        const p = PROVIDERS.find((pr) => pr.value === row.provider);
+        return (
+          <Badge variant={PROVIDER_BADGE_VARIANT[row.provider] ?? 'neutral'} size="sm">
+            {p?.label ?? row.provider}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: 'file_name',
+      header: t('backup.file', 'File'),
+      render: (row) => (
+        <span className="text-xs text-white/60 max-w-[200px] truncate block font-mono">
+          {row.file_name ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'file_size',
-      header: t('Size'),
+      header: t('backup.size', 'Size'),
       sortable: true,
       render: (row) => (
         <span className="text-sm tabular-nums">{row.file_size ? formatBytes(row.file_size) : '—'}</span>
       ),
     },
     {
-      key: 'duration',
-      header: t('Duration'),
+      key: 'record_count',
+      header: t('backup.records', 'Records'),
       render: (row) => (
-        <span className="text-sm tabular-nums text-[var(--text-muted)]">
-          {row.duration_ms != null ? formatDuration(row.duration_ms) : '—'}
+        <span className="text-sm tabular-nums text-white/60 font-mono">
+          {row.record_count > 0 ? fmtInt(row.record_count) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'duration',
+      header: t('backup.duration', 'Duration'),
+      render: (row) => (
+        <span className="text-sm tabular-nums text-white/40">
+          {row.duration_ms > 0 ? formatDuration(row.duration_ms) : '—'}
         </span>
       ),
     },
@@ -485,6 +561,7 @@ export default function BackupRestorePage() {
               variant="ghost"
               icon={<Download className="h-3.5 w-3.5" />}
               onClick={() => handleDownload(row.id)}
+              aria-label={t('backup.download', 'Download')}
             />
             <Button
               size="sm"
@@ -492,12 +569,14 @@ export default function BackupRestorePage() {
               icon={<ShieldCheck className="h-3.5 w-3.5" />}
               onClick={() => verifyMutation.mutate(row.id)}
               loading={verifyMutation.isPending}
+              aria-label={t('backup.verify', 'Verify')}
             />
             <Button
               size="sm"
               variant="ghost"
               icon={<Eye className="h-3.5 w-3.5" />}
               onClick={() => handlePreview(row.id)}
+              aria-label={t('backup.preview', 'Preview')}
             />
           </div>
         ) : null,
@@ -505,20 +584,20 @@ export default function BackupRestorePage() {
   ];
 
   /* ---- preview table columns ---- */
-  const previewColumns: Column<{ name: string; row_count: number }>[] = [
-    { key: 'name', header: t('Table'), render: (row) => <span className="font-medium">{row.name}</span> },
+  const previewColumns: Column<{ name: string; rows: number }>[] = [
+    { key: 'name', header: t('backup.table', 'Table'), render: (row) => <span className="font-medium font-mono">{row.name}</span> },
     {
-      key: 'row_count',
-      header: t('Rows'),
-      render: (row) => <span className="tabular-nums">{fmtInt(row.row_count)}</span>,
+      key: 'rows',
+      header: t('backup.rows', 'Rows'),
+      render: (row) => <span className="tabular-nums">{fmtInt(row.rows)}</span>,
     },
   ];
 
   /* ---- render ---- */
   return (
     <PageContainer
-      title={t('Backup & Restore')}
-      subtitle={t('Manage automated backups and restore points')}
+      title={t('backup.title', 'Backup & Restore')}
+      subtitle={t('backup.subtitle', 'Manage automated backups and restore points')}
       loading={loading}
       error={configsError as Error | null}
       actions={
@@ -530,7 +609,7 @@ export default function BackupRestorePage() {
             onClick={() => quickBackupMutation.mutate()}
             loading={quickBackupMutation.isPending}
           >
-            {t('Quick Backup')}
+            {t('backup.quickBackup', 'Quick Backup')}
           </Button>
           <Button
             variant="primary"
@@ -538,7 +617,7 @@ export default function BackupRestorePage() {
             icon={<Plus className="h-4 w-4" />}
             onClick={openCreate}
           >
-            {t('New Config')}
+            {t('backup.newConfig', 'New Config')}
           </Button>
         </div>
       }
@@ -551,26 +630,30 @@ export default function BackupRestorePage() {
           ) : (
             <>
               <MetricCard
-                label={t('Total Configs')}
-                value={fmtInt(stats?.total_configs ?? configs.length)}
+                label={t('backup.totalConfigs', 'Total Configs')}
+                value={fmtInt(configs.length)}
                 icon={<Database className="h-5 w-5" />}
                 color="cyan"
               />
               <MetricCard
-                label={t('Total Backups')}
-                value={fmtInt(stats?.total_runs ?? runs.length)}
-                icon={<HardDrive className="h-5 w-5" />}
+                label={t('backup.totalBackups', 'Total Backups')}
+                value={fmtInt(stats.totalBackups)}
+                icon={<Archive className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
-                label={t('Last Backup')}
-                value={stats?.last_backup ? formatRelative(stats.last_backup) : '—'}
+                label={t('backup.lastBackup', 'Last Backup')}
+                value={
+                  stats.lastBackup
+                    ? formatRelative(stats.lastBackup.completed_at ?? stats.lastBackup.created_at)
+                    : '—'
+                }
                 icon={<Clock className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
-                label={t('Total Size')}
-                value={formatBytes(stats?.total_size ?? 0)}
+                label={t('backup.totalSize', 'Total Size')}
+                value={formatBytes(stats.totalSize)}
                 icon={<HardDrive className="h-5 w-5" />}
               />
             </>
@@ -581,20 +664,20 @@ export default function BackupRestorePage() {
       {/* ---- backup configurations ---- */}
       <FadeIn delay={0.1}>
         <GlassPanel className="mt-6">
-          <h2 className="mb-4 text-lg font-semibold">{t('Backup Configurations')}</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t('backup.configurations', 'Backup Configurations')}</h2>
           {configs.length === 0 && !loadingConfigs ? (
             <EmptyState
-              icon={<Database className="h-10 w-10 text-[var(--text-muted)]" />}
-              title={t('No backup configurations')}
-              message={t('Create a backup configuration to start protecting your data.', '')}
-              action={{ label: t('New Config'), onClick: openCreate }}
+              icon={<Database className="h-10 w-10 text-white/30" />}
+              title={t('backup.noConfigs', 'No backup configurations')}
+              message={t('backup.noConfigsMessage', 'Create a backup configuration to start protecting your data.')}
+              action={{ label: t('backup.newConfig', 'New Config'), onClick: openCreate }}
             />
           ) : (
             <DataTable<BackupConfig>
               columns={configColumns}
               data={configs}
               keyExtractor={(r) => r.id}
-              emptyMessage={t('No backup configurations')}
+              emptyMessage={t('backup.noConfigs', 'No backup configurations')}
               compact
             />
           )}
@@ -604,21 +687,58 @@ export default function BackupRestorePage() {
       {/* ---- backup runs history ---- */}
       <FadeIn delay={0.2}>
         <GlassPanel className="mt-6">
-          <h2 className="mb-4 text-lg font-semibold">{t('Backup History')}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">{t('backup.history', 'Backup History')}</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => qc.invalidateQueries({ queryKey: ['backup-runs'] })}
+              aria-label={t('backup.refresh', 'Refresh')}
+            >
+              {t('backup.refresh', 'Refresh')}
+            </Button>
+          </div>
           {runs.length === 0 && !loadingRuns ? (
             <EmptyState
-              icon={<Clock className="h-10 w-10 text-[var(--text-muted)]" />}
-              title={t('No backup runs yet')}
-              message={t('Trigger a backup or wait for the scheduled run.', '')}
+              icon={<Clock className="h-10 w-10 text-white/30" />}
+              title={t('backup.noRuns', 'No backup runs yet')}
+              message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
             />
           ) : (
-            <DataTable<BackupRun>
-              columns={runColumns}
-              data={runs}
-              keyExtractor={(r) => r.id}
-              emptyMessage={t('No backup runs yet')}
-              compact
-            />
+            <>
+              <DataTable<BackupRun>
+                columns={runColumns}
+                data={runs}
+                keyExtractor={(r) => r.id}
+                emptyMessage={t('backup.noRuns', 'No backup runs yet')}
+                compact
+              />
+
+              {/* Recent Errors for failed runs */}
+              {failedRuns.length > 0 && (
+                <div className="border-t border-white/[0.06] p-4 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-neon-red/70 mb-2">
+                    {t('backup.recentErrors', 'Recent Errors')}
+                  </p>
+                  {failedRuns.map((run) => (
+                    <div
+                      key={`err-${run.id}`}
+                      className="flex items-start gap-2 rounded-lg bg-neon-red/5 p-3 ring-1 ring-neon-red/10"
+                    >
+                      <AlertCircle className="h-4 w-4 text-neon-red shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs text-neon-red font-medium">
+                          {run.file_name ?? `Run #${run.id}`}
+                        </p>
+                        <p className="text-[11px] text-neon-red/70 mt-0.5 break-words">
+                          {run.error_message}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </GlassPanel>
       </FadeIn>
@@ -627,36 +747,36 @@ export default function BackupRestorePage() {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingConfig ? t('Edit Configuration') : t('New Configuration')}
+        title={editingConfig ? t('backup.editConfig', 'Edit Configuration') : t('backup.newConfig', 'New Configuration')}
         size="lg"
       >
         <div className="flex flex-col gap-5 p-1">
           <Input
-            label={t('Name')}
+            label={t('backup.configName', 'Name')}
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
-            placeholder={t('e.g. Daily Full Backup', ' Daily Full Backup')}
+            placeholder={t('backup.configNamePlaceholder', 'Daily full backup')}
           />
 
           <Toggle
-            label={t('Enabled')}
+            label={t('backup.enabled', 'Enabled')}
             checked={form.enabled}
             onChange={(v) => setField('enabled', v)}
           />
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label={t('Backup Type')}
+              label={t('backup.backupType', 'Backup Type')}
               options={BACKUP_TYPE_OPTIONS}
               value={form.backup_type}
-              onChange={(e) => setField('backup_type', e.target.value as 'full' | 'incremental')}
+              onChange={(e) => setField('backup_type', e.target.value)}
             />
             <Select
-              label={t('Provider')}
+              label={t('backup.provider', 'Provider')}
               options={PROVIDER_OPTIONS}
               value={form.provider}
               onChange={(e) => {
-                setField('provider', e.target.value as BackupConfig['provider']);
+                setField('provider', e.target.value);
                 setField('provider_config', {});
               }}
             />
@@ -664,13 +784,13 @@ export default function BackupRestorePage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label={t('Frequency (days)')}
+              label={t('backup.frequencyDays', 'Frequency (days)')}
               type="number"
               value={String(form.frequency_days)}
               onChange={(e) => setField('frequency_days', Math.max(1, Number(e.target.value)))}
             />
             <Input
-              label={t('Max Retention')}
+              label={t('backup.maxRetention', 'Max Retention')}
               type="number"
               value={String(form.max_retention)}
               onChange={(e) => setField('max_retention', Math.max(1, Number(e.target.value)))}
@@ -679,29 +799,42 @@ export default function BackupRestorePage() {
 
           {/* dynamic provider fields */}
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
-            <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
-              {t('Provider Settings')}
+            <p className="mb-3 text-sm font-medium text-white/60">
+              {t('backup.providerSettings', 'Provider Settings')}
             </p>
             <div className="grid gap-3">
-              {providerFields(form.provider).map((f) => (
-                <Input
-                  key={f.key}
-                  label={f.label}
-                  value={form.provider_config[f.key] ?? ''}
-                  onChange={(e) => setProviderField(f.key, e.target.value)}
-                />
+              {(PROVIDER_FIELDS[form.provider] ?? []).map((field) => (
+                <div key={field.key}>
+                  {field.type === 'textarea' ? (
+                    <Textarea
+                      label={field.required ? `${field.label} *` : field.label}
+                      value={form.provider_config[field.key] ?? ''}
+                      onChange={(e) => setProviderField(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={3}
+                    />
+                  ) : (
+                    <Input
+                      label={field.required ? `${field.label} *` : field.label}
+                      type={field.type ?? 'text'}
+                      value={form.provider_config[field.key] ?? ''}
+                      onChange={(e) => setProviderField(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </div>
 
           <div className="flex gap-6">
             <Toggle
-              label={t('Compress')}
+              label={t('backup.compress', 'Compress')}
               checked={form.compress}
               onChange={(v) => setField('compress', v)}
             />
             <Toggle
-              label={t('Encrypt')}
+              label={t('backup.encrypt', 'Encrypt')}
               checked={form.encrypt}
               onChange={(v) => setField('encrypt', v)}
             />
@@ -709,7 +842,7 @@ export default function BackupRestorePage() {
 
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={closeModal}>
-              {t('Cancel')}
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               variant="primary"
@@ -717,7 +850,7 @@ export default function BackupRestorePage() {
               loading={createMutation.isPending || updateMutation.isPending}
               disabled={!form.name.trim()}
             >
-              {editingConfig ? t('Save Changes') : t('Create')}
+              {editingConfig ? t('backup.saveChanges', 'Save Changes') : t('backup.create', 'Create')}
             </Button>
           </div>
         </div>
@@ -726,13 +859,13 @@ export default function BackupRestorePage() {
       {/* ---- delete confirm dialog ---- */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title={t('Delete Configuration')}
-        message={t('Are you sure you want to delete "{{name}}"? This cannot be undone.', {
+        title={t('backup.deleteConfig', 'Delete Configuration')}
+        message={t('backup.deleteConfigMessage', 'Are you sure you want to delete "{{name}}"? This cannot be undone.', {
           name: deleteTarget?.name,
         })}
         variant="danger"
-        confirmLabel={t('Delete')}
-        cancelLabel={t('Cancel')}
+        confirmLabel={t('backup.delete', 'Delete')}
+        cancelLabel={t('common.cancel', 'Cancel')}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
       />
@@ -744,50 +877,57 @@ export default function BackupRestorePage() {
           setPreviewOpen(false);
           setPreviewData(null);
         }}
-        title={t('Restore Preview')}
+        title={t('backup.restorePreview', 'Restore Preview')}
         size="md"
       >
-        {previewData && (
+        {previewData ? (
           <div className="flex flex-col gap-4 p-1">
             <div className="flex items-center gap-2 text-sm">
               <ShieldCheck
-                className={clsx(
+                className={cn(
                   'h-4 w-4',
                   previewData.checksum_verified ? 'text-neon-green' : 'text-neon-red',
                 )}
               />
-              <span>
+              <span className={previewData.checksum_verified ? 'text-neon-green' : 'text-neon-red'}>
                 {previewData.checksum_verified
-                  ? t('Checksum verified')
-                  : t('Checksum mismatch')}
+                  ? t('backup.checksumVerified', 'Checksum verified')
+                  : t('backup.checksumFailed', 'Checksum verification failed')}
               </span>
             </div>
 
-            {previewData.tables.length > 0 ? (
-              <DataTable<{ name: string; row_count: number }>
-                columns={previewColumns}
-                data={previewData.tables}
-                keyExtractor={(r) => r.name}
-                compact
-              />
-            ) : (
-              <EmptyState message={t('No tables found in backup')} />
-            )}
-
-            {Object.keys(previewData.metadata).length > 0 && (
+            {/* Metadata */}
+            {previewData.metadata && Object.keys(previewData.metadata).length > 0 && (
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">
-                  {t('Metadata')}
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  {t('backup.metadata', 'Backup Metadata')}
                 </p>
                 <div className="space-y-1 text-xs">
                   {Object.entries(previewData.metadata).map(([k, v]) => (
                     <div key={k} className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">{k}</span>
-                      <span>{v}</span>
+                      <span className="text-white/40">{k}</span>
+                      <span className="text-white/60 font-mono">{String(v)}</span>
                     </div>
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Tables */}
+            {previewData.tables.length > 0 ? (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">
+                  {t('backup.tables', 'Tables')} ({previewData.tables.length})
+                </p>
+                <DataTable<{ name: string; rows: number }>
+                  columns={previewColumns}
+                  data={previewData.tables}
+                  keyExtractor={(r) => r.name}
+                  compact
+                />
+              </div>
+            ) : (
+              <EmptyState message={t('backup.noTables', 'No tables found in backup')} />
             )}
 
             <div className="flex justify-end pt-2">
@@ -798,9 +938,14 @@ export default function BackupRestorePage() {
                   setPreviewData(null);
                 }}
               >
-                {t('Close')}
+                {t('common.close', 'Close')}
               </Button>
             </div>
+          </div>
+        ) : (
+          <div className="py-12 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-neon-purple mx-auto mb-2" />
+            <p className="text-sm text-white/40">{t('backup.loadingPreview', 'Loading preview…')}</p>
           </div>
         )}
       </Modal>
