@@ -21,7 +21,12 @@ function camelCaseKeys(obj: unknown): unknown {
   if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
     const result: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      result[snakeToCamel(key)] = camelCaseKeys(value)
+      const transformed = camelCaseKeys(value)
+      result[key] = transformed
+      const camelKey = snakeToCamel(key)
+      if (camelKey !== key) {
+        result[camelKey] = transformed
+      }
     }
     return result
   }

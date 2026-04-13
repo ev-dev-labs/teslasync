@@ -18,4 +18,15 @@ export interface Vehicle {
   latitude?: number;
   longitude?: number;
   charging_state?: string;
+  // camelCase aliases (populated by API response transformer)
+  vehicleId?: number;
+  displayName?: string;
+  trimBadging?: string;
+  exteriorColor?: string;
+  wheelType?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  batteryLevel?: number;
+  batteryRange?: number;
+  chargingState?: string;
 }
