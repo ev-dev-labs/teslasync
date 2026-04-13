@@ -10,7 +10,8 @@ export const tripKeys = {
 export function useTrips(vehicleId?: string) {
   return useQuery({
     queryKey: vehicleId ? [...tripKeys.all, vehicleId] : tripKeys.all,
-    queryFn: () => request<Trip[]>(vehicleId ? `/trips?vehicleId=${vehicleId}` : '/trips'),
+    queryFn: () => request<Trip[]>(vehicleId ? `/trips?vehicle_id=${vehicleId}` : '/trips'),
+    enabled: !!vehicleId,
   });
 }
 

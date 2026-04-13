@@ -176,7 +176,7 @@ export default function DrivingDynamicsPage() {
   const filteredDrives = useMemo(() => {
     if (!drives) return [];
     return drives.filter((d) => {
-      const driveDate = d.startDate.slice(0, 10);
+      const driveDate = d.startDate?.slice(0, 10) ?? '';
       return driveDate >= startDate && driveDate <= endDate;
     });
   }, [drives, startDate, endDate]);

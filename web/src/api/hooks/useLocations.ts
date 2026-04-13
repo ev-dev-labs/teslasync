@@ -11,8 +11,9 @@ export function useLocations(vehicleId?: string) {
   return useQuery({
     queryKey: locationKeys.all(vehicleId),
     queryFn: () => request<Location[]>(
-      vehicleId ? `/locations?vehicleId=${vehicleId}` : '/locations',
+      vehicleId ? `/locations?vehicle_id=${vehicleId}` : '/locations',
     ),
+    enabled: !!vehicleId,
   });
 }
 

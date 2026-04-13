@@ -109,21 +109,21 @@ export default function SpeedProfilePage() {
             <GlassPanel className="p-4 sm:p-6">
               <div className="grid grid-cols-3 gap-4 sm:gap-6 items-center">
                 <RadialGauge
-                  value={Math.round(convertSpeed(data.avgSpeedKmh))}
+                  value={Math.round(convertSpeed(data.avgSpeedKmh ?? 0))}
                   max={Math.round(convertSpeed(200))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
                   color="#00f0ff"
                 />
                 <RadialGauge
-                  value={Math.round(convertSpeed(data.peakSpeedKmh))}
+                  value={Math.round(convertSpeed(data.peakSpeedKmh ?? 0))}
                   max={Math.round(convertSpeed(250))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
                   color="#ef4444"
                 />
                 <RadialGauge
-                  value={Math.round(convertSpeed(data.optimalSpeedKmh))}
+                  value={Math.round(convertSpeed(data.optimalSpeedKmh ?? 0))}
                   max={Math.round(convertSpeed(200))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
@@ -203,7 +203,7 @@ export default function SpeedProfilePage() {
           )}
 
           {/* Efficiency insight */}
-          {data.optimalSpeedKmh > 0 && (
+          {(data.optimalSpeedKmh ?? 0) > 0 && (
             <FadeIn>
               <GlassPanel className="p-4 border-l-4 border-green-400">
                 <div className="flex items-start gap-3">
@@ -214,7 +214,7 @@ export default function SpeedProfilePage() {
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                        speed: Math.round(convertSpeed(data.optimalSpeedKmh)),
+                        speed: Math.round(convertSpeed(data.optimalSpeedKmh ?? 0)),
                         unit: speedUnit,
                       })}
                     </p>

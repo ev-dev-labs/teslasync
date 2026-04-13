@@ -23,8 +23,9 @@ export function useChargingSessions(vehicleId?: string) {
   return useQuery({
     queryKey: vehicleId ? chargingKeys.byVehicle(vehicleId) : chargingKeys.all,
     queryFn: () => request<ChargingSession[]>(
-      vehicleId ? `/charging-sessions?vehicleId=${vehicleId}` : '/charging-sessions',
+      vehicleId ? `/charging-sessions?vehicle_id=${vehicleId}` : '/charging-sessions',
     ),
+    enabled: !!vehicleId,
   });
 }
 

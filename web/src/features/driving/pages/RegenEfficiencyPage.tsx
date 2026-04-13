@@ -91,7 +91,7 @@ export default function RegenEfficiencyPage() {
       .slice(0, 20)
       .map((d) => ({
         id: d.id,
-        date: formatDateShort(d.startDate),
+        date: d.startDate ? formatDateShort(d.startDate) : '—',
         distance: fmtWithUnit(convertDistance(d.distance), distanceUnit),
         maxRegen: d.powerMin ? fmtWithUnit(Math.abs(d.powerMin), 'kW') : '—',
         ratio: getRegenRatio(d),
@@ -120,17 +120,17 @@ export default function RegenEfficiencyPage() {
           <FadeIn>
             <GlassPanel className="p-6 flex flex-col items-center">
               <RadialGauge
-                value={Math.round(data.regenRatio)}
+                value={Math.round(data.regenRatio ?? 0)}
                 max={100}
                 label={t('regen.regenRatio', 'Regen Ratio')}
                 unit="%"
-                color={regenColor(data.regenRatio)}
+                color={regenColor(data.regenRatio ?? 0)}
                 size={160}
               />
               <p className="text-xs text-[var(--text-muted)] mt-2">
                 {t('regen.recoveredInfo', 'You\'ve recovered {{kwh}} kWh — equivalent to ~{{charges}} free charges.', {
-                  kwh: fmtNumber(data.totalRegenKwh),
-                  charges: fmtNumber(data.freeCharges),
+                  kwh: fmtNumber(data.totalRegenKwh ?? 0),
+                  charges: fmtNumber(data.freeCharges ?? 0),
                 })}
               </p>
             </GlassPanel>
@@ -141,28 +141,28 @@ export default function RegenEfficiencyPage() {
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-green-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.totalRegenKwh} decimals={1} /></p>
+                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.totalRegenKwh ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.totalRegen', 'Total Regen kWh')}</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Activity className="h-4 w-4 mx-auto mb-1 text-cyan-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtPercent(data.regenRatio)}</p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{fmtPercent(data.regenRatio ?? 0)}</p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.ratioLabel', 'Recovery Rate')}</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Calendar className="h-4 w-4 mx-auto mb-1 text-amber-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgKw} decimals={1} /></p>
+                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.monthlyAvgKw ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.monthlyAvg', 'Monthly Avg kW')}</p>
               </GlassPanel>
             </StaggerItem>
             <StaggerItem>
               <GlassPanel className="p-4 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-purple-400" />
-                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.freeCharges} decimals={1} /></p>
+                <p className="text-lg font-bold text-[var(--text-primary)]"><AnimatedNumber value={data.freeCharges ?? 0} decimals={1} /></p>
                 <p className="text-[10px] text-[var(--text-muted)]">{t('regen.freeCharges', 'Free Charges')}</p>
               </GlassPanel>
             </StaggerItem>
@@ -195,20 +195,20 @@ export default function RegenEfficiencyPage() {
               </h3>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
                 <div>
-                  <MetricBar label={t('regen.totalRegenLabel', 'Total Regen')} value={data.totalRegenKwh} max={Math.max(data.totalRegenKwh, 100)} color="#10b981" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.totalRegenKwh)} kWh</p>
+                  <MetricBar label={t('regen.totalRegenLabel', 'Total Regen')} value={data.totalRegenKwh ?? 0} max={Math.max(data.totalRegenKwh ?? 0, 100)} color="#10b981" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.totalRegenKwh ?? 0)} kWh</p>
                 </div>
                 <div>
-                  <MetricBar label={t('regen.regenRatioBar', 'Regen Ratio')} value={data.regenRatio} max={100} color="#00f0ff" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtPercent(data.regenRatio)}</p>
+                  <MetricBar label={t('regen.regenRatioBar', 'Regen Ratio')} value={data.regenRatio ?? 0} max={100} color="#00f0ff" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtPercent(data.regenRatio ?? 0)}</p>
                 </div>
                 <div>
-                  <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgKw} max={Math.max(data.monthlyAvgKw, 50)} color="#a855f7" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgKw)} kW</p>
+                  <MetricBar label={t('regen.monthlyAvgBar', 'Monthly Avg')} value={data.monthlyAvgKw ?? 0} max={Math.max(data.monthlyAvgKw ?? 0, 50)} color="#a855f7" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.monthlyAvgKw ?? 0)} kW</p>
                 </div>
                 <div>
-                  <MetricBar label={t('regen.freeChargesBar', 'Free Charges')} value={data.freeCharges} max={Math.max(data.freeCharges, 10)} color="#f59e0b" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.freeCharges)}</p>
+                  <MetricBar label={t('regen.freeChargesBar', 'Free Charges')} value={data.freeCharges ?? 0} max={Math.max(data.freeCharges ?? 0, 10)} color="#f59e0b" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(data.freeCharges ?? 0)}</p>
                 </div>
               </div>
             </GlassPanel>

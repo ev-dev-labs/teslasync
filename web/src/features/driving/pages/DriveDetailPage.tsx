@@ -154,16 +154,22 @@ export default function DriveDetailPage() {
     if (!drive || chartData.length === 0) return null;
     const speeds = chartData.map((d) => d.speed);
     const maxSpd = drive.speedMax != null ? convertSpeed(drive.speedMax) : Math.max(...speeds, 0);
-    const avgSpd = drive.speedAvg != null ? convertSpeed(drive.speedAvg) : speeds.reduce((a, b) => a + b, 0) / speeds.length;
+    const avgSpd = drive.speedAvg != null
+      ? convertSpeed(drive.speedAvg)
+      : speeds.length > 0
+        ? speeds.reduce((a, b) => a + b, 0) / speeds.length
+        : 0;
     const movingSpeeds = speeds.filter((s) => s > 0);
     const minSpd = movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0;
     const powers = chartData.map((d) => d.power);
     const powerMax = drive.powerMax ?? Math.max(...powers, 0);
     const powerMin = drive.powerMin ?? Math.min(...powers, 0);
-    const avgPower = powers.reduce((a, b) => a + b, 0) / powers.length;
+    const avgPower = powers.length > 0 ? powers.reduce((a, b) => a + b, 0) / powers.length : 0;
     const durationH = drive.durationMin / 60;
     const energyWh = Math.abs(avgPower) * durationH * 1000;
-    const regenWh = chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000;
+    const regenWh = chartData.length > 0
+      ? chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000
+      : 0;
     const consumptionWhKm = drive.distance > 0 ? energyWh / drive.distance : 0;
     const elevations = chartData.map((d) => d.elevation);
     let elevGain = 0;
@@ -200,7 +206,7 @@ export default function DriveDetailPage() {
     });
     return buckets
       .filter((b) => b.count > 0)
-      .map((b) => ({ range: b.range, pct: Math.round((b.count / chartData.length) * 100) }));
+      .map((b) => ({ range: b.range, pct: chartData.length > 0 ? Math.round((b.count / chartData.length) * 100) : 0 }));
   }, [chartData, convertSpeed]);
 
   /* ---- Share handler ---- */
