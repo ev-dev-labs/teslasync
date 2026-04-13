@@ -57,9 +57,13 @@ docs/.vitepress/dist/
 # Test artifacts
 coverage.out
 coverage.html
+*.test.log
 
 PROMPT_COMMANDS.txt
 
+# Copilot session state (per-user, not committed)
+.copilot/
 
-# Copilot prompts
-.github/prompts/
+# Temporary files from audits/scripts
+/tmp/old_*.tsx
+/tmp/old_*.go

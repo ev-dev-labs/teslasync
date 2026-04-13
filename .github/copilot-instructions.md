@@ -1,197 +1,418 @@
 # TeslaSync — Copilot Instructions
 
+## ⚠️ COMPLETION & INTEGRITY STANDARDS
+
+These rules exist because agents consistently violate them. Read carefully.
+
+### Anti-Dishonesty
+```
+❌ DO NOT claim "all checks pass" without actually running them
+❌ DO NOT say "TypeScript compiles clean" without running `npx tsc --noEmit`
+❌ DO NOT say "0 violations found" without running grep/audit commands
+❌ DO NOT report completion percentages you haven't verified
+✅ DO run every verification command and paste the actual output
+✅ DO show the raw terminal output, not a summary of what you think it says
+```
+
+### Anti-Shortcuts
+```
+❌ DO NOT stub pages with "Coming soon" or "No data available" as the only content
+❌ DO NOT reduce a 600-line page to 100 lines and call it "refactored"
+❌ DO NOT gate ALL page content behind a single `{data && ...}` or `empty={!data}`
+❌ DO NOT skip sections that seem complex — implement ALL of them
+❌ DO NOT create placeholder components that render nothing useful
+❌ DO NOT use `any` type to avoid writing proper interfaces
+✅ DO implement every section the original page had
+✅ DO keep line count within ±30% of the original (unless genuinely simpler)
+✅ DO show section-by-section evidence that each section renders
+```
+
+### Anti-Laziness
+```
+❌ DO NOT copy-paste the same component 5 times instead of creating a shared one
+❌ DO NOT hardcode data that should come from API hooks
+❌ DO NOT skip error handling, loading states, or empty states
+❌ DO NOT omit i18n on "just a few strings"
+❌ DO NOT leave TODO/FIXME comments instead of implementing the code
+❌ DO NOT import a library just to use one function — check if a shared util exists
+✅ DO handle loading, error, AND empty states for every data source
+✅ DO create shared components when you see the same pattern 2+ times
+✅ DO write complete implementations, not scaffolds
+```
+
+### Verification Protocol
+Before reporting any task as complete, you MUST:
+1. **Run TypeScript**: `cd web && npx tsc --noEmit` — paste output
+2. **Run violations audit**: Check for inline styles, raw HTML, wrong imports — paste counts
+3. **Compare line counts**: New file must be ≥ 70% of original (for restorations)
+4. **Count sections**: grep for GlassPanel/ChartContainer — compare against original
+5. **Verify hooks**: Confirm every hook URL matches a route in `internal/api/router.go`
+
+**If you cannot run a verification step, say so explicitly — do not fabricate results.**
+
+---
+
 ## Project Overview
 
-TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** built with Go and React. It collects, analyzes, and visualizes data from Tesla vehicles via the Tesla Fleet API and optional Fleet Telemetry streaming. It provides real-time monitoring, 30+ interactive pages, remote vehicle commands, and 16 Grafana dashboards.
-
+TeslaSync is a **self-hosted Tesla Fleet Intelligence Platform** — Go 1.25 backend + React 18 SPA.
+Collects, analyzes, and visualizes Tesla vehicle data via Fleet API + Fleet Telemetry streaming.
 **Repository:** `github.com/ev-dev-labs/teslasync`
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  React SPA (Vite 5)  │  Grafana (16 dashboards)            │
-└────────────┬─────────┴──────────────────┬───────────────────┘
-             │                            │ SQL
-┌────────────┴────────────────────────────┤                   │
-│          Nginx (teslasync-web :80)      │                   │
-│   Static files + reverse proxy /api/*   │                   │
-└────────────┬────────────────────────────┘                   │
-             │ proxy_pass                                     │
-┌────────────┴────────────────────────────────────────────────┐
-│              Go API Server (teslasync :8080)                │
-│   Chi router · 28+ API handlers · SSE EventHub             │
-│   Circuit breaker · Rate limiting · Prometheus /metrics     │
-└────┬──────────┬──────────┬──────────┬───────────────────────┘
-     │          │          │          │
-  PostgreSQL  Redis 7   Mosquitto  Tesla Fleet API
-   (PG 17)    Cache     MQTT 2
+React SPA (Vite 5) ──▶ Nginx reverse proxy ──▶ Go API Server (:8080)
+                                                  │   │   │   │
+                                            Postgres Redis MQTT Tesla API
 ```
 
-### Docker Compose Services (8 total)
-| Service | Purpose | Port |
-|---------|---------|------|
-| `teslasync` | Go API server | 8080 |
-| `web` | React SPA via Nginx | 3000 |
-| `notification-worker` | Async MQTT notification processor | 8081 |
-| `export-worker` | Data export processor | 8082 |
-| `postgres` | PostgreSQL 17 database | 5432 |
-| `redis` | Redis 7 cache | 6379 |
-| `mosquitto` | Eclipse Mosquitto MQTT broker | 1883 |
-| `grafana` | Grafana 10.4 dashboards | 3001 |
-| `fleet-telemetry` | *(optional profile)* Tesla Fleet Telemetry server | 4443 |
+**Services:** teslasync (:8080), web (:3000), notification-worker (:8081), export-worker (:8082), postgres, redis, mosquitto, grafana, fleet-telemetry (optional)
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Go 1.24 · Chi router · pgx/v5 · zerolog · gobreaker · go-redis/v9 · paho.mqtt |
-| **Frontend** | React 18 · TypeScript 5.4 · Vite 5 · Tailwind CSS 3.4 · Recharts · Leaflet · Framer Motion · TanStack Query v5 |
-| **Database** | PostgreSQL 17 (native partitioning for positions) · golang-migrate |
-| **Cache** | Redis 7 (fallback to in-memory) |
-| **Messaging** | MQTT via Eclipse Mosquitto 2 · paho.mqtt.golang |
-| **Monitoring** | Grafana 10.4 · Prometheus client_golang |
-| **Deployment** | Docker Compose · Helm 3 · GitHub Actions (6 workflows) |
-
-## Project Structure
+## ⛔ PROHIBITED PATTERNS — These will be rejected in code review
 
 ```
-cmd/
-  teslasync/          # Main API server entry point
-  notification-worker/# MQTT notification processor
-  export-worker/      # Data export processor
-internal/
-  api/                # HTTP handlers, router, middleware, SSE
-  cache/              # Redis cache wrapper (fallback to in-memory)
-  config/             # Environment-based configuration (config.Load())
-  crypto/             # Encryption for tokens at rest
-  database/           # pgx/v5 pool, 27 repository files, migrations
-  events/             # Domain event bus (MQTT-backed)
-  export/             # CSV/JSON data export logic
-  models/             # Go structs with json + db tags
-  mqtt/               # MQTT client wrapper (paho.mqtt)
-  notification/       # 7-channel notification dispatch
-  resilience/         # Circuit breaker, retry, health monitor
-  tesla/              # Tesla Fleet API client with circuit breaker
-  worker/             # Vehicle polling loop with adaptive sleep backoff
-web/                  # React SPA (Vite + TypeScript + Tailwind)
-migrations/           # PostgreSQL migrations (000001–000016)
-grafana/              # Provisioning + 16 dashboard JSON files
-helm/teslasync/       # Helm chart for Kubernetes deployment
-docs/                 # VitePress documentation site
+❌ 1. INLINE STYLES with static CSS variables
+   BAD:  style={{ color: 'var(--text-primary)' }}
+   GOOD: className="text-white/90"
+   EXCEPTION: Dynamic computed values (ternary, CHART_COLORS[i]), Recharts wrapperStyle/contentStyle
+
+❌ 2. RAW HTML elements (use shared components)
+   BAD:  <button onClick={...}>Save</button>
+   GOOD: <Button onClick={...}>Save</Button>
+   Applies to: button, input, textarea, select, table — always use @/components/ui/ equivalents
+
+❌ 3. DIRECT library imports in pages/features
+   BAD:  import { LineChart } from 'recharts'
+   BAD:  import { MapContainer } from 'react-leaflet'
+   GOOD: import { LineChart, Area, XAxis } from '@/components/charts'
+   GOOD: import { MapContainer, Polyline } from '@/components/maps'
+
+❌ 4. OLD API imports or fetch/useEffect for data loading
+   BAD:  import { getVehicles } from '../api'
+   BAD:  useEffect(() => { fetch('/api/...').then(setData) }, [])
+   GOOD: import { useVehicles } from '@/api/hooks/useVehicles'
+
+❌ 5. HARDCODED English strings
+   BAD:  <h2>Battery Health</h2>
+   GOOD: <h2>{t('battery.health.title', 'Battery Health')}</h2>
+
+❌ 6. HIDING sections when data is null (must always show with placeholder)
+   BAD:  {data && <Panel>...</Panel>}
+   GOOD: <Panel>{data ? <Content /> : <EmptyState message={t('...')} />}</Panel>
+
+❌ 7. DOUBLE PREFIX in API hook URLs
+   The request() client auto-adds /api/v1 — hooks must NOT include it
+   BAD:  request('/api/v1/vehicles')     → fetches /api/v1/api/v1/vehicles
+   GOOD: request('/vehicles')            → fetches /api/v1/vehicles
+
+❌ 8. camelCase query parameters (backend uses snake_case)
+   BAD:  vehicleId=${id}
+   GOOD: vehicle_id=${id}
+
+❌ 9. MONOLITH component files (max 1 exported component per file)
+   BAD:  export { A, B, C, D, E } from './MegaFile'
+   GOOD: One component per file, barrel re-export from index.ts
+
+❌ 10. IMPORTING from component root (use category barrels)
+   BAD:  import { X } from '@/components/SomeFile'
+   GOOD: import { X } from '@/components/ui'
+   GOOD: import { X } from '@/components/charts'
 ```
 
-## Go Backend Conventions
+## Frontend Architecture (Refactored)
 
-### General
-- **Go 1.24**, CGO_ENABLED=0 for static binaries
-- **Logging:** zerolog only — never `fmt.Println` or `log.Println`
-- **Errors:** Return errors, don't panic. Use `fmt.Errorf("context: %w", err)` for wrapping.
-- **Timestamps:** Always `time.Now().UTC()`
-- **Linting:** golangci-lint with errcheck, govet, staticcheck, unused, gosimple, ineffassign, typecheck
+### Directory Structure
+```
+web/src/
+  api/
+    client.ts          # request<T>() — resilient fetch, auto-adds /api/v1
+    hooks/             # 15 TanStack Query hook files (one per domain)
+    types.ts           # API response interfaces (snake_case, matching Go JSON tags)
+  features/            # 14 domain directories
+    {domain}/pages/    # Page components (code-split with React.lazy)
+  components/          # 9 shared component categories (see below)
+  hooks/               # App-level hooks (useSettings, usePageTitle, etc.)
+  types/               # Domain type definitions
+  lib/                 # Utilities (cn, dateFormat, numberFormat, resilience)
+```
 
-### Configuration
-- All config via environment variables, loaded in `internal/config/config.Load()`
-- Config struct: `config.Config` with nested `DatabaseConfig`, `TeslaConfig`, `MQTTConfig`, `RedisConfig`, `FleetTelemetryConfig`, etc.
-- Database DSN format: `postgres://user:pass@host:port/name?sslmode=disable`
+### Shared Component Library (ALWAYS use these)
+```
+components/ui/           — 22 exports: Button, Badge, Card, Input, Modal, Select, Tabs, GlassPanel, Toggle, Tooltip, DataTable, Textarea, etc.
+components/charts/       — 10+ exports: ChartContainer, RadialGauge, Sparkline, ChartTooltip, ChartGradient + re-exports from recharts
+components/data-display/ — 10 exports: StatCard, MetricCard, MetricBar, AnimatedNumber, KVList, StatusBadge, Timeline, etc.
+components/layout/       — 4 exports: PageContainer, Grid, Stack, PageHeader
+components/feedback/     — 9 exports: Spinner, Skeleton, EmptyState, ErrorDisplay, QueryError, AlertBanner, etc.
+components/forms/        — 3 exports: FormSection, DateRangeFilter, RuleBuilder
+components/maps/         — 3+ exports: MapLayerSwitcher, MapTileLayer + re-exports from react-leaflet
+components/motion/       — 4 exports: FadeIn, StaggerContainer, StaggerItem, CarAnimation
+components/vehicles/     — 1 export: VehicleHeroCard
+```
 
-### HTTP Handlers
-- **Router:** go-chi/chi/v5 with nested `r.Route()` groups
-- **Handler pattern:** Struct-based with `NewXxxHandler(db, ...)` constructors
-- **Functional options:** `WithDB()`, `WithConfig()`, `WithMQTTClient()` for optional dependencies
+### API Hook Files (15 files in api/hooks/)
+```
+useVehicles.ts   useCharging.ts  useDriving.ts     useEnergy.ts      useAnalytics.ts
+useTelemetry.ts  useAdmin.ts     useNotifications.ts useSettings.ts  useDashboard.ts
+useExports.ts    useLocations.ts useTrips.ts       useUser.ts       useVehicleSystems.ts
+```
+
+### Page Template (every page MUST follow this)
+```tsx
+import { PageContainer } from '@/components/layout';
+import { GlassPanel } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
+import { FadeIn } from '@/components/motion';
+import { useSomeHook } from '@/api/hooks/useSomeHook';
+import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@/hooks/usePageTitle';
+
+export default function SomePage() {
+  const { t } = useTranslation();
+  usePageTitle(t('page.title'));
+  const { data, isLoading } = useSomeHook();
+
+  return (
+    <PageContainer title={t('page.title')} loading={isLoading}>
+      <FadeIn>
+        <GlassPanel>
+          {data ? <Content /> : <EmptyState message={t('page.noData')} />}
+        </GlassPanel>
+      </FadeIn>
+    </PageContainer>
+  );
+}
+```
+
+### Null Safety Rules
+- All optional fields: `value ?? 0`, `label ?? '—'`, `items ?? []`
+- All hook data: `const items = data ?? []` before iterating
+- Never call `.map()`, `.filter()`, `.length` on potentially undefined data
+
+## Go Backend Architecture
+
+### Key Conventions
+- **Go 1.25**, CGO_ENABLED=0, zerolog only, `fmt.Errorf("context: %w", err)`
+- **Router:** Chi v5, all endpoints under `/api/v1/`, struct-based handlers
+- **Database:** pgx v5 pool, repository pattern, parameterized queries only
 - **Response helpers:** `writeJSON(w, status, data)`, `writeError(w, status, msg)`
-- **Middleware stack:** RequestID → RealIP → Logger → Recovery → Compress → CORS → SecurityHeaders → MaxBytesReader (1MB)
-- **Rate limiting:** `httprate.LimitByIP(N, duration)` applied per-route with `r.With()`
-- **API prefix:** All endpoints under `/api/v1/`
+- **Resilience:** Circuit breaker (gobreaker), retry with backoff, health monitor
 
-### Database
-- **Driver:** pgx/v5 with connection pool (`pgxpool.Pool`)
-- **Pool settings:** MaxConns=25, MinConns=5, HealthCheck=15s
-- **Repository pattern:** One file per entity in `internal/database/` (e.g., `vehicle_repo.go`)
-- **Queries:** Parameterized only (`$1`, `$2`, ...) — never string interpolation
-- **Not-found convention:** Return `(nil, nil)` when `pgx.ErrNoRows`, not an error
-- **Row scanning:** Always `rows.Scan(&field1, &field2, ...)` with `defer rows.Close()`
-- **Migrations:** `golang-migrate/migrate/v4`, files named `000NNN_description.{up,down}.sql`
+### Backend Route Map (source of truth: `internal/api/router.go`)
+The frontend hooks MUST match these exact paths (without `/api/v1/` prefix):
+```
+/vehicles, /vehicles/{vehicleID}/state, /vehicles/{vehicleID}/energy, /vehicles/{vehicleID}/battery
+/drives, /drives/{driveID}, /drives/{driveID}/telemetry
+/charging, /charging/{sessionID}/telemetry
+/motor/, /motor/latest
+/tire-pressure/latest, /climate/latest, /security/latest, /media/latest
+/analytics/fleet, /analytics/tco, /analytics/sleep, /analytics/regen, /analytics/battery-degradation
+/analytics/speed-profile, /analytics/temperature-impact, /analytics/route-efficiency
+/signals/{vehicleID}/available, /signals/{vehicleID}/live, /signals/{vehicleID}/{signalName}/history
+/alerts, /alerts/rules, /alerts/test
+/notifications, /notifications/logs, /notifications/stats
+/system/status, /system/health, /system/audit, /system/version
+```
 
-### Tesla API Client
-- Located in `internal/tesla/client.go`
-- **Circuit breaker:** gobreaker with 10 consecutive failures to open, 60s timeout
-- **Rate limiter:** 10 req/sec with burst=5
-- **Token management:** Thread-safe with `sync.RWMutex`
-- **API logging:** Callback-based, logs method/url/status/duration/body to `api_call_logs` table
-- **Commands:** Map-based dispatch (`commandMap`) for 14 vehicle commands
-
-### MQTT
-- **Client:** `internal/mqtt/Client` wrapping `paho.mqtt.golang`
-- **Topic format:** `{prefix}/{vin}/{metric}` (default prefix: `teslasync`)
-- **QoS:** 0 (at most once), Retain: true
-- **Auto-reconnect:** Enabled with 60s max interval
-- **Publishing:** `Publish(topic, payload)` and `PublishJSON(topic, obj)` methods
-
-### Resilience Patterns
-- **ConnectWithRetry:** Retry loop for DB/MQTT connections with backoff
-- **SafeGoLoop:** Goroutine wrapper that recovers from panics and restarts
-- **HealthMonitor:** Component health tracking with 60s watchdog tick
-- **Graceful shutdown:** Signal handler → cancel context → drain connections (30s timeout)
-
-## React Frontend Conventions
-
-- **React 18** with functional components and hooks only (no class components)
-- **TypeScript strict mode** — all props and state typed
-- **Vite 5** for bundling, `tsc && vite build` for production
-- **Tailwind CSS 3.4** with glassmorphism design (frosted glass panels, neon accents)
-- **5 color themes** via CSS custom properties — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber
-- **Code-splitting** with `React.lazy()` for all route-level components
-- **API client** centralized in `web/src/api.ts` — typed `request<T>()` wrapper with resilient fetch
-- **State management:** TanStack Query v5 for async state + caching
-- **Routing:** react-router-dom v6 with nested routes
-- **Charts:** Recharts for data visualization
-- **Maps:** react-leaflet + Leaflet for GPS visualization
-- **Animations:** Framer Motion
-- **Icons:** lucide-react
-- **i18n:** i18next + react-i18next
-- **PWA:** vite-plugin-pwa with service worker
-
-## Model Conventions
-
-Go struct tags use both `json` and `db` tags:
+### Model Conventions
 ```go
 type Vehicle struct {
     ID          int64     `json:"id" db:"id"`
-    VIN         string    `json:"vin" db:"vin"`
-    DisplayName string    `json:"display_name" db:"display_name"`
-    State       string    `json:"state" db:"state"`
-    CreatedAt   time.Time `json:"created_at" db:"created_at"`
+    DisplayName string    `json:"display_name" db:"display_name"`  // snake_case JSON
 }
 ```
-- Nullable fields use pointers: `*float64`, `*int`, `*string`, `*time.Time`
-- Sensitive fields use `json:"-"` to exclude from API responses
-- Optional JSON fields use `json:"field,omitempty"`
+- Nullable fields → pointers (`*float64`, `*string`, `*time.Time`)
+- Frontend types MUST use snake_case matching Go JSON tags
 
-## Fleet Telemetry Integration
+## Engineering Principles
 
-TeslaSync integrates with Tesla's [fleet-telemetry](https://github.com/teslamotors/fleet-telemetry) server:
-- **Config:** `fleet-telemetry-config.json` dispatches vehicle data to `POST /api/v1/telemetry`
-- **Docker:** Optional `--profile telemetry` enables the Fleet Telemetry sidecar
-- **Ingestion handler:** `internal/api/telemetry_handler.go` — parses signals, stores positions, publishes to MQTT
-- **Session tracking:** Auto-detects drive/charge sessions from telemetry stream
-- **Public key:** Auto-served at `/.well-known/appspecific/com.tesla.3p.public-key.pem`
-- **Key management:** Generate/upload ECDSA P-256 keys via Dev Tools UI, stored in `tesla_public_key` table
+### DRY — Don't Repeat Yourself
+- Extract repeated logic into shared components, hooks, or utility functions
+- If a pattern appears 3+ times → extract it
+- Frontend: shared components in `components/`, shared hooks in `hooks/`
+- Backend: shared utilities in `internal/platform/`, shared models in `internal/models/`
 
-## Environment Configuration
+### SOLID
+- **Single Responsibility:** One component/handler/repo per concern
+- **Open/Closed:** Extend via composition, not modification (functional options in Go, component props in React)
+- **Interface Segregation:** Small focused interfaces (Go ports), specific prop types (React)
+- **Dependency Inversion:** Go handlers accept interfaces, React components accept callbacks
 
-All settings via `.env` file (see `.env.example`). Key variables:
-- `TESLA_CLIENT_ID`, `TESLA_CLIENT_SECRET` — Tesla API credentials
-- `TESLA_API_BASE_URL` — Regional Fleet API endpoint (NA/EU/CN)
-- `POSTGRES_*` — Database connection
-- `MQTT_*` — MQTT broker settings
-- `REDIS_*` — Redis cache settings
-- `FLEET_TELEMETRY_*` — Optional Fleet Telemetry server settings
-- `LOG_LEVEL` — trace, debug, info, warn, error
+### Separation of Concerns
+- **Frontend:** Pages orchestrate, components render, hooks fetch, lib/ transforms
+- **Backend:** Handlers route, repos query, models define, adapters integrate
+- Never put business logic in handlers — delegate to service/repo layer
+- Never put API calls in React components — delegate to hooks
 
-## Testing
+## Git Conventions
 
-- **Go:** `go test -race -coverprofile=coverage.out ./...`
-- **Lint:** `golangci-lint run ./...`
-- **Frontend:** `cd web && npm run lint` (ESLint), `npm test` (Vitest)
-- **All checks:** `make check` runs lint + test + vet
+### Commit Messages (Conventional Commits)
+```
+type(scope): description
+
+feat(web):     Add battery degradation chart
+fix(api):      Handle nil pointer in drive handler
+refactor(web): Extract shared StatCard component
+perf(db):      Add index for vehicle_id on positions
+docs:          Update API route documentation
+test(api):     Add unit tests for charging handler
+chore:         Update Go dependencies
+```
+
+Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`, `ci`, `style`
+Scope: `web`, `api`, `db`, `mqtt`, `helm`, `ci`, or specific feature name
+
+### Branch Naming
+```
+feature/add-battery-cells-page
+fix/drive-detail-missing-panels
+refactor/extract-shared-chart-container
+```
+
+### Pull Request Standards
+- Title follows conventional commit format
+- Description includes: what changed, why, how to test
+- All CI checks must pass before merge
+- Self-review checklist: types pass, lint clean, no regressions
+
+## Security Practices
+
+### Frontend
+- **XSS Prevention:** Never use `dangerouslySetInnerHTML`. React auto-escapes by default — keep it that way
+- **Input Sanitization:** All user inputs go through shared `<Input>` / `<Textarea>` components
+- **Auth Tokens:** Never store tokens in localStorage — use httpOnly cookies via Authentik/ForwardAuth
+- **Sensitive Data:** Never log PII (VINs, tokens, locations) to browser console in production
+- **Dependencies:** Renovate/Dependabot keeps deps updated, Trivy scans for CVEs
+
+### Backend
+- **SQL Injection:** Parameterized queries ONLY (`$1`, `$2`) — never string interpolation
+- **Authentication:** All `/api/v1/*` routes behind Authentik ForwardAuth middleware
+- **Secrets:** All secrets via environment variables, encrypted at rest in DB (`internal/crypto/`)
+- **Input Validation:** Validate all request params before use. Use `DecodeAndValidate[T]` for request bodies
+- **Rate Limiting:** httprate middleware on write endpoints (`POST`, `PUT`, `DELETE`)
+- **CORS:** Strict origin whitelist in middleware
+- **TLS:** All production traffic over TLS. mTLS for Fleet Telemetry
+
+## Performance Standards
+
+### Frontend Performance Budget
+- **First Contentful Paint:** < 1.5s on 4G
+- **Bundle Size:** Code-split all routes with `React.lazy()` — no route loads the full app bundle
+- **Images:** Use responsive images, lazy load below-the-fold content
+- **Re-renders:** Avoid unnecessary re-renders:
+  - Use `useMemo` for expensive computations (sorting, filtering, chart data transforms)
+  - Use `useCallback` for callbacks passed to memoized children
+  - Don't create objects/arrays in JSX props (creates new references each render)
+- **TanStack Query caching:** Set appropriate `staleTime` (default 0 = always refetch, live data = 5s, static = 5min)
+
+### Backend Performance
+- **Database:** Use indexes for frequently-queried columns. Use `EXPLAIN ANALYZE` for slow queries
+- **Connection Pool:** pgx pool sized for expected concurrency (MaxConns=25)
+- **Caching:** Redis for frequently-accessed, rarely-changing data (vehicle state, user preferences)
+- **Pagination:** All list endpoints support `limit` + `offset` parameters
+- **N+1 Prevention:** Batch queries instead of querying in loops
+- **Timeouts:** All external API calls have `context.WithTimeout` (Tesla API: 30s, geocoding: 10s)
+
+## Error Handling Philosophy
+
+### Frontend
+- **Network errors:** TanStack Query handles retry (3 retries by default). Display `QueryError` component
+- **API errors:** Show user-friendly message via `ErrorDisplay`, log technical details to console
+- **Render errors:** Error boundaries catch component crashes, show fallback UI
+- **Empty data:** Always show `EmptyState` with helpful message — never a blank panel
+- **Loading:** Show `Skeleton` or `Spinner` — never a frozen/unresponsive UI
+
+### Backend
+- **Return errors, never panic:** `return fmt.Errorf("fetch vehicle %d: %w", id, err)`
+- **Wrap with context:** Every error includes what operation failed
+- **HTTP error responses:** Use structured JSON `{"error": "message", "code": "NOT_FOUND"}`
+- **Log at boundaries:** Log errors at handler level, not deep in repos
+- **Graceful degradation:** If Redis is down, fall back to in-memory cache. If MQTT is down, queue locally
+
+## Testing Standards
+
+### Frontend Testing (Vitest + Testing Library)
+- **Unit tests** for utility functions (`lib/`)
+- **Component tests** for shared components — render + interaction
+- **Hook tests** for custom hooks with `renderHook`
+- **Page tests** for critical user flows with mocked API
+- Test the behavior, not the implementation:
+  ```typescript
+  // ❌ BAD — testing implementation
+  expect(component.state.isOpen).toBe(true);
+  
+  // ✅ GOOD — testing behavior
+  await userEvent.click(screen.getByRole('button', { name: /open/i }));
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  ```
+
+### Backend Testing
+- **Unit tests** for repos, handlers, and business logic
+- **Table-driven tests** for multiple input scenarios:
+  ```go
+  tests := []struct {
+      name    string
+      input   int64
+      want    *models.Vehicle
+      wantErr bool
+  }{
+      {"valid ID", 1, &models.Vehicle{ID: 1}, false},
+      {"not found", 999, nil, false},
+      {"zero ID", 0, nil, true},
+  }
+  ```
+- **Race detection:** Always run with `-race` flag
+- **Test coverage:** Aim for 80%+ on critical paths (handlers, repos, Tesla client)
+
+### CI Pipeline
+- **GitHub Actions:** lint → test → security → build → publish
+- **Go:** `golangci-lint run` + `go test -race ./...` + `govulncheck`
+- **Frontend:** `npm run lint` + `npx tsc --noEmit` + `npm test`
+- **Security:** Trivy (container scan) + CodeQL (SAST) + govulncheck (Go vulns)
+- **Helm:** `helm lint` + `helm template` validation
+
+## Observability Standards
+
+### Structured Logging (zerolog)
+```go
+// ✅ GOOD — structured, contextual, appropriate level
+log.Info().
+    Str("vehicle_id", fmt.Sprint(id)).
+    Str("action", "fetch_state").
+    Dur("duration", elapsed).
+    Msg("vehicle state fetched")
+
+// ❌ BAD
+fmt.Printf("got vehicle %d in %v\n", id, elapsed)
+log.Info().Msg(fmt.Sprintf("vehicle %d state: %v", id, state))
+```
+
+**Log Levels:**
+- `Error` — operation failed, needs attention
+- `Warn` — degraded but functional (cache miss, retry needed)
+- `Info` — significant business events (drive started, charge complete)
+- `Debug` — development diagnostics (query params, response sizes)
+
+### Metrics (Prometheus)
+- All handlers expose request count, duration, and error rate
+- Custom business metrics: active vehicles, drives/day, charge sessions
+- Available at `/metrics` endpoint
+
+### Health Checks
+- `/healthz` — liveness (is the process alive?)
+- `/readyz` — readiness (are dependencies connected?)
+- Both return 200 OK with JSON health status
+
+## Documentation Standards
+
+- **Code comments:** Only for non-obvious "why", not "what"
+  ```go
+  // ✅ GOOD — explains why
+  // Circuit breaker opens after 10 failures to prevent cascading timeouts to Tesla API
+  
+  // ❌ BAD — restates the code
+  // Create a new vehicle handler
+  func NewVehicleHandler(db *database.DB) *VehicleHandler {
+  ```
+- **API documentation:** Router is the source of truth. Keep route comments in `router.go`
+- **README:** Keep deployment/setup docs in `docs/` (VitePress)
+- **Type documentation:** Complex types get JSDoc comments explaining fields
