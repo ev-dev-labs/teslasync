@@ -78,7 +78,7 @@ export default function SignalLogViewerPage() {
   const vehicleId = 1;
 
   // Signal selection
-  const { data: availableSignals } = useSignals();
+  const { data: availableSignals } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
   const [signalSearch, setSignalSearch] = useState('');
 

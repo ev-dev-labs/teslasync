@@ -27,7 +27,7 @@ import type { MapStyle } from '@/components/maps/MapTileLayer';
 import { CircleMarker } from '@/components/maps';
 import {
   ArrowLeft, Zap, Battery, Clock, Gauge, DollarSign,
-  Thermometer, MapPin, PlugZap,
+  Thermometer, MapPin, PlugZap, Activity,
 } from 'lucide-react';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
@@ -524,16 +524,16 @@ export default function ChargingDetailPage() {
         )}
 
         {/* ── 7. Charge curve chart ──────────────────────────── */}
-        {chargeCurve.length > 0 && (
-          <GlassPanel className="p-6 mb-8">
-            <h2 className="text-lg font-semibold mb-4">
-              {t('charging.detail.chargeCurve', 'Charge Curve')}
-              {!hasTelemetry && (
-                <span className="text-xs text-muted ml-2">
-                  ({t('charging.detail.estimated', 'estimated')})
-                </span>
-              )}
-            </h2>
+        <GlassPanel className="p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">
+            {t('charging.detail.chargeCurve', 'Charge Curve')}
+            {!hasTelemetry && (
+              <span className="text-xs text-muted ml-2">
+                ({t('charging.detail.estimated', 'estimated')})
+              </span>
+            )}
+          </h2>
+          {chargeCurve.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={chargeCurve} margin={chartMargin}>
                 <defs>
@@ -561,15 +561,20 @@ export default function ChargingDetailPage() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </GlassPanel>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
 
         {/* ── 8. SoC / Energy / Range over time ──────────────── */}
-        {timeSeriesData.length > 0 && (
-          <GlassPanel className="p-6 mb-8">
-            <h2 className="text-lg font-semibold mb-4">
-              {t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
-            </h2>
+        <GlassPanel className="p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">
+            {t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
+          </h2>
+          {timeSeriesData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={timeSeriesData} margin={chartMargin}>
                 <defs>
@@ -612,15 +617,20 @@ export default function ChargingDetailPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </GlassPanel>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
 
         {/* ── 9. Temperature chart ───────────────────────────── */}
-        {tempData.length > 0 && (
-          <GlassPanel className="p-6 mb-8">
-            <h2 className="text-lg font-semibold mb-4">
-              {t('charging.detail.temperature', 'Temperature')}
-            </h2>
+        <GlassPanel className="p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">
+            {t('charging.detail.temperature', 'Temperature')}
+          </h2>
+          {tempData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={tempData} margin={chartMargin}>
                 {chartGrid}
@@ -656,15 +666,20 @@ export default function ChargingDetailPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </GlassPanel>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
 
         {/* ── 10. Voltage & Current chart ────────────────────── */}
-        {voltCurrentData.length > 0 && (
-          <GlassPanel className="p-6 mb-8">
-            <h2 className="text-lg font-semibold mb-4">
-              {t('charging.detail.voltageCurrent', 'Voltage & Current')}
-            </h2>
+        <GlassPanel className="p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">
+            {t('charging.detail.voltageCurrent', 'Voltage & Current')}
+          </h2>
+          {voltCurrentData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={voltCurrentData} margin={chartMargin}>
                 {chartGrid}
@@ -694,8 +709,13 @@ export default function ChargingDetailPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </GlassPanel>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
 
         {/* ── 11. Temperature summary fallback ───────────────── */}
         {tempData.length === 0 &&

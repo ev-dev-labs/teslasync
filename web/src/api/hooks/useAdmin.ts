@@ -139,7 +139,7 @@ export function useConnectionPool() {
 export function useExportJobs() {
   return useQuery({
     queryKey: adminKeys.exportJobs,
-    queryFn: () => request<ExportJob[]>('/exports'),
+    queryFn: () => request<ExportJob[]>('/export/jobs'),
   });
 }
 

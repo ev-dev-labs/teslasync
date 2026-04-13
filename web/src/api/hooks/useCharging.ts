@@ -32,7 +32,7 @@ export function useChargingSessions(vehicleId?: string) {
 export function useChargingSession(id: string) {
   return useQuery({
     queryKey: chargingKeys.detail(id),
-    queryFn: () => request<ChargingSession>(`/charging-sessions/${id}`),
+    queryFn: () => request<ChargingSession>(`/charging/${id}`),
     enabled: !!id,
   });
 }

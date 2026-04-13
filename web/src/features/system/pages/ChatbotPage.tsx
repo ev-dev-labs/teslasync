@@ -266,7 +266,7 @@ export default function ChatbotPage() {
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+          <div className="p-4 border-t border-[var(--glass-border)]">
             <div className="flex items-center gap-3">
               <Input
                 ref={inputRef}

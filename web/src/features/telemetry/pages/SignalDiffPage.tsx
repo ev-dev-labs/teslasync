@@ -87,6 +87,7 @@ function buildComparisonColumns(t: (k: string, d: string) => string): Column<Com
 export default function SignalDiffPage() {
   const { t } = useTranslation();
   usePageTitle(t('signalDiff.title', 'Signal Diff'));
+  const vehicleId = 1;
 
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -100,14 +101,16 @@ export default function SignalDiffPage() {
   const [rangeBFrom, setRangeBFrom] = useState(toLocalDatetimeInput(yesterdayStart));
   const [rangeBTo, setRangeBTo] = useState(toLocalDatetimeInput(yesterdayEnd));
 
-  const { data: availableSignals } = useSignals();
+  const { data: availableSignals } = useSignals(vehicleId);
 
   const { data: historyA, isLoading: loadingA } = useSignalDiff(
+    vehicleId,
     selectedSignal,
     rangeAFrom ? new Date(rangeAFrom).toISOString() : '',
     rangeATo ? new Date(rangeATo).toISOString() : '',
   );
   const { data: historyB, isLoading: loadingB } = useSignalDiff(
+    vehicleId,
     selectedSignal,
     rangeBFrom ? new Date(rangeBFrom).toISOString() : '',
     rangeBTo ? new Date(rangeBTo).toISOString() : '',

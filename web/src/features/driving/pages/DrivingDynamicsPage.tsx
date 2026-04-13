@@ -10,6 +10,9 @@ import {
   Lightbulb,
   ShieldCheck,
   AlertTriangle,
+  Thermometer,
+  Footprints,
+  Cog,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -25,6 +28,8 @@ import {
   Scatter,
   AreaChart,
   Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -37,17 +42,12 @@ import {
   AnimatedNumber,
   StatCard,
   MetricBar,
-  MetricCard,
 } from '@/components/data-display';
 import { DateRangeFilter } from '@/components/forms';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
-import {
-  useDrivingDynamics,
-  useDrives,
-  useDrivingStats,
-} from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useDrives } from '@/api/hooks/useDriving';
+import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -75,36 +75,12 @@ interface PowerPoint {
   powerMin: number;
 }
 
-type SmoothnessGrade = 'smooth' | 'moderate' | 'aggressive';
+type ThrottleStyle = 'conservative' | 'moderate' | 'aggressive';
 
-function getSmoothnessGrade(score: number): SmoothnessGrade {
-  if (score >= 70) return 'smooth';
-  if (score >= 40) return 'moderate';
+function getThrottleStyle(avgPedal: number): ThrottleStyle {
+  if (avgPedal < 25) return 'conservative';
+  if (avgPedal < 55) return 'moderate';
   return 'aggressive';
-}
-
-function gradeColor(grade: SmoothnessGrade): string {
-  switch (grade) {
-    case 'smooth':
-      return '#22c55e';
-    case 'moderate':
-      return '#eab308';
-    case 'aggressive':
-      return '#ef4444';
-  }
-}
-
-function gradeBadgeVariant(
-  grade: SmoothnessGrade,
-): 'success' | 'warning' | 'danger' {
-  switch (grade) {
-    case 'smooth':
-      return 'success';
-    case 'moderate':
-      return 'warning';
-    case 'aggressive':
-      return 'danger';
-  }
 }
 
 function gForceColor(g: number): string {
@@ -112,6 +88,25 @@ function gForceColor(g: number): string {
   if (g < 0.4) return '#3b82f6';
   if (g < 0.6) return '#eab308';
   return '#ef4444';
+}
+
+function gearColor(gear: string | undefined): string {
+  switch (gear) {
+    case 'D': return 'text-emerald-400';
+    case 'R': return 'text-red-400';
+    case 'N': return 'text-yellow-400';
+    case 'P': return 'text-gray-400';
+    default: return 'text-white/50';
+  }
+}
+
+function gearBadgeVariant(gear: string | undefined): 'success' | 'danger' | 'warning' | 'neutral' {
+  switch (gear) {
+    case 'D': return 'success';
+    case 'R': return 'danger';
+    case 'N': return 'warning';
+    default: return 'neutral';
+  }
 }
 
 const SPEED_BUCKETS_RANGES = [
@@ -146,19 +141,19 @@ export default function DrivingDynamicsPage() {
   );
 
   /* ---- data hooks ---- */
-  const {
-    data: dynamics,
-    isLoading: dynLoading,
-  } = useDrivingDynamics(vehicleIdStr);
+  const vehicleIdNum = vehicleId ?? 0;
+  const { data: motorLatest, isLoading: motorLoading } = useMotorLatest(vehicleIdNum, 5000);
+  const { data: motorHistory } = useMotorHistory(vehicleIdNum, 200);
   const { data: drives } = useDrives(vehicleIdStr);
-  const { data: stats } = useDrivingStats(vehicleIdStr);
 
   /* ---- settings ---- */
   const {
     convertDistance,
     convertSpeed,
+    convertTemp,
     distanceUnit,
     speedUnit,
+    tempUnit,
   } = useSettings();
 
   /* ---- date filter ---- */
@@ -179,6 +174,63 @@ export default function DrivingDynamicsPage() {
       return driveDate >= startDate && driveDate <= endDate;
     });
   }, [drives, startDate, endDate]);
+
+  /* ---- motor history chart data ---- */
+  const speedChartData = useMemo(() =>
+    (motorHistory ?? []).map((s) => ({
+      time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      speed: s.vehicle_speed != null ? convertSpeed(s.vehicle_speed) : null,
+    })), [motorHistory, convertSpeed],
+  );
+
+  const torqueChartData = useMemo(() =>
+    (motorHistory ?? []).map((s) => ({
+      time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      torque: s.di_torque ?? null,
+    })), [motorHistory],
+  );
+
+  const gForceChartData = useMemo(() =>
+    (motorHistory ?? []).map((s) => ({
+      time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      lateral: s.lateral_accel ?? null,
+      longitudinal: s.longitudinal_accel ?? null,
+    })), [motorHistory],
+  );
+
+  /* ---- motor history computed stats ---- */
+  const motorStats = useMemo(() => {
+    const h = motorHistory ?? [];
+    if (h.length === 0) return null;
+
+    const vals = (fn: (s: typeof h[0]) => number | undefined | null) =>
+      h.map(fn).filter((v): v is number => v != null);
+
+    const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    const max = (arr: number[]) => arr.length > 0 ? Math.max(...arr) : 0;
+
+    const torques = vals((s) => s.di_torque);
+    const laterals = vals((s) => s.lateral_accel);
+    const longitudinals = vals((s) => s.longitudinal_accel);
+    const pedals = vals((s) => s.pedal_position);
+    const statorTemps = vals((s) => s.di_stator_temp);
+
+    return {
+      totalReadings: h.length,
+      avgTorque: avg(torques),
+      maxTorque: max(torques),
+      maxLateralG: max(laterals.map(Math.abs)),
+      maxLongitudinalG: max(longitudinals.map(Math.abs)),
+      avgPedalPosition: avg(pedals),
+      avgStatorTemp: avg(statorTemps),
+      maxStatorTemp: max(statorTemps),
+      peakLateralG: max(laterals.map(Math.abs)),
+      peakLongitudinalG: max(longitudinals.map(Math.abs)),
+      highTorquePct: torques.length > 0
+        ? (torques.filter((t) => t > 200).length / torques.length) * 100
+        : 0,
+    };
+  }, [motorHistory]);
 
   /* ---- speed distribution buckets ---- */
   const speedDistribution = useMemo<SpeedBucket[]>(() => {
@@ -203,14 +255,14 @@ export default function DrivingDynamicsPage() {
   }, [filteredDrives, convertSpeed, speedUnit]);
 
   /* ---- acceleration patterns (scatter) ---- */
-  const accelPatterns = useMemo<AccelPoint[]>(() => {
-    return filteredDrives
+  const accelPatterns = useMemo<AccelPoint[]>(() =>
+    filteredDrives
       .filter((d) => d.powerMax != null)
       .map((d) => ({
         distance: Math.round(convertDistance(d.distance)),
         powerMax: d.powerMax as number,
-      }));
-  }, [filteredDrives, convertDistance]);
+      })),
+  [filteredDrives, convertDistance]);
 
   /* ---- power profile (area) ---- */
   const powerProfile = useMemo<PowerPoint[]>(() => {
@@ -223,65 +275,39 @@ export default function DrivingDynamicsPage() {
     }));
   }, [filteredDrives]);
 
-  /* ---- derived metrics ---- */
-  const grade = dynamics ? getSmoothnessGrade(dynamics.smoothnessScore) : null;
+  /* ---- throttle style ---- */
+  const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPedalPosition) : null;
 
-  /* ---- tips based on smoothness ---- */
+  /* ---- tips based on motor data ---- */
   const tips = useMemo(() => {
-    if (!dynamics) return [];
     const list: string[] = [];
-    const g = getSmoothnessGrade(dynamics.smoothnessScore);
-    if (g === 'aggressive') {
-      list.push(
-        t(
-          'dynamics.tipEaseAccel',
-          'Ease into the accelerator — gradual inputs save energy and tire wear.',
-        ),
-      );
-      list.push(
-        t(
-          'dynamics.tipBrakeEarly',
-          'Brake earlier and lighter to improve regen capture.',
-        ),
-      );
-      list.push(
-        t(
-          'dynamics.tipCorner',
-          'Slow before corners, not in them — smoother arcs reduce lateral G.',
-        ),
-      );
-    } else if (g === 'moderate') {
-      list.push(
-        t(
-          'dynamics.tipSmoothThrottle',
-          'Smooth throttle transitions can improve your score by 10–15 points.',
-        ),
-      );
-      list.push(
-        t(
-          'dynamics.tipCoast',
-          'Lift off the pedal earlier to let regen do the work.',
-        ),
-      );
+    if (!motorStats) {
+      list.push(t('dynamics.tipNoData', 'Drive your vehicle to start collecting dynamics data.'));
+      return list;
+    }
+    if (motorStats.avgPedalPosition > 55) {
+      list.push(t('dynamics.tipEaseAccel', 'Ease into the accelerator — gradual inputs save energy and tire wear.'));
+      list.push(t('dynamics.tipBrakeEarly', 'Brake earlier and lighter to improve regen capture.'));
+    } else if (motorStats.avgPedalPosition > 25) {
+      list.push(t('dynamics.tipSmoothThrottle', 'Smooth throttle transitions can improve efficiency by 10–15%.'));
+      list.push(t('dynamics.tipCoast', 'Lift off the pedal earlier to let regen do the work.'));
     } else {
-      list.push(
-        t(
-          'dynamics.tipGreat',
-          'Excellent driving style! Maintaining this maximizes range and comfort.',
-        ),
-      );
-      list.push(
-        t(
-          'dynamics.tipKeep',
-          'Keep monitoring your scores — consistency is key.',
-        ),
-      );
+      list.push(t('dynamics.tipGreat', 'Excellent driving style! Maintaining this maximizes range and comfort.'));
+      list.push(t('dynamics.tipKeep', 'Keep monitoring your scores — consistency is key.'));
+    }
+    if (motorStats.maxStatorTemp > 120) {
+      list.push(t('dynamics.tipThermal', 'Motor temps are running high — consider easing off sustained high power.'));
     }
     return list;
-  }, [dynamics, t]);
+  }, [motorStats, t]);
 
-  /* ---- loading skeleton ---- */
-  const isLoading = dynLoading;
+  /* ---- placeholder ---- */
+  const noDataPlaceholder = (msg?: string) => (
+    <div className="flex h-32 items-center justify-center text-sm text-white/30">
+      <Activity className="mr-2 h-5 w-5 opacity-30" />
+      {msg ?? t('dynamics.awaitingData', 'Awaiting motor telemetry data...')}
+    </div>
+  );
 
   /* ================================================================ */
   /*  RENDER                                                           */
@@ -290,14 +316,9 @@ export default function DrivingDynamicsPage() {
   return (
     <PageContainer
       title={t('dynamics.title', 'Driving Dynamics')}
-      subtitle={t(
-        'dynamics.subtitle',
-        'Acceleration, braking & cornering analysis',
-      )}
-      loading={isLoading}
+      subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces & driving analysis')}
+      loading={motorLoading}
       error={null}
-      empty={!dynamics}
-      emptyMessage={t('dynamics.empty', 'No dynamics data available.')}
       actions={
         vehicleOptions.length > 1 ? (
           <Select
@@ -309,486 +330,595 @@ export default function DrivingDynamicsPage() {
         ) : undefined
       }
     >
-      {dynamics && (
-        <>
-          {/* ------- Date Range Filter ------- */}
-          <FadeIn>
-            <DateRangeFilter
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              presets
-            />
-          </FadeIn>
-
-          {/* ========================================================= */}
-          {/*  SECTION 1 — G-Force Circular Gauges                      */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.05}>
-            <GlassPanel className="p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white/90">
-                {t('dynamics.gForceGauges', 'G-Force Overview')}
-              </h2>
-              <Grid cols={{ default: 2, md: 4 }} gap={6}>
-                <div className="flex flex-col items-center gap-2">
-                  <RadialGauge
-                    value={dynamics.maxAccelerationG}
-                    max={1.5}
-                    label={t('dynamics.accel', 'Accel')}
-                    unit="g"
-                    color="#3b82f6"
-                    size={120}
-                  />
-                  <span className="text-xs text-white/50">
-                    {t('dynamics.peakAcceleration', 'Peak Acceleration')}
-                  </span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <RadialGauge
-                    value={dynamics.maxBrakingG}
-                    max={1.5}
-                    label={t('dynamics.braking', 'Braking')}
-                    unit="g"
-                    color="#ef4444"
-                    size={120}
-                  />
-                  <span className="text-xs text-white/50">
-                    {t('dynamics.peakBraking', 'Peak Braking')}
-                  </span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <RadialGauge
-                    value={dynamics.maxCorneringG}
-                    max={1.5}
-                    label={t('dynamics.cornering', 'Cornering')}
-                    unit="g"
-                    color="#a855f7"
-                    size={120}
-                  />
-                  <span className="text-xs text-white/50">
-                    {t('dynamics.peakCornering', 'Peak Cornering')}
-                  </span>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <RadialGauge
-                    value={dynamics.smoothnessScore}
-                    max={100}
-                    label={t('dynamics.smoothLabel', 'Smooth')}
-                    unit="/100"
-                    color={grade ? gradeColor(grade) : '#22c55e'}
-                    size={120}
-                  />
-                  <span className="text-xs text-white/50">
-                    {t('dynamics.smoothnessScore', 'Smoothness Score')}
-                  </span>
-                </div>
-              </Grid>
-            </GlassPanel>
-          </FadeIn>
-
-          {/* ========================================================= */}
-          {/*  SECTION 2 — G-Force Metric Cards                         */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.1}>
-            <StaggerContainer className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-              <StaggerItem>
-                <MetricCard
-                  label={t('dynamics.peakAccel', 'Peak Accel')}
-                  value={`${fmtNumber(dynamics.maxAccelerationG, 2)} g`}
-                  icon={<Zap className="h-4 w-4" />}
-                  color="cyan"
+      <div className="space-y-6">
+        {/* ========================================================= */}
+        {/*  SECTION 1 — Live Motor Status (4 gauges)                  */}
+        {/* ========================================================= */}
+        <FadeIn>
+          <GlassPanel className="p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white/90">
+              {t('dynamics.liveMotor', 'Live Motor Status')}
+            </h2>
+            <Grid cols={{ default: 2, md: 4 }} gap={6}>
+              <div className="flex flex-col items-center gap-2">
+                <RadialGauge
+                  value={motorLatest?.di_torque ?? 0}
+                  max={500}
+                  label={t('dynamics.torque', 'Torque')}
+                  unit="Nm"
+                  color="#3b82f6"
+                  size={120}
                 />
-              </StaggerItem>
-              <StaggerItem>
-                <MetricCard
-                  label={t('dynamics.avgAccel', 'Avg Accel')}
-                  value={`${fmtNumber(dynamics.avgAccelerationG, 2)} g`}
-                  icon={<Activity className="h-4 w-4" />}
-                  color="cyan"
+                <span className="text-xs text-white/50">
+                  {motorLatest ? `${fmtNumber(motorLatest.di_torque ?? 0)} Nm` : t('dynamics.awaiting', 'Awaiting data')}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <RadialGauge
+                  value={motorLatest?.di_axle_speed ?? 0}
+                  max={18000}
+                  label={t('dynamics.axleSpeed', 'Axle RPM')}
+                  unit="RPM"
+                  color="#a855f7"
+                  size={120}
                 />
-              </StaggerItem>
-              <StaggerItem>
-                <MetricCard
-                  label={t('dynamics.peakBraking', 'Peak Braking')}
-                  value={`${fmtNumber(dynamics.maxBrakingG, 2)} g`}
-                  icon={<TrendingDown className="h-4 w-4" />}
-                  color="purple"
+                <span className="text-xs text-white/50">
+                  {motorLatest ? `${fmtNumber(motorLatest.di_axle_speed ?? 0, 0)} RPM` : t('dynamics.awaiting', 'Awaiting data')}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <RadialGauge
+                  value={motorLatest?.di_stator_temp != null ? convertTemp(motorLatest.di_stator_temp) : 0}
+                  max={200}
+                  label={t('dynamics.statorTemp', 'Stator')}
+                  unit={`°${tempUnit}`}
+                  color="#f59e0b"
+                  size={120}
                 />
-              </StaggerItem>
-              <StaggerItem>
-                <MetricCard
-                  label={t('dynamics.avgBraking', 'Avg Braking')}
-                  value={`${fmtNumber(dynamics.avgBrakingG, 2)} g`}
-                  icon={<TrendingDown className="h-4 w-4" />}
-                  color="purple"
-                />
-              </StaggerItem>
-              <StaggerItem>
-                <MetricCard
-                  label={t('dynamics.maxCornering', 'Max Cornering')}
-                  value={`${fmtNumber(dynamics.maxCorneringG, 2)} g`}
-                  icon={<CornerDownRight className="h-4 w-4" />}
-                  color="green"
-                />
-              </StaggerItem>
-              <StaggerItem>
-                <MetricCard
-                  label={t('dynamics.smoothnessScore', 'Smoothness Score')}
-                  value={`${dynamics.smoothnessScore}/100`}
-                  icon={<Gauge className="h-4 w-4" />}
-                  color="green"
-                />
-              </StaggerItem>
-            </StaggerContainer>
-          </FadeIn>
-
-          {/* ========================================================= */}
-          {/*  SECTION 3 — Smoothness Assessment                        */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.15}>
-            <GlassPanel className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-white/90">
-                    {t('dynamics.smoothnessAssessment', 'Smoothness Assessment')}
-                  </h2>
-                  <p className="mt-1 text-sm text-white/50">
-                    {t(
-                      'dynamics.smoothnessDesc',
-                      'Based on acceleration, braking and cornering patterns',
-                    )}
-                  </p>
-                </div>
-                {grade && (
-                  <Badge variant={gradeBadgeVariant(grade)} size="lg">
-                    {grade === 'smooth'
-                      ? t('dynamics.gradeSmooth', 'Smooth')
-                      : grade === 'moderate'
-                        ? t('dynamics.gradeModerate', 'Moderate')
-                        : t('dynamics.gradeAggressive', 'Aggressive')}
+                <span className="text-xs text-white/50">
+                  {motorLatest?.di_stator_temp != null
+                    ? `${fmtNumber(convertTemp(motorLatest.di_stator_temp), 1)}°${tempUnit}`
+                    : t('dynamics.awaiting', 'Awaiting data')}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex h-[120px] w-[120px] items-center justify-center">
+                  <Badge
+                    variant={motorLatest?.di_state === 'drive' ? 'success' : 'neutral'}
+                    size="lg"
+                  >
+                    <Cog className="mr-1 h-4 w-4" />
+                    {motorLatest?.di_state ?? t('dynamics.unknown', 'Unknown')}
                   </Badge>
-                )}
-              </div>
-
-              <div className="mt-6 flex items-center gap-6">
-                <div className="flex flex-col items-center">
-                  <AnimatedNumber
-                    value={dynamics.smoothnessScore}
-                    suffix="/100"
-                    className="text-4xl font-bold text-white"
-                  />
-                  <span className="mt-1 text-xs text-white/50">
-                    {t('dynamics.overallScore', 'Overall Score')}
-                  </span>
                 </div>
-
-                <div className="flex-1 space-y-3">
-                  <MetricBar
-                    value={dynamics.maxAccelerationG}
-                    max={1.5}
-                    color={gForceColor(dynamics.maxAccelerationG)}
-                    label={t('dynamics.acceleration', 'Acceleration')}
-                    sublabel={`${fmtNumber(dynamics.maxAccelerationG, 2)} g`}
-                  />
-                  <MetricBar
-                    value={dynamics.maxBrakingG}
-                    max={1.5}
-                    color={gForceColor(dynamics.maxBrakingG)}
-                    label={t('dynamics.braking', 'Braking')}
-                    sublabel={`${fmtNumber(dynamics.maxBrakingG, 2)} g`}
-                  />
-                  <MetricBar
-                    value={dynamics.maxCorneringG}
-                    max={1.5}
-                    color={gForceColor(dynamics.maxCorneringG)}
-                    label={t('dynamics.cornering', 'Cornering')}
-                    sublabel={`${fmtNumber(dynamics.maxCorneringG, 2)} g`}
-                  />
-                </div>
+                <span className="text-xs text-white/50">
+                  {t('dynamics.motorState', 'Motor State')}
+                </span>
               </div>
-            </GlassPanel>
-          </FadeIn>
-
-          {/* ========================================================= */}
-          {/*  SECTION 4 & 5 — Speed Distribution + Acceleration Chart  */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.2}>
-            <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-              {/* Speed Distribution */}
-              <ChartContainer
-                title={t('dynamics.speedDistribution', 'Speed Distribution')}
-                subtitle={t(
-                  'dynamics.speedDistDesc',
-                  'Drives grouped by average speed',
-                )}
-                height={300}
-              >
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={speedDistribution}>
-                    <defs>
-                      <ChartGradient id="speedFill" color="#3b82f6" />
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="rgba(255,255,255,0.06)"
-                    />
-                    <XAxis
-                      dataKey="range"
-                      tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                    />
-                    <YAxis
-                      tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                      allowDecimals={false}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar
-                      dataKey="count"
-                      fill="url(#speedFill)"
-                      radius={[4, 4, 0, 0]}
-                      name={t('dynamics.drives', 'Drives')}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-
-              {/* Acceleration Patterns (Scatter) */}
-              <ChartContainer
-                title={t('dynamics.accelPatterns', 'Acceleration Patterns')}
-                subtitle={t(
-                  'dynamics.accelPatternsDesc',
-                  'Peak power vs trip distance',
-                )}
-                height={300}
-              >
-                <ResponsiveContainer width="100%" height={300}>
-                  <ScatterChart>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="rgba(255,255,255,0.06)"
-                    />
-                    <XAxis
-                      dataKey="distance"
-                      type="number"
-                      name={t('dynamics.distance', 'Distance')}
-                      unit={` ${distanceUnit}`}
-                      tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                    />
-                    <YAxis
-                      dataKey="powerMax"
-                      type="number"
-                      name={t('dynamics.peakPower', 'Peak Power')}
-                      unit=" kW"
-                      tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Scatter
-                      data={accelPatterns}
-                      fill="#a855f7"
-                      name={t('dynamics.drives', 'Drives')}
-                    />
-                    {accelPatterns.length > 0 && (
-                      <ReferenceLine
-                        y={
-                          accelPatterns.reduce(
-                            (sum, p) => sum + p.powerMax,
-                            0,
-                          ) / accelPatterns.length
-                        }
-                        stroke="#eab308"
-                        strokeDasharray="4 4"
-                        label={{
-                          value: t('dynamics.avg', 'Avg'),
-                          fill: '#eab308',
-                          fontSize: 11,
-                        }}
-                      />
-                    )}
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </ChartContainer>
             </Grid>
-          </FadeIn>
+          </GlassPanel>
+        </FadeIn>
 
-          {/* ========================================================= */}
-          {/*  SECTION 6 — Power Profile (Area)                         */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.25}>
-            <ChartContainer
-              title={t('dynamics.powerProfile', 'Power Profile')}
-              subtitle={t(
-                'dynamics.powerProfileDesc',
-                'Peak & regen power for recent drives',
-              )}
-              height={320}
-            >
-              <ResponsiveContainer width="100%" height={320}>
-                <AreaChart data={powerProfile}>
+        {/* ========================================================= */}
+        {/*  SECTION 2 — Acceleration G-Force                          */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.05}>
+          <GlassPanel className="p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white/90">
+              {t('dynamics.gForce', 'Acceleration G-Force')}
+            </h2>
+            <Grid cols={{ default: 1, md: 3 }} gap={6}>
+              {/* Lateral / Longitudinal values */}
+              <div className="flex flex-col gap-4">
+                <div>
+                  <span className="text-xs text-white/50">{t('dynamics.lateralG', 'Lateral G')}</span>
+                  <AnimatedNumber
+                    value={motorLatest?.lateral_accel ?? 0}
+                    decimals={3}
+                    suffix=" g"
+                    className="text-3xl font-bold text-white"
+                  />
+                </div>
+                <div>
+                  <span className="text-xs text-white/50">{t('dynamics.longitudinalG', 'Longitudinal G')}</span>
+                  <AnimatedNumber
+                    value={motorLatest?.longitudinal_accel ?? 0}
+                    decimals={3}
+                    suffix=" g"
+                    className="text-3xl font-bold text-white"
+                  />
+                </div>
+                <div className="mt-2 flex gap-4 text-xs text-white/40">
+                  <span>{t('dynamics.peakLat', 'Peak Lat')}: {fmtNumber(motorStats?.peakLateralG ?? 0, 3)} g</span>
+                  <span>{t('dynamics.peakLon', 'Peak Lon')}: {fmtNumber(motorStats?.peakLongitudinalG ?? 0, 3)} g</span>
+                </div>
+              </div>
+
+              {/* G-Force vector dot visualization */}
+              <div className="flex items-center justify-center">
+                <svg viewBox="-1.5 -1.5 3 3" className="h-48 w-48">
+                  {/* Grid lines */}
+                  <line x1="-1.2" y1="0" x2="1.2" y2="0" stroke="rgba(255,255,255,0.1)" strokeWidth="0.02" />
+                  <line x1="0" y1="-1.2" x2="0" y2="1.2" stroke="rgba(255,255,255,0.1)" strokeWidth="0.02" />
+                  <circle cx="0" cy="0" r="0.3" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.02" />
+                  <circle cx="0" cy="0" r="0.6" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.02" />
+                  <circle cx="0" cy="0" r="0.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.02" />
+                  <circle cx="0" cy="0" r="1.2" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="0.02" />
+                  {/* G-force dot */}
+                  <circle
+                    cx={Math.max(-1.2, Math.min(1.2, motorLatest?.lateral_accel ?? 0))}
+                    cy={Math.max(-1.2, Math.min(1.2, -(motorLatest?.longitudinal_accel ?? 0)))}
+                    r="0.08"
+                    fill="#3b82f6"
+                    filter="drop-shadow(0 0 4px rgba(59,130,246,0.6))"
+                  />
+                  {/* Labels */}
+                  <text x="0" y="-1.35" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="0.12">{t('dynamics.accelLabel', 'ACCEL')}</text>
+                  <text x="0" y="1.45" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="0.12">{t('dynamics.brakeLabel', 'BRAKE')}</text>
+                  <text x="-1.35" y="0.04" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="0.12">{t('dynamics.leftLabel', 'L')}</text>
+                  <text x="1.35" y="0.04" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="0.12">{t('dynamics.rightLabel', 'R')}</text>
+                </svg>
+              </div>
+
+              {/* Peak values from history */}
+              <div className="flex flex-col gap-3">
+                <MetricBar
+                  value={motorStats?.peakLateralG ?? 0}
+                  max={1.5}
+                  color={gForceColor(motorStats?.peakLateralG ?? 0)}
+                  label={t('dynamics.peakLateralG', 'Peak Lateral G')}
+                  sublabel={`${fmtNumber(motorStats?.peakLateralG ?? 0, 3)} g`}
+                />
+                <MetricBar
+                  value={motorStats?.peakLongitudinalG ?? 0}
+                  max={1.5}
+                  color={gForceColor(motorStats?.peakLongitudinalG ?? 0)}
+                  label={t('dynamics.peakLongG', 'Peak Longitudinal G')}
+                  sublabel={`${fmtNumber(motorStats?.peakLongitudinalG ?? 0, 3)} g`}
+                />
+              </div>
+            </Grid>
+          </GlassPanel>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  SECTION 3 — Pedal Usage                                   */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.1}>
+          <GlassPanel className="p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white/90">
+              {t('dynamics.pedalUsage', 'Pedal Usage')}
+            </h2>
+            <Grid cols={{ default: 2 }} gap={6}>
+              <div className="flex flex-col items-center gap-2">
+                <RadialGauge
+                  value={motorLatest?.pedal_position ?? 0}
+                  max={100}
+                  label={t('dynamics.throttle', 'Throttle')}
+                  unit="%"
+                  color="#06b6d4"
+                  size={140}
+                />
+                <span className="text-xs text-white/50">
+                  {t('dynamics.throttlePosition', 'Throttle Position')}
+                </span>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-3">
+                <Footprints className="h-8 w-8 text-white/20" />
+                <Badge
+                  variant={motorLatest?.brake_pedal ? 'danger' : 'success'}
+                  size="lg"
+                >
+                  {motorLatest?.brake_pedal
+                    ? t('dynamics.brakeActive', 'Brake Active')
+                    : t('dynamics.brakeInactive', 'Brake Inactive')}
+                </Badge>
+                <span className="text-xs text-white/50">
+                  {t('dynamics.brakePedal', 'Brake Pedal Status')}
+                </span>
+              </div>
+            </Grid>
+          </GlassPanel>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  SECTION 4 — Speed & Gear                                  */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.15}>
+          <GlassPanel className="p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white/90">
+              {t('dynamics.speedGear', 'Speed & Gear')}
+            </h2>
+            <Grid cols={{ default: 2, md: 4 }} gap={6}>
+              <div className="flex flex-col items-center gap-2">
+                <AnimatedNumber
+                  value={motorLatest?.vehicle_speed != null ? convertSpeed(motorLatest.vehicle_speed) : 0}
+                  decimals={0}
+                  className="text-5xl font-bold text-white"
+                />
+                <span className="text-sm text-white/50">{speedUnit}</span>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-2">
+                <span className={cn('text-5xl font-bold', gearColor(motorLatest?.gear))}>
+                  {motorLatest?.gear ?? '—'}
+                </span>
+                <Badge variant={gearBadgeVariant(motorLatest?.gear)} size="sm">
+                  {t('dynamics.gear', 'Gear')}
+                </Badge>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-white/50">{t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}</span>
+                <span className="text-2xl font-semibold text-white">
+                  {filteredDrives.length > 0
+                    ? fmtNumber(convertSpeed(
+                        filteredDrives.reduce((s, d) => s + (d.speedAvg ?? 0), 0) / filteredDrives.length,
+                      ), 0)
+                    : '—'}
+                </span>
+                <span className="text-xs text-white/40">{speedUnit}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-white/50">{t('dynamics.topDriveSpeed', 'Top Drive Speed')}</span>
+                <span className="text-2xl font-semibold text-white">
+                  {filteredDrives.length > 0
+                    ? fmtNumber(convertSpeed(
+                        Math.max(...filteredDrives.map((d) => d.speedMax ?? 0)),
+                      ), 0)
+                    : '—'}
+                </span>
+                <span className="text-xs text-white/40">{speedUnit}</span>
+              </div>
+            </Grid>
+          </GlassPanel>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  SECTION 5 — Speed Over Time Chart                         */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.2}>
+          <ChartContainer
+            title={t('dynamics.speedOverTime', 'Speed Over Time')}
+            subtitle={t('dynamics.speedOverTimeDesc', 'Vehicle speed from motor telemetry')}
+            height={280}
+          >
+            {speedChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={speedChartData}>
                   <defs>
-                    <ChartGradient id="powerMaxGrad" color="#3b82f6" />
-                    <ChartGradient
-                      id="powerMinGrad"
-                      color="#ef4444"
-                      opacity={0.25}
-                    />
+                    <ChartGradient id="speedAreaGrad" color="#06b6d4" />
                   </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.06)"
-                  />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                  />
-                  <YAxis
-                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }}
-                    unit=" kW"
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit={` ${speedUnit}`} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Legend
-                    wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }}
-                  />
-                  <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-                  <Area
-                    type="monotone"
-                    dataKey="powerMax"
-                    stroke="#3b82f6"
-                    fill="url(#powerMaxGrad)"
-                    name={t('dynamics.maxPower', 'Max Power (kW)')}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="powerMin"
-                    stroke="#ef4444"
-                    fill="url(#powerMinGrad)"
-                    name={t('dynamics.regenPower', 'Regen Power (kW)')}
-                  />
+                  <Area type="monotone" dataKey="speed" stroke="#06b6d4" fill="url(#speedAreaGrad)" name={t('dynamics.speed', 'Speed')} />
                 </AreaChart>
               </ResponsiveContainer>
-            </ChartContainer>
-          </FadeIn>
+            ) : noDataPlaceholder()}
+          </ChartContainer>
+        </FadeIn>
 
-          {/* ========================================================= */}
-          {/*  SECTION 9 — G-Force Comparison Bars                      */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.3}>
-            <GlassPanel className="p-6">
-              <h2 className="mb-4 text-lg font-semibold text-white/90">
-                {t('dynamics.gForceComparison', 'G-Force Comparison')}
-              </h2>
-              <div className="space-y-4">
-                <MetricBar
-                  value={dynamics.maxAccelerationG}
-                  max={1.5}
-                  color="#3b82f6"
-                  label={t('dynamics.maxAcceleration', 'Max Acceleration')}
-                  sublabel={`${fmtNumber(dynamics.maxAccelerationG, 2)} g`}
-                />
-                <MetricBar
-                  value={dynamics.avgAccelerationG}
-                  max={1.5}
-                  color="#60a5fa"
-                  label={t('dynamics.avgAcceleration', 'Avg Acceleration')}
-                  sublabel={`${fmtNumber(dynamics.avgAccelerationG, 2)} g`}
-                />
-                <MetricBar
-                  value={dynamics.maxBrakingG}
-                  max={1.5}
-                  color="#ef4444"
-                  label={t('dynamics.maxBrakingForce', 'Max Braking')}
-                  sublabel={`${fmtNumber(dynamics.maxBrakingG, 2)} g`}
-                />
-                <MetricBar
-                  value={dynamics.avgBrakingG}
-                  max={1.5}
-                  color="#f87171"
-                  label={t('dynamics.avgBrakingForce', 'Avg Braking')}
-                  sublabel={`${fmtNumber(dynamics.avgBrakingG, 2)} g`}
-                />
-                <MetricBar
-                  value={dynamics.maxCorneringG}
-                  max={1.5}
-                  color="#a855f7"
-                  label={t('dynamics.maxCorneringForce', 'Max Cornering')}
-                  sublabel={`${fmtNumber(dynamics.maxCorneringG, 2)} g`}
-                />
-                <MetricBar
-                  value={dynamics.smoothnessScore / 100}
-                  max={1}
-                  color={grade ? gradeColor(grade) : '#22c55e'}
-                  label={t('dynamics.smoothnessRatio', 'Smoothness')}
-                  sublabel={`${dynamics.smoothnessScore}/100`}
-                />
+        {/* ========================================================= */}
+        {/*  SECTION 6 — Motor Torque History Chart                    */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.25}>
+          <ChartContainer
+            title={t('dynamics.torqueHistory', 'Motor Torque History')}
+            subtitle={t('dynamics.torqueHistoryDesc', 'Drive inverter torque over time')}
+            height={280}
+          >
+            {torqueChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={torqueChartData}>
+                  <defs>
+                    <ChartGradient id="torqueGrad" color="#3b82f6" />
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" Nm" />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="torque" stroke="#3b82f6" fill="url(#torqueGrad)" name={t('dynamics.torqueNm', 'Torque (Nm)')} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : noDataPlaceholder()}
+          </ChartContainer>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  SECTION 7 — G-Force History Chart                         */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.3}>
+          <ChartContainer
+            title={t('dynamics.gForceHistory', 'G-Force History')}
+            subtitle={t('dynamics.gForceHistoryDesc', 'Lateral & longitudinal acceleration over time')}
+            height={280}
+          >
+            {gForceChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={gForceChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" g" />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                  <Line type="monotone" dataKey="lateral" stroke="#a855f7" strokeWidth={2} dot={false} name={t('dynamics.lateralGLine', 'Lateral G')} />
+                  <Line type="monotone" dataKey="longitudinal" stroke="#22c55e" strokeWidth={2} dot={false} name={t('dynamics.longGLine', 'Longitudinal G')} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : noDataPlaceholder()}
+          </ChartContainer>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  SECTION 8 — Motor Efficiency Insights (3 cards)           */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.35}>
+          <Grid cols={{ default: 1, md: 3 }} gap={4}>
+            {/* Torque Distribution */}
+            <GlassPanel className="p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-blue-400" />
+                <h3 className="text-sm font-semibold text-white/90">
+                  {t('dynamics.torqueDistribution', 'Torque Distribution')}
+                </h3>
               </div>
+              {motorStats ? (
+                <div className="space-y-2 text-sm text-white/70">
+                  <div className="flex justify-between"><span>{t('dynamics.avgTorque', 'Avg Torque')}</span><span className="font-mono">{fmtNumber(motorStats.avgTorque, 1)} Nm</span></div>
+                  <div className="flex justify-between"><span>{t('dynamics.maxTorque', 'Max Torque')}</span><span className="font-mono">{fmtNumber(motorStats.maxTorque, 1)} Nm</span></div>
+                  <div className="flex justify-between"><span>{t('dynamics.highTorqueTime', 'High Torque Time')}</span><span className="font-mono">{fmtNumber(motorStats.highTorquePct, 1)}%</span></div>
+                </div>
+              ) : noDataPlaceholder(t('dynamics.noMotorData', 'No motor data recorded yet'))}
             </GlassPanel>
-          </FadeIn>
 
-          {/* ========================================================= */}
-          {/*  SECTION 10 — Driving Style Recommendations               */}
-          {/* ========================================================= */}
-          <FadeIn delay={0.35}>
-            <GlassPanel className="p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <Lightbulb className="h-5 w-5 text-yellow-400" />
-                <h2 className="text-lg font-semibold text-white/90">
-                  {t('dynamics.recommendations', 'Driving Style Recommendations')}
-                </h2>
+            {/* Throttle Behavior */}
+            <GlassPanel className="p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Gauge className="h-4 w-4 text-cyan-400" />
+                <h3 className="text-sm font-semibold text-white/90">
+                  {t('dynamics.throttleBehavior', 'Throttle Behavior')}
+                </h3>
               </div>
-
-              <div className="space-y-3">
-                {tips.map((tip, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      'flex items-start gap-3 rounded-lg p-3',
-                      'bg-white/[0.03] border border-white/[0.06]',
-                    )}
-                  >
-                    {grade === 'smooth' ? (
-                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-                    ) : (
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
-                    )}
-                    <span className="text-sm text-white/70">{tip}</span>
+              {motorStats ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm text-white/70">
+                    <span>{t('dynamics.avgPedalPos', 'Avg Pedal Position')}</span>
+                    <span className="font-mono">{fmtNumber(motorStats.avgPedalPosition, 1)}%</span>
                   </div>
-                ))}
-              </div>
-
-              {/* Summary stats row */}
-              {stats && (
-                <Grid cols={{ default: 2, md: 4 }} gap={4} className="mt-6">
-                  <StatCard
-                    label={t('dynamics.totalDrives', 'Total Drives')}
-                    value={stats.totalDrives}
-                    icon={<BarChart3 className="h-4 w-4" />}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-white/70">{t('dynamics.drivingStyle', 'Style')}</span>
+                    <Badge
+                      variant={throttleStyle === 'conservative' ? 'success' : throttleStyle === 'moderate' ? 'warning' : 'danger'}
+                      size="sm"
+                    >
+                      {throttleStyle === 'conservative'
+                        ? t('dynamics.conservative', 'Conservative')
+                        : throttleStyle === 'moderate'
+                          ? t('dynamics.moderate', 'Moderate')
+                          : t('dynamics.aggressive', 'Aggressive')}
+                    </Badge>
+                  </div>
+                  <MetricBar
+                    value={motorStats.avgPedalPosition}
+                    max={100}
+                    color={throttleStyle === 'conservative' ? '#22c55e' : throttleStyle === 'moderate' ? '#eab308' : '#ef4444'}
+                    label=""
+                    sublabel=""
                   />
-                  <StatCard
-                    label={t('dynamics.totalDistance', 'Total Distance')}
-                    value={fmtNumber(
-                      convertDistance(stats.totalDistanceKm),
-                      0,
-                    )}
-                    unit={distanceUnit}
-                    icon={<Activity className="h-4 w-4" />}
-                  />
-                  <StatCard
-                    label={t('dynamics.avgSpeed', 'Avg Speed')}
-                    value={fmtNumber(convertSpeed(stats.avgSpeedKmh), 0)}
-                    unit={speedUnit}
-                    icon={<Gauge className="h-4 w-4" />}
-                  />
-                  <StatCard
-                    label={t('dynamics.topSpeed', 'Top Speed')}
-                    value={fmtNumber(convertSpeed(stats.topSpeedKmh), 0)}
-                    unit={speedUnit}
-                    icon={<Zap className="h-4 w-4" />}
-                  />
-                </Grid>
-              )}
+                </div>
+              ) : noDataPlaceholder(t('dynamics.noMotorData', 'No motor data recorded yet'))}
             </GlassPanel>
-          </FadeIn>
-        </>
-      )}
+
+            {/* Motor Thermal */}
+            <GlassPanel className="p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Thermometer className="h-4 w-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-white/90">
+                  {t('dynamics.motorThermal', 'Motor Thermal')}
+                </h3>
+              </div>
+              {motorStats ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm text-white/70">
+                    <span>{t('dynamics.avgStatorTemp', 'Avg Stator Temp')}</span>
+                    <span className="font-mono">{fmtNumber(convertTemp(motorStats.avgStatorTemp), 1)}°{tempUnit}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-white/70">
+                    <span>{t('dynamics.maxStatorTemp', 'Max Stator Temp')}</span>
+                    <span className="font-mono">{fmtNumber(convertTemp(motorStats.maxStatorTemp), 1)}°{tempUnit}</span>
+                  </div>
+                  <Badge
+                    variant={motorStats.maxStatorTemp < 100 ? 'success' : motorStats.maxStatorTemp < 140 ? 'warning' : 'danger'}
+                    size="sm"
+                  >
+                    {motorStats.maxStatorTemp < 100
+                      ? t('dynamics.thermalGood', 'Thermal: Good')
+                      : motorStats.maxStatorTemp < 140
+                        ? t('dynamics.thermalWarm', 'Thermal: Warm')
+                        : t('dynamics.thermalHot', 'Thermal: Hot')}
+                  </Badge>
+                </div>
+              ) : noDataPlaceholder(t('dynamics.noMotorData', 'No motor data recorded yet'))}
+            </GlassPanel>
+          </Grid>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  SECTION 9 — Summary Stats                                 */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.4}>
+          <StaggerContainer className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <StaggerItem>
+              <StatCard
+                label={t('dynamics.totalReadings', 'Total Readings')}
+                value={motorStats?.totalReadings ?? 0}
+                icon={<BarChart3 className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('dynamics.avgTorque', 'Avg Torque')}
+                value={`${fmtNumber(motorStats?.avgTorque ?? 0, 1)} Nm`}
+                icon={<Zap className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('dynamics.maxLatG', 'Max Lat G')}
+                value={`${fmtNumber(motorStats?.maxLateralG ?? 0, 3)} g`}
+                icon={<CornerDownRight className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('dynamics.maxLonG', 'Max Lon G')}
+                value={`${fmtNumber(motorStats?.maxLongitudinalG ?? 0, 3)} g`}
+                icon={<TrendingDown className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('dynamics.avgPedal', 'Avg Pedal')}
+                value={`${fmtNumber(motorStats?.avgPedalPosition ?? 0, 1)}%`}
+                icon={<Gauge className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label={t('dynamics.avgStator', 'Avg Stator')}
+                value={motorStats
+                  ? `${fmtNumber(convertTemp(motorStats.avgStatorTemp), 1)}°${tempUnit}`
+                  : '—'}
+                icon={<Thermometer className="h-4 w-4" />}
+              />
+            </StaggerItem>
+          </StaggerContainer>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  DRIVE ANALYTICS — Date filter + charts from drives data   */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.45}>
+          <div className="mt-2 mb-2">
+            <h2 className="text-lg font-semibold text-white/80">
+              {t('dynamics.driveAnalytics', 'Drive Analytics')}
+            </h2>
+          </div>
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            presets
+          />
+        </FadeIn>
+
+        {/* Speed Distribution + Acceleration Patterns */}
+        <FadeIn delay={0.5}>
+          <Grid cols={{ default: 1, lg: 2 }} gap={4}>
+            <ChartContainer
+              title={t('dynamics.speedDistribution', 'Speed Distribution')}
+              subtitle={t('dynamics.speedDistDesc', 'Drives grouped by average speed')}
+              height={300}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={speedDistribution}>
+                  <defs>
+                    <ChartGradient id="speedFill" color="#3b82f6" />
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="range" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="count" fill="url(#speedFill)" radius={[4, 4, 0, 0]} name={t('dynamics.drives', 'Drives')} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+
+            <ChartContainer
+              title={t('dynamics.accelPatterns', 'Acceleration Patterns')}
+              subtitle={t('dynamics.accelPatternsDesc', 'Peak power vs trip distance')}
+              height={300}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                  <YAxis dataKey="powerMax" type="number" name={t('dynamics.peakPower', 'Peak Power')} unit=" kW" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Scatter data={accelPatterns} fill="#a855f7" name={t('dynamics.drives', 'Drives')} />
+                  {accelPatterns.length > 0 && (
+                    <ReferenceLine
+                      y={accelPatterns.reduce((sum, p) => sum + p.powerMax, 0) / accelPatterns.length}
+                      stroke="#eab308"
+                      strokeDasharray="4 4"
+                      label={{ value: t('dynamics.avg', 'Avg'), fill: '#eab308', fontSize: 11 }}
+                    />
+                  )}
+                </ScatterChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </Grid>
+        </FadeIn>
+
+        {/* Power Profile */}
+        <FadeIn delay={0.55}>
+          <ChartContainer
+            title={t('dynamics.powerProfile', 'Power Profile')}
+            subtitle={t('dynamics.powerProfileDesc', 'Peak & regen power for recent drives')}
+            height={320}
+          >
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={powerProfile}>
+                <defs>
+                  <ChartGradient id="powerMaxGrad" color="#3b82f6" />
+                  <ChartGradient id="powerMinGrad" color="#ef4444" opacity={0.25} />
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} unit=" kW" />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
+                <Area type="monotone" dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} />
+                <Area type="monotone" dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </FadeIn>
+
+        {/* ========================================================= */}
+        {/*  Driving Style Recommendations                             */}
+        {/* ========================================================= */}
+        <FadeIn delay={0.6}>
+          <GlassPanel className="p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <Lightbulb className="h-5 w-5 text-yellow-400" />
+              <h2 className="text-lg font-semibold text-white/90">
+                {t('dynamics.recommendations', 'Driving Style Recommendations')}
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {tips.map((tip, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'flex items-start gap-3 rounded-lg p-3',
+                    'bg-white/[0.03] border border-white/[0.06]',
+                  )}
+                >
+                  {throttleStyle === 'conservative' ? (
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                  ) : (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
+                  )}
+                  <span className="text-sm text-white/70">{tip}</span>
+                </div>
+              ))}
+            </div>
+          </GlassPanel>
+        </FadeIn>
+      </div>
     </PageContainer>
   );
 }

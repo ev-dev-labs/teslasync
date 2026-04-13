@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight } from 'lucide-react';
+import { Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
@@ -446,50 +446,57 @@ export default function EnergyPage() {
 
           {/* ── Charts Row 2: Time of Day + Charger Breakdown ──── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {timeOfDayData.length > 0 && (
-              <FadeIn delay={0.2}>
-                <ChartContainer title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}>
-                  <div className="h-44 sm:h-60">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={timeOfDayData}>
-                        {chartGrid}
-                        <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Bar
-                          dataKey="energy"
-                          name={t('energy.chart.energyKwh', 'Energy (kWh)')}
-                          fill="#f59e0b"
-                          fillOpacity={0.7}
-                          radius={[3, 3, 0, 0]}
-                          animationDuration={800}
-                        />
-                        <Bar
-                          dataKey="count"
-                          name={t('energy.chart.sessions', 'Sessions')}
-                          fill="#a855f7"
-                          fillOpacity={0.5}
-                          radius={[3, 3, 0, 0]}
-                          animationDuration={800}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+            <FadeIn delay={0.2}>
+              <ChartContainer title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}>
+                {timeOfDayData.length > 0 ? (
+                  <>
+                    <div className="h-44 sm:h-60">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={timeOfDayData}>
+                          {chartGrid}
+                          <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <Tooltip content={<ChartTooltip />} />
+                          <Bar
+                            dataKey="energy"
+                            name={t('energy.chart.energyKwh', 'Energy (kWh)')}
+                            fill="#f59e0b"
+                            fillOpacity={0.7}
+                            radius={[3, 3, 0, 0]}
+                            animationDuration={800}
+                          />
+                          <Bar
+                            dataKey="count"
+                            name={t('energy.chart.sessions', 'Sessions')}
+                            fill="#a855f7"
+                            fillOpacity={0.5}
+                            radius={[3, 3, 0, 0]}
+                            animationDuration={800}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-3 flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
+                      <span className="flex items-center gap-1">
+                        <Moon className="h-3 w-3" /> {t('energy.tip.offPeak', 'Off-peak charging saves money')}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Sun className="h-3 w-3" /> {t('energy.tip.solar', 'Solar-optimal: 10am–3pm')}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                    <Activity className="h-8 w-8 opacity-20" />
+                    <p className="text-xs">{t('common.noData', 'No data available')}</p>
                   </div>
-                  <div className="mt-3 flex items-center gap-4 text-[10px] text-[var(--text-muted)]">
-                    <span className="flex items-center gap-1">
-                      <Moon className="h-3 w-3" /> {t('energy.tip.offPeak', 'Off-peak charging saves money')}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Sun className="h-3 w-3" /> {t('energy.tip.solar', 'Solar-optimal: 10am–3pm')}
-                    </span>
-                  </div>
-                </ChartContainer>
-              </FadeIn>
-            )}
+                )}
+              </ChartContainer>
+            </FadeIn>
 
-            {chargerBreakdown.length > 0 && (
-              <FadeIn delay={0.25}>
-                <ChartContainer title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}>
+            <FadeIn delay={0.25}>
+              <ChartContainer title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}>
+                {chargerBreakdown.length > 0 ? (
                   <div className="flex items-center gap-6">
                     <div className="h-48 w-48">
                       <ResponsiveContainer width="100%" height="100%">
@@ -534,43 +541,37 @@ export default function EnergyPage() {
                       ))}
                     </div>
                   </div>
-                </ChartContainer>
-              </FadeIn>
-            )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                    <Activity className="h-8 w-8 opacity-20" />
+                    <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                  </div>
+                )}
+              </ChartContainer>
+            </FadeIn>
           </div>
 
           {/* ── Recent Charging Sessions ─────────────────────────── */}
-          {sessions && sessions.length === 0 && (
-            <FadeIn delay={0.3}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-4 flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-neon-amber" />
-                  {t('energy.sessions.title', 'Recent Charging Sessions')}
-                </h3>
-                <div className="text-center py-12 text-[var(--text-muted)]">
-                  <p className="text-lg">{t('energy.sessions.none', 'No charging sessions recorded')}</p>
-                  <p className="text-sm mt-1">
-                    {t('energy.sessions.noneHint', 'Charging data will appear here once your vehicle completes a session.')}
-                  </p>
-                </div>
-              </GlassPanel>
-            </FadeIn>
-          )}
-          {sessions && sessions.length > 0 && (
-            <FadeIn delay={0.3}>
-              <GlassPanel className="p-6">
-                <h3 className="section-title mb-4 flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-neon-amber" />
-                  {t('energy.sessions.title', 'Recent Charging Sessions')}
-                </h3>
+          <FadeIn delay={0.3}>
+            <GlassPanel className="p-6">
+              <h3 className="section-title mb-4 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-neon-amber" />
+                {t('energy.sessions.title', 'Recent Charging Sessions')}
+              </h3>
+              {sessions && sessions.length > 0 ? (
                 <DataTable
                   columns={sessionColumns}
                   data={sessions.slice(0, 15)}
                   keyExtractor={(s) => s.id}
                 />
-              </GlassPanel>
-            </FadeIn>
-          )}
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                  <Activity className="h-8 w-8 opacity-20" />
+                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                </div>
+              )}
+            </GlassPanel>
+          </FadeIn>
         </>
       )}
     </PageContainer>

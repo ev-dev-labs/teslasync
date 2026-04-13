@@ -87,7 +87,7 @@ export function useVehiclePositions(vehicleId: number, limit = 100) {
 export function useRefreshVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/refresh`, { method: 'POST' }),
+    mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/wake`, { method: 'POST' }),
     onSuccess: (data, id) => {
       queryClient.setQueryData(vehicleKeys.detail(id), data);
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
@@ -128,6 +128,14 @@ export function useMotorLatest(vehicleId: number, refetchInterval?: number) {
     queryFn: () => request<import('../types').MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`),
     enabled: vehicleId > 0,
     refetchInterval,
+  });
+}
+
+export function useMotorHistory(vehicleId: number, limit = 200) {
+  return useQuery({
+    queryKey: ['motor-history', vehicleId, limit],
+    queryFn: () => request<import('../types').MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}`),
+    enabled: vehicleId > 0,
   });
 }
 

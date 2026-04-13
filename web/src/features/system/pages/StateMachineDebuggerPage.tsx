@@ -67,8 +67,8 @@ export default function StateMachineDebuggerPage() {
       <Card>
         <CardHeader title={t('Current State')} />
         <div className="flex items-center gap-4 px-4 pb-4">
-          <Badge variant={stateColors[state?.state ?? ''] ?? 'neutral'} size="lg" dot>
-            {state?.state?.toUpperCase() ?? '--'}
+          <Badge variant={stateColors[String(state?.state ?? '')] ?? 'neutral'} size="lg" dot>
+            {state?.state != null ? String(state.state).toUpperCase() : '--'}
           </Badge>
           <p className="text-sm text-gray-400">
             {state?.since ? `${t('Since')} ${state.since ? new Date(state.since).toLocaleString() : '—'}` : ''}
@@ -99,7 +99,7 @@ export default function StateMachineDebuggerPage() {
         <StatCard label={t('Transitions')} value={transitions.length} />
         <StatCard label={t('States Seen')} value={Object.keys(durationByState).length} />
         <StatCard label={t('Total Time')} value={formatDuration(totalDuration)} />
-        <StatCard label={t('Current')} value={state?.state ?? '--'} />
+        <StatCard label={t('Current')} value={state?.state != null ? String(state.state) : '--'} />
       </Grid>
 
       <Card>

@@ -92,7 +92,7 @@ import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
    ========================================================================== */
 
 function getStatusColor(status: string): string {
-  switch (status.toLowerCase()) {
+  switch ((status ?? '').toLowerCase()) {
     case 'healthy':
     case 'ok':
     case 'online':
@@ -119,7 +119,7 @@ function getStatusColor(status: string): string {
 }
 
 function statusTextClass(status: string): string {
-  switch (status.toLowerCase()) {
+  switch ((status ?? '').toLowerCase()) {
     case 'healthy': case 'ok': case 'online': case 'connected': case 'ready': case 'sent': case 'completed':
       return 'text-green-400';
     case 'degraded': case 'warning': case 'pending': case 'queued': case 'processing':
@@ -133,7 +133,7 @@ function statusTextClass(status: string): string {
 
 function getStatusIcon(status: string): JSX.Element {
   const cls = statusTextClass(status);
-  switch (status.toLowerCase()) {
+  switch ((status ?? '').toLowerCase()) {
     case 'healthy':
     case 'ok':
     case 'online':
@@ -179,7 +179,7 @@ function formatBytes(bytes: number): string {
 function statusToBadgeVariant(
   status: string,
 ): 'success' | 'warning' | 'danger' | 'neutral' {
-  switch (status.toLowerCase()) {
+  switch ((status ?? '').toLowerCase()) {
     case 'healthy':
     case 'ok':
     case 'online':
@@ -755,15 +755,13 @@ function ServiceHealthSection() {
             />
           </Grid>
 
-          {vehicles.length > 0 && (
-            <DataTable
-              columns={vehicleColumns}
-              data={vehicles}
-              keyExtractor={(v) => v.vin}
-              compact
-              emptyMessage={t('No vehicles connected')}
-            />
-          )}
+          <DataTable
+            columns={vehicleColumns}
+            data={vehicles}
+            keyExtractor={(v) => v.vin}
+            compact
+            emptyMessage={t('No vehicles connected')}
+          />
         </div>
       )}
     </AccordionSection>
@@ -1301,7 +1299,7 @@ function OperationsSection() {
                 />
               </div>
 
-              {notifLogs && notifLogs.length > 0 && (
+              {notifLogs ? (
                 <DataTable
                   columns={notifLogColumns}
                   data={notifLogs}
@@ -1309,6 +1307,11 @@ function OperationsSection() {
                   compact
                   emptyMessage={t('No recent notifications')}
                 />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                  <Activity className="h-8 w-8 opacity-20" />
+                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                </div>
               )}
             </div>
           )}
@@ -1480,46 +1483,53 @@ function DiagnosticsSection() {
           )}
 
           {/* Worker Health */}
-          {workers && workers.workers.length > 0 && (
+          {workers ? (
             <div>
               <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
                 {t('Worker Health')}
               </h4>
-              <Grid cols={{ default: 1, md: 2, lg: 3 }} gap={3}>
-                {workers.workers.map((w) => (
-                  <Card key={w.name} padding="sm">
-                    <div className="flex items-center gap-3">
-                      <IconBox
-                        color={w.status === 'healthy' ? 'green' : 'red'}
-                        size="sm"
-                      >
-                        {getStatusIcon(w.status)}
-                      </IconBox>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-[var(--text-primary)] truncate">
-                          {w.name}
+              {workers.workers.length > 0 ? (
+                <Grid cols={{ default: 1, md: 2, lg: 3 }} gap={3}>
+                  {workers.workers.map((w) => (
+                    <Card key={w.name} padding="sm">
+                      <div className="flex items-center gap-3">
+                        <IconBox
+                          color={w.status === 'healthy' ? 'green' : 'red'}
+                          size="sm"
+                        >
+                          {getStatusIcon(w.status)}
+                        </IconBox>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-[var(--text-primary)] truncate">
+                            {w.name}
+                          </div>
+                          <div className="text-xs text-[var(--text-muted)]">
+                            {w.host} · {fmtNumber(w.latency_ms, 0)} ms
+                          </div>
                         </div>
-                        <div className="text-xs text-[var(--text-muted)]">
-                          {w.host} · {fmtNumber(w.latency_ms, 0)} ms
+                        <Badge
+                          variant={statusToBadgeVariant(w.status)}
+                          size="sm"
+                        >
+                          {w.status}
+                        </Badge>
+                      </div>
+                      {w.error && (
+                        <div className="mt-2 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">
+                          {w.error}
                         </div>
-                      </div>
-                      <Badge
-                        variant={statusToBadgeVariant(w.status)}
-                        size="sm"
-                      >
-                        {w.status}
-                      </Badge>
-                    </div>
-                    {w.error && (
-                      <div className="mt-2 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">
-                        {w.error}
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </Grid>
+                      )}
+                    </Card>
+                  ))}
+                </Grid>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                  <Activity className="h-8 w-8 opacity-20" />
+                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </AccordionSection>

@@ -13,6 +13,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { Skeleton } from '@/components/feedback';
+import { Activity } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -397,7 +398,7 @@ export default function ChargingCurvePage() {
     if (!sessions?.length) return [];
     const byMonth = new Map<string, { dc: number[]; ac: number[] }>();
     sessions.forEach((s) => {
-      const month = s.start_date.slice(0, 7);
+      const month = (s.start_date ?? '').slice(0, 7);
       if (!byMonth.has(month)) byMonth.set(month, { dc: [], ac: [] });
       const group = byMonth.get(month)!;
       const power = s.charger_power ?? 0;
@@ -454,7 +455,7 @@ export default function ChargingCurvePage() {
     // Group by year
     const byYear = new Map<string, { d10: number[]; d20: number[]; count: number }>();
     dcSessions.forEach((s) => {
-      const year = s.start_date.slice(0, 4);
+      const year = (s.start_date ?? '').slice(0, 4);
       if (!byYear.has(year)) byYear.set(year, { d10: [], d20: [], count: 0 });
       const g = byYear.get(year)!;
       g.count++;
@@ -1005,91 +1006,98 @@ export default function ChargingCurvePage() {
             </div>
 
             {/* Yearly trend chart */}
-            {timeToCharge.yearlyTrend.length > 0 && (
-              <ChartContainer
-                title={t('charging.curve.yearlyTrend', 'Yearly Charging Speed Trend')}
-                subtitle={t(
-                  'charging.curve.yearlyTrendDesc',
-                  'Average time-to-charge and session count by year',
-                )}
-                height={280}
-              >
-                <ResponsiveContainer width="100%" height={280}>
-                  <ComposedChart
-                    data={timeToCharge.yearlyTrend}
-                    margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid {...chartGrid} />
-                    <XAxis dataKey="year" tick={axisTickSm} />
-                    <YAxis
-                      yAxisId="min"
-                      tick={axisTickSm}
-                      orientation="left"
-                      label={{
-                        value: t('charging.curve.minutes', 'Minutes'),
-                        angle: -90,
-                        position: 'insideLeft',
-                        style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
-                      }}
-                    />
-                    <YAxis
-                      yAxisId="count"
-                      tick={axisTickSm}
-                      orientation="right"
-                      label={{
-                        value: t('charging.curve.sessionCount', 'Sessions'),
-                        angle: 90,
-                        position: 'insideRight',
-                        style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
-                      }}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar
-                      yAxisId="count"
-                      dataKey="count"
-                      name={t('charging.curve.dcSessions', 'DC Sessions')}
-                      fill={CHART_COLORS[5]}
-                      opacity={0.3}
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Line
-                      yAxisId="min"
-                      type="monotone"
-                      dataKey="avg10to80"
-                      name={t('charging.curve.avg10to80Line', '10→80% avg')}
-                      stroke={CHART_COLORS[0]}
-                      strokeWidth={2}
-                      dot={{ r: 4, fill: CHART_COLORS[0] }}
-                      unit=" min"
-                    />
-                    <Line
-                      yAxisId="min"
-                      type="monotone"
-                      dataKey="avg20to80"
-                      name={t('charging.curve.avg20to80Line', '20→80% avg')}
-                      stroke={CHART_COLORS[2]}
-                      strokeWidth={2}
-                      dot={{ r: 4, fill: CHART_COLORS[2] }}
-                      unit=" min"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                <div className="mt-3 flex flex-wrap gap-4 px-2">
-                  <div className="flex items-center gap-1.5 text-xs text-white/60">
-                    <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
-                    {t('charging.curve.avg10to80Line', '10→80% avg')}
+            <ChartContainer
+              title={t('charging.curve.yearlyTrend', 'Yearly Charging Speed Trend')}
+              subtitle={t(
+                'charging.curve.yearlyTrendDesc',
+                'Average time-to-charge and session count by year',
+              )}
+              height={280}
+            >
+              {timeToCharge.yearlyTrend.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <ComposedChart
+                      data={timeToCharge.yearlyTrend}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid {...chartGrid} />
+                      <XAxis dataKey="year" tick={axisTickSm} />
+                      <YAxis
+                        yAxisId="min"
+                        tick={axisTickSm}
+                        orientation="left"
+                        label={{
+                          value: t('charging.curve.minutes', 'Minutes'),
+                          angle: -90,
+                          position: 'insideLeft',
+                          style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                        }}
+                      />
+                      <YAxis
+                        yAxisId="count"
+                        tick={axisTickSm}
+                        orientation="right"
+                        label={{
+                          value: t('charging.curve.sessionCount', 'Sessions'),
+                          angle: 90,
+                          position: 'insideRight',
+                          style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                        }}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar
+                        yAxisId="count"
+                        dataKey="count"
+                        name={t('charging.curve.dcSessions', 'DC Sessions')}
+                        fill={CHART_COLORS[5]}
+                        opacity={0.3}
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Line
+                        yAxisId="min"
+                        type="monotone"
+                        dataKey="avg10to80"
+                        name={t('charging.curve.avg10to80Line', '10→80% avg')}
+                        stroke={CHART_COLORS[0]}
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: CHART_COLORS[0] }}
+                        unit=" min"
+                      />
+                      <Line
+                        yAxisId="min"
+                        type="monotone"
+                        dataKey="avg20to80"
+                        name={t('charging.curve.avg20to80Line', '20→80% avg')}
+                        stroke={CHART_COLORS[2]}
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: CHART_COLORS[2] }}
+                        unit=" min"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  <div className="mt-3 flex flex-wrap gap-4 px-2">
+                    <div className="flex items-center gap-1.5 text-xs text-white/60">
+                      <span className="inline-block h-2 w-3 rounded-sm bg-[#00f0ff]" />
+                      {t('charging.curve.avg10to80Line', '10→80% avg')}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-white/60">
+                      <span className="inline-block h-2 w-3 rounded-sm bg-purple-500" />
+                      {t('charging.curve.avg20to80Line', '20→80% avg')}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-white/60">
+                      <span className="inline-block h-2 w-3 rounded-sm bg-red-500 opacity-30" />
+                      {t('charging.curve.dcSessions', 'DC Sessions')}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-white/60">
-                    <span className="inline-block h-2 w-3 rounded-sm bg-purple-500" />
-                    {t('charging.curve.avg20to80Line', '20→80% avg')}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-white/60">
-                    <span className="inline-block h-2 w-3 rounded-sm bg-red-500 opacity-30" />
-                    {t('charging.curve.dcSessions', 'DC Sessions')}
-                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                  <Activity className="h-8 w-8 opacity-20" />
+                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
                 </div>
-              </ChartContainer>
-            )}
+              )}
+            </ChartContainer>
           </div>
         </FadeIn>
       </div>

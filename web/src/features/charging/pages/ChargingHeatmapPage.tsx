@@ -5,6 +5,7 @@ import { GlassPanel } from '@/components/ui';
 import { Select } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton } from '@/components/feedback';
+import { Activity } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, chartGrid, axisTickSm,
@@ -234,12 +235,12 @@ export default function ChargingHeatmapPage() {
       </FadeIn>
 
       {/* ── Top charging locations ── */}
-      {locationData.length > 0 && (
-        <FadeIn delay={0.3}>
-          <GlassPanel className="mt-6 p-4">
-            <h3 className="mb-3 text-base font-semibold text-white">
-              {t('charging.heatmap.topLocations', 'Top Charging Locations')}
-            </h3>
+      <FadeIn delay={0.3}>
+        <GlassPanel className="mt-6 p-4">
+          <h3 className="mb-3 text-base font-semibold text-white">
+            {t('charging.heatmap.topLocations', 'Top Charging Locations')}
+          </h3>
+          {locationData.length > 0 ? (
             <ResponsiveContainer width="100%" height={locationData.length * 36 + 20}>
               <BarChart data={locationData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
                 {chartGrid}
@@ -249,9 +250,14 @@ export default function ChargingHeatmapPage() {
                 <Bar dataKey="count" fill="rgba(0, 240, 255, 0.6)" radius={[0, 4, 4, 0]} name="Sessions" />
               </BarChart>
             </ResponsiveContainer>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

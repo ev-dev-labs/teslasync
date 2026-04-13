@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import {
-  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp,
+  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -89,10 +89,12 @@ export default function TemperatureImpactPage() {
   /* ---- temperature data ---- */
   const { data: points, isLoading } = useQuery({
     queryKey: ['temperature-impact', vehicleId],
-    queryFn: () =>
-      request<TempEfficiencyPoint[]>(
+    queryFn: async () => {
+      const res = await request<{ points: TempEfficiencyPoint[] }>(
         `/analytics/temperature-impact?vehicle_id=${vehicleId}`,
-      ),
+      );
+      return res.points ?? [];
+    },
     enabled: vehicleId !== '',
   });
 
@@ -386,15 +388,15 @@ export default function TemperatureImpactPage() {
         )}
 
         {/* ── Tips & Recommendations ──────────────────────────── */}
-        {tips.length > 0 && (
-          <FadeIn delay={0.35}>
-            <GlassPanel className="p-6">
-              <h3
-                className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]"
-              >
-                <Lightbulb className="h-4 w-4 text-amber-400" />
-                {t('tempImpact.tipsTitle', 'Recommendations')}
-              </h3>
+        <FadeIn delay={0.35}>
+          <GlassPanel className="p-6">
+            <h3
+              className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]"
+            >
+              <Lightbulb className="h-4 w-4 text-amber-400" />
+              {t('tempImpact.tipsTitle', 'Recommendations')}
+            </h3>
+            {tips.length > 0 ? (
               <ul className={clsx('space-y-2')}>
                 {tips.map((tip) => {
                   const Icon = tip.icon;
@@ -408,9 +410,14 @@ export default function TemperatureImpactPage() {
                   );
                 })}
               </ul>
-            </GlassPanel>
-          </FadeIn>
-        )}
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                <Activity className="h-8 w-8 opacity-20" />
+                <p className="text-xs">{t('common.noData', 'No data available')}</p>
+              </div>
+            )}
+          </GlassPanel>
+        </FadeIn>
       </div>
     </PageContainer>
   );

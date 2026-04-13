@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, ArrowRight, TrendingUp } from 'lucide-react';
+import { MapPin, ArrowRight, TrendingUp, Activity } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -132,7 +132,7 @@ export default function RouteEfficiencyPage() {
       .sort((a, b) => a.avgEfficiency - b.avgEfficiency)
       .slice(0, 10)
       .map((r) => ({
-        name: `${r.startLocation.substring(0, 10)}→${r.endLocation.substring(0, 10)}`,
+        name: `${(r.startLocation ?? '').substring(0, 10)}→${(r.endLocation ?? '').substring(0, 10)}`,
         avg: Math.round(convertEfficiency(r.avgEfficiency)),
         best: Math.round(convertEfficiency(r.bestEfficiency)),
         worst: Math.round(convertEfficiency(r.worstEfficiency)),
@@ -217,12 +217,12 @@ export default function RouteEfficiencyPage() {
       </StaggerContainer>
 
       {/* Metric bars */}
-      {routes.length > 0 && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-5">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-              <TrendingUp className="h-4 w-4 text-cyan-400" /> {t('routeEfficiency.metrics', 'Route Metrics')}
-            </h3>
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-cyan-400" /> {t('routeEfficiency.metrics', 'Route Metrics')}
+          </h3>
+          {routes.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <div>
                 <MetricBar label={t('routeEfficiency.bestLabel', 'Best Efficiency')} value={convertEfficiency(bestEff)} max={300} color="#10b981" />
@@ -241,9 +241,14 @@ export default function RouteEfficiencyPage() {
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">{routes[0]?.tripCount ?? 0} {t('routeEfficiency.trips', 'trips')}</p>
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

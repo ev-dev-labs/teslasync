@@ -90,7 +90,7 @@ export default function EfficiencyPage() {
       .map((d) => ({
         date: formatDateShort(d.startDate),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
-        distance: parseFloat(convertDistance(d.distance).toFixed(1)),
+        distance: parseFloat(convertDistance(d.distance ?? 0).toFixed(1)),
       }));
   }, [filteredDrives, convertEfficiency, convertDistance]);
 

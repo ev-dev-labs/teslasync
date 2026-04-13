@@ -212,7 +212,52 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		monthlyTrend = []monthlyTempTrend{}
 	}
 
+	// Per-drive scatter data for the frontend
+	type drivePoint struct {
+		OutsideTemp    float64 `json:"outside_temp"`
+		EfficiencyWhKm float64 `json:"efficiency_wh_km"`
+		DistanceKm     float64 `json:"distance_km"`
+		DriveDate      string  `json:"drive_date"`
+	}
+
+	pointRows, err := h.db.Pool.Query(ctx, `
+		SELECT outside_temp_avg,
+		       CASE WHEN distance > 0 THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75 ELSE 0 END as efficiency_wh_km,
+		       distance,
+		       start_date::date
+		FROM drives
+		WHERE vehicle_id = $1 AND distance > 2 AND outside_temp_avg IS NOT NULL
+		ORDER BY start_date DESC
+		LIMIT 500`, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Msg("temp impact: failed to query drive points")
+	}
+
+	var points []drivePoint
+	if pointRows != nil {
+		defer pointRows.Close()
+		for pointRows.Next() {
+			var p drivePoint
+			var temp, eff, dist *float64
+			var driveDate interface{}
+			if err := pointRows.Scan(&temp, &eff, &dist, &driveDate); err != nil {
+				continue
+			}
+			if temp != nil { p.OutsideTemp = math.Round(*temp*10) / 10 }
+			if eff != nil { p.EfficiencyWhKm = math.Round(*eff*10) / 10 }
+			if dist != nil { p.DistanceKm = math.Round(*dist*10) / 10 }
+			if dt, ok := driveDate.(interface{ Format(string) string }); ok {
+				p.DriveDate = dt.Format("2006-01-02")
+			}
+			points = append(points, p)
+		}
+	}
+	if points == nil {
+		points = []drivePoint{}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"points":        points,
 		"efficiency":    efficiency,
 		"vampire_drain": vampireDrain,
 		"monthly_trend": monthlyTrend,

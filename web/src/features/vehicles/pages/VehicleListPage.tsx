@@ -252,22 +252,22 @@ export default function VehicleListPage() {
           </FadeIn>
 
           {/* ── Battery Comparison Chart ───────────────── */}
-          {fleet.entries.length > 0 && (
-            <FadeIn delay={0.1}>
-              <GlassPanel className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-cyan-400" />
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {t('vehicles.batteryStatus', 'Fleet Battery Status')}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    <AnimatedNumber value={Math.round(fleet.avgBattery)} suffix="%" />
-                    {' '}{t('vehicles.avgLabel', 'avg')}
+          <FadeIn delay={0.1}>
+            <GlassPanel className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-cyan-400" />
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {t('vehicles.batteryStatus', 'Fleet Battery Status')}
                   </span>
                 </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <AnimatedNumber value={Math.round(fleet.avgBattery)} suffix="%" />
+                  {' '}{t('vehicles.avgLabel', 'avg')}
+                </span>
+              </div>
 
+              {fleet.entries.length > 0 ? (
                 <div className="space-y-3">
                   {fleet.entries.map(({ vehicle, state }) => {
                     const level = state.battery_level ?? 0;
@@ -297,9 +297,14 @@ export default function VehicleListPage() {
                     );
                   })}
                 </div>
-              </GlassPanel>
-            </FadeIn>
-          )}
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                  <Activity className="h-8 w-8 opacity-20" />
+                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                </div>
+              )}
+            </GlassPanel>
+          </FadeIn>
 
           {/* ── Vehicle Cards ─────────────────────────── */}
           <FadeIn delay={0.15}>

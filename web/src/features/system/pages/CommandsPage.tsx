@@ -23,7 +23,7 @@ import { request } from '@/api/client';
 import {
   Lock, Unlock, Wind, Car, Zap, Power, Shield,
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
-  Loader2, Battery, Wifi,
+  Loader2, Battery, Wifi, Activity,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -266,16 +266,21 @@ export default function CommandsPage() {
       }
     >
       {/* Stats */}
-      {vehicles && vehicles.length > 0 && (
-        <FadeIn>
+      <FadeIn>
+        {vehicles && vehicles.length > 0 ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <MetricCard label={t('Vehicles')} value={vehicles.length} icon={<Car className="h-4 w-4" />} color="cyan" />
             <MetricCard label={t('Online')} value={onlineCount} icon={<Wifi className="h-4 w-4" />} color="green" />
             <MetricCard label={t('Asleep')} value={vehicles.length - onlineCount} icon={<Power className="h-4 w-4" />} color="amber" />
             <MetricCard label={t('Refresh')} value="15s" icon={<Loader2 className="h-4 w-4" />} color="purple" />
           </div>
-        </FadeIn>
-      )}
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+            <Activity className="h-8 w-8 opacity-20" />
+            <p className="text-xs">{t('common.noData', 'No data available')}</p>
+          </div>
+        )}
+      </FadeIn>
 
       {statesError && (
         <GlassPanel className="p-3 flex items-center gap-2 bg-neon-red/5 border-neon-red/20">

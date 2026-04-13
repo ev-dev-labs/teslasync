@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   Route, Clock, Gauge, Battery, ChevronRight, TrendingUp,
-  Zap, ArrowUpDown, MapPin, Download,
+  Zap, ArrowUpDown, MapPin, Download, Activity,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -276,7 +276,7 @@ export default function DrivesListPage() {
     if (filteredDrives.length === 0) return [];
     return filteredDrives.slice(0, 20).reverse().map((d) => ({
       date: formatDateShort(d.startDate),
-      distance: parseFloat(d.distance.toFixed(1)),
+      distance: parseFloat((d.distance ?? 0).toFixed(1)),
     }));
   }, [filteredDrives]);
 
@@ -483,8 +483,8 @@ export default function DrivesListPage() {
       )}
 
       {/* Sort controls + export */}
-      {sortedDrives.length > 0 && (
-        <FadeIn>
+      <FadeIn>
+        {sortedDrives.length > 0 ? (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-400" />
@@ -526,8 +526,13 @@ export default function DrivesListPage() {
               </a>
             </div>
           </div>
-        </FadeIn>
-      )}
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+            <Activity className="h-8 w-8 opacity-20" />
+            <p className="text-xs">{t('common.noData', 'No data available')}</p>
+          </div>
+        )}
+      </FadeIn>
 
       {/* Drive list */}
       {isDrivesLoading ? (

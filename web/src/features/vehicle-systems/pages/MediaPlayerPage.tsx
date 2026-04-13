@@ -77,7 +77,7 @@ function fmtPlayTime(seconds: number): string {
 }
 
 function sourceIcon(source: string) {
-  const s = source.toLowerCase();
+  const s = (source ?? '').toLowerCase();
   if (s.includes('spotify')) return <Disc3 className="h-4 w-4 text-green-400" />;
   if (s.includes('bluetooth')) return <Bluetooth className="h-4 w-4 text-blue-400" />;
   if (s.includes('radio') || s.includes('fm') || s.includes('am'))
@@ -87,14 +87,14 @@ function sourceIcon(source: string) {
 }
 
 function statusVariant(status: string): 'success' | 'warning' | 'neutral' {
-  const s = status.toLowerCase();
+  const s = (status ?? '').toLowerCase();
   if (s.includes('playing')) return 'success';
   if (s.includes('paused')) return 'warning';
   return 'neutral';
 }
 
 function statusLabel(status: string, t: (k: string) => string): string {
-  const s = status.toLowerCase();
+  const s = (status ?? '').toLowerCase();
   if (s.includes('playing')) return t('Playing');
   if (s.includes('paused')) return t('Paused');
   return t('Stopped');

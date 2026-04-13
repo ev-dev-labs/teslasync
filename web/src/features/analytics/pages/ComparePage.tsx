@@ -67,7 +67,7 @@ const PERIOD_DAYS: Record<string, number> = {
 
 export default function ComparePage() {
   const { t } = useTranslation();
-  usePageTitle(t('Title'));
+  usePageTitle(t('compare.title', 'Compare Periods'));
 
   const [vehicleId, setVehicleId] = useState('');
   const [periodA, setPeriodA] = useState('30');
@@ -230,8 +230,8 @@ export default function ComparePage() {
 
   return (
     <PageContainer
-      title={t('Title')}
-      subtitle={t('Subtitle')}
+      title={t('compare.title', 'Compare Periods')}
+      subtitle={t('compare.subtitle', 'Compare driving stats across time periods')}
       loading={isLoading}
       error={error as Error | null}
     >

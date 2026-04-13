@@ -54,6 +54,8 @@ export function useMaintenance() {
   return useQuery({
     queryKey: vehicleSystemsKeys.maintenance,
     queryFn: () => request<MaintenanceItem[]>('/maintenance'),
+    retry: false,
+    staleTime: Infinity,
   });
 }
 
@@ -61,6 +63,8 @@ export function useServiceRecords() {
   return useQuery({
     queryKey: vehicleSystemsKeys.serviceRecords,
     queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
+    retry: false,
+    staleTime: Infinity,
   });
 }
 

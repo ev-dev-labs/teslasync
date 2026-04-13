@@ -286,7 +286,7 @@ export default function BatteryDegradationPage() {
                 color="purple"
               />
             </div>
-            <div className="mt-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+            <div className="mt-4 text-xs text-[var(--text-muted)]">
               {t('Original capacity')}:{' '}
               <span className="font-medium">
                 {fmtNumber(data?.original_capacity ?? 0)} kWh
@@ -397,7 +397,7 @@ export default function BatteryDegradationPage() {
                   {fmtNumber(data?.charge_habits_score ?? 0)}/100
                 </Badge>
               </div>
-              <div className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <div className="space-y-1 text-xs text-[var(--text-muted)]">
                 <div className="flex justify-between">
                   <span>{t('Fast Charge')}</span>
                   <span className="font-medium">{fmtNumber(data?.fast_charge_pct ?? 0)}%</span>
@@ -419,7 +419,7 @@ export default function BatteryDegradationPage() {
                   {fmtNumber(data?.temp_exposure_score ?? 0)}/100
                 </Badge>
               </div>
-              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                 <Thermometer className="h-3 w-3" />
                 {t('Lower is better for longevity')}
               </div>
@@ -435,7 +435,7 @@ export default function BatteryDegradationPage() {
                   {fmtNumber(cycleDepthScore)}/100
                 </Badge>
               </div>
-              <div className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <div className="space-y-1 text-xs text-[var(--text-muted)]">
                 <div className="flex justify-between">
                   <span>{t('Avg DoD')}</span>
                   <span className="font-medium">
@@ -449,12 +449,12 @@ export default function BatteryDegradationPage() {
       </FadeIn>
 
       {/* ── Degradation History Table ─────────────────── */}
-      {data?.history && data.history.length > 0 && (
-        <FadeIn delay={0.3}>
-          <GlassPanel className="p-6">
-            <div className="mb-4 text-sm font-semibold">
-              {t('Degradation History')}
-            </div>
+      <FadeIn delay={0.3}>
+        <GlassPanel className="p-6">
+          <div className="mb-4 text-sm font-semibold">
+            {t('Degradation History')}
+          </div>
+          {data?.history && data.history.length > 0 ? (
             <DataTable
               columns={columns}
               data={data.history}
@@ -464,9 +464,14 @@ export default function BatteryDegradationPage() {
               emptyMessage={t('No degradation records found.')}
               compact
             />
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

@@ -21,6 +21,7 @@ import {
   LogOut,
   Check,
   X,
+  Activity,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -254,33 +255,42 @@ export default function GeofencesPage() {
       }
     >
       {/* Summary Stats */}
-      {!isLoading && geofences && geofences.length > 0 && (
+      {!isLoading && (
         <FadeIn>
           <GlassPanel className="mb-6 grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
-            <MetricCard
-              label={t('Total Geofences')}
-              value={stats.total}
-              icon={<MapPin className="h-4 w-4" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('Active')}
-              value={stats.active}
-              icon={<Check className="h-4 w-4" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('Entry Alerts')}
-              value={stats.entryAlerts}
-              icon={<LogIn className="h-4 w-4" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('Exit Alerts')}
-              value={stats.exitAlerts}
-              icon={<LogOut className="h-4 w-4" />}
-              color="amber"
-            />
+            {geofences && geofences.length > 0 ? (
+              <>
+                <MetricCard
+                  label={t('Total Geofences')}
+                  value={stats.total}
+                  icon={<MapPin className="h-4 w-4" />}
+                  color="purple"
+                />
+                <MetricCard
+                  label={t('Active')}
+                  value={stats.active}
+                  icon={<Check className="h-4 w-4" />}
+                  color="green"
+                />
+                <MetricCard
+                  label={t('Entry Alerts')}
+                  value={stats.entryAlerts}
+                  icon={<LogIn className="h-4 w-4" />}
+                  color="cyan"
+                />
+                <MetricCard
+                  label={t('Exit Alerts')}
+                  value={stats.exitAlerts}
+                  icon={<LogOut className="h-4 w-4" />}
+                  color="amber"
+                />
+              </>
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                <Activity className="h-8 w-8 opacity-20" />
+                <p className="text-xs">{t('common.noData', 'No data available')}</p>
+              </div>
+            )}
           </GlassPanel>
         </FadeIn>
       )}
@@ -296,72 +306,81 @@ export default function GeofencesPage() {
       )}
 
       {/* Geofence List */}
-      {!isLoading && geofences && geofences.length > 0 && (
+      {!isLoading && (
         <StaggerContainer className="space-y-3">
-          {geofences.map((g) => (
-            <StaggerItem key={g.id}>
-              <GlassPanel
-                hover
-                glow="purple"
-                className={clsx(
-                  'flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between',
-                )}
-              >
-                {/* Left: info */}
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)]">
-                    <MapPin className="h-5 w-5 text-[var(--text-muted)]" />
-                  </div>
+          {geofences && geofences.length > 0 ? (
+            <>
+              {geofences.map((g) => (
+                <StaggerItem key={g.id}>
+                  <GlassPanel
+                    hover
+                    glow="purple"
+                    className={clsx(
+                      'flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between',
+                    )}
+                  >
+                    {/* Left: info */}
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)]">
+                        <MapPin className="h-5 w-5 text-[var(--text-muted)]" />
+                      </div>
 
-                  <div className="min-w-0">
-                    <div className="mb-1 flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-[var(--text-primary)]">
-                        {g.name}
-                      </span>
-                      <Badge variant={g.enabled ? 'success' : 'neutral'} size="sm">
-                        {g.enabled ? t('Active') : t('Inactive')}
-                      </Badge>
-                      <Badge variant={alertBadgeVariant(getAlertType(g))} size="sm">
-                        {alertBadgeLabel(getAlertType(g), t)}
-                      </Badge>
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-[var(--text-primary)]">
+                            {g.name}
+                          </span>
+                          <Badge variant={g.enabled ? 'success' : 'neutral'} size="sm">
+                            {g.enabled ? t('Active') : t('Inactive')}
+                          </Badge>
+                          <Badge variant={alertBadgeVariant(getAlertType(g))} size="sm">
+                            {alertBadgeLabel(getAlertType(g), t)}
+                          </Badge>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                          <span className="flex items-center gap-1 font-mono">
+                            <Globe className="h-3 w-3" />
+                            {(g.latitude ?? 0).toFixed(6)}, {(g.longitude ?? 0).toFixed(6)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Ruler className="h-3 w-3" />
+                            {g.radius}{t('m')}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1 font-mono">
-                        <Globe className="h-3 w-3" />
-                        {g.latitude.toFixed(6)}, {g.longitude.toFixed(6)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Ruler className="h-3 w-3" />
-                        {g.radius}{t('m')}
-                      </span>
+                    {/* Right: actions */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Toggle
+                        checked={g.enabled}
+                        onChange={(checked) => toggleMut.mutate({ id: g.id, enabled: checked })}
+                        size="sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Pencil className="h-4 w-4" />}
+                        onClick={() => openEdit(g)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Trash2 className="h-4 w-4" />}
+                        onClick={() => setDeleteTarget(g)}
+                      />
                     </div>
-                  </div>
-                </div>
-
-                {/* Right: actions */}
-                <div className="flex shrink-0 items-center gap-2">
-                  <Toggle
-                    checked={g.enabled}
-                    onChange={(checked) => toggleMut.mutate({ id: g.id, enabled: checked })}
-                    size="sm"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Pencil className="h-4 w-4" />}
-                    onClick={() => openEdit(g)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Trash2 className="h-4 w-4" />}
-                    onClick={() => setDeleteTarget(g)}
-                  />
-                </div>
-              </GlassPanel>
-            </StaggerItem>
-          ))}
+                  </GlassPanel>
+                </StaggerItem>
+              ))}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
         </StaggerContainer>
       )}
 

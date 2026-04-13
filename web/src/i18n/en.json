@@ -27,6 +27,7 @@
   "common": {
     "loading": "Loading...",
     "noData": "No data available",
+    "noDataForPeriod": "No data available for this period",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",

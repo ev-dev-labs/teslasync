@@ -164,7 +164,7 @@ export default function SpeedProfilePage() {
                   <div className="flex items-end justify-between">
                     <div>
                       <p className={cn('text-lg font-bold', bucketTextClass(bucket.range))}>
-                        {bucket.percentage.toFixed(1)}%
+                        {(bucket.percentage ?? 0).toFixed(1)}%
                       </p>
                       <p className="text-[10px] text-[var(--text-muted)]">
                         {bucket.driveCount} {t('speedProfile.drives', 'drives')}

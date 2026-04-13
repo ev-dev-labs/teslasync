@@ -326,3 +326,188 @@ func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapsh
 
 	return pred
 }
+
+// Health handles GET /analytics/battery-health?vehicle_id=X
+// Returns data shaped for the BatteryDegradationPage frontend.
+func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := r.URL.Query().Get("vehicle_id")
+	if vehicleIDStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		return
+	}
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
+
+	ctx := r.Context()
+	const nominalCapacity = 75.0
+
+	// Battery snapshots for history
+	snapRows, err := h.db.Pool.Query(ctx, `
+		SELECT health_score, capacity_kwh, degradation_pct,
+			est_range_km, cycle_count, created_at
+		FROM battery_snapshots
+		WHERE vehicle_id = $1
+		ORDER BY created_at`, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("battery-health: failed to query snapshots")
+		writeError(w, http.StatusInternalServerError, "failed to get battery data")
+		return
+	}
+	defer snapRows.Close()
+
+	type histEntry struct {
+		Date        string  `json:"date"`
+		Odometer    float64 `json:"odometer"`
+		SohPct      float64 `json:"soh_pct"`
+		CapacityKWh float64 `json:"capacity_kwh"`
+		RangeKm     float64 `json:"range_km"`
+	}
+
+	var history []histEntry
+	var latestSOH, latestCapacity, latestRange float64
+	var latestCycles int
+	var firstDate time.Time
+
+	for snapRows.Next() {
+		var healthScore, capacityKWh, degradationPct, rangeKm float64
+		var cycleCount int
+		var createdAt time.Time
+		if err := snapRows.Scan(&healthScore, &capacityKWh, &degradationPct, &rangeKm, &cycleCount, &createdAt); err != nil {
+			continue
+		}
+		if firstDate.IsZero() {
+			firstDate = createdAt
+		}
+		history = append(history, histEntry{
+			Date:        createdAt.Format("2006-01-02"),
+			SohPct:      math.Round(healthScore*10) / 10,
+			CapacityKWh: math.Round(capacityKWh*10) / 10,
+			RangeKm:     math.Round(rangeKm*10) / 10,
+		})
+		latestSOH = healthScore
+		latestCapacity = capacityKWh
+		latestRange = rangeKm
+		latestCycles = cycleCount
+	}
+
+	// Fallback from charging_telemetry
+	if latestSOH == 0 {
+		var energy, rng *float64
+		_ = h.db.Pool.QueryRow(ctx,
+			`SELECT energy_remaining, est_battery_range FROM charging_telemetry
+			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL
+			 ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&energy, &rng)
+		if energy != nil && *energy > 0 {
+			latestCapacity = *energy
+			latestSOH = (latestCapacity / nominalCapacity) * 100
+			if latestSOH > 100 {
+				latestSOH = 100
+			}
+		}
+		if rng != nil {
+			latestRange = *rng
+		}
+		var delta *float64
+		_ = h.db.Pool.QueryRow(ctx,
+			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0))
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			vehicleID).Scan(&delta)
+		if delta != nil {
+			latestCycles = int(*delta / 100)
+		}
+		if latestSOH > 0 {
+			history = []histEntry{{
+				Date:        time.Now().Format("2006-01-02"),
+				SohPct:      math.Round(latestSOH*10) / 10,
+				CapacityKWh: math.Round(latestCapacity*10) / 10,
+				RangeKm:     math.Round(latestRange*10) / 10,
+			}}
+			firstDate = time.Now().AddDate(0, -1, 0)
+		}
+	}
+
+	// Charging habit stats
+	var fastCount, slowCount, deepDischarge, fullCharge int
+	_ = h.db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) FILTER (WHERE charger_power > 50),
+			COUNT(*) FILTER (WHERE charger_power <= 50 OR charger_power IS NULL),
+			COUNT(*) FILTER (WHERE start_battery_level < 10),
+			COUNT(*) FILTER (WHERE end_battery_level > 95)
+		FROM charging_sessions
+		WHERE vehicle_id = $1`, vehicleID).Scan(&fastCount, &slowCount, &deepDischarge, &fullCharge)
+
+	totalCharges := fastCount + slowCount
+	fastChargePct := 0.0
+	fullChargePct := 0.0
+	if totalCharges > 0 {
+		fastChargePct = float64(fastCount) / float64(totalCharges) * 100
+		fullChargePct = float64(fullCharge) / float64(totalCharges) * 100
+	}
+
+	// Calculate scores
+	chargeHabitsScore := 100.0
+	if fastChargePct > 50 {
+		chargeHabitsScore -= 30
+	} else if fastChargePct > 25 {
+		chargeHabitsScore -= 15
+	}
+	if fullChargePct > 50 {
+		chargeHabitsScore -= 20
+	} else if fullChargePct > 25 {
+		chargeHabitsScore -= 10
+	}
+	if deepDischarge > 20 {
+		chargeHabitsScore -= 20
+	} else if deepDischarge > 10 {
+		chargeHabitsScore -= 10
+	}
+	if chargeHabitsScore < 0 {
+		chargeHabitsScore = 0
+	}
+
+	// Age
+	ageMonths := 0
+	if !firstDate.IsZero() {
+		ageMonths = int(time.Since(firstDate).Hours() / (24 * 30.44))
+	}
+
+	// Degradation rate per year
+	degradationRate := 0.0
+	if ageMonths > 0 && latestSOH > 0 && latestSOH < 100 {
+		degradationRate = (100 - latestSOH) / (float64(ageMonths) / 12)
+	}
+
+	// Avg depth of discharge
+	var avgDoD *float64
+	_ = h.db.Pool.QueryRow(ctx,
+		`SELECT AVG(GREATEST(start_battery_level - end_battery_level, 0))
+		 FROM drives WHERE vehicle_id = $1 AND start_battery_level > end_battery_level`,
+		vehicleID).Scan(&avgDoD)
+	dod := 0.0
+	if avgDoD != nil {
+		dod = *avgDoD
+	}
+
+	if history == nil {
+		history = []histEntry{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"current_soh":            math.Round(latestSOH*10) / 10,
+		"estimated_capacity":     math.Round(latestCapacity*10) / 10,
+		"original_capacity":      nominalCapacity,
+		"degradation_rate_yr":    math.Round(degradationRate*100) / 100,
+		"battery_age_months":     ageMonths,
+		"total_cycles":           latestCycles,
+		"avg_depth_of_discharge": math.Round(dod*10) / 10,
+		"fast_charge_pct":        math.Round(fastChargePct*10) / 10,
+		"full_charge_pct":        math.Round(fullChargePct*10) / 10,
+		"charge_habits_score":    math.Round(chargeHabitsScore),
+		"temp_exposure_score":    80, // placeholder until temp tracking is granular
+		"history":                history,
+	})
+}

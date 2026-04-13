@@ -15,6 +15,7 @@ import {
   Zap,
   AlertTriangle,
   RefreshCw,
+  Activity,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -285,7 +286,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {row.latitude.toFixed(6)}
+            {(row.latitude ?? 0).toFixed(6)}
           </span>
         ),
       },
@@ -295,7 +296,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {row.longitude.toFixed(6)}
+            {(row.longitude ?? 0).toFixed(6)}
           </span>
         ),
       },
@@ -553,7 +554,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.currentLocation', 'Current Location')}
                 value={
                   latest
-                    ? `${latest.latitude.toFixed(4)}, ${latest.longitude.toFixed(4)} · ${headingToCardinal(latest.heading)} ${fmtNumber(latest.speed, 0)} mph`
+                    ? `${(latest.latitude ?? 0).toFixed(4)}, ${(latest.longitude ?? 0).toFixed(4)} · ${headingToCardinal(latest.heading)} ${fmtNumber(latest.speed, 0)} mph`
                     : '—'
                 }
                 active={!!latest}
@@ -714,19 +715,26 @@ export default function NavigationRoutePage() {
           </FadeIn>
 
           {/* ─────── Waypoints / Supercharger List ─────── */}
-          {hasActiveRoute && waypoints.length > 0 && (
+          {hasActiveRoute && (
             <FadeIn delay={0.25}>
               <GlassPanel className="mb-6 p-5">
                 <span className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Zap className="h-4 w-4" />
                   {t('nav.waypoints', 'Route Waypoints')}
                 </span>
-                <DataTable
-                  columns={waypointColumns}
-                  data={waypoints}
-                  keyExtractor={(wp) => `${wp.name}-${wp.distance}`}
-                  compact
-                />
+                {waypoints.length > 0 ? (
+                  <DataTable
+                    columns={waypointColumns}
+                    data={waypoints}
+                    keyExtractor={(wp) => `${wp.name}-${wp.distance}`}
+                    compact
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                    <Activity className="h-8 w-8 opacity-20" />
+                    <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                  </div>
+                )}
               </GlassPanel>
             </FadeIn>
           )}

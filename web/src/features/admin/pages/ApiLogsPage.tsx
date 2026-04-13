@@ -248,7 +248,7 @@ export default function ApiLogsPage() {
                       </span>
                       <MethodBadge method={log.method} />
                       <span className="text-xs font-mono text-[var(--text-secondary)] truncate flex-1" title={log.url}>
-                        {log.url.replace(/^https?:\/\/[^/]+/, '')}
+                        {(log.url ?? '').replace(/^https?:\/\/[^/]+/, '')}
                       </span>
                       <StatusBadge code={log.status_code} />
                       <span className="text-xs font-mono text-[var(--text-secondary)] w-16 text-right shrink-0">

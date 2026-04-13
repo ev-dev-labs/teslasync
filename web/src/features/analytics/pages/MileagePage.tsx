@@ -99,7 +99,7 @@ export default function MileagePage() {
     if (!entries?.length) return [];
     const map = new Map<string, { distance: number; drives: number }>();
     for (const e of entries) {
-      const key = e.date.slice(0, 7);
+      const key = (e.date ?? '').slice(0, 7);
       const cur = map.get(key) ?? { distance: 0, drives: 0 };
       cur.distance += e.distance;
       cur.drives += 1;

@@ -224,7 +224,7 @@ export default function TirePressurePage() {
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {val.toFixed(2)} {t('Bar Unit')}
+                {(val ?? 0).toFixed(2)} {t('Bar Unit')}
               </Badge>
             );
           },
@@ -364,7 +364,7 @@ export default function TirePressurePage() {
             label={t('Avg Pressure')}
             value={
               summaryStats
-                ? `${summaryStats.avg.toFixed(2)} ${t('Bar Unit')}`
+                ? `${(summaryStats.avg ?? 0).toFixed(2)} ${t('Bar Unit')}`
                 : '—'
             }
             icon={<Activity className="h-5 w-5" />}
@@ -374,7 +374,7 @@ export default function TirePressurePage() {
             label={t('Min Pressure')}
             value={
               summaryStats
-                ? `${summaryStats.min.toFixed(2)} ${t('Bar Unit')}`
+                ? `${(summaryStats.min ?? 0).toFixed(2)} ${t('Bar Unit')}`
                 : '—'
             }
             icon={<TrendingDown className="h-5 w-5" />}

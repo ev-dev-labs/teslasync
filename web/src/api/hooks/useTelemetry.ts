@@ -3,19 +3,20 @@ import { request } from '../client';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
 
 export const telemetryKeys = {
-  signals: ['signals'] as const,
+  signals: (vehicleId: number) => ['signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
-  signalHistory: (signal: string, hours: number) => ['signal-history', signal, hours] as const,
-  signalLog: (signal: string, hours: number, page: number) => ['signal-log', signal, hours, page] as const,
-  signalDiff: (signal: string, from: string, to: string) => ['signal-diff', signal, from, to] as const,
-  signalGaps: ['signal-gaps'] as const,
+  signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
+  signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
+  signalDiff: (vehicleId: number, signal: string, from: string, to: string) => ['signal-diff', vehicleId, signal, from, to] as const,
+  signalGaps: (vehicleId: number) => ['signal-gaps', vehicleId] as const,
   mqttStatus: ['mqtt-status'] as const,
 };
 
-export function useSignals() {
+export function useSignals(vehicleId: number) {
   return useQuery({
-    queryKey: telemetryKeys.signals,
-    queryFn: () => request<string[]>('/signals/available'),
+    queryKey: telemetryKeys.signals(vehicleId),
+    queryFn: () => request<string[]>(`/signals/${vehicleId}/available`),
+    enabled: vehicleId > 0,
     staleTime: 60_000,
   });
 }
@@ -23,44 +24,48 @@ export function useSignals() {
 export function useSignalStats(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signalStats(vehicleId),
-    queryFn: () => request<SignalStats>(`/signals/stats?vehicle_id=${vehicleId}`),
+    queryFn: () => request<SignalStats>(`/signals/${vehicleId}/stats`),
     enabled: vehicleId > 0,
   });
 }
 
-export function useSignalHistory(signal: string, hours: number) {
+export function useSignalHistory(vehicleId: number, signal: string, hours: number) {
   return useQuery({
-    queryKey: telemetryKeys.signalHistory(signal, hours),
-    queryFn: () => request<SignalHistoryResponse>(`/signals/history?signal=${signal}&hours=${hours}`),
-    enabled: !!signal,
+    queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
+    queryFn: () => request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`),
+    enabled: vehicleId > 0 && !!signal,
     refetchInterval: 30_000,
   });
 }
 
-export function useSignalLog(signal: string, hours: number, page: number, pageSize: number) {
+export function useSignalLog(vehicleId: number, signal: string, hours: number, page: number, pageSize: number) {
   return useQuery({
-    queryKey: telemetryKeys.signalLog(signal, hours, page),
+    queryKey: telemetryKeys.signalLog(vehicleId, signal, hours, page),
     queryFn: () =>
       request<SignalHistoryResponse>(
-        `/signals/history?signal=${signal}&hours=${hours}&page=${page}&page_size=${pageSize}`
+        `/signals/${vehicleId}/${signal}/history?hours=${hours}&page=${page}&page_size=${pageSize}`
       ),
-    enabled: !!signal,
+    enabled: vehicleId > 0 && !!signal,
   });
 }
 
-export function useSignalDiff(signal: string, from: string, to: string) {
+export function useSignalDiff(vehicleId: number, signal: string, from: string, to: string) {
   return useQuery({
-    queryKey: telemetryKeys.signalDiff(signal, from, to),
+    queryKey: telemetryKeys.signalDiff(vehicleId, signal, from, to),
     queryFn: () =>
-      request<SignalHistoryResponse>(`/signals/history?signal=${signal}&from=${from}&to=${to}`),
-    enabled: !!signal && !!from && !!to,
+      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?from=${from}&to=${to}`),
+    enabled: vehicleId > 0 && !!signal && !!from && !!to,
   });
 }
 
-export function useSignalGaps() {
+export function useSignalGaps(vehicleId: number) {
   return useQuery({
-    queryKey: telemetryKeys.signalGaps,
-    queryFn: () => request<Record<string, { value: unknown; timestamp: string }>>('/signals/live'),
+    queryKey: telemetryKeys.signalGaps(vehicleId),
+    queryFn: async () => {
+      const res = await request<{ signals?: Record<string, { value: unknown; timestamp: string }> }>(`/signals/${vehicleId}/live`);
+      return res.signals ?? {};
+    },
+    enabled: vehicleId > 0,
     refetchInterval: 5_000,
   });
 }

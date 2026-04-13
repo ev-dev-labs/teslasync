@@ -125,7 +125,7 @@ function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
   const bucketMap = new Map<string, { on: number; off: number }>();
 
   for (const ev of events) {
-    const dateKey = ev.createdAt.slice(0, 10);
+    const dateKey = (ev.createdAt ?? '').slice(0, 10);
     const bucket = bucketMap.get(dateKey) ?? { on: 0, off: 0 };
     if (ev.sentryMode) {
       bucket.on += 1;
@@ -578,7 +578,7 @@ export default function SecurityAccessPage() {
               >
                 <p className="text-xs text-gray-400 mb-1">{win.label}</p>
                 <p className={clsx('text-xl font-bold', windowTextClass(state))}>
-                  {t(`admin.security.windowState.${state.toLowerCase()}`, state)}
+                  {t(`admin.security.windowState.${(state ?? '').toLowerCase()}`, state)}
                 </p>
               </GlassPanel>
             );
@@ -587,12 +587,12 @@ export default function SecurityAccessPage() {
       </FadeIn>
 
       {/* ---- Sentry Mode Chart ---- */}
-      {sentryBuckets.length > 0 && (
-        <FadeIn delay={300}>
-          <GlassPanel className="p-4 mb-6">
-            <h2 className="text-lg font-semibold text-gray-200 mb-4">
-              {t('admin.security.sentryChart', 'Sentry Mode Activity')}
-            </h2>
+      <FadeIn delay={300}>
+        <GlassPanel className="p-4 mb-6">
+          <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            {t('admin.security.sentryChart', 'Sentry Mode Activity')}
+          </h2>
+          {sentryBuckets.length > 0 ? (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sentryBuckets}>
@@ -627,9 +627,14 @@ export default function SecurityAccessPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ---- Security Event History Table ---- */}
       <FadeIn delay={400}>

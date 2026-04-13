@@ -160,6 +160,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dataRepairHandler := NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
+	batteryCellsHandler := NewBatteryCellsHandler(db)
+	rangeProjectionHandler := NewRangeProjectionHandler(db)
+	drivetrainHealthHandler := NewDrivetrainHealthHandler(db)
+	maintenanceHandler := NewMaintenanceHandler(db)
+	periodStatsHandler := NewPeriodStatsHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -213,11 +218,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Drives
 		r.Route("/drives", func(r chi.Router) {
 			r.Get("/", driveHandler.ListByVehicle)
+			r.Get("/stats", driveHandler.Stats)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
 				r.Get("/telemetry", driveHandler.TelemetryReadings)
 			})
+		})
+
+		// Drivetrain Health
+		r.Get("/drivetrain/health", drivetrainHealthHandler.Get)
+
+		// Maintenance
+		r.Route("/maintenance", func(r chi.Router) {
+			r.Get("/", maintenanceHandler.List)
+			r.Get("/records", maintenanceHandler.Records)
 		})
 
 		// Charging
@@ -279,11 +294,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/sleep", sleepHandler.GetSleepAnalytics)
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
+		r.Get("/analytics/battery-health", batteryDegradationHandler.Health)
 		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
 		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
 		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
 		r.Get("/analytics/route-efficiency", routeEfficiencyHandler.List)
 		r.Get("/analytics/route-efficiency/detail", routeEfficiencyHandler.Detail)
+		r.Get("/analytics/battery-cells", batteryCellsHandler.Get)
+		r.Get("/analytics/energy", energyHandler.AnalyticsStats)
+		r.Get("/analytics/range-projection", rangeProjectionHandler.Get)
+		r.Get("/analytics/period-stats", periodStatsHandler.Get)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {
@@ -521,14 +541,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Signal History (MongoDB-backed per-signal log)
-		if telemetryHandler != nil && telemetryHandler.signalLogRepo != nil {
-			signalHandler := NewSignalHandler(telemetryHandler.signalLogRepo)
-			r.Route("/signals/{vehicleID}", func(r chi.Router) {
-				r.Get("/available", signalHandler.AvailableSignals)
-				r.Get("/stats", signalHandler.Stats)
+		// Signal routes
+		r.Route("/signals/{vehicleID}", func(r chi.Router) {
+			// Live state from in-memory SignalStore (always available)
+			if telemetryHandler != nil {
 				r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
-					// Live state from in-memory SignalStore
 					store := telemetryHandler.GetSignalStore()
 					if store == nil {
 						writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal store not initialized"})
@@ -556,9 +573,44 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						"signals":    signals,
 					})
 				})
+			}
+
+			// Signal History (MongoDB-backed per-signal log)
+			if telemetryHandler != nil && telemetryHandler.signalLogRepo != nil {
+				signalHandler := NewSignalHandler(telemetryHandler.signalLogRepo)
+				r.Get("/available", signalHandler.AvailableSignals)
+				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
-			})
-		}
+			} else if telemetryHandler != nil {
+				// Fallback: derive available signals from in-memory SignalStore
+				r.Get("/available", func(w http.ResponseWriter, r *http.Request) {
+					store := telemetryHandler.GetSignalStore()
+					if store == nil {
+						writeJSON(w, http.StatusOK, map[string]interface{}{
+							"vehicle_id": 0,
+							"count":      0,
+							"signals":    []string{},
+						})
+						return
+					}
+					vid, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
+					if err != nil {
+						writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+						return
+					}
+					raw := store.GetAll(vid)
+					names := make([]string, 0, len(raw))
+					for k := range raw {
+						names = append(names, k)
+					}
+					writeJSON(w, http.StatusOK, map[string]interface{}{
+						"vehicle_id": vid,
+						"count":      len(names),
+						"signals":    names,
+					})
+				})
+			}
+		})
 
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {

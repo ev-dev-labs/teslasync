@@ -164,7 +164,7 @@ export default function ProjectedRangePage() {
             {(data?.factors ?? []).map((f) => (
               <GlassPanel key={f.name} hover className="flex items-start gap-3 p-4">
                 <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">
-                  {FACTOR_ICONS[f.name.toLowerCase().replace(/\s+/g, '_')] ?? <Gauge className="h-4 w-4" />}
+                  {FACTOR_ICONS[(f.name ?? '').toLowerCase().replace(/\s+/g, '_')] ?? <Gauge className="h-4 w-4" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className={clsx('flex items-center gap-2')}>

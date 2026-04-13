@@ -215,12 +215,12 @@ export default function RegenEfficiencyPage() {
           </FadeIn>
 
           {/* Per-drive regen table */}
-          {regenDrives.length > 0 && (
-            <FadeIn>
-              <GlassPanel className="p-4 sm:p-6">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-                  <Zap className="h-4 w-4 text-green-400" /> {t('regen.recentDrives', 'Recent Regen Drives')}
-                </h3>
+          <FadeIn>
+            <GlassPanel className="p-4 sm:p-6">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+                <Zap className="h-4 w-4 text-green-400" /> {t('regen.recentDrives', 'Recent Regen Drives')}
+              </h3>
+              {regenDrives.length > 0 ? (
                 <div className="overflow-x-auto">
                   <div className="grid grid-cols-4 gap-2 text-xs font-medium text-[var(--text-muted)] mb-2 px-2">
                     <span>{t('regen.date', 'Date')}</span>
@@ -239,9 +239,14 @@ export default function RegenEfficiencyPage() {
                     </div>
                   ))}
                 </div>
-              </GlassPanel>
-            </FadeIn>
-          )}
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+                  <Activity className="h-8 w-8 opacity-20" />
+                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
+                </div>
+              )}
+            </GlassPanel>
+          </FadeIn>
         </>
       )}
     </PageContainer>

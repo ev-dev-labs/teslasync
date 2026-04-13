@@ -822,8 +822,9 @@ export default function DriveScorePage() {
         />
       )}
 
-      {scoredDrives.length > 0 && (
-        <StaggerContainer className="space-y-6">
+      <StaggerContainer className="space-y-6">
+        {scoredDrives.length > 0 ? (
+          <>
           {/* -------- Section 1: Hero overall score gauge -------- */}
           <StaggerItem>
             <GlassPanel className="flex flex-col items-center py-8">
@@ -1686,8 +1687,14 @@ export default function DriveScorePage() {
               </Card>
             </Grid>
           </StaggerItem>
-        </StaggerContainer>
-      )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+            <Activity className="h-8 w-8 opacity-20" />
+            <p className="text-xs">{t('common.noData', 'No data available')}</p>
+          </div>
+        )}
+      </StaggerContainer>
     </PageContainer>
   );
 }

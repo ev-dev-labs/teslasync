@@ -71,6 +71,16 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 		gasPrice = 3.50
 		gasEfficiencyMPG = 25
 	}
+	// Guard against zero/negative values that would cause division-by-zero (producing +Inf/NaN in JSON)
+	if gasEfficiencyMPG <= 0 {
+		gasEfficiencyMPG = 25
+	}
+	if baseCostPerKWh <= 0 {
+		baseCostPerKWh = 0.12
+	}
+	if gasPrice <= 0 {
+		gasPrice = 3.50
+	}
 
 	// Calculate ownership duration
 	var monthsOfOwnership float64 = 1
@@ -165,6 +175,14 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 		return monthlyBreakdown[i].Month < monthlyBreakdown[j].Month
 	})
 
+	// safeF guards against NaN/Inf which silently break json.Encode
+	safeF := func(v float64) float64 {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return 0
+		}
+		return v
+	}
+
 	equivalentGasCostTotal := 0.0
 	if totalKm > 0 {
 		totalMiles := totalKm / 1.60934
@@ -183,22 +201,22 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":                   vehicleID,
-		"total_charging_cost":          math.Round(totalChargingCost*100) / 100,
-		"total_kwh":                    math.Round(totalKWh*100) / 100,
+		"total_charging_cost":          safeF(math.Round(totalChargingCost*100) / 100),
+		"total_kwh":                    safeF(math.Round(totalKWh*100) / 100),
 		"total_sessions":               totalSessions,
-		"total_km":                     math.Round(totalKm*100) / 100,
+		"total_km":                     safeF(math.Round(totalKm*100) / 100),
 		"first_date":                   firstDateStr,
 		"last_date":                    lastDateStr,
-		"months_of_ownership":          math.Round(monthsOfOwnership*10) / 10,
-		"cost_per_km_ev":               math.Round(costPerKmEV*10000) / 10000,
-		"cost_per_km_ice":              math.Round(costPerKmICE*10000) / 10000,
-		"equivalent_gas_cost":          math.Round(equivalentGasCostTotal*100) / 100,
-		"total_savings":                math.Round(totalSavings*100) / 100,
-		"monthly_savings":              math.Round(monthlySavings*100) / 100,
-		"maintenance_savings_estimate": math.Round(maintenanceSavingsEstimate*100) / 100,
-		"gas_price":                    gasPrice,
-		"gas_efficiency_mpg":           gasEfficiencyMPG,
-		"base_cost_per_kwh":            baseCostPerKWh,
+		"months_of_ownership":          safeF(math.Round(monthsOfOwnership*10) / 10),
+		"cost_per_km_ev":               safeF(math.Round(costPerKmEV*10000) / 10000),
+		"cost_per_km_ice":              safeF(math.Round(costPerKmICE*10000) / 10000),
+		"equivalent_gas_cost":          safeF(math.Round(equivalentGasCostTotal*100) / 100),
+		"total_savings":                safeF(math.Round(totalSavings*100) / 100),
+		"monthly_savings":              safeF(math.Round(monthlySavings*100) / 100),
+		"maintenance_savings_estimate": safeF(math.Round(maintenanceSavingsEstimate*100) / 100),
+		"gas_price":                    safeF(gasPrice),
+		"gas_efficiency_mpg":           safeF(gasEfficiencyMPG),
+		"base_cost_per_kwh":            safeF(baseCostPerKWh),
 		"monthly_breakdown":            monthlyBreakdown,
 	})
 }

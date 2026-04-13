@@ -214,11 +214,11 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       </div>
 
       {/* Delivery status pie */}
-      {logTypeCounts.length > 0 && (
-        <GlassPanel className="p-4 sm:p-6">
-          <span className="section-title mb-4 flex items-center gap-2">
-            <PieChartIcon className="h-4 w-4 text-neon-purple" /> {t('Delivery Status')}
-          </span>
+      <GlassPanel className="p-4 sm:p-6">
+        <span className="section-title mb-4 flex items-center gap-2">
+          <PieChartIcon className="h-4 w-4 text-neon-purple" /> {t('Delivery Status')}
+        </span>
+        {logTypeCounts.length > 0 ? (
           <div className="h-40 flex flex-col sm:flex-row items-center">
             <ResponsiveContainer width="50%" height="100%">
               <PieChart>
@@ -238,8 +238,13 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
               ))}
             </div>
           </div>
-        </GlassPanel>
-      )}
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+            <Activity className="h-8 w-8 opacity-20" />
+            <p className="text-xs">{t('common.noData')}</p>
+          </div>
+        )}
+      </GlassPanel>
 
       {/* Log table */}
       <GlassPanel className="p-4 sm:p-6">

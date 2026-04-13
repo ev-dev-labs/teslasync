@@ -113,7 +113,7 @@ function buildHistogram(cells: CellReading[]): { bucket: string; count: number }
   }
 
   return buckets.map((b) => ({
-    bucket: `${b.low.toFixed(3)}–${b.high.toFixed(3)}`,
+    bucket: `${(b.low ?? 0).toFixed(3)}–${(b.high ?? 0).toFixed(3)}`,
     count: b.count,
   }));
 }
@@ -149,10 +149,10 @@ function CellHeatmap({
               'transition-transform hover:scale-110',
             )}
             style={{ backgroundColor: `${cellColor(cell.voltage, avg)}20`, color: cellColor(cell.voltage, avg) }}
-            title={`${t('Cell')} ${cell.cell_number}: ${cell.voltage.toFixed(3)} V (${cell.delta_from_avg >= 0 ? '+' : ''}${(cell.delta_from_avg * 1000).toFixed(1)} mV)`}
+            title={`${t('Cell')} ${cell.cell_number}: ${(cell.voltage ?? 0).toFixed(3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${((cell.delta_from_avg ?? 0) * 1000).toFixed(1)} mV)`}
           >
             <span className="font-semibold">{cell.cell_number}</span>
-            <span>{cell.voltage.toFixed(3)}</span>
+            <span>{(cell.voltage ?? 0).toFixed(3)}</span>
           </div>
         ))}
       </div>
@@ -263,7 +263,7 @@ export default function BatteryCellsPage() {
       render: (r) => (
         <Badge variant={statusVariant(r.status)} size="sm" dot>
           {statusIcon(r.status)}
-          {t(r.status.charAt(0).toUpperCase() + r.status.slice(1))}
+          {t((r.status ?? '').charAt(0).toUpperCase() + (r.status ?? '').slice(1))}
         </Badge>
       ),
     },

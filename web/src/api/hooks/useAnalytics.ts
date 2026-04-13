@@ -15,14 +15,14 @@ export const analyticsKeys = {
 export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
-    queryFn: () => request<AnalyticsSummary>(`/analytics/summary?days=${days}`),
+    queryFn: () => request<AnalyticsSummary>(`/analytics/fleet?days=${days}`),
   });
 }
 
 export function useMileageStats(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.mileage(vehicleId),
-    queryFn: () => request<MileageStats>(`/vehicles/${vehicleId}/mileage`),
+    queryFn: () => request<MileageStats>(`/mileage/stats?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
   });
 }
@@ -30,7 +30,7 @@ export function useMileageStats(vehicleId: string) {
 export function useMonthlyMileage(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.monthlyMileage(vehicleId),
-    queryFn: () => request<MonthlyStat[]>(`/vehicles/${vehicleId}/mileage/monthly`),
+    queryFn: () => request<MonthlyStat[]>(`/mileage/monthly?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
   });
 }
@@ -38,7 +38,7 @@ export function useMonthlyMileage(vehicleId: string) {
 export function useCostBreakdown(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.cost(vehicleId),
-    queryFn: () => request<CostBreakdown>(`/vehicles/${vehicleId}/cost-breakdown`),
+    queryFn: () => request<CostBreakdown>(`/analytics/tco?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
   });
 }
@@ -46,7 +46,7 @@ export function useCostBreakdown(vehicleId: string) {
 export function useTimeline(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.timeline(vehicleId),
-    queryFn: () => request<TimelineEvent[]>(`/vehicles/${vehicleId}/timeline`),
+    queryFn: () => request<TimelineEvent[]>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
   });
 }
@@ -54,7 +54,7 @@ export function useTimeline(vehicleId: string) {
 export function useStateSummary(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: () => request<StateSummary[]>(`/vehicles/${vehicleId}/state-summary`),
+    queryFn: () => request<StateSummary[]>(`/vehicle-states/summary?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
   });
 }
@@ -64,5 +64,7 @@ export function useWeeklyDigest(vehicleId: string) {
     queryKey: analyticsKeys.weeklyDigest(vehicleId),
     queryFn: () => request<WeeklyDigestData>(`/vehicles/${vehicleId}/weekly-digest`),
     enabled: !!vehicleId,
+    retry: false,
+    staleTime: Infinity,
   });
 }

@@ -192,9 +192,9 @@ export default function AlertStudioPage() {
     if (templateSearch) {
       const q = templateSearch.toLowerCase();
       list = list.filter(tpl =>
-        tpl.name.toLowerCase().includes(q) ||
-        tpl.msg_template.toLowerCase().includes(q) ||
-        tpl.category.toLowerCase().includes(q),
+        (tpl.name ?? '').toLowerCase().includes(q) ||
+        (tpl.msg_template ?? '').toLowerCase().includes(q) ||
+        (tpl.category ?? '').toLowerCase().includes(q),
       );
     }
     return list;

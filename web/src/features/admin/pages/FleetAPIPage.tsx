@@ -21,7 +21,7 @@ import {
   useSettings, useToggleAPISuspend, usePollingConfig,
   useUpdatePollingConfig, useCaptureStats, useVersionInfo,
 } from '@/api/hooks/useSettings';
-import { Shield, Pause, Play, Globe, Link } from 'lucide-react';
+import { Shield, Pause, Play, Globe, Link, Activity } from 'lucide-react';
 
 // ─── EndpointToggle sub-component ────────────────────────────────────────────
 
@@ -269,23 +269,23 @@ export default function FleetAPIPage() {
       </FadeIn>
 
       {/* ── Configured Endpoints ─────────────────────────────────── */}
-      {version?.endpoints && Object.keys(version.endpoints).length > 0 && (
-        <FadeIn>
-          <GlassPanel className="p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <IconBox color="purple">
-                <Globe className="h-5 w-5" />
-              </IconBox>
-              <div>
-                <span className="text-base font-semibold text-[var(--text-primary)] block">
-                  {t('API Endpoints')}
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">
-                  {version ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}` : ''}
-                </span>
-              </div>
+      <FadeIn>
+        <GlassPanel className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <IconBox color="purple">
+              <Globe className="h-5 w-5" />
+            </IconBox>
+            <div>
+              <span className="text-base font-semibold text-[var(--text-primary)] block">
+                {t('API Endpoints')}
+              </span>
+              <span className="text-xs text-[var(--text-muted)]">
+                {version ? `v${version.chart_version} · ${version.go_version} · ${version.os}/${version.arch}` : ''}
+              </span>
             </div>
+          </div>
 
+          {version?.endpoints && Object.keys(version.endpoints).length > 0 ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Link className="h-3.5 w-3.5 text-[var(--text-muted)]" />
@@ -307,9 +307,14 @@ export default function FleetAPIPage() {
                 ))}
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('common.noData', 'No data available')}</p>
+            </div>
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

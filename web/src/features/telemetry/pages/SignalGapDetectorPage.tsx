@@ -101,12 +101,13 @@ function buildColumns(t: (k: string, d: string) => string): Column<SignalRow>[] 
 export default function SignalGapDetectorPage() {
   const { t } = useTranslation();
   usePageTitle(t('signalGap.title', 'Signal Gaps'));
+  const vehicleId = 1;
 
   const [sortMode, setSortMode] = useState<SortMode>('staleness');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [search, setSearch] = useState('');
 
-  const { data: liveData, isLoading, dataUpdatedAt } = useSignalGaps();
+  const { data: liveData, isLoading, dataUpdatedAt } = useSignalGaps(vehicleId);
 
   const now = Date.now();
 
