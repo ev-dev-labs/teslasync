@@ -9,6 +9,25 @@
 
 type RequestStatus = 'online' | 'offline'
 
+// --- Snake-case to camelCase transformer ---
+// The Go backend returns snake_case JSON but TypeScript types use camelCase.
+
+function snakeToCamel(s: string): string {
+  return s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())
+}
+
+function camelCaseKeys(obj: unknown): unknown {
+  if (Array.isArray(obj)) return obj.map(camelCaseKeys)
+  if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      result[snakeToCamel(key)] = camelCaseKeys(value)
+    }
+    return result
+  }
+  return obj
+}
+
 // --- API Base URL ---
 // Injected at runtime by Nginx via sub_filter into index.html.
 // Falls back to empty string (relative paths) if not set.
@@ -170,7 +189,7 @@ async function _doFetch<T>(
         throw apiErr
       }
 
-      return await res.json() as T
+      return camelCaseKeys(await res.json()) as T
     } catch (err) {
       if (err instanceof ApiError) throw err
 

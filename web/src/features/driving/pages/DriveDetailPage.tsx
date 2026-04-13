@@ -151,21 +151,16 @@ export default function DriveDetailPage() {
 
   /* ---- Computed stats ---- */
   const stats = useMemo(() => {
-    if (!drive || chartData.length === 0) return null;
-    const speeds = chartData.map((d) => d.speed);
-    const maxSpd = drive.speedMax != null ? convertSpeed(drive.speedMax) : Math.max(...speeds, 0);
-    const avgSpd = drive.speedAvg != null
-      ? convertSpeed(drive.speedAvg)
-      : speeds.length > 0
-        ? speeds.reduce((a, b) => a + b, 0) / speeds.length
-        : 0;
-    const movingSpeeds = speeds.filter((s) => s > 0);
-    const minSpd = movingSpeeds.length > 0 ? Math.min(...movingSpeeds) : 0;
-    const powers = chartData.map((d) => d.power);
-    const powerMax = drive.powerMax ?? Math.max(...powers, 0);
-    const powerMin = drive.powerMin ?? Math.min(...powers, 0);
-    const avgPower = powers.length > 0 ? powers.reduce((a, b) => a + b, 0) / powers.length : 0;
-    const durationH = drive.durationMin / 60;
+    if (!drive) return null;
+    const maxSpd = drive.speedMax != null ? convertSpeed(drive.speedMax) : 0;
+    const avgSpd = drive.speedAvg != null ? convertSpeed(drive.speedAvg) : 0;
+    const minSpd = 0;
+    const powerMax = drive.powerMax ?? 0;
+    const powerMin = drive.powerMin ?? 0;
+    const avgPower = chartData.length > 0
+      ? chartData.reduce((s, d) => s + d.power, 0) / chartData.length
+      : (powerMax + powerMin) / 2;
+    const durationH = (drive.durationMin ?? 0) / 60;
     const energyWh = Math.abs(avgPower) * durationH * 1000;
     const regenWh = chartData.length > 0
       ? chartData.filter((d) => d.power < 0).reduce((s, d) => s + Math.abs(d.power), 0) * (durationH / chartData.length) * 1000
