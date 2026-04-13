@@ -61,5 +61,94 @@
     "charges": "Charges",
     "energy": "Energy",
     "cost": "Cost"
+  },
+  "charging": {
+    "list": {
+      "title": "Charging Sessions",
+      "subtitle": "Cost analysis, charger breakdown, energy patterns, and performance tracking",
+      "empty": "No charging sessions yet",
+      "emptyDescription": "Charging data will appear here once your vehicle records a session."
+    },
+    "gauges": {
+      "sessions": "Sessions",
+      "energy": "Energy",
+      "totalCost": "Total Cost",
+      "avgPower": "Avg Power",
+      "avgCostPerKwh": "Avg $/kWh"
+    },
+    "metrics": {
+      "home": "Home",
+      "supercharger": "Supercharger",
+      "dcFast": "DC Fast",
+      "totalTime": "Total Time",
+      "monthlyAvg": "Monthly Avg",
+      "perSession": "Per Session"
+    },
+    "charts": {
+      "energyCostTrend": "Energy & Cost Trend",
+      "chargerBreakdown": "Charger Breakdown",
+      "batteryLevelAtStart": "Battery Level at Charge Start",
+      "batteryLevelHint": "How low do you typically go before charging?"
+    },
+    "stats": {
+      "chargingByType": "Charging Stats by Type",
+      "energySplitLabel": "Energy Split (AC vs DC)",
+      "detailedStatistics": "Detailed Statistics",
+      "totalSessions": "Total Sessions",
+      "avgDuration": "Avg Duration",
+      "avgPower": "Avg Power",
+      "topCharger": "Top Charger",
+      "totalCost": "Total Cost",
+      "avgCostPerKwh": "Avg $/kWh"
+    },
+    "efficiency": {
+      "title": "Charging Efficiency",
+      "hint": "Wall-to-battery energy conversion",
+      "sessionsWithData": "sessions with data",
+      "average": "Average Efficiency",
+      "best": "Best Session",
+      "worst": "Worst Session",
+      "wallLoss": "Wall-to-Battery Loss"
+    },
+    "specs": {
+      "title": "Charger Specs Breakdown",
+      "byVoltage": "By Voltage",
+      "byPhase": "By Phase",
+      "byCable": "By Cable",
+      "byBrand": "By Brand"
+    },
+    "sessions": {
+      "allSessions": "All Sessions",
+      "filterAll": "All",
+      "filterHome": "Home",
+      "filterSC": "SC",
+      "filterDC": "DC",
+      "sortDate": "Date",
+      "sortEnergy": "kWh",
+      "sortCost": "Cost",
+      "sortTime": "Time",
+      "sortPower": "Power",
+      "exportCsv": "CSV",
+      "exportJson": "JSON"
+    },
+    "table": {
+      "type": "Type",
+      "sessionCount": "Sessions",
+      "energy": "Energy",
+      "cost": "Cost",
+      "costPerKwh": "$/kWh",
+      "avgEnergy": "Avg Energy",
+      "avgTime": "Avg Time",
+      "free": "Free",
+      "acCharging": "AC Charging",
+      "dcCharging": "DC Charging",
+      "freeCharged": "Free charged",
+      "freeEnergy": "Free energy"
+    },
+    "chargerTypes": {
+      "supercharger": "Supercharger",
+      "dc": "DC Fast",
+      "home": "Home / AC"
+    }
   }
 }
