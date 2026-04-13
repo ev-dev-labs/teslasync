@@ -10,19 +10,13 @@ import {
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
   MapPin, FileText, ChevronRight,
 } from 'lucide-react'
-import { PageContainer } from '@/components/layout/PageContainer'
-import { GlassPanel } from '@/components/ui/GlassPanel'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
-import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Accordion } from '@/components/ui/Accordion'
-import { Skeleton } from '@/components/feedback/Skeleton'
-import { FadeIn } from '@/components/motion/FadeIn'
+import { PageContainer } from '@/components/layout'
+import { GlassPanel, Badge, Button, Input, Select, DataTable, Accordion, Textarea, type Column } from '@/components/ui'
+import { Skeleton } from '@/components/feedback'
+import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { request } from '@/api/client'
-import { Textarea } from '@/components/ui/Textarea'
+import type { Vehicle } from '@/api/types'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
 import { fmtNumber } from '@/lib/numberFormat'
@@ -175,6 +169,19 @@ async function apiFetch(
 }
 
 /* ─── tiny helpers ────────────────────────────────────────────────────── */
+
+function useVehicleOptions() {
+  const { data } = useQuery<Vehicle[]>({
+    queryKey: ['vehicles'],
+    queryFn: () => request<Vehicle[]>('/vehicles'),
+  })
+  const vehicles = data ?? []
+  const options = vehicles.map((v) => ({
+    value: v.vin,
+    label: v.display_name || v.vin,
+  }))
+  return { vehicles, options }
+}
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   const r1 = r / 255
@@ -544,7 +551,7 @@ function PublicKeySetupTool() {
   })
 
   const deleteMut = useMutation({
-    mutationFn: () => apiFetch('delete-keypair', 'DELETE'),
+    mutationFn: () => apiFetch('public-key', 'DELETE'),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
   })
 
@@ -661,7 +668,7 @@ function VehicleKeyPairingTool() {
 function FleetTelemetrySubscribeTool() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [vehicleId, setVehicleId] = useState('')
+  const [vin, setVin] = useState('')
   const [hostname, setHostname] = useState('')
   const [port, setPort] = useState('443')
   const [interval, setInterval_] = useState(30)
@@ -669,22 +676,20 @@ function FleetTelemetrySubscribeTool() {
   const [signalModalOpen, setSignalModalOpen] = useState(false)
   const [selectedSignals, setSelectedSignals] = useState<{ name: string; interval: number }[]>([])
 
-  const { data: vehiclesData } = useQuery({
-    queryKey: ['devtools', 'vehicles'],
-    queryFn: () => apiFetch('vehicles'),
-  })
-
-  const vehicles = Array.isArray(vehiclesData?.vehicles) ? (vehiclesData.vehicles as { id: string; name: string }[]) : []
-  const vehicleOptions = vehicles.map((v) => ({ value: String(v.id), label: v.name || String(v.id) }))
+  const { options: vehicleOptions } = useVehicleOptions()
 
   const subscribeMut = useMutation({
     mutationFn: () =>
-      apiFetch('telemetry-subscribe', 'POST', {
-        vehicleId,
+      apiFetch('fleet-telemetry-subscribe', 'POST', {
+        vins: [vin],
         hostname,
         port: parseInt(port, 10),
-        caCert,
-        signals: selectedSignals.length > 0 ? selectedSignals : undefined,
+        ca: caCert || undefined,
+        fields: selectedSignals.length > 0 ? selectedSignals.map((s) => s.name) : undefined,
+        interval_seconds: interval,
+        field_intervals: selectedSignals.length > 0
+          ? Object.fromEntries(selectedSignals.filter((s) => s.interval !== interval).map((s) => [s.name, s.interval]))
+          : undefined,
       }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools'] }) },
   })
@@ -696,8 +701,8 @@ function FleetTelemetrySubscribeTool() {
           label={t('Vehicle')}
           placeholder={t('Select Vehicle')}
           options={vehicleOptions}
-          value={vehicleId}
-          onChange={(e) => setVehicleId(e.target.value)}
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
         />
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
@@ -779,19 +784,13 @@ interface TelemetryError {
 
 function FleetTelemetryConfigTool() {
   const { t } = useTranslation()
-  const [vehicleId, setVehicleId] = useState('')
+  const [vin, setVin] = useState('')
 
-  const { data: vehiclesData } = useQuery({
-    queryKey: ['devtools', 'vehicles'],
-    queryFn: () => apiFetch('vehicles'),
-  })
+  const { options: vehicleOptions } = useVehicleOptions()
 
-  const vehicles = Array.isArray(vehiclesData?.vehicles) ? (vehiclesData.vehicles as { id: string; name: string }[]) : []
-  const vehicleOptions = vehicles.map((v) => ({ value: String(v.id), label: v.name || String(v.id) }))
-
-  const configQuery = useMutation({ mutationFn: () => apiFetch(`telemetry-config?vehicle_id=${vehicleId}`) })
-  const errorsQuery = useMutation({ mutationFn: () => apiFetch(`telemetry-errors?vehicle_id=${vehicleId}`) })
-  const deleteMut = useMutation({ mutationFn: () => apiFetch(`telemetry-config?vehicle_id=${vehicleId}`, 'DELETE') })
+  const configQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`) })
+  const errorsQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${vin}`) })
+  const deleteMut = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`, 'DELETE') })
 
   const errorData = Array.isArray(errorsQuery.data?.errors) ? (errorsQuery.data.errors as TelemetryError[]) : []
 
@@ -808,8 +807,8 @@ function FleetTelemetryConfigTool() {
           label={t('Vehicle')}
           placeholder={t('Select Vehicle')}
           options={vehicleOptions}
-          value={vehicleId}
-          onChange={(e) => setVehicleId(e.target.value)}
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
           <Button variant="primary" size="sm" loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Eye className="h-3.5 w-3.5" />}>
@@ -835,7 +834,7 @@ function FleetTelemetryConfigTool() {
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `telemetry-errors-${vehicleId}.json`
+                a.download = `telemetry-errors-${vin}.json`
                 a.click()
                 URL.revokeObjectURL(url)
               }}
@@ -851,31 +850,46 @@ function FleetTelemetryConfigTool() {
 }
 
 function FleetStatusTool() {
+  const { t } = useTranslation()
+  const { vehicles } = useVehicleOptions()
+  const fleetStatusMut = useMutation({
+    mutationFn: () => apiFetch('fleet-status', 'POST', { vins: vehicles.map((v) => v.vin) }),
+  })
+
   return (
-    <BackendTool
-      icon={Zap}
-      color="green"
-      title="Fleet Status"
-      description="Check fleet status for all vehicles"
-      endpoint="fleet-status"
-    />
+    <ToolCard icon={Zap} color="green" title={t('Fleet Status')} description={t('Check fleet status for all vehicles')}>
+      <div className="mt-3 flex items-center gap-2">
+        <Button
+          variant="primary"
+          size="sm"
+          loading={fleetStatusMut.isPending}
+          onClick={() => fleetStatusMut.mutate()}
+          disabled={vehicles.length === 0}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('Check Fleet Status')}
+        </Button>
+      </div>
+      {fleetStatusMut.data && (
+        <ResultPanel
+          title={t('Fleet Status')}
+          data={fleetStatusMut.data.error ? undefined : fleetStatusMut.data}
+          error={typeof fleetStatusMut.data.error === 'string' ? fleetStatusMut.data.error : undefined}
+        />
+      )}
+    </ToolCard>
   )
 }
 
 function VehicleDataTools() {
   const { t } = useTranslation()
-  const [vehicleId, setVehicleId] = useState('')
-  const { data: vehiclesData } = useQuery({
-    queryKey: ['devtools', 'vehicles'],
-    queryFn: () => apiFetch('vehicles'),
-  })
-  const vehicles = Array.isArray(vehiclesData?.vehicles) ? (vehiclesData.vehicles as { id: string; name: string }[]) : []
-  const vehicleOptions = vehicles.map((v) => ({ value: String(v.id), label: v.name || String(v.id) }))
+  const [vin, setVin] = useState('')
+  const { options: vehicleOptions } = useVehicleOptions()
 
-  const chargingMut = useMutation({ mutationFn: () => apiFetch(`vehicle-nearby-charging?vehicle_id=${vehicleId}`) })
-  const releaseNotesMut = useMutation({ mutationFn: () => apiFetch(`vehicle-release-notes?vehicle_id=${vehicleId}`) })
-  const alertsMut = useMutation({ mutationFn: () => apiFetch(`vehicle-recent-alerts?vehicle_id=${vehicleId}`) })
-  const serviceMut = useMutation({ mutationFn: () => apiFetch(`vehicle-service-data?vehicle_id=${vehicleId}`) })
+  const chargingMut = useMutation({ mutationFn: () => apiFetch(`nearby-charging?vin=${vin}`) })
+  const releaseNotesMut = useMutation({ mutationFn: () => apiFetch(`release-notes?vin=${vin}`) })
+  const alertsMut = useMutation({ mutationFn: () => apiFetch(`recent-alerts?vin=${vin}`) })
+  const serviceMut = useMutation({ mutationFn: () => apiFetch(`service-data?vin=${vin}`) })
 
   const lastResult = chargingMut.data ?? releaseNotesMut.data ?? alertsMut.data ?? serviceMut.data
 
@@ -886,8 +900,8 @@ function VehicleDataTools() {
           label={t('Vehicle')}
           placeholder={t('Select Vehicle')}
           options={vehicleOptions}
-          value={vehicleId}
-          onChange={(e) => setVehicleId(e.target.value)}
+          value={vin}
+          onChange={(e) => setVin(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => chargingMut.mutate()} icon={<MapPin className="h-3.5 w-3.5" />}>
