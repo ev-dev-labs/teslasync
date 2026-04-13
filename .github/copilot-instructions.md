@@ -66,7 +66,7 @@ If something worked in the old code but not in the new code:
 Before reporting any task as complete, you MUST:
 1. **Run TypeScript**: `cd web && npx tsc --noEmit` — paste output
 2. **Run violations audit**: Check for inline styles, raw HTML, wrong imports — paste counts
-3. **Compare line counts**: New file must be ≥ 70% of original (for restorations)
+3. **Compare line counts**: Count the page file PLUS any extracted components in the same feature directory. Total must be ≥ 70% of original. Properly decomposed pages (page + sub-components) are preferred over monoliths.
 4. **Count sections**: grep for GlassPanel/ChartContainer — compare against original
 5. **Verify hooks**: Confirm every hook URL matches a route in `internal/api/router.go`
 

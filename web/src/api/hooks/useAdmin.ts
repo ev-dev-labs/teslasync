@@ -173,10 +173,11 @@ export function useVehicleStateMachine(vehicleId: string) {
   });
 }
 
-export function useStateTimeline(vehicleId: string) {
+export function useStateTimeline(vehicleId: string, days = 7) {
   return useQuery({
-    queryKey: adminKeys.stateTimeline(vehicleId),
-    queryFn: () => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`),
+    queryKey: [...adminKeys.stateTimeline(vehicleId), days],
+    queryFn: () => request<{ transitions: StateTransition[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}&days=${days}`),
     enabled: !!vehicleId,
+    refetchInterval: 10_000,
   });
 }
