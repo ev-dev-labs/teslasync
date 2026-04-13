@@ -57,7 +57,9 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	drive, err := h.driveRepo.GetByID(r.Context(), id)
+	ctx := r.Context()
+
+	drive, err := h.driveRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
@@ -67,7 +69,41 @@ func (h *DriveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "drive not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, drive)
+
+	// Fetch telemetry readings for this drive
+	telemetry, err := h.driveTelRepo.GetByDriveID(ctx, id)
+	if err != nil {
+		log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry")
+		telemetry = nil
+	}
+	if telemetry == nil {
+		telemetry = make([]*models.DriveTelemetryReading, 0)
+	}
+
+	// Fetch positions for this drive's time range
+	var positions []*models.Position
+	if drive.EndDate != nil {
+		positions, err = h.posRepo.GetByTimeRange(ctx, drive.VehicleID, drive.StartDate, drive.EndDate)
+		if err != nil {
+			log.Warn().Err(err).Int64("driveID", id).Msg("failed to get drive positions")
+		}
+	}
+	if positions == nil {
+		positions = make([]*models.Position, 0)
+	}
+
+	// Build response with embedded telemetry and positions
+	type driveDetailResponse struct {
+		*models.Drive
+		Telemetry []*models.DriveTelemetryReading `json:"telemetry"`
+		Positions []*models.Position               `json:"positions"`
+	}
+
+	writeJSON(w, http.StatusOK, driveDetailResponse{
+		Drive:     drive,
+		Telemetry: telemetry,
+		Positions: positions,
+	})
 }
 
 func (h *DriveHandler) Positions(w http.ResponseWriter, r *http.Request) {

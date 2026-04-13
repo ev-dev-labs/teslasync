@@ -231,3 +231,78 @@ func ptrF64(p *float64) float64 {
 	}
 	return *p
 }
+
+// GetByVehicle handles GET /vehicles/{vehicleID}/battery/projected-range
+// Returns the ProjectedRangeData shape the frontend expects.
+func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := urlParamInt64(r, "vehicleID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	var batteryLevel, ratedRange, idealRange *float64
+	_ = h.db.Pool.QueryRow(ctx, `
+		SELECT battery_level, rated_range, ideal_battery_range
+		FROM charging_telemetry
+		WHERE vehicle_id = $1 AND battery_level IS NOT NULL
+		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&batteryLevel, &ratedRange, &idealRange)
+
+	bl := ptrF64(batteryLevel)
+	rated := ptrF64(ratedRange)
+	if rated == 0 {
+		rated = ptrF64(idealRange)
+	}
+	if rated == 0 {
+		rated = 500 // default Model Y rated range
+	}
+
+	newRange := rated // range when new at 100%
+	currentRange := rated * bl / 100
+	if bl == 0 {
+		currentRange = rated
+	}
+
+	// Degradation estimate from battery snapshots
+	var healthPct *float64
+	_ = h.db.Pool.QueryRow(ctx, `
+		SELECT battery_health_pct FROM battery_snapshots
+		WHERE vehicle_id = $1 AND battery_health_pct IS NOT NULL
+		ORDER BY created_at DESC LIMIT 1`, vehicleID).Scan(&healthPct)
+
+	degradation := 0.0
+	healthScore := 100.0
+	capacityPct := 100.0
+	if healthPct != nil && *healthPct > 0 {
+		healthScore = *healthPct
+		degradation = 100 - *healthPct
+		capacityPct = *healthPct
+	}
+
+	// Cycle estimate
+	var totalCycles int
+	_ = h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM charging_sessions WHERE vehicle_id = $1`, vehicleID).Scan(&totalCycles)
+
+	// Avg daily km
+	var avgDailyKm float64
+	_ = h.db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(AVG(daily_km), 0) FROM (
+			SELECT DATE(start_date) AS d, SUM(distance) AS daily_km
+			FROM drives WHERE vehicle_id = $1 AND distance > 0
+			GROUP BY DATE(start_date)
+		) sub`, vehicleID).Scan(&avgDailyKm)
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"current_range_km":   math.Round(currentRange*10) / 10,
+		"new_range_km":       math.Round(newRange*10) / 10,
+		"degradation_pct":    math.Round(degradation*10) / 10,
+		"total_cycles":       totalCycles,
+		"health_score":       math.Round(healthScore*10) / 10,
+		"current_capacity_pct": math.Round(capacityPct*10) / 10,
+		"avg_daily_km":       math.Round(avgDailyKm*10) / 10,
+	})
+}

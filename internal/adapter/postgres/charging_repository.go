@@ -74,8 +74,7 @@ func (r *chargingRepository) GetByIDForUpdate(ctx context.Context, id string) (*
 func (r *chargingRepository) Save(ctx context.Context, s *charging.ChargingSession) error {
 	_, err := r.pool.Exec(ctx, queries.UpsertChargingSession,
 		s.ID, s.VehicleID, s.ChargerType, s.StartBatteryLevel, s.EndBatteryLevel,
-		s.EnergyAddedKWh, s.MaxPowerKW, s.CostCents, s.FSMState, s.SubFSMState,
-		s.ChargerConnected, s.StartedAt, s.CompletedAt, s.CreatedAt,
+		s.EnergyAddedKWh, s.MaxPowerKW, s.CostCents, s.StartedAt, s.CompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("saving charging session %s: %w", s.ID, err)

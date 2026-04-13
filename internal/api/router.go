@@ -165,6 +165,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	drivetrainHealthHandler := NewDrivetrainHealthHandler(db)
 	maintenanceHandler := NewMaintenanceHandler(db)
 	periodStatsHandler := NewPeriodStatsHandler(db)
+	energyFlowHandler := NewEnergyFlowHandler(db)
+	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -211,7 +213,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
 				r.Get("/energy", energyHandler.Stats)
+				r.Get("/energy/flow", energyFlowHandler.Get)
 				r.Get("/battery", batteryHandler.Report)
+				r.Get("/battery/cells", batteryCellsHandler.GetByVehicle)
+				r.Get("/battery/projected-range", rangeProjectionHandler.GetByVehicle)
+				r.Get("/weekly-digest", weeklyDigestHandler.Get)
 			})
 		})
 

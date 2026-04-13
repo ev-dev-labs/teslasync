@@ -77,16 +77,33 @@ func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Build history from records that have brick voltage data
 	history := buildHistory(records)
 
+	// Build response with fields matching both analytics and frontend BatteryCellSummary types
+	// Get temperature data from the latest record
+	avgTemp, minTemp, maxTemp := extractTemps(latest)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"total_cells":   summary.totalCells,
-		"avg_voltage":   round4(summary.avgVoltage),
-		"min_voltage":   round4(summary.minVoltage),
-		"max_voltage":   round4(summary.maxVoltage),
-		"imbalance_mv":  round2(summary.imbalanceMV),
-		"pack_voltage":  round2(summary.packVoltage),
-		"cells":         cells,
-		"history":       history,
+		"total_cells":      summary.totalCells,
+		"avg_voltage":      round4(summary.avgVoltage),
+		"min_voltage":      round4(summary.minVoltage),
+		"max_voltage":      round4(summary.maxVoltage),
+		"voltage_spread":   round4(summary.maxVoltage - summary.minVoltage),
+		"imbalance_mv":     round2(summary.imbalanceMV),
+		"pack_voltage":     round2(summary.packVoltage),
+		"avg_temperature":  round2(avgTemp),
+		"min_temperature":  round2(minTemp),
+		"max_temperature":  round2(maxTemp),
+		"temp_spread":      round2(maxTemp - minTemp),
+		"cells":            buildFrontendCells(cells, summary.totalCells),
+		"history":          history,
 	})
+}
+
+// GetByVehicle handles GET /vehicles/{vehicleID}/battery/cells — reads vehicleID from path.
+func (h *BatteryCellsHandler) GetByVehicle(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	q.Set("vehicle_id", urlParamVehicleID(r))
+	r.URL.RawQuery = q.Encode()
+	h.Get(w, r)
 }
 
 type cellSummary struct {
@@ -238,4 +255,46 @@ func round2(v float64) float64 {
 
 func round4(v float64) float64 {
 	return math.Round(v*10000) / 10000
+}
+
+// extractTemps returns avg/min/max temperature from charging telemetry.
+func extractTemps(ct *models.ChargingTelemetry) (avg, min, max float64) {
+	if ct == nil {
+		return 0, 0, 0
+	}
+	tMax := derefF64(ct.ModuleTempMax)
+	tMin := derefF64(ct.ModuleTempMin)
+	if tMax == 0 && tMin == 0 {
+		return 0, 0, 0
+	}
+	return (tMax + tMin) / 2, tMin, tMax
+}
+
+// frontendCell matches the BatteryCell TypeScript interface.
+type frontendCell struct {
+	CellID      int     `json:"cell_id"`
+	Module      int     `json:"module"`
+	Voltage     float64 `json:"voltage"`
+	Temperature float64 `json:"temperature"`
+}
+
+// buildFrontendCells converts internal cellReadings to the shape the frontend expects.
+func buildFrontendCells(cells []cellReading, totalCells int) []frontendCell {
+	moduleCells := 24 // typical cells per module
+	if totalCells > 0 {
+		moduleCells = totalCells / 4
+		if moduleCells < 1 {
+			moduleCells = 1
+		}
+	}
+	out := make([]frontendCell, len(cells))
+	for i, c := range cells {
+		out[i] = frontendCell{
+			CellID:      c.CellNumber,
+			Module:      (c.CellNumber-1)/moduleCells + 1,
+			Voltage:     c.Voltage,
+			Temperature: 25.0, // nominal; real per-cell temps not available from Tesla
+		}
+	}
+	return out
 }

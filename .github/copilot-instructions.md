@@ -40,6 +40,28 @@ These rules exist because agents consistently violate them. Read carefully.
 ✅ DO write complete implementations, not scaffolds
 ```
 
+### Anti-Revert (CRITICAL)
+```
+❌ DO NOT revert to old code patterns to "fix" issues in refactored code
+❌ DO NOT re-import from old `../api` or `../../api` — fix the new hooks instead
+❌ DO NOT restore old `pages/` imports — fix the new `features/` code
+❌ DO NOT bring back clsx, old fetch patterns, or class components
+❌ DO NOT undo the shared component architecture to bypass a bug
+❌ DO NOT copy old page code wholesale — adapt it to the new architecture
+❌ DO NOT reintroduce direct recharts/leaflet/framer-motion imports
+
+When fixing a bug in refactored code:
+✅ DO fix the NEW code using the NEW architecture (hooks, shared components, Tailwind)
+✅ DO check the old code in git history for LOGIC reference only, not for copy-paste
+✅ DO use: import from @/components/, @/api/hooks/, @/lib/ — never from old paths
+✅ DO keep all refactoring improvements (i18n, null safety, shared components)
+
+If something worked in the old code but not in the new code:
+  1. Understand WHY it worked (what data, what endpoint, what logic)
+  2. Reproduce that LOGIC in the new architecture
+  3. Never transplant old code directly — it will reintroduce every violation we fixed
+```
+
 ### Verification Protocol
 Before reporting any task as complete, you MUST:
 1. **Run TypeScript**: `cd web && npx tsc --noEmit` — paste output

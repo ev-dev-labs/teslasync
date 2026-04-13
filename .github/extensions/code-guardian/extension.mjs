@@ -207,6 +207,7 @@ const session = await joinSession({
         "INTEGRITY: Do NOT claim checks pass without running them. Paste actual command output.",
         "INTEGRITY: Do NOT stub or gut pages. Implement ALL sections the original had.",
         "INTEGRITY: Do NOT gate all content behind a single empty/data check. Each section handles its own state.",
+        "ANTI-REVERT: Do NOT revert to old code to fix bugs. Fix the NEW code using NEW architecture (hooks, shared components, Tailwind). Never re-import from old ../api or old pages/ paths.",
       ];
 
       if (isPageTask) {

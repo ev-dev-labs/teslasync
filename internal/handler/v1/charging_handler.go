@@ -30,7 +30,10 @@ func (h *ChargingHandler) Register(r chi.Router) {
 func (h *ChargingHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID := r.URL.Query().Get("vehicleId")
 	if vehicleID == "" {
-		httputil.RespondError(w, http.StatusBadRequest, "VALIDATION_ERROR", "vehicleId query parameter required")
+		vehicleID = r.URL.Query().Get("vehicle_id")
+	}
+	if vehicleID == "" {
+		httputil.RespondError(w, http.StatusBadRequest, "VALIDATION_ERROR", "vehicle_id query parameter required")
 		return
 	}
 

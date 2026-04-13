@@ -1643,10 +1643,8 @@ func (h *TelemetryHandler) trackClimate(ctx context.Context, vehicleID int64, si
 		snap.CabinOverheatMode = &s
 	}
 	if v, ok := signals["DefrostMode"]; ok {
-		// DefrostMode is an enum (DefrostModeState) — any non-Off state is true
 		s := toString(v)
-		b := !strings.Contains(s, "Off") && s != "" && s != "0" && s != "false"
-		snap.DefrostMode = &b
+		snap.DefrostMode = &s
 	}
 	if v, ok := signals["BatteryHeaterOn"]; ok {
 		b := toBool(v)
