@@ -156,6 +156,11 @@ func (s *Subscriber) addSignal(vin, fieldName string, value interface{}) {
 			signals: make(map[string]interface{}),
 		}
 		batch.timer = time.AfterFunc(time.Duration(s.batchMs)*time.Millisecond, func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error().Interface("panic", r).Str("vin", vin).Msg("mqtt: panic in batch flush")
+				}
+			}()
 			s.flushBatch(vin)
 		})
 		s.batches[vin] = batch

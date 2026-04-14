@@ -11,9 +11,9 @@ const INTERVAL_OPTIONS = [
   { value: 10, label: '10s', color: 'text-[var(--text-secondary)]', desc: 'Default' },
   { value: 30, label: '30s', color: 'text-[var(--text-muted)]', desc: 'Slow' },
   { value: 60, label: '60s', color: 'text-[var(--text-muted)]', desc: '1 min' },
-  { value: 300, label: '5m', color: 'text-gray-500', desc: 'Rare' },
-  { value: 900, label: '15m', color: 'text-gray-600', desc: '15 min' },
-  { value: 3600, label: '1h', color: 'text-gray-600', desc: '1 hour' },
+  { value: 300, label: '5m', color: 'text-[var(--text-muted)]', desc: 'Rare' },
+  { value: 900, label: '15m', color: 'text-[var(--text-muted)]', desc: '15 min' },
+  { value: 3600, label: '1h', color: 'text-[var(--text-muted)]', desc: '1 hour' },
   { value: 86400, label: '24h', color: 'text-gray-700', desc: 'Daily' },
 ]
 

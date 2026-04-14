@@ -70,6 +70,11 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /internal/flush
+                port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

@@ -71,3 +71,5 @@ PROMPT_COMMANDS.txt
 # Signal exports (large data files)
 scripts/signals-export.json
 scripts/signal-dump/
+
+web/svg-compare.html

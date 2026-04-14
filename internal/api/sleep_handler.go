@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 )
 
 // SleepHandler handles sleep efficiency analytics requests.
@@ -64,7 +65,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 			continue
 		}
 		totalMinutesAll += e.TotalMinutes
-		if e.State == "asleep" {
+		if e.State == enums.StateAsleep {
 			sleepMinutes = e.TotalMinutes
 		}
 		stateDistribution = append(stateDistribution, e)

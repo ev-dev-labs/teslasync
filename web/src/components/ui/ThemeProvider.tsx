@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { getApiBase } from '../../lib/resilience'
+import { getApiBase } from '@/lib/resilience'
+import { request } from '@/api/client'
 
 export type ThemeId = 'neon-cyan' | 'tesla-red' | 'matrix-green' | 'royal-purple' | 'solar-amber' | 'custom'
 export type ModeId = 'dark' | 'light' | 'oled' | 'midnight' | 'auto' | 'sunset' | 'nord'
@@ -246,7 +247,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [customColors, setCustomColorsState] = useState(loadCustomColors)
   const [initialized, setInitialized] = useState(false)
 
-  // Load theme from backend settings on first mount
+  // Load theme from backend settings on first mount.
+  // Uses raw fetch intentionally — ThemeProvider mounts before auth context
+  // is available, so request() (which handles 401 token refresh) may not work.
   useEffect(() => {
     fetch(`${getApiBase()}/api/v1/settings`)
       .then(r => r.ok ? r.json() : null)
@@ -294,11 +297,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Persist theme changes to backend (fire-and-forget)
   const saveThemeToBackend = useCallback((t: ThemeId, m: ModeId, cp: string, ca: string) => {
     if (!initialized) return
-    fetch(`${getApiBase()}/api/v1/settings`).then(r => r.ok ? r.json() : null).then(current => {
+    request<Record<string, unknown>>('/settings').then(current => {
       if (!current) return
-      fetch(`${getApiBase()}/api/v1/settings`, {
+      request('/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...current, theme: t, mode: m, custom_primary: cp, custom_accent: ca }),
       }).catch(() => {})
     }).catch(() => {})

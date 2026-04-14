@@ -191,7 +191,7 @@ const catalog: SignalMeta[] = [
   { name: 'AutomaticEmergencyBrakingOff', category: 'Safety', type: 'boolean', description: 'Automatic emergency braking disabled' },
   { name: 'BlindSpotCollisionWarningChime', category: 'Safety', type: 'boolean', description: 'Blind spot collision warning chime enabled' },
   { name: 'CruiseFollowDistance', category: 'Safety', type: 'number', description: 'Cruise follow distance setting (1-7)' },
-  { name: 'DriverSeatBelt', category: 'Safety', type: 'boolean', description: 'Driver seat belt buckled' },
+  { name: 'DriverSeatBelt', category: 'Safety', type: 'boolean', description: 'Driver seat belt unbuckled warning' },
   { name: 'EmergencyLaneDepartureAvoidance', category: 'Safety', type: 'boolean', description: 'Emergency lane departure avoidance enabled' },
   { name: 'ForwardCollisionWarning', category: 'Safety', type: 'string', description: 'Forward collision warning sensitivity', enumValues: ['Off', 'Late', 'Average', 'Early'] },
   { name: 'LaneDepartureAvoidance', category: 'Safety', type: 'string', description: 'Lane departure avoidance mode', enumValues: ['Off', 'Warning', 'Assist'] },

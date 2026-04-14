@@ -1,0 +1,2 @@
+-- Restore old km-based conversion functions (rollback)
+-- See migration 000018 for the original definitions.

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { GlassPanel } from '../ui/GlassPanel'
+import { GlassPanel } from '@/components/ui'
+import { COLOR } from '@/lib/colors'
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
@@ -40,9 +41,9 @@ export function computeDriveScore(drive: any): { total: number; efficiency: numb
 }
 
 export function getScoreColor(score: number): string {
-  if (score < 40) return '#ef4444'
-  if (score < 70) return '#f59e0b'
-  return '#10b981'
+  if (score < 40) return COLOR.BAD
+  if (score < 70) return COLOR.WARN
+  return COLOR.GOOD
 }
 
 export function DriveScore({ drive }: { drive: any }) {

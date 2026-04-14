@@ -193,12 +193,14 @@ func main() {
 
 	// Fleet Telemetry handler — created early so the worker can check streaming state
 	var telemetryHandler *api.TelemetryHandler
+	var signalStore *sigsvc.Store
+	var signalHistoryWriter *database.SignalHistoryWriter
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
 
-		// Initialize SignalStore with Postgres flusher for pod restart recovery
+		// Initialize SignalStore with write-through Postgres flusher
 		liveStateRepo := database.NewLiveStateRepo(db)
-		signalStore := sigsvc.New(liveStateRepo, 5*time.Second)
+		signalStore = sigsvc.New(liveStateRepo, 0)
 		telemetryHandler.SetSignalStore(signalStore)
 
 		// Load existing live state from DB (pod restart recovery)
@@ -208,6 +210,33 @@ func main() {
 			}
 		}
 		log.Info().Msg("signal store initialized")
+
+		// Recover active drive/charge sessions from Postgres (pod restart resilience)
+		sessionTracker := telemetryHandler.SessionTracker()
+		if sessionTracker != nil {
+			sessionTracker.RecoverSessions(ctx)
+			sessionTracker.ValidateRecoveredSessions(ctx)
+		}
+
+		// Populate alert prevSignals from SignalStore (pod restart resilience)
+		alertEvaluator := telemetryHandler.AlertEvaluator()
+		if alertEvaluator != nil {
+			for _, vid := range signalStore.VehicleIDs() {
+				raw := signalStore.GetRawMap(vid)
+				if raw != nil {
+					alertEvaluator.RuleEngine().LoadPrevSignalsFromStore(vid, raw)
+				}
+			}
+			log.Info().Msg("alert prevSignals populated from signal store")
+		}
+
+		// Postgres signal_history writer (always-on per-signal history)
+		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second)
+		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
+		go signalHistoryWriter.FlushLoop(ctx)
+		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
+
+		log.Info().Msg("FSM vehicle state engine active — declarative transition table with 20 transitions")
 
 		// MongoDB raw telemetry capture (optional)
 		if cfg.MongoDB.Enabled {
@@ -319,6 +348,27 @@ func main() {
 		worker.StartMaintenanceWorker(loopCtx, db, cfg)
 	})
 	log.Info().Msg("maintenance worker started")
+
+	// Signal history TTL cleanup — daily purge of old rows (only if retention configured)
+	if signalHistoryWriter != nil && cfg.Retention.SignalHistoryRetentionDays > 0 {
+		go func() {
+			signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
+
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					signalHistoryWriter.Cleanup(ctx, cfg.Retention.SignalHistoryRetentionDays)
+				}
+			}
+		}()
+		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
+	} else if signalHistoryWriter != nil {
+		log.Info().Msg("signal_history TTL cleanup DISABLED (SIGNAL_HISTORY_RETENTION_DAYS not set)")
+	}
 
 	// Trip generator — backfill monthly summaries on startup, then daily
 	tripRepo := database.NewTripRepo(db)
@@ -467,6 +517,7 @@ func main() {
 		TelemetryHandler: telemetryHandler,
 		GasPriceWorker:   gasPriceWorker,
 		PollEngine:       pollEngine,
+		SignalStore:      signalStore,
 	})
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -508,12 +559,19 @@ func main() {
 	// Phase 1: Stop accepting new work
 	cancel()
 
-	// Phase 2: Shutdown telemetry handler goroutines
+	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
+	if signalStore != nil {
+		flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		signalStore.FlushAll(flushCtx)
+		flushCancel()
+	}
+
+	// Phase 3: Shutdown telemetry handler goroutines
 	if telemetryHandler != nil {
 		telemetryHandler.Shutdown()
 	}
 
-	// Phase 3: Drain HTTP connections
+	// Phase 4: Drain HTTP connections
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
