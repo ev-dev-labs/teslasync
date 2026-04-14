@@ -40,6 +40,7 @@ type Vehicle struct {
 	WheelType     string    `json:"wheel_type" db:"wheel_type"`
 	State         string    `json:"state" db:"state"`   // online, asleep, offline
 	Healthy       bool      `json:"healthy" db:"healthy"`
+	IsGearCapable bool      `json:"is_gear_capable" db:"is_gear_capable"`
 	CreatedAt     time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }

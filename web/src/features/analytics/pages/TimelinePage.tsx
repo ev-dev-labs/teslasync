@@ -23,31 +23,46 @@ import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
-/* ─── Types ──────────────────────────────────────────────── */
+/* ─── Types matching actual API responses ────────────────── */
 
-interface StateTransition {
-  id: number;
-  vehicle_id: number;
+/** GET /vehicle-states/timeline → { transitions: StateRecord[] } */
+interface StateRecord {
+  state: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number;
+}
+
+/** Derived row for the transitions table (computed from consecutive StateRecords) */
+interface TransitionRow {
+  index: number;
   from_state: string;
   to_state: string;
   timestamp: string;
   duration_seconds: number;
 }
 
-interface DailyBreakdown {
+/** GET /vehicle-states/summary → StateSummaryRow[] */
+interface StateSummaryRow {
+  state: string;
+  count: number;
+  total_min: number;
+}
+
+/** GET /vehicle-states/daily → DailyRow[] (one row per state per day) */
+interface DailyRow {
+  day: string;
+  state: string;
+  total_min: number;
+}
+
+/** Pivoted daily breakdown for stacked chart */
+interface DailyPivoted {
   date: string;
   driving_hours: number;
   charging_hours: number;
   idle_hours: number;
   sleeping_hours: number;
-}
-
-interface StateSummary {
-  total: number;
-  driving: number;
-  charging: number;
-  idle: number;
-  sleeping: number;
 }
 
 /* ─── Constants ──────────────────────────────────────────── */
@@ -59,6 +74,8 @@ const STATE_COLORS: Record<string, string> = {
   sleeping: '#64748b',
   online: '#3b82f6',
   offline: '#374151',
+  parked: '#8b5cf6',
+  asleep: '#64748b',
 };
 
 const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | 'danger'> = {
@@ -68,6 +85,8 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
   sleeping: 'neutral',
   online: 'info',
   offline: 'danger',
+  parked: 'warning',
+  asleep: 'neutral',
 };
 
 function formatDuration(seconds: number): string {
@@ -77,11 +96,32 @@ function formatDuration(seconds: number): string {
   return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
 }
 
-function formatHours(hours: number): string {
+function formatHours(minutes: number): string {
+  const hours = minutes / 60;
   const h = Math.floor(hours);
   const m = (hours - h) * 60;
   if (h === 0) return `${fmtInt(m)}m`;
   return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
+}
+
+/** Pivot per-state-per-day rows into one row per day with columns per state */
+function pivotDaily(rows: DailyRow[]): DailyPivoted[] {
+  const byDay = new Map<string, DailyPivoted>();
+  for (const r of rows) {
+    let entry = byDay.get(r.day);
+    if (!entry) {
+      entry = { date: r.day, driving_hours: 0, charging_hours: 0, idle_hours: 0, sleeping_hours: 0 };
+      byDay.set(r.day, entry);
+    }
+    const hours = r.total_min / 60;
+    switch (r.state) {
+      case 'driving': entry.driving_hours += hours; break;
+      case 'charging': entry.charging_hours += hours; break;
+      case 'online': case 'parked': case 'idle': entry.idle_hours += hours; break;
+      case 'asleep': case 'sleeping': case 'offline': entry.sleeping_hours += hours; break;
+    }
+  }
+  return Array.from(byDay.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /* ─── Component ──────────────────────────────────────────── */
@@ -99,7 +139,7 @@ export default function TimelinePage() {
   const { data: timelineData, isLoading: tlLoading, refetch } = useQuery({
     queryKey: ['vehicle-timeline', activeId],
     queryFn: () =>
-      request<{ transitions: StateTransition[] }>(
+      request<{ transitions: StateRecord[] }>(
         `/vehicle-states/timeline?vehicle_id=${activeId}`,
       ),
     enabled,
@@ -108,7 +148,7 @@ export default function TimelinePage() {
   const { data: summaryData, isLoading: sumLoading } = useQuery({
     queryKey: ['vehicle-summary', activeId],
     queryFn: () =>
-      request<{ transitions: StateTransition[]; summary: StateSummary }>(
+      request<StateSummaryRow[]>(
         `/vehicle-states/summary?vehicle_id=${activeId}`,
       ),
     enabled,
@@ -116,27 +156,59 @@ export default function TimelinePage() {
 
   const { data: dailyData, isLoading: dayLoading } = useQuery({
     queryKey: ['vehicle-daily', activeId],
-    queryFn: () => request<DailyBreakdown[]>(`/vehicle-states/daily?vehicle_id=${activeId}`),
+    queryFn: () => request<DailyRow[]>(`/vehicle-states/daily?vehicle_id=${activeId}`),
     enabled,
   });
 
-  const transitions = timelineData?.transitions ?? [];
-  const summary = summaryData?.summary;
-  const daily = dailyData ?? [];
+  const stateRecords = timelineData?.transitions ?? [];
+  const summaryRows = summaryData ?? [];
+  const daily = useMemo(() => pivotDaily(dailyData ?? []), [dailyData]);
   const isLoading = tlLoading || sumLoading || dayLoading;
 
-  const totalDuration = useMemo(
-    () => transitions.reduce((s, tr) => s + tr.duration_seconds, 0),
-    [transitions],
+  // Derive transition rows from consecutive state records
+  const transitions = useMemo<TransitionRow[]>(
+    () =>
+      stateRecords.map((rec, i, arr) => ({
+        index: i,
+        from_state: i > 0 ? arr[i - 1].state : '—',
+        to_state: rec.state,
+        timestamp: rec.started_at,
+        duration_seconds: rec.duration_seconds,
+      })),
+    [stateRecords],
   );
+
+  const totalDuration = useMemo(
+    () => stateRecords.reduce((s, rec) => s + rec.duration_seconds, 0),
+    [stateRecords],
+  );
+
+  // Derive summary metrics from the raw summary rows
+  const summaryByState = useMemo(() => {
+    const m: Record<string, { count: number; totalMin: number }> = {};
+    for (const row of summaryRows) {
+      m[row.state] = { count: row.count, totalMin: row.total_min };
+    }
+    return m;
+  }, [summaryRows]);
+
+  const totalTransitions = summaryRows.reduce((s, r) => s + r.count, 0);
+  const drivingMin = summaryByState.driving?.totalMin ?? 0;
+  const chargingMin = summaryByState.charging?.totalMin ?? 0;
+  const idleMin = (summaryByState.online?.totalMin ?? 0) +
+    (summaryByState.parked?.totalMin ?? 0) +
+    (summaryByState.idle?.totalMin ?? 0);
+  const sleepingMin = (summaryByState.asleep?.totalMin ?? 0) +
+    (summaryByState.sleeping?.totalMin ?? 0) +
+    (summaryByState.offline?.totalMin ?? 0);
 
   /* ─── Table columns ─── */
 
-  const columns = useMemo<Column<StateTransition>[]>(
+  const columns = useMemo<Column<TransitionRow>[]>(
     () => [
       {
         key: 'timestamp',
-        header: t('Time'),
+        header: t('timeline.time', 'Time'),
         sortable: true,
         render: (row) => (
           <span className="text-sm">{formatDateTime(row.timestamp)}</span>
@@ -144,7 +216,7 @@ export default function TimelinePage() {
       },
       {
         key: 'from_state',
-        header: t('From State'),
+        header: t('timeline.fromState', 'From State'),
         sortable: true,
         render: (row) => (
           <Badge variant={STATE_BADGE[row.from_state] ?? 'neutral'} size="sm">
@@ -154,7 +226,7 @@ export default function TimelinePage() {
       },
       {
         key: 'to_state',
-        header: t('To State'),
+        header: t('timeline.toState', 'To State'),
         sortable: true,
         render: (row) => (
           <Badge variant={STATE_BADGE[row.to_state] ?? 'neutral'} size="sm">
@@ -164,7 +236,7 @@ export default function TimelinePage() {
       },
       {
         key: 'duration',
-        header: t('Duration'),
+        header: t('timeline.duration', 'Duration'),
         sortable: true,
         render: (row) => (
           <span className="text-sm font-medium">
@@ -190,7 +262,7 @@ export default function TimelinePage() {
           options={vehicleOptions}
           value={activeId}
           onChange={(e) => setVehicleId(e.target.value)}
-          placeholder={t('Select Vehicle')}
+          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
         />
       )}
       <Button variant="ghost" onClick={() => refetch()}>
@@ -201,34 +273,34 @@ export default function TimelinePage() {
 
   return (
     <PageContainer
-      title={t('Title')}
-      subtitle={t('Subtitle')}
+      title={t('timeline.title', 'Timeline')}
+      subtitle={t('timeline.subtitle', 'Vehicle state history and transitions')}
       actions={actions}
-      loading={isLoading && transitions.length === 0}
+      loading={isLoading && stateRecords.length === 0}
     >
       {/* Summary metric cards */}
       <FadeIn>
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricCard
-            label={t('Total Transitions')}
-            value={summary?.total ?? 0}
+            label={t('timeline.totalTransitions', 'Total Transitions')}
+            value={totalTransitions}
             icon={<ArrowRightLeft className="h-5 w-5" />}
           />
           <MetricCard
-            label={t('Driving Time')}
-            value={formatHours(summary?.driving ?? 0)}
+            label={t('timeline.drivingTime', 'Driving Time')}
+            value={formatHours(drivingMin)}
             icon={<Car className="h-5 w-5" />}
             color="green"
           />
           <MetricCard
-            label={t('Charging Time')}
-            value={formatHours(summary?.charging ?? 0)}
+            label={t('timeline.chargingTime', 'Charging Time')}
+            value={formatHours(chargingMin)}
             icon={<BatteryCharging className="h-5 w-5" />}
             color="cyan"
           />
           <MetricCard
-            label={t('Idle Sleep Time')}
-            value={formatHours((summary?.idle ?? 0) + (summary?.sleeping ?? 0))}
+            label={t('timeline.idleSleepTime', 'Idle / Sleep Time')}
+            value={formatHours(idleMin + sleepingMin)}
             icon={<Moon className="h-5 w-5" />}
           />
         </div>
@@ -237,28 +309,28 @@ export default function TimelinePage() {
       {/* State timeline bar */}
       <FadeIn delay={0.1}>
         <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            {t('State Timeline')}
+          <p className="mb-3 text-sm font-semibold text-white/90">
+            {t('timeline.stateTimeline', 'State Timeline')}
           </p>
-          {transitions.length === 0 ? (
+          {stateRecords.length === 0 ? (
             <Skeleton height={32} />
           ) : (
             <div className="flex h-8 overflow-hidden rounded-full">
-              {transitions.map((tr) => {
+              {stateRecords.map((rec, i) => {
                 const pct = totalDuration > 0
-                  ? (tr.duration_seconds / totalDuration) * 100
+                  ? (rec.duration_seconds / totalDuration) * 100
                   : 0;
                 if (pct < 0.3) return null;
                 return (
                   <div
-                    key={tr.id}
+                    key={`${rec.started_at}-${i}`}
                     className={cn('relative transition-all')}
                     style={{
                       width: `${pct}%`,
                       backgroundColor:
-                        STATE_COLORS[tr.to_state] ?? STATE_COLORS.offline,
+                        STATE_COLORS[rec.state] ?? STATE_COLORS.offline,
                     }}
-                    title={`${tr.to_state}: ${formatDuration(tr.duration_seconds)}`}
+                    title={`${rec.state}: ${formatDuration(rec.duration_seconds)}`}
                   />
                 );
               })}
@@ -271,7 +343,7 @@ export default function TimelinePage() {
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: color }}
                 />
-                <span className="text-xs capitalize text-[var(--text-muted)]">
+                <span className="text-xs capitalize text-white/50">
                   {state}
                 </span>
               </div>
@@ -283,35 +355,35 @@ export default function TimelinePage() {
       {/* Daily breakdown stacked chart */}
       <FadeIn delay={0.2}>
         <GlassPanel className="mb-6 p-4">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            {t('Daily Breakdown')}
+          <p className="mb-3 text-sm font-semibold text-white/90">
+            {t('timeline.dailyBreakdown', 'Daily Breakdown')}
           </p>
           {dayLoading ? (
             <Skeleton height={280} />
           ) : daily.length === 0 ? (
             <EmptyState
               icon={<Clock className="h-8 w-8" />}
-              message={t('No Daily Data')}
+              message={t('timeline.noDailyData', 'No daily data available yet')}
             />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={daily}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="var(--glass-border)"
+                  stroke="rgba(255,255,255,0.06)"
                   strokeOpacity={0.5}
                 />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                  tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }}
                 />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                <YAxis tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="driving_hours" stackId="s" fill={STATE_COLORS.driving} name={t('Driving')} />
-                <Bar dataKey="charging_hours" stackId="s" fill={STATE_COLORS.charging} name={t('Charging')} />
-                <Bar dataKey="idle_hours" stackId="s" fill={STATE_COLORS.idle} name={t('Idle')} />
-                <Bar dataKey="sleeping_hours" stackId="s" fill={STATE_COLORS.sleeping} name={t('Sleeping')} />
+                <Bar dataKey="driving_hours" stackId="s" fill={STATE_COLORS.driving} name={t('timeline.driving', 'Driving')} />
+                <Bar dataKey="charging_hours" stackId="s" fill={STATE_COLORS.charging} name={t('timeline.charging', 'Charging')} />
+                <Bar dataKey="idle_hours" stackId="s" fill={STATE_COLORS.idle ?? '#f59e0b'} name={t('timeline.idle', 'Idle')} />
+                <Bar dataKey="sleeping_hours" stackId="s" fill={STATE_COLORS.sleeping ?? '#64748b'} name={t('timeline.sleeping', 'Sleeping')} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -321,14 +393,14 @@ export default function TimelinePage() {
       {/* State transitions table */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-            {t('State Transitions')}
+          <p className="mb-3 text-sm font-semibold text-white/90">
+            {t('timeline.stateTransitions', 'State Transitions')}
           </p>
           <DataTable
             columns={columns}
             data={transitions}
-            keyExtractor={(row) => row.id}
-            emptyMessage={t('No Transitions')}
+            keyExtractor={(row) => row.index}
+            emptyMessage={t('timeline.noTransitions', 'No state transitions recorded')}
             pagination
           />
         </GlassPanel>
