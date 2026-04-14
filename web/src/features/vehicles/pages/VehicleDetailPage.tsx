@@ -1,63 +1,29 @@
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import clsx from 'clsx'
 import {
-  ArrowLeft,
-  Power,
-  Battery,
-  BatteryCharging,
-  Gauge,
-  Thermometer,
-  Navigation,
-  Eye,
-  Lock,
-  Unlock,
-  Shield,
-  Wind,
-  Cog,
-  Car,
-  Route,
-  Clock,
-  ChevronRight,
-  Zap,
-  Activity,
-  Settings,
-  BarChart3,
-  Snowflake,
-  CircleDot,
-  MapPin,
+  ArrowLeft, Power, Battery, BatteryCharging, Gauge, Thermometer,
+  Navigation, Eye, Lock, Unlock, Shield, Wind, Cog, Car, Route,
+  Clock, ChevronRight, Zap, Activity, Settings, BarChart3,
+  Snowflake, CircleDot, MapPin,
 } from 'lucide-react'
-import { PageContainer } from '@/components/layout/PageContainer'
-import { GlassPanel } from '@/components/ui/GlassPanel'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { DataTable, type Column } from '@/components/ui/DataTable'
-import { MetricCard } from '@/components/data-display/MetricCard'
-import { RadialGauge } from '@/components/charts/RadialGauge'
-import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
-import { KVList } from '@/components/data-display/KVList'
-import { Skeleton } from '@/components/feedback/Skeleton'
-import { EmptyState } from '@/components/feedback/EmptyState'
-import { FadeIn } from '@/components/motion/FadeIn'
+
+import { PageContainer } from '@/components/layout'
+import { GlassPanel, Badge, Button, DataTable, type Column } from '@/components/ui'
+import { MetricCard, AnimatedNumber, KVList } from '@/components/data-display'
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  RadialGauge, ChartTooltip, CHART_COLORS,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts'
-import { ChartTooltip } from '@/components/charts/ChartTooltip'
+import { Skeleton, EmptyState } from '@/components/feedback'
+import { FadeIn } from '@/components/motion'
+
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSettings } from '@/hooks/useSettings'
 import { formatDateTime, formatDate } from '@/lib/dateFormat'
 import { fmtNumber, fmtInt } from '@/lib/numberFormat'
-import { CHART_COLORS } from '@/lib/colors'
+import { cn } from '@/lib/cn'
 import { request } from '@/api/client'
 import type {
   Vehicle,
@@ -1030,7 +996,7 @@ export default function VehicleDetailPage() {
                       <GlassPanel
                         hover
                         glow="cyan"
-                        className={clsx(
+                        className={cn(
                           'flex flex-col items-center gap-2 p-4 text-center',
                           'transition-all cursor-pointer',
                         )}
