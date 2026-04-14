@@ -498,6 +498,52 @@ import 'leaflet/dist/leaflet.css';
 
 ---
 
+## Bug 10 — Speed Profile: Crashes with "Cannot read properties of undefined (reading 'match')"
+
+**Page:** `web/src/features/driving/pages/SpeedProfilePage.tsx`
+**Screenshot:** Error boundary: "Cannot read properties of undefined (reading 'match')"
+
+**Root Cause:** Complete field name mismatch between API and frontend.
+
+API response (`internal/api/speed_profile_handler.go`) returns:
+```json
+{"distribution": [{"speed_bucket": "0-15", "readings": 42, "avg_power_kw": 3.5}]}
+```
+After `camelCaseKeys`: `speedBucket`, `readings`, `avgPowerKw`
+
+But the frontend expects:
+- `b.range` (line 98, 169, 186) → should be `b.speed_bucket` or `b.speedBucket`
+- `b.percentage` (line 169) → doesn't exist, needs to be computed from `readings`
+- `b.driveCount` (line 169) → should be `b.readings`
+
+**Fix:**
+1. Update line 98 and all references to use actual API field names:
+```typescript
+// Before: const parts = r.range.match(/(\d+)/g);
+const parts = (r.speedBucket ?? r.speed_bucket ?? '').match(/(\d+)/g);
+```
+
+2. Fix the bar chart data mapping (line 169):
+```typescript
+// Before:
+.map((b) => ({ range: b.range, pct: b.percentage, count: b.driveCount }))
+// After:
+.map((b) => ({ range: b.speedBucket ?? b.speed_bucket, pct: b.readings, count: b.readings }))
+```
+
+3. Fix all other references to `bucket.range` in the summary cards section (line 186+):
+```typescript
+bucket.speedBucket ?? bucket.speed_bucket  // instead of bucket.range
+```
+
+4. If percentage is needed, compute it from total readings:
+```typescript
+const totalReadings = distribution.reduce((s, b) => s + (b.readings ?? 0), 0);
+// pct = totalReadings > 0 ? (b.readings / totalReadings) * 100 : 0
+```
+
+---
+
 ## Verification
 
 ```bash
@@ -535,5 +581,6 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Data Export: PageContainer title/subtitle use proper fallbacks
 - [ ] Data Repair: fix 404 — page calls wrong API endpoint
 - [ ] Navigation & Route: "—" for zero lat/lng, info banner, filter 0,0 from Home/Work chart
+- [ ] Speed Profile: fix crash — use actual API field names (speedBucket/readings, not range/percentage/driveCount)
 - [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
