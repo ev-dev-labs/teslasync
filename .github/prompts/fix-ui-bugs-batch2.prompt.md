@@ -101,6 +101,39 @@ so both controls align to the bottom:
 
 ---
 
+## Bug 3 — Signal Log Viewer: Same two issues as Signal Explorer
+
+**Page:** `web/src/features/telemetry/pages/SignalLogViewerPage.tsx`
+**Screenshot:** Query returns "0 records" even with signals selected. Query button misaligned.
+
+**Root Cause A — Wrong endpoint (same as Bug 1):**
+Line 133 calls non-existent bulk endpoint:
+```typescript
+request(`/signals/history?${params}`)
+```
+Should fetch per-signal from `/signals/{vehicleID}/{signalName}/history`.
+
+**Fix A:** Same approach as Bug 1 — parallel per-signal fetches:
+```typescript
+queryFn: async () => {
+  const results = await Promise.all(
+    selectedSignals.map(sig =>
+      request<SignalHistoryEntry[]>(
+        `/signals/${vehicleId}/${sig}/history?from=${fromIso}&to=${toIso}&limit=${perPage}&page=${page}`
+      )
+    )
+  );
+  return mergeSignalResults(selectedSignals, results);
+},
+```
+
+**Root Cause B — Button alignment (same as Bug 2):**
+Line 257 has `className="mt-5"` on the Query button, pushing it below the Per Page dropdown.
+
+**Fix B:** Remove `mt-5`, use `items-end` on the parent flex container.
+
+---
+
 ## Verification
 
 ```bash
@@ -115,6 +148,8 @@ cd web && npx tsc --noEmit
 **COMPLETION DEFINITION:**
 - [ ] Signal Explorer: clicking Explore fetches per-signal history and merges results
 - [ ] Signal Explorer: Explore button aligned with Per Page dropdown (no mt-5)
+- [ ] Signal Log Viewer: Query fetches per-signal history (same fix as Explorer)
+- [ ] Signal Log Viewer: Query button aligned (remove mt-5, items-end)
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
