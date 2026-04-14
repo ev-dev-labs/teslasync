@@ -6,8 +6,7 @@ import {
   Trees, Calculator,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Input, Button } from '@/components/ui';
-import { DataTable, type Column } from '@/components/ui/DataTable';
+import { GlassPanel, Select, Input, Button, DataTable, type Column } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   ChartTooltip, ChartGradient, chartGrid, axisTickSm,
