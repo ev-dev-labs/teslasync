@@ -11,6 +11,8 @@ import {
   TrendingUp,
   Cpu,
   BatteryCharging,
+  Cog,
+  Gauge,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -43,7 +45,7 @@ import { Skeleton, AlertBanner } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useVehicles, useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -151,6 +153,10 @@ export default function DrivetrainHealthPage() {
   } = useDrivetrainHealth(vehicleIdStr);
   const { data: drives } = useDrives(vehicleIdStr);
   const { data: stats } = useDrivingStats(vehicleIdStr);
+
+  /* ---- Motor telemetry hooks ---- */
+  const { data: motorLatest } = useMotorLatest(vehicleId ?? 0, 5_000);
+  const { data: motorHistory } = useMotorHistory(vehicleId ?? 0, 200);
 
   /* ---- Settings ---- */
   const {
@@ -266,6 +272,38 @@ export default function DrivetrainHealthPage() {
     if (!chartData.length) return 0;
     return Math.min(...chartData.map((d) => d.powerMin));
   }, [chartData]);
+
+  /* ---- Motor telemetry chart data ---- */
+  const motorChartData = useMemo(() => {
+    const history = motorHistory ?? [];
+    if (history.length === 0) return [];
+    return history.map((s) => ({
+      time: s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      stator: s.di_stator_temp != null ? convertTemp(s.di_stator_temp) : null,
+      torque: s.di_torque ?? null,
+      speed: s.vehicle_speed != null ? convertSpeed(s.vehicle_speed) : null,
+      axle: s.di_axle_speed ?? null,
+    }));
+  }, [motorHistory, convertTemp, convertSpeed]);
+
+  /* ---- Live motor status helpers ---- */
+  const diStateColor = useMemo(() => {
+    const state = motorLatest?.di_state;
+    if (!state) return 'text-[var(--text-muted)]';
+    if (state === 'drive') return 'text-green-400';
+    if (state === 'idle') return 'text-cyan-400';
+    return 'text-amber-400';
+  }, [motorLatest]);
+
+  const gearValue = motorLatest?.gear ?? '—';
+  const gearColor = useMemo(() => {
+    const g = motorLatest?.gear;
+    if (!g) return 'text-[var(--text-muted)]';
+    if (g === 'D' || g === 'Drive') return 'text-green-400';
+    if (g === 'R' || g === 'Reverse') return 'text-amber-400';
+    if (g === 'P' || g === 'Park') return 'text-cyan-400';
+    return 'text-[var(--text-muted)]';
+  }, [motorLatest]);
 
   /* ---- Recommendations based on health ---- */
   const recommendations = useMemo(() => {
@@ -747,6 +785,105 @@ export default function DrivetrainHealthPage() {
               </div>
             </GlassPanel>
           </FadeIn>
+
+          {/* ═══ Section 12: Live Motor Status ═══ */}
+          {motorLatest && (
+            <FadeIn delay={0.22}>
+              <GlassPanel className="p-6">
+                <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                  <Cog className="mr-2 inline-block h-4 w-4" />
+                  {t('drivetrain.liveMotor', 'Live Motor Status')}
+                </h3>
+                <Grid cols={{ default: 2, sm: 4 }} gap={3}>
+                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t('drivetrain.diState', 'DI State')}</p>
+                    <p className={cn('text-lg font-bold', diStateColor)}>{motorLatest.di_state ?? '—'}</p>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t('drivetrain.gear', 'Gear')}</p>
+                    <p className={cn('text-lg font-bold', gearColor)}>{gearValue}</p>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t('drivetrain.vehicleSpeed', 'Vehicle Speed')}</p>
+                    <p className="text-lg font-bold text-cyan-400">
+                      {motorLatest.vehicle_speed != null ? `${fmtNumber(convertSpeed(motorLatest.vehicle_speed))} ${speedUnit}` : '—'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t('drivetrain.torque', 'Torque')}</p>
+                    <p className="text-lg font-bold text-purple-400">
+                      {motorLatest.di_torque != null ? `${fmtNumber(motorLatest.di_torque)} Nm` : '—'}
+                    </p>
+                  </div>
+                </Grid>
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <InlineMetric icon={<Activity className="h-4 w-4 text-yellow-400" />} label={t('drivetrain.axleSpeed', 'Axle Speed')} value={motorLatest.di_axle_speed != null ? `${fmtInt(motorLatest.di_axle_speed)} RPM` : '—'} />
+                  <InlineMetric icon={<Gauge className="h-4 w-4 text-green-400" />} label={t('drivetrain.pedalPos', 'Pedal Position')} value={motorLatest.pedal_position != null ? `${fmtNumber(motorLatest.pedal_position * 100, 0)}%` : '—'} />
+                  <InlineMetric icon={<Thermometer className="h-4 w-4 text-red-400" />} label={t('drivetrain.statorTemp', 'Stator Temp')} value={motorLatest.di_stator_temp != null ? `${fmtNumber(convertTemp(motorLatest.di_stator_temp))} ${tempUnit}` : '—'} />
+                  <InlineMetric
+                    icon={<Shield className={cn('h-4 w-4', motorLatest.hvil === 'Fault' ? 'text-red-400' : 'text-green-400')} />}
+                    label={t('drivetrain.hvil', 'HV Interlock')}
+                    value={motorLatest.hvil ?? '—'}
+                  />
+                </div>
+                {motorLatest.brake_pedal != null && (
+                  <div className="mt-3">
+                    <AlertBanner variant={motorLatest.brake_pedal ? 'danger' : 'success'} icon={motorLatest.brake_pedal ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}>
+                      {motorLatest.brake_pedal ? t('drivetrain.brakeEngaged', 'Brake Engaged') : t('drivetrain.brakeReleased', 'Brake Released')}
+                    </AlertBanner>
+                  </div>
+                )}
+              </GlassPanel>
+            </FadeIn>
+          )}
+
+          {/* ═══ Section 13: Stator Temperature History ═══ */}
+          {motorChartData.length > 1 && (
+            <FadeIn delay={0.23}>
+              <ChartContainer
+                title={t('drivetrain.statorTempHistory', 'Stator Temperature History')}
+                subtitle={t('drivetrain.statorTempSub', 'Motor stator temperature over recent snapshots')}
+                height={280}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={motorChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    <Line type="monotone" dataKey="stator" name={`${t('drivetrain.statorTemp', 'Stator Temp')} (${tempUnit})`} stroke="#ef4444" strokeWidth={2} dot={false} connectNulls />
+                    <ReferenceLine y={convertTemp(60)} stroke="#4ade80" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: t('drivetrain.normal', 'Normal'), position: 'right', fill: '#4ade80', fontSize: 10 }} />
+                    <ReferenceLine y={convertTemp(80)} stroke="#fbbf24" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: t('drivetrain.warm', 'Warm'), position: 'right', fill: '#fbbf24', fontSize: 10 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </FadeIn>
+          )}
+
+          {/* ═══ Section 14: Motor Torque History ═══ */}
+          {motorChartData.length > 1 && motorChartData.some((d) => d.torque !== null) && (
+            <FadeIn delay={0.24}>
+              <ChartContainer
+                title={t('drivetrain.torqueHistory', 'Motor Torque')}
+                subtitle={t('drivetrain.torqueHistorySub', 'Drive inverter torque output over time')}
+                height={280}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={motorChartData}>
+                    <defs><ChartGradient id="dtTorqueGrad" color="#00f0ff" /></defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend />
+                    <Area type="monotone" dataKey="torque" name={`${t('drivetrain.torque', 'Torque')} (Nm)`} stroke="#00f0ff" fill="url(#dtTorqueGrad)" strokeWidth={2} />
+                    <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </FadeIn>
+          )}
 
           {/* ═══ Section 6: Historical temperature chart ═══ */}
           {tempTrendData.length > 1 && (
