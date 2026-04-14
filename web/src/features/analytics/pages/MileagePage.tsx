@@ -1,25 +1,24 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import { Gauge, TrendingUp, Calendar, BarChart3 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
+  ChartTooltip, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -40,12 +39,6 @@ interface MileageStats {
   entries: MileageEntry[];
 }
 
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
-}
-
 interface MonthRow {
   month: string;
   distance: number;
@@ -59,14 +52,11 @@ interface MonthRow {
 
 export default function MileagePage() {
   const { t } = useTranslation();
-  usePageTitle(t('Mileage'));
+  usePageTitle(t('mileage.title', 'Mileage'));
 
   const [vehicleId, setVehicleId] = useState('');
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
@@ -78,7 +68,7 @@ export default function MileagePage() {
 
   const { data: entries } = useQuery<MileageEntry[]>({
     queryKey: ['mileage-entries', activeId],
-    queryFn: () => request<MileageEntry[]>(`/mileage?vehicle_id=${activeId}&limit=90`),
+    queryFn: () => request<MileageEntry[]>(`/mileage/daily?vehicle_id=${activeId}&limit=90`),
     enabled: activeId !== '',
   });
 
@@ -144,7 +134,7 @@ export default function MileagePage() {
     >
       {/* Summary metric cards */}
       <FadeIn>
-        <div className={clsx('grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6')}>
+        <div className={cn('grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6')}>
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} height={96} className="rounded-xl" />
