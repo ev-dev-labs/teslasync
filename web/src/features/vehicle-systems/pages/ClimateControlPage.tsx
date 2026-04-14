@@ -302,7 +302,7 @@ export default function ClimateControlPage() {
   const comfortScore = useMemo(() => {
     if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
     const delta = Math.abs(latest.insideTemp - latest.driverTempSetting);
-    return Math.max(0, Math.round(100 - delta * 10));
+    return Math.max(0, 100 - delta * 10);
   }, [latest?.insideTemp, latest?.driverTempSetting]);
 
   const tempDelta = useMemo(() => {

@@ -19,6 +19,7 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -71,16 +72,16 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  if (h === 0) return `${m}m`;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  const m = (seconds % 3600) / 60;
+  if (h === 0) return `${fmtInt(m)}m`;
+  return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
 }
 
 function formatHours(hours: number): string {
   const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
-  if (h === 0) return `${m}m`;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  const m = (hours - h) * 60;
+  if (h === 0) return `${fmtInt(m)}m`;
+  return m >= 0.5 ? `${h}h ${fmtInt(m)}m` : `${h}h`;
 }
 
 /* ─── Component ──────────────────────────────────────────── */

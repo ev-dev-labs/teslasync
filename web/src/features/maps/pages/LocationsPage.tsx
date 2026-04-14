@@ -62,7 +62,7 @@ export default function LocationsPage() {
   const totalTime = locations?.reduce((s, l) => s + l.total_duration_min, 0) ?? 0;
   const uniquePlaces = locations?.length ?? 0;
   const topLocation = locations?.[0];
-  const avgDurationMin = totalVisits > 0 ? Math.round(totalTime / totalVisits) : 0;
+  const avgDurationMin = totalVisits > 0 ? totalTime / totalVisits : 0;
 
   const visitsChartData = useMemo(() =>
     (locations ?? []).slice(0, 15).map(l => ({
@@ -101,7 +101,7 @@ export default function LocationsPage() {
           <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
           <MetricCard label={t('Total Time')} value={`${fmtInt(totalTime / 60)}h`} icon={<Clock className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-          <MetricCard label={t('Avg Visit')} value={avgDurationMin > 60 ? `${Math.floor(avgDurationMin / 60)}h ${avgDurationMin % 60}m` : `${avgDurationMin}m`} icon={<Clock className="h-4 w-4" />} color="cyan" />
+          <MetricCard label={t('Avg Visit')} value={avgDurationMin > 60 ? `${Math.floor(avgDurationMin / 60)}h ${fmtInt(avgDurationMin % 60)}m` : `${fmtInt(avgDurationMin)}m`} icon={<Clock className="h-4 w-4" />} color="cyan" />
         </div>
       </FadeIn>
 

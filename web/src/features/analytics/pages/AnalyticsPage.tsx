@@ -898,7 +898,7 @@ function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
           <div className="mt-3 space-y-3">
             {chargerTypes.map((ct, i) => {
               const totalSessions = chargerTypes.reduce((s, x) => s + safe(x.count), 0);
-              const pct = totalSessions > 0 ? Math.round((safe(ct.count) / totalSessions) * 100) : 0;
+              const pct = totalSessions > 0 ? (safe(ct.count) / totalSessions) * 100 : 0;
               return (
                 <div key={i} className="flex items-center gap-3">
                   <span className="w-28 text-xs text-right font-medium text-white/60">{ct.type}</span>
@@ -909,7 +909,7 @@ function ChargingTab({ data }: { data: FleetAnalytics | undefined }) {
                     />
                   </div>
                   <span className="w-20 text-xs font-mono text-right text-white/80">
-                    {safe(ct.count)} ({pct}%)
+                    {safe(ct.count)} ({fmtInt(pct)}%)
                   </span>
                 </div>
               );

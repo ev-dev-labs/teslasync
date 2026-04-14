@@ -19,6 +19,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 import {
   Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle,
@@ -61,10 +62,10 @@ type Tab = 'charging' | 'drives';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function hoursOpen(startDate: string): string {
-  const h = Math.round((Date.now() - new Date(startDate).getTime()) / 3600000);
-  if (h < 24) return `${h}h`;
+  const h = (Date.now() - new Date(startDate).getTime()) / 3600000;
+  if (h < 24) return `${fmtInt(h)}h`;
   const d = Math.floor(h / 24);
-  return `${d}d ${h % 24}h`;
+  return `${d}d ${fmtInt(h % 24)}h`;
 }
 
 // ─── Charging Edit Form ──────────────────────────────────────────────────────
