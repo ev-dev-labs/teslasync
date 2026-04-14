@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -145,7 +145,7 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
                     return (
                       <GlassPanel
                         key={ct.value}
-                        className={clsx(
+                        className={cn(
                           'flex flex-col items-center gap-1.5 p-3 text-xs font-medium cursor-pointer transition-all',
                           type === ct.value ? 'border-neon-cyan/40 bg-neon-cyan/10' : 'hover:bg-white/10',
                         )}
@@ -190,7 +190,7 @@ function ChannelFormModal({ channel, onClose, onSaved, t }: {
 
             {/* Test result */}
             {testResult && (
-              <GlassPanel className={clsx(
+              <GlassPanel className={cn(
                 'flex items-center gap-2 p-3 text-sm',
                 testResult.success ? 'bg-neon-green/10 text-neon-green border-neon-green/20' : 'bg-neon-red/10 text-neon-red border-neon-red/20',
               )}>
@@ -314,7 +314,7 @@ export default function NotificationsPage() {
             return (
               <GlassPanel
                 key={ch.id}
-                className={clsx(
+                className={cn(
                   'p-5 space-y-4 transition-all duration-300',
                   ch.enabled ? 'ring-1 ring-white/[0.08]' : 'opacity-60',
                 )}

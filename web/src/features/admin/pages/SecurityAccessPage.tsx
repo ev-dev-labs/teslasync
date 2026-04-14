@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import {
   Lock,
   Unlock,
@@ -284,7 +284,7 @@ export default function SecurityAccessPage() {
         header: t('admin.security.col.doors', 'Doors'),
         render: (row) => (
           <span
-            className={clsx(
+            className={cn(
               'text-sm',
               doorClosed(row.doorState) ? 'text-green-400' : 'text-amber-400',
             )}
@@ -299,7 +299,7 @@ export default function SecurityAccessPage() {
         render: (row) => {
           const closed = allWindowsClosed(row);
           return (
-            <span className={clsx('text-sm', closed ? 'text-green-400' : 'text-amber-400')}>
+            <span className={cn('text-sm', closed ? 'text-green-400' : 'text-amber-400')}>
               {windowSummary(row)}
             </span>
           );
@@ -407,7 +407,7 @@ export default function SecurityAccessPage() {
                 </h3>
               </div>
               <p
-                className={clsx(
+                className={cn(
                   'text-2xl font-bold',
                   latest?.locked ? 'text-green-400' : 'text-red-400',
                 )}
@@ -434,7 +434,7 @@ export default function SecurityAccessPage() {
                 </h3>
               </div>
               <p
-                className={clsx(
+                className={cn(
                   'text-2xl font-bold',
                   latest?.sentryMode ? 'text-blue-400' : 'text-gray-500',
                 )}
@@ -461,7 +461,7 @@ export default function SecurityAccessPage() {
                 </h3>
               </div>
               <p
-                className={clsx(
+                className={cn(
                   'text-2xl font-bold',
                   doorClosed(latest?.doorState) ? 'text-green-400' : 'text-amber-400',
                 )}
@@ -479,7 +479,7 @@ export default function SecurityAccessPage() {
             <GlassPanel className="p-4">
               <div className="flex items-center gap-3 mb-2">
                 <DoorClosed
-                  className={clsx(
+                  className={cn(
                     'h-6 w-6',
                     allWindowsClosed(latest) ? 'text-green-400' : 'text-amber-400',
                   )}
@@ -489,7 +489,7 @@ export default function SecurityAccessPage() {
                 </h3>
               </div>
               <p
-                className={clsx(
+                className={cn(
                   'text-2xl font-bold',
                   allWindowsClosed(latest) ? 'text-green-400' : 'text-amber-400',
                 )}
@@ -505,7 +505,7 @@ export default function SecurityAccessPage() {
             <GlassPanel className="p-4">
               <div className="flex items-center gap-3 mb-2">
                 <Home
-                  className={clsx(
+                  className={cn(
                     'h-6 w-6',
                     latest?.homelinkNearby ? 'text-purple-400' : 'text-gray-500',
                   )}
@@ -515,7 +515,7 @@ export default function SecurityAccessPage() {
                 </h3>
               </div>
               <p
-                className={clsx(
+                className={cn(
                   'text-2xl font-bold',
                   latest?.homelinkNearby ? 'text-purple-400' : 'text-gray-500',
                 )}
@@ -533,7 +533,7 @@ export default function SecurityAccessPage() {
             <GlassPanel className="p-4">
               <div className="flex items-center gap-3 mb-2">
                 <UserCheck
-                  className={clsx(
+                  className={cn(
                     'h-6 w-6',
                     latest?.guestMode ? 'text-amber-400' : 'text-gray-500',
                   )}
@@ -543,7 +543,7 @@ export default function SecurityAccessPage() {
                 </h3>
               </div>
               <p
-                className={clsx(
+                className={cn(
                   'text-2xl font-bold',
                   latest?.guestMode ? 'text-amber-400' : 'text-gray-500',
                 )}
@@ -590,10 +590,10 @@ export default function SecurityAccessPage() {
             return (
               <GlassPanel
                 key={win.key}
-                className={clsx('p-4 border', windowColor(state))}
+                className={cn('p-4 border', windowColor(state))}
               >
                 <p className="text-xs text-gray-400 mb-1">{win.label}</p>
-                <p className={clsx('text-xl font-bold', windowTextClass(state))}>
+                <p className={cn('text-xl font-bold', windowTextClass(state))}>
                   {t(`admin.security.windowState.${(state ?? '').toLowerCase()}`, state)}
                 </p>
               </GlassPanel>

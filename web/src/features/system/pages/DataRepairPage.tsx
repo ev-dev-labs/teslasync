@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -235,7 +235,7 @@ export default function DataRepairPage() {
             size="sm"
             icon={<BatteryCharging className="h-4 w-4" />}
             onClick={() => { setTab('charging'); setExpandedId(null); }}
-            className={clsx('border', tab === 'charging' ? 'bg-neon-amber/15 text-neon-amber border-neon-amber/20' : 'border-transparent text-[var(--text-secondary)]')}
+            className={cn('border', tab === 'charging' ? 'bg-neon-amber/15 text-neon-amber border-neon-amber/20' : 'border-transparent text-[var(--text-secondary)]')}
           >
             {t('Charging Sessions')}
             {staleCharging.length > 0 && <Badge variant="warning" size="sm" className="ml-1">{staleCharging.length}</Badge>}
@@ -245,7 +245,7 @@ export default function DataRepairPage() {
             size="sm"
             icon={<Route className="h-4 w-4" />}
             onClick={() => { setTab('drives'); setExpandedId(null); }}
-            className={clsx('border', tab === 'drives' ? 'bg-neon-amber/15 text-neon-amber border-neon-amber/20' : 'border-transparent text-[var(--text-secondary)]')}
+            className={cn('border', tab === 'drives' ? 'bg-neon-amber/15 text-neon-amber border-neon-amber/20' : 'border-transparent text-[var(--text-secondary)]')}
           >
             {t('Drives')}
             {staleDrives.length > 0 && <Badge variant="warning" size="sm" className="ml-1">{staleDrives.length}</Badge>}
@@ -267,7 +267,7 @@ export default function DataRepairPage() {
               staleCharging.map(s => (
                 <div key={s.id}>
                   <GlassPanel
-                    className={clsx('p-4 cursor-pointer transition-all', expandedId === s.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-white/10')}
+                    className={cn('p-4 cursor-pointer transition-all', expandedId === s.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-white/10')}
                     onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
                   >
                     <div className="flex items-center gap-4 flex-wrap">
@@ -286,7 +286,7 @@ export default function DataRepairPage() {
               staleDrives.map(d => (
                 <div key={d.id}>
                   <GlassPanel
-                    className={clsx('p-4 cursor-pointer transition-all', expandedId === d.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-white/10')}
+                    className={cn('p-4 cursor-pointer transition-all', expandedId === d.id ? 'bg-neon-amber/[0.06] border-neon-amber/20' : 'hover:border-white/10')}
                     onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}
                   >
                     <div className="flex items-center gap-4 flex-wrap">

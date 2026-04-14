@@ -5,7 +5,7 @@ import {
   CircleDot, Headphones, Navigation2, MapPin, Lock, Unlock, Zap,
   Activity, Lightbulb, Key, User, Monitor, Settings,
 } from 'lucide-react'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn';
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Badge } from '@/components/ui/Badge'
 import { FadeIn } from '@/components/motion/FadeIn'
@@ -48,7 +48,7 @@ function InfoTile({
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      <p className={clsx('text-lg font-semibold truncate', color)} title={String(display)}>
+      <p className={cn('text-lg font-semibold truncate', color)} title={String(display)}>
         {display}
       </p>
       {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{sub}</p>}
@@ -193,7 +193,7 @@ export function LiveTelemetryPanels({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">Motor State</span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
                       motorData.di_state === 'Enabled'
                         ? 'border-green-500/30 bg-green-500/10 text-green-400'
@@ -219,7 +219,7 @@ export function LiveTelemetryPanels({
                     <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
                     {motorData.di_torque != null && (
                       <div
-                        className={clsx(
+                        className={cn(
                           'absolute inset-y-0 rounded-full transition-all duration-300',
                           motorData.di_torque >= 0 ? 'bg-green-500/60' : 'bg-red-500/60',
                         )}
@@ -256,7 +256,7 @@ export function LiveTelemetryPanels({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">Stator Temp</span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'text-sm font-mono',
                       motorData.di_stator_temp != null && motorData.di_stator_temp > 80
                         ? 'text-red-400'
@@ -291,13 +291,13 @@ export function LiveTelemetryPanels({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">Brake</span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1 text-xs font-semibold',
                       motorData.brake_pedal ? 'text-red-400' : 'text-[var(--text-muted)]',
                     )}
                   >
                     <span
-                      className={clsx(
+                      className={cn(
                         'h-2 w-2 rounded-full',
                         motorData.brake_pedal ? 'bg-red-400' : 'bg-gray-600',
                       )}
@@ -413,7 +413,7 @@ export function LiveTelemetryPanels({
                     {[1, 2, 3, 4, 5, 6].map((level) => (
                       <div
                         key={level}
-                        className={clsx(
+                        className={cn(
                           'h-3 rounded-sm transition-colors',
                           level === 1
                             ? 'w-1.5'
@@ -441,7 +441,7 @@ export function LiveTelemetryPanels({
                 {/* System badges */}
                 <div className="flex flex-wrap gap-2 pt-1">
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
                       climateData.defrost_mode
                         ? 'border-blue-400/30 bg-blue-400/10 text-blue-400'
@@ -452,7 +452,7 @@ export function LiveTelemetryPanels({
                     {climateData.defrost_mode ? 'ON' : 'OFF'}
                   </span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
                       climateData.battery_heater_on
                         ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
@@ -463,7 +463,7 @@ export function LiveTelemetryPanels({
                     {climateData.battery_heater_on ? 'ON' : 'OFF'}
                   </span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
                       climateData.cabin_overheat_mode &&
                         climateData.cabin_overheat_mode !== 'Off'
@@ -495,7 +495,7 @@ export function LiveTelemetryPanels({
                 {/* Lock status */}
                 <div className="flex items-center gap-4">
                   <div
-                    className={clsx(
+                    className={cn(
                       'rounded-xl p-3 border',
                       securityData.locked
                         ? 'border-green-500/30 bg-green-500/10'
@@ -510,7 +510,7 @@ export function LiveTelemetryPanels({
                   </div>
                   <div>
                     <p
-                      className={clsx(
+                      className={cn(
                         'text-lg font-semibold',
                         securityData.locked ? 'text-green-400' : 'text-amber-400',
                       )}
@@ -527,7 +527,7 @@ export function LiveTelemetryPanels({
                     <Eye className="h-3 w-3" /> Sentry Mode
                   </span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
                       securityData.sentry_mode
                         ? 'border-red-500/30 bg-red-500/10 text-red-400'
@@ -567,7 +567,7 @@ export function LiveTelemetryPanels({
                       >
                         <span className="text-[11px] text-[var(--text-muted)]">{label}</span>
                         <span
-                          className={clsx(
+                          className={cn(
                             'text-[11px] font-semibold',
                             val === 'Closed'
                               ? 'text-green-400'
@@ -589,7 +589,7 @@ export function LiveTelemetryPanels({
                     <Car className="h-3 w-3" /> HomeLink
                   </span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'text-xs font-medium',
                       securityData.homelink_nearby
                         ? 'text-green-400'
@@ -604,7 +604,7 @@ export function LiveTelemetryPanels({
                     <Shield className="h-3 w-3" /> Guest Mode
                   </span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'text-xs font-medium',
                       securityData.guest_mode
                         ? 'text-amber-400'
@@ -642,7 +642,7 @@ export function LiveTelemetryPanels({
                   <Lightbulb className="h-3 w-3" /> High Beams
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).lightsHighBeams
                       ? 'text-neon-cyan'
@@ -657,7 +657,7 @@ export function LiveTelemetryPanels({
                   <Car className="h-3 w-3" /> Turn Signal
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).lightsTurnSignal &&
                       (live as Record<string, unknown>).lightsTurnSignal !== 'Off'
@@ -673,7 +673,7 @@ export function LiveTelemetryPanels({
                   <ShieldAlert className="h-3 w-3" /> Hazards
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).lightsHazards
                       ? 'text-neon-red'
@@ -692,7 +692,7 @@ export function LiveTelemetryPanels({
                   <User className="h-3 w-3" /> Driver Seat
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).driverSeatOccupied
                       ? 'text-green-400'
@@ -719,7 +719,7 @@ export function LiveTelemetryPanels({
                   <Car className="h-3 w-3" /> Valet Mode
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).valetMode
                       ? 'text-purple-400'
@@ -734,7 +734,7 @@ export function LiveTelemetryPanels({
                   <Settings className="h-3 w-3" /> Service Mode
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).serviceMode
                       ? 'text-amber-400'
@@ -749,7 +749,7 @@ export function LiveTelemetryPanels({
                   <Gauge className="h-3 w-3" /> Speed Limit
                 </span>
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-xs font-medium',
                     (live as Record<string, unknown>).speedLimitMode
                       ? 'text-neon-cyan'
@@ -840,7 +840,7 @@ export function LiveTelemetryPanels({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">BMS State</span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
                       chargingTelemetry.bms_state === 'Standby'
                         ? 'border-green-500/30 bg-green-500/10 text-green-400'
@@ -859,7 +859,7 @@ export function LiveTelemetryPanels({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">Cell Voltage Spread</span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'text-sm font-mono',
                       chargingTelemetry.brick_voltage_max != null &&
                         chargingTelemetry.brick_voltage_min != null &&
@@ -881,7 +881,7 @@ export function LiveTelemetryPanels({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">Battery Heater</span>
                   <span
-                    className={clsx(
+                    className={cn(
                       'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium border',
                       chargingTelemetry.battery_heater_on
                         ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
@@ -1063,13 +1063,13 @@ function TirePressurePanel({
         {tires.map((t) => (
           <div
             key={t.label}
-            className={clsx(
+            className={cn(
               'rounded-xl border bg-white/[0.02] p-4 text-center',
               getBorder(t.pressure),
             )}
           >
             <p className="text-[10px] text-[var(--text-muted)] mb-1">{t.label}</p>
-            <p className={clsx('text-xl font-bold font-mono', getColor(t.pressure))}>
+            <p className={cn('text-xl font-bold font-mono', getColor(t.pressure))}>
               {t.pressure != null ? fmtNumber(t.pressure) : '—'}
             </p>
             <p className="text-[10px] text-[var(--text-muted)]">{pressureUnit}</p>
@@ -1078,7 +1078,7 @@ function TirePressurePanel({
       </div>
       <div className="text-center">
         <span
-          className={clsx(
+          className={cn(
             'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border',
             allGood
               ? 'border-green-500/30 bg-green-500/10 text-green-400'

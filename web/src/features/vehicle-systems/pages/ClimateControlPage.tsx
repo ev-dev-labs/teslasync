@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import {
   Thermometer,
   Wind,
@@ -156,8 +156,8 @@ function SeatHeaterCard({
 }) {
   const style = heatStyle(level);
   return (
-    <GlassPanel className={clsx('flex flex-col items-center gap-2 p-4', style.bg)}>
-      <Flame className={clsx('h-6 w-6', style.color)} />
+    <GlassPanel className={cn('flex flex-col items-center gap-2 p-4', style.bg)}>
+      <Flame className={cn('h-6 w-6', style.color)} />
       <span className="text-xs font-medium text-[var(--text-secondary)]">
         {t(label)}
       </span>
@@ -361,7 +361,7 @@ export default function ClimateControlPage() {
       {/* ─── HVAC Status Banner ─── */}
       <FadeIn>
         <GlassPanel
-          className={clsx(
+          className={cn(
             'flex flex-wrap items-center justify-between gap-4 p-4',
             latest?.isAcOn ? 'border-cyan-500/30' : 'border-gray-600/30',
           )}
@@ -369,7 +369,7 @@ export default function ClimateControlPage() {
         >
           <div className="flex items-center gap-3">
             <Power
-              className={clsx(
+              className={cn(
                 'h-6 w-6',
                 latest?.isAcOn ? 'text-cyan-400' : 'text-gray-500',
               )}
@@ -459,7 +459,7 @@ export default function ClimateControlPage() {
             value={latest?.isAcOn ? t('On') : t('Off')}
             icon={
               <Power
-                className={clsx(
+                className={cn(
                   'h-5 w-5',
                   latest?.isAcOn ? 'text-cyan-400' : 'text-gray-500',
                 )}
@@ -502,7 +502,7 @@ export default function ClimateControlPage() {
             value={latest?.steeringWheelHeat ? t('On') : t('Off')}
             icon={
               <CircleGauge
-                className={clsx(
+                className={cn(
                   'h-5 w-5',
                   latest?.steeringWheelHeat
                     ? 'text-amber-400'
@@ -517,7 +517,7 @@ export default function ClimateControlPage() {
             value={latest?.defrostMode ? t('Active') : t('Inactive')}
             icon={
               <Snowflake
-                className={clsx(
+                className={cn(
                   'h-5 w-5',
                   latest?.defrostMode ? 'text-blue-400' : 'text-gray-500',
                 )}
@@ -540,7 +540,7 @@ export default function ClimateControlPage() {
             value={latest?.batteryHeater ? t('On') : t('Off')}
             icon={
               <BatteryCharging
-                className={clsx(
+                className={cn(
                   'h-5 w-5',
                   latest?.batteryHeater ? 'text-amber-400' : 'text-gray-500',
                 )}
@@ -571,7 +571,7 @@ export default function ClimateControlPage() {
                 {t('Comfort Score')}
               </span>
               <div
-                className={clsx(
+                className={cn(
                   'flex h-20 w-20 items-center justify-center rounded-full',
                   comfortScore != null && comfortScore >= 80
                     ? 'bg-green-500/20'
@@ -581,7 +581,7 @@ export default function ClimateControlPage() {
                 )}
               >
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-2xl font-bold',
                     comfortScore != null && comfortScore >= 80
                       ? 'text-green-400'
@@ -617,7 +617,7 @@ export default function ClimateControlPage() {
                 {t('Temp Delta')}
               </span>
               <div
-                className={clsx(
+                className={cn(
                   'flex h-20 w-20 items-center justify-center rounded-full',
                   tempDelta == null
                     ? 'bg-white/5'
@@ -629,7 +629,7 @@ export default function ClimateControlPage() {
                 )}
               >
                 <span
-                  className={clsx(
+                  className={cn(
                     'text-2xl font-bold',
                     tempDelta == null
                       ? 'text-white/30'
@@ -662,7 +662,7 @@ export default function ClimateControlPage() {
                 {t('Status')}
               </span>
               <div
-                className={clsx(
+                className={cn(
                   'flex h-20 w-20 items-center justify-center rounded-full',
                   comfortScore != null && comfortScore >= 80
                     ? 'bg-green-500/20'
@@ -770,7 +770,7 @@ export default function ClimateControlPage() {
           <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
             {HEAT_LEVELS.map((lvl, idx) => (
               <div key={lvl.label} className="flex items-center gap-1.5">
-                <Flame className={clsx('h-3.5 w-3.5', lvl.color)} />
+                <Flame className={cn('h-3.5 w-3.5', lvl.color)} />
                 <span className="text-xs text-[var(--text-muted)]">
                   {idx} — {t(lvl.label)}
                 </span>

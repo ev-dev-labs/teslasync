@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -162,7 +162,7 @@ export default function APIKeysPage() {
         <StaggerContainer className="space-y-3">
           {keys.map(k => (
             <StaggerItem key={k.id}>
-              <GlassPanel className={clsx('p-4', isExpired(k) && 'opacity-50')}>
+              <GlassPanel className={cn('p-4', isExpired(k) && 'opacity-50')}>
                 <div className="flex items-center gap-4">
                   <div className="p-2.5 rounded-xl bg-neon-cyan/5 shrink-0">
                     <Key className="h-5 w-5 text-neon-cyan" />

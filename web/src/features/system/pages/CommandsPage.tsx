@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -79,7 +79,7 @@ function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'def
 
   return (
     <GlassPanel
-      className={clsx(
+      className={cn(
         'p-4 flex flex-col items-center gap-2 transition-all duration-300 text-center min-h-[100px] justify-center cursor-pointer',
         variantStyles[variant],
         active && activeStyles[variant],
@@ -87,13 +87,13 @@ function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'def
       )}
       onClick={loading ? undefined : onClick}
     >
-      <div className={clsx('rounded-xl p-2.5 transition-colors', iconColors[variant])}>
+      <div className={cn('rounded-xl p-2.5 transition-colors', iconColors[variant])}>
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : icon}
       </div>
       <div>
         <span className="text-xs font-medium text-[var(--text-primary)] block">{label}</span>
         {sublabel && (
-          <span className={clsx('text-[10px] mt-0.5 font-medium block',
+          <span className={cn('text-[10px] mt-0.5 font-medium block',
             active ? (variant === 'danger' ? 'text-neon-red' : variant === 'success' ? 'text-neon-green' : 'text-neon-cyan') : 'text-[var(--text-muted)]',
           )}>{sublabel}</span>
         )}
@@ -170,7 +170,7 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         </div>
         {state && (
           <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1"><Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className={clsx('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-neon-green' : 'text-neon-amber')}>{state.battery_level}%</span></span>
+            <span className="flex items-center gap-1"><Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className={cn('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-neon-green' : 'text-neon-amber')}>{state.battery_level}%</span></span>
             <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span></span>
             {state.inside_temp != null && (
               <span className="flex items-center gap-1"><Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(convertTemp(state.inside_temp))}{tempUnit}</span></span>
@@ -181,9 +181,9 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
 
       {/* Status feedback */}
       {lastResult && (
-        <GlassPanel className={clsx('p-3 mb-4 flex items-center gap-2', lastResult.success ? 'bg-neon-green/5 border-neon-green/20' : 'bg-neon-red/5 border-neon-red/20')}>
+        <GlassPanel className={cn('p-3 mb-4 flex items-center gap-2', lastResult.success ? 'bg-neon-green/5 border-neon-green/20' : 'bg-neon-red/5 border-neon-red/20')}>
           {lastResult.success ? <CheckCircle className="h-4 w-4 text-neon-green" /> : <AlertTriangle className="h-4 w-4 text-neon-red" />}
-          <span className={clsx('text-xs', lastResult.success ? 'text-neon-green' : 'text-neon-red')}>{lastResult.message}</span>
+          <span className={cn('text-xs', lastResult.success ? 'text-neon-green' : 'text-neon-red')}>{lastResult.message}</span>
         </GlassPanel>
       )}
 

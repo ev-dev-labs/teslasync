@@ -5,7 +5,7 @@ import {
   Music, Disc3, Radio, Bluetooth, Podcast,
   Headphones, Volume2, ListMusic, BarChart3,
 } from 'lucide-react';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -348,7 +348,7 @@ export default function MediaPlayerPage() {
           <div className="flex items-start gap-6">
             {/* Album art placeholder */}
             <div
-              className={clsx(
+              className={cn(
                 'flex h-28 w-28 shrink-0 items-center justify-center rounded-xl bg-gray-800/60',
                 isPlaying && 'animate-pulse',
               )}

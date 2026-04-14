@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -329,7 +329,7 @@ export default function AlertStudioPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setTemplateCategory(null)}
-                className={clsx('!text-[11px] border',
+                className={cn('!text-[11px] border',
                   templateCategory === null
                     ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
                     : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
@@ -345,7 +345,7 @@ export default function AlertStudioPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
-                    className={clsx('!text-[11px] border',
+                    className={cn('!text-[11px] border',
                       templateCategory === cat
                         ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
                         : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
@@ -369,8 +369,8 @@ export default function AlertStudioPage() {
                     onClick={() => handleCloneTemplate(tpl)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <div className={clsx('rounded-lg p-1.5', sev.bg)}>
-                        <Icon className={clsx('h-3.5 w-3.5', sev.color)} />
+                      <div className={cn('rounded-lg p-1.5', sev.bg)}>
+                        <Icon className={cn('h-3.5 w-3.5', sev.color)} />
                       </div>
                       <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">
                         {tpl.name}
@@ -433,14 +433,14 @@ export default function AlertStudioPage() {
                 return (
                   <GlassPanel
                     key={rule.id}
-                    className={clsx(
+                    className={cn(
                       'p-3 transition-all cursor-pointer',
                       active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
                     )}
                     onClick={() => handleSelectRule(rule)}
                   >
                     <div className="flex items-center gap-2">
-                      <SevIcon className={clsx('h-3.5 w-3.5 shrink-0', sev.color)} />
+                      <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
                       <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">
                         {rule.name || t('Untitled')}
                       </span>
@@ -556,7 +556,7 @@ export default function AlertStudioPage() {
                             key={ch.id}
                             variant="ghost"
                             size="sm"
-                            className={clsx(
+                            className={cn(
                               '!text-xs border',
                               isSelected
                                 ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'

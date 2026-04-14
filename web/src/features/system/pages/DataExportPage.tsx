@@ -22,7 +22,7 @@ import {
   HardDrive,
   Calendar,
 } from 'lucide-react';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -185,7 +185,7 @@ function ExportTypeSelector({
             key={et.value}
             hover
             onClick={() => onChange(et.value)}
-            className={clsx(
+            className={cn(
               'p-4 text-left transition-all duration-200 cursor-pointer border-2 rounded-xl',
               active
                 ? 'border-white/30'
@@ -195,19 +195,19 @@ function ExportTypeSelector({
           >
             <div className="flex items-center gap-2.5 mb-2">
               <div
-                className={clsx(
+                className={cn(
                   'p-1.5 rounded-lg',
                   active ? 'bg-white/10' : 'bg-white/5',
                 )}
                 style={active ? { background: `color-mix(in srgb, var(--neon-${et.color}) 15%, transparent)` } : undefined}
               >
                 <Icon
-                  className={clsx('h-4 w-4', active ? 'text-white' : 'text-[var(--text-muted)]')}
+                  className={cn('h-4 w-4', active ? 'text-white' : 'text-[var(--text-muted)]')}
                   style={active ? { color: `var(--neon-${et.color})` } : undefined}
                 />
               </div>
               <span
-                className={clsx(
+                className={cn(
                   'text-sm font-semibold',
                   active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
                 )}
@@ -287,7 +287,7 @@ function StatusBadge({ status }: { status: ExportStatus }) {
   const Icon = cfg.icon;
   return (
     <Badge variant={cfg.badgeVariant} size="sm">
-      <Icon className={clsx('h-3 w-3', cfg.spinning && 'animate-spin')} />
+      <Icon className={cn('h-3 w-3', cfg.spinning && 'animate-spin')} />
       {t(cfg.labelKey)}
     </Badge>
   );

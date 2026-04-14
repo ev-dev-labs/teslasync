@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import {
   Navigation,
   MapPin,
@@ -106,11 +106,11 @@ interface LocationStatusCardProps {
 function LocationStatusCard({ icon, label, value, active }: LocationStatusCardProps) {
   return (
     <GlassPanel
-      className={clsx('flex items-center gap-4 p-4', active && 'ring-1 ring-emerald-500/40')}
+      className={cn('flex items-center gap-4 p-4', active && 'ring-1 ring-emerald-500/40')}
       glow={active ? 'green' : 'none'}
     >
       <span
-        className={clsx(
+        className={cn(
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
           active
             ? 'bg-emerald-500/20 text-emerald-400'
@@ -800,7 +800,7 @@ export default function NavigationRoutePage() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-baseline gap-2">
                     <span
-                      className={clsx(
+                      className={cn(
                         'text-3xl font-bold',
                         (latest?.destination_traffic_minutes_delay ?? 0) === 0
                           ? 'text-green-400'

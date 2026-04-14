@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -118,26 +118,26 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
 
   return (
     <GlassPanel
-      className={clsx(
+      className={cn(
         'p-4 flex items-start gap-4 transition-all duration-200 group',
         !alert.is_read && `${sev.border} ${sev.bg.replace('/10', '/5')}`,
       )}
     >
       <div className="flex flex-col items-center gap-1 shrink-0">
-        <div className={clsx('rounded-xl p-2.5 ring-1', sev.bg, sev.border)}>
-          <Icon className={clsx('h-4 w-4', sev.color)} />
+        <div className={cn('rounded-xl p-2.5 ring-1', sev.bg, sev.border)}>
+          <Icon className={cn('h-4 w-4', sev.color)} />
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <span className={clsx('text-sm font-medium block', alert.is_read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
+            <span className={cn('text-sm font-medium block', alert.is_read ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]')}>
               {alert.title}
             </span>
             <span className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-2 block">{alert.message}</span>
           </div>
           {!alert.is_read && (
-            <span className={clsx('h-2 w-2 rounded-full shrink-0 mt-1.5 animate-pulse', sev.dot)} />
+            <span className={cn('h-2 w-2 rounded-full shrink-0 mt-1.5 animate-pulse', sev.dot)} />
           )}
         </div>
         <div className="flex items-center gap-3 mt-2">
@@ -369,7 +369,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
             {digestOptions.map(opt => (
               <GlassPanel
                 key={opt.value}
-                className={clsx(
+                className={cn(
                   'p-3 cursor-pointer transition-all',
                   digestMode === opt.value ? 'bg-neon-amber/10 border-neon-amber/20' : 'hover:bg-white/[0.03]',
                 )}
@@ -378,7 +378,7 @@ function PreferencesSection({ t }: { t: (k: string) => string }) {
                   toast.info(`${t('Alert digest set to')} ${opt.label}`);
                 }}
               >
-                <span className={clsx('text-xs font-medium block', digestMode === opt.value ? 'text-neon-amber' : 'text-[var(--text-secondary)]')}>
+                <span className={cn('text-xs font-medium block', digestMode === opt.value ? 'text-neon-amber' : 'text-[var(--text-secondary)]')}>
                   {opt.label}
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)]">{opt.desc}</span>

@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
+import { cn } from '@/lib/cn';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -158,7 +158,7 @@ function ProgressBar({ pct }: { pct: number }) {
   return (
     <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
       <div
-        className={clsx('h-full rounded-full transition-all duration-500', progressBarColor(pct))}
+        className={cn('h-full rounded-full transition-all duration-500', progressBarColor(pct))}
         style={{ width: `${Math.min(pct, 100)}%` }}
       />
     </div>
@@ -168,7 +168,7 @@ function ProgressBar({ pct }: { pct: number }) {
 function CategoryBadge({ category }: { category: string }) {
   return (
     <span
-      className={clsx(
+      className={cn(
         'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium capitalize',
         categoryBgClass(category),
       )}
