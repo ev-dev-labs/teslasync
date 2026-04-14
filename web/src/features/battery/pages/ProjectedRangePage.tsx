@@ -5,24 +5,23 @@ import {
   Gauge, TrendingUp, Thermometer, Wind, Mountain,
   Car, Lightbulb, Zap, BatteryFull,
 } from 'lucide-react';
-import clsx from 'clsx';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { RadialGauge } from '@/components/charts/RadialGauge';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Select } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import {
+  RadialGauge, ChartTooltip,
+  chartMargin, axisTick, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { chartMargin, axisTick } from '@/components/charts';
+import { Skeleton } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ── Types ── */
@@ -37,7 +36,6 @@ interface RangeProjection {
   factors: RangeFactor[];
   projection_curve: CurvePoint[];
 }
-interface Vehicle { id: number; vin: string; display_name: string }
 
 const FACTOR_ICONS: Record<string, React.ReactNode> = {
   temperature: <Thermometer className="h-4 w-4" />,
@@ -51,14 +49,11 @@ const FACTOR_ICONS: Record<string, React.ReactNode> = {
 
 export default function ProjectedRangePage() {
   const { t } = useTranslation();
-  usePageTitle(t('Projected Range'));
+  usePageTitle(t('range.title', 'Projected Range'));
 
   const [vehicleId, setVehicleId] = useState<string>('');
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
@@ -96,7 +91,7 @@ export default function ProjectedRangePage() {
     >
       {/* Summary Stats */}
       <FadeIn>
-        <div className={clsx('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
+        <div className={cn('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
           <MetricCard label={t('Current Range')} value={`${fmtNumber(data?.current_range_km, 0)} km`} icon={<BatteryFull className="h-4 w-4" />} color="cyan" />
           <MetricCard label={t('Projected Range')} value={`${fmtNumber(data?.projected_range_km, 0)} km`} icon={<TrendingUp className="h-4 w-4" />} color="green" />
           <MetricCard label={t('Efficiency Factor')} value={fmtNumber((data?.efficiency_factor ?? 0) * 100, 1) + '%'} icon={<Gauge className="h-4 w-4" />} color="purple" />
@@ -106,7 +101,7 @@ export default function ProjectedRangePage() {
 
       {/* Gauge + Projection Chart */}
       <FadeIn delay={0.1}>
-        <div className={clsx('grid gap-4 grid-cols-1 md:grid-cols-3')}>
+        <div className={cn('grid gap-4 grid-cols-1 md:grid-cols-3')}>
           <GlassPanel className="flex flex-col items-center justify-center p-6">
             {data ? (
               <RadialGauge
@@ -158,14 +153,14 @@ export default function ProjectedRangePage() {
       <FadeIn delay={0.2}>
         <GlassPanel className="p-5">
           <span className="mb-3 block text-sm font-semibold text-[var(--text-primary)]">{t('Range Factors')}</span>
-          <div className={clsx('grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')}>
+          <div className={cn('grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')}>
             {(data?.factors ?? []).map((f) => (
               <GlassPanel key={f.name} hover className="flex items-start gap-3 p-4">
                 <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">
                   {FACTOR_ICONS[(f.name ?? '').toLowerCase().replace(/\s+/g, '_')] ?? <Gauge className="h-4 w-4" />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className={clsx('flex items-center gap-2')}>
+                  <div className={cn('flex items-center gap-2')}>
                     <span className="text-sm font-medium text-[var(--text-primary)]">{t(f.name)}</span>
                     <Badge variant={f.impact_pct >= 0 ? 'success' : 'danger'} size="sm">
                       {f.impact_pct >= 0 ? '+' : ''}{fmtNumber(f.impact_pct, 1)}%
@@ -182,13 +177,13 @@ export default function ProjectedRangePage() {
       {/* Tips */}
       <FadeIn delay={0.3}>
         <GlassPanel glow="green" className="p-5">
-          <div className={clsx('mb-3 flex items-center gap-2')}>
+          <div className={cn('mb-3 flex items-center gap-2')}>
             <Lightbulb className="h-5 w-5 text-neon-green" />
             <span className="text-sm font-semibold text-[var(--text-primary)]">{t('Tips to Maximize Range')}</span>
           </div>
           <ul className="space-y-2">
             {tips.map((tip, i) => (
-              <li key={i} className={clsx('flex items-start gap-2 text-sm text-[var(--text-secondary)]')}>
+              <li key={i} className={cn('flex items-start gap-2 text-sm text-[var(--text-secondary)]')}>
                 <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{tip.icon}</span>
                 <span>{tip.text}</span>
               </li>
