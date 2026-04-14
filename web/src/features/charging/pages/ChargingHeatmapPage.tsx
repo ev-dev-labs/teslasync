@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui';
-import { Select } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton } from '@/components/feedback';
 import { Activity } from 'lucide-react';
