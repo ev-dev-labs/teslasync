@@ -1,5 +1,5 @@
 ---
-description: "Fix UI data binding bugs — TirePressure NaN, Map 0,0, Locations empty, FSM Debugger duplicate controls + stats"
+description: "Fix UI data binding bugs — TirePressure, Map, Locations, FSM Debugger, Signal Log/Explorer/Diff"
 ---
 
 # Fix: UI Data Binding Bugs Found During Signal Replay Testing
@@ -240,6 +240,90 @@ This shows actual state distribution (how many times vehicle transitioned TO eac
 
 ---
 
+## Bug 6 — Signal Log, Signal Explorer, Signal Diff: No signal names in search/dropdown
+
+**Pages:**
+- `web/src/features/telemetry/pages/SignalLogViewerPage.tsx` — typing in Signals search shows nothing
+- `web/src/features/telemetry/pages/SignalExplorerPage.tsx` — "Search signals…" shows nothing
+- `web/src/features/telemetry/pages/SignalDiffPage.tsx` — "Select a signal..." dropdown is empty
+
+**Root Cause (two issues):**
+
+**Issue A — API response type mismatch:**
+The `useSignals` hook in `web/src/api/hooks/useTelemetry.ts` line 19:
+```typescript
+queryFn: () => request<string[]>(`/signals/${vehicleId}/available`),
+```
+expects a raw `string[]`, but the API handler (`internal/api/signal_handler.go:106`) returns:
+```json
+{"vehicle_id": 1, "count": 42, "signals": ["ACChargingEnergyIn", "BatteryLevel", ...]}
+```
+After `camelCaseKeys` transforms it, the hook receives an **object**, not an array.
+`safeArray` then returns `[]`.
+
+**Fix A:** Update the hook to extract `.signals` from the response:
+```typescript
+export function useSignals(vehicleId: number) {
+  return useQuery({
+    queryKey: telemetryKeys.signals(vehicleId),
+    queryFn: async () => {
+      const resp = await request<{ signals: string[] }>(`/signals/${vehicleId}/available`);
+      return resp.signals ?? [];
+    },
+    enabled: vehicleId > 0,
+    staleTime: 60_000,
+    select: safeArray,
+  });
+}
+```
+
+**Issue B — MongoDB dependency:**
+`GetAvailableSignals()` in `internal/database/signal_log_repo.go:180` queries MongoDB's
+`signal_log` collection via `Distinct("signal")`. If MongoDB is not running or has no data,
+this returns empty. And if `signalLogRepo == nil` (MongoDB not configured), the handler
+returns HTTP 503.
+
+**Fix B:** Add a PostgreSQL fallback in the signal handler. If MongoDB is unavailable or returns
+empty, query distinct signal names from `vehicle_live_state` columns that have non-null values:
+```go
+// Fallback: get column names from vehicle_live_state that have data
+fallbackQuery := `
+  SELECT column_name FROM information_schema.columns
+  WHERE table_name = 'vehicle_live_state'
+    AND column_name NOT IN ('id', 'vehicle_id', 'created_at', 'updated_at')
+  ORDER BY column_name`
+```
+Or maintain a static list of known Fleet Telemetry signal names as a last resort.
+
+---
+
+## Bug 6b — Signal Explorer: Per Page + Explore button not right-aligned
+
+**Page:** `web/src/features/telemetry/pages/SignalExplorerPage.tsx`
+
+The "Per Page" dropdown and "Explore" button sit left-aligned (line ~250).
+
+**Fix:** Add `justify-end` or `ml-auto` to push them right:
+```tsx
+<div className="flex items-center gap-3 justify-end">
+```
+
+---
+
+## Bug 6c — Explore / Query buttons disabled (consequence of Bug 6)
+
+**Pages:** SignalExplorerPage, SignalLogViewerPage
+
+Both buttons have `disabled={!canExplore}` / `disabled={!canQuery}` where:
+```typescript
+const canExplore = selectedSignals.length > 0 && fromStr && toStr;
+```
+
+Since no signals can be selected (Bug 6), the buttons stay permanently disabled.
+**This is fixed automatically by fixing Bug 6.** No separate code change needed.
+
+---
+
 ## Verification
 
 ```bash
@@ -268,4 +352,9 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] FSM Debugger: only dropdown for Time Range, no duplicate button group
 - [ ] FSM Debugger: no duplicate entries in pie chart or transition counts table
 - [ ] FSM Debugger: pie chart shows actual state distribution (driving/charging/parked/online), not fsm_name
+- [ ] Signal pages: useSignals hook extracts .signals from wrapped API response
+- [ ] Signal pages: PostgreSQL fallback when MongoDB unavailable for signal names
+- [ ] Signal pages: typing in signal search shows matching signal names
+- [ ] Signal Diff: dropdown populated with signal names
+- [ ] Signal Explorer: Per Page + Explore button right-aligned
 - [ ] TypeScript compiles clean
