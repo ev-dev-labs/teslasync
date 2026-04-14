@@ -1,28 +1,25 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import {
   Car, Calendar, TrendingUp, Zap, Gauge, DollarSign, Leaf, Lightbulb,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Select, type SelectOption } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
+  ChartTooltip, CHART_COLORS,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -34,12 +31,6 @@ interface PeriodStats {
   avg_efficiency: number;
   total_cost: number;
   co2_saved: number;
-}
-
-interface VehicleOption {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 interface ComparisonRow {
@@ -75,10 +66,7 @@ export default function ComparePage() {
 
   /* ── Queries ── */
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<VehicleOption[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeVehicle = vehicleId || String(vehicles?.[0]?.id ?? '');
   const daysA = PERIOD_DAYS[periodA] ?? 30;
@@ -187,7 +175,7 @@ export default function ComparePage() {
         header: t('Change'),
         sortable: true,
         render: (r) => (
-          <span className={clsx(r.positive ? 'text-neon-green' : 'text-neon-red')}>
+          <span className={cn(r.positive ? 'text-neon-green' : 'text-neon-red')}>
             {r.positive ? '↑' : '↓'} {fmtNumber(Math.abs(r.change))}
           </span>
         ),
