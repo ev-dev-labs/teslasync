@@ -237,6 +237,49 @@ This makes all cards stretch to the tallest card's height.
 
 ---
 
+## Bug 7 — Battery Cells: MIN/MAX CELL shows "#undefined"
+
+**Page:** `web/src/features/battery/pages/BatteryCellsPage.tsx`
+**Screenshot:** MIN CELL shows "#undefined 4.1240 V", MAX CELL shows "#undefined 4.1300 V".
+
+**Root Cause:** Field name mismatch. The API returns `cell_id` (from `frontendCell` struct
+in `battery_cells_handler.go:275`) but the frontend interface uses `cell_number`:
+
+API (`frontendCell`):
+```go
+CellID      int     `json:"cell_id"`
+```
+
+Frontend (`CellReading` line 32):
+```typescript
+cell_number: number;
+```
+
+After `camelCaseKeys`: response has `cellId`/`cell_id` — neither matches `cell_number`.
+So `minCell.cell_number` is `undefined` → displays "#undefined".
+
+**Fix:** Update the frontend interface to match the API:
+```typescript
+interface CellReading {
+  cell_id: number;       // was cell_number
+  module: number;
+  voltage: number;
+  temperature: number;
+  delta_from_avg?: number;
+}
+```
+
+Then update ALL references from `cell_number` to `cell_id`:
+- Line 142: `key={cell.cell_id}`
+- Line 148, 150: `cell.cell_id`
+- Line 317: `useSortToggle('cell_id', 'asc')`
+- Line 329, 333: `key: 'cell_id'`, `r.cell_id`
+- Line 407, 413: `minCell.cell_id`, `maxCell.cell_id`
+- Line 476: `dataKey="cell_id"`
+- Line 692: `keyExtractor={(r) => r.cell_id}`
+
+---
+
 ## Verification
 
 ```bash
@@ -258,6 +301,7 @@ cd web && npx tsc --noEmit
 - [ ] Navigation: Location History shows "—" not "0.000000" — add typeof guard to all coord checks
 - [ ] All map pages: use consistent `isValidCoord(lat, lng)` helper with typeof + !== 0 check
 - [ ] Speed Profile: summary cards equal height (h-full + flex-col on GlassPanel)
+- [ ] Battery Cells: fix #undefined — use cell_id instead of cell_number (11 references)
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
