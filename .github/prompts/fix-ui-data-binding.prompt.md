@@ -324,6 +324,81 @@ Since no signals can be selected (Bug 6), the buttons stay permanently disabled.
 
 ---
 
+## Bug 7 — Data Export: Raw i18n keys shown everywhere instead of labels
+
+**Page:** `web/src/features/system/pages/DataExportPage.tsx`
+**Screenshot:** Every label shows raw i18n key prefixes: `dataExport.types.drives`,
+`dataExport.formats.csv`, `dataExport.presets.last30`, etc. Page title shows "Page Title",
+section headers show "Title", format cards show "Csv Title" / "Json Title".
+
+**Root Cause:** The page defines constants with `labelKey`/`descKey` (lines 92-123):
+```typescript
+{ value: 'drives', labelKey: 'dataExport.types.drives', ... }
+```
+Then renders with `t(et.labelKey)` (line 216) — **no fallback value**. Since i18n translation
+files don't include these keys, the raw key is displayed.
+
+Additionally, other labels use bare `t('Title')`, `t('Csv Title')`, `t('Csv Desc')` —
+generic placeholder strings that aren't proper i18n keys with fallbacks.
+
+**Fix:** Add human-readable fallback values to every `t()` call. Two approaches:
+
+1. **Add fallbacks to the constant definitions:**
+```typescript
+const EXPORT_TYPES = [
+  { value: 'drives', labelKey: 'dataExport.types.drives', label: 'Drives',
+    descKey: 'dataExport.types.drivesDesc', desc: 'Export drive sessions, routes, and efficiency data',
+    icon: Car, color: 'cyan' },
+  { value: 'charging', labelKey: 'dataExport.types.charging', label: 'Charging',
+    descKey: 'dataExport.types.chargingDesc', desc: 'Export charging sessions and energy data',
+    icon: Zap, color: 'green' },
+  // ... etc for all entries
+];
+// Then render: t(et.labelKey, et.label)
+```
+
+2. **Or provide inline fallbacks at every t() call site:**
+```typescript
+// Types
+t('dataExport.types.drives', 'Drives')
+t('dataExport.types.charging', 'Charging')
+t('dataExport.types.analytics', 'Analytics')
+t('dataExport.types.fullBackup', 'Full Backup')
+t('dataExport.types.maintenance', 'Maintenance')
+t('dataExport.types.energy', 'Energy')
+
+// Formats
+t('dataExport.formats.csv', 'CSV')
+t('dataExport.formats.json', 'JSON')
+
+// Presets
+t('dataExport.presets.last7', 'Last 7 Days')
+t('dataExport.presets.last30', 'Last 30 Days')
+t('dataExport.presets.last90', 'Last 90 Days')
+t('dataExport.presets.lastYear', 'Last Year')
+t('dataExport.presets.allTime', 'All Time')
+
+// Steps
+t('dataExport.wizard.step1', 'STEP 1 — Select Data Type')
+t('dataExport.wizard.step2', 'STEP 2 — Choose Format')
+t('dataExport.wizard.step3', 'STEP 3 — Select Vehicle')
+t('dataExport.wizard.step4', 'STEP 4 — Date Range')
+```
+
+3. **Fix placeholder labels:**
+```typescript
+// Replace generic placeholders:
+t('Title') → t('dataExport.title', 'Data Export')
+t('Csv Title') → t('dataExport.csvPreview', 'CSV Preview')
+t('Json Title') → t('dataExport.jsonPreview', 'JSON Preview')
+t('Csv Desc') → t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')
+t('Json Desc') → t('dataExport.jsonDesc', 'Structured JSON format for programmatic access')
+```
+
+Also fix: PageContainer `title` and `subtitle` should use proper fallbacks, not bare `t('Title')`.
+
+---
+
 ## Verification
 
 ```bash
@@ -357,4 +432,6 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Signal pages: typing in signal search shows matching signal names
 - [ ] Signal Diff: dropdown populated with signal names
 - [ ] Signal Explorer: Per Page + Explore button right-aligned
+- [ ] Data Export: all labels show human-readable text, no raw i18n key prefixes
+- [ ] Data Export: PageContainer title/subtitle use proper fallbacks
 - [ ] TypeScript compiles clean
