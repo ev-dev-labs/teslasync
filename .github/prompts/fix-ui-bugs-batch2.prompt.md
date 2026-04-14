@@ -280,6 +280,42 @@ Then update ALL references from `cell_number` to `cell_id`:
 
 ---
 
+## Bug 8 — Charging Curve: Summary card text overflows card boundaries
+
+**Page:** `web/src/features/charging/pages/ChargingCurvePage.tsx`
+**Screenshot:** 6 summary cards in a row (TOTAL SESSIONS, TOTAL ENERGY, AVG CHARGE RATE,
+PEAK RATE, AVG DURATION, TOTAL COST) — text overflows card edges at narrow widths.
+
+**Root Cause:** The `SummaryCard` component (line 141-167) uses `text-2xl` for values
+without overflow protection. At `xl:grid-cols-6`, each card is narrow and values like
+"214.20 kWh" overflow.
+
+**Fix:** Add text truncation and responsive font sizing to `SummaryCard`:
+```tsx
+function SummaryCard({ label, value, unit, loading, className }) {
+  return (
+    <GlassPanel className={cn('p-4 min-w-0 overflow-hidden', className)}>
+      <p className="text-xs uppercase tracking-wider text-white/50 truncate">{label}</p>
+      {loading ? (
+        <Skeleton className="mt-1 h-7 w-20" />
+      ) : (
+        <p className="mt-1 text-lg xl:text-2xl font-semibold text-white truncate">
+          {value}
+          {unit && <span className="ml-1 text-xs xl:text-sm text-white/60">{unit}</span>}
+        </p>
+      )}
+    </GlassPanel>
+  );
+}
+```
+
+Key changes:
+- `min-w-0` on GlassPanel — allows flex/grid items to shrink below content width
+- `truncate` on both label and value — clips with ellipsis instead of overflow
+- `text-lg xl:text-2xl` — smaller font on narrower screens
+
+---
+
 ## Verification
 
 ```bash
@@ -302,6 +338,7 @@ cd web && npx tsc --noEmit
 - [ ] All map pages: use consistent `isValidCoord(lat, lng)` helper with typeof + !== 0 check
 - [ ] Speed Profile: summary cards equal height (h-full + flex-col on GlassPanel)
 - [ ] Battery Cells: fix #undefined — use cell_id instead of cell_number (11 references)
+- [ ] Charging Curve: SummaryCard text overflow — add min-w-0, truncate, responsive text size
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
