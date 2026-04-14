@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/Input';
 import { TabNav } from '@/components/ui/TabNav';
 import { Toggle } from '@/components/ui/Toggle';
 import { DataTable, type Column } from '@/components/ui/DataTable';
-import { Pagination } from '@/components/ui/Pagination';
+
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -162,8 +162,6 @@ function AlertCard({ alert, onMarkRead, t }: { alert: Alert; onMarkRead: () => v
 // ─── NotificationHistory sub-component ───────────────────────────────────────
 
 function NotificationHistory({ t }: { t: (k: string) => string }) {
-  const [logPage, setLogPage] = useState(1);
-  const logPageSize = 25;
 
   const { data: logs, isLoading: logsLoading } = useNotificationLogs();
   const { data: stats } = useNotificationStats();
@@ -189,12 +187,6 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       name: status, value, fill: colors[status] || '#00f0ff',
     }));
   }, [logs]);
-
-  const paginatedLogs = useMemo(() => {
-    if (!logs) return [];
-    const start = (logPage - 1) * logPageSize;
-    return logs.slice(start, start + logPageSize);
-  }, [logs, logPage, logPageSize]);
 
   const logColumns: Column<NotificationLog>[] = useMemo(() => [
     { key: 'time', header: t('Time'), render: (log) => <span className="text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(log.created_at)}</span> },
@@ -253,23 +245,16 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
         </span>
         {logsLoading ? (
           <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}</div>
-        ) : paginatedLogs.length > 0 ? (
-          <>
+        ) : (logs ?? []).length > 0 ? (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <DataTable
                 columns={logColumns}
-                data={paginatedLogs}
+                data={logs ?? []}
                 keyExtractor={(log) => log.id}
                 compact
+                pagination={{ defaultPageSize: 50 }}
               />
             </div>
-            <Pagination
-              page={logPage}
-              pageSize={logPageSize}
-              total={logs?.length ?? 0}
-              onPageChange={setLogPage}
-            />
-          </>
         ) : (
           <EmptyState
             icon={<Send className="h-8 w-8" />}

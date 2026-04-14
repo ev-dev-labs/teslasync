@@ -357,6 +357,7 @@ export default function SignalExplorerPage() {
                   data={statsData}
                   keyExtractor={(s) => s.signal}
                   compact
+                  pagination={{ defaultPageSize: 50 }}
                 />
               ) : (
                 <span className="text-xs text-[var(--text-muted)]">{t('No stats available')}</span>
@@ -377,6 +378,7 @@ export default function SignalExplorerPage() {
                     data={tableResponse?.data ?? []}
                     keyExtractor={(r) => `${r.created_at}-${r.signal}`}
                     compact
+                    pagination={{ defaultPageSize: 50 }}
                   />
                   <Pagination
                     page={page}

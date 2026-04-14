@@ -886,6 +886,7 @@ function AcDcTable({
       data={data}
       keyExtractor={(r) => r.label}
       compact
+      pagination
     />
   );
 }

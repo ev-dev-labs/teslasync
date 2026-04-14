@@ -761,6 +761,7 @@ function ServiceHealthSection() {
             data={vehicles}
             keyExtractor={(v) => v.vin}
             compact
+            pagination
             emptyMessage={t('No vehicles connected')}
           />
         </div>

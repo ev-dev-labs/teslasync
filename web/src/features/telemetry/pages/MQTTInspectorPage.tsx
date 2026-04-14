@@ -272,6 +272,7 @@ export default function MQTTInspectorPage() {
               data={vehicles}
               keyExtractor={(v) => v.vin}
               compact
+              pagination={{ defaultPageSize: 50 }}
               emptyMessage={t('mqtt.noVehicles', 'No vehicles currently streaming')}
             />
           )}

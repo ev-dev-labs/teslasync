@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
-import { Pagination } from '@/components/ui/Pagination';
+
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -104,7 +104,7 @@ const SORT_OPTIONS = [
   { value: 'category', label: 'Category' },
 ];
 
-const PAGE_SIZE = 10;
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -365,7 +365,6 @@ export default function MaintenancePage() {
   // ── Filters & sorting ─────────────────────────────────────────────────
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('status');
-  const [recordsPage, setRecordsPage] = useState(1);
 
   const categories = useMemo(() => {
     if (!items) return [];
@@ -411,12 +410,7 @@ export default function MaintenancePage() {
     );
   }, [items]);
 
-  // ── Paginated records ──────────────────────────────────────────────────
-  const paginatedRecords = useMemo(() => {
-    if (!records) return [];
-    const start = (recordsPage - 1) * PAGE_SIZE;
-    return records.slice(start, start + PAGE_SIZE);
-  }, [records, recordsPage]);
+  // ── Render ─────────────────────────────────────────────────────────────
 
   const serviceColumns = useMemo(() => buildServiceColumns(t), [t]);
 
@@ -457,8 +451,6 @@ export default function MaintenancePage() {
   const handleSchedule = useCallback(() => {
     // placeholder — would open scheduling modal
   }, []);
-
-  const handleRecordsPageChange = useCallback((p: number) => setRecordsPage(p), []);
 
   const isLoading = loadingItems || loadingRecords;
 
@@ -677,21 +669,12 @@ export default function MaintenancePage() {
             <>
               <DataTable<ServiceRecord>
                 columns={serviceColumns}
-                data={paginatedRecords}
+                data={records}
                 keyExtractor={(r) => r.id}
                 compact
-                emptyMessage={t('No records on this page.')}
+                pagination
+                emptyMessage={t('No service records found.')}
               />
-              {records.length > PAGE_SIZE && (
-                <div className="mt-4">
-                  <Pagination
-                    page={recordsPage}
-                    pageSize={PAGE_SIZE}
-                    total={records.length}
-                    onPageChange={handleRecordsPageChange}
-                  />
-                </div>
-              )}
             </>
           )}
         </GlassPanel>

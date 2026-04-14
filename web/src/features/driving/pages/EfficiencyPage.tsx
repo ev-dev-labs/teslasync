@@ -379,6 +379,7 @@ export default function EfficiencyPage() {
               data={tempBuckets}
               keyExtractor={(b) => b.range}
               compact
+              pagination
               columns={[
                 {
                   key: 'range',

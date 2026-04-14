@@ -328,6 +328,7 @@ export default function ComparePage() {
                 data={tableRows}
                 keyExtractor={(r) => r.metric}
                 compact
+                pagination
               />
             </GlassPanel>
           </FadeIn>

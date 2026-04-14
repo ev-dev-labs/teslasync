@@ -568,6 +568,7 @@ export default function EnergyPage() {
                   columns={sessionColumns}
                   data={sessions.slice(0, 15)}
                   keyExtractor={(s) => s.id}
+                  pagination
                 />
               ) : (
                 <EmptyState

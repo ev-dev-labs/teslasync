@@ -292,6 +292,7 @@ export default function SignalLogViewerPage() {
                   data={rows}
                   keyExtractor={(r) => `${r.created_at}-${r.signal}`}
                   compact
+                  pagination={{ defaultPageSize: 50 }}
                 />
                 <Pagination
                   page={page}

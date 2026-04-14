@@ -679,6 +679,7 @@ export default function BackupRestorePage() {
               keyExtractor={(r) => r.id}
               emptyMessage={t('backup.noConfigs', 'No backup configurations')}
               compact
+              pagination
             />
           )}
         </GlassPanel>
