@@ -1,33 +1,30 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import {
   Battery, Cpu, Activity, TrendingDown, BarChart3, Grid3x3,
-  ArrowDownRight, ArrowUpRight, Minus,
+  ArrowDownRight, ArrowUpRight, Minus, Thermometer, Zap,
+  CheckCircle, AlertTriangle, Shield, Info,
 } from 'lucide-react';
-import clsx from 'clsx';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column, useSortToggle } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageContainer, Grid } from '@/components/layout';
+import { GlassPanel, Badge, Button, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  ChartContainer, ChartTooltip, ChartGradient,
+  chartGrid, axisTick, axisTickSm, chartMargin, chartMarginLabeled, CHART_COLORS,
+  BarChart, Bar, LineChart, Line, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { chartMargin, chartMarginLabeled, axisTick } from '@/components/charts';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import { useQuery } from '@tanstack/react-query';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -51,16 +48,15 @@ interface BatteryCellData {
   avg_voltage: number;
   min_voltage: number;
   max_voltage: number;
+  voltage_spread: number;
   imbalance_mv: number;
   pack_voltage: number;
+  avg_temperature: number;
+  min_temperature: number;
+  max_temperature: number;
+  temp_spread: number;
   cells: CellReading[];
   history: HistoryPoint[];
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 /* ── Helpers ───────────────────────────────────────────────────── */
@@ -144,7 +140,7 @@ function CellHeatmap({
         {cells.map((cell) => (
           <div
             key={cell.cell_number}
-            className={clsx(
+            className={cn(
               'flex flex-col items-center justify-center rounded-md p-1 text-[9px] font-mono',
               'transition-transform hover:scale-110',
             )}
@@ -174,21 +170,42 @@ function CellHeatmap({
   );
 }
 
+/* ── InsightCard ────────────────────────────────────────────────── */
+
+function InsightCard({ icon, title, description, status }: {
+  icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical';
+}) {
+  const bgCls = {
+    good: 'border-neon-green/20 bg-neon-green/5',
+    warning: 'border-neon-amber/20 bg-neon-amber/5',
+    critical: 'border-neon-red/20 bg-neon-red/5',
+  };
+  const iconCls = { good: 'text-neon-green', warning: 'text-neon-amber', critical: 'text-neon-red' };
+  return (
+    <div className={cn('rounded-xl border p-4 transition-all duration-200', bgCls[status])}>
+      <div className="flex items-start gap-3">
+        <div className={cn('mt-0.5', iconCls[status])}>{icon}</div>
+        <div>
+          <p className="text-sm font-medium text-white/90">{title}</p>
+          <p className="text-xs text-white/60 mt-0.5">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Page Component ────────────────────────────────────────────── */
 
 export default function BatteryCellsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Battery Cells'));
+  usePageTitle(t('battery.cells.title', 'Battery Cells'));
 
   const [vehicleId, setVehicleId] = useState<string>('');
   const [showHeatmap, setShowHeatmap] = useState(true);
 
   /* ── Queries ─── */
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
@@ -211,6 +228,89 @@ export default function BatteryCellsPage() {
     if (!data?.cells?.length) return null;
     return data.cells.reduce((a, b) => (a.voltage > b.voltage ? a : b));
   }, [data?.cells]);
+
+  /* ── Derived: voltage spread trend from history ─── */
+  const voltageSpreadTrend = useMemo(() => {
+    const hist = data?.history ?? [];
+    if (hist.length === 0) return [];
+    return hist.map((h) => ({
+      time: formatDateTime(h.timestamp).split(',')[0],
+      spread: fmtNumber((h.max_voltage - h.min_voltage) * 1000, 1),
+      spreadRaw: (h.max_voltage - h.min_voltage) * 1000,
+    }));
+  }, [data?.history]);
+
+  /* ── Derived: health insights ─── */
+  const insights = useMemo(() => {
+    if (!data) return [];
+    const items: { icon: React.ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }[] = [];
+    const imb = data.imbalance_mv ?? 0;
+
+    if (imb > 15) {
+      items.push({
+        icon: <Zap className="h-4 w-4" />,
+        title: t('battery.cells.insight.highSpread', 'High Voltage Spread'),
+        description: t('battery.cells.insight.highSpreadDesc', 'Cell imbalance is significant. Consider a full charge to 100% to allow BMS balancing, then discharge to 90%.'),
+        status: 'critical',
+      });
+    } else if (imb > 5) {
+      items.push({
+        icon: <Zap className="h-4 w-4" />,
+        title: t('battery.cells.insight.watchSpread', 'Voltage Spread Increasing'),
+        description: t('battery.cells.insight.watchSpreadDesc', 'Cell balance is slightly off. Periodic full charges can help the BMS equalize cells.'),
+        status: 'warning',
+      });
+    } else {
+      items.push({
+        icon: <CheckCircle className="h-4 w-4" />,
+        title: t('battery.cells.insight.balanced', 'Cells Well Balanced'),
+        description: t('battery.cells.insight.balancedDesc', 'Voltage spread is within healthy range. Battery cells are operating normally.'),
+        status: 'good',
+      });
+    }
+
+    if (data.temp_spread > 5) {
+      items.push({
+        icon: <Thermometer className="h-4 w-4" />,
+        title: t('battery.cells.insight.highTemp', 'High Temperature Spread'),
+        description: t('battery.cells.insight.highTempDesc', 'Avoid fast charging in extreme temperatures. Allow the battery to precondition before supercharging.'),
+        status: 'critical',
+      });
+    } else if (data.temp_spread > 3) {
+      items.push({
+        icon: <Thermometer className="h-4 w-4" />,
+        title: t('battery.cells.insight.watchTemp', 'Module Temperature Variation'),
+        description: t('battery.cells.insight.watchTempDesc', 'Some temperature variation is normal. Monitor during fast charging sessions.'),
+        status: 'warning',
+      });
+    } else {
+      items.push({
+        icon: <Thermometer className="h-4 w-4" />,
+        title: t('battery.cells.insight.goodTemp', 'Thermal Balance Good'),
+        description: t('battery.cells.insight.goodTempDesc', 'Module temperatures are consistent. Thermal management system is performing well.'),
+        status: 'good',
+      });
+    }
+
+    const criticalCells = data.cells.filter((c) => c.status === 'critical').length;
+    if (criticalCells > 0) {
+      items.push({
+        icon: <AlertTriangle className="h-4 w-4" />,
+        title: t('battery.cells.insight.criticalCells', 'Critical Cells Detected'),
+        description: t('battery.cells.insight.criticalCellsDesc', `${criticalCells} cell(s) show significant deviation. Consider scheduling a service appointment.`),
+        status: 'critical',
+      });
+    } else {
+      items.push({
+        icon: <Shield className="h-4 w-4" />,
+        title: t('battery.cells.insight.healthy', 'All Cells Healthy'),
+        description: t('battery.cells.insight.healthyDesc', 'No critical cells detected. Continue current charging habits for long-term health.'),
+        status: 'good',
+      });
+    }
+
+    return items;
+  }, [data, t]);
 
   /* ── Table ─── */
 
@@ -250,7 +350,7 @@ export default function BatteryCellsPage() {
       render: (r) => {
         const mv = r.delta_from_avg * 1000;
         return (
-          <span className={clsx('font-mono', mv > 0 ? 'text-neon-green' : mv < 0 ? 'text-neon-red' : '')}>
+          <span className={cn('font-mono', mv > 0 ? 'text-neon-green' : mv < 0 ? 'text-neon-red' : '')}>
             {mv >= 0 ? '+' : ''}{fmtNumber(mv, 1)}
           </span>
         );
@@ -289,7 +389,7 @@ export default function BatteryCellsPage() {
     >
       {/* ── Summary Metrics ─── */}
       <FadeIn>
-        <div className={clsx('grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6')}>
+        <div className={cn('grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6')}>
           <MetricCard
             label={t('Total Cells')}
             value={fmtNumber(data?.total_cells ?? 0, 0)}
@@ -420,7 +520,7 @@ export default function BatteryCellsPage() {
 
       {/* ── Voltage Distribution & Imbalance Trend ─── */}
       <FadeIn delay={0.15}>
-        <div className={clsx('grid gap-4 grid-cols-1 md:grid-cols-2')}>
+        <div className={cn('grid gap-4 grid-cols-1 md:grid-cols-2')}>
           {/* Voltage Distribution Histogram */}
           <GlassPanel className="p-4">
             <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
@@ -602,6 +702,169 @@ export default function BatteryCellsPage() {
             />
           )}
         </GlassPanel>
+      </FadeIn>
+
+      {/* ── Voltage Spread Trend ─── */}
+      <FadeIn delay={0.3}>
+        <ChartContainer title={t('battery.cells.chart.spreadTrend', 'Voltage Spread Trend')}>
+          {voltageSpreadTrend.length > 0 ? (
+            <div className="h-48 sm:h-60">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={voltageSpreadTrend}>
+                  <defs>
+                    <ChartGradient id="spreadGrad" color="#a855f7" opacity={0.3} />
+                  </defs>
+                  {chartGrid}
+                  <XAxis dataKey="time" tick={axisTickSm} tickLine={false} axisLine={false} />
+                  <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit=" mV" />
+                  <Tooltip content={<ChartTooltip />} />
+                  <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" />
+                  <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" />
+                  <Area
+                    type="monotone"
+                    dataKey="spreadRaw"
+                    name={t('battery.cells.chart.voltageSpread', 'Voltage Spread (mV)')}
+                    stroke="#a855f7"
+                    fill="url(#spreadGrad)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Activity className="h-8 w-8" />}
+              message={t('battery.cells.chart.noSpreadTrend', 'Not enough history for spread trend')}
+              className="py-8"
+            />
+          )}
+        </ChartContainer>
+      </FadeIn>
+
+      {/* ── Temperature Summary ─── */}
+      <FadeIn delay={0.35}>
+        <GlassPanel className="p-6">
+          <h3 className="section-title mb-4 flex items-center gap-2">
+            <Thermometer className="h-4 w-4 text-neon-amber" />
+            {t('battery.cells.temp.title', 'Temperature Summary')}
+          </h3>
+          {data ? (
+            <Grid cols={{ default: 2, md: 4 }} gap={4}>
+              <MetricCard
+                label={t('battery.cells.temp.avg', 'Avg Temperature')}
+                value={`${fmtNumber(data.avg_temperature, 1)}°C`}
+                icon={<Thermometer className="h-5 w-5" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('battery.cells.temp.min', 'Min Temperature')}
+                value={`${fmtNumber(data.min_temperature, 1)}°C`}
+                icon={<ArrowDownRight className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('battery.cells.temp.max', 'Max Temperature')}
+                value={`${fmtNumber(data.max_temperature, 1)}°C`}
+                icon={<ArrowUpRight className="h-5 w-5" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('battery.cells.temp.spread', 'Temp Spread')}
+                value={`${fmtNumber(data.temp_spread, 1)}°C`}
+                icon={<Activity className="h-5 w-5" />}
+                color={data.temp_spread > 5 ? 'red' : data.temp_spread > 3 ? 'amber' : 'green'}
+              />
+            </Grid>
+          ) : (
+            <EmptyState
+              icon={<Thermometer className="h-8 w-8" />}
+              message={t('battery.cells.temp.empty', 'No temperature data available')}
+              className="py-8"
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Health Recommendations ─── */}
+      <FadeIn delay={0.4}>
+        <GlassPanel className="p-6">
+          <h3 className="section-title mb-4 flex items-center gap-2">
+            <Shield className="h-4 w-4 text-neon-green" />
+            {t('battery.cells.recommendations', 'Health Recommendations')}
+          </h3>
+          {insights.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {insights.map((ins, i) => (
+                <InsightCard key={i} {...ins} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Info className="h-8 w-8" />}
+              message={t('battery.cells.noInsights', 'Not enough data for recommendations')}
+              className="py-8"
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Summary Stats ─── */}
+      <FadeIn delay={0.45}>
+        <Grid cols={{ default: 2, sm: 3, lg: 6 }} gap={3}>
+          <GlassPanel className="p-4 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+              {t('battery.cells.stat.totalCells', 'Total Cells')}
+            </p>
+            <p className="text-2xl font-bold text-neon-cyan">{data?.total_cells ?? 0}</p>
+          </GlassPanel>
+          <GlassPanel className="p-4 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+              {t('battery.cells.stat.packVoltage', 'Pack Voltage')}
+            </p>
+            <p className="text-2xl font-bold text-neon-green">
+              {fmtNumber(data?.pack_voltage ?? 0, 1)}<span className="text-sm">V</span>
+            </p>
+          </GlassPanel>
+          <GlassPanel className="p-4 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+              {t('battery.cells.stat.avgVoltage', 'Avg Cell V')}
+            </p>
+            <p className="text-2xl font-bold text-white/90">
+              {fmtNumber(data?.avg_voltage ?? 0, 4)}<span className="text-sm">V</span>
+            </p>
+          </GlassPanel>
+          <GlassPanel className="p-4 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+              {t('battery.cells.stat.voltageSpread', 'V Spread')}
+            </p>
+            <p className={cn('text-2xl font-bold',
+              (data?.imbalance_mv ?? 0) > 15 ? 'text-neon-red' :
+              (data?.imbalance_mv ?? 0) > 5 ? 'text-neon-amber' : 'text-neon-green'
+            )}>
+              {fmtNumber(data?.imbalance_mv ?? 0, 1)}<span className="text-sm">mV</span>
+            </p>
+          </GlassPanel>
+          <GlassPanel className="p-4 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+              {t('battery.cells.stat.tempSpread', 'Temp Spread')}
+            </p>
+            <p className={cn('text-2xl font-bold',
+              (data?.temp_spread ?? 0) > 5 ? 'text-neon-red' :
+              (data?.temp_spread ?? 0) > 3 ? 'text-neon-amber' : 'text-neon-green'
+            )}>
+              {fmtNumber(data?.temp_spread ?? 0, 1)}<span className="text-sm">°C</span>
+            </p>
+          </GlassPanel>
+          <GlassPanel className="p-4 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+              {t('battery.cells.stat.normalCells', 'Normal Cells')}
+            </p>
+            <p className="text-2xl font-bold text-neon-green">
+              {data?.cells.filter((c) => c.status === 'normal').length ?? 0}
+              <span className="text-sm">/{data?.total_cells ?? 0}</span>
+            </p>
+          </GlassPanel>
+        </Grid>
       </FadeIn>
     </PageContainer>
   );
