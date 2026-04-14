@@ -1,5 +1,5 @@
 ---
-description: "Fix UI data binding bugs — TirePressure NaN/zero, Map 0,0 positions, Locations empty"
+description: "Fix UI data binding bugs — TirePressure NaN/zero, Map 0,0 positions, Locations empty, FSM Debugger duplicate controls"
 ---
 
 # Fix: UI Data Binding Bugs Found During Signal Replay Testing
@@ -123,6 +123,36 @@ import { AlertBanner } from '@/components/feedback';
 
 ---
 
+## Bug 4 — FSM Debugger: Duplicate time range controls
+
+**Page:** `web/src/features/system/pages/StateMachineDebuggerPage.tsx`
+**Screenshot:** Both a `<Select>` dropdown ("Last 1 hour") AND quick-toggle buttons (1h, 6h, 24h, 7d) are shown for the same Time Range filter.
+
+**Fix:** Remove the quick-toggle button group (lines ~360-376). Keep only the `<Select>` dropdown for Time Range.
+
+Remove this block:
+```tsx
+<div className="flex items-end gap-2">
+  <div className="flex flex-wrap gap-1.5">
+    {HOURS_OPTIONS.map((opt) => (
+      <Button
+        key={opt.value}
+        size="sm"
+        variant={hours === opt.value ? 'primary' : 'ghost'}
+        onClick={() => {
+          setHours(opt.value);
+          setServerPage(1);
+        }}
+      >
+        {opt.value === '1' ? '1h' : opt.value === '6' ? '6h' : opt.value === '24' ? '24h' : '7d'}
+      </Button>
+    ))}
+  </div>
+</div>
+```
+
+---
+
 ## Verification
 
 ```bash
@@ -148,4 +178,5 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Map: graceful handling when lat=0, lng=0 (info banner, no marker at 0,0)
 - [ ] Map: "—" in table instead of "0.0000" when no GPS
 - [ ] Locations: info banner when no GPS data available
+- [ ] FSM Debugger: only dropdown for Time Range, no duplicate button group
 - [ ] TypeScript compiles clean
