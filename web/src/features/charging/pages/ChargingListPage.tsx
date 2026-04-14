@@ -6,8 +6,7 @@ import {
   Cable, Activity, Gauge,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Select, Pagination } from '@/components/ui';
-import { DataTable, type Column } from '@/components/ui/DataTable';
+import { GlassPanel, Button, Select, Pagination, DataTable, type Column } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   RadialGauge, ChartTooltip, ChartGradient, chartGrid, axisTickSm,
