@@ -44,7 +44,7 @@ export function useSettings() {
   })
 
   const s = settings ?? defaults
-  const decimals = s.decimal_precision ?? 1
+  const decimals = s.decimal_precision ?? 2
 
   // Sync global precision so fmtNumber/fmtPercent/etc. use it automatically
   setGlobalPrecision(decimals)

@@ -957,15 +957,13 @@ export default function DriveScorePage() {
                   label={t('driveScore.powerRange', 'Power range')}
                   value={fmtWithUnit(
                     scoredDrives.length > 0
-                      ? Math.round(
-                          scoredDrives.reduce(
+                      ? scoredDrives.reduce(
                             (sum, sd) =>
                               sum +
                               ((sd.drive.powerMax ?? 50) -
                                 (sd.drive.powerMin ?? -20)),
                             0,
-                          ) / scoredDrives.length,
-                        )
+                          ) / scoredDrives.length
                       : 0,
                     'kW',
                   )}
@@ -1001,15 +999,13 @@ export default function DriveScorePage() {
                   label={t('driveScore.avgMaxSpeed', 'Avg max speed')}
                   value={fmtWithUnit(
                     scoredDrives.length > 0
-                      ? Math.round(
-                          convertSpeed(
+                      ? convertSpeed(
                             scoredDrives.reduce(
                               (sum, sd) =>
                                 sum + (sd.drive.speedMax ?? 80),
                               0,
                             ) / scoredDrives.length,
-                          ),
-                        )
+                          )
                       : 0,
                     speedUnit,
                   )}
