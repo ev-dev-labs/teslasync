@@ -4,6 +4,7 @@ import { Zap, TrendingUp, Thermometer, Fuel, Gauge } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Select } from '@/components/ui/Select';
+import { DataTable } from '@/components/ui/DataTable';
 import { MetricBar } from '@/components/data-display/MetricBar';
 import {
   ChartContainer, ChartTooltip, ChartGradient,
@@ -60,7 +61,7 @@ export default function EfficiencyPage() {
 
   const {
     convertDistance, convertSpeed, convertTemp, convertEfficiency,
-    distanceUnit, speedUnit, tempUnit, efficiencyUnit,
+    distanceUnit, speedUnit, tempUnit, efficiencyUnit, isFahrenheit,
   } = useSettings();
 
   const [startDate, setStartDate] = useState(() => {
@@ -136,6 +137,53 @@ export default function EfficiencyPage() {
       count: b.count,
     }));
   }, [filteredDrives, speedUnit, convertEfficiency]);
+
+  /* ---- Temperature-bucketed efficiency ---- */
+  const tempBuckets = useMemo(() => {
+    const ranges = isFahrenheit
+      ? [
+          { range: '< 32°F', min: -999, max: 0 },
+          { range: '32–50°F', min: 0, max: 10 },
+          { range: '50–68°F', min: 10, max: 20 },
+          { range: '68–86°F', min: 20, max: 30 },
+          { range: '> 86°F', min: 30, max: 999 },
+        ]
+      : [
+          { range: '< 0°C', min: -999, max: 0 },
+          { range: '0–10°C', min: 0, max: 10 },
+          { range: '10–20°C', min: 10, max: 20 },
+          { range: '20–30°C', min: 20, max: 30 },
+          { range: '> 30°C', min: 30, max: 999 },
+        ];
+    const buckets = ranges.map((r) => ({
+      ...r,
+      count: 0,
+      totalEff: 0,
+      totalDist: 0,
+      totalSpeed: 0,
+    }));
+    filteredDrives.forEach((d) => {
+      if (d.outsideTempAvg == null) return;
+      const eff = getEfficiency(d);
+      if (!eff) return;
+      const b = buckets.find((bk) => d.outsideTempAvg! >= bk.min && d.outsideTempAvg! < bk.max);
+      if (b) {
+        b.count++;
+        b.totalEff += eff;
+        b.totalDist += d.distance;
+        b.totalSpeed += d.speedAvg ?? 0;
+      }
+    });
+    return buckets
+      .filter((b) => b.count > 0)
+      .map((b) => ({
+        range: b.range,
+        count: b.count,
+        avgEff: b.totalEff / b.count,
+        totalDist: b.totalDist,
+        avgSpeed: b.totalSpeed / b.count,
+      }));
+  }, [filteredDrives, isFahrenheit]);
 
   /* ---- Computed metrics ---- */
   const costPerKm = stats && stats.totalDistanceKm > 0
@@ -312,6 +360,65 @@ export default function EfficiencyPage() {
           </FadeIn>
         )}
       </div>
+
+      {/* Temperature-Bucketed Efficiency Table */}
+      {tempBuckets.length > 0 && (
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-6">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+              <Thermometer className="h-4 w-4 text-orange-400" /> {t('efficiency.tempEfficiency', 'Efficiency by Temperature Range')}
+            </h3>
+            <DataTable
+              data={tempBuckets}
+              keyExtractor={(b) => b.range}
+              compact
+              columns={[
+                {
+                  key: 'range',
+                  header: t('efficiency.tempRange', 'Temp Range'),
+                  render: (b) => <span className="font-medium text-[var(--text-primary)]">{b.range}</span>,
+                },
+                {
+                  key: 'count',
+                  header: t('efficiency.drives', 'Drives'),
+                  className: 'text-right',
+                  render: (b) => <span className="text-[var(--text-secondary)]">{b.count}</span>,
+                },
+                {
+                  key: 'avgEff',
+                  header: `${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`,
+                  className: 'text-right',
+                  render: (b) => (
+                    <span style={{ color: efficiencyColor(b.avgEff) }}>
+                      {fmtInt(convertEfficiency(b.avgEff))}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'kmPerKwh',
+                  header: `${distanceUnit}/kWh`,
+                  className: 'text-right',
+                  render: (b) => (
+                    <span className="text-cyan-400">{b.avgEff > 0 ? fmtNumber(1000 / convertEfficiency(b.avgEff)) : '—'}</span>
+                  ),
+                },
+                {
+                  key: 'totalDist',
+                  header: `${t('efficiency.total', 'Total')} ${distanceUnit}`,
+                  className: 'text-right',
+                  render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(convertDistance(b.totalDist))}</span>,
+                },
+                {
+                  key: 'avgSpeed',
+                  header: t('efficiency.avgSpeedCol', 'Avg Speed'),
+                  className: 'text-right',
+                  render: (b) => <span className="text-[var(--text-secondary)]">{fmtInt(convertSpeed(b.avgSpeed))} {speedUnit}</span>,
+                },
+              ]}
+            />
+          </GlassPanel>
+        </FadeIn>
+      )}
 
       {/* Metric bars summary */}
       {stats && (
