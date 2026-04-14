@@ -10,10 +10,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// SignalHandler provides API endpoints for querying signal history from MongoDB.
+// SignalHandler provides API endpoints for querying signal history
+// (Postgres primary, MongoDB optional fallback).
 type SignalHandler struct {
-	signalLogRepo *database.SignalLogRepo
-	db            *database.DB
+	signalLogRepo       *database.SignalLogRepo       // MongoDB (optional)
+	signalHistoryWriter *database.SignalHistoryWriter  // Postgres (primary)
+	db                  *database.DB
 }
 
 // NewSignalHandler creates a new SignalHandler.
@@ -27,14 +29,15 @@ func (h *SignalHandler) WithDB(db *database.DB) *SignalHandler {
 	return h
 }
 
-// History returns signal history for a vehicle and signal name.
-// GET /api/v1/signals/{vehicleID}/{signalName}/history?from=...&to=...&limit=...
-func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
-	if h.signalLogRepo == nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal log not configured (MongoDB required)"})
-		return
-	}
+// WithSignalHistory adds the Postgres signal_history writer for primary queries.
+func (h *SignalHandler) WithSignalHistory(w *database.SignalHistoryWriter) *SignalHandler {
+	h.signalHistoryWriter = w
+	return h
+}
 
+// History returns signal history for a vehicle and signal name.
+// GET /api/v1/signals/{vehicleID}/{signalName}/history?from=...&to=...&limit=...&hours=...
+func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
@@ -50,6 +53,13 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 	// Parse time range (defaults to last 24 hours)
 	to := time.Now().UTC()
 	from := to.Add(-24 * time.Hour)
+
+	// Support "hours" shorthand (e.g. ?hours=6)
+	if hoursStr := r.URL.Query().Get("hours"); hoursStr != "" {
+		if hrs, err := strconv.Atoi(hoursStr); err == nil && hrs > 0 {
+			from = to.Add(-time.Duration(hrs) * time.Hour)
+		}
+	}
 
 	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromStr); err == nil {
@@ -69,25 +79,66 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	points, err := h.signalLogRepo.GetHistory(r.Context(), database.SignalHistoryQuery{
-		VehicleID: vehicleID,
-		Signal:    signalName,
-		From:      from,
-		To:        to,
-		Limit:     limit,
-	})
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to query signal history")
-		return
+	// Try Postgres signal_history first
+	if h.signalHistoryWriter != nil {
+		rows, err := h.signalHistoryWriter.GetHistory(r.Context(), vehicleID, signalName, from, to, int(limit))
+		if err == nil && len(rows) > 0 {
+			points := make([]map[string]interface{}, len(rows))
+			for i, row := range rows {
+				p := map[string]interface{}{"timestamp": row.CreatedAt}
+				if row.ValueNum != nil {
+					p["value_num"] = *row.ValueNum
+				}
+				if row.ValueStr != nil {
+					p["value_str"] = *row.ValueStr
+				}
+				if row.ValueBool != nil {
+					p["value_bool"] = *row.ValueBool
+				}
+				points[i] = p
+			}
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"vehicle_id": vehicleID,
+				"signal":     signalName,
+				"from":       from,
+				"to":         to,
+				"count":      len(points),
+				"data":       points,
+			})
+			return
+		}
 	}
 
+	// Fallback to MongoDB
+	if h.signalLogRepo != nil {
+		points, err := h.signalLogRepo.GetHistory(r.Context(), database.SignalHistoryQuery{
+			VehicleID: vehicleID,
+			Signal:    signalName,
+			From:      from,
+			To:        to,
+			Limit:     limit,
+		})
+		if err == nil {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"vehicle_id": vehicleID,
+				"signal":     signalName,
+				"from":       from,
+				"to":         to,
+				"count":      len(points),
+				"data":       points,
+			})
+			return
+		}
+	}
+
+	// No data from either source — return empty result (not 503)
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"signal":     signalName,
 		"from":       from,
 		"to":         to,
-		"count":      len(points),
-		"data":       points,
+		"count":      0,
+		"data":       []interface{}{},
 	})
 }
 
@@ -100,7 +151,21 @@ func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Try MongoDB first
+	// Try Postgres signal_history first (most accurate — actual observed signals)
+	if h.signalHistoryWriter != nil {
+		signals, err := h.signalHistoryWriter.AvailableSignals(r.Context(), vehicleID)
+		if err == nil && len(signals) > 0 {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"vehicle_id": vehicleID,
+				"count":      len(signals),
+				"signals":    signals,
+				"source":     "signal_history",
+			})
+			return
+		}
+	}
+
+	// Try MongoDB
 	if h.signalLogRepo != nil {
 		signals, err := h.signalLogRepo.GetAvailableSignals(r.Context(), vehicleID)
 		if err == nil && len(signals) > 0 {
@@ -113,7 +178,7 @@ func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Fallback: query distinct signal columns from vehicle_live_state that have non-null values
+	// Fallback: query distinct signal columns from vehicle_live_state
 	if h.db != nil {
 		signals, err := h.getSignalNamesFromPG(r.Context(), vehicleID)
 		if err == nil && len(signals) > 0 {
@@ -182,28 +247,46 @@ func getKnownSignalNames() []string {
 // Stats returns signal log statistics for a vehicle.
 // GET /api/v1/signals/{vehicleID}/stats
 func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
-	if h.signalLogRepo == nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal log not configured"})
-		return
-	}
-
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
-	count, oldest, newest, err := h.signalLogRepo.GetStats(r.Context(), vehicleID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to query stats")
-		return
+	// Try Postgres signal_history first
+	if h.signalHistoryWriter != nil {
+		count, oldest, newest, err := h.signalHistoryWriter.GetGlobalStats(r.Context(), vehicleID)
+		if err == nil {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"vehicle_id": vehicleID,
+				"count":      count,
+				"oldest":     oldest,
+				"newest":     newest,
+			})
+			return
+		}
 	}
 
+	// Fallback to MongoDB
+	if h.signalLogRepo != nil {
+		count, oldest, newest, err := h.signalLogRepo.GetStats(r.Context(), vehicleID)
+		if err == nil {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"vehicle_id": vehicleID,
+				"count":      count,
+				"oldest":     oldest,
+				"newest":     newest,
+			})
+			return
+		}
+	}
+
+	// No source available — return zeros (not 503)
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
-		"count":      count,
-		"oldest":     oldest,
-		"newest":     newest,
+		"count":      0,
+		"oldest":     nil,
+		"newest":     nil,
 	})
 }
 
