@@ -134,6 +134,38 @@ Line 257 has `className="mt-5"` on the Query button, pushing it below the Per Pa
 
 ---
 
+## Bug 4 — Live Map: Crashes with "Invalid LatLng object: (undefined, undefined)"
+
+**Page:** `web/src/features/maps/pages/MapOverviewPage.tsx`
+**Screenshot:** Error boundary: "Invalid LatLng object: (undefined, undefined)" — Retry attempt 2.
+
+**Root Cause:** The `hasValidLocation` guard (line 115) doesn't check for `undefined`:
+```typescript
+const hasValidLocation = latest != null && (latest.latitude !== 0 || latest.longitude !== 0);
+```
+When `latest` exists but `latest.latitude` is `undefined` (field name mismatch from
+`camelCaseKeys` or API returning different structure), `undefined !== 0` evaluates to `true`,
+so `hasValidLocation = true`. Then `MapContainer center={[undefined, undefined]}` → Leaflet crash.
+
+**Fix:** Add type guard for actual numbers:
+```typescript
+const hasValidLocation = latest != null
+  && typeof latest.latitude === 'number'
+  && typeof latest.longitude === 'number'
+  && (latest.latitude !== 0 || latest.longitude !== 0);
+```
+
+Also investigate WHY `latest.latitude` is undefined:
+1. Check the `/location-snapshots/latest` API response — what field names does it return?
+2. The `LocationSnapshot` interface (line ~26) has `latitude`/`longitude` — verify the API
+   model matches. After `camelCaseKeys`, snake_case fields get duplicated.
+3. If the API returns wrapped response (like `{data: {...}}` or `{snapshot: {...}}`),
+   the hook needs to extract the inner object.
+
+Quick debug: `curl http://localhost:8080/api/v1/location-snapshots/latest?vehicle_id=1 | jq`
+
+---
+
 ## Verification
 
 ```bash
@@ -150,6 +182,8 @@ cd web && npx tsc --noEmit
 - [ ] Signal Explorer: Explore button aligned with Per Page dropdown (no mt-5)
 - [ ] Signal Log Viewer: Query fetches per-signal history (same fix as Explorer)
 - [ ] Signal Log Viewer: Query button aligned (remove mt-5, items-end)
+- [ ] Live Map: guard against undefined lat/lng (typeof check before rendering MapContainer)
+- [ ] Live Map: investigate and fix why latest.latitude is undefined
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
