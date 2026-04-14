@@ -4,6 +4,7 @@ import { safeArray } from '@/lib/safeArray';
 import type {
   EnergyStats,
   BatteryHealth,
+  BatteryHealthAnalytics,
   BatteryCellSummary,
   DegradationData,
   EnergyFlowData,
@@ -36,6 +37,14 @@ export function useBatteryCells(vehicleId: string | null) {
     enabled: vehicleId !== null,
     retry: false,
     staleTime: Infinity,
+  });
+}
+
+export function useBatteryHealthAnalytics(vehicleId: string | null) {
+  return useQuery({
+    queryKey: ['battery-health-analytics', vehicleId],
+    queryFn: () => request<BatteryHealthAnalytics>(`/analytics/battery-health?vehicle_id=${vehicleId}`),
+    enabled: vehicleId !== null,
   });
 }
 

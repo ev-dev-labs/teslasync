@@ -92,6 +92,29 @@ export interface ChargingHabits {
   charge_to_full_count: number;
 }
 
+export interface BatteryHealthAnalytics {
+  current_soh: number;
+  estimated_capacity: number;
+  original_capacity: number;
+  degradation_rate_yr: number;
+  battery_age_months: number;
+  total_cycles: number;
+  avg_depth_of_discharge: number;
+  fast_charge_pct: number;
+  full_charge_pct: number;
+  charge_habits_score: number;
+  temp_exposure_score: number;
+  history: BatteryHealthSnapshot[];
+}
+
+export interface BatteryHealthSnapshot {
+  date: string;
+  odometer: number;
+  soh_pct: number;
+  capacity_kwh: number;
+  range_km: number;
+}
+
 export interface EnergyFlowData {
   dc_charging_power: number | null;
   ac_charging_power: number | null;
