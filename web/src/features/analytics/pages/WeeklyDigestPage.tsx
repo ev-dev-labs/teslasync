@@ -473,9 +473,9 @@ export default function WeeklyDigestPage() {
     if (!pair) return undefined;
     const times = metrics.totalDistance / pair.km;
     if (times >= 0.8) {
-      return { from: pair.from, to: pair.to, times: Math.round(times * 10) / 10 };
+      return { from: pair.from, to: pair.to, times: fmtNumber(times, 1) };
     }
-    return { from: pair.from, to: pair.to, times: Math.round(times * 10) / 10 };
+    return { from: pair.from, to: pair.to, times: fmtNumber(times, 1) };
   }, [metrics.totalDistance]);
 
   /* ── Navigation callbacks ── */

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { useSettings } from '@/hooks/useSettings';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { Vehicle, VehicleState } from '@/api/types';
 
 /** Traffic-light color for battery percentage */
@@ -75,7 +76,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
                 {level}%
               </span>
               <span className="text-[10px] text-gray-500 dark:text-gray-400 w-16 text-right">
-                {Math.round(convertDistance(state.rated_range ?? 0))} {distanceUnit}
+                {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
               </span>
             </div>
           );

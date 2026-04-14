@@ -17,6 +17,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { cn } from '@/lib/cn';
+import { fmtNumber } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import type { Vehicle } from '@/types/vehicle';
@@ -219,13 +220,13 @@ export default function VehicleListPage() {
               />
               <MetricCard
                 label={t('vehicles.avgBattery', 'Avg Battery')}
-                value={`${Math.round(fleet.avgBattery)}%`}
+                value={`${fmtNumber(fleet.avgBattery)}%`}
                 icon={<Battery className="h-5 w-5" />}
                 color="green"
               />
               <MetricCard
                 label={`${t('vehicles.totalRange', 'Total Range')} (${distanceUnit})`}
-                value={Math.round(convertDistance(fleet.totalRange))}
+                value={fmtNumber(convertDistance(fleet.totalRange))}
                 icon={<Gauge className="h-5 w-5" />}
                 color="purple"
               />
@@ -278,7 +279,7 @@ export default function VehicleListPage() {
                           {level}%
                         </span>
                         <span className="text-[10px] text-gray-500 dark:text-gray-400 w-16 text-right">
-                          {Math.round(convertDistance(state.rated_range ?? 0))} {distanceUnit}
+                          {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
                         </span>
                       </div>
                     );
@@ -357,10 +358,10 @@ export default function VehicleListPage() {
                             {state && (
                               <>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {Math.round(convertDistance(state.rated_range ?? 0))} {distanceUnit}
+                                  {fmtNumber(convertDistance(state.rated_range ?? 0))} {distanceUnit}
                                 </span>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {Math.round(convertDistance(state.odometer ?? 0)).toLocaleString()} {distanceUnit}
+                                  {fmtNumber(convertDistance(state.odometer ?? 0))} {distanceUnit}
                                 </span>
                                 {state.is_charging && (
                                   <span className="text-xs font-medium text-green-400">

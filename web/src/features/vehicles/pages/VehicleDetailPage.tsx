@@ -89,7 +89,7 @@ function tirePressureVariant(psi: number | null): 'success' | 'warning' | 'dange
 
 function durationStr(minutes: number): string {
   const h = Math.floor(minutes / 60)
-  const m = Math.round(minutes % 60)
+  const m = fmtInt(minutes % 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 

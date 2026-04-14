@@ -343,7 +343,7 @@ function NavigationPanel({ data, convertDistance, distanceUnit }: {
           />
           <TelemetryRow
             label={t('telemetry.eta', 'ETA')}
-            value={data.minutes_to_arrival != null ? `${Math.round(data.minutes_to_arrival)} min` : '—'}
+            value={data.minutes_to_arrival != null ? `${fmtInt(data.minutes_to_arrival)} min` : '—'}
           />
           <div className="flex items-center gap-2 flex-wrap">
             {data.located_at_home && (

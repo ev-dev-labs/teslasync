@@ -21,6 +21,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { fmtNumber } from '@/lib/numberFormat';
 import { VehicleHero } from '../components/VehicleHero';
 import { FleetStatsBar } from '../components/FleetStatsBar';
 import { RecentActivity } from '../components/RecentActivity';
@@ -343,11 +344,11 @@ function OtherVehiclesStrip({ vehicles, states, convertDistance, convertTemp, di
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)]">{t('other.range', 'Range')}</p>
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{Math.round(convertDistance(s.rated_range))} {distanceUnit}</p>
+                      <p className="text-sm font-bold text-[var(--text-primary)]">{fmtNumber(convertDistance(s.rated_range), 0)} {distanceUnit}</p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)]">{t('other.temp', 'Temp')}</p>
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{s.inside_temp != null ? `${Math.round(convertTemp(s.inside_temp))}°` : '—'}</p>
+                      <p className="text-sm font-bold text-[var(--text-primary)]">{s.inside_temp != null ? `${fmtNumber(convertTemp(s.inside_temp), 0)}°` : '—'}</p>
                     </div>
                   </div>
                 ) : (

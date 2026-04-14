@@ -6,6 +6,7 @@ import { TeslaCarViz, parseModelKey } from '@/components/data-display/TeslaCarVi
 import { RadialGauge } from '@/components/charts/RadialGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
 import { useSettings } from '@/hooks/useSettings'
+import { fmtNumber } from '@/lib/numberFormat'
 import type { Vehicle, VehicleState } from '@/api/types'
 
 /** Color constants matching original production palette */
@@ -134,7 +135,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 max={convertDistance(600)}
                 color={COLOR.CYAN}
                 label={t('common.estimatedRange', 'Estimated Range')}
-                sublabel={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit}`}
+                sublabel={`${fmtNumber(convertDistance(state.rated_range))} ${distanceUnit}`}
               />
               {state.is_charging && (
                 <MetricBar
@@ -142,7 +143,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                   max={state.charger_power || 100}
                   color="#10b981"
                   label={t('common.chargeRate', 'Charge Rate')}
-                  sublabel={`${Math.round(convertSpeed(state.charge_rate))} ${speedUnit} added`}
+                  sublabel={`${fmtNumber(convertSpeed(state.charge_rate))} ${speedUnit} added`}
                 />
               )}
             </div>

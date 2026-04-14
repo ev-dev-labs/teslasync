@@ -43,7 +43,7 @@ export function RecentActivity({
     activityItems.push({
       type: 'drive',
       title: `${fmtNumber(convertDistance(d.distance ?? 0), 1)} ${distanceUnit} ${t('activity.drive', 'drive')}`,
-      subtitle: `${Math.floor((d.duration_min ?? 0) / 60)}h ${Math.round((d.duration_min ?? 0) % 60)}m · ${d.start_battery_level ?? '?'}% → ${d.end_battery_level ?? '?'}%`,
+      subtitle: `${Math.floor((d.duration_min ?? 0) / 60)}h ${fmtInt((d.duration_min ?? 0) % 60)}m · ${d.start_battery_level ?? '?'}% → ${d.end_battery_level ?? '?'}%`,
       time: new Date(d.start_date),
     }),
   );

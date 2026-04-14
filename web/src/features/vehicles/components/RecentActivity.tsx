@@ -8,6 +8,7 @@ import { InlineMetric } from '@/components/data-display/InlineMetric'
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
 import { useSettings } from '@/hooks/useSettings'
 import { formatDateTime } from '@/lib/dateFormat'
+import { fmtInt } from '@/lib/numberFormat'
 import type { Drive, ChargingSession } from '@/api/types'
 
 interface RecentActivityProps {
@@ -62,7 +63,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="text-right">
                     <InlineMetric
                       icon={<Clock />}
-                      value={`${Math.floor(d.duration_min / 60)}h ${Math.round(d.duration_min % 60)}m`}
+                      value={`${Math.floor(d.duration_min / 60)}h ${fmtInt(d.duration_min % 60)}m`}
                     />
                     {d.start_battery_level != null && d.end_battery_level != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">
@@ -122,7 +123,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                   <div className="text-right">
                     <InlineMetric
                       icon={<Clock />}
-                      value={`${Math.floor(s.duration_min / 60)}h ${Math.round(s.duration_min % 60)}m`}
+                      value={`${Math.floor(s.duration_min / 60)}h ${fmtInt(s.duration_min % 60)}m`}
                     />
                     {s.end_battery_level != null && (
                       <span className="text-[10px] text-[var(--text-muted)]">

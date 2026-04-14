@@ -185,24 +185,24 @@ function buildStatCards(
 
   if (isDriving) {
     cards.push(
-      { icon: Gauge, label: 'Speed', value: `${Math.round(u.convertSpeed(s.speed))} ${u.speedUnit}`, color: '#a855f7' },
+      { icon: Gauge, label: 'Speed', value: `${fmtNumber(u.convertSpeed(s.speed), 0)} ${u.speedUnit}`, color: '#a855f7' },
       { icon: Zap, label: 'Power', value: `${fmtNumber(s.power)} kW`, color: s.power > 0 ? '#f59e0b' : s.power < 0 ? '#10b981' : '#374151' },
-      { icon: Navigation, label: 'Odometer', value: `${Math.round(u.convertDistance(s.odometer)).toLocaleString()} ${u.distanceUnit}`, color: '#a855f7' },
-      { icon: Activity, label: 'Ideal Range', value: `${Math.round(u.convertDistance(s.ideal_range))} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.convertDistance(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.convertDistance(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
     );
   } else if (isCharging) {
     cards.push(
       { icon: Zap, label: 'Charge Rate', value: `${fmtInt(u.convertDistance(s.charge_rate ?? 0))} ${u.distanceUnit}/h`, color: '#10b981' },
       { icon: Clock, label: 'Time to Full', value: s.time_to_full_charge > 0 ? `${fmtNumber(s.time_to_full_charge, 1)}h` : '—', color: '#f59e0b' },
-      { icon: Activity, label: 'Ideal Range', value: `${Math.round(u.convertDistance(s.ideal_range))} ${u.distanceUnit}`, color: '#00f0ff' },
-      { icon: Navigation, label: 'Odometer', value: `${Math.round(u.convertDistance(s.odometer)).toLocaleString()} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.convertDistance(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.convertDistance(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
     );
   } else {
     cards.push(
       { icon: Thermometer, label: 'Inside', value: s.inside_temp != null ? `${fmtNumber(u.convertTemp(s.inside_temp), 1)}${u.tempUnit}` : '—', color: '#f97316' },
       { icon: Thermometer, label: 'Outside', value: s.outside_temp != null ? `${fmtNumber(u.convertTemp(s.outside_temp), 1)}${u.tempUnit}` : '—', color: '#3b82f6' },
-      { icon: Navigation, label: 'Odometer', value: `${Math.round(u.convertDistance(s.odometer)).toLocaleString()} ${u.distanceUnit}`, color: '#a855f7' },
-      { icon: Activity, label: 'Ideal Range', value: `${Math.round(u.convertDistance(s.ideal_range))} ${u.distanceUnit}`, color: '#00f0ff' },
+      { icon: Navigation, label: 'Odometer', value: `${fmtInt(u.convertDistance(s.odometer))} ${u.distanceUnit}`, color: '#a855f7' },
+      { icon: Activity, label: 'Ideal Range', value: `${fmtNumber(u.convertDistance(s.ideal_range), 0)} ${u.distanceUnit}`, color: '#00f0ff' },
     );
   }
 

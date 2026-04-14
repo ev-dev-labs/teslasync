@@ -134,7 +134,7 @@ export default function StatisticsPage() {
           {/* ── Period Stats ──────────────────────────────────── */}
           <FadeIn>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(Math.round(convertDistance(stats.total_distance)))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+              <MetricCard label={t('statistics.totalDistance', 'Total Distance')} value={`${fmtInt(convertDistance(stats.total_distance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
               <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(stats.total_drives)} icon={<TrendingUp className="h-4 w-4" />} color="green" />
               <MetricCard label={t('statistics.totalEnergy', 'Total Energy')} value={`${fmtNumber(stats.energy_used)} kWh`} icon={<Zap className="h-4 w-4" />} color="amber" />
               <MetricCard label={t('statistics.totalCost', 'Total Cost')} value={`$${fmtInt(stats.total_cost)}`} icon={<DollarSign className="h-4 w-4" />} color="red" />
@@ -204,10 +204,10 @@ export default function StatisticsPage() {
                 </h2>
                 {mileage ? (
                   <Grid cols={{ default: 2 }} gap={3}>
-                    <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(Math.round(convertDistance(mileage.totalDistance)))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+                    <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(convertDistance(mileage.totalDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
                     <MetricCard label={t('statistics.dailyAvg', 'Daily Average')} value={`${fmtNumber(convertDistance(mileage.avgDaily))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
                     <MetricCard label={t('statistics.daysTracked', 'Days Tracked')} value={fmtInt(mileage.daysTracked)} icon={<Clock className="h-4 w-4" />} color="purple" />
-                    <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(Math.round(convertDistance(mileage.avgDaily * 365)))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
+                    <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(convertDistance(mileage.avgDaily * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   </Grid>
                 ) : (
                   <EmptyState icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />

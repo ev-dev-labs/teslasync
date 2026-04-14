@@ -87,7 +87,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                       {state.battery_level}%
                     </p>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      {Math.round(convertDistance(state.rated_range))} {distanceUnit}
+                      {fmtNumber(convertDistance(state.rated_range))} {distanceUnit}
                     </p>
                   </div>
                 </div>

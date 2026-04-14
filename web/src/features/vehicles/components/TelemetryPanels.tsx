@@ -83,14 +83,14 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
                 ? 'text-neon-amber'
                 : 'text-neon-red'
           }
-          sub={`${Math.round(convertDistance(state.rated_range))} ${distanceUnit} range`}
+          sub={`${fmtNumber(convertDistance(state.rated_range))} ${distanceUnit} range`}
         />
       </StaggerItem>
       <StaggerItem>
         <InfoTile
           icon={Gauge}
           label={t('common.speed', 'Speed')}
-          value={`${Math.round(convertSpeed(state.speed))} ${speedUnit}`}
+          value={`${fmtNumber(convertSpeed(state.speed))} ${speedUnit}`}
           sub={state.speed > 0 ? 'Driving' : 'Parked'}
         />
       </StaggerItem>
@@ -757,7 +757,7 @@ export function LiveTelemetryPanels({
                   )}
                 >
                   {(live as Record<string, unknown>).speedLimitMode
-                    ? `${Math.round((live as Record<string, unknown>).currentSpeedLimit as number)} mph`
+                    ? `${fmtNumber((live as Record<string, unknown>).currentSpeedLimit as number)} mph`
                     : 'Off'}
                 </span>
               </div>
@@ -968,7 +968,7 @@ export function LiveTelemetryPanels({
                             </span>
                           )}
                           {locationData.minutes_to_arrival != null && (
-                            <span>{Math.round(locationData.minutes_to_arrival)} min</span>
+                            <span>{fmtInt(locationData.minutes_to_arrival)} min</span>
                           )}
                         </div>
                       </div>
