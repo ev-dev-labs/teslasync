@@ -92,7 +92,7 @@ export default function EfficiencyPage() {
       .map((d) => ({
         date: formatDateShort(d.startDate),
         efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
-        distance: parseFloat(convertDistance(d.distance ?? 0).toFixed(1)),
+        distance: parseFloat(fmtNumber(convertDistance(d.distance ?? 0), 1)),
       }));
   }, [filteredDrives, convertEfficiency, convertDistance]);
 
@@ -188,10 +188,10 @@ export default function EfficiencyPage() {
 
   /* ---- Computed metrics ---- */
   const costPerKm = stats && stats.totalDistanceKm > 0
-    ? ((stats.avgEfficiencyWhKm / 1000) * 0.12).toFixed(3)
+    ? fmtNumber((stats.avgEfficiencyWhKm / 1000) * 0.12, 3)
     : '—';
   const kmPerKwh = stats && stats.avgEfficiencyWhKm > 0
-    ? (1000 / stats.avgEfficiencyWhKm).toFixed(1)
+    ? fmtNumber(1000 / stats.avgEfficiencyWhKm, 1)
     : '—';
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
@@ -263,14 +263,14 @@ export default function EfficiencyPage() {
           <StaggerItem>
             <GlassPanel className="p-4 text-center">
               <Zap className="h-4 w-4 mx-auto mb-1 text-amber-400" />
-              <p className="text-lg font-bold text-[var(--text-primary)]">{Math.round(convertEfficiency(stats.avgEfficiencyWhKm))}</p>
+              <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(convertEfficiency(stats.avgEfficiencyWhKm))}</p>
               <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.avgConsumption', 'Avg')} {efficiencyUnit}</p>
             </GlassPanel>
           </StaggerItem>
           <StaggerItem>
             <GlassPanel className="p-4 text-center">
               <TrendingUp className="h-4 w-4 mx-auto mb-1 text-green-400" />
-              <p className="text-lg font-bold text-[var(--text-primary)]">{Math.round(convertSpeed(stats.avgSpeedKmh))}</p>
+              <p className="text-lg font-bold text-[var(--text-primary)]">{fmtNumber(convertSpeed(stats.avgSpeedKmh))}</p>
               <p className="text-[10px] text-[var(--text-muted)]">{t('efficiency.avgSpeed', 'Avg Speed')} {speedUnit}</p>
             </GlassPanel>
           </StaggerItem>
@@ -453,7 +453,7 @@ export default function EfficiencyPage() {
                 </div>
                 <div>
                   <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationMin} max={Math.max(stats.totalDurationMin, 600)} color="#f59e0b" />
-                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{Math.round(stats.totalDurationMin / 60)} {t('efficiency.hours', 'h')}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(stats.totalDurationMin / 60)} {t('efficiency.hours', 'h')}</p>
                 </div>
               </div>
             </>

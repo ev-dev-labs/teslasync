@@ -1515,7 +1515,7 @@ export default function DriveScorePage() {
                     {periodStats.aOrBetter}
                   </span>
                   <span className="text-[10px] text-[var(--text-muted)]">
-                    {periodStats.totalDrives > 0 ? `${Math.round((periodStats.aOrBetter / periodStats.totalDrives) * 100)}% ${t('driveScore.ofDrives', 'of drives')}` : t('driveScore.noDrives', 'no drives')}
+                    {periodStats.totalDrives > 0 ? `${fmtInt((periodStats.aOrBetter / periodStats.totalDrives) * 100)}% ${t('driveScore.ofDrives', 'of drives')}` : t('driveScore.noDrives', 'no drives')}
                   </span>
                 </GlassPanel>
               </Grid>

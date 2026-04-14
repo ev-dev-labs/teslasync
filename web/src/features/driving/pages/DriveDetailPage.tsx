@@ -259,7 +259,7 @@ export default function DriveDetailPage() {
       { min: convertSpeed(120), max: 9999 },
     ];
     const buckets = defs.map((d) => ({
-      range: d.max >= 9999 ? `${Math.round(d.min)}+` : `${Math.round(d.min)}–${Math.round(d.max)}`,
+      range: d.max >= 9999 ? `${fmtNumber(d.min)}+` : `${fmtNumber(d.min)}–${fmtNumber(d.max)}`,
       count: 0,
     }));
     chartData.forEach((d) => {
@@ -436,7 +436,7 @@ export default function DriveDetailPage() {
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.odometer', 'Odometer (From → To)')}</p>
                   <p className="text-lg font-bold text-cyan-400">
                     {drive.startOdometer && drive.endOdometer
-                      ? `${Math.round(convertDistance(drive.startOdometer))} → ${Math.round(convertDistance(drive.endOdometer))}`
+                      ? `${fmtNumber(convertDistance(drive.startOdometer))} → ${fmtNumber(convertDistance(drive.endOdometer))}`
                       : '—'}{' '}
                     <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
                   </p>
@@ -447,7 +447,7 @@ export default function DriveDetailPage() {
                   </p>
                   <p className="text-lg font-bold text-green-400">
                     {stats.startRange != null
-                      ? `${Math.round(stats.startRange)} → ${stats.endRange != null ? Math.round(stats.endRange) : '?'}`
+                      ? `${fmtNumber(stats.startRange)} → ${stats.endRange != null ? fmtNumber(stats.endRange) : '?'}`
                       : '—'}{' '}
                     <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
                   </p>
@@ -455,26 +455,26 @@ export default function DriveDetailPage() {
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.elevSummary', 'Elevation Summary')}</p>
                   <div className="text-base font-bold">
-                    <span className="text-green-400 flex items-center justify-center gap-1"><ArrowUpRight className="h-3 w-3" />{Math.round(stats.elevGain)} m</span>
-                    <span className="text-red-400 flex items-center justify-center gap-1"><ArrowDownRight className="h-3 w-3" />{Math.round(stats.elevLoss)} m</span>
+                    <span className="text-green-400 flex items-center justify-center gap-1"><ArrowUpRight className="h-3 w-3" />{fmtNumber(stats.elevGain)} m</span>
+                    <span className="text-red-400 flex items-center justify-center gap-1"><ArrowDownRight className="h-3 w-3" />{fmtNumber(stats.elevLoss)} m</span>
                   </div>
                 </div>
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
                   <p className="text-lg font-bold text-amber-400">
-                    {stats.energyWh > 1000 ? fmtWithUnit(stats.energyWh / 1000, 'kWh') : `${Math.round(stats.energyWh)} Wh`}
+                    {stats.energyWh > 1000 ? fmtWithUnit(stats.energyWh / 1000, 'kWh') : `${fmtNumber(stats.energyWh)} Wh`}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
                   <p className="text-lg font-bold text-green-400">
-                    {stats.regenWh > 1000 ? fmtWithUnit(stats.regenWh / 1000, 'kWh') : `${Math.round(stats.regenWh)} Wh`}
+                    {stats.regenWh > 1000 ? fmtWithUnit(stats.regenWh / 1000, 'kWh') : `${fmtNumber(stats.regenWh)} Wh`}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.consumptionRate', 'Consumption')}</p>
                   <p className="text-lg font-bold text-purple-400">
-                    {stats.consumptionWhKm > 0 ? `${Math.round(convertEfficiency(stats.consumptionWhKm))}` : '—'}{' '}
+                    {stats.consumptionWhKm > 0 ? `${fmtNumber(convertEfficiency(stats.consumptionWhKm))}` : '—'}{' '}
                     <span className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</span>
                   </p>
                 </div>
@@ -518,7 +518,7 @@ export default function DriveDetailPage() {
                   <p className="text-lg font-bold text-cyan-400">
                     {(stats.energyWh - stats.regenWh) > 1000
                       ? fmtWithUnit((stats.energyWh - stats.regenWh) / 1000, 'kWh')
-                      : `${Math.round(stats.energyWh - stats.regenWh)} Wh`}
+                      : `${fmtNumber(stats.energyWh - stats.regenWh)} Wh`}
                   </p>
                 </div>
               </div>
@@ -534,19 +534,19 @@ export default function DriveDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
-                  <p className="text-lg font-bold text-amber-400">{stats.energyWh > 1000 ? fmtWithUnit(stats.energyWh / 1000, 'kWh') : `${Math.round(stats.energyWh)} Wh`}</p>
+                  <p className="text-lg font-bold text-amber-400">{stats.energyWh > 1000 ? fmtWithUnit(stats.energyWh / 1000, 'kWh') : `${fmtNumber(stats.energyWh)} Wh`}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
-                  <p className="text-lg font-bold text-green-400">{stats.regenWh > 1000 ? fmtWithUnit(stats.regenWh / 1000, 'kWh') : `${Math.round(stats.regenWh)} Wh`}</p>
+                  <p className="text-lg font-bold text-green-400">{stats.regenWh > 1000 ? fmtWithUnit(stats.regenWh / 1000, 'kWh') : `${fmtNumber(stats.regenWh)} Wh`}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.netConsumption', 'Net Consumption')}</p>
-                  <p className="text-lg font-bold text-cyan-400">{(stats.energyWh - stats.regenWh) > 1000 ? fmtWithUnit((stats.energyWh - stats.regenWh) / 1000, 'kWh') : `${Math.round(stats.energyWh - stats.regenWh)} Wh`}</p>
+                  <p className="text-lg font-bold text-cyan-400">{(stats.energyWh - stats.regenWh) > 1000 ? fmtWithUnit((stats.energyWh - stats.regenWh) / 1000, 'kWh') : `${fmtNumber(stats.energyWh - stats.regenWh)} Wh`}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.efficiency', 'Efficiency')}</p>
-                  <p className="text-lg font-bold text-purple-400">{stats.consumptionWhKm > 0 ? `${Math.round(convertEfficiency(stats.consumptionWhKm))} ${efficiencyUnit}` : '—'}</p>
+                  <p className="text-lg font-bold text-purple-400">{stats.consumptionWhKm > 0 ? `${fmtNumber(convertEfficiency(stats.consumptionWhKm))} ${efficiencyUnit}` : '—'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
@@ -559,7 +559,7 @@ export default function DriveDetailPage() {
                   <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('driveDetail.rangeUsed', 'Range Used')}</p>
                   <p className="text-lg font-bold text-green-400">
                     {drive.startRangeKm != null && drive.endRangeKm != null
-                      ? `${Math.round(convertDistance(drive.startRangeKm - drive.endRangeKm))} ${distanceUnit}`
+                      ? `${fmtNumber(convertDistance(drive.startRangeKm - drive.endRangeKm))} ${distanceUnit}`
                       : '—'}
                   </p>
                 </div>
@@ -602,10 +602,10 @@ export default function DriveDetailPage() {
                     <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startDate)}</span>
                     {trail.length > 1 && (
                       <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{Math.round(convertSpeed(30))}</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {Math.round(convertSpeed(30))}–{Math.round(convertSpeed(60))}</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {Math.round(convertSpeed(60))}–{Math.round(convertSpeed(100))}</span>
-                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{Math.round(convertSpeed(100))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(convertSpeed(30))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(convertSpeed(30))}–{fmtNumber(convertSpeed(60))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(convertSpeed(60))}–{fmtNumber(convertSpeed(100))}</span>
+                        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(convertSpeed(100))}</span>
                         <span>{speedUnit}</span>
                       </div>
                     )}
@@ -645,7 +645,7 @@ export default function DriveDetailPage() {
                   <p className="text-xs text-[var(--text-secondary)]">
                     {t('driveDetail.battery', 'Battery')}: {drive.startBatteryLevel ?? '?'}%
                     {drive.startRangeKm != null && (
-                      <> · {t('driveDetail.range', 'Range')}: {Math.round(convertDistance(drive.startRangeKm))} {distanceUnit}</>
+                      <> · {t('driveDetail.range', 'Range')}: {fmtNumber(convertDistance(drive.startRangeKm))} {distanceUnit}</>
                     )}
                   </p>
                 </div>
@@ -664,7 +664,7 @@ export default function DriveDetailPage() {
                   <p className="text-xs text-[var(--text-secondary)]">
                     {t('driveDetail.battery', 'Battery')}: {drive.endBatteryLevel ?? '?'}%
                     {drive.endRangeKm != null && (
-                      <> · {t('driveDetail.range', 'Range')}: {Math.round(convertDistance(drive.endRangeKm))} {distanceUnit}</>
+                      <> · {t('driveDetail.range', 'Range')}: {fmtNumber(convertDistance(drive.endRangeKm))} {distanceUnit}</>
                     )}
                   </p>
                 </div>
@@ -774,9 +774,9 @@ export default function DriveDetailPage() {
                     {chartData.length > 1 ? (
                     <>
                     <div className="flex items-center gap-4 mb-2 text-xs">
-                      <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" />{Math.round(stats.elevGain)} m {t('driveDetail.gain', 'gain')}</span>
-                      <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" />{Math.round(stats.elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
-                      <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {Math.round(stats.elevGain - stats.elevLoss)} m</span>
+                      <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" />{fmtNumber(stats.elevGain)} m {t('driveDetail.gain', 'gain')}</span>
+                      <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" />{fmtNumber(stats.elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
+                      <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(stats.elevGain - stats.elevLoss)} m</span>
                     </div>
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={chartData}>

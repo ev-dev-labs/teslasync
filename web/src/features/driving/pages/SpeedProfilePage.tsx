@@ -19,6 +19,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { Drive } from '@/types/driving';
 
 /* ------------------------------------------------------------------ */
@@ -195,7 +196,7 @@ export default function SpeedProfilePage() {
                       <div className="flex justify-between">
                         <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.timeShare', 'Time')}</span>
                         <span className={cn('text-sm font-bold', bucketTextClass(bucket.range))}>
-                          {(bucket.percentage ?? 0).toFixed(1)}%
+                          {fmtNumber(bucket.percentage ?? 0, 1)}%
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -207,13 +208,13 @@ export default function SpeedProfilePage() {
                           <div className="flex justify-between">
                             <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.avgSpeed', 'Avg Speed')}</span>
                             <span className="text-sm font-bold text-[var(--text-secondary)]">
-                              {Math.round(convertSpeed(effData.avgSpeed))} {speedUnit}
+                              {fmtNumber(convertSpeed(effData.avgSpeed))} {speedUnit}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[10px] text-[var(--text-muted)]">{efficiencyUnit}</span>
                             <span className={cn('text-sm font-bold', effData.avgEff < 160 ? 'text-green-400' : effData.avgEff < 220 ? 'text-amber-400' : 'text-red-400')}>
-                              {Math.round(convertEfficiency(effData.avgEff))}
+                              {fmtNumber(convertEfficiency(effData.avgEff))}
                             </span>
                           </div>
                         </>
@@ -273,7 +274,7 @@ export default function SpeedProfilePage() {
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                        speed: Math.round(convertSpeed(data.optimalSpeedKmh ?? 0)),
+                        speed: fmtNumber(convertSpeed(data.optimalSpeedKmh ?? 0)),
                         unit: speedUnit,
                       })}
                     </p>
