@@ -19,11 +19,12 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { request } from '@/api/client';
 import {
   Lock, Unlock, Wind, Car, Zap, Power, Shield,
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
-  Loader2, Battery, Wifi, Activity,
+  Loader2, Battery, Wifi, Activity, Thermometer,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -114,7 +115,11 @@ function CommandGroup({ title, children, t }: { title: string; children: React.R
 
 // ─── Vehicle Command Center ──────────────────────────────────────────────────
 
-function VehicleCommandCenter({ vehicle, state, t }: { vehicle: Vehicle; state: VehicleState | null; t: (k: string) => string }) {
+function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance, tempUnit, distanceUnit }: {
+  vehicle: Vehicle; state: VehicleState | null; t: (k: string) => string;
+  convertTemp: (c: number) => number; convertDistance: (km: number) => number;
+  tempUnit: string; distanceUnit: string;
+}) {
   const qc = useQueryClient();
   const toast = useToast();
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -131,6 +136,7 @@ function VehicleCommandCenter({ vehicle, state, t }: { vehicle: Vehicle; state: 
     onSuccess: (data) => {
       setLastResult(data);
       qc.invalidateQueries({ queryKey: ['command-vehicle-states'] });
+      qc.invalidateQueries({ queryKey: ['vehicle-state'] });
       if (data.success) toast.success(`${t('Command sent to')} ${name}`);
       else toast.error(data.message || `${t('Command failed on')} ${name}`);
     },
@@ -165,7 +171,10 @@ function VehicleCommandCenter({ vehicle, state, t }: { vehicle: Vehicle; state: 
         {state && (
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1"><Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className={clsx('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-neon-green' : 'text-neon-amber')}>{state.battery_level}%</span></span>
-            <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(state.rated_range)} km</span></span>
+            <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span></span>
+            {state.inside_temp != null && (
+              <span className="flex items-center gap-1"><Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(convertTemp(state.inside_temp))}{tempUnit}</span></span>
+            )}
           </div>
         )}
       </div>
@@ -195,7 +204,7 @@ function VehicleCommandCenter({ vehicle, state, t }: { vehicle: Vehicle; state: 
         </CommandGroup>
 
         <CommandGroup title="Climate & Comfort" t={t}>
-          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? t('ON') : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
+          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${Math.round(convertTemp(state.inside_temp))}${tempUnit}` : t('ON')) : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
         </CommandGroup>
 
         <CommandGroup title="Charging" t={t}>
@@ -251,6 +260,7 @@ export default function CommandsPage() {
 
   const states = statesMap ?? {};
   const onlineCount = vehicles?.filter(v => v.state !== 'asleep' && v.state !== 'offline').length ?? 0;
+  const { convertTemp, convertDistance, tempUnit, distanceUnit } = useSettings();
 
   return (
     <PageContainer
@@ -296,7 +306,7 @@ export default function CommandsPage() {
         <StaggerContainer className="space-y-6">
           {vehicles.map(v => (
             <StaggerItem key={v.id}>
-              <VehicleCommandCenter vehicle={v} state={states[v.id] ?? null} t={t} />
+              <VehicleCommandCenter vehicle={v} state={states[v.id] ?? null} t={t} convertTemp={convertTemp} convertDistance={convertDistance} tempUnit={tempUnit} distanceUnit={distanceUnit} />
             </StaggerItem>
           ))}
         </StaggerContainer>
