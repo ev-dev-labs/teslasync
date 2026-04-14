@@ -67,3 +67,7 @@ PROMPT_COMMANDS.txt
 # Temporary files from audits/scripts
 /tmp/old_*.tsx
 /tmp/old_*.go
+
+# Signal exports (large data files)
+scripts/signals-export.json
+scripts/signal-dump/

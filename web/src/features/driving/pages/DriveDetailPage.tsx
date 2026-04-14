@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Route, Clock, Gauge, Battery, Zap, TrendingUp,
   MapPin, Navigation, Flag, Thermometer, BatteryCharging,
-  Activity, ArrowUpRight, ArrowDownRight, Share2,
+  Activity, ArrowUpRight, ArrowDownRight, Share2, Play,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -323,6 +323,11 @@ export default function DriveDetailPage() {
                   {drive.endDate && ` → ${formatTime(drive.endDate)}`}
                 </p>
               </div>
+              <Link to={`/drives/${id}/replay`}>
+                <Button variant="ghost" size="sm" icon={<Play className="h-4 w-4" />}>
+                  {t('driveDetail.replay', 'Replay')}
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={handleShare} icon={<Share2 className="h-4 w-4" />}>
                 {t('driveDetail.share', 'Share')}
               </Button>

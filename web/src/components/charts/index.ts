@@ -6,6 +6,7 @@ export { Sparkline } from './Sparkline';
 export { ChartTooltip, ChartTooltipBase } from './ChartTooltip';
 export { ChartGradient, ChartGradientBase } from './ChartGradient';
 export { chartGrid, axisTick, axisTickSm, chartMargin, chartMarginLabeled, chartAnimation, safe, fmt, CHART_COLORS, NEON_COLORS } from './chartUtils';
+export { ElevationProfile, type ElevationDataPoint } from './ElevationProfile';
 
 // Re-export recharts through shared charts module
 export { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, Brush, ComposedChart, ScatterChart, Scatter, ReferenceLine, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, ZAxis } from 'recharts';

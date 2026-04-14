@@ -5,6 +5,8 @@ import type { Drive as ApiDrive } from '../types';
 import type {
   Drive,
   DriveDetail,
+  DrivePosition,
+  DriveTelemetryPoint,
   DriveScore,
   DrivingStats,
   DrivingDynamicsData,
@@ -134,5 +136,23 @@ export function useRouteEfficiency(vehicleId?: string) {
           : '/analytics/route-efficiency',
       ),
     enabled: !!vehicleId,
+  });
+}
+
+export function useDrivePositions(driveId: string) {
+  return useQuery({
+    queryKey: ['drive-positions', driveId],
+    queryFn: () => request<DrivePosition[]>(`/drives/${driveId}/positions`),
+    enabled: !!driveId,
+    select: safeArray,
+  });
+}
+
+export function useDriveTelemetry(driveId: string) {
+  return useQuery({
+    queryKey: ['drive-telemetry', driveId],
+    queryFn: () => request<DriveTelemetryPoint[]>(`/drives/${driveId}/telemetry`),
+    enabled: !!driveId,
+    select: safeArray,
   });
 }

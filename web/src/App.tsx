@@ -38,6 +38,7 @@ const SleepEfficiency = lazy(() => import('./features/battery/pages/SleepEfficie
 // Driving & Performance
 const Drives = lazy(() => import('./features/driving/pages/DrivesListPage'))
 const DriveDetail = lazy(() => import('./features/driving/pages/DriveDetailPage'))
+const TripReplay = lazy(() => import('./features/driving/pages/TripReplayPage'))
 const DriveScore = lazy(() => import('./features/driving/pages/DriveScorePage'))
 const DrivingDynamics = lazy(() => import('./features/driving/pages/DrivingDynamicsPage'))
 const DrivetrainHealth = lazy(() => import('./features/driving/pages/DrivetrainHealthPage'))
@@ -135,6 +136,7 @@ export default function App() {
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
+        <Route path="drives/:id/replay" element={<SafeRoute name="TripReplay"><TripReplay /></SafeRoute>} />
         <Route path="charging/:id" element={<SafeRoute name="ChargeDetail"><ChargeDetail /></SafeRoute>} />
         <Route path="notifications" element={<SafeRoute name="Notifications"><Notifications /></SafeRoute>} />
         <Route path="chatbot" element={<SafeRoute name="Chatbot"><Chatbot /></SafeRoute>} />

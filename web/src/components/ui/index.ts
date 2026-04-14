@@ -21,3 +21,4 @@ export { CommandPalette } from './CommandPalette';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 export { default as Logo } from './Logo';
+export { PlaybackControls } from './PlaybackControls';
