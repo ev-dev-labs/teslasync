@@ -314,6 +314,45 @@ var isTimestampCol = map[string]bool{
 	"last_speed_time":                 true,
 }
 
+// isVarcharCol lists vehicle_live_state columns typed as VARCHAR/TEXT.
+// Non-string values (bool, float, int) must be coerced to string via
+// fmt.Sprintf before insertion — pgx cannot encode bool→varchar directly.
+var isVarcharCol = map[string]bool{
+	"gear": true, "charge_state": true, "detailed_charge_state": true,
+	"charging_cable_type": true, "door_state": true,
+	"fd_window": true, "fp_window": true, "rd_window": true, "rp_window": true,
+	"center_display": true, "vehicle_name": true, "car_type": true, "version": true,
+	"wheel_type": true, "exterior_color": true,
+	"guest_mode_mobile_access": true, "lights_turn_signal": true,
+	"sw_update_version": true, "sw_update_scheduled_start": true,
+	"trim": true, "roof_color": true, "efficiency_package": true,
+	"rear_seat_heaters": true, "sunroof_installed": true, "last_gear": true,
+	"bms_state": true,
+	"cabin_overheat_protection_mode": true, "cabin_overheat_protection_temperature_limit": true,
+	"charge_port": true, "charge_port_latch": true,
+	"climate_keeper_mode": true, "cruise_follow_distance": true,
+	"destination_name": true,
+	"di_state_f": true, "di_state_r": true, "di_state_rel": true, "di_state_rer": true,
+	"fast_charger_type": true, "forward_collision_warning": true,
+	"hvac_auto_mode": true, "hvil": true, "lane_departure_avoidance": true,
+	"media_now_playing_album": true, "media_now_playing_artist": true,
+	"media_now_playing_station": true, "media_now_playing_title": true,
+	"media_playback_source": true, "media_playback_status": true,
+	"powershare_status": true, "powershare_stop_reason": true, "powershare_type": true,
+	"route_last_updated": true, "route_line": true,
+	"scheduled_charging_mode": true, "scheduled_charging_start_time": true,
+	"scheduled_departure_time": true,
+	"setting24_hour_time": true, "setting_charge_unit": true,
+	"setting_distance_unit": true, "setting_temperature_unit": true,
+	"setting_tire_pressure_unit": true,
+	"speed_limit_warning": true, "speed_limit_mode": true,
+	"supercharger_session_trip_planner": true,
+	"tonneau_position": true, "tonneau_tent_mode": true,
+	"tpms_hard_warnings": true, "tpms_soft_warnings": true,
+	"emergency_lane_departure_avoidance": true,
+	"defrost_mode": true,
+}
+
 // normalizeSignalValue unwraps wrapped signal values and converts types.
 // Fleet Telemetry occasionally wraps values in {"value": X, "timestamp": "..."}
 // objects (Bug 4), or sends {"invalid": true} markers.
@@ -550,8 +589,18 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		default:
 			continue
 		}
+
+		// Coerce value to match the Postgres column type.
+		// pgx cannot encode bool→varchar or float→varchar directly.
+		if isVarcharCol[colName] {
+			vals = append(vals, fmt.Sprintf("%v", v))
+		} else if isTimestampCol[colName] {
+			// Already converted above — just append
+			vals = append(vals, v)
+		} else {
+			vals = append(vals, v)
+		}
 		cols = append(cols, colName)
-		vals = append(vals, v)
 	}
 
 	if len(cols) == 0 {
