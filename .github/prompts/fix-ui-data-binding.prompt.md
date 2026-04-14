@@ -123,17 +123,31 @@ import { AlertBanner } from '@/components/feedback';
 
 ---
 
-## Bug 3b — Navigation & Route Page: Location History all zeros
+## Bug 3b — Navigation & Route Page: Current Location 0,0 + Location History all zeros
 
 **Page:** `web/src/features/maps/pages/NavigationRoutePage.tsx`
 
 Same GPS root cause as Bug 2/3 — all positions are lat=0, lng=0.
-The Location History table shows `0.000000` for every LAT/LON, `0.0 mph` speed, `0° —` heading, `0.0 mi` odometer.
 
-**Fix:** Apply the same graceful handling as Bug 2:
-1. Show "—" instead of "0.000000" when lat/lng are 0
-2. Add info banner when all positions have zero coordinates
-3. Filter out 0,0 positions from the Home/Work Presence chart (they're not real locations)
+**Issues visible:**
+1. **Current Location card** shows "0.0000, 0.0000 · — 0 mph" — must NOT display 0,0.
+   When lat=0 AND lng=0, show "Location unavailable" or "—" instead of raw zeros.
+2. **Home Status** shows "At Home" ✅ — false positive because 0,0 matches as "home"
+   (or default). When no valid GPS, Home/Work status should show "Unknown" or "—".
+3. **Location History table** shows `0.000000` for every LAT/LON, `0.0 mph` speed,
+   `0° —` heading, `0.0 mi` odometer.
+4. **Speed Profile chart** is empty (no data at all — same underlying data issue).
+
+**Fix:**
+1. Treat lat=0 AND lng=0 as "no location data":
+```typescript
+const hasValidLocation = latest && (latest.latitude !== 0 || latest.longitude !== 0);
+```
+2. Current Location card: show "Location unavailable" when `!hasValidLocation`
+3. Home/Work Status: show "Unknown" when no valid GPS
+4. Location History table: show "—" instead of "0.000000" when lat/lng are 0
+5. Add info banner when all positions have zero coordinates
+6. Filter out 0,0 positions from charts
 
 ---
 
@@ -620,7 +634,7 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Data Export: all labels show human-readable text, no raw i18n key prefixes
 - [ ] Data Export: PageContainer title/subtitle use proper fallbacks
 - [ ] Data Repair: fix 404 — page calls wrong API endpoint
-- [ ] Navigation & Route: "—" for zero lat/lng, info banner, filter 0,0 from Home/Work chart
+- [ ] Navigation & Route: "Location unavailable" for 0,0 Current Location card, "Unknown" Home/Work status, "—" in table, filter 0,0 from charts
 - [ ] Speed Profile: fix crash — use actual API field names (speedBucket/readings, not range/percentage/driveCount)
 - [ ] Drive Detail: fix "Invalid Date" — use createdAt/created_at instead of timestamp
 - [ ] Drive Detail: wire tire pressure signals into flushDriveTelemetry (check TPMS signal names)
