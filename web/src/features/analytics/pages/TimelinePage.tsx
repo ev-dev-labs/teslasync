@@ -1,27 +1,25 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import {
   Clock, ArrowRightLeft, Car, BatteryCharging, Moon, RefreshCw,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
+  ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -49,12 +47,6 @@ interface StateSummary {
   charging: number;
   idle: number;
   sleeping: number;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 /* ─── Constants ──────────────────────────────────────────── */
@@ -95,13 +87,10 @@ function formatHours(hours: number): string {
 
 export default function TimelinePage() {
   const { t } = useTranslation();
-  usePageTitle(t('Title'));
+  usePageTitle(t('timeline.title', 'Timeline'));
   const [vehicleId, setVehicleId] = useState('');
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
   const enabled = activeId !== '';
@@ -262,7 +251,7 @@ export default function TimelinePage() {
                 return (
                   <div
                     key={tr.id}
-                    className={clsx('relative transition-all')}
+                    className={cn('relative transition-all')}
                     style={{
                       width: `${pct}%`,
                       backgroundColor:
