@@ -1,57 +1,34 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import {
-  BarChart3, MapPin, Zap, Battery, DollarSign, Leaf,
-  Trophy, TrendingUp, Gauge, RefreshCw,
+  BarChart3, MapPin, Zap, DollarSign, Leaf,
+  TrendingUp, Gauge, RefreshCw,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+
+import { PageContainer } from '@/components/layout';
+import { Select, Button } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
-}
-
-interface LifetimeStats {
+interface PeriodStats {
   total_distance: number;
   total_drives: number;
-  total_charging_sessions: number;
-  total_energy_kwh: number;
-  total_cost: number;
-  co2_saved_kg: number;
+  energy_used: number;
   avg_efficiency: number;
-  avg_drive_distance: number;
-  avg_charge_energy: number;
-  monthly_distance: { month: string; distance: number }[];
-  records: {
-    longest_drive_km: number;
-    fastest_charge_kw: number;
-    most_efficient_wh_km: number;
-    highest_charge_kwh: number;
-  };
+  total_cost: number;
+  co2_saved: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -60,21 +37,18 @@ interface LifetimeStats {
 
 export default function StatisticsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Title'));
+  usePageTitle(t('statistics.title', 'Statistics'));
 
   const [vehicleId, setVehicleId] = useState('');
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   const { data: stats, isLoading, error, refetch } = useQuery({
-    queryKey: ['lifetime-stats', activeId],
+    queryKey: ['period-stats', activeId],
     queryFn: () =>
-      request<LifetimeStats>(`/analytics/lifetime?vehicle_id=${activeId}`),
+      request<PeriodStats>(`/analytics/period-stats?vehicle_id=${activeId}`),
     enabled: !!activeId,
   });
 
@@ -83,31 +57,17 @@ export default function StatisticsPage() {
     label: v.display_name || v.vin,
   }));
 
-  const pieData = stats
-    ? [
-        { name: t('Driving'), value: stats.total_drives },
-        { name: t('Charging'), value: stats.total_charging_sessions },
-      ]
-    : [];
-
-  const records = stats?.records;
-
-  const recordItems = records
-    ? [
-        { label: t('Longest Drive'), value: `${fmtNumber(records.longest_drive_km)} km`, icon: <MapPin className="h-4 w-4 text-cyan-400" /> },
-        { label: t('Fastest Charge'), value: `${fmtNumber(records.fastest_charge_kw)} kW`, icon: <Zap className="h-4 w-4 text-amber-400" /> },
-        { label: t('Most Efficient'), value: `${fmtNumber(records.most_efficient_wh_km)} Wh/km`, icon: <Gauge className="h-4 w-4 text-green-400" /> },
-        { label: t('Highest Charge'), value: `${fmtNumber(records.highest_charge_kwh)} kWh`, icon: <Battery className="h-4 w-4 text-purple-400" /> },
-      ]
-    : [];
+  const avgDriveDistance = stats && stats.total_drives > 0
+    ? stats.total_distance / stats.total_drives
+    : 0;
 
   return (
     <PageContainer
-      title={t('Title')}
-      subtitle={t('Subtitle')}
+      title={t('statistics.title', 'Statistics')}
+      subtitle={t('statistics.subtitle', 'Lifetime vehicle statistics and records')}
       error={error as Error | null}
       actions={
-        <div className={clsx('flex items-center gap-2')}>
+        <div className={cn('flex items-center gap-2')}>
           {vehicleOptions.length > 1 && (
             <Select
               value={activeId}
@@ -136,144 +96,64 @@ export default function StatisticsPage() {
         />
       ) : (
         <FadeIn>
-          {/* ---- Lifetime Stats (6 MetricCards) ---- */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {/* ---- Lifetime Stats (5 MetricCards) ---- */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard
-              label={t('Total Distance')}
+              label={t('statistics.totalDistance', 'Total Distance')}
               value={`${fmtInt(stats.total_distance)} km`}
               icon={<MapPin className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
-              label={t('Total Drives')}
+              label={t('statistics.totalDrives', 'Total Drives')}
               value={fmtInt(stats.total_drives)}
               icon={<TrendingUp className="h-4 w-4" />}
               color="green"
             />
             <MetricCard
-              label={t('Charging Sessions')}
-              value={fmtInt(stats.total_charging_sessions)}
-              icon={<Battery className="h-4 w-4" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('Total Energy')}
-              value={`${fmtNumber(stats.total_energy_kwh)} kWh`}
+              label={t('statistics.totalEnergy', 'Total Energy')}
+              value={`${fmtNumber(stats.energy_used)} kWh`}
               icon={<Zap className="h-4 w-4" />}
               color="amber"
             />
             <MetricCard
-              label={t('Total Cost')}
+              label={t('statistics.totalCost', 'Total Cost')}
               value={`$${fmtInt(stats.total_cost)}`}
               icon={<DollarSign className="h-4 w-4" />}
               color="red"
             />
             <MetricCard
-              label={t('statistics.co2Saved', 'Co2Saved')}
-              value={`${fmtNumber(stats.co2_saved_kg)} kg`}
+              label={t('statistics.co2Saved', 'CO₂ Saved')}
+              value={`${fmtNumber(stats.co2_saved)} kg`}
               icon={<Leaf className="h-4 w-4" />}
               color="green"
             />
           </div>
 
-          {/* ---- Charts Row ---- */}
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Monthly Distance BarChart */}
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-                {t('Monthly Distance')}
-              </h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={stats.monthly_distance}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.5} />
-                  <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="distance" fill={CHART_COLORS[0]} name={t('Distance')} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </GlassPanel>
-
-            {/* Driving vs Charging PieChart */}
-            <GlassPanel className="p-4 sm:p-6">
-              <h3 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
-                {t('Driving Vs Charging')}
-              </h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={`cell-${CHART_COLORS[i]}`} fill={CHART_COLORS[i]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </GlassPanel>
-          </div>
-
-          {/* ---- Personal Records ---- */}
-          <GlassPanel className="mt-6 p-4 sm:p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-400" />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                {t('Personal Records')}
-              </span>
-              <Badge variant="warning" size="sm">
-                {t('Best')}
-              </Badge>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {recordItems.map((item) => (
-                <GlassPanel key={item.label} hover className="p-3">
-                  <div className="flex items-center gap-2">
-                    {item.icon}
-                    <span className="text-xs text-[var(--text-secondary)]">
-                      {item.label}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-                    {item.value}
-                  </p>
-                </GlassPanel>
-              ))}
-            </div>
-          </GlassPanel>
-
-          {/* ---- Averages ---- */}
+          {/* ---- Efficiency + Averages ---- */}
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FadeIn delay={0.1}>
               <MetricCard
-                label={t('Avg Drive Distance')}
-                value={`${fmtNumber(stats.avg_drive_distance)} km`}
+                label={t('statistics.avgDriveDistance', 'Avg Drive Distance')}
+                value={`${fmtNumber(avgDriveDistance)} km`}
                 icon={<MapPin className="h-4 w-4" />}
                 color="cyan"
               />
             </FadeIn>
             <FadeIn delay={0.2}>
               <MetricCard
-                label={t('Avg Charge Energy')}
-                value={`${fmtNumber(stats.avg_charge_energy)} kWh`}
-                icon={<Zap className="h-4 w-4" />}
+                label={t('statistics.avgEfficiency', 'Avg Efficiency')}
+                value={`${fmtNumber(stats.avg_efficiency)} Wh/km`}
+                icon={<Gauge className="h-4 w-4" />}
                 color="green"
               />
             </FadeIn>
             <FadeIn delay={0.3}>
               <MetricCard
-                label={t('Avg Efficiency')}
-                value={`${fmtNumber(stats.avg_efficiency)} Wh/km`}
-                icon={<Gauge className="h-4 w-4" />}
-                color="purple"
+                label={t('statistics.costPerKm', 'Cost per km')}
+                value={stats.total_distance > 0 ? `$${fmtNumber(stats.total_cost / stats.total_distance, 3)}` : '—'}
+                icon={<DollarSign className="h-4 w-4" />}
+                color="amber"
               />
             </FadeIn>
           </div>
