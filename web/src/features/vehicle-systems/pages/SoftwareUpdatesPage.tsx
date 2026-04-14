@@ -7,23 +7,22 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
-import { Pagination } from '@/components/ui/Pagination';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDate } from '@/lib/dateFormat';
-import { request } from '@/api/client';
 import {
   Download, CheckCircle, Clock, ArrowUpCircle, Smartphone,
   Calendar, ExternalLink,
 } from 'lucide-react';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Select, Pagination } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { formatDate } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
+import { request } from '@/api/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -35,12 +34,6 @@ interface SoftwareUpdate {
   installed_at: string | null;
   scheduled_at: string | null;
   created_at: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 // ─── Status config ───────────────────────────────────────────────────────────
@@ -61,12 +54,9 @@ function getStatus(status: string) {
 
 export default function SoftwareUpdatesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Software Updates'));
+  usePageTitle(t('softwareUpdates.title', 'Software Updates'));
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
   const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
   const [page, setPage] = useState(1);
@@ -79,7 +69,7 @@ export default function SoftwareUpdatesPage() {
   });
 
   const vehicleMap = useMemo(() => {
-    const m = new Map<number, Vehicle>();
+    const m = new Map<number, { id: number; display_name: string; vin: string }>();
     vehicles?.forEach(v => m.set(v.id, v));
     return m;
   }, [vehicles]);
@@ -137,8 +127,8 @@ export default function SoftwareUpdatesPage() {
                     const vName = vehicleMap.get(u.vehicle_id)?.display_name ?? `${t('Vehicle')} ${u.vehicle_id}`;
                     return (
                       <div key={u.id} className="relative pl-14">
-                        <div className={clsx('absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]', s.bg)}>
-                          <Icon className={clsx('h-3 w-3', s.color)} />
+                        <div className={cn('absolute left-3.5 top-3 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-[var(--bg)]', s.bg)}>
+                          <Icon className={cn('h-3 w-3', s.color)} />
                         </div>
                         <GlassPanel className="p-4 hover:border-white/10 transition-colors">
                           <div className="flex items-start justify-between gap-4">
