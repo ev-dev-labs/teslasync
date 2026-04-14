@@ -399,6 +399,29 @@ Also fix: PageContainer `title` and `subtitle` should use proper fallbacks, not 
 
 ---
 
+## Bug 8 — Data Repair: "Not Found" (404)
+
+**Page:** `web/src/features/system/pages/DataRepairPage.tsx`
+**Screenshot:** Page shows "Not Found" error immediately on load.
+
+**Root Cause:** Endpoint mismatch. The page (line 204) calls:
+```typescript
+queryFn: () => request<StaleData>('/data-repair/stale'),
+```
+But the API route (`internal/api/router.go:635`) is:
+```go
+r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
+```
+
+The correct path is `/data-repair/stale-sessions`, not `/data-repair/stale`.
+
+**Fix:** Update the query URL in DataRepairPage.tsx line 204:
+```typescript
+queryFn: () => request<StaleData>('/data-repair/stale-sessions'),
+```
+
+---
+
 ## Verification
 
 ```bash
@@ -434,4 +457,5 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Signal Explorer: Per Page + Explore button right-aligned
 - [ ] Data Export: all labels show human-readable text, no raw i18n key prefixes
 - [ ] Data Export: PageContainer title/subtitle use proper fallbacks
+- [ ] Data Repair: fix 404 — page calls wrong API endpoint
 - [ ] TypeScript compiles clean
