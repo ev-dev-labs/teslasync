@@ -647,6 +647,53 @@ fmtInt(drive.startSoc) + '% → ' + fmtInt(drive.endSoc) + '%'
 
 ---
 
+## Bug 13 — Trips Page: Empty despite 6 completed drives
+
+**Page:** `web/src/features/trips/pages/TripListPage.tsx`
+**Screenshot:** "No trips recorded yet" — Total Trips: 0, Total Distance: 0 mi. But the
+`drives` table has 6 rows and the Drives page shows them.
+
+**Root Cause:** The `trips` table is empty (0 rows, confirmed via DB query). Nothing in the
+codebase automatically creates trips from completed drives.
+
+The refactored code has `internal/app/tripsvc/service.go` with `Create()` but:
+1. The telemetry session tracker (`telemetry_sessions.go`) creates drives but never calls
+   `tripsvc.Create()` to group consecutive drives into trips.
+2. The v1 trip handler is commented out in the router (line 714):
+   ```go
+   // NOTE: /trips conflicts with legacy tripHandler above; skip new trip handler.
+   ```
+3. The legacy `tripHandler.List` queries the `trips` table directly, which stays empty.
+
+**Fix:** Wire automatic trip creation when a drive ends. In `telemetry_sessions.go` where
+drives are finalized (the `endDrive()` or `closeDrive()` method):
+
+1. After closing a drive, check if it should be grouped into an existing trip or create a new one:
+```go
+// After drive is closed:
+// If the previous drive ended < 30 minutes ago, add this drive to the same trip.
+// Otherwise create a new trip containing just this drive.
+func (t *TelemetrySessionTracker) maybeCreateTrip(ctx context.Context, vehicleID int64, driveID int64) {
+    // Query last trip for this vehicle
+    lastTrip := t.tripRepo.GetLatestForVehicle(ctx, vehicleID)
+    if lastTrip != nil && time.Since(lastTrip.EndDate) < 30*time.Minute {
+        // Add drive to existing trip
+        t.tripRepo.AddDriveToTrip(ctx, lastTrip.ID, driveID)
+        t.tripRepo.UpdateTripStats(ctx, lastTrip.ID)
+    } else {
+        // Create new trip with this drive
+        t.tripRepo.CreateFromDrive(ctx, vehicleID, driveID)
+    }
+}
+```
+
+2. Or add a periodic background job that scans for un-tripped drives and groups them.
+
+3. Also resolve the router conflict — either remove the legacy tripHandler or register
+   the v1 handler on a different path.
+
+---
+
 ## Verification
 
 ```bash
@@ -689,5 +736,6 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Drive Detail: wire tire pressure signals into flushDriveTelemetry (check TPMS signal names)
 - [ ] Drive Detail: SOC display formatted with fmtInt, not raw float
 - [ ] Trip Replay: show EmptyState with GPS info when no valid positions, disable Replay button on Drive Detail
+- [ ] Trips: wire automatic trip creation from completed drives (tripsvc.Create never called)
 - [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
