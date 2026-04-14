@@ -17,6 +17,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
+import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -93,6 +94,7 @@ export default function GeofencesPage() {
   const { t } = useTranslation();
   usePageTitle(t('Geofences'));
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   // ─── State ───────────────────────────────────────────────────────────────
 
@@ -113,8 +115,10 @@ export default function GeofencesPage() {
       request<Geofence>('/geofences', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
+      toast.success(t('Geofence created'));
       closeModal();
     },
+    onError: (err: Error) => toast.error(t('Failed to create geofence'), err.message),
   });
 
   const updateMut = useMutation({
@@ -122,8 +126,10 @@ export default function GeofencesPage() {
       request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
+      toast.success(t('Geofence updated'));
       closeModal();
     },
+    onError: (err: Error) => toast.error(t('Failed to update geofence'), err.message),
   });
 
   const deleteMut = useMutation({
@@ -131,8 +137,10 @@ export default function GeofencesPage() {
       request<void>(`/geofences/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
+      toast.success(t('Geofence deleted'));
       setDeleteTarget(null);
     },
+    onError: (err: Error) => toast.error(t('Failed to delete geofence'), err.message),
   });
 
   const toggleMut = useMutation({
@@ -142,6 +150,7 @@ export default function GeofencesPage() {
         body: JSON.stringify({ enabled }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
+    onError: (err: Error) => toast.error(t('Failed to toggle geofence'), err.message),
   });
 
   // ─── Computed stats ──────────────────────────────────────────────────────
