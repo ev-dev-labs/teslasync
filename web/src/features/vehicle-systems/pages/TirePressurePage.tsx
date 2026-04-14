@@ -1,39 +1,25 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import {
-  Gauge,
-  AlertTriangle,
-  TrendingDown,
-  Activity,
-  Clock,
+  Gauge, AlertTriangle, TrendingDown, Activity, Clock,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { RadialGauge } from '@/components/charts/RadialGauge';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  RadialGauge, ChartTooltip, CHART_COLORS,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -50,12 +36,6 @@ interface TirePressureReading {
   tpms_hard_warnings: boolean;
   tpms_soft_warnings: boolean;
   created_at: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -150,10 +130,7 @@ export default function TirePressurePage() {
 
   /* ---- API queries ---- */
 
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeVehicleId = vehicleId ?? vehicles?.[0]?.id ?? null;
 
@@ -287,7 +264,7 @@ export default function TirePressurePage() {
         {/* Warning banner */}
         {hasWarning && (
           <GlassPanel
-            className={clsx(
+            className={cn(
               'mb-6 flex items-center gap-3 px-4 py-3',
               latest?.tpms_hard_warnings
                 ? 'border-red-500/40'
@@ -295,7 +272,7 @@ export default function TirePressurePage() {
             )}
           >
             <AlertTriangle
-              className={clsx(
+              className={cn(
                 'h-5 w-5 shrink-0',
                 latest?.tpms_hard_warnings ? 'text-red-400' : 'text-amber-400',
               )}
