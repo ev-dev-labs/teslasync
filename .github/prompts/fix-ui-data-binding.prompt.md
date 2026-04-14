@@ -422,6 +422,68 @@ queryFn: () => request<StaleData>('/data-repair/stale-sessions'),
 
 ---
 
+## Bug 9 — Map Overview (Live Map): Placeholder instead of real Leaflet map
+
+**Page:** `web/src/features/maps/pages/MapOverviewPage.tsx`
+**Screenshot:** Shows a "Map View" badge with raw coordinates and "Map requires Leaflet — showing
+coordinates" note. Meanwhile DriveDetailPage renders real Leaflet maps correctly.
+
+**Root Cause:** The page (lines 179-214) renders a static placeholder with a Lucide `<Map>` icon
+instead of using the shared Leaflet map components. It was never wired up.
+
+DriveDetailPage correctly imports from `@/components/maps`:
+```typescript
+import { MapContainer, MapTileLayer, MapInvalidator, MapLayerSwitcher, ... } from '@/components/maps';
+```
+
+**Fix:** Replace the placeholder with a real Leaflet map:
+
+1. Import shared map components:
+```typescript
+import {
+  MapContainer, Marker, Popup, useMap,
+  MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  type MapStyle,
+} from '@/components/maps';
+import 'leaflet/dist/leaflet.css';
+```
+
+2. Replace the placeholder `<GlassPanel>` (lines 181-214) with:
+```tsx
+<GlassPanel className="relative overflow-hidden" style={{ height: 400 }}>
+  {latest && (latest.latitude !== 0 || latest.longitude !== 0) ? (
+    <>
+      <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+      <MapContainer
+        center={[latest.latitude, latest.longitude]}
+        zoom={15}
+        scrollWheelZoom
+        className="h-full w-full"
+      >
+        <MapTileLayer style={mapStyle} />
+        <MapInvalidator />
+        <Marker position={[latest.latitude, latest.longitude]}>
+          <Popup>{vehicle?.display_name ?? 'Vehicle'}</Popup>
+        </Marker>
+      </MapContainer>
+    </>
+  ) : (
+    <EmptyState
+      icon={<MapPin className="h-8 w-8" />}
+      message={t('mapOverview.noLocation', 'No GPS data available.')}
+    />
+  )}
+</GlassPanel>
+```
+
+3. Add `mapStyle` state: `const [mapStyle, setMapStyle] = useState<MapStyle>('dark');`
+
+4. If positions list exists, also show the recent position trail as a `<Polyline>`.
+
+5. Remove the "Map requires Leaflet" note — it's no longer needed.
+
+---
+
 ## Verification
 
 ```bash
@@ -458,4 +520,5 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Data Export: all labels show human-readable text, no raw i18n key prefixes
 - [ ] Data Export: PageContainer title/subtitle use proper fallbacks
 - [ ] Data Repair: fix 404 — page calls wrong API endpoint
+- [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
