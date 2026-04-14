@@ -1,6 +1,7 @@
 import { type ReactNode, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { UserCheck, Armchair, Lock, Navigation, Cpu } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -26,8 +27,9 @@ import {
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -47,6 +49,8 @@ interface SafetySnapshot {
   speed_limit_warning: string;
   cruise_follow_distance: string;
   pin_to_drive_enabled: boolean;
+  miles_since_reset?: number | null;
+  self_driving_miles_since_reset?: number | null;
   created_at: string;
 }
 
@@ -96,6 +100,38 @@ function scoreColor(pct: number): string {
   if (pct >= 80) return '#10b981';
   if (pct >= 50) return '#f59e0b';
   return '#ef4444';
+}
+
+/* ------------------------------------------------------------------ */
+/*  SignalCard                                                          */
+/* ------------------------------------------------------------------ */
+
+function SignalCard({
+  icon,
+  value,
+  label,
+  positive,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  positive?: boolean | null;
+}) {
+  const color =
+    positive === true
+      ? 'text-green-400'
+      : positive === false
+        ? 'text-red-400'
+        : 'text-white/70';
+  return (
+    <GlassPanel className="p-4 flex flex-col items-center gap-2 text-center">
+      <span className={color}>{icon}</span>
+      <span className={cn('text-sm font-bold', color)}>{value}</span>
+      <span className="text-[10px] uppercase tracking-wider text-white/40">
+        {label}
+      </span>
+    </GlassPanel>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -377,6 +413,12 @@ export default function SafetySettingsPage() {
   const [vehicleId, setVehicleId] = useState<string>('');
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
+  /* --- security data (live safety signals) --- */
+  const { data: securityData } = useSecurityLatest(
+    Number(activeId) || 0,
+    15_000,
+  );
+
   /* --- safety data --- */
   const {
     data: latest,
@@ -465,7 +507,7 @@ export default function SafetySettingsPage() {
         <div className="space-y-6">
           {/* ---- Safety Score Gauge + Stat Cards ---- */}
           <FadeIn>
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
               {/* RadialGauge */}
               <GlassPanel className="p-6 flex flex-col items-center justify-center lg:col-span-1">
                 <RadialGauge
@@ -474,7 +516,7 @@ export default function SafetySettingsPage() {
                   label={t('Safety Score')}
                   unit={`${fmtInt(scorePct)}%`}
                   color={scoreColor(scorePct)}
-                  size={140}
+                  size={120}
                 />
                 <Badge
                   variant={scorePct >= 80 ? 'success' : scorePct >= 50 ? 'warning' : 'danger'}
@@ -510,8 +552,98 @@ export default function SafetySettingsPage() {
             </div>
           </FadeIn>
 
-          {/* ---- Safety Feature Cards (3-col grid) ---- */}
+          {/* ---- Live Safety Signals ---- */}
+          <FadeIn delay={0.05}>
+            <GlassPanel className="p-5">
+              <p className="mb-4 text-sm font-semibold text-white/90">
+                {t('safety.liveSignals', 'Live Safety Signals')}
+              </p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <SignalCard
+                  icon={<UserCheck className="h-6 w-6" />}
+                  value={
+                    securityData?.driver_seat_belt == null
+                      ? '—'
+                      : securityData.driver_seat_belt
+                        ? t('safety.buckled', 'Buckled')
+                        : t('safety.unbuckled', 'Unbuckled')
+                  }
+                  label={t('safety.driverBelt', 'Driver Belt')}
+                  positive={securityData?.driver_seat_belt ?? null}
+                />
+                <SignalCard
+                  icon={<UserCheck className="h-6 w-6" />}
+                  value={
+                    securityData?.passenger_seat_belt == null
+                      ? '—'
+                      : securityData.passenger_seat_belt
+                        ? t('safety.buckled', 'Buckled')
+                        : t('safety.unbuckled', 'Unbuckled')
+                  }
+                  label={t('safety.passengerBelt', 'Passenger Belt')}
+                  positive={securityData?.passenger_seat_belt ?? null}
+                />
+                <SignalCard
+                  icon={<Armchair className="h-6 w-6" />}
+                  value={
+                    securityData?.driver_seat_occupied == null
+                      ? '—'
+                      : securityData.driver_seat_occupied
+                        ? t('safety.occupied', 'Occupied')
+                        : t('safety.empty', 'Empty')
+                  }
+                  label={t('safety.driverSeat', 'Driver Seat')}
+                  positive={securityData?.driver_seat_occupied ?? null}
+                />
+                <SignalCard
+                  icon={<Lock className="h-6 w-6" />}
+                  value={
+                    securityData?.locked == null
+                      ? '—'
+                      : securityData.locked
+                        ? t('safety.locked', 'Locked')
+                        : t('safety.unlocked', 'Unlocked')
+                  }
+                  label={t('safety.vehicleLock', 'Vehicle Lock')}
+                  positive={securityData?.locked ?? null}
+                />
+              </div>
+            </GlassPanel>
+          </FadeIn>
+
+          {/* ---- Driving Statistics ---- */}
           <FadeIn delay={0.1}>
+            <GlassPanel className="p-5">
+              <p className="mb-4 text-sm font-semibold text-white/90">
+                {t('safety.drivingStats', 'Driving Statistics')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <MetricCard
+                  icon={<Navigation className="h-5 w-5" />}
+                  label={t('safety.milesSinceReset', 'Miles Since Reset')}
+                  value={
+                    latest.miles_since_reset != null
+                      ? fmtNumber(latest.miles_since_reset)
+                      : '—'
+                  }
+                  subtitle={t('safety.miles', 'miles')}
+                />
+                <MetricCard
+                  icon={<Cpu className="h-5 w-5" />}
+                  label={t('safety.selfDrivingMiles', 'Self-Driving Miles')}
+                  value={
+                    latest.self_driving_miles_since_reset != null
+                      ? fmtNumber(latest.self_driving_miles_since_reset)
+                      : '—'
+                  }
+                  subtitle={t('safety.milesAutopilot', 'miles (autopilot)')}
+                />
+              </div>
+            </GlassPanel>
+          </FadeIn>
+
+          {/* ---- Safety Feature Cards (3-col grid) ---- */}
+          <FadeIn delay={0.15}>
             <GlassPanel className="p-5">
               <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
                 {t('ADAS Features')}
@@ -531,12 +663,12 @@ export default function SafetySettingsPage() {
           </FadeIn>
 
           {/* ---- Safety States Chart ---- */}
-          {chartData.length > 1 && (
-            <FadeIn delay={0.2}>
-              <GlassPanel className="p-5">
-                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                  {t('Safety States Over Time')}
-                </h2>
+          <FadeIn delay={0.2}>
+            <GlassPanel className="p-5">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+                {t('Safety States Over Time')}
+              </h2>
+              {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData} margin={chartMargin}>
                     {chartGrid}
@@ -582,9 +714,11 @@ export default function SafetySettingsPage() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </GlassPanel>
-            </FadeIn>
-          )}
+              ) : (
+                <EmptyState message={t('No safety state history to chart yet.')} />
+              )}
+            </GlassPanel>
+          </FadeIn>
 
           {/* ---- History DataTable ---- */}
           <FadeIn delay={0.3}>

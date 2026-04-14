@@ -240,25 +240,27 @@ export default function SleepEfficiencyPage() {
             </FadeIn>
 
             <FadeIn delay={0.1}>
-              <ChartContainer title={t('sleep.sentryComparison', 'Sentry vs No-Sentry')} height={224}>
-                {comparisonData.some((d) => d.sentry_on > 0 || d.sentry_off > 0) ? (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={comparisonData}>
-                      {chartGrid}
-                      <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTick} tickLine={false} axisLine={false} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Bar dataKey="sentry_on" name={t('sleep.sentryOn', 'Sentry On')} fill="#f59e0b" radius={[4, 4, 0, 0]} animationDuration={800} />
-                      <Bar dataKey="sentry_off" name={t('sleep.sentryOff', 'Sentry Off')} fill="#a855f7" radius={[4, 4, 0, 0]} animationDuration={800} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <EmptyState message={t('sleep.noSentryData', 'No sentry comparison data available')} />
-                )}
+              <div className="flex flex-col gap-4">
+                <ChartContainer title={t('sleep.sentryComparison', 'Sentry vs No-Sentry')} height={224}>
+                  {comparisonData.some((d) => d.sentry_on > 0 || d.sentry_off > 0) ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={comparisonData}>
+                        {chartGrid}
+                        <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
+                        <YAxis tick={axisTick} tickLine={false} axisLine={false} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="sentry_on" name={t('sleep.sentryOn', 'Sentry On')} fill="#f59e0b" radius={[4, 4, 0, 0]} animationDuration={800} />
+                        <Bar dataKey="sentry_off" name={t('sleep.sentryOff', 'Sentry Off')} fill="#a855f7" radius={[4, 4, 0, 0]} animationDuration={800} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <EmptyState message={t('sleep.noSentryData', 'No sentry comparison data available')} />
+                  )}
+                </ChartContainer>
 
-                {/* Sentry cost callout */}
-                <div className="mt-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4">
+                {/* Sentry cost callout — outside ChartContainer to avoid overflow */}
+                <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Eye className="h-4 w-4 text-amber-400" />
                     <span className="text-sm font-medium text-amber-300">
@@ -280,7 +282,7 @@ export default function SleepEfficiencyPage() {
                     </div>
                   </div>
                 </div>
-              </ChartContainer>
+              </div>
             </FadeIn>
           </div>
 

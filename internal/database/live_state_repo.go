@@ -130,6 +130,10 @@ var signalToColumn = map[string]string{
 	"TpmsPressureFr": "tire_pressure_fr",
 	"TpmsPressureRl": "tire_pressure_rl",
 	"TpmsPressureRr": "tire_pressure_rr",
+	"TpmsFl":         "tire_pressure_fl",
+	"TpmsFr":         "tire_pressure_fr",
+	"TpmsRl":         "tire_pressure_rl",
+	"TpmsRr":         "tire_pressure_rr",
 
 	// Vehicle Info
 	"VehicleName":   "vehicle_name",

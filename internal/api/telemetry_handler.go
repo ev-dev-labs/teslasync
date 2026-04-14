@@ -981,6 +981,14 @@ func (h *TelemetryHandler) trackTirePressure(ctx context.Context, vehicleID int6
 		rr, rrOk = signals["TpmsPressureRr"]
 	}
 
+	if !flOk && !frOk && !rlOk && !rrOk {
+		// Try short TpmsFl/Fr/Rl/Rr naming from Fleet Telemetry subscriptions
+		fl, flOk = signals["TpmsFl"]
+		fr, frOk = signals["TpmsFr"]
+		rl, rlOk = signals["TpmsRl"]
+		rr, rrOk = signals["TpmsRr"]
+	}
+
 	_, hasHardWarn := signals["TpmsHardWarnings"]
 	_, hasSoftWarn := signals["TpmsSoftWarnings"]
 	_, hasLastSeenFL := signals["TpmsLastSeenPressureTimeFl"]

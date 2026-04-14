@@ -928,10 +928,10 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 		if b, ok2 := v.(bool); ok2 { reading.IsClimateOn = boolPtr(b) }
 	}
 	// Fleet Telemetry sends tire pressure in bar via TpmsPressure* signals
-	if v, ok := signalFloat(signals, "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsFl", "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsFr", "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsRl", "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
+	if v, ok := signalFloat(signals, "TpmsRr", "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
 	if v, ok := signals["BatteryHeaterOn"]; ok {
 		if b, ok2 := v.(bool); ok2 { reading.BatteryHeaterOn = boolPtr(b) }
 	}
