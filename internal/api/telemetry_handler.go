@@ -639,6 +639,15 @@ func (h *TelemetryHandler) detectVehicleState(vehicleID int64, signals map[strin
 			if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
 				return "charging"
 			}
+			if rate, ok := toFloatOk(signals["ChargeRateMilePerHour"]); ok && rate > 0 {
+				return "charging"
+			}
+			if power, ok := toFloatOk(signals["ACChargingPower"]); ok && power > 0.1 {
+				return "charging"
+			}
+			if voltage, ok := toFloatOk(signals["ChargerVoltage"]); ok && voltage > 10 {
+				return "charging"
+			}
 			return "parked"
 		case "N":
 			return "online"
@@ -650,7 +659,8 @@ func (h *TelemetryHandler) detectVehicleState(vehicleID int64, signals map[strin
 		return "driving"
 	}
 
-	// Fallback: charging signals
+	// Fallback: charging signals — check rare authoritative signals first,
+	// then common high-frequency indicators for consistent detection
 	if dcs, ok := signals["DetailedChargeState"]; ok {
 		dcsStr := toString(dcs)
 		if strings.Contains(dcsStr, "Charging") || strings.Contains(dcsStr, "Starting") {
@@ -664,6 +674,16 @@ func (h *TelemetryHandler) detectVehicleState(vehicleID int64, signals map[strin
 		}
 	}
 	if amps, ok := toFloatOk(signals["ChargeAmps"]); ok && amps > 1.0 {
+		return "charging"
+	}
+	// High-frequency charging indicators (sent every few seconds during active charge)
+	if rate, ok := toFloatOk(signals["ChargeRateMilePerHour"]); ok && rate > 0 {
+		return "charging"
+	}
+	if power, ok := toFloatOk(signals["ACChargingPower"]); ok && power > 0.1 {
+		return "charging"
+	}
+	if voltage, ok := toFloatOk(signals["ChargerVoltage"]); ok && voltage > 10 {
 		return "charging"
 	}
 
