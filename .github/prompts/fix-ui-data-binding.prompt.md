@@ -123,6 +123,20 @@ import { AlertBanner } from '@/components/feedback';
 
 ---
 
+## Bug 3b — Navigation & Route Page: Location History all zeros
+
+**Page:** `web/src/features/maps/pages/NavigationRoutePage.tsx`
+
+Same GPS root cause as Bug 2/3 — all positions are lat=0, lng=0.
+The Location History table shows `0.000000` for every LAT/LON, `0.0 mph` speed, `0° —` heading, `0.0 mi` odometer.
+
+**Fix:** Apply the same graceful handling as Bug 2:
+1. Show "—" instead of "0.000000" when lat/lng are 0
+2. Add info banner when all positions have zero coordinates
+3. Filter out 0,0 positions from the Home/Work Presence chart (they're not real locations)
+
+---
+
 ## Bug 4 — FSM Debugger: Duplicate time range controls
 
 **Page:** `web/src/features/system/pages/StateMachineDebuggerPage.tsx`
@@ -520,5 +534,6 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Data Export: all labels show human-readable text, no raw i18n key prefixes
 - [ ] Data Export: PageContainer title/subtitle use proper fallbacks
 - [ ] Data Repair: fix 404 — page calls wrong API endpoint
+- [ ] Navigation & Route: "—" for zero lat/lng, info banner, filter 0,0 from Home/Work chart
 - [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
