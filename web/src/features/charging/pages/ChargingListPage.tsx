@@ -331,9 +331,9 @@ export default function ChargingListPage() {
       {error && <QueryError error={error as Error} onRetry={refetch} />}
 
       {/* ── Hero Gauges ─────────────────────────────────────────── */}
-      {stats && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-6">
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          {stats ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
               <RadialGauge value={stats.count} max={Math.max(stats.count, 50)} label={t('charging.gauges.sessions', 'Sessions')} unit="" color="#00f0ff" />
               <RadialGauge value={Math.round(stats.totalEnergy)} max={Math.max(stats.totalEnergy, 500)} label={t('charging.gauges.energy', 'Energy')} unit="kWh" color="#10b981" />
@@ -348,14 +348,16 @@ export default function ChargingListPage() {
                 </p>
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('charging.noStats', 'No charging statistics available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ── Quick Metrics ───────────────────────────────────────── */}
-      {stats && (
-        <FadeIn delay={0.05}>
-          <GlassPanel className="p-3 sm:p-5">
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-3 sm:p-5">
+          {stats ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 text-center">
               <div>
                 <p className="text-lg font-bold text-neon-green"><AnimatedNumber value={stats.homeCount} /></p>
@@ -388,9 +390,11 @@ export default function ChargingListPage() {
                 <p className="text-[10px] text-[var(--text-muted)]">{t('charging.metrics.perSession', 'Per Session')}</p>
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('charging.noMetrics', 'No charging metrics available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ── Charts Row ──────────────────────────────────────────── */}
       {sessions && sessions.length > 2 && (
@@ -613,78 +617,96 @@ export default function ChargingListPage() {
       )}
 
       {/* ── Charger Specs Breakdown ─────────────────────────────── */}
-      {chargerSpecsBreakdown && (chargerSpecsBreakdown.voltage.length > 0 || chargerSpecsBreakdown.cable.length > 0 || chargerSpecsBreakdown.brand.length > 0) && (
-        <FadeIn delay={0.26}>
-          <GlassPanel className="p-5">
-            <h3 className="section-title flex items-center gap-2 mb-4">
-              <Gauge className="h-4 w-4 text-neon-purple" />
-              {t('charging.specs.title', 'Charger Specs Breakdown')}
-            </h3>
+      <FadeIn delay={0.26}>
+        <GlassPanel className="p-5">
+          <h3 className="section-title flex items-center gap-2 mb-4">
+            <Gauge className="h-4 w-4 text-neon-purple" />
+            {t('charging.specs.title', 'Charger Specs Breakdown')}
+          </h3>
+          {chargerSpecsBreakdown && (chargerSpecsBreakdown.voltage.length > 0 || chargerSpecsBreakdown.cable.length > 0 || chargerSpecsBreakdown.brand.length > 0) ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {chargerSpecsBreakdown.voltage.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
-                    <Zap className="h-3 w-3" /> {t('charging.specs.byVoltage', 'By Voltage')}
-                  </p>
-                  <div className="space-y-2">
-                    {chargerSpecsBreakdown.voltage.map((v) => (
-                      <div key={v.name} className="flex justify-between items-center text-xs">
-                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {chargerSpecsBreakdown.phase.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
-                    <Activity className="h-3 w-3" /> {t('charging.specs.byPhase', 'By Phase')}
-                  </p>
-                  <div className="space-y-2">
-                    {chargerSpecsBreakdown.phase.map((v) => (
-                      <div key={v.name} className="flex justify-between items-center text-xs">
-                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {chargerSpecsBreakdown.cable.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
-                    <Cable className="h-3 w-3" /> {t('charging.specs.byCable', 'By Cable')}
-                  </p>
-                  <div className="space-y-2">
-                    {chargerSpecsBreakdown.cable.map((v) => (
-                      <div key={v.name} className="flex justify-between items-center text-xs">
-                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {chargerSpecsBreakdown.brand.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
-                    <Plug className="h-3 w-3" /> {t('charging.specs.byBrand', 'By Brand')}
-                  </p>
-                  <div className="space-y-2">
-                    {chargerSpecsBreakdown.brand.map((v) => (
-                      <div key={v.name} className="flex justify-between items-center text-xs">
-                        <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
-                        <span className="text-[var(--text-muted)]">{v.count} · {v.avgPower != null ? `${fmtInt(v.avgPower)} kW avg` : fmtWithUnit(v.energy, 'kWh')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div>
+                {chargerSpecsBreakdown.voltage.length > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
+                      <Zap className="h-3 w-3" /> {t('charging.specs.byVoltage', 'By Voltage')}
+                    </p>
+                    <div className="space-y-2">
+                      {chargerSpecsBreakdown.voltage.map((v) => (
+                        <div key={v.name} className="flex justify-between items-center text-xs">
+                          <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                          <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState message={t('charging.specs.noVoltage', 'No voltage data')} />
+                )}
+              </div>
+              <div>
+                {chargerSpecsBreakdown.phase.length > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
+                      <Activity className="h-3 w-3" /> {t('charging.specs.byPhase', 'By Phase')}
+                    </p>
+                    <div className="space-y-2">
+                      {chargerSpecsBreakdown.phase.map((v) => (
+                        <div key={v.name} className="flex justify-between items-center text-xs">
+                          <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                          <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState message={t('charging.specs.noPhase', 'No phase data')} />
+                )}
+              </div>
+              <div>
+                {chargerSpecsBreakdown.cable.length > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
+                      <Cable className="h-3 w-3" /> {t('charging.specs.byCable', 'By Cable')}
+                    </p>
+                    <div className="space-y-2">
+                      {chargerSpecsBreakdown.cable.map((v) => (
+                        <div key={v.name} className="flex justify-between items-center text-xs">
+                          <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                          <span className="text-[var(--text-muted)]">{v.count} sessions · {fmtWithUnit(v.energy, 'kWh')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState message={t('charging.specs.noCable', 'No cable data')} />
+                )}
+              </div>
+              <div>
+                {chargerSpecsBreakdown.brand.length > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2 flex items-center gap-1">
+                      <Plug className="h-3 w-3" /> {t('charging.specs.byBrand', 'By Brand')}
+                    </p>
+                    <div className="space-y-2">
+                      {chargerSpecsBreakdown.brand.map((v) => (
+                        <div key={v.name} className="flex justify-between items-center text-xs">
+                          <span className="text-[var(--text-primary)] font-medium">{v.name}</span>
+                          <span className="text-[var(--text-muted)]">{v.count} · {v.avgPower != null ? `${fmtInt(v.avgPower)} kW avg` : fmtWithUnit(v.energy, 'kWh')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <EmptyState message={t('charging.specs.noBrand', 'No brand data')} />
+                )}
+              </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('charging.specs.noData', 'No charger specification data available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ── Session List ────────────────────────────────────────── */}
       {isLoading ? (

@@ -746,7 +746,6 @@ export default function ChargingCurvePage() {
               'charging.curve.sessionComparisonDesc',
               'Power curves overlaid from last 10 sessions',
             )}
-            empty={comparisonSessions.length === 0}
             height={300}
           >
             <ResponsiveContainer width="100%" height={300}>
@@ -812,7 +811,6 @@ export default function ChargingCurvePage() {
                 'charging.curve.chargerTypeDesc',
                 'Average kW and kWh per charger category',
               )}
-              empty={chargerTypeStats.length === 0}
               height={280}
             >
               <ResponsiveContainer width="100%" height={280}>
@@ -886,7 +884,6 @@ export default function ChargingCurvePage() {
                 'charging.curve.speedTrendDesc',
                 'Monthly average DC vs AC charge rate',
               )}
-              empty={monthlyTrend.length === 0}
               height={280}
             >
               <ResponsiveContainer width="100%" height={280}>

@@ -17,6 +17,7 @@ import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
@@ -215,9 +216,9 @@ export default function EfficiencyPage() {
       </FadeIn>
 
       {/* Hero gauges */}
-      {stats && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-6">
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          {stats ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 items-center">
               <RadialGauge
                 value={Math.round(convertEfficiency(stats.avgEfficiencyWhKm))}
@@ -250,12 +251,14 @@ export default function EfficiencyPage() {
                 </p>
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('efficiency.noStats', 'No efficiency data available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* Stat cards */}
-      {stats && (
+      {stats ? (
         <StaggerContainer className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StaggerItem>
             <GlassPanel className="p-4 text-center">
@@ -286,6 +289,10 @@ export default function EfficiencyPage() {
             </GlassPanel>
           </StaggerItem>
         </StaggerContainer>
+      ) : (
+        <GlassPanel className="p-6">
+          <EmptyState message={t('efficiency.noStatCards', 'No driving statistics available yet')} />
+        </GlassPanel>
       )}
 
       {/* Charts row 1 */}
@@ -362,12 +369,12 @@ export default function EfficiencyPage() {
       </div>
 
       {/* Temperature-Bucketed Efficiency Table */}
-      {tempBuckets.length > 0 && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-6">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-              <Thermometer className="h-4 w-4 text-orange-400" /> {t('efficiency.tempEfficiency', 'Efficiency by Temperature Range')}
-            </h3>
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+            <Thermometer className="h-4 w-4 text-orange-400" /> {t('efficiency.tempEfficiency', 'Efficiency by Temperature Range')}
+          </h3>
+          {tempBuckets.length > 0 ? (
             <DataTable
               data={tempBuckets}
               keyExtractor={(b) => b.range}
@@ -416,75 +423,85 @@ export default function EfficiencyPage() {
                 },
               ]}
             />
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('efficiency.noTempData', 'Not enough data for temperature breakdown')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* Metric bars summary */}
-      {stats && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-6">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-              <Zap className="h-4 w-4 text-amber-400" /> {t('efficiency.summary', 'Efficiency Summary')}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={convertEfficiency(stats.avgEfficiencyWhKm)} max={300} color="#00f0ff" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertEfficiency(stats.avgEfficiencyWhKm))} {efficiencyUnit}</p>
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          {stats ? (
+            <>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+                <Zap className="h-4 w-4 text-amber-400" /> {t('efficiency.summary', 'Efficiency Summary')}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <MetricBar label={t('efficiency.avgConsumption', 'Avg Consumption')} value={convertEfficiency(stats.avgEfficiencyWhKm)} max={300} color="#00f0ff" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(convertEfficiency(stats.avgEfficiencyWhKm))} {efficiencyUnit}</p>
+                </div>
+                <div>
+                  <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={convertSpeed(stats.avgSpeedKmh)} max={150} color="#10b981" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertSpeed(stats.avgSpeedKmh))} {speedUnit}</p>
+                </div>
+                <div>
+                  <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={stats.regenRatio * 100} max={100} color="#a855f7" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(stats.regenRatio * 100)}%</p>
+                </div>
+                <div>
+                  <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationMin} max={Math.max(stats.totalDurationMin, 600)} color="#f59e0b" />
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">{Math.round(stats.totalDurationMin / 60)} {t('efficiency.hours', 'h')}</p>
+                </div>
               </div>
-              <div>
-                <MetricBar label={t('efficiency.avgSpeed', 'Avg Speed')} value={convertSpeed(stats.avgSpeedKmh)} max={150} color="#10b981" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtInt(convertSpeed(stats.avgSpeedKmh))} {speedUnit}</p>
-              </div>
-              <div>
-                <MetricBar label={t('efficiency.regenRatio', 'Regen Ratio')} value={stats.regenRatio * 100} max={100} color="#a855f7" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{fmtNumber(stats.regenRatio * 100)}%</p>
-              </div>
-              <div>
-                <MetricBar label={t('efficiency.totalDriveTime', 'Total Drive Time')} value={stats.totalDurationMin} max={Math.max(stats.totalDurationMin, 600)} color="#f59e0b" />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">{Math.round(stats.totalDurationMin / 60)} {t('efficiency.hours', 'h')}</p>
-              </div>
-            </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+            </>
+          ) : (
+            <EmptyState message={t('efficiency.noSummary', 'No efficiency summary available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* Energy insights */}
-      {stats && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-6">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-              <Thermometer className="h-4 w-4 text-orange-400" /> {t('efficiency.insights', 'Energy Insights')}
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
-              <div>
-                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalRegen', 'Total Regen')}</p>
-                <p className="text-lg font-bold text-green-400">{fmtNumber(stats.totalRegenKwh)} <span className="text-xs text-[var(--text-muted)]">kWh</span></p>
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          {stats ? (
+            <>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+                <Thermometer className="h-4 w-4 text-orange-400" /> {t('efficiency.insights', 'Energy Insights')}
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+                <div>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalRegen', 'Total Regen')}</p>
+                  <p className="text-lg font-bold text-green-400">{fmtNumber(stats.totalRegenKwh)} <span className="text-xs text-[var(--text-muted)]">kWh</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.regenRatioLabel', 'Regen Ratio')}</p>
+                  <p className="text-lg font-bold text-cyan-400">{fmtNumber(stats.regenRatio * 100)}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.co2Label', 'CO₂ Saved')}</p>
+                  <p className="text-lg font-bold text-green-400">{fmtInt(stats.co2SavedKg)} <span className="text-xs text-[var(--text-muted)]">kg</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalDistLabel', 'Total Distance')}</p>
+                  <p className="text-lg font-bold text-cyan-400">{fmtInt(convertDistance(stats.totalDistanceKm))} <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.topSpeed', 'Top Speed')}</p>
+                  <p className="text-lg font-bold text-purple-400">{fmtInt(convertSpeed(stats.topSpeedKmh))} <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.costPerKmLabel', 'Est. Cost/km')}</p>
+                  <p className="text-lg font-bold text-amber-400">${costPerKm}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.regenRatioLabel', 'Regen Ratio')}</p>
-                <p className="text-lg font-bold text-cyan-400">{fmtNumber(stats.regenRatio * 100)}%</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.co2Label', 'CO₂ Saved')}</p>
-                <p className="text-lg font-bold text-green-400">{fmtInt(stats.co2SavedKg)} <span className="text-xs text-[var(--text-muted)]">kg</span></p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.totalDistLabel', 'Total Distance')}</p>
-                <p className="text-lg font-bold text-cyan-400">{fmtInt(convertDistance(stats.totalDistanceKm))} <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span></p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.topSpeed', 'Top Speed')}</p>
-                <p className="text-lg font-bold text-purple-400">{fmtInt(convertSpeed(stats.topSpeedKmh))} <span className="text-xs text-[var(--text-muted)]">{speedUnit}</span></p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[var(--text-muted)] mb-1">{t('efficiency.costPerKmLabel', 'Est. Cost/km')}</p>
-                <p className="text-lg font-bold text-amber-400">${costPerKm}</p>
-              </div>
-            </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+            </>
+          ) : (
+            <EmptyState message={t('efficiency.noInsights', 'No energy insights available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageContainer>
   );
 }

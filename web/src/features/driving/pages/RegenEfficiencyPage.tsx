@@ -15,6 +15,7 @@ import { MetricBar } from '@/components/data-display/MetricBar';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useRegenEfficiency, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
@@ -111,10 +112,9 @@ export default function RegenEfficiencyPage() {
         <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
       ) : undefined}
       loading={isLoading}
-      empty={!data}
-      emptyMessage={t('regen.empty', 'No regen data available.')}
+
     >
-      {data && (
+      {data ? (
         <>
           {/* Hero gauges */}
           <FadeIn>
@@ -248,6 +248,8 @@ export default function RegenEfficiencyPage() {
             </GlassPanel>
           </FadeIn>
         </>
+      ) : (
+        <EmptyState message={t('regen.noData', 'No regen efficiency data available yet')} />
       )}
     </PageContainer>
   );

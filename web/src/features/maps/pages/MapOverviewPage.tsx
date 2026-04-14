@@ -186,8 +186,6 @@ export default function MapOverviewPage() {
       )}
       loading={vehiclesLoading}
       error={vehiclesError as Error | null}
-      empty={!vehiclesLoading && !hasVehicles}
-      emptyMessage={t('mapOverview.empty', 'No vehicles found.')}
       actions={
         hasVehicles ? (
           <Select
@@ -277,13 +275,12 @@ export default function MapOverviewPage() {
       ) : null}
 
       {/* ---- Location details ---- */}
-      {latest && (
-        <FadeIn delay={0.1}>
-          <GlassPanel className="p-5">
-            <span className="mb-4 block text-sm font-semibold text-[var(--text-primary)]">
-              {t('mapOverview.locationDetails', 'Location Details')}
-            </span>
-
+      <FadeIn delay={0.1}>
+        <GlassPanel className="p-5">
+          <span className="mb-4 block text-sm font-semibold text-[var(--text-primary)]">
+            {t('mapOverview.locationDetails', 'Location Details')}
+          </span>
+          {latest ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Home */}
               <div className="flex items-center gap-3">
@@ -363,9 +360,11 @@ export default function MapOverviewPage() {
                 </span>
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('mapOverview.noLocation', 'No location data available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ---- Quick links ---- */}
       <FadeIn delay={0.15}>

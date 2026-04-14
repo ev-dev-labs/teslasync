@@ -108,8 +108,6 @@ export default function BatteryDegradationPage() {
     enabled: activeId !== null,
   });
 
-  const noData = !isLoading && (!data || data.history.length === 0);
-
   /* Chart data */
   const trendData = useMemo(() => {
     if (!data?.history) return [];
@@ -192,8 +190,6 @@ export default function BatteryDegradationPage() {
       subtitle={t('Health trends, degradation predictions, and charging habit impact')}
       loading={isLoading}
       error={error as Error | null}
-      empty={noData}
-      emptyMessage={t('Not enough data to display degradation trends.')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select

@@ -212,7 +212,6 @@ export default function DBHealthPage() {
         <ChartContainer
           title={t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
           loading={statsLoading}
-          empty={chartData.length === 0}
           height={300}
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -333,7 +332,7 @@ export default function DBHealthPage() {
                       </span>
                     </div>
                   )}
-                  {migrations.length > 0 && (
+                  {migrations.length > 0 ? (
                     <div className="mt-3 pt-3 border-t border-white/[0.06]">
                       <p className="text-[10px] text-white/40 mb-2 uppercase tracking-wider">
                         {t('dbHealth.recentMigrations', 'Recent Migrations')}
@@ -359,6 +358,8 @@ export default function DBHealthPage() {
                           ))}
                       </div>
                     </div>
+                  ) : (
+                    <EmptyState message={t('dbHealth.noMigrations', 'No migration history available')} />
                   )}
                 </div>
               ) : (

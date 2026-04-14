@@ -312,9 +312,9 @@ export default function DrivesListPage() {
       </FadeIn>
 
       {/* Hero gauges */}
-      {stats && (
-        <FadeIn>
-          <GlassPanel className="p-4 sm:p-6">
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-6">
+          {stats ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
               <RadialGauge
                 value={stats.totalDrives}
@@ -352,9 +352,11 @@ export default function DrivesListPage() {
                 <p className="text-[10px] text-[var(--text-muted)]">{speedUnit}</p>
               </div>
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('drives.noStats', 'No driving statistics available yet')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* Quick metrics strip */}
       {computedStats && (

@@ -239,8 +239,6 @@ export default function EnergyPage() {
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
       loading={isLoading}
       error={statsError as Error | null}
-      empty={!stats && !sessions}
-      emptyMessage={t('energy.empty', 'No energy data available yet.')}
       actions={
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {vehicles && vehicles.length > 1 && (

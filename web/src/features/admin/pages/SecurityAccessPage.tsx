@@ -319,8 +319,6 @@ export default function SecurityAccessPage() {
       subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and windows')}
       loading={isLoading}
       error={null}
-      empty={!latest && !loadingLatest && !!activeId}
-      emptyMessage={t('admin.security.empty', 'No security events found for this vehicle.')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select

@@ -141,8 +141,6 @@ export default function MileagePage() {
       actions={selector}
       loading={isLoading}
       error={null}
-      empty={!stats && !isLoading}
-      emptyMessage={t('No Mileage Data')}
     >
       {/* Summary metric cards */}
       <FadeIn>

@@ -1432,8 +1432,8 @@ export default function DriveScorePage() {
           </StaggerItem>
 
           {/* -------- Section 9: Weekly / Monthly Averages -------- */}
-          {periodStats && (
-            <StaggerItem>
+          <StaggerItem>
+            {periodStats ? (
               <Grid cols={{ default: 2, sm: 3, lg: 6 }} gap={3}>
                 <GlassPanel className="p-4 sm:p-5 flex flex-col gap-2">
                   <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
@@ -1519,8 +1519,12 @@ export default function DriveScorePage() {
                   </span>
                 </GlassPanel>
               </Grid>
-            </StaggerItem>
-          )}
+            ) : (
+              <GlassPanel className="p-6">
+                <EmptyState message={t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet')} />
+              </GlassPanel>
+            )}
+          </StaggerItem>
 
           {/* -------- Section 10: Achievement badges -------- */}
           <StaggerItem>

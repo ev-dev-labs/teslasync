@@ -1591,8 +1591,6 @@ export default function SystemStatusPage() {
       subtitle={t('Health monitoring for all backend services')}
       loading={isLoading}
       error={error as Error | null}
-      empty={!health}
-      emptyMessage={t('Unable to load system status.')}
       actions={
         <Button
           variant="ghost"

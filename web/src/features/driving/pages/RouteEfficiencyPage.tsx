@@ -146,8 +146,7 @@ export default function RouteEfficiencyPage() {
         <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
       ) : undefined}
       loading={isLoading}
-      empty={routes.length === 0}
-      emptyMessage={t('routeEfficiency.empty', 'No route data yet. Routes appear once you have drives with geocoded addresses.')}
+
     >
       {/* Summary stats */}
       <FadeIn>

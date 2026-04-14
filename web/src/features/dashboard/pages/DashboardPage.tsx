@@ -14,7 +14,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, EmptyState } from '@/components/feedback';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useSettings } from '@/hooks/useSettings';
@@ -253,8 +253,8 @@ export default function DashboardPage() {
             </FadeIn>
 
             {/* Other Vehicles Strip */}
-            {otherVehicles.length > 0 && (
-              <FadeIn delay={0.15}>
+            <FadeIn delay={0.15}>
+              {otherVehicles.length > 0 ? (
                 <OtherVehiclesStrip
                   vehicles={otherVehicles}
                   states={otherStates}
@@ -262,8 +262,10 @@ export default function DashboardPage() {
                   convertTemp={convertTemp}
                   distanceUnit={distanceUnit}
                 />
-              </FadeIn>
-            )}
+              ) : (
+                <EmptyState message={t('dashboard.noOtherVehicles', 'No other vehicles')} />
+              )}
+            </FadeIn>
 
             {/* Quick Navigation */}
             <FadeIn delay={0.2}>

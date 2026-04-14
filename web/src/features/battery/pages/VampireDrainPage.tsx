@@ -115,8 +115,6 @@ export default function VampireDrainPage() {
       subtitle={t('Analyze phantom energy loss while your vehicle is parked')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
-      empty={!data}
-      emptyMessage={t('No vampire drain data recorded yet.')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select

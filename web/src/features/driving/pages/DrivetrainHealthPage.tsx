@@ -41,7 +41,7 @@ import {
   InlineMetric,
   KVList,
 } from '@/components/data-display';
-import { Skeleton, AlertBanner } from '@/components/feedback';
+import { Skeleton, AlertBanner, EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { useDrivetrainHealth, useDrives, useDrivingStats } from '@/api/hooks/useDriving';
@@ -414,8 +414,7 @@ export default function DrivetrainHealthPage() {
       )}
       loading={healthLoading}
       error={null}
-      empty={!health}
-      emptyMessage={t('drivetrain.empty', 'No drivetrain data available.')}
+
       actions={
         vehicleOptions.length > 0 ? (
           <Select
@@ -436,7 +435,7 @@ export default function DrivetrainHealthPage() {
         ) : undefined
       }
     >
-      {health && (
+      {health ? (
         <>
           {/* ═══ Section 5: Alert banner for warning / critical ═══ */}
           {overallHealth !== 'good' && (
@@ -1217,6 +1216,8 @@ export default function DrivetrainHealthPage() {
             </Grid>
           </FadeIn>
         </>
+      ) : (
+        <EmptyState message={t('drivetrain.noData', 'No drivetrain health data available yet')} />
       )}
     </PageContainer>
   );

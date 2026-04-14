@@ -215,8 +215,6 @@ export default function TimelinePage() {
       subtitle={t('Subtitle')}
       actions={actions}
       loading={isLoading && transitions.length === 0}
-      empty={!isLoading && transitions.length === 0}
-      emptyMessage={t('Empty')}
     >
       {/* Summary metric cards */}
       <FadeIn>

@@ -270,8 +270,6 @@ export default function TirePressurePage() {
       subtitle={t('Subtitle')}
       loading={isLoading}
       error={latestError as Error | null}
-      empty={!isLoading && !latest && !latestError}
-      emptyMessage={t('No Data')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select

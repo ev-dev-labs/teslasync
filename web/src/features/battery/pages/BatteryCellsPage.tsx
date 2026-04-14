@@ -277,8 +277,6 @@ export default function BatteryCellsPage() {
       subtitle={t('Individual cell voltage monitoring and analysis')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
-      empty={!data}
-      emptyMessage={t('No cell data available yet.')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select

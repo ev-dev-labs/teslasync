@@ -191,7 +191,6 @@ export default function TripListPage() {
           title={t('trips.chart.title', 'Top Trips by Distance')}
           height={280}
           className="mb-6"
-          empty={chartData.length === 0}
           action={
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={handleExportCSV}>

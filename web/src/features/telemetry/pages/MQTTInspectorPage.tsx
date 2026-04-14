@@ -9,7 +9,7 @@ import {
   ChartTooltip, ChartGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -132,8 +132,6 @@ export default function MQTTInspectorPage() {
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
       loading={isLoading}
       error={null}
-      empty={!status}
-      emptyMessage={t('mqtt.empty', 'No MQTT status available.')}
       actions={
         <div className="flex items-center gap-3">
           <span className="text-xs text-[var(--text-muted)]">
@@ -175,9 +173,9 @@ export default function MQTTInspectorPage() {
       </FadeIn>
 
       {/* Connection Info */}
-      {status && (
-        <FadeIn delay={0.15}>
-          <GlassPanel className="p-5">
+      <FadeIn delay={0.15}>
+        <GlassPanel className="p-5">
+          {status ? (
             <div className="flex flex-wrap gap-6 text-sm">
               {status.broker && (
                 <div>
@@ -191,7 +189,7 @@ export default function MQTTInspectorPage() {
                   <p className="font-mono text-[var(--text-primary)]">{formatUptime(status.uptimeSeconds)}</p>
                 </div>
               )}
-              {status.topics && status.topics.length > 0 && (
+              {status.topics && status.topics.length > 0 ? (
                 <div>
                   <span className="text-[var(--text-muted)] text-xs">{t('mqtt.topicPatterns', 'Topic Patterns')}</span>
                   <div className="flex flex-wrap gap-1.5 mt-1">
@@ -200,11 +198,15 @@ export default function MQTTInspectorPage() {
                     ))}
                   </div>
                 </div>
+              ) : (
+                <EmptyState message={t('mqtt.noTopics', 'No MQTT topics detected')} />
               )}
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('mqtt.noStatus', 'MQTT broker status not available')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* Throughput Chart */}
       <FadeIn delay={0.2}>

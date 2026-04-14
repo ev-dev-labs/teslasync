@@ -13,6 +13,7 @@ import { RadialGauge } from '@/components/charts/RadialGauge';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
@@ -127,10 +128,9 @@ export default function SpeedProfilePage() {
         <Select value={String(vehicleId ?? '')} onChange={(e) => setSelectedVehicle(Number(e.target.value))} options={vehicleOptions} />
       ) : undefined}
       loading={isLoading}
-      empty={!data}
-      emptyMessage={t('speedProfile.empty', 'No speed data available.')}
+
     >
-      {data && (
+      {data ? (
         <>
           {/* Hero gauges */}
           <FadeIn>
@@ -283,6 +283,8 @@ export default function SpeedProfilePage() {
             </FadeIn>
           )}
         </>
+      ) : (
+        <EmptyState message={t('speedProfile.noData', 'No speed profile data available yet')} />
       )}
     </PageContainer>
   );

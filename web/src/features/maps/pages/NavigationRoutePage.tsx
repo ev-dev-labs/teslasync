@@ -493,8 +493,6 @@ export default function NavigationRoutePage() {
       subtitle={t('nav.subtitle', 'Live location tracking and navigation status')}
       loading={isLoading}
       error={vehiclesError as Error | null}
-      empty={!vehicleId && !vehiclesLoading}
-      emptyMessage={t('nav.noVehicles', 'No vehicles available.')}
       actions={
         <span className="flex items-center gap-3">
           <Select
@@ -763,8 +761,8 @@ export default function NavigationRoutePage() {
           </FadeIn>
 
           {/* ─────── Waypoints / Supercharger List ─────── */}
-          {hasActiveRoute && (
-            <FadeIn delay={0.25}>
+          <FadeIn delay={0.25}>
+            {hasActiveRoute ? (
               <GlassPanel className="mb-6 p-5">
                 <span className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Zap className="h-4 w-4" />
@@ -784,8 +782,10 @@ export default function NavigationRoutePage() {
                   </div>
                 )}
               </GlassPanel>
-            </FadeIn>
-          )}
+            ) : (
+              <EmptyState message={t('navigation.noRoute', 'No active route selected')} />
+            )}
+          </FadeIn>
 
           {/* ─────── Route Traffic Delay ─────── */}
           <FadeIn delay={0.22}>

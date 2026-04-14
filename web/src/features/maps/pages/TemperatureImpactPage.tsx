@@ -202,8 +202,6 @@ export default function TemperatureImpactPage() {
       title={t('tempImpact.title', 'Temperature Impact')}
       subtitle={t('tempImpact.subtitle', 'How outside temperature affects driving efficiency')}
       loading={isLoading}
-      empty={!isLoading && !points?.length}
-      emptyMessage={t('tempImpact.empty', 'No temperature data available. Drive data with temperature readings is needed.')}
       actions={vehicleSelector}
     >
       <div className="space-y-6">

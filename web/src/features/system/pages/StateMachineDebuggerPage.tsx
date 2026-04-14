@@ -246,9 +246,9 @@ export default function StateMachineDebuggerPage() {
       }
     >
       {/* Vehicle Selector */}
-      {vehicleOptions.length > 0 && (
-        <FadeIn delay={0.05}>
-          <GlassPanel className="p-4 sm:p-5">
+      <FadeIn delay={0.05}>
+        <GlassPanel className="p-4 sm:p-5">
+          {vehicleOptions.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label={t('stateMachine.vehicle', 'Vehicle')}
@@ -257,9 +257,11 @@ export default function StateMachineDebuggerPage() {
                 onChange={(e) => setVehicleId(e.target.value)}
               />
             </div>
-          </GlassPanel>
-        </FadeIn>
-      )}
+          ) : (
+            <EmptyState message={t('stateMachine.noVehicles', 'No vehicles available')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* Current State Hero */}
       <FadeIn delay={0.1}>
@@ -305,7 +307,6 @@ export default function StateMachineDebuggerPage() {
           <ChartContainer
             title={t('stateMachine.pieTitle', 'State Duration Distribution (7d)')}
             loading={timelineLoading}
-            empty={pieData.length === 0}
             height={260}
           >
             <div className="flex flex-col items-center">

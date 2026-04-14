@@ -127,8 +127,6 @@ export default function ChargingHeatmapPage() {
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
       error={error as Error | null}
-      empty={!sessions?.length}
-      emptyMessage={t('charging.heatmap.empty', 'No charging data for heatmap.')}
       actions={
         vehicleOptions.length > 1 ? (
           <Select

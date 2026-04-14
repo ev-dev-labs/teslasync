@@ -84,8 +84,6 @@ export default function ProjectedRangePage() {
       subtitle={t('Real-world range estimation based on driving conditions')}
       loading={isLoading}
       error={error instanceof Error ? error : null}
-      empty={!data}
-      emptyMessage={t('No range projection data available yet.')}
       actions={
         vehicles && vehicles.length > 1 ? (
           <Select

@@ -335,8 +335,6 @@ export default function ClimateControlPage() {
       subtitle={t('HVAC status, temperatures, and seat heaters')}
       loading={isLoading}
       error={error as Error | null}
-      empty={!latest && !isLoading}
-      emptyMessage={t('No climate data available.')}
       actions={
         <div className="flex items-center gap-3">
           {vehicles && vehicles.length > 1 && (

@@ -568,9 +568,9 @@ function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
       </GlassPanel>
 
       {/* 7 — Drive Duration Distribution (optional) */}
-      {durationDist.length > 0 && (
-        <GlassPanel className="p-4">
-          <SectionTitle>{t('analytics.driving.durationDist', 'Drive Duration Distribution')}</SectionTitle>
+      <GlassPanel className="p-4">
+        <SectionTitle>{t('analytics.driving.durationDist', 'Drive Duration Distribution')}</SectionTitle>
+        {durationDist.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={durationDist} margin={chartMarginLabeled} {...chartAnimation}>
               {chartGrid}
@@ -580,8 +580,10 @@ function DrivingTab({ data }: { data: FleetAnalytics | undefined }) {
               <Bar dataKey="count" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </GlassPanel>
-      )}
+        ) : (
+          <EmptyState message={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')} />
+        )}
+      </GlassPanel>
 
       {/* 8 — Efficiency Trend */}
       <GlassPanel className="p-4">
