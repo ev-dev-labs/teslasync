@@ -2,34 +2,21 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import {
-  Car,
-  RefreshCw,
-  Activity,
-  Battery,
-  Gauge,
-  Zap,
-  ExternalLink,
-  Trash2,
-  Lock,
-  Shield,
+  Car, RefreshCw, Activity, Battery, Gauge, Zap,
+  ExternalLink, Trash2, Lock, Shield,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, ConfirmDialog } from '@/components/ui';
+import { MetricCard, AnimatedNumber } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
 import type { Vehicle } from '@/types/vehicle';
@@ -383,7 +370,7 @@ export default function VehicleListPage() {
                               </>
                             )}
 
-                            <div className={clsx('flex items-center gap-2 ml-auto')}>
+                            <div className={cn('flex items-center gap-2 ml-auto')}>
                               {state?.is_locked && <Lock className="h-3.5 w-3.5 text-green-500" />}
                               {state?.sentry_mode && <Shield className="h-3.5 w-3.5 text-cyan-400" />}
                             </div>
