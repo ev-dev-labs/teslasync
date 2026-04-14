@@ -382,35 +382,44 @@ Sentry Uptime: 100%, Total Events: 31) + alert banner, then completely blank bel
 
 ---
 
-## Bug 11 — Safety Settings: Missing details compared to pre-refactoring
+## Bug 11 — Safety Settings: Missing 4 major panels vs pre-refactoring
 
 **Page:** `web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx` (568 lines)
 **Old:** `D:\repos\teslasync-old\web\src\pages\SafetySettings.tsx` (573 lines)
-**Screenshots:** Prod (before) shows full Safety Score gauge, 7 feature toggle cards (AEB,
-Blind Spot, Forward Collision, Lane Departure, Speed Limit, Blind Spot Warning, Emergency
-Lane), 4 stat summary cards, history table, settings timeline chart, and Autopilot detail
-panel. Refactored version shows much less content.
+**Screenshots:** Before refactoring had full feature set, after refactoring missing 4 panels.
 
-**Root Cause:** The refactored page has the sections in code (lines 460-603) but they only
-render when `latest` is truthy (line 461: `{!isLoading && latest && ( ... )}`). If the
-`/safety/latest` API returns data but with different field names after `camelCaseKeys`, or
-returns a wrapped response, `latest` might be populated but individual fields like
-`latest.automatic_emergency_braking_off` become `undefined` after camelCase transformation.
+**Missing panels (visible in pre-refactoring prod):**
+1. **Live Safety Signals** — real-time display of AEB, blind spot camera, collision warning,
+   lane departure, speed limit warning with ON/OFF badges and live values
+2. **Driving Statistics Panel** — safety score breakdown with per-metric analysis (hard braking,
+   aggressive turning, forward collision warnings per 1000 miles, unsafe following distance)
+3. **ADAS Status Timeline** — line chart showing AEB, Blind Spot Warning, Emergency Lane Departure
+   enabled/disabled over time (`type="stepAfter"` chart)
+4. **Safety Overview Panel** — detailed Autopilot configuration panel showing each safety feature's
+   current setting with ON/OFF toggles, descriptions, and last-changed timestamps
 
-The `SafetySnapshot` interface uses snake_case (`automatic_emergency_braking_off`,
-`automatic_blind_spot_camera`, etc.) but `camelCaseKeys` transforms them to camelCase
-(`automaticEmergencyBrakingOff`, `automaticBlindSpotCamera`). The code accesses snake_case
-which returns `undefined` → all features show as disabled/missing.
+**Root Cause (two issues):**
+
+**A — camelCaseKeys transform:** The `SafetySnapshot` interface uses snake_case field names
+(`automatic_emergency_braking_off`, `automatic_blind_spot_camera`) but `camelCaseKeys()`
+transforms API responses to camelCase. So `latest.automatic_emergency_braking_off` is
+`undefined` while `latest.automaticEmergencyBrakingOff` has the value.
+
+**B — Sections may be conditionally hidden:** Check if panels are inside `{data && ...}` or
+`{latest && ...}` blocks that evaluate to false due to field name mismatches.
 
 **Fix:**
-1. Check what `/safety/latest?vehicle_id=X` actually returns — curl it
-2. Update field access to handle both snake_case and camelCase:
+1. Update field access to handle both snake_case and camelCase throughout the page:
    ```typescript
    const aebOff = latest.automatic_emergency_braking_off ?? latest.automaticEmergencyBrakingOff;
+   const blindSpot = latest.automatic_blind_spot_camera ?? latest.automaticBlindSpotCamera;
+   const fcw = latest.forward_collision_warning ?? latest.forwardCollisionWarning;
+   const lda = latest.lane_departure_avoidance ?? latest.laneDepartureAvoidance;
+   const slw = latest.speed_limit_warning ?? latest.speedLimitWarning;
    ```
-3. Or update the interface to use camelCase and access camelCase fields
-4. Compare section-by-section with old page and restore any missing panels
-5. Ensure all feature cards render with proper enabled/disabled states
+2. Restore missing panels from old page at `D:\repos\teslasync-old\web\src\pages\SafetySettings.tsx`
+3. Ensure all 4 panels always render (with EmptyState when no data)
+4. Use shared components (`GlassPanel`, `ChartContainer`, `Badge`, `DataTable`) per guardrails
 
 ---
 
