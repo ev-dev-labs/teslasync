@@ -166,6 +166,43 @@ Quick debug: `curl http://localhost:8080/api/v1/location-snapshots/latest?vehicl
 
 ---
 
+## Bug 5 — Navigation: Location History still shows 0.000000 (undefined guard missing)
+
+**Page:** `web/src/features/maps/pages/NavigationRoutePage.tsx`
+**Screenshot:** Location History table still shows `0.000000` for all LAT/LON despite the
+batch 1 fix adding `row.latitude !== 0 || row.longitude !== 0` guards.
+
+**Root Cause:** Same as Bug 4 — `row.latitude` is likely `undefined` (field name mismatch
+from API response), NOT `0`. `undefined !== 0` evaluates to `true`, so the guard passes
+and `fmtNumber(undefined ?? 0, 6)` displays `0.000000`.
+
+The batch 1 fix (line 339) has:
+```typescript
+{row.latitude !== 0 || row.longitude !== 0 ? fmtNumber(row.latitude ?? 0, 6) : '—'}
+```
+
+**Fix:** Add `typeof` guard consistently across the page:
+```typescript
+const isValidCoord = (lat: unknown, lng: unknown) =>
+  typeof lat === 'number' && typeof lng === 'number' && (lat !== 0 || lng !== 0);
+
+// Line 339:
+{isValidCoord(row.latitude, row.longitude) ? fmtNumber(row.latitude, 6) : '—'}
+// Line 349:
+{isValidCoord(row.latitude, row.longitude) ? fmtNumber(row.longitude, 6) : '—'}
+```
+
+Apply the same `typeof` guard to ALL coordinate checks on this page:
+- Line 247: `hasValidLocation` — add `typeof latest.latitude === 'number'`
+- Line 339/349: table LAT/LON columns
+- Line 611-612: Current Location card
+- Home/Work Status cards (lines 629, 641)
+
+Also apply to **MapOverviewPage.tsx** (Bug 4) and **LocationsPage.tsx** — any page that
+checks `!== 0` on coordinates needs the `typeof` guard.
+
+---
+
 ## Verification
 
 ```bash
@@ -184,6 +221,8 @@ cd web && npx tsc --noEmit
 - [ ] Signal Log Viewer: Query button aligned (remove mt-5, items-end)
 - [ ] Live Map: guard against undefined lat/lng (typeof check before rendering MapContainer)
 - [ ] Live Map: investigate and fix why latest.latitude is undefined
+- [ ] Navigation: Location History shows "—" not "0.000000" — add typeof guard to all coord checks
+- [ ] All map pages: use consistent `isValidCoord(lat, lng)` helper with typeof + !== 0 check
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
