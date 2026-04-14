@@ -203,6 +203,40 @@ checks `!== 0` on coordinates needs the `typeof` guard.
 
 ---
 
+## Bug 6 — Speed Profile: Summary cards have unequal heights
+
+**Page:** `web/src/features/driving/pages/SpeedProfilePage.tsx`
+**Screenshot:** The 3 speed bucket cards (0-15, 45-60, 90-105) have different heights.
+Cards with efficiency data show 4 rows (Time, Drives, Avg Speed, Wh/mi) while others
+show only 2 rows (Time, Drives).
+
+**Root Cause:** The `{effData && (...)}` block at line 213 conditionally renders extra rows,
+but the grid parent (line 189) doesn't enforce equal height:
+```tsx
+<StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+```
+
+**Fix:** Add `items-stretch` and make each `<GlassPanel>` fill its grid cell:
+
+```tsx
+// Line 189: add items-stretch (default for grid, but ensure it)
+<StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+
+// Line 196-197: make StaggerItem + GlassPanel fill height
+<StaggerItem key={range} className="h-full">
+  <GlassPanel className="p-4 h-full flex flex-col">
+    ...
+    <div className="space-y-2 flex-1">
+      {/* existing rows */}
+    </div>
+  </GlassPanel>
+</StaggerItem>
+```
+
+This makes all cards stretch to the tallest card's height.
+
+---
+
 ## Verification
 
 ```bash
@@ -223,6 +257,7 @@ cd web && npx tsc --noEmit
 - [ ] Live Map: investigate and fix why latest.latitude is undefined
 - [ ] Navigation: Location History shows "—" not "0.000000" — add typeof guard to all coord checks
 - [ ] All map pages: use consistent `isValidCoord(lat, lng)` helper with typeof + !== 0 check
+- [ ] Speed Profile: summary cards equal height (h-full + flex-col on GlassPanel)
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
