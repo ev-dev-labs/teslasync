@@ -79,6 +79,28 @@ message to the user.
 
 ---
 
+## Bug 2 — Signal Explorer: Explore button vertically misaligned with Per Page
+
+**Page:** `web/src/features/telemetry/pages/SignalExplorerPage.tsx`
+
+The Explore button has `className="mt-5"` (line ~269) which pushes it down relative to the
+Per Page dropdown. Both should be baseline-aligned.
+
+**Fix:** Remove `mt-5` from the Button, and add `items-end` to the parent flex container
+so both controls align to the bottom:
+
+```tsx
+// Line 250: change items-center → items-end
+<div className="flex items-end gap-3 justify-end">
+  <Select ... />
+  <Button
+    ...
+    className=""  // remove mt-5
+  >
+```
+
+---
+
 ## Verification
 
 ```bash
@@ -92,6 +114,7 @@ cd web && npx tsc --noEmit
 
 **COMPLETION DEFINITION:**
 - [ ] Signal Explorer: clicking Explore fetches per-signal history and merges results
+- [ ] Signal Explorer: Explore button aligned with Per Page dropdown (no mt-5)
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
