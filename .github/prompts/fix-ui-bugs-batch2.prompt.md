@@ -382,6 +382,38 @@ Sentry Uptime: 100%, Total Events: 31) + alert banner, then completely blank bel
 
 ---
 
+## Bug 11 — Safety Settings: Missing details compared to pre-refactoring
+
+**Page:** `web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx` (568 lines)
+**Old:** `D:\repos\teslasync-old\web\src\pages\SafetySettings.tsx` (573 lines)
+**Screenshots:** Prod (before) shows full Safety Score gauge, 7 feature toggle cards (AEB,
+Blind Spot, Forward Collision, Lane Departure, Speed Limit, Blind Spot Warning, Emergency
+Lane), 4 stat summary cards, history table, settings timeline chart, and Autopilot detail
+panel. Refactored version shows much less content.
+
+**Root Cause:** The refactored page has the sections in code (lines 460-603) but they only
+render when `latest` is truthy (line 461: `{!isLoading && latest && ( ... )}`). If the
+`/safety/latest` API returns data but with different field names after `camelCaseKeys`, or
+returns a wrapped response, `latest` might be populated but individual fields like
+`latest.automatic_emergency_braking_off` become `undefined` after camelCase transformation.
+
+The `SafetySnapshot` interface uses snake_case (`automatic_emergency_braking_off`,
+`automatic_blind_spot_camera`, etc.) but `camelCaseKeys` transforms them to camelCase
+(`automaticEmergencyBrakingOff`, `automaticBlindSpotCamera`). The code accesses snake_case
+which returns `undefined` → all features show as disabled/missing.
+
+**Fix:**
+1. Check what `/safety/latest?vehicle_id=X` actually returns — curl it
+2. Update field access to handle both snake_case and camelCase:
+   ```typescript
+   const aebOff = latest.automatic_emergency_braking_off ?? latest.automaticEmergencyBrakingOff;
+   ```
+3. Or update the interface to use camelCase and access camelCase fields
+4. Compare section-by-section with old page and restore any missing panels
+5. Ensure all feature cards render with proper enabled/disabled states
+
+---
+
 ## Verification
 
 ```bash
@@ -407,6 +439,7 @@ cd web && npx tsc --noEmit
 - [ ] Charging Curve: SummaryCard text overflow — add min-w-0, truncate, responsive text size
 - [ ] Maintenance: all sections visible — items grid, cost summary, service history, log form
 - [ ] Security & Access: restore 7 missing sections (vehicle diagram, status cards, windows, features, stats, sentry chart, timeline)
+- [ ] Safety Settings: fix field access for camelCase transform, restore all feature cards + stats + chart
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
