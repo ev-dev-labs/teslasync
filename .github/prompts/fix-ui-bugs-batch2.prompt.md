@@ -414,6 +414,27 @@ which returns `undefined` → all features show as disabled/missing.
 
 ---
 
+## Bug 12 — Media Player: Only "Now Playing" card, 6 sections missing
+
+**Page:** `web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx` (524 lines)
+**Old:** `D:\repos\teslasync-old\web\src\pages\MediaPlayer.tsx` (500 lines)
+**Screenshot:** Shows only "No track · Playing" card with progress bar. Everything else blank.
+
+**Missing sections from old page:**
+1. **Equalizer Visualization** — animated bars when playing
+2. **Volume Gauge** — SVG arc gauge with current volume level
+3. **Listening Stats Cards** (3) — Unique Tracks, Top Source, Avg Volume
+4. **Playback History Table** — track name, artist, source, volume, duration, timestamp
+5. **Volume Over Time Chart** — line chart of volume history
+6. **Source Distribution Pie Chart** — Spotify vs Radio vs USB vs Bluetooth breakdown
+7. **Listening Stats Summary** — 3-panel summary grid
+
+**Fix:** Compare with old page at `D:\repos\teslasync-old\web\src\pages\MediaPlayer.tsx` and
+restore missing sections. The refactored page likely has sections in code but they're
+conditionally hidden or have data binding issues.
+
+---
+
 ## Verification
 
 ```bash
@@ -440,6 +461,7 @@ cd web && npx tsc --noEmit
 - [ ] Maintenance: all sections visible — items grid, cost summary, service history, log form
 - [ ] Security & Access: restore 7 missing sections (vehicle diagram, status cards, windows, features, stats, sentry chart, timeline)
 - [ ] Safety Settings: fix field access for camelCase transform, restore all feature cards + stats + chart
+- [ ] Media Player: restore 6 missing sections (equalizer, volume gauge, stats, history table, charts)
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
