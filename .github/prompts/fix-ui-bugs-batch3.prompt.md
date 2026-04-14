@@ -95,6 +95,40 @@ History comes from `/media/history?vehicle_id=X` endpoint. Check what APIs exist
 grep -n "media\|audio\|playback" internal/api/router.go
 ```
 
+## Bug 3 — Security & Access: Missing Live Vehicle State + Security Event Timeline
+
+**Page:** `web/src/features/admin/pages/SecurityAccessPage.tsx`
+**Old:** `D:\repos\teslasync-old\web\src\pages\SecurityAccess.tsx`
+
+The refactored page shows: summary cards, status cards (Lock/Sentry/Doors/Windows/HomeLink/
+Guest Mode), Window Status Detail, Sentry Mode Activity chart, Security Statistics.
+
+**Missing sections (visible in pre-refactoring prod):**
+
+1. **Live Vehicle State** panel — 2-row grid showing real-time security-related signals:
+   - Row 1: Hazards (Off), High Beams (Off), Turn Signal (TurnSignalStateOff), Driver Seat (Empty), Paired Keys (10)
+   - Row 2: Valet Mode (Off), Service Mode (Off), Speed Limit (Off), HomeLink Devices (—), Center Display (DisplayStateOff)
+   - Has green "● Live" indicator in top-right corner
+   - Each cell has an icon + label + value
+
+2. **Security Event Timeline** — chronological event feed at bottom of page:
+   - Shows events like "Vehicle Unlocked", "Sentry Mode Activated", "Locked",
+     "Vehicle Locked / Sentry Mode Deactivated"
+   - Each event has: colored icon (🔴/🟢), title, subtitle, timestamp
+   - Scrollable list with lock/sentry/door events
+   - Color-coded: red for unlock/deactivate, green for lock/activate
+
+**Fix:**
+1. Check if these sections exist in the refactored page code but are conditionally hidden
+2. If missing, restore from old page `D:\repos\teslasync-old\web\src\pages\SecurityAccess.tsx`:
+   - Live Vehicle State: old page lines ~630-765 (security features grid with 10 GlassPanel cards)
+   - Security Event Timeline: old page lines ~814-848 (event list with icons + timestamps)
+3. Data source for Live Vehicle State: comes from `/vehicles/{id}/state` (same as dashboard)
+   — fields like `valet_mode`, `speed_limit`, `sentry_mode`, `center_display`, `homelink_nearby`
+4. Data source for Event Timeline: comes from `/security?vehicle_id=X` history endpoint
+5. Use shared components: `GlassPanel`, `Badge`, `FadeIn`
+6. No inline styles — use Tailwind classes
+
 ---
 
 ## Verification
@@ -127,4 +161,6 @@ cd web && npx tsc --noEmit
 - [ ] Media Player: Source Distribution pie chart
 - [ ] No direct `from 'recharts'` imports — use shared chart wrappers
 - [ ] No inline styles — use Tailwind classes
+- [ ] Security & Access: Live Vehicle State panel (10 signal cards in 2-row grid with Live indicator)
+- [ ] Security & Access: Security Event Timeline (chronological event feed with colored icons)
 - [ ] TypeScript compiles clean
