@@ -7,7 +7,7 @@ import {
   useCarPreferences, useGasPriceStatus, usePollGasPrice,
   useToggleGasPrice, useUpdateGasPriceConfig,
 } from '@/api/hooks/useSettings'
-import { PageContainer } from '@/components/layout/PageContainer'
+import { PageContainer } from '@/components/layout'
 import { GlassPanel, Button, Input, Select, IconBox } from '@/components/ui'
 import { Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
