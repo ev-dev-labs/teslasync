@@ -1,55 +1,30 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import {
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Car,
-  Zap,
-  Battery,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown, Fuel,
-  Leaf,
-  MapPin,
-  Clock,
-  Activity,
-  BarChart3,
-  Info,
-  AlertCircle,
+  Calendar, ChevronLeft, ChevronRight, Car, Zap, Battery,
+  AlertTriangle, TrendingUp, TrendingDown, Fuel, Leaf,
+  MapPin, Clock, Activity, BarChart3, Info, AlertCircle,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
-import { StatCard } from '@/components/data-display/StatCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Select } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from '@/components/charts';
-import {
+  ChartTooltip, CHART_COLORS,
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { CHART_COLORS, STATUS_COLORS } from '@/lib/colors';
+import { STATUS_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ─── Types ───────────────────────────────────────────────────────── */
@@ -77,12 +52,6 @@ interface Alert {
   id: number;
   severity: string;
   created_at: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 /* ─── Constants ───────────────────────────────────────────────────── */
@@ -198,7 +167,7 @@ function HighlightCard({
   return (
     <GlassPanel
       glow={glowMap[color] as 'cyan' | 'green' | 'purple' | 'none'}
-      className={clsx('flex flex-col gap-2 p-5', className)}
+      className={cn('flex flex-col gap-2 p-5', className)}
     >
       <span className="flex items-center gap-2 text-sm text-white/60">
         {icon}
@@ -209,7 +178,7 @@ function HighlightCard({
       </span>
       {change && (
         <span
-          className={clsx(
+          className={cn(
             'flex items-center gap-1 text-xs font-medium',
             change.positive ? 'text-emerald-400' : 'text-red-400',
           )}
@@ -238,7 +207,7 @@ interface MiniStatProps {
 
 function MiniStat({ label, value, icon, className }: MiniStatProps) {
   return (
-    <GlassPanel className={clsx('flex items-center gap-3 px-4 py-3', className)}>
+    <GlassPanel className={cn('flex items-center gap-3 px-4 py-3', className)}>
       {icon && <span className="text-white/40">{icon}</span>}
       <span className="flex flex-col">
         <span className="text-xs text-white/50">{label}</span>
@@ -263,7 +232,7 @@ function BatteryPill({ level, label, className }: BatteryPillProps) {
         : STATUS_COLORS.critical;
 
   return (
-    <GlassPanel className={clsx('flex items-center gap-3 px-4 py-3', className)}>
+    <GlassPanel className={cn('flex items-center gap-3 px-4 py-3', className)}>
       <Battery className="h-5 w-5" style={{ color }} />
       <span className="flex flex-col">
         <span className="text-xs text-white/50">{label}</span>
@@ -321,10 +290,7 @@ export default function WeeklyDigestPage() {
   const isCurrentWeek = weekOffset === 0;
 
   /* ── Vehicle query ── */
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const vehicleOptions = useMemo(
     () =>
