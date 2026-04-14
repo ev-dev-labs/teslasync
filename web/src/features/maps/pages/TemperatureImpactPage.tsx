@@ -1,24 +1,24 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import {
   Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Select } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { FadeIn } from '@/components/motion';
 import {
+  ChartTooltip, CHART_COLORS,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend, ReferenceLine,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -30,12 +30,6 @@ interface TempEfficiencyPoint {
   efficiency_wh_km: number;
   distance_km: number;
   drive_date: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 interface BucketDef {
@@ -75,14 +69,11 @@ function getTempBucket(temp: number): BucketDef {
 /* ------------------------------------------------------------------ */
 
 export default function TemperatureImpactPage() {
-  usePageTitle('Temperature Impact');
   const { t } = useTranslation();
+  usePageTitle(t('temperature.title', 'Temperature Impact'));
 
   /* ---- vehicles ---- */
-  const { data: vehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const vehicleId = selectedVehicle || String(vehicles?.[0]?.id ?? '');
 
@@ -395,7 +386,7 @@ export default function TemperatureImpactPage() {
               {t('tempImpact.tipsTitle', 'Recommendations')}
             </h3>
             {tips.length > 0 ? (
-              <ul className={clsx('space-y-2')}>
+              <ul className={cn('space-y-2')}>
                 {tips.map((tip) => {
                   const Icon = tip.icon;
                   return (
