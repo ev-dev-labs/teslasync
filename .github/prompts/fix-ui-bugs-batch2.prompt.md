@@ -356,6 +356,32 @@ as blank/invisible. Investigate:
 
 ---
 
+## Bug 10 — Security & Access: Only summary cards visible, 7 sections missing
+
+**Page:** `web/src/features/admin/pages/SecurityAccessPage.tsx` (701 lines)
+**Old:** `D:\repos\teslasync-old\web\src\pages\SecurityAccess.tsx` (780 lines)
+**Screenshot:** Shows 4 summary cards (Current Status: Unsecure, Last Lock Change: 1h ago,
+Sentry Uptime: 100%, Total Events: 31) + alert banner, then completely blank below.
+
+**Missing sections from old page:**
+1. **SVG Vehicle Diagram** — animated car outline with color-coded lock/door/window/sentry indicators
+2. **Status Detail Cards** (2x3 grid) — Lock Status, Sentry Mode, Doors, Windows, HomeLink, Guest Mode
+3. **Window Status Detail** — 4 individual window panels (FD, FP, RD, RP) with state badges
+4. **Security Features Grid** (10 panels) — Speed Limit, Valet Mode, PIN to Drive, Parental Controls, Guest Mode, Remote Access, Service Mode, Auto Lock, Dashcam, Sentry Sound
+5. **Security Stats** — Sentry Uptime %, Door Open Events, Window Open Events
+6. **Sentry Mode Activity Chart** — stacked bar chart (sentry on/off per day)
+7. **Security Event Timeline** — recent lock/unlock/door/window/sentry events with icons
+
+**Fix:** The refactored page likely has these sections in code but they're not rendering
+(same pattern as Maintenance Bug 9). Investigate:
+1. Check if sections exist in the 701-line file but are conditionally hidden
+2. If sections are missing, restore from old page at
+   `D:\repos\teslasync-old\web\src\pages\SecurityAccess.tsx`
+3. Use shared components (`GlassPanel`, `Badge`, `MetricCard`, `ChartContainer`) per guardrails
+4. Ensure all sections always render (with EmptyState when no data)
+
+---
+
 ## Verification
 
 ```bash
@@ -380,6 +406,7 @@ cd web && npx tsc --noEmit
 - [ ] Battery Cells: fix #undefined — use cell_id instead of cell_number (11 references)
 - [ ] Charging Curve: SummaryCard text overflow — add min-w-0, truncate, responsive text size
 - [ ] Maintenance: all sections visible — items grid, cost summary, service history, log form
+- [ ] Security & Access: restore 7 missing sections (vehicle diagram, status cards, windows, features, stats, sentry chart, timeline)
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
