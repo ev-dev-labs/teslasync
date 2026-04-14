@@ -544,6 +544,46 @@ const totalReadings = distribution.reduce((s, b) => s + (b.readings ?? 0), 0);
 
 ---
 
+## Bug 11 — Drive Detail: "Invalid Date" on all chart X-axes + Tire Pressure empty
+
+**Page:** `web/src/features/driving/pages/DriveDetailPage.tsx`
+**Screenshot:** Every chart (Speed, SOC%, Temperatures, Power Profile, Elevation) shows
+"Invalid Date" on X-axis. "Tire Pressure During Drive" shows "No telemetry data available".
+
+**Root Cause A — Invalid Date:** The chart data mapping (line 135) uses:
+```typescript
+time: new Date(tp.timestamp).toLocaleTimeString(...)
+```
+But the API model (`DriveTelemetryReading`) has `created_at`, NOT `timestamp`.
+After `camelCaseKeys`, the field is `createdAt` (or `created_at`).
+`tp.timestamp` is `undefined` → `new Date(undefined)` → "Invalid Date".
+
+**Fix A:** Change line 135:
+```typescript
+time: new Date(tp.createdAt ?? tp.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+```
+
+**Root Cause B — Tire Pressure empty:** The tire pressure fields (`tire_pressure_fl` etc.)
+are likely NULL in the `drive_telemetry_readings` table because the Fleet Telemetry signal
+`TirePressure` is NOT being captured into drive telemetry readings during drive flushes.
+
+Check `internal/api/telemetry_sessions.go` `flushDriveTelemetry()` — verify it reads
+`TirePressureFl`/`TirePressureFr`/`TirePressureRl`/`TirePressureRr` from accumulated signals
+and writes them to the `tire_pressure_fl`/`fr`/`rl`/`rr` columns. The signal names from
+Fleet Telemetry are likely different (e.g. `TirePressure` compound signal or individual
+`TPMSFL`/`TPMSFR`/`TPMSRL`/`TPMSRR`).
+
+**Fix B:** In `flushDriveTelemetry()`, map the correct Fleet Telemetry signal names:
+```go
+reading.TirePressureFL = toFloatPtr(signals["TPMSFL"])   // or "TirePressureFl"
+reading.TirePressureFR = toFloatPtr(signals["TPMSFR"])
+reading.TirePressureRL = toFloatPtr(signals["TPMSRL"])
+reading.TirePressureRR = toFloatPtr(signals["TPMSRR"])
+```
+Check actual signal names in the export: `grep "TPMS\|TirePressure" scripts/signals-export.json`.
+
+---
+
 ## Verification
 
 ```bash
@@ -582,5 +622,7 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Data Repair: fix 404 — page calls wrong API endpoint
 - [ ] Navigation & Route: "—" for zero lat/lng, info banner, filter 0,0 from Home/Work chart
 - [ ] Speed Profile: fix crash — use actual API field names (speedBucket/readings, not range/percentage/driveCount)
+- [ ] Drive Detail: fix "Invalid Date" — use createdAt/created_at instead of timestamp
+- [ ] Drive Detail: wire tire pressure signals into flushDriveTelemetry (check TPMS signal names)
 - [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
