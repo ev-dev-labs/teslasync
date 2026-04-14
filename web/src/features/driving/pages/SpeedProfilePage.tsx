@@ -38,13 +38,6 @@ function bucketTextClass(range: string): string {
   return 'text-red-500';
 }
 
-function bucketBgClass(range: string): string {
-  if (range.startsWith('0') || range.includes('15')) return 'bg-emerald-500/20';
-  if (range.startsWith('30') || range.includes('45')) return 'bg-cyan-400/20';
-  if (range.startsWith('60') || range.includes('75')) return 'bg-amber-500/20';
-  return 'bg-red-500/20';
-}
-
 function categoryIcon(range: string): React.ReactNode {
   if (range.includes('30') || range.startsWith('0')) return <Car className="h-5 w-5 text-green-400" />;
   if (range.includes('60') || range.includes('90')) return <TrendingUp className="h-5 w-5 text-cyan-400" />;
@@ -80,11 +73,46 @@ export default function SpeedProfilePage() {
     if (!drives) return [];
     return drives
       .filter((d) => d.speedAvg && getEfficiency(d))
-      .map((d) => ({
-        speed: Math.round(convertSpeed(d.speedAvg!)),
-        efficiency: Math.round(convertEfficiency(getEfficiency(d)!)),
-      }));
+      .map((d) => {
+        const eff = convertEfficiency(getEfficiency(d)!);
+        return {
+          speed: Math.round(convertSpeed(d.speedAvg!)),
+          efficiency: Math.round(eff),
+          color: eff < 140 ? '#10b981' : eff < 200 ? '#00f0ff' : eff < 260 ? '#f59e0b' : '#ef4444',
+        };
+      });
   }, [drives, convertSpeed, convertEfficiency]);
+
+  /* ---- Per-bucket efficiency from drives ---- */
+  const bucketEfficiency = useMemo(() => {
+    if (!drives) return new Map<string, { avgEff: number; avgSpeed: number }>();
+    const map = new Map<string, { totalEff: number; totalSpd: number; count: number }>();
+    const ranges = data?.distribution ?? [];
+    drives.forEach((d) => {
+      if (d.speedAvg == null) return;
+      const eff = getEfficiency(d);
+      if (!eff) return;
+      for (const r of ranges) {
+        const parts = r.range.match(/(\d+)/g);
+        if (!parts) continue;
+        const lo = Number(parts[0]);
+        const hi = parts.length > 1 ? Number(parts[1]) : 999;
+        if (d.speedAvg >= lo && d.speedAvg < hi) {
+          const existing = map.get(r.range) ?? { totalEff: 0, totalSpd: 0, count: 0 };
+          existing.totalEff += eff;
+          existing.totalSpd += d.speedAvg;
+          existing.count++;
+          map.set(r.range, existing);
+          break;
+        }
+      }
+    });
+    const result = new Map<string, { avgEff: number; avgSpeed: number }>();
+    map.forEach((v, k) => {
+      result.set(k, { avgEff: v.totalEff / v.count, avgSpeed: v.totalSpd / v.count });
+    });
+    return result;
+  }, [drives, data]);
 
   const vehicleOptions = (vehicles ?? []).map((v) => ({
     value: String(v.id), label: v.display_name || v.vin,
@@ -154,31 +182,47 @@ export default function SpeedProfilePage() {
 
           {/* Speed bucket detail cards */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {(data.distribution ?? []).map((bucket) => (
-              <StaggerItem key={bucket.range}>
-                <GlassPanel className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    {categoryIcon(bucket.range)}
-                    <span className="text-xs font-semibold text-[var(--text-primary)]">{bucket.range}</span>
-                  </div>
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className={cn('text-lg font-bold', bucketTextClass(bucket.range))}>
-                        {(bucket.percentage ?? 0).toFixed(1)}%
-                      </p>
-                      <p className="text-[10px] text-[var(--text-muted)]">
-                        {bucket.driveCount} {t('speedProfile.drives', 'drives')}
-                      </p>
+            {(data.distribution ?? []).map((bucket) => {
+              const effData = bucketEfficiency.get(bucket.range);
+              return (
+                <StaggerItem key={bucket.range}>
+                  <GlassPanel className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {categoryIcon(bucket.range)}
+                      <span className="text-xs font-semibold text-[var(--text-primary)]">{bucket.range}</span>
                     </div>
-                    <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', bucketBgClass(bucket.range))}>
-                      <span className={cn('text-xs font-bold', bucketTextClass(bucket.range))}>
-                        {Math.round(bucket.percentage)}
-                      </span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.timeShare', 'Time')}</span>
+                        <span className={cn('text-sm font-bold', bucketTextClass(bucket.range))}>
+                          {(bucket.percentage ?? 0).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.drives', 'Drives')}</span>
+                        <span className="text-sm font-bold text-cyan-400">{bucket.driveCount}</span>
+                      </div>
+                      {effData && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.avgSpeed', 'Avg Speed')}</span>
+                            <span className="text-sm font-bold text-[var(--text-secondary)]">
+                              {Math.round(convertSpeed(effData.avgSpeed))} {speedUnit}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[10px] text-[var(--text-muted)]">{efficiencyUnit}</span>
+                            <span className={cn('text-sm font-bold', effData.avgEff < 160 ? 'text-green-400' : effData.avgEff < 220 ? 'text-amber-400' : 'text-red-400')}>
+                              {Math.round(convertEfficiency(effData.avgEff))}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  </div>
-                </GlassPanel>
-              </StaggerItem>
-            ))}
+                  </GlassPanel>
+                </StaggerItem>
+              );
+            })}
           </StaggerContainer>
 
           {/* Speed vs Efficiency scatter */}
@@ -195,9 +239,24 @@ export default function SpeedProfilePage() {
                     <XAxis dataKey="speed" name={t('speedProfile.speed', 'Speed')} unit={` ${speedUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <YAxis dataKey="efficiency" name={efficiencyUnit} unit={` ${efficiencyUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Scatter data={scatterData} fill="#f59e0b" fillOpacity={0.6} />
+                    <Scatter data={scatterData} fillOpacity={0.7}>
+                      {scatterData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Scatter>
                   </ScatterChart>
                 </ResponsiveContainer>
+                <div className="flex items-center gap-3 mt-2 justify-end">
+                  <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> {t('speedProfile.efficient', 'Efficient')}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> {t('speedProfile.moderate', 'Moderate')}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-500" /> {t('speedProfile.highConsumption', 'High consumption')}
+                  </span>
+                </div>
               </ChartContainer>
             </FadeIn>
           )}
