@@ -316,6 +316,46 @@ Key changes:
 
 ---
 
+## Bug 9 — Maintenance: Only summary cards visible, all other panels blank/missing
+
+**Page:** `web/src/features/vehicle-systems/pages/MaintenancePage.tsx`
+**Screenshot:** Shows 4 summary cards (Total Items: 8, Due Soon: 0, Overdue: 0, Completed: 0)
+but everything below is blank — no maintenance items grid, no cost summary, no service history.
+
+The old page (`D:\repos\teslasync-old\web\src\pages\Maintenance.tsx`) had 6 full sections:
+1. Service Overview Cards
+2. Overdue Alert Banner
+3. Upcoming Maintenance (items with progress bars)
+4. Maintenance Schedule Table (all 8 items with intervals, last service, status)
+5. Log Service Form (add new service record)
+6. Service History Log + Estimated Annual Cost vs ICE comparison
+
+**Root Cause:** The refactored page has these sections in code (lines 542-680) but they render
+as blank/invisible. Investigate:
+
+1. **Items grid (line 542-563):** `filteredItems` should have 8 items. Check if
+   `MaintenanceItemCard` renders correctly — might have invisible styling or a silent error
+   in `ProgressBar`/`CategoryBadge` components.
+
+2. **Cost Summary (line 565-606):** `costStats` is null when no service records exist →
+   shows EmptyState. But the EmptyState might be invisible or missing.
+
+3. **Service History (line 652-680):** `records` likely empty → shows empty table.
+
+4. **Missing from old page:** The "Log Service Form" section (add new record with item picker,
+   date, mileage, cost, notes) is missing from the refactored page. The old page stored
+   records in `localStorage` (`STORAGE_KEY`). Check if the new page relies on an API that
+   returns empty.
+
+**Fix:**
+1. Debug render: temporarily add visible borders to each section to see which ones render
+2. Ensure `MaintenanceItemCard` renders visibly (check text colors, backgrounds)
+3. Restore "Log Service" form from old page if missing
+4. Add visible EmptyState messages for each section when data is missing
+5. Ensure all panels always show (not conditionally hidden when empty)
+
+---
+
 ## Verification
 
 ```bash
@@ -339,6 +379,7 @@ cd web && npx tsc --noEmit
 - [ ] Speed Profile: summary cards equal height (h-full + flex-col on GlassPanel)
 - [ ] Battery Cells: fix #undefined — use cell_id instead of cell_number (11 references)
 - [ ] Charging Curve: SummaryCard text overflow — add min-w-0, truncate, responsive text size
+- [ ] Maintenance: all sections visible — items grid, cost summary, service history, log form
 - [ ] Signal Explorer: chart renders with selected signals overlaid
 - [ ] Signal Explorer: table shows merged data
 - [ ] TypeScript compiles clean
