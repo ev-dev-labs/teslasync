@@ -118,6 +118,42 @@ grep -rn "miles_since\|self_driving\|autopilot_miles\|drive_score" internal/api/
 </FadeIn>
 ```
 
+## Bug 3 — Safety Settings: Score gauge + summary cards misaligned
+
+**Page:** `web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx`
+**Screenshot:** The Safety Score radial gauge takes a huge column (~40% width) while the 4
+summary cards (Safety Score 78%, Total Features 9, Enabled 7, Disabled 2) are squeezed into
+narrow columns on the right. The gauge is much taller than the cards, leaving wasted space.
+
+**Expected (from prod):** Gauge and cards are in a balanced row — gauge is smaller, cards
+have equal width, all same height.
+
+**Fix:** Adjust the grid layout. Currently likely `lg:grid-cols-5` with gauge spanning 2 cols.
+Change to a more balanced layout:
+```tsx
+{/* Option A: Gauge smaller, cards equal */}
+<div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
+  <GlassPanel className="p-4 flex flex-col items-center justify-center">
+    <RadialGauge value={enabled} max={TOTAL_FEATURES} size={120} />
+    <p className="text-xs text-white/50 mt-2">Safety Score</p>
+    <Badge variant="success" size="sm">{enabled}/{TOTAL_FEATURES} enabled</Badge>
+  </GlassPanel>
+  {/* 4 cards each take 1 col */}
+  <MetricCard label="Safety Score" value={`${pct}%`} />
+  <MetricCard label="Total Features" value={TOTAL_FEATURES} />
+  <MetricCard label="Enabled" value={enabled} color="green" />
+  <MetricCard label="Disabled" value={TOTAL_FEATURES - enabled} color="red" />
+</div>
+```
+
+Key changes:
+- Remove `lg:col-span-2` from gauge panel — give it just 1 column
+- Use `items-stretch` so all cards are same height
+- Reduce gauge `size` from ~200 to ~120 to fit the narrower column
+- Or use `lg:grid-cols-5` with gauge at col-span-1
+
+---
+
 ## Verification
 
 ```bash
@@ -134,5 +170,6 @@ cd web && npx tsc --noEmit
 - [ ] Driving Statistics panel: 2 cards with miles values
 - [ ] Data comes from vehicle live state (handle both snake_case and camelCase fields)
 - [ ] Sections always render (show "—" when no data)
+- [ ] Safety Score gauge + summary cards properly aligned (equal height, balanced widths)
 - [ ] No inline styles, no direct recharts imports
 - [ ] TypeScript compiles clean
