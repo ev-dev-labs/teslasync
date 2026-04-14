@@ -12,15 +12,20 @@ description: "Fix UI bugs batch 3 — Safety Settings missing panels + Media Pla
 **Page:** `web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx` (568 lines)
 **Old:** `D:\repos\teslasync-old\web\src\pages\SafetySettings.tsx` (573 lines)
 
-**Missing panels (visible in pre-refactoring prod):**
-1. **Live Safety Signals** — real-time display of AEB, blind spot camera, collision warning,
-   lane departure, speed limit warning with ON/OFF badges and live values
-2. **Driving Statistics Panel** — safety score breakdown with per-metric analysis (hard braking,
-   aggressive turning, forward collision warnings per 1000 miles, unsafe following distance)
-3. **ADAS Status Timeline** — line chart showing AEB, Blind Spot Warning, Emergency Lane Departure
-   enabled/disabled over time (`type="stepAfter"` chart)
-4. **Safety Overview Panel** — detailed Autopilot configuration panel showing each safety feature's
-   current setting with ON/OFF toggles, descriptions, and last-changed timestamps
+**Missing panels (visible in pre-refactoring prod screenshot):**
+1. **Safety Score Gauge** — radial gauge showing 7/9 enabled (78%) with score ring
+2. **Summary Cards** (4) — Safety Score: 78%, Total Features: 9, Enabled: 7, Disabled: 2
+3. **ADAS Features Grid** (9 cards, 3x3) — Auto Emergency Braking (Enabled), Blind Spot Camera
+   (Enabled), Forward Collision Warning (ForwardCollisionSensitivityEarly), Lane Departure
+   Avoidance (LaneAssistLevelWarning), Cruise Follow Distance (FollowDistance7), Speed Limit
+   Warning (SpeedAssistLevelDisplay), Pin to Drive (Disabled), Blind Spot Collision Warning
+   (Enabled), Emergency Lane Departure Avoidance (Enabled). Each card has green dot for
+   enabled, red for disabled, and shows the actual setting value.
+4. **Safety States Over Time** — stepAfter line chart with 3 series (AEB cyan, BSCW blue,
+   ELDA purple) showing On/Off state changes over time with timestamps on X-axis
+5. **Safety Settings History Table** — paginated table (25 of 42 rows, 2 pages) with columns:
+   TIME, AEB, BSC, BSCW, FCW, LDA, ELDA, SLW — each cell shows On (green) or Off (red)
+   badges. Shows setting changes chronologically.
 
 **Root Cause (two issues):**
 
