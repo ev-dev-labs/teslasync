@@ -28,6 +28,7 @@ type TelemetrySessionTracker struct {
 	posRepo           *database.PositionRepo
 	geofenceRepo      *database.GeofenceRepo
 	placesCache       *database.PlacesCacheRepo
+	tripRepo          *database.TripRepo
 	eventBus          *events.Bus
 	geocoder          geocoding.Geocoder
 	signalStore       *signal.Store
@@ -150,6 +151,7 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		posRepo:       database.NewPositionRepo(db),
 		geofenceRepo:  database.NewGeofenceRepo(db),
 		placesCache:   database.NewPlacesCacheRepo(db),
+		tripRepo:      database.NewTripRepo(db),
 		eventBus:      eventBus,
 		geocoder:      geocoder,
 		signalStore:   store,
@@ -980,6 +982,16 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
 		Float64("duration_min", duration).Float64("distance", distance).Msg("telemetry: drive ended")
+
+	// Update monthly trip summary for this drive's month
+	go func() {
+		tripCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		monthStart := time.Date(active.StartTime.Year(), active.StartTime.Month(), 1, 0, 0, 0, 0, time.UTC)
+		if _, err := t.tripRepo.UpsertMonthTrip(tripCtx, vehicleID, monthStart, true); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to update monthly trip")
+		}
+	}()
 
 	if t.eventBus != nil {
 		t.eventBus.Publish(events.Event{Type: events.DriveEnded, VehicleID: vehicleID,
