@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, ChevronDown, ChevronRight, Clock, Activity, Layers, Zap } from 'lucide-react';
+import { RefreshCw, ChevronDown, ChevronRight, Activity, Layers, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, Select, Pagination } from '@/components/ui';
 import type { Column } from '@/components/ui';
-import { StatCard, FSMBadge, TransitionArrow } from '@/components/data-display';
+import { StatCard, FSMBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import {
@@ -20,29 +20,25 @@ import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { FSMTransition, FSMType } from '@/types/fsm';
 import { FSM_TYPE_OPTIONS, HOURS_OPTIONS } from '@/types/fsm';
+import { StateBadge } from '../components/StateBadge';
+import { FSMStateDiagram } from '../components/FSMStateDiagram';
+import { FSMHealthPanel, computeFlapIds } from '../components/FSMHealthPanel';
+import { FSMTimelineChart } from '../components/FSMTimelineChart';
+import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
 
-/* ─── Vehicle state styling ─── */
-const stateStyle: Record<string, { bg: string; text: string; dot: string }> = {
+/* ─── Vehicle state styling (for live state hero) ─── */
+const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
   driving: { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
-  charging: { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
-  parked: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
+  charging: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
+  parked: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
   online: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
   offline: { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-400' },
-  asleep: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
+  asleep: { bg: 'bg-gray-600/10', text: 'text-gray-500', dot: 'bg-gray-500' },
 };
 
-const stateVariant: Record<string, 'success' | 'warning' | 'info' | 'danger' | 'neutral'> = {
-  driving: 'success',
-  charging: 'warning',
-  parked: 'info',
-  online: 'info',
-  offline: 'danger',
-  asleep: 'neutral',
-};
-
-function getStyle(state?: string | null) {
-  if (!state) return stateStyle.offline;
-  return stateStyle[state.toLowerCase()] ?? stateStyle.offline;
+function getVehicleStyle(state?: string | null) {
+  if (!state) return vehicleStateStyle.offline;
+  return vehicleStateStyle[state.toLowerCase()] ?? vehicleStateStyle.offline;
 }
 
 function formatDuration(seconds: number): string {
@@ -58,42 +54,9 @@ interface StateResponse {
   live?: boolean;
 }
 
-/* ─── Flap detection: >5 transitions of same FSM within any 1-min window ─── */
-function detectFlaps(transitions: FSMTransition[]): Set<string> {
-  const flapped = new Set<string>();
-  const byType = new Map<string, FSMTransition[]>();
-  for (const tr of transitions) {
-    const list = byType.get(tr.fsm_name) ?? [];
-    list.push(tr);
-    byType.set(tr.fsm_name, list);
-  }
-  for (const [, list] of byType) {
-    const sorted = [...list].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-    for (let i = 0; i < sorted.length; i++) {
-      const windowEnd = new Date(sorted[i].created_at).getTime() + 60_000;
-      let count = 0;
-      for (let j = i; j < sorted.length; j++) {
-        if (new Date(sorted[j].created_at).getTime() <= windowEnd) {
-          count++;
-        } else break;
-      }
-      if (count > 5) {
-        for (let j = i; j < sorted.length; j++) {
-          if (new Date(sorted[j].created_at).getTime() <= windowEnd) {
-            flapped.add(sorted[j].id);
-          } else break;
-        }
-      }
-    }
-  }
-  return flapped;
-}
-
 /* ─── Stat summary row for the distribution table ─── */
 interface StatSummaryRow {
-  fsm_name: string;
+  fsm_type: string;
   count: number;
   avg_interval_sec: number;
 }
@@ -115,7 +78,7 @@ export default function StateMachineDebuggerPage() {
   const [perPage, setPerPage] = useState(50);
 
   /* ─── Detail panel ─── */
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   /* ─── Data hooks ─── */
   const {
@@ -138,22 +101,35 @@ export default function StateMachineDebuggerPage() {
   const stateResponse = stateData as unknown as StateResponse | undefined;
   const currentState = stateResponse?.state;
   const stateName = currentState?.state?.toLowerCase() ?? null;
-  const style = getStyle(stateName);
+  const style = getVehicleStyle(stateName);
 
   const stats = statsData?.stats ?? {};
   const transitions: FSMTransition[] = transData?.data ?? [];
   const totalRows = transData?.total ?? 0;
 
-  const flapIds = useMemo(() => detectFlaps(transitions), [transitions]);
+  const flapIds = useMemo(() => computeFlapIds(transitions), [transitions]);
 
-  /* ─── Pie chart data (from transitions — actual state distribution) ─── */
+  /* ─── Pie chart data — dual mode ─── */
   const pieData = useMemo(() => {
+    if (fsmType === 'all') {
+      // Show distribution by FSM type (deduplicated — skip camelCase duplicates)
+      const byType = new Map<string, number>();
+      for (const tr of transitions) {
+        byType.set(tr.fsm_type, (byType.get(tr.fsm_type) ?? 0) + 1);
+      }
+      return Array.from(byType.entries())
+        .filter(([key]) => key.includes('_') || key.length <= 10)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, value], i) => ({
+          name,
+          value,
+          fill: CHART_COLORS[i % CHART_COLORS.length],
+        }));
+    }
+    // Show state distribution within selected FSM
     const byState = new Map<string, number>();
     for (const tr of transitions) {
-      const state = tr.to_state;
-      if (state) {
-        byState.set(state, (byState.get(state) ?? 0) + 1);
-      }
+      byState.set(tr.to_state, (byState.get(tr.to_state) ?? 0) + 1);
     }
     return Array.from(byState.entries())
       .sort((a, b) => b[1] - a[1])
@@ -162,28 +138,34 @@ export default function StateMachineDebuggerPage() {
         value,
         fill: CHART_COLORS[i % CHART_COLORS.length],
       }));
-  }, [transitions]);
+  }, [transitions, fsmType]);
 
-  /* ─── Stat summary rows (deduplicated — skip camelCase duplicates) ─── */
+  /* ─── Stat summary rows (computed from transitions, deduplicated) ─── */
   const summaryRows: StatSummaryRow[] = useMemo(() => {
-    // Compute average interval between transitions per FSM type
     const byType = new Map<string, number[]>();
+    const counts = new Map<string, number>();
     for (const tr of transitions) {
-      const list = byType.get(tr.fsm_name) ?? [];
+      const key = tr.fsm_type;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      const list = byType.get(key) ?? [];
       list.push(new Date(tr.created_at).getTime());
-      byType.set(tr.fsm_name, list);
+      byType.set(key, list);
     }
-    // Filter stats to only snake_case keys (skip camelCase duplicates from response transformer)
-    const cleanEntries = Object.entries(stats).filter(([key]) => {
+
+    // Also merge in stats endpoint data (for FSM types not in current transitions page)
+    const cleanStats = Object.entries(stats).filter(([key]) => {
       if (!key.includes('_')) {
-        // Check if a snake_case equivalent exists — if so, this is a camelCase duplicate
         return !Object.keys(stats).some(
           k => k.includes('_') && k.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase()) === key
         );
       }
       return true;
     });
-    return cleanEntries
+    for (const [name, count] of cleanStats) {
+      if (!counts.has(name)) counts.set(name, count);
+    }
+
+    return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => {
         const times = byType.get(name) ?? [];
@@ -196,7 +178,7 @@ export default function StateMachineDebuggerPage() {
           }
           avgInterval = totalGap / (sorted.length - 1) / 1000;
         }
-        return { fsm_name: name, count, avg_interval_sec: avgInterval };
+        return { fsm_type: name, count, avg_interval_sec: avgInterval };
       });
   }, [stats, transitions]);
 
@@ -204,9 +186,9 @@ export default function StateMachineDebuggerPage() {
   const summaryColumns: Column<StatSummaryRow>[] = useMemo(
     () => [
       {
-        key: 'fsm_name',
+        key: 'fsm_type',
         header: t('fsm.type', 'FSM Type'),
-        render: (row: StatSummaryRow) => <FSMBadge type={row.fsm_name} />,
+        render: (row: StatSummaryRow) => <FSMBadge type={row.fsm_type} />,
       },
       {
         key: 'count',
@@ -230,7 +212,7 @@ export default function StateMachineDebuggerPage() {
     [t],
   );
 
-  /* ─── DataTable columns — transition timeline ─── */
+  /* ─── DataTable columns — transition timeline with color-coded state badges ─── */
   const timelineColumns: Column<FSMTransition>[] = useMemo(
     () => [
       {
@@ -253,22 +235,29 @@ export default function StateMachineDebuggerPage() {
         ),
       },
       {
-        key: 'fsm_name',
+        key: 'fsm_type',
         header: t('fsm.type', 'FSM Type'),
-        render: (row: FSMTransition) => <FSMBadge type={row.fsm_name} />,
+        render: (row: FSMTransition) => <FSMBadge type={row.fsm_type} />,
       },
       {
-        key: 'transition',
-        header: t('fsm.transition', 'From → To'),
+        key: 'from_state',
+        header: t('fsm.from', 'From'),
         render: (row: FSMTransition) => (
-          <TransitionArrow from={row.from_state} to={row.to_state} />
+          <StateBadge state={row.from_state} fsmType={row.fsm_type} />
         ),
       },
       {
-        key: 'event',
+        key: 'to_state',
+        header: t('fsm.to', 'To'),
+        render: (row: FSMTransition) => (
+          <StateBadge state={row.to_state} fsmType={row.fsm_type} />
+        ),
+      },
+      {
+        key: 'trigger',
         header: t('fsm.trigger', 'Trigger'),
         render: (row: FSMTransition) => (
-          <span className="text-white/60 text-xs font-mono">{row.event}</span>
+          <span className="text-white/60 text-xs font-mono">{row.trigger}</span>
         ),
       },
       {
@@ -318,13 +307,14 @@ export default function StateMachineDebuggerPage() {
     { value: '100', label: '100' },
   ];
 
-  const totalTransitions = Object.values(stats).reduce((a, b) => a + b, 0);
-  const fsmTypeCount = Object.keys(stats).length;
+  // Compute totals from transitions data (not from stats endpoint which returns instance counts)
+  const totalTransitionsOnPage = transitions.length;
+  const uniqueFsmTypes = new Set(transitions.map(tr => tr.fsm_type)).size;
 
   return (
     <PageContainer
       title={t('fsm.title', 'FSM Debugger')}
-      subtitle={t('fsm.subtitle', 'Finite state machine transitions, distribution, and context analysis')}
+      subtitle={t('fsm.subtitle', 'Multi-FSM transition analysis — vehicle, drive, charge, command, notification')}
       loading={stateLoading && transLoading && statsLoading}
       actions={
         <span className="flex items-center gap-1 text-xs text-white/40">
@@ -381,8 +371,13 @@ export default function StateMachineDebuggerPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── Section 2: Current Vehicle State ──── */}
+      {/* ──── Section 2: FSM Health Indicators ──── */}
       <FadeIn delay={0.05}>
+        <FSMHealthPanel transitions={transitions} />
+      </FadeIn>
+
+      {/* ──── Section 3: Current Vehicle State ──── */}
+      <FadeIn delay={0.1}>
         <GlassPanel className="p-6">
           <h2 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">
             {t('fsm.vehicleLiveState', 'Vehicle Live State')}
@@ -422,12 +417,27 @@ export default function StateMachineDebuggerPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── Section 3: Distribution + Counts ──── */}
+      {/* ──── Section 4: Sub-FSM Panel (active drive/charge context) ──── */}
+      <FadeIn delay={0.15}>
+        <FSMSubFSMPanel transitions={transitions} fsmType={fsmType} />
+      </FadeIn>
+
+      {/* ──── Section 5: State Diagram ──── */}
+      <FadeIn delay={0.2}>
+        <FSMStateDiagram
+          fsmType={fsmType === 'all' ? 'vehicle_state' : fsmType}
+          transitions={transitions}
+        />
+      </FadeIn>
+
+      {/* ──── Section 6: Distribution + Counts ──── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <FadeIn delay={0.1}>
+        <FadeIn delay={0.25}>
           <ChartContainer
-            title={t('fsm.distribution', 'Transition Distribution')}
-            loading={statsLoading}
+            title={fsmType === 'all'
+              ? t('fsm.distributionByType', 'Distribution by FSM Type')
+              : t('fsm.distributionByState', 'State Distribution')}
+            loading={transLoading}
             height={280}
           >
             {pieData.length > 0 ? (
@@ -469,18 +479,18 @@ export default function StateMachineDebuggerPage() {
           </ChartContainer>
         </FadeIn>
 
-        <FadeIn delay={0.15}>
+        <FadeIn delay={0.3}>
           <GlassPanel className="p-5">
             <h2 className="text-sm font-semibold text-white/90 mb-4">
               {t('fsm.transitionCounts', 'Transition Counts')}
             </h2>
-            {statsLoading ? (
+            {transLoading ? (
               <Skeleton height={200} />
             ) : summaryRows.length > 0 ? (
               <DataTable<StatSummaryRow>
                 columns={summaryColumns}
                 data={summaryRows}
-                keyExtractor={(row) => row.fsm_name}
+                keyExtractor={(row) => row.fsm_type}
               />
             ) : (
               <EmptyState message={t('fsm.noTransitions', 'No transitions recorded')} />
@@ -489,23 +499,23 @@ export default function StateMachineDebuggerPage() {
         </FadeIn>
       </div>
 
-      {/* ──── Section 4: Summary Cards ──── */}
-      <FadeIn delay={0.2}>
+      {/* ──── Section 7: Summary Cards ──── */}
+      <FadeIn delay={0.25}>
         <Grid cols={{ default: 2, lg: 4 }} gap={4}>
           <StatCard
-            label={t('fsm.totalTransitions', 'Total Transitions')}
-            value={fmtInt(totalTransitions)}
+            label={t('fsm.totalOnPage', 'Transitions (Page)')}
+            value={`${fmtInt(totalTransitionsOnPage)} / ${fmtInt(totalRows)}`}
             icon={<Activity className="h-4 w-4" />}
           />
           <StatCard
-            label={t('fsm.fsmTypes', 'FSM Types')}
-            value={fmtInt(fsmTypeCount)}
+            label={t('fsm.fsmTypes', 'FSM Types Seen')}
+            value={fmtInt(uniqueFsmTypes)}
             icon={<Layers className="h-4 w-4" />}
           />
           <StatCard
-            label={t('fsm.pageResults', 'Page Results')}
-            value={`${fmtInt(transitions.length)} / ${fmtInt(totalRows)}`}
-            icon={<Clock className="h-4 w-4" />}
+            label={t('fsm.flapCount', 'Flap Warnings')}
+            value={fmtInt(flapIds.size)}
+            icon={<AlertTriangle className="h-4 w-4" />}
           />
           <StatCard
             label={t('fsm.currentState', 'Current State')}
@@ -515,11 +525,16 @@ export default function StateMachineDebuggerPage() {
         </Grid>
       </FadeIn>
 
-      {/* ──── Section 5: Transition Timeline ──── */}
+      {/* ──── Section 8: Transition Timeline Chart ──── */}
+      <FadeIn delay={0.3}>
+        <FSMTimelineChart transitions={transitions} hours={Number(hours)} />
+      </FadeIn>
+
+      {/* ──── Section 9: Transition Table ──── */}
       <FadeIn delay={0.25}>
         <GlassPanel className="p-5">
           <h2 className="text-sm font-semibold text-white/90 mb-4">
-            {t('fsm.timelineTitle', 'Transition Timeline')}
+            {t('fsm.timelineTitle', 'Transition Log')}
             {totalRows > 0 && (
               <span className="ml-2 text-white/50 font-normal">
                 {fmtInt(totalRows)} {t('fsm.total', 'total')}
@@ -537,7 +552,7 @@ export default function StateMachineDebuggerPage() {
               <DataTable<FSMTransition>
                 columns={timelineColumns}
                 data={transitions}
-                keyExtractor={(tr) => tr.id}
+                keyExtractor={(tr) => String(tr.id)}
                 compact
               />
               <Pagination
@@ -551,12 +566,6 @@ export default function StateMachineDebuggerPage() {
                 }}
                 pageSizeOptions={[25, 50, 100]}
               />
-              {/* Flap detection warning */}
-              {flapIds.size > 0 && (
-                <div className="mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400">
-                  ⚠ {t('fsm.flapWarning', '{{count}} transitions flagged as potential state flapping (>5 same-FSM transitions within 1 minute)', { count: flapIds.size })}
-                </div>
-              )}
             </>
           ) : (
             <EmptyState message={t('fsm.noTimeline', 'No transitions in selected time range')} />
@@ -564,8 +573,8 @@ export default function StateMachineDebuggerPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── Section 6: Selected Transition Detail ──── */}
-      {selectedId && (() => {
+      {/* ──── Section 10: Selected Transition Detail ──── */}
+      {selectedId != null && (() => {
         const selected = transitions.find((tr) => tr.id === selectedId);
         return selected ? (
           <FadeIn key={selectedId}>
@@ -586,40 +595,72 @@ export default function StateMachineDebuggerPage() {
 function TransitionDetail({ transition }: { transition: FSMTransition }) {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
       <div>
         <span className="text-white/40 block mb-1">{t('fsm.detail.id', 'Transition ID')}</span>
         <span className="text-white/80 font-mono break-all">{transition.id}</span>
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.entityId', 'Entity ID')}</span>
-        <span className="text-white/80 font-mono">{transition.entity_id}</span>
+        <span className="text-white/40 block mb-1">{t('fsm.detail.vehicleId', 'Vehicle ID')}</span>
+        <span className="text-white/80 font-mono">{transition.vehicle_id}</span>
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.fsmName', 'FSM Name')}</span>
-        <FSMBadge type={transition.fsm_name} />
+        <span className="text-white/40 block mb-1">{t('fsm.detail.fsmType', 'FSM Type')}</span>
+        <FSMBadge type={transition.fsm_type} />
       </div>
+      {transition.fsm_instance_id != null && (
+        <div>
+          <span className="text-white/40 block mb-1">{t('fsm.detail.instanceId', 'Instance ID')}</span>
+          <span className="text-white/80 font-mono">{transition.fsm_instance_id}</span>
+        </div>
+      )}
       <div>
         <span className="text-white/40 block mb-1">{t('fsm.detail.from', 'From State')}</span>
-        <Badge variant={stateVariant[transition.from_state.toLowerCase()] ?? 'neutral'} dot>
-          {transition.from_state}
-        </Badge>
+        <StateBadge state={transition.from_state} fsmType={transition.fsm_type} />
       </div>
       <div>
         <span className="text-white/40 block mb-1">{t('fsm.detail.to', 'To State')}</span>
-        <Badge variant={stateVariant[transition.to_state.toLowerCase()] ?? 'neutral'} dot>
-          {transition.to_state}
-        </Badge>
+        <StateBadge state={transition.to_state} fsmType={transition.fsm_type} />
       </div>
       <div>
-        <span className="text-white/40 block mb-1">{t('fsm.detail.event', 'Event / Trigger')}</span>
-        <span className="text-white/80 font-mono">{transition.event}</span>
+        <span className="text-white/40 block mb-1">{t('fsm.detail.trigger', 'Trigger')}</span>
+        <span className="text-white/80 font-mono">{transition.trigger}</span>
       </div>
-      <div className="sm:col-span-2 lg:col-span-3">
+      <div>
+        <span className="text-white/40 block mb-1">{t('fsm.detail.mode', 'Mode')}</span>
+        <Badge variant={transition.mode === 'immediate' ? 'info' : 'warning'}>
+          {transition.mode}
+        </Badge>
+      </div>
+      {transition.guard && (
+        <div>
+          <span className="text-white/40 block mb-1">{t('fsm.detail.guard', 'Guard')}</span>
+          <span className="text-white/80 font-mono">{transition.guard}</span>
+        </div>
+      )}
+      {transition.duration_in_state_ms > 0 && (
+        <div>
+          <span className="text-white/40 block mb-1">{t('fsm.detail.duration', 'Duration in State')}</span>
+          <span className="text-white/80 font-mono">{formatDuration(transition.duration_in_state_ms / 1000)}</span>
+        </div>
+      )}
+      <div className="sm:col-span-2 lg:col-span-4">
         <span className="text-white/40 block mb-1">{t('fsm.detail.timestamp', 'Timestamp')}</span>
         <span className="text-white/80 font-mono">{formatDateTime(transition.created_at)}</span>
         <span className="text-white/50 ml-2">{formatRelative(transition.created_at)}</span>
       </div>
+      {transition.context_snapshot && Object.keys(transition.context_snapshot).length > 0 && (
+        <div className="sm:col-span-2 lg:col-span-4">
+          <span className="text-white/40 block mb-1">{t('fsm.detail.context', 'Context Snapshot')}</span>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {Object.entries(transition.context_snapshot).map(([key, val]) => (
+              <span key={key} className="px-2 py-0.5 rounded bg-white/[0.04] text-white/60 font-mono text-[10px]">
+                {key}: {String(val)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
