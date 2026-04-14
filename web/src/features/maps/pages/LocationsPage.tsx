@@ -21,6 +21,7 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -73,7 +74,7 @@ export default function LocationsPage() {
   const timeChartData = useMemo(() =>
     (locations ?? []).slice(0, 10).map(l => ({
       name: (l.address_name ?? '').length > 25 ? (l.address_name ?? '').slice(0, 22) + '…' : (l.address_name ?? ''),
-      hours: +(l.total_duration_min / 60).toFixed(1),
+      hours: +(fmtNumber(l.total_duration_min / 60, 1)),
     })),
   [locations]);
 

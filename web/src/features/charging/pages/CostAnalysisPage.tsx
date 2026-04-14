@@ -669,7 +669,7 @@ export default function CostAnalysisPage() {
                   <XAxis dataKey="date" {...axisTickSm} />
                   <YAxis
                     {...axisTickSm}
-                    tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+                    tickFormatter={(v: number) => `$${fmtNumber(v, 2)}`}
                   />
                   <Tooltip content={<ChartTooltip />} />
                   <Line

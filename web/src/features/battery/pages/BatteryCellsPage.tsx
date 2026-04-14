@@ -109,7 +109,7 @@ function buildHistogram(cells: CellReading[]): { bucket: string; count: number }
   }
 
   return buckets.map((b) => ({
-    bucket: `${(b.low ?? 0).toFixed(3)}–${(b.high ?? 0).toFixed(3)}`,
+    bucket: `${fmtNumber(b.low ?? 0, 3)}–${fmtNumber(b.high ?? 0, 3)}`,
     count: b.count,
   }));
 }
@@ -145,10 +145,10 @@ function CellHeatmap({
               'transition-transform hover:scale-110',
             )}
             style={{ backgroundColor: `${cellColor(cell.voltage, avg)}20`, color: cellColor(cell.voltage, avg) }}
-            title={`${t('Cell')} ${cell.cell_number}: ${(cell.voltage ?? 0).toFixed(3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${((cell.delta_from_avg ?? 0) * 1000).toFixed(1)} mV)`}
+            title={`${t('Cell')} ${cell.cell_number}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
           >
             <span className="font-semibold">{cell.cell_number}</span>
-            <span>{(cell.voltage ?? 0).toFixed(3)}</span>
+            <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
           </div>
         ))}
       </div>
@@ -480,7 +480,7 @@ export default function BatteryCellsPage() {
                 <YAxis
                   tick={axisTick}
                   domain={['dataMin - 0.005', 'dataMax + 0.005']}
-                  tickFormatter={(v: number) => v.toFixed(3)}
+                  tickFormatter={(v: number) => fmtNumber(v, 3)}
                   width={55}
                   label={{ value: t('Voltage (V)'), angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 11 } }}
                 />
@@ -629,7 +629,7 @@ export default function BatteryCellsPage() {
                 <YAxis
                   tick={axisTick}
                   domain={['dataMin - 0.002', 'dataMax + 0.002']}
-                  tickFormatter={(v: number) => v.toFixed(3)}
+                  tickFormatter={(v: number) => fmtNumber(v, 3)}
                   width={55}
                   label={{ value: t('Voltage (V)'), angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 11 } }}
                 />

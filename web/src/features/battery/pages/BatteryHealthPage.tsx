@@ -302,8 +302,8 @@ export default function BatteryHealthPage() {
     });
     return {
       pieData: [
-        { name: 'AC', value: +(acEnergy.toFixed(1)), fill: '#10b981' },
-        { name: 'DC', value: +(dcEnergy.toFixed(1)), fill: '#f59e0b' },
+        { name: 'AC', value: +(fmtNumber(acEnergy, 1)), fill: '#10b981' },
+        { name: 'DC', value: +(fmtNumber(dcEnergy, 1)), fill: '#f59e0b' },
       ],
       acCount,
       dcCount,

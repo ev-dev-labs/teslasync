@@ -94,7 +94,7 @@ function getChargerLabel(s: ChargingSession): string {
 function sessionLabel(s: ChargingSession): string {
   const date = formatDateShort(s.start_date);
   const label = getChargerLabel(s);
-  const energy = s.charge_energy_added?.toFixed(1) ?? '?';
+  const energy = s.charge_energy_added != null ? fmtNumber(s.charge_energy_added, 1) : '?';
   return `${date} — ${label} — ${energy} kWh`;
 }
 

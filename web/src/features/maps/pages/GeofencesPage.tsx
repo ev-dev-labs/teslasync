@@ -21,6 +21,7 @@ import { useToast } from '@/components/feedback/Toast';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
@@ -323,7 +324,7 @@ export default function GeofencesPage() {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                           <span className="flex items-center gap-1 font-mono">
                             <Globe className="h-3 w-3" />
-                            {(g.latitude ?? 0).toFixed(6)}, {(g.longitude ?? 0).toFixed(6)}
+                            {fmtNumber(g.latitude ?? 0, 6)}, {fmtNumber(g.longitude ?? 0, 6)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Ruler className="h-3 w-3" />

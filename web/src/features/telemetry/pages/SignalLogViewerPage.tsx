@@ -21,6 +21,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
+import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 import { Database, Search, Clock, Activity, Filter } from 'lucide-react';
 
@@ -47,7 +48,7 @@ function toLocalDatetime(d: Date): string {
 }
 
 function formatValue(row: SignalRow): string {
-  if (row.value_num !== null && row.value_num !== undefined) return row.value_num.toFixed(4);
+  if (row.value_num !== null && row.value_num !== undefined) return fmtNumber(row.value_num, 4);
   if (row.value_bool !== null && row.value_bool !== undefined) return String(row.value_bool);
   return row.value_str ?? '';
 }

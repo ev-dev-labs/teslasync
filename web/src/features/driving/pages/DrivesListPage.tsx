@@ -276,7 +276,7 @@ export default function DrivesListPage() {
     if (filteredDrives.length === 0) return [];
     return filteredDrives.slice(0, 20).reverse().map((d) => ({
       date: formatDateShort(d.startDate),
-      distance: parseFloat((d.distance ?? 0).toFixed(1)),
+      distance: parseFloat(fmtNumber(d.distance ?? 0, 1)),
     }));
   }, [filteredDrives]);
 

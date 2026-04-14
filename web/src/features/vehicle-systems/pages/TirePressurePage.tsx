@@ -19,6 +19,7 @@ import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -201,7 +202,7 @@ export default function TirePressurePage() {
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {(val ?? 0).toFixed(2)} {t('Bar Unit')}
+                {fmtNumber(val ?? 0)} {t('Bar Unit')}
               </Badge>
             );
           },
@@ -339,7 +340,7 @@ export default function TirePressurePage() {
             label={t('Avg Pressure')}
             value={
               summaryStats
-                ? `${(summaryStats.avg ?? 0).toFixed(2)} ${t('Bar Unit')}`
+                ? `${fmtNumber(summaryStats.avg ?? 0)} ${t('Bar Unit')}`
                 : '—'
             }
             icon={<Activity className="h-5 w-5" />}
@@ -349,7 +350,7 @@ export default function TirePressurePage() {
             label={t('Min Pressure')}
             value={
               summaryStats
-                ? `${(summaryStats.min ?? 0).toFixed(2)} ${t('Bar Unit')}`
+                ? `${fmtNumber(summaryStats.min ?? 0)} ${t('Bar Unit')}`
                 : '—'
             }
             icon={<TrendingDown className="h-5 w-5" />}
@@ -418,7 +419,7 @@ export default function TirePressurePage() {
                   <YAxis
                     domain={[2.0, 4.0]}
                     tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                    tickFormatter={(v: number) => v.toFixed(1)}
+                    tickFormatter={(v: number) => fmtNumber(v, 1)}
                   />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />

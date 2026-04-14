@@ -78,7 +78,7 @@ export default function RegenEfficiencyPage() {
       .slice(-12)
       .map(([month, val]) => ({
         month,
-        regenKwh: parseFloat((val.totalRegen / 1000).toFixed(1)),
+        regenKwh: parseFloat(fmtNumber(val.totalRegen / 1000, 1)),
         drives: val.count,
         distance: Math.round(convertDistance(val.totalDist)),
       }));

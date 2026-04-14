@@ -111,7 +111,7 @@ export default function ChargingListPage() {
       .reverse()
       .map((s) => ({
         date: formatDateShort(s.start_date),
-        energy: parseFloat((s.charge_energy_added ?? 0).toFixed(1)),
+        energy: parseFloat(fmtNumber(s.charge_energy_added ?? 0, 1)),
         cost: s.cost ?? 0,
       }));
   }, [sessions]);
@@ -135,9 +135,9 @@ export default function ChargingListPage() {
     });
     return Object.entries(groups).map(([name, v]) => ({
       name,
-      energy: parseFloat(v.energy.toFixed(1)),
-      cost: parseFloat(v.cost.toFixed(2)),
-      perKwh: v.energy > 0 ? parseFloat((v.cost / v.energy).toFixed(3)) : 0,
+      energy: parseFloat(fmtNumber(v.energy, 1)),
+      cost: parseFloat(fmtNumber(v.cost, 2)),
+      perKwh: v.energy > 0 ? parseFloat(fmtNumber(v.cost / v.energy, 3)) : 0,
     }));
   }, [sessions, chargerLabels]);
 
@@ -336,11 +336,11 @@ export default function ChargingListPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 items-center">
               <RadialGauge value={stats.count} max={Math.max(stats.count, 50)} label={t('charging.gauges.sessions', 'Sessions')} unit="" color="#00f0ff" />
               <RadialGauge value={Math.round(stats.totalEnergy)} max={Math.max(stats.totalEnergy, 500)} label={t('charging.gauges.energy', 'Energy')} unit="kWh" color="#10b981" />
-              <RadialGauge value={parseFloat((stats.totalCost ?? 0).toFixed(0))} max={Math.max(stats.totalCost ?? 0, 100)} label={t('charging.gauges.totalCost', 'Total Cost')} unit="$" color="#f59e0b" />
+              <RadialGauge value={parseFloat(fmtNumber(stats.totalCost ?? 0, 0))} max={Math.max(stats.totalCost ?? 0, 100)} label={t('charging.gauges.totalCost', 'Total Cost')} unit="$" color="#f59e0b" />
               <RadialGauge value={Math.round(stats.avgPower)} max={250} label={t('charging.gauges.avgPower', 'Avg Power')} unit="kW" color="#a855f7" />
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-bold text-neon-green">
-                  $<AnimatedNumber value={parseFloat((stats.avgCostPerKwh ?? 0).toFixed(2))} decimals={3} />
+                  $<AnimatedNumber value={parseFloat(fmtNumber(stats.avgCostPerKwh ?? 0, 2))} decimals={3} />
                 </p>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">
                   {t('charging.gauges.avgCostPerKwh', 'Avg $/kWh')}

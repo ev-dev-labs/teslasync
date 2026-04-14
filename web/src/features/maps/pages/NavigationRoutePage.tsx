@@ -334,7 +334,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {(row.latitude ?? 0).toFixed(6)}
+            {fmtNumber(row.latitude ?? 0, 6)}
           </span>
         ),
       },
@@ -344,7 +344,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {(row.longitude ?? 0).toFixed(6)}
+            {fmtNumber(row.longitude ?? 0, 6)}
           </span>
         ),
       },
@@ -600,7 +600,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.currentLocation', 'Current Location')}
                 value={
                   latest
-                    ? `${(latest.latitude ?? 0).toFixed(4)}, ${(latest.longitude ?? 0).toFixed(4)} · ${headingToCardinal(latest.heading)} ${fmtNumber(latest.speed, 0)} mph`
+                    ? `${fmtNumber(latest.latitude ?? 0, 4)}, ${fmtNumber(latest.longitude ?? 0, 4)} · ${headingToCardinal(latest.heading)} ${fmtNumber(latest.speed, 0)} mph`
                     : '—'
                 }
                 active={!!latest}

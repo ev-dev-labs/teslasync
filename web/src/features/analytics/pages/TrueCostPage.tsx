@@ -157,7 +157,7 @@ export default function TrueCostPage() {
                     ]}>
                       {chartGrid}
                       <XAxis dataKey="name" tick={axisTick} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v.toFixed(3)}`} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${fmtNumber(v, 3)}`} />
                       <Tooltip content={<ChartTooltip />} />
                       <Bar dataKey="cost" name={t('tco.costKm', 'Cost/km')} radius={[6, 6, 0, 0]} animationDuration={800} />
                     </BarChart>

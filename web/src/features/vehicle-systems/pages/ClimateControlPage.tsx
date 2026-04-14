@@ -307,7 +307,7 @@ export default function ClimateControlPage() {
 
   const tempDelta = useMemo(() => {
     if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
-    return +(latest.insideTemp - latest.driverTempSetting).toFixed(1);
+    return +(fmtNumber(latest.insideTemp - latest.driverTempSetting, 1));
   }, [latest?.insideTemp, latest?.driverTempSetting]);
 
   /* ─── Climate efficiency stats (from real power samples only) ─── */
