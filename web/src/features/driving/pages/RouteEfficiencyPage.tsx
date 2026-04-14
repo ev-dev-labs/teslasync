@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/Select';
 import { IconBox } from '@/components/ui/IconBox';
 import {
   ChartContainer, ChartTooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { MetricBar } from '@/components/data-display/MetricBar';
@@ -25,13 +25,6 @@ import type { RouteSummary } from '@/types/driving';
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
-
-function efficiencyColor(eff: number): string {
-  if (eff < 140) return '#10b981';
-  if (eff < 180) return '#00f0ff';
-  if (eff < 220) return '#f59e0b';
-  return '#ef4444';
-}
 
 function efficiencyVariant(eff: number): 'success' | 'info' | 'warning' | 'danger' {
   if (eff < 140) return 'success';
@@ -190,11 +183,9 @@ export default function RouteEfficiencyPage() {
                 <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} width={120} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${efficiencyUnit}`} radius={[0, 4, 4, 0]}>
-                  {chartData.map((entry, i) => (
-                    <Cell key={i} fill={efficiencyColor(entry.avg)} fillOpacity={0.7} />
-                  ))}
-                </Bar>
+                <Bar dataKey="best" name={`${t('routeEfficiency.best', 'Best')} ${efficiencyUnit}`} fill="#10b981" fillOpacity={0.8} radius={[0, 3, 3, 0]} />
+                <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${efficiencyUnit}`} fill="#00f0ff" fillOpacity={0.6} radius={[0, 3, 3, 0]} />
+                <Bar dataKey="worst" name={`${t('routeEfficiency.worst', 'Worst')} ${efficiencyUnit}`} fill="#ef4444" fillOpacity={0.5} radius={[0, 3, 3, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
