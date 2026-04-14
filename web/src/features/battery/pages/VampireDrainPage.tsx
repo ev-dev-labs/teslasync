@@ -204,6 +204,7 @@ export default function VampireDrainPage() {
             onSort={onSort}
             emptyMessage={t('No drain sessions recorded yet.')}
             compact
+            pagination
           />
         </GlassPanel>
       </FadeIn>

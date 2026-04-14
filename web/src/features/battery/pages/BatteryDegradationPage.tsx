@@ -585,6 +585,7 @@ export default function BatteryDegradationPage() {
               }
               emptyMessage={t('No degradation records found.')}
               compact
+              pagination
             />
           ) : (
             <EmptyState

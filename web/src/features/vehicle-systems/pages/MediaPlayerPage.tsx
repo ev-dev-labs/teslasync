@@ -564,6 +564,7 @@ export default function MediaPlayerPage() {
               onSort={handleSort}
               emptyMessage={t('No playback history')}
               compact
+              pagination
             />
           ) : (
             <EmptyState

@@ -952,6 +952,7 @@ export default function ClimateControlPage() {
               sortDir={sortDir}
               onSort={onSort}
               compact
+              pagination
             />
           )}
         </GlassPanel>

@@ -463,6 +463,7 @@ export default function TirePressurePage() {
                 keyExtractor={(row) => row.id}
                 emptyMessage={t('No History Data')}
                 compact
+                pagination
               />
             )}
           </FadeIn>

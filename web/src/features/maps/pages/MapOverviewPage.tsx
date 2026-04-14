@@ -402,6 +402,7 @@ export default function MapOverviewPage() {
                 'No location history found.',
               )}
               compact
+              pagination
             />
           ) : (
             <EmptyState

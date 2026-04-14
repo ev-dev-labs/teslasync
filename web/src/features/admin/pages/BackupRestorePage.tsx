@@ -712,6 +712,7 @@ export default function BackupRestorePage() {
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('backup.noRuns', 'No backup runs yet')}
                 compact
+                pagination
               />
 
               {/* Recent Errors for failed runs */}
@@ -924,6 +925,7 @@ export default function BackupRestorePage() {
                   data={previewData.tables}
                   keyExtractor={(r) => r.name}
                   compact
+                  pagination
                 />
               </div>
             ) : (

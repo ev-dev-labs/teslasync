@@ -278,6 +278,7 @@ export default function SignalDiffPage() {
                 columns={comparisonColumns}
                 data={comparisonRows}
                 keyExtractor={(row) => row.label}
+                pagination
               />
             </GlassPanel>
           </FadeIn>

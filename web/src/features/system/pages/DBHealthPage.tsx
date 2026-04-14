@@ -280,6 +280,7 @@ export default function DBHealthPage() {
                 data={sortedTables}
                 keyExtractor={(tbl) => tbl.name}
                 compact
+                pagination
                 emptyMessage={t('dbHealth.noTables', 'No tables found')}
                 className="max-h-[50vh] overflow-auto"
               />

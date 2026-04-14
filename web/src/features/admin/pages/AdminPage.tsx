@@ -212,6 +212,7 @@ export default function AdminPage() {
                 data={auditLogs as AuditLogEntry[]}
                 keyExtractor={(log) => String(log.id)}
                 compact
+                pagination={{ defaultPageSize: 50 }}
               />
             </div>
           ) : (
@@ -240,6 +241,7 @@ export default function AdminPage() {
                 data={apiKeys as APIKey[]}
                 keyExtractor={(k) => String(k.id)}
                 compact
+                pagination
               />
             </div>
           ) : (

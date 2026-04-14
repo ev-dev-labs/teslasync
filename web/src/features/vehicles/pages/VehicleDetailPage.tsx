@@ -917,6 +917,7 @@ export default function VehicleDetailPage() {
                   data={drives}
                   keyExtractor={(d) => d.id}
                   compact
+                  pagination
                   emptyMessage={t('common.noDrives', 'No drives recorded yet')}
                 />
               ) : (
@@ -951,6 +952,7 @@ export default function VehicleDetailPage() {
                   data={sessions}
                   keyExtractor={(s) => s.id}
                   compact
+                  pagination
                   emptyMessage={t('common.noCharges', 'No charging sessions recorded yet')}
                 />
               ) : (

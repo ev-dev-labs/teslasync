@@ -539,6 +539,7 @@ function BackendStatusSection() {
               data={componentRows}
               keyExtractor={(r) => r.name}
               compact
+              pagination
               emptyMessage={t('No components found')}
             />
           </div>
@@ -1103,6 +1104,7 @@ function DataPipelineSection() {
                   data={exportJobs}
                   keyExtractor={(j) => j.id}
                   compact
+                  pagination
                   emptyMessage={t('No export jobs')}
                 />
               </>
@@ -1305,6 +1307,7 @@ function OperationsSection() {
                   data={notifLogs}
                   keyExtractor={(l) => l.id}
                   compact
+                  pagination={{ defaultPageSize: 50 }}
                   emptyMessage={t('No recent notifications')}
                 />
               ) : (
@@ -1327,6 +1330,7 @@ function OperationsSection() {
                 data={auditLogs}
                 keyExtractor={(l) => l.id}
                 compact
+                pagination={{ defaultPageSize: 50 }}
                 emptyMessage={t('No audit entries')}
               />
             ) : (

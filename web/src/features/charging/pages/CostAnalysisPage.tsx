@@ -907,6 +907,7 @@ export default function CostAnalysisPage() {
               sortDir={tableSortDir}
               onSort={handleSort}
               compact
+              pagination
             />
           ) : (
             <div className="flex h-32 items-center justify-center text-sm text-gray-500">

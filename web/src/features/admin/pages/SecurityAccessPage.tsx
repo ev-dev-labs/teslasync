@@ -736,6 +736,7 @@ export default function SecurityAccessPage() {
                 'No security events recorded yet.',
               )}
               compact
+              pagination={{ defaultPageSize: 50 }}
             />
           )}
         </GlassPanel>

@@ -233,6 +233,7 @@ export default function SignalGapDetectorPage() {
               data={filtered}
               keyExtractor={(signal) => signal.name}
               compact
+              pagination
               className="max-h-[65vh] overflow-auto border border-white/5"
               emptyMessage={t('signalGap.noMatch', 'No signals match current filters')}
             />

@@ -298,6 +298,7 @@ export default function SleepEfficiencyPage() {
                   keyExtractor={(event) => event.id}
                   emptyMessage={t('sleep.noDrainEvents', 'No drain events recorded yet')}
                   compact
+                  pagination
                 />
               ) : (
                 <EmptyState message={t('sleep.noDrainEvents', 'No drain events recorded yet')} />

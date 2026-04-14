@@ -831,7 +831,7 @@ function FleetTelemetryConfigTool() {
         <ResultPanel title={t('Delete Config')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
         {errorData.length > 0 && (
           <div className="space-y-2">
-            <DataTable columns={errorColumns} data={errorData} keyExtractor={(r) => r.id} compact />
+            <DataTable columns={errorColumns} data={errorData} keyExtractor={(r) => r.id} compact pagination={{ defaultPageSize: 50 }} />
             <Button
               variant="ghost"
               size="sm"
@@ -1702,7 +1702,7 @@ function HttpStatusTool() {
           onChange={(e) => setSearch(e.target.value)}
           icon={<Network className="h-4 w-4" />}
         />
-        <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.code} compact />
+        <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.code} compact pagination />
       </div>
     </ToolCard>
   )
@@ -1760,7 +1760,7 @@ function TeslaApiRefTool() {
           onChange={(e) => setSearch(e.target.value)}
           icon={<BookOpen className="h-4 w-4" />}
         />
-        <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.path} compact />
+        <DataTable columns={columns} data={filtered} keyExtractor={(r) => r.path} compact pagination />
       </div>
     </ToolCard>
   )

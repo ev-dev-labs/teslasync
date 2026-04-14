@@ -669,6 +669,7 @@ export default function EnergyFlowPage() {
               onSort={onSort}
               emptyMessage={t('No energy records found.')}
               compact
+              pagination
             />
           ) : (
             <EmptyState message={t('No energy history records available.')} />

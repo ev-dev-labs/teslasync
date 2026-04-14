@@ -328,6 +328,7 @@ export default function TimelinePage() {
             data={transitions}
             keyExtractor={(row) => row.id}
             emptyMessage={t('No Transitions')}
+            pagination
           />
         </GlassPanel>
       </FadeIn>

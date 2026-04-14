@@ -774,6 +774,7 @@ export default function NavigationRoutePage() {
                     data={waypoints}
                     keyExtractor={(wp) => `${wp.name}-${wp.distance}`}
                     compact
+                    pagination
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
@@ -839,6 +840,7 @@ export default function NavigationRoutePage() {
                   data={recentDestinations}
                   keyExtractor={(row) => `${row.time}-${row.destination}`}
                   compact
+                  pagination
                 />
               )}
             </GlassPanel>
@@ -903,6 +905,7 @@ export default function NavigationRoutePage() {
                   sortDir={sortDir}
                   onSort={handleSort}
                   compact
+                  pagination
                 />
               )}
             </GlassPanel>

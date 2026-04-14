@@ -244,6 +244,7 @@ export default function MileagePage() {
             keyExtractor={(r) => r.month}
             emptyMessage={t('No Entries')}
             compact
+            pagination
           />
         </GlassPanel>
       </FadeIn>

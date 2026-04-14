@@ -226,6 +226,7 @@ export default function LiveSignalMonitorPage() {
               data={filteredEntries}
               keyExtractor={(entry) => entry.id}
               compact
+              pagination={{ defaultPageSize: 50 }}
               emptyMessage={
                 entries.length === 0
                   ? t('liveMonitor.waiting', 'Waiting for signals…')

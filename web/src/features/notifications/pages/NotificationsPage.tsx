@@ -426,6 +426,7 @@ export default function NotificationsPage() {
               columns={logColumns}
               data={logs}
               keyExtractor={(log) => log.id}
+              pagination={{ defaultPageSize: 50 }}
               emptyMessage={t('No delivery logs yet')}
             />
           </GlassPanel>

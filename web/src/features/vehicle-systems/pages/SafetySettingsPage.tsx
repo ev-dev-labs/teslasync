@@ -596,6 +596,7 @@ export default function SafetySettingsPage() {
                   data={sortedHistory}
                   keyExtractor={(row) => row.id}
                   compact
+                  pagination
                 />
               )}
             </GlassPanel>

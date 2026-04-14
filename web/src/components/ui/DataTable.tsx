@@ -1,7 +1,8 @@
-import { type ReactNode, useState, useCallback } from 'react'
+import { type ReactNode, useState, useCallback, useEffect } from 'react'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
 import { ChevronUp, ChevronDown } from 'lucide-react'
+import { Pagination } from './Pagination'
 
 export interface Column<T> {
   key: string
@@ -9,6 +10,11 @@ export interface Column<T> {
   render: (row: T) => ReactNode
   sortable?: boolean
   className?: string
+}
+
+export interface PaginationConfig {
+  defaultPageSize?: number;
+  pageSizeOptions?: number[];
 }
 
 interface DataTableProps<T> {
@@ -21,12 +27,28 @@ interface DataTableProps<T> {
   emptyMessage?: string
   className?: string
   compact?: boolean
+  pagination?: boolean | PaginationConfig
 }
 
-/** Sortable glass-styled data table with consistent styling. */
+/** Sortable glass-styled data table with consistent styling and optional pagination. */
 export function DataTable<T>({
-  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact,
+  columns, data, keyExtractor, sortKey, sortDir, onSort, emptyMessage = 'No data', className, compact, pagination,
 }: DataTableProps<T>) {
+  const paginationEnabled = !!pagination
+  const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
+  const defaultPageSize = paginationConfig.defaultPageSize ?? 25
+  const pageSizeOptions = paginationConfig.pageSizeOptions ?? [20, 50, 100]
+
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(defaultPageSize)
+
+  // Reset to page 1 when data changes (e.g. filters applied)
+  useEffect(() => { setPage(1) }, [data.length])
+
+  const paginatedData = paginationEnabled
+    ? data.slice((page - 1) * pageSize, page * pageSize)
+    : data
+
   return (
     <div className={cn('overflow-x-auto rounded-xl', className)}>
       <table className={tableTokens.wrapper}>
@@ -64,7 +86,7 @@ export function DataTable<T>({
               </td>
             </tr>
           ) : (
-            data.map(row => (
+            paginatedData.map(row => (
               <tr key={keyExtractor(row)} className={tableTokens.row}>
                 {columns.map(col => (
                   <td key={col.key} className={cn(compact ? 'px-3 py-2' : tableTokens.cell, col.className)}>
@@ -76,6 +98,16 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
+      {paginationEnabled && data.length > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={data.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          pageSizeOptions={pageSizeOptions}
+        />
+      )}
     </div>
   )
 }

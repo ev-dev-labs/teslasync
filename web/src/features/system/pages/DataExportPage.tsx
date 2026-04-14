@@ -813,6 +813,7 @@ function ExportHistoryTable({
           keyExtractor={(row) => row.id}
           emptyMessage={t('No Jobs')}
           compact
+          pagination
         />
       )}
     </GlassPanel>

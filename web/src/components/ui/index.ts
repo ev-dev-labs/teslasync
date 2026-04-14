@@ -14,7 +14,7 @@ export { IconBox } from './IconBox';
 export { TabNav } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination } from './Pagination';
-export { DataTable, useSortToggle, type Column } from './DataTable';
+export { DataTable, useSortToggle, type Column, type PaginationConfig } from './DataTable';
 export { Drawer } from './Drawer';
 export { Breadcrumb } from './Breadcrumb';
 export { CommandPalette } from './CommandPalette';

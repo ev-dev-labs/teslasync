@@ -358,6 +358,7 @@ export default function StateMachineDebuggerPage() {
                 columns={stateCountColumns}
                 data={stateCountRows}
                 keyExtractor={(row) => row.state}
+                pagination
               />
             ) : (
               <EmptyState
@@ -414,6 +415,7 @@ export default function StateMachineDebuggerPage() {
               data={transitions}
               keyExtractor={(tr) => tr.startedAt}
               compact
+              pagination={{ defaultPageSize: 50 }}
               className="max-h-[50vh] overflow-auto"
             />
           ) : (

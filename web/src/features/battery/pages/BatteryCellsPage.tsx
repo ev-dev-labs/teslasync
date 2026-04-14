@@ -694,6 +694,7 @@ export default function BatteryCellsPage() {
               sortDir={sortDir}
               onSort={onSort}
               compact
+              pagination
             />
           ) : (
             <EmptyState
