@@ -7,21 +7,22 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Select } from '@/components/ui/Select';
-import { Pagination } from '@/components/ui/Pagination';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from '@/components/charts';
+import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select, Pagination } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+import {
+  ChartTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from '@/components/charts';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
-import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -156,7 +157,7 @@ export default function LocationsPage() {
               <div className="space-y-2">
                 {locations.map((loc, i) => (
                   <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-white/10 transition-colors">
-                    <div className={clsx(
+                    <div className={cn(
                       'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
                       i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-white/5 text-[var(--text-muted)]',
                     )}>
