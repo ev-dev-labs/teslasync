@@ -694,6 +694,61 @@ func (t *TelemetrySessionTracker) maybeCreateTrip(ctx context.Context, vehicleID
 
 ---
 
+## Bug 14 — Mileage Page: All zeros despite data in DB
+
+**Page:** `web/src/features/analytics/pages/MileagePage.tsx`
+**Screenshot:** Current Odometer: 0, Month Distance: 0, Daily Avg: 0.00, Annual Projection: 0.
+Charts empty. Monthly Summary shows Distance: 0.00. Subtitle shows raw "Mileage Subtitle".
+
+**Root Cause:** Complete field name mismatch between API response and frontend interface.
+
+API `/mileage/stats` (`internal/database/mileage_repo.go:105-112`) returns:
+```json
+{"total_distance": 16158, "avg_daily": 16158, "max_daily": 16158, "total_energy": 0, "total_drives": 0, "days_tracked": 1}
+```
+
+Frontend `MileageStats` interface (line 34-40) expects:
+```typescript
+interface MileageStats {
+  current_odometer: number;   // ❌ not in API response
+  month_distance: number;     // ❌ API has total_distance
+  daily_avg: number;          // ❌ API has avg_daily
+  annual_projection: number;  // ❌ not in API response
+  entries: MileageEntry[];    // ❌ not in API response
+}
+```
+
+After `camelCaseKeys`, API fields become `totalDistance`, `avgDaily`, `maxDaily`, etc. —
+NONE match the interface. `stats?.current_odometer` is `undefined` → displays 0.
+
+**Fix:** Update the interface to match the actual API response:
+```typescript
+interface MileageStats {
+  total_distance: number;   // or totalDistance after camelCase
+  avg_daily: number;        // or avgDaily
+  max_daily: number;        // or maxDaily
+  total_energy: number;     // or totalEnergy
+  total_drives: number;     // or totalDrives
+  days_tracked: number;     // or daysTracked
+}
+```
+
+Then update the metric cards:
+```typescript
+// Current Odometer → needs a separate query or use latest odometer from daily_mileage
+value={fmtInt(stats?.totalDistance ?? stats?.total_distance)}  // for Total Distance
+value={fmtNumber(stats?.avgDaily ?? stats?.avg_daily)}         // for Daily Avg
+// Annual projection: compute as avg_daily * 365
+value={fmtInt((stats?.avgDaily ?? stats?.avg_daily ?? 0) * 365)}
+```
+
+Also: add `/mileage/stats` endpoint fields for `current_odometer` (latest odometer_end)
+and `month_distance` (SUM for current month only), or compute them in the frontend.
+
+Also fix: subtitle "Mileage Subtitle" → `t('mileage.subtitle', 'Daily and monthly distance tracking')`.
+
+---
+
 ## Verification
 
 ```bash
@@ -737,5 +792,7 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Drive Detail: SOC display formatted with fmtInt, not raw float
 - [ ] Trip Replay: show EmptyState with GPS info when no valid positions, disable Replay button on Drive Detail
 - [ ] Trips: wire automatic trip creation from completed drives (tripsvc.Create never called)
+- [ ] Mileage: fix interface to match API fields (total_distance/avg_daily, not current_odometer/month_distance)
+- [ ] Mileage: fix subtitle "Mileage Subtitle" → proper i18n fallback
 - [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
