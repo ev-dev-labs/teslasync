@@ -2,26 +2,24 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BatteryWarning, Clock, Zap, Activity, Lightbulb, ShieldAlert } from 'lucide-react';
-import clsx from 'clsx';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
-import { DataTable, type Column, useSortToggle } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { RadialGauge } from '@/components/charts/RadialGauge';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { FadeIn } from '@/components/motion/FadeIn';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Select, DataTable, type Column, useSortToggle } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  RadialGauge, ChartTooltip,
+  chartMargin, axisTick, CHART_COLORS,
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
-import { chartMargin, axisTick } from '@/components/charts';
+import { Skeleton } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { CHART_COLORS } from '@/lib/colors';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ── Types ── */
@@ -48,20 +46,15 @@ interface VampireDrainStats {
   daily: { date: string; drain_pct: number; hours_parked: number }[];
 }
 
-interface Vehicle { id: number; vin: string; display_name: string }
-
 /* ── Component ── */
 
 export default function VampireDrainPage() {
   const { t } = useTranslation();
-  usePageTitle(t('Vampire Drain'));
+  usePageTitle(t('vampire.title', 'Vampire Drain'));
 
   const [vehicleId, setVehicleId] = useState<string>('');
 
-  const { data: vehicles } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  const { data: vehicles } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
@@ -127,7 +120,7 @@ export default function VampireDrainPage() {
     >
       {/* Summary Metrics */}
       <FadeIn>
-        <div className={clsx('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
+        <div className={cn('grid gap-4 grid-cols-2 lg:grid-cols-4')}>
           <MetricCard label={t('Avg Drain Rate')} value={`${fmtNumber(data?.avg_drain_rate, 2)}%/hr`} icon={<Zap className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Total Phantom Loss')} value={`${fmtNumber(data?.total_energy_lost, 1)} kWh`} icon={<BatteryWarning className="h-4 w-4" />} color="red" />
           <MetricCard label={t('Worst Session')} value={`${fmtNumber(data?.worst_drain_pct, 1)}%`} icon={<Activity className="h-4 w-4" />} color="amber" />
@@ -137,7 +130,7 @@ export default function VampireDrainPage() {
 
       {/* Gauge + Drain Rate Trend */}
       <FadeIn delay={0.1}>
-        <div className={clsx('grid gap-4 grid-cols-1 md:grid-cols-3')}>
+        <div className={cn('grid gap-4 grid-cols-1 md:grid-cols-3')}>
           <GlassPanel className="flex flex-col items-center justify-center p-6">
             {data ? (
               <RadialGauge
@@ -198,7 +191,7 @@ export default function VampireDrainPage() {
       {/* Drain Sessions Table */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4">
-          <div className={clsx('mb-3 flex items-center justify-between')}>
+          <div className={cn('mb-3 flex items-center justify-between')}>
             <span className="text-sm font-medium text-[var(--text-secondary)]">{t('Drain Sessions')}</span>
             <Badge variant="neutral">{data?.entries?.length ?? 0} {t('sessions')}</Badge>
           </div>
@@ -218,13 +211,13 @@ export default function VampireDrainPage() {
       {/* Recommendations */}
       <FadeIn delay={0.4}>
         <GlassPanel glow="green" className="p-5">
-          <div className={clsx('mb-3 flex items-center gap-2')}>
+          <div className={cn('mb-3 flex items-center gap-2')}>
             <Lightbulb className="h-5 w-5 text-neon-green" />
             <span className="text-sm font-semibold text-[var(--text-primary)]">{t('Tips to Reduce Vampire Drain')}</span>
           </div>
           <ul className="space-y-2">
             {tips.map((tip, i) => (
-              <li key={i} className={clsx('flex items-start gap-2 text-sm text-[var(--text-secondary)]')}>
+              <li key={i} className={cn('flex items-start gap-2 text-sm text-[var(--text-secondary)]')}>
                 <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">{tip.icon}</span>
                 <span>{tip.text}</span>
               </li>
