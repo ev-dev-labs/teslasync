@@ -1260,6 +1260,14 @@ func normalizeFleetUnits(signals map[string]interface{}) {
 }
 
 func toFloat(v interface{}) float64 {
+	// Unwrap {"value": X, ...} envelopes from wrapped telemetry payloads
+	if m, ok := v.(map[string]interface{}); ok {
+		if inner, has := m["value"]; has {
+			v = inner
+		} else {
+			return 0
+		}
+	}
 	switch val := v.(type) {
 	case float64:
 		return val
@@ -1285,12 +1293,17 @@ func toFloatOk(v interface{}) (float64, bool) {
 	if v == nil {
 		return 0, false
 	}
-	// Tesla sends {"invalid": true} for signals that can't be measured
+	// Handle map values: {"invalid": true} → skip, {"value": X} → unwrap
 	if m, ok := v.(map[string]interface{}); ok {
 		if inv, ok := m["invalid"]; ok {
 			if b, ok := inv.(bool); ok && b {
 				return 0, false
 			}
+		}
+		if inner, ok := m["value"]; ok {
+			v = inner
+		} else {
+			return 0, false
 		}
 	}
 	switch val := v.(type) {
@@ -1330,6 +1343,14 @@ func toString(v interface{}) string {
 	if v == nil {
 		return ""
 	}
+	// Unwrap {"value": X, ...} envelopes from wrapped telemetry payloads
+	if m, ok := v.(map[string]interface{}); ok {
+		if inner, has := m["value"]; has {
+			v = inner
+		} else {
+			return ""
+		}
+	}
 	switch val := v.(type) {
 	case string:
 		if val == "<nil>" || val == "nil" || val == "null" {
@@ -1353,6 +1374,14 @@ func toString(v interface{}) string {
 }
 
 func toBool(v interface{}) bool {
+	// Unwrap {"value": X, ...} envelopes from wrapped telemetry payloads
+	if m, ok := v.(map[string]interface{}); ok {
+		if inner, has := m["value"]; has {
+			v = inner
+		} else {
+			return false
+		}
+	}
 	switch val := v.(type) {
 	case bool:
 		return val
