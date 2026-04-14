@@ -1,5 +1,5 @@
 ---
-description: "Fix UI data binding bugs — TirePressure NaN/zero, Map 0,0 positions, Locations empty, FSM Debugger duplicate controls"
+description: "Fix UI data binding bugs — TirePressure NaN, Map 0,0, Locations empty, FSM Debugger duplicate controls + stats"
 ---
 
 # Fix: UI Data Binding Bugs Found During Signal Replay Testing
@@ -153,6 +153,93 @@ Remove this block:
 
 ---
 
+## Bug 5 — FSM Debugger: Transition Distribution & Counts show duplicate entries
+
+**Page:** `web/src/features/system/pages/StateMachineDebuggerPage.tsx`
+**Screenshot:** Pie chart shows `vehicle_state` (19) AND `vehicleState` (19) as separate slices.
+Transition Counts table shows both as separate rows with identical counts.
+
+**Root Cause:** `web/src/lib/resilience.ts` lines 19-33 — the `camelCaseKeys()` response transformer
+keeps BOTH the original snake_case key AND adds a camelCase duplicate. The `/fsm/stats` endpoint
+returns `{"stats": {"vehicle_state": 19}}`. After transformation it becomes:
+```json
+{"stats": {"vehicle_state": 19, "vehicleState": 19}}
+```
+
+The `stats` record keys are **data values** (FSM type names from the DB), not structural JSON
+field names. The transformer incorrectly treats them as field names and duplicates them.
+
+**Fix:** Deduplicate in the page where stats are consumed. In `StateMachineDebuggerPage.tsx`:
+
+1. Filter the `pieData` computation (line ~150-158) to skip camelCase duplicates:
+```typescript
+const pieData = useMemo(() => {
+  const seen = new Set<string>();
+  return Object.entries(stats)
+    .filter(([name]) => {
+      // Skip camelCase duplicates created by the response transformer
+      if (!name.includes('_') && Object.prototype.hasOwnProperty.call(stats, name.replace(/[A-Z]/g, m => '_' + m.toLowerCase()))) {
+        return false;
+      }
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    })
+    .map(([name, value], i) => ({
+      name,
+      value,
+      fill: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+}, [stats]);
+```
+
+2. Apply the same filter to `summaryRows` computation (line ~169).
+
+3. **Alternative simpler approach:** Filter stats ONCE before both computations:
+```typescript
+const cleanStats = useMemo(() => {
+  const result: Record<string, number> = {};
+  for (const [key, value] of Object.entries(stats)) {
+    // Keep only snake_case keys (original from API), skip camelCase duplicates
+    if (key.includes('_') || !Object.keys(stats).some(k => k.includes('_') && k.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase()) === key)) {
+      result[key] = value;
+    }
+  }
+  return result;
+}, [stats]);
+```
+Then use `cleanStats` instead of `stats` for both `pieData` and `summaryRows`.
+
+---
+
+## Bug 5b — FSM Debugger: Transition Distribution should show actual states, not FSM type names
+
+**Page:** `web/src/features/system/pages/StateMachineDebuggerPage.tsx`
+
+The Transition Distribution pie chart currently shows the `fsm_name` (e.g. "vehicle_state") — which
+is the FSM type, NOT the actual states (driving, charging, parked, online, etc.).
+
+**Fix:** Change the pie chart to show distribution of `to_state` values from the transitions:
+```typescript
+const pieData = useMemo(() => {
+  const byState = new Map<string, number>();
+  for (const tr of transitions) {
+    byState.set(tr.to_state, (byState.get(tr.to_state) ?? 0) + 1);
+  }
+  return Array.from(byState.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value], i) => ({
+      name,
+      value,
+      fill: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+}, [transitions]);
+```
+
+This shows actual state distribution (how many times vehicle transitioned TO each state).
+
+---
+
 ## Verification
 
 ```bash
@@ -179,4 +266,6 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Map: "—" in table instead of "0.0000" when no GPS
 - [ ] Locations: info banner when no GPS data available
 - [ ] FSM Debugger: only dropdown for Time Range, no duplicate button group
+- [ ] FSM Debugger: no duplicate entries in pie chart or transition counts table
+- [ ] FSM Debugger: pie chart shows actual state distribution (driving/charging/parked/online), not fsm_name
 - [ ] TypeScript compiles clean
