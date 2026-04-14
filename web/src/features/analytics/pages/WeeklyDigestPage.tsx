@@ -310,7 +310,7 @@ export default function WeeklyDigestPage() {
     error: drivesError,
   } = useQuery({
     queryKey: ['drives', selectedVehicleId],
-    queryFn: () => request<Drive[]>('/drives'),
+    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${selectedVehicleId}`),
     enabled: !!selectedVehicleId,
   });
 
@@ -320,7 +320,7 @@ export default function WeeklyDigestPage() {
     error: chargingError,
   } = useQuery({
     queryKey: ['charging', selectedVehicleId],
-    queryFn: () => request<ChargingSession[]>('/charging'),
+    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${selectedVehicleId}`),
     enabled: !!selectedVehicleId,
   });
 

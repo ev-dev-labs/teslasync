@@ -108,12 +108,13 @@ export function useCarPreferences(vehicleId: number | null) {
 
 // ─── Gas Price ───────────────────────────────────────────────────────────────
 
-export function useGasPriceStatus() {
+export function useGasPriceStatus(enabled = true) {
   return useQuery({
     queryKey: settingsKeys.gasPriceStatus,
     queryFn: () => request<GasPriceStatus>('/gas-price/status'),
+    enabled,
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: enabled ? 30_000 : false,
   });
 }
 

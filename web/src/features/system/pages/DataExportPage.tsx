@@ -838,8 +838,8 @@ export default function DataExportPage() {
     isLoading: jobsLoading,
     error: jobsError,
   } = useQuery<ExportJobSummary[]>({
-    queryKey: ['exports'],
-    queryFn: () => request<ExportJobSummary[]>('/exports'),
+    queryKey: ['export-jobs'],
+    queryFn: () => request<ExportJobSummary[]>('/export/jobs'),
     refetchInterval: 10_000,
   });
 
@@ -852,14 +852,14 @@ export default function DataExportPage() {
 
   const submitExport = useMutation({
     mutationFn: (payload: ExportSubmitPayload) =>
-      request<ExportJobSummary>('/exports', {
+      request<ExportJobSummary>('/export/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }),
     onSuccess: () => {
       toast.success(t('Export Started'), t('Export Started Msg'));
-      queryClient.invalidateQueries({ queryKey: ['exports'] });
+      queryClient.invalidateQueries({ queryKey: ['export-jobs'] });
     },
     onError: () => {
       toast.error(t('Export Failed'), t('Export Failed Msg'));
@@ -869,11 +869,11 @@ export default function DataExportPage() {
   /* --- Handlers --- */
 
   const handleDownload = useCallback((job: ExportJobSummary) => {
-    window.open(`/api/v1/exports/${job.id}/download`, '_blank');
+    window.open(`/api/v1/export/jobs/${job.id}/download`, '_blank');
   }, []);
 
   const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['exports'] });
+    queryClient.invalidateQueries({ queryKey: ['export-jobs'] });
   }, [queryClient]);
 
   const handleSubmit = useCallback(

@@ -446,6 +446,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		} else {
 			// No auth on SSE (development)
 			r.Get("/events", SSEHandler(eventHub))
+			// Return empty token in dev mode so frontend doesn't get 404
+			r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
+				writeJSON(w, http.StatusOK, map[string]string{"token": ""})
+			})
 		}
 
 		// System endpoints
