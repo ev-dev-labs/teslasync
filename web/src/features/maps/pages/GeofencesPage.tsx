@@ -8,38 +8,19 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import {
-  MapPin,
-  Plus,
-  Pencil,
-  Trash2,
-  Globe,
-  Ruler,
-  Shield,
-  LogIn,
-  LogOut,
-  Check,
-  X,
-  Activity,
+  MapPin, Plus, Pencil, Trash2, Globe, Ruler, Shield,
+  LogIn, LogOut, Check, X, Activity,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Modal } from '@/components/ui/Modal';
-import { Toggle } from '@/components/ui/Toggle';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useToast } from '@/components/feedback/Toast';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 
@@ -112,7 +93,6 @@ export default function GeofencesPage() {
   const { t } = useTranslation();
   usePageTitle(t('Geofences'));
   const queryClient = useQueryClient();
-  const toast = useToast();
 
   // ─── State ───────────────────────────────────────────────────────────────
 
@@ -133,10 +113,8 @@ export default function GeofencesPage() {
       request<Geofence>('/geofences', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
-      toast.success(t('Geofence created'));
       closeModal();
     },
-    onError: (err: Error) => toast.error(t('Failed to create geofence'), err.message),
   });
 
   const updateMut = useMutation({
@@ -144,10 +122,8 @@ export default function GeofencesPage() {
       request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
-      toast.success(t('Geofence updated'));
       closeModal();
     },
-    onError: (err: Error) => toast.error(t('Failed to update geofence'), err.message),
   });
 
   const deleteMut = useMutation({
@@ -155,10 +131,8 @@ export default function GeofencesPage() {
       request<void>(`/geofences/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
-      toast.success(t('Geofence deleted'));
       setDeleteTarget(null);
     },
-    onError: (err: Error) => toast.error(t('Failed to delete geofence'), err.message),
   });
 
   const toggleMut = useMutation({
@@ -168,7 +142,6 @@ export default function GeofencesPage() {
         body: JSON.stringify({ enabled }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['geofences'] }),
-    onError: (err: Error) => toast.error(t('Failed to toggle geofence'), err.message),
   });
 
   // ─── Computed stats ──────────────────────────────────────────────────────
@@ -315,7 +288,7 @@ export default function GeofencesPage() {
                   <GlassPanel
                     hover
                     glow="purple"
-                    className={clsx(
+                    className={cn(
                       'flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between',
                     )}
                   >
