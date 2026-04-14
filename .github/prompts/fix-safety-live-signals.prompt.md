@@ -193,6 +193,32 @@ may deliver them as `TpmsFl` but the accumulator might use a different key.
 
 ---
 
+## Bug 5 — Sleep Efficiency: "Monthly Sentry Mode Impact" overlaps "Sentry vs No-Sentry" panel
+
+**Page:** `web/src/features/battery/pages/SleepEfficiencyPage.tsx`
+**Screenshot:** The "Monthly Sentry Mode Impact" card (0.00% Extra drain/hr, 0.00 kWh, $0.00)
+overlaps/overflows into the bottom of the "Sentry vs No-Sentry" panel. It looks like the
+impact card is positioned absolutely or has a negative margin pushing it into the panel above.
+
+**Fix:** Check the layout of the "Sentry vs No-Sentry" section and the "Monthly Sentry Mode
+Impact" card. They should be stacked vertically, not overlapping:
+
+1. Find the Monthly Sentry Mode Impact card and ensure it's inside the grid flow (not
+   absolutely positioned or with negative margins)
+2. If it's inside the Sentry vs No-Sentry panel, make sure the panel has enough height:
+   ```tsx
+   <GlassPanel className="p-5 flex flex-col">
+     <p className="text-sm font-semibold">Sentry vs No-Sentry</p>
+     {/* chart or empty state */}
+     <div className="mt-auto">  {/* push impact card to bottom */}
+       <GlassPanel className="p-4 mt-4">Monthly Sentry Mode Impact...</GlassPanel>
+     </div>
+   </GlassPanel>
+   ```
+3. Or if they're separate panels, ensure they're in a proper grid/flex column with gap
+
+---
+
 ## Verification
 
 ```bash
@@ -211,5 +237,6 @@ cd web && npx tsc --noEmit
 - [ ] Sections always render (show "—" when no data)
 - [ ] Safety Score gauge + summary cards properly aligned (equal height, balanced widths)
 - [ ] Drive Detail: tire pressure columns populated in drive_telemetry_readings (map TpmsFl/Fr/Rl/Rr)
+- [ ] Sleep Efficiency: Monthly Sentry Mode Impact card not overlapping Sentry panel
 - [ ] No inline styles, no direct recharts imports
 - [ ] TypeScript compiles clean
