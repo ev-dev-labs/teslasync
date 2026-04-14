@@ -1,35 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import clsx from 'clsx';
 import {
-  MapPin,
-  Compass,
-  Gauge,
-  Clock,
-  Home,
-  Briefcase,
-  Link2,
-  Navigation,
-  Map,
-  Route,
-  Fence,
-  LocateFixed,
+  MapPin, Compass, Gauge, Clock, Home, Briefcase,
+  Link2, Navigation, Map, Route, Fence, LocateFixed,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Select, type SelectOption } from '@/components/ui/Select';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { MetricCard } from '@/components/data-display/MetricCard';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { FadeIn } from '@/components/motion/FadeIn';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState } from '@/components/feedback';
+import { FadeIn } from '@/components/motion';
+
+import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -50,12 +37,6 @@ interface LocationSnapshot {
   active_route: boolean;
   destination_name: string;
   created_at: string;
-}
-
-interface Vehicle {
-  id: number;
-  vin: string;
-  display_name: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -83,10 +64,7 @@ export default function MapOverviewPage() {
     data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
-  } = useQuery<Vehicle[]>({
-    queryKey: ['vehicles'],
-    queryFn: () => request<Vehicle[]>('/vehicles'),
-  });
+  } = useVehicles();
 
   const selectedId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
@@ -285,7 +263,7 @@ export default function MapOverviewPage() {
               {/* Home */}
               <div className="flex items-center gap-3">
                 <Home
-                  className={clsx(
+                  className={cn(
                     'h-5 w-5',
                     latest.located_at_home ? 'text-emerald-400' : 'text-gray-500',
                   )}
@@ -307,7 +285,7 @@ export default function MapOverviewPage() {
               {/* Work */}
               <div className="flex items-center gap-3">
                 <Briefcase
-                  className={clsx(
+                  className={cn(
                     'h-5 w-5',
                     latest.located_at_work ? 'text-emerald-400' : 'text-gray-500',
                   )}
@@ -329,7 +307,7 @@ export default function MapOverviewPage() {
               {/* HomeLink nearby */}
               <div className="flex items-center gap-3">
                 <Link2
-                  className={clsx(
+                  className={cn(
                     'h-5 w-5',
                     latest.homelink_nearby ? 'text-cyan-400' : 'text-gray-500',
                   )}
