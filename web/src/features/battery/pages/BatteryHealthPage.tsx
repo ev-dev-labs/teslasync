@@ -25,7 +25,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSettings } from '@/hooks/useSettings';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import type { ChargingSession } from '@/api/types';
@@ -685,7 +685,7 @@ export default function BatteryHealthPage() {
               </p>
               <p className="text-2xl font-bold text-white/90">
                 {health.history.length > 0
-                  ? Math.round(convertDistance(health.history[0].range_km))
+                  ? fmtInt(convertDistance(health.history[0].range_km))
                   : '—'}
                 <span className="text-sm text-white/40"> {distanceUnit}</span>
               </p>
@@ -696,13 +696,13 @@ export default function BatteryHealthPage() {
               </p>
               <p className="text-2xl font-bold text-neon-green">
                 {health.history.length > 0
-                  ? Math.round(convertDistance(health.history[health.history.length - 1].range_km))
+                  ? fmtInt(convertDistance(health.history[health.history.length - 1].range_km))
                   : '—'}
                 <span className="text-sm text-white/40"> {distanceUnit}</span>
               </p>
               {health.history.length >= 2 && (
                 <p className="text-[10px] text-neon-red mt-1">
-                  -{Math.round(convertDistance(
+                  -{fmtInt(convertDistance(
                     health.history[0].range_km - health.history[health.history.length - 1].range_km,
                   ))} {distanceUnit} {t('battery.newVsNow.lost', 'lost')}
                 </p>

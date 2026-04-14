@@ -21,7 +21,7 @@ import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/us
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -116,9 +116,9 @@ export default function BatteryDegradationPage() {
   /* Risk factors from degradation data */
   const habits = degradation?.charging_habits;
   const totalCharges = (habits?.fast_charge_count ?? 0) + (habits?.slow_charge_count ?? 0);
-  const fastChargePct = totalCharges > 0
-    ? Math.round(((habits?.fast_charge_count ?? 0) / totalCharges) * 100)
-    : 0;
+  const fastChargePct = fmtInt(totalCharges > 0
+    ? ((habits?.fast_charge_count ?? 0) / totalCharges) * 100
+    : 0);
 
   const cycleDepthScore = data
     ? Math.max(0, Math.round(100 - data.avg_depth_of_discharge))
