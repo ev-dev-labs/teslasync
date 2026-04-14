@@ -508,7 +508,7 @@ export default function MaintenancePage() {
       </FadeIn>
 
       {/* ── Filter / Sort toolbar ────────────────────────────────── */}
-      <FadeIn delay={50}>
+      <FadeIn delay={0.05}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-[var(--text-muted)]" />
@@ -540,7 +540,7 @@ export default function MaintenancePage() {
       </FadeIn>
 
       {/* ── Maintenance items grid ───────────────────────────────── */}
-      <FadeIn delay={100}>
+      <FadeIn delay={0.1}>
         {loadingItems && !items ? (
           <ItemsSkeleton />
         ) : filteredItems.length === 0 ? (
@@ -563,7 +563,7 @@ export default function MaintenancePage() {
       </FadeIn>
 
       {/* ── Cost Summary & Service Projections ────────────────────── */}
-      <FadeIn delay={120}>
+      <FadeIn delay={0.15}>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Estimated Annual Cost */}
           <GlassPanel className="p-6">
@@ -648,7 +648,7 @@ export default function MaintenancePage() {
       </FadeIn>
 
       {/* ── Service records table ────────────────────────────────── */}
-      <FadeIn delay={150}>
+      <FadeIn delay={0.2}>
         <GlassPanel className="p-6">
           <span className="text-sm font-semibold mb-4 block text-[var(--text-primary)]">
             {t('Service Records')}

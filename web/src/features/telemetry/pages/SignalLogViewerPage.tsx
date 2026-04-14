@@ -36,8 +36,14 @@ interface SignalRow {
 }
 
 interface SignalHistoryResp {
-  data: SignalRow[];
-  pagination?: { total: number; total_pages: number; page: number; per_page: number };
+  signal: string;
+  count: number;
+  data: Array<{
+    created_at: string;
+    value_num?: number | null;
+    value_str?: string | null;
+    value_bool?: boolean | null;
+  }>;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,29 +120,38 @@ export default function SignalLogViewerPage() {
     );
   }, []);
 
-  const signalsCsv = selectedSignals.join(',');
   const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
-  // ── Data query ──
-  const { data: historyResp, isLoading, isFetching } = useQuery<SignalHistoryResp>({
-    queryKey: ['signal-log', queryKey, page, perPage],
-    queryFn: () => {
-      const params = new URLSearchParams({
-        vehicle_id: String(vehicleId),
-        signals: signalsCsv,
-        from: fromIso,
-        to: toIso,
-        page: String(page),
-        per_page: String(perPage),
-      });
-      return request(`/signals/history?${params}`);
+  // ── Data query (parallel per-signal fetches) ──
+  const { data: allRows, isLoading, isFetching } = useQuery<SignalRow[]>({
+    queryKey: ['signal-log', queryKey],
+    queryFn: async () => {
+      const results = await Promise.all(
+        selectedSignals.map(sig =>
+          request<SignalHistoryResp>(
+            `/signals/${vehicleId}/${sig}/history?from=${fromIso}&to=${toIso}&limit=${perPage * 10}`,
+          ),
+        ),
+      );
+      return results.flatMap((resp) =>
+        (resp?.data ?? []).map(row => ({
+          created_at: row.created_at,
+          signal: resp?.signal ?? '',
+          value_num: row.value_num ?? null,
+          value_str: row.value_str ?? null,
+          value_bool: row.value_bool ?? null,
+        })),
+      ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: queryKey !== null,
   });
 
-  const rows = historyResp?.data ?? [];
-  const totalRecords = historyResp?.pagination?.total ?? 0;
+  const totalRecords = (allRows ?? []).length;
+  const rows = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return (allRows ?? []).slice(start, start + perPage);
+  }, [allRows, page, perPage]);
   const hasQueried = queryKey !== null;
 
   // Signal search filter
@@ -235,7 +250,7 @@ export default function SignalLogViewerPage() {
         </div>
 
         {/* Query controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-end gap-3">
           <Select
             label={t('Per Page')}
             value={String(perPage)}
@@ -254,12 +269,11 @@ export default function SignalLogViewerPage() {
             onClick={handleQuery}
             disabled={!canQuery}
             loading={isFetching}
-            className="mt-5"
           >
             {t('Query')}
           </Button>
           {hasQueried && (
-            <span className="text-xs text-[var(--text-muted)] mt-5">
+            <span className="text-xs text-[var(--text-muted)]">
               {totalRecords} {t('records')}
             </span>
           )}

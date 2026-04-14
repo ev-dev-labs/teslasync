@@ -152,14 +152,14 @@ function SummaryCard({
   className?: string;
 }) {
   return (
-    <GlassPanel className={cn('p-4', className)}>
-      <p className="text-xs uppercase tracking-wider text-white/50">{label}</p>
+    <GlassPanel className={cn('p-4 min-w-0 overflow-hidden', className)}>
+      <p className="text-xs uppercase tracking-wider text-white/50 truncate">{label}</p>
       {loading ? (
         <Skeleton className="mt-1 h-7 w-20" />
       ) : (
-        <p className="mt-1 text-2xl font-semibold text-white">
+        <p className="mt-1 text-lg xl:text-2xl font-semibold text-white truncate">
           {value}
-          {unit && <span className="ml-1 text-sm text-white/60">{unit}</span>}
+          {unit && <span className="ml-1 text-xs xl:text-sm text-white/60">{unit}</span>}
         </p>
       )}
     </GlassPanel>

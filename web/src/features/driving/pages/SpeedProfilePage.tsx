@@ -193,13 +193,13 @@ export default function SpeedProfilePage() {
               const pct = totalReadings > 0 ? ((bucket.readings ?? 0) / totalReadings) * 100 : 0;
               const effData = bucketEfficiency.get(range);
               return (
-                <StaggerItem key={range}>
-                  <GlassPanel className="p-4">
+                <StaggerItem key={range} className="h-full">
+                  <GlassPanel className="p-4 h-full flex flex-col">
                     <div className="flex items-center gap-2 mb-2">
                       {categoryIcon(range)}
                       <span className="text-xs font-semibold text-[var(--text-primary)]">{range}</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex-1">
                       <div className="flex justify-between">
                         <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.timeShare', 'Time')}</span>
                         <span className={cn('text-sm font-bold', bucketTextClass(range))}>

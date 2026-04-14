@@ -75,14 +75,14 @@ function isAebEnabled(off: boolean): boolean {
 
 function boolFeatures(snap: SafetySnapshot): boolean[] {
   return [
-    isAebEnabled(snap.automatic_emergency_braking_off),
-    snap.automatic_blind_spot_camera,
-    snap.blind_spot_collision_warning,
-    snap.emergency_lane_departure_avoidance,
-    snap.pin_to_drive_enabled,
-    snap.forward_collision_warning !== 'Off',
-    snap.lane_departure_avoidance !== 'Off',
-    snap.speed_limit_warning !== 'Off',
+    isAebEnabled(snap.automatic_emergency_braking_off ?? false),
+    snap.automatic_blind_spot_camera ?? false,
+    snap.blind_spot_collision_warning ?? false,
+    snap.emergency_lane_departure_avoidance ?? false,
+    snap.pin_to_drive_enabled ?? false,
+    (snap.forward_collision_warning ?? 'Off') !== 'Off',
+    (snap.lane_departure_avoidance ?? 'Off') !== 'Off',
+    (snap.speed_limit_warning ?? 'Off') !== 'Off',
   ];
 }
 
@@ -172,9 +172,9 @@ function toChartData(history: SafetySnapshot[]): ChartPoint[] {
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     .map((s) => ({
       time: formatDateTime(s.created_at),
-      aeb: isAebEnabled(s.automatic_emergency_braking_off) ? 1 : 0,
-      bscw: s.blind_spot_collision_warning ? 1 : 0,
-      elda: s.emergency_lane_departure_avoidance ? 1 : 0,
+      aeb: isAebEnabled(s.automatic_emergency_braking_off ?? false) ? 1 : 0,
+      bscw: (s.blind_spot_collision_warning ?? false) ? 1 : 0,
+      elda: (s.emergency_lane_departure_avoidance ?? false) ? 1 : 0,
     }));
 }
 
@@ -186,10 +186,13 @@ function buildFeatureCards(
   snap: SafetySnapshot,
   t: (key: string) => string,
 ): FeatureCardDef[] {
-  const aebOn = isAebEnabled(snap.automatic_emergency_braking_off);
-  const fcwOn = snap.forward_collision_warning !== 'Off';
-  const ldaOn = snap.lane_departure_avoidance !== 'Off';
-  const slwOn = snap.speed_limit_warning !== 'Off';
+  const aebOn = isAebEnabled(snap.automatic_emergency_braking_off ?? false);
+  const fcwVal = snap.forward_collision_warning ?? 'Off';
+  const ldaVal = snap.lane_departure_avoidance ?? 'Off';
+  const slwVal = snap.speed_limit_warning ?? 'Off';
+  const fcwOn = fcwVal !== 'Off';
+  const ldaOn = ldaVal !== 'Off';
+  const slwOn = slwVal !== 'Off';
 
   return [
     {
@@ -203,57 +206,57 @@ function buildFeatureCards(
       key: 'bsc',
       label: t('Blind Spot Camera'),
       description: t('Camera view when signaling'),
-      enabled: snap.automatic_blind_spot_camera,
-      valueText: snap.automatic_blind_spot_camera ? t('Enabled') : t('Disabled'),
+      enabled: snap.automatic_blind_spot_camera ?? false,
+      valueText: (snap.automatic_blind_spot_camera ?? false) ? t('Enabled') : t('Disabled'),
     },
     {
       key: 'fcw',
       label: t('Forward Collision Warning'),
       description: t('Warns of potential frontal collisions'),
       enabled: fcwOn,
-      valueText: snap.forward_collision_warning,
+      valueText: fcwVal,
     },
     {
       key: 'lda',
       label: t('Lane Departure Avoidance'),
       description: t('Prevents unintentional lane changes'),
       enabled: ldaOn,
-      valueText: snap.lane_departure_avoidance,
+      valueText: ldaVal,
     },
     {
       key: 'cfd',
       label: t('Cruise Follow Distance'),
       description: t('Adaptive cruise headway setting'),
       enabled: Number(snap.cruise_follow_distance) > 0,
-      valueText: snap.cruise_follow_distance,
+      valueText: snap.cruise_follow_distance ?? '—',
     },
     {
       key: 'slw',
       label: t('Speed Limit Warning'),
       description: t('Alerts when exceeding speed limit'),
       enabled: slwOn,
-      valueText: snap.speed_limit_warning,
+      valueText: slwVal,
     },
     {
       key: 'ptd',
       label: t('Pin to Drive'),
       description: t('Requires PIN before driving'),
-      enabled: snap.pin_to_drive_enabled,
-      valueText: snap.pin_to_drive_enabled ? t('Enabled') : t('Disabled'),
+      enabled: snap.pin_to_drive_enabled ?? false,
+      valueText: (snap.pin_to_drive_enabled ?? false) ? t('Enabled') : t('Disabled'),
     },
     {
       key: 'bscw',
       label: t('Blind Spot Collision Warning'),
       description: t('Alerts for blind-spot hazards'),
-      enabled: snap.blind_spot_collision_warning,
-      valueText: snap.blind_spot_collision_warning ? t('Enabled') : t('Disabled'),
+      enabled: snap.blind_spot_collision_warning ?? false,
+      valueText: (snap.blind_spot_collision_warning ?? false) ? t('Enabled') : t('Disabled'),
     },
     {
       key: 'elda',
       label: t('Emergency Lane Departure Avoidance'),
       description: t('Steers back on unintentional departure'),
-      enabled: snap.emergency_lane_departure_avoidance,
-      valueText: snap.emergency_lane_departure_avoidance ? t('Enabled') : t('Disabled'),
+      enabled: snap.emergency_lane_departure_avoidance ?? false,
+      valueText: (snap.emergency_lane_departure_avoidance ?? false) ? t('Enabled') : t('Disabled'),
     },
   ];
 }
@@ -283,17 +286,17 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
     {
       key: 'aeb',
       header: t('AEB'),
-      render: (row) => boolCell(isAebEnabled(row.automatic_emergency_braking_off)),
+      render: (row) => boolCell(isAebEnabled(row.automatic_emergency_braking_off ?? false)),
     },
     {
       key: 'bsc',
       header: t('BSC'),
-      render: (row) => boolCell(row.automatic_blind_spot_camera),
+      render: (row) => boolCell(row.automatic_blind_spot_camera ?? false),
     },
     {
       key: 'bscw',
       header: t('BSCW'),
-      render: (row) => boolCell(row.blind_spot_collision_warning),
+      render: (row) => boolCell(row.blind_spot_collision_warning ?? false),
     },
     {
       key: 'fcw',
@@ -316,7 +319,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
     {
       key: 'elda',
       header: t('ELDA'),
-      render: (row) => boolCell(row.emergency_lane_departure_avoidance),
+      render: (row) => boolCell(row.emergency_lane_departure_avoidance ?? false),
     },
     {
       key: 'slw',
@@ -330,7 +333,7 @@ function buildHistoryColumns(t: (k: string) => string): Column<SafetySnapshot>[]
     {
       key: 'pin',
       header: t('PIN'),
-      render: (row) => boolCell(row.pin_to_drive_enabled),
+      render: (row) => boolCell(row.pin_to_drive_enabled ?? false),
     },
   ];
 }

@@ -112,11 +112,14 @@ export default function MapOverviewPage() {
   /* ---- derived ---- */
   const isLoading = vehiclesLoading || latestLoading;
   const hasVehicles = (vehicles?.length ?? 0) > 0;
-  const hasValidLocation = latest != null && (latest.latitude !== 0 || latest.longitude !== 0);
+  const hasValidLocation = latest != null
+    && typeof latest.latitude === 'number'
+    && typeof latest.longitude === 'number'
+    && (latest.latitude !== 0 || latest.longitude !== 0);
 
   const trailPositions = useMemo(
     () => (history ?? [])
-      .filter((s) => s.latitude !== 0 || s.longitude !== 0)
+      .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number' && (s.latitude !== 0 || s.longitude !== 0))
       .map((s) => [s.latitude, s.longitude] as [number, number]),
     [history],
   );
@@ -140,7 +143,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colLat', 'Lat'),
         render: (r) => (
           <span className="font-mono text-xs">
-            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.latitude, 5) : '—'}
+            {typeof r.latitude === 'number' && typeof r.longitude === 'number' && (r.latitude !== 0 || r.longitude !== 0) ? fmtNumber(r.latitude, 5) : '—'}
           </span>
         ),
       },
@@ -149,7 +152,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colLon', 'Lon'),
         render: (r) => (
           <span className="font-mono text-xs">
-            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.longitude, 5) : '—'}
+            {typeof r.latitude === 'number' && typeof r.longitude === 'number' && (r.latitude !== 0 || r.longitude !== 0) ? fmtNumber(r.longitude, 5) : '—'}
           </span>
         ),
       },

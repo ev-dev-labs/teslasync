@@ -393,7 +393,7 @@ export default function SecurityAccessPage() {
           ))}
         </div>
       ) : (
-        <FadeIn delay={100}>
+        <FadeIn delay={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {/* Lock Status */}
             <GlassPanel className="p-4">
@@ -562,7 +562,7 @@ export default function SecurityAccessPage() {
       )}
 
       {/* ---- Window Status Detail (4 cards) ---- */}
-      <FadeIn delay={200}>
+      <FadeIn delay={0.15}>
         <h2 className="text-lg font-semibold text-gray-200 mb-3">
           {t('admin.security.windowDetail', 'Window Status Detail')}
         </h2>
@@ -604,7 +604,7 @@ export default function SecurityAccessPage() {
       </FadeIn>
 
       {/* ---- Sentry Mode Chart ---- */}
-      <FadeIn delay={300}>
+      <FadeIn delay={0.2}>
         <GlassPanel className="p-4 mb-6">
           <h2 className="text-lg font-semibold text-gray-200 mb-4">
             {t('admin.security.sentryChart', 'Sentry Mode Activity')}
@@ -654,7 +654,7 @@ export default function SecurityAccessPage() {
       </FadeIn>
 
       {/* ---- Security Statistics ---- */}
-      <FadeIn delay={350}>
+      <FadeIn delay={0.25}>
         <GlassPanel className="p-4 mb-6">
           <h2 className="text-lg font-semibold text-gray-200 mb-4">
             {t('admin.security.statsTitle', 'Security Statistics')}

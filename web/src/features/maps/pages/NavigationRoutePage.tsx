@@ -244,7 +244,10 @@ export default function NavigationRoutePage() {
   /* ---- derived ---- */
   const isLoading = vehiclesLoading || latestLoading;
   const hasActiveRoute = latest?.active_route ?? false;
-  const hasValidLocation = latest != null && (latest.latitude !== 0 || latest.longitude !== 0);
+  const hasValidLocation = latest != null
+    && typeof latest.latitude === 'number'
+    && typeof latest.longitude === 'number'
+    && (latest.latitude !== 0 || latest.longitude !== 0);
 
   const waypoints = useMemo(
     () => (latest ? buildWaypoints(latest) : []),
@@ -336,7 +339,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {row.latitude !== 0 || row.longitude !== 0 ? fmtNumber(row.latitude ?? 0, 6) : '—'}
+            {typeof row.latitude === 'number' && typeof row.longitude === 'number' && (row.latitude !== 0 || row.longitude !== 0) ? fmtNumber(row.latitude, 6) : '—'}
           </span>
         ),
       },
@@ -346,7 +349,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {row.latitude !== 0 || row.longitude !== 0 ? fmtNumber(row.longitude ?? 0, 6) : '—'}
+            {typeof row.latitude === 'number' && typeof row.longitude === 'number' && (row.latitude !== 0 || row.longitude !== 0) ? fmtNumber(row.longitude, 6) : '—'}
           </span>
         ),
       },

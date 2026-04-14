@@ -29,7 +29,7 @@ import { useQuery } from '@tanstack/react-query';
 /* ── Types ─────────────────────────────────────────────────────── */
 
 interface CellReading {
-  cell_number: number;
+  cell_id: number;
   voltage: number;
   delta_from_avg: number;
   status: 'normal' | 'low' | 'high' | 'critical';
@@ -139,15 +139,15 @@ function CellHeatmap({
       >
         {cells.map((cell) => (
           <div
-            key={cell.cell_number}
+            key={cell.cell_id}
             className={cn(
               'flex flex-col items-center justify-center rounded-md p-1 text-[9px] font-mono',
               'transition-transform hover:scale-110',
             )}
             style={{ backgroundColor: `${cellColor(cell.voltage, avg)}20`, color: cellColor(cell.voltage, avg) }}
-            title={`${t('Cell')} ${cell.cell_number}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
+            title={`${t('Cell')} ${cell.cell_id}: ${fmtNumber(cell.voltage ?? 0, 3)} V (${(cell.delta_from_avg ?? 0) >= 0 ? '+' : ''}${fmtNumber((cell.delta_from_avg ?? 0) * 1000, 1)} mV)`}
           >
-            <span className="font-semibold">{cell.cell_number}</span>
+            <span className="font-semibold">{cell.cell_id}</span>
             <span>{fmtNumber(cell.voltage ?? 0, 3)}</span>
           </div>
         ))}
@@ -314,7 +314,7 @@ export default function BatteryCellsPage() {
 
   /* ── Table ─── */
 
-  const { sortKey, sortDir, onSort, sortFn } = useSortToggle('cell_number', 'asc');
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle('cell_id', 'asc');
 
   const sortedCells = useMemo(() => {
     if (!data?.cells) return [];
@@ -326,11 +326,11 @@ export default function BatteryCellsPage() {
 
   const columns: Column<CellReading>[] = useMemo(() => [
     {
-      key: 'cell_number',
+      key: 'cell_id',
       header: t('Cell #'),
       sortable: true,
       render: (r) => (
-        <span className="font-mono font-semibold">{r.cell_number}</span>
+        <span className="font-mono font-semibold">{r.cell_id}</span>
       ),
     },
     {
@@ -404,13 +404,13 @@ export default function BatteryCellsPage() {
           />
           <MetricCard
             label={t('Min Cell')}
-            value={minCell ? `#${minCell.cell_number} ${fmtNumber(minCell.voltage, 4)} V` : '—'}
+            value={minCell ? `#${minCell.cell_id} ${fmtNumber(minCell.voltage, 4)} V` : '—'}
             icon={<ArrowDownRight className="h-4 w-4" />}
             color="amber"
           />
           <MetricCard
             label={t('Max Cell')}
-            value={maxCell ? `#${maxCell.cell_number} ${fmtNumber(maxCell.voltage, 4)} V` : '—'}
+            value={maxCell ? `#${maxCell.cell_id} ${fmtNumber(maxCell.voltage, 4)} V` : '—'}
             icon={<ArrowUpRight className="h-4 w-4" />}
             color="purple"
           />
@@ -473,7 +473,7 @@ export default function BatteryCellsPage() {
               <BarChart data={data.cells} margin={chartMarginLabeled}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis
-                  dataKey="cell_number"
+                  dataKey="cell_id"
                   tick={axisTick}
                   label={{ value: t('Cell #'), position: 'insideBottom', offset: -2, style: { fill: 'var(--text-muted)', fontSize: 11 } }}
                 />
@@ -689,7 +689,7 @@ export default function BatteryCellsPage() {
             <DataTable
               columns={columns}
               data={sortedCells}
-              keyExtractor={(r) => r.cell_number}
+              keyExtractor={(r) => r.cell_id}
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={onSort}

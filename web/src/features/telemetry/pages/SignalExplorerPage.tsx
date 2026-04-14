@@ -41,8 +41,14 @@ interface SignalRow {
 }
 
 interface SignalHistoryResp {
-  data: SignalRow[];
-  pagination?: { total: number; total_pages: number; page: number; per_page: number };
+  signal: string;
+  count: number;
+  data: Array<{
+    created_at: string;
+    value_num?: number | null;
+    value_str?: string | null;
+    value_bool?: boolean | null;
+  }>;
 }
 
 interface SignalStat {
@@ -111,28 +117,30 @@ export default function SignalExplorerPage() {
     );
   }, []);
 
-  const signalsCsv = selectedSignals.join(',');
   const fromIso = fromStr ? new Date(fromStr).toISOString() : '';
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
-  // ── Chart data query ──
-  const { data: chartResponse, isLoading: chartLoading } = useQuery<SignalHistoryResp>({
-    queryKey: ['explorer-chart', exploreKey],
-    queryFn: () => request(`/signals/history?vehicle_id=${vehicleId}&signals=${signalsCsv}&from=${fromIso}&to=${toIso}&page=1&per_page=1000`),
-    enabled: exploreKey !== null,
-  });
-
-  // ── Stats query ──
-  const { data: statsData, isLoading: statsLoading } = useQuery<SignalStat[]>({
-    queryKey: ['explorer-stats', exploreKey],
-    queryFn: () => request(`/signals/stats?vehicle_id=${vehicleId}&signals=${signalsCsv}&from=${fromIso}&to=${toIso}`),
-    enabled: exploreKey !== null,
-  });
-
-  // ── Paginated table query ──
-  const { data: tableResponse, isLoading: tableLoading } = useQuery<SignalHistoryResp>({
-    queryKey: ['explorer-table', exploreKey, page, perPage],
-    queryFn: () => request(`/signals/history?vehicle_id=${vehicleId}&signals=${signalsCsv}&from=${fromIso}&to=${toIso}&page=${page}&per_page=${perPage}`),
+  // ── Combined signal data query (parallel per-signal fetches) ──
+  const { data: allSignalRows, isLoading: dataLoading } = useQuery<SignalRow[]>({
+    queryKey: ['explorer-data', exploreKey],
+    queryFn: async () => {
+      const results = await Promise.all(
+        selectedSignals.map(sig =>
+          request<SignalHistoryResp>(
+            `/signals/${vehicleId}/${sig}/history?from=${fromIso}&to=${toIso}&limit=1000`,
+          ),
+        ),
+      );
+      return results.flatMap((resp) =>
+        (resp?.data ?? []).map(row => ({
+          created_at: row.created_at,
+          signal: resp?.signal ?? '',
+          value_num: row.value_num ?? null,
+          value_str: row.value_str ?? null,
+          value_bool: row.value_bool ?? null,
+        })),
+      );
+    },
     enabled: exploreKey !== null,
   });
 
@@ -140,9 +148,9 @@ export default function SignalExplorerPage() {
 
   // ── Chart data transform ──
   const chartData = useMemo(() => {
-    if (!chartResponse?.data?.length) return [];
+    if (!allSignalRows?.length) return [];
     const map = new Map<string, Record<string, unknown>>();
-    for (const row of chartResponse.data) {
+    for (const row of allSignalRows) {
       const ts = row.created_at;
       let entry = map.get(ts);
       if (!entry) { entry = { timestamp: ts }; map.set(ts, entry); }
@@ -151,7 +159,34 @@ export default function SignalExplorerPage() {
     return Array.from(map.values()).sort(
       (a, b) => new Date(a.timestamp as string).getTime() - new Date(b.timestamp as string).getTime(),
     );
-  }, [chartResponse]);
+  }, [allSignalRows]);
+
+  // ── Stats computed from data ──
+  const statsData = useMemo((): SignalStat[] => {
+    if (!allSignalRows?.length) return [];
+    const bySignal = new Map<string, number[]>();
+    for (const row of allSignalRows) {
+      if (row.value_num == null) continue;
+      const arr = bySignal.get(row.signal) ?? [];
+      arr.push(row.value_num);
+      bySignal.set(row.signal, arr);
+    }
+    return Array.from(bySignal.entries()).map(([signal, values]) => ({
+      signal,
+      min: Math.min(...values),
+      max: Math.max(...values),
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
+      count: values.length,
+    }));
+  }, [allSignalRows]);
+
+  // ── Table data (client-side pagination) ──
+  const tableRows = allSignalRows ?? [];
+  const totalTableRows = tableRows.length;
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return tableRows.slice(start, start + perPage);
+  }, [tableRows, page, perPage]);
 
   // Dual Y-axis when scales differ significantly
   const useRightAxis = useMemo(() => {
@@ -247,7 +282,7 @@ export default function SignalExplorerPage() {
         </div>
 
         {/* Query controls */}
-        <div className="flex items-center gap-3 justify-end">
+        <div className="flex items-end gap-3 justify-end">
           <Select
             label={t('Per Page')}
             value={String(perPage)}
@@ -265,8 +300,7 @@ export default function SignalExplorerPage() {
             icon={<Activity className="h-4 w-4" />}
             onClick={handleExplore}
             disabled={!canExplore}
-            loading={hasData && (chartLoading || statsLoading || tableLoading)}
-            className="mt-5"
+            loading={hasData && dataLoading}
           >
             {t('Explore')}
           </Button>
@@ -290,14 +324,14 @@ export default function SignalExplorerPage() {
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="h-4 w-4 text-neon-cyan" />
                 <span className="section-title">{t('Signal Chart')}</span>
-                {chartResponse && (
+                {chartData.length > 0 && (
                   <span className="ml-auto text-[10px] text-[var(--text-muted)]">
-                    {fmtInt((chartResponse.data ?? []).length)} {t('points loaded')}
+                    {fmtInt((allSignalRows ?? []).length)} {t('points loaded')}
                   </span>
                 )}
               </div>
 
-              {chartLoading ? (
+              {dataLoading ? (
                 <Skeleton className="h-[350px] w-full" />
               ) : chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={350}>
@@ -341,7 +375,7 @@ export default function SignalExplorerPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-5">
               <span className="section-title mb-3 block">{t('Stats Summary')}</span>
-              {statsLoading ? (
+              {dataLoading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}
                 </div>
@@ -369,13 +403,13 @@ export default function SignalExplorerPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-5">
               <span className="section-title mb-3 block">{t('Signal Data')}</span>
-              {tableLoading ? (
+              {dataLoading ? (
                 <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-8" />)}</div>
-              ) : (tableResponse?.data ?? []).length > 0 ? (
+              ) : paginatedRows.length > 0 ? (
                 <>
                   <DataTable
                     columns={tableColumns}
-                    data={tableResponse?.data ?? []}
+                    data={paginatedRows}
                     keyExtractor={(r) => `${r.created_at}-${r.signal}`}
                     compact
                     pagination={{ defaultPageSize: 50 }}
@@ -383,7 +417,7 @@ export default function SignalExplorerPage() {
                   <Pagination
                     page={page}
                     pageSize={perPage}
-                    total={tableResponse?.pagination?.total ?? 0}
+                    total={totalTableRows}
                     onPageChange={setPage}
                   />
                 </>
