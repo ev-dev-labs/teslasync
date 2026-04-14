@@ -598,6 +598,55 @@ Check actual signal names in the export: `grep "TPMS\|TirePressure" scripts/sign
 
 ---
 
+## Bug 12 — Trip Replay: Empty when all positions are 0,0
+
+**Page:** `web/src/features/driving/pages/TripReplayPage.tsx`
+**Screenshot:** Clicking "Replay" on Drive Detail opens Trip Replay but nothing happens — blank map,
+no playback, no trail.
+
+**Root Cause:** The page correctly filters out 0,0 positions (line 120-122):
+```typescript
+return pos.filter((p) => p.latitude !== 0 || p.longitude !== 0);
+```
+Since ALL positions have lat=0,lng=0 (GPS data issue), the filtered array is empty →
+`useTripReplay([])` has nothing to animate → blank page.
+
+**Fix:** Show an informative empty state instead of a blank page:
+```typescript
+if (positions.length === 0 && !isLoading) {
+  return (
+    <PageContainer title={t('replay.title', 'Trip Replay')}>
+      <EmptyState
+        icon={<MapPin className="h-10 w-10" />}
+        message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
+      />
+    </PageContainer>
+  );
+}
+```
+
+Also on **Drive Detail page** (line that links to replay), disable the Replay button when no
+valid positions exist:
+```typescript
+<Button disabled={!hasValidPositions} ...>Replay</Button>
+```
+
+---
+
+## Bug 12b — Drive Detail: SOC shows raw unformatted float
+
+**Page:** `web/src/features/driving/pages/DriveDetailPage.tsx`
+**Screenshot:** SOC card shows "85.9269662921..." instead of "86%". The raw float value is
+displayed without rounding or formatting.
+
+**Fix:** Use `fmtInt()` or `fmtNumber()` for SOC display:
+```typescript
+// Instead of showing raw soc value:
+fmtInt(drive.startSoc) + '% → ' + fmtInt(drive.endSoc) + '%'
+```
+
+---
+
 ## Verification
 
 ```bash
@@ -638,5 +687,7 @@ grep -n "started_at\|from_state.*arr\|to_state.*row.state" src/features/analytic
 - [ ] Speed Profile: fix crash — use actual API field names (speedBucket/readings, not range/percentage/driveCount)
 - [ ] Drive Detail: fix "Invalid Date" — use createdAt/created_at instead of timestamp
 - [ ] Drive Detail: wire tire pressure signals into flushDriveTelemetry (check TPMS signal names)
+- [ ] Drive Detail: SOC display formatted with fmtInt, not raw float
+- [ ] Trip Replay: show EmptyState with GPS info when no valid positions, disable Replay button on Drive Detail
 - [ ] Map Overview: real Leaflet map rendered (not placeholder), using shared MapContainer/MapTileLayer
 - [ ] TypeScript compiles clean
