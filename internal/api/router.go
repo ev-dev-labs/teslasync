@@ -622,6 +622,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			}
 		})
 
+		// FSM Debugger
+		fsmHandler := NewFSMHandler(db)
+		r.Route("/fsm", func(r chi.Router) {
+			r.Get("/stats", fsmHandler.Stats)
+			r.Get("/transitions", fsmHandler.Transitions)
+		})
+
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, 1*time.Minute))
