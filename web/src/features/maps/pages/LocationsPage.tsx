@@ -21,7 +21,7 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -99,7 +99,7 @@ export default function LocationsPage() {
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <MetricCard label={t('Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
           <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
-          <MetricCard label={t('Total Time')} value={`${Math.round(totalTime / 60)}h`} icon={<Clock className="h-4 w-4" />} color="purple" />
+          <MetricCard label={t('Total Time')} value={`${fmtInt(totalTime / 60)}h`} icon={<Clock className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
           <MetricCard label={t('Avg Visit')} value={avgDurationMin > 60 ? `${Math.floor(avgDurationMin / 60)}h ${avgDurationMin % 60}m` : `${avgDurationMin}m`} icon={<Clock className="h-4 w-4" />} color="cyan" />
         </div>
@@ -167,7 +167,7 @@ export default function LocationsPage() {
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium truncate block text-[var(--text-primary)]">{loc.address_name}</span>
                       <span className="text-[11px] text-[var(--text-muted)]">
-                        {loc.visit_count} {t('visits')} · {Math.round(loc.total_duration_min / 60)}h {t('total')} · ~{loc.visit_count > 0 ? Math.round(loc.total_duration_min / loc.visit_count) : 0}m {t('avg')}
+                        {loc.visit_count} {t('visits')} · {fmtInt(loc.total_duration_min / 60)}h {t('total')} · ~{loc.visit_count > 0 ? fmtInt(loc.total_duration_min / loc.visit_count) : 0}m {t('avg')}
                         {loc.last_visited && ` · ${t('Last')}: ${formatDate(loc.last_visited)}`}
                       </span>
                     </div>

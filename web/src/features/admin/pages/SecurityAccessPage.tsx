@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
+import { fmtInt } from '@/lib/numberFormat';
 import {
   Lock,
   Unlock,
@@ -150,7 +151,7 @@ function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
 function computeSentryUptime(events: SecurityEvent[]): number {
   if (events.length === 0) return 0;
   const sentryOnCount = events.filter((e) => e.sentryMode).length;
-  return Math.round((sentryOnCount / events.length) * 100);
+  return (sentryOnCount / events.length) * 100;
 }
 
 /** Find the most recent lock-change event */
@@ -370,7 +371,7 @@ export default function SecurityAccessPage() {
             />
             <MetricCard
               label={t('admin.security.stat.sentryUptime', 'Sentry Uptime')}
-              value={`${sentryUptime}%`}
+              value={`${fmtInt(sentryUptime)}%`}
               icon={<Activity className="h-5 w-5" />}
               color="blue"
             />
@@ -674,7 +675,7 @@ export default function SecurityAccessPage() {
               />
               <MetricCard
                 label={t('admin.security.stats.sentryUptime', 'Sentry Uptime')}
-                value={`${sentryUptime}%`}
+                value={`${fmtInt(sentryUptime)}%`}
                 icon={<Eye className="h-4 w-4" />}
                 color="blue"
               />

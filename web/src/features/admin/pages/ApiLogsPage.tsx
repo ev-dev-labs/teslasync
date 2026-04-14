@@ -128,7 +128,7 @@ export default function ApiLogsPage() {
           <StatCard
             icon={<Clock className="h-5 w-5" />}
             label={t('apiLogs.avgDuration', 'Avg Duration')}
-            value={stats ? `${Math.round(stats.avg_duration_ms)}ms` : '—'}
+            value={stats ? `${fmtInt(stats.avg_duration_ms)}ms` : '—'}
           />
           <StatCard
             icon={<Activity className="h-5 w-5" />}

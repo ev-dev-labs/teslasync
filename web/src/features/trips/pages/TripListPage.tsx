@@ -21,9 +21,9 @@ function formatDuration(startDate: string, endDate: string | null): string {
   if (!endDate) return 'In progress';
   const ms = new Date(endDate).getTime() - new Date(startDate).getTime();
   const hours = Math.floor(ms / 3600000);
-  const mins = Math.round((ms % 3600000) / 60000);
-  if (hours === 0) return `${mins}m`;
-  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  const minsRaw = (ms % 3600000) / 60000;
+  if (hours === 0) return `${fmtInt(minsRaw)}m`;
+  return minsRaw >= 0.5 ? `${hours}h ${fmtInt(minsRaw)}m` : `${hours}h`;
 }
 
 export default function TripListPage() {

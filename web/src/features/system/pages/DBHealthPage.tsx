@@ -82,7 +82,7 @@ export default function DBHealthPage() {
   const pool = poolData;
   const poolUsage =
     pool?.maxOpen && pool.maxOpen > 0
-      ? Math.round(Math.min((pool.inUse / pool.maxOpen) * 100, 100))
+      ? Math.min((pool.inUse / pool.maxOpen) * 100, 100)
       : 0;
 
   const largeTables = tables.filter(
@@ -407,7 +407,7 @@ export default function DBHealthPage() {
                   <div className="mt-2">
                     <div className="flex justify-between text-[10px] text-white/40 mb-1">
                       <span>{t('dbHealth.poolUsage', 'Pool Usage')}</span>
-                      <span>{poolUsage}%</span>
+                      <span>{fmtInt(poolUsage)}%</span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                       <div

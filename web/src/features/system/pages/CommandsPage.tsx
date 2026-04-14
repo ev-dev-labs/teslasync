@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { fmtNumber } from '@/lib/numberFormat';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -171,9 +172,9 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         {state && (
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1"><Battery className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className={cn('font-semibold', (state.battery_level ?? 0) > 50 ? 'text-neon-green' : 'text-neon-amber')}>{state.battery_level}%</span></span>
-            <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(convertDistance(state.rated_range))} {distanceUnit}</span></span>
+            <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{fmtNumber(convertDistance(state.rated_range), 0)} {distanceUnit}</span></span>
             {state.inside_temp != null && (
-              <span className="flex items-center gap-1"><Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{Math.round(convertTemp(state.inside_temp))}{tempUnit}</span></span>
+              <span className="flex items-center gap-1"><Thermometer className="h-3.5 w-3.5 text-[var(--text-muted)]" /><span className="text-[var(--text-secondary)]">{fmtNumber(convertTemp(state.inside_temp), 0)}{tempUnit}</span></span>
             )}
           </div>
         )}
@@ -204,7 +205,7 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         </CommandGroup>
 
         <CommandGroup title="Climate & Comfort" t={t}>
-          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${Math.round(convertTemp(state.inside_temp))}${tempUnit}` : t('ON')) : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
+          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${fmtNumber(convertTemp(state.inside_temp), 0)}${tempUnit}` : t('ON')) : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
         </CommandGroup>
 
         <CommandGroup title="Charging" t={t}>

@@ -19,7 +19,7 @@ import { request } from '@/api/client'
 import type { Vehicle } from '@/api/types'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtNumber } from '@/lib/numberFormat'
+import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import SignalConfigModal from '@/components/ui/SignalConfigModal'
 
 /* ─── constants ───────────────────────────────────────────────────────── */
@@ -991,7 +991,7 @@ function OnboardingWorkflow() {
   }, [keyStatus, fleetInfo, completed])
 
   const completedCount = ONBOARDING_STEPS.filter((s) => completed[s.id]).length
-  const progressPct = Math.round((completedCount / ONBOARDING_STEPS.length) * 100)
+  const progressPct = (completedCount / ONBOARDING_STEPS.length) * 100
   const step = ONBOARDING_STEPS[currentStep]
   if (!step) return null
   const StepIcon = step.icon
@@ -1007,7 +1007,7 @@ function OnboardingWorkflow() {
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-white/60">
           <span>{t('Progress')}</span>
-          <span>{completedCount} / {ONBOARDING_STEPS.length} ({progressPct}%)</span>
+          <span>{completedCount} / {ONBOARDING_STEPS.length} ({fmtInt(progressPct)}%)</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-glass-border">
           <div

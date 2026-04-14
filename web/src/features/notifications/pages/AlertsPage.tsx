@@ -18,6 +18,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
+import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -176,7 +177,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
   const totalSent = stats?.sent ?? 0;
   const totalFailed = stats?.failed ?? 0;
   const total = stats?.total_sent ?? (totalSent + totalFailed + (stats?.pending ?? 0));
-  const successRate = total > 0 ? Math.round((totalSent / total) * 100) : 0;
+  const successRate = total > 0 ? (totalSent / total) * 100 : 0;
 
   const logTypeCounts = useMemo(() => {
     if (!logs?.length) return [];
@@ -201,7 +202,7 @@ function NotificationHistory({ t }: { t: (k: string) => string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCard label={t('Total Sent')} value={totalSent} icon={<Send className="h-4 w-4" />} color="cyan" />
         <MetricCard label={t('Failed')} value={totalFailed} icon={<AlertCircle className="h-4 w-4" />} color="red" />
-        <MetricCard label={t('Success Rate')} value={`${successRate}%`} icon={<CheckCircle className="h-4 w-4" />} color="green" />
+        <MetricCard label={t('Success Rate')} value={`${fmtInt(successRate)}%`} icon={<CheckCircle className="h-4 w-4" />} color="green" />
         <MetricCard label={t('Channels')} value={`${stats?.enabled_channels ?? 0} / ${stats?.total_channels ?? 0}`} icon={<Bell className="h-4 w-4" />} color="purple" />
       </div>
 
@@ -548,7 +549,7 @@ export default function AlertsPage() {
           </a>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Read Rate')}</span>
-            <span className="text-sm font-bold text-neon-green">{totalCount > 0 ? `${Math.round((readCount / totalCount) * 100)}%` : '—'}</span>
+            <span className="text-sm font-bold text-neon-green">{totalCount > 0 ? `${fmtInt((readCount / totalCount) * 100)}%` : '—'}</span>
           </GlassPanel>
           <GlassPanel className="p-3 text-center">
             <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1 block">{t('Most Common')}</span>

@@ -25,6 +25,7 @@ import {
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { request } from '@/api/client';
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -169,7 +170,7 @@ export default function MediaPlayerPage() {
     const avgVol =
       filtered.reduce((sum, s) => sum + s.audio_volume, 0) / filtered.length;
 
-    return { uniqueTracks: titles.size, topSource, avgVolume: Math.round(avgVol) };
+    return { uniqueTracks: titles.size, topSource, avgVolume: avgVol };
   }, [filtered]);
 
   /* ── Volume chart data ────────────────────────────────────── */
@@ -445,7 +446,7 @@ export default function MediaPlayerPage() {
 
           <MetricCard
             label={t('Avg Volume')}
-            value={stats.avgVolume}
+            value={fmtInt(stats.avgVolume)}
             icon={<Volume2 className="h-5 w-5" />}
             color="cyan"
           />

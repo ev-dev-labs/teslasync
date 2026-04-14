@@ -27,6 +27,7 @@ import {
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 
@@ -401,7 +402,7 @@ export default function SafetySettingsPage() {
   const enabled = useMemo(() => (latest ? enabledCount(latest) : 0), [latest]);
   const disabled = TOTAL_FEATURES - enabled;
   const scorePct = useMemo(
-    () => (latest ? Math.round((enabled / TOTAL_FEATURES) * 100) : 0),
+    () => (latest ? (enabled / TOTAL_FEATURES) * 100 : 0),
     [latest, enabled],
   );
 
@@ -468,7 +469,7 @@ export default function SafetySettingsPage() {
                   value={enabled}
                   max={TOTAL_FEATURES}
                   label={t('Safety Score')}
-                  unit={`${scorePct}%`}
+                  unit={`${fmtInt(scorePct)}%`}
                   color={scoreColor(scorePct)}
                   size={140}
                 />
@@ -484,7 +485,7 @@ export default function SafetySettingsPage() {
               <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard
                   label={t('Safety Score')}
-                  value={`${scorePct}%`}
+                  value={`${fmtInt(scorePct)}%`}
                   color={scorePct >= 80 ? 'green' : scorePct >= 50 ? 'amber' : 'red'}
                 />
                 <MetricCard

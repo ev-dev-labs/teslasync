@@ -10,6 +10,7 @@ import { FadeIn } from '@/components/motion';
 import { useSignalGaps } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 
 /* ------------------------------------------------------------------ */
@@ -39,11 +40,11 @@ function getStalenessColor(seconds: number, hasTimestamp: boolean) {
 }
 
 function formatStaleness(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s ago`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
+  if (seconds < 60) return `${fmtInt(seconds)}s ago`;
+  if (seconds < 3600) return `${fmtInt(seconds / 60)}m ago`;
   const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  return `${h}h ${m}m ago`;
+  const m = (seconds % 3600) / 60;
+  return `${h}h ${fmtInt(m)}m ago`;
 }
 
 function statusVariant(row: SignalRow): 'success' | 'warning' | 'danger' | 'neutral' {

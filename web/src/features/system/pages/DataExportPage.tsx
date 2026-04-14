@@ -23,6 +23,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { fmtNumber as fmtNum } from '@/lib/numberFormat';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -155,7 +156,7 @@ function formatDuration(ms: number | undefined): string {
   const sec = ms / 1000;
   if (sec < 60) return `${sec.toFixed(1)}s`;
   const min = Math.floor(sec / 60);
-  return `${min}m ${Math.round(sec % 60)}s`;
+  return `${min}m ${fmtNum(sec % 60, 0)}s`;
 }
 
 function fmtInt(n: number | undefined): string {

@@ -15,7 +15,7 @@ import { useVehicleStateMachine, useStateTimeline } from '@/api/hooks/useAdmin';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { StateTransition } from '@/types/admin';
 
@@ -55,11 +55,11 @@ function getStyle(state?: string | null) {
 }
 
 function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 60) return `${fmtInt(seconds)}s`;
+  if (seconds < 3600) return `${fmtInt(seconds / 60)}m`;
   const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  const mRaw = (seconds % 3600) / 60;
+  return mRaw >= 0.5 ? `${h}h ${fmtInt(mRaw)}m` : `${h}h`;
 }
 
 // Backend wraps the vehicle state: {state: {state: "driving", since: "..."}, live: boolean}

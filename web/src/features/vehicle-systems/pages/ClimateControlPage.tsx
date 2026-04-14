@@ -47,7 +47,7 @@ import {
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -590,7 +590,7 @@ export default function ClimateControlPage() {
                         : 'text-red-400',
                   )}
                 >
-                  {comfortScore ?? '—'}
+                  {comfortScore != null ? fmtInt(comfortScore) : '—'}
                 </span>
               </div>
               <Badge
@@ -724,7 +724,7 @@ export default function ClimateControlPage() {
             />
             <MetricCard
               label={t('Comfort Score')}
-              value={comfortScore != null ? `${comfortScore}%` : '—'}
+              value={comfortScore != null ? `${fmtInt(comfortScore)}%` : '—'}
               icon={<Thermometer className="h-4 w-4" />}
               color={comfortScore != null && comfortScore >= 80 ? 'green' : 'amber'}
             />
