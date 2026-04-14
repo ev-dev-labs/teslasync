@@ -588,6 +588,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Signal History (MongoDB-backed per-signal log)
 			if telemetryHandler != nil && telemetryHandler.signalLogRepo != nil {
 				signalHandler := NewSignalHandler(telemetryHandler.signalLogRepo)
+				if db != nil {
+					signalHandler.WithDB(db)
+				}
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
@@ -596,11 +599,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/available", func(w http.ResponseWriter, r *http.Request) {
 					store := telemetryHandler.GetSignalStore()
 					if store == nil {
-						writeJSON(w, http.StatusOK, map[string]interface{}{
-							"vehicle_id": 0,
-							"count":      0,
-							"signals":    []string{},
-						})
+						// Last resort: return static list of known signals
+						signalHandler := NewSignalHandler(nil)
+						if db != nil {
+							signalHandler.WithDB(db)
+						}
+						signalHandler.AvailableSignals(w, r)
 						return
 					}
 					vid, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)

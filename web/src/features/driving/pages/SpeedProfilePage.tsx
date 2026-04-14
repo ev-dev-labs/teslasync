@@ -95,16 +95,17 @@ export default function SpeedProfilePage() {
       const eff = getEfficiency(d);
       if (!eff) return;
       for (const r of ranges) {
-        const parts = r.range.match(/(\d+)/g);
+        const bucket = r.speedBucket ?? r.speed_bucket ?? '';
+        const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
         const lo = Number(parts[0]);
         const hi = parts.length > 1 ? Number(parts[1]) : 999;
         if (d.speedAvg >= lo && d.speedAvg < hi) {
-          const existing = map.get(r.range) ?? { totalEff: 0, totalSpd: 0, count: 0 };
+          const existing = map.get(bucket) ?? { totalEff: 0, totalSpd: 0, count: 0 };
           existing.totalEff += eff;
           existing.totalSpd += d.speedAvg;
           existing.count++;
-          map.set(r.range, existing);
+          map.set(bucket, existing);
           break;
         }
       }
@@ -166,14 +167,17 @@ export default function SpeedProfilePage() {
           <FadeIn>
             <ChartContainer title={t('speedProfile.distribution', 'Speed Distribution')} height={280}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={(data.distribution ?? []).map((b) => ({ range: b.range, pct: b.percentage, count: b.driveCount }))}>
+                <BarChart data={(data.distribution ?? []).map((b) => {
+                  const range = b.speedBucket ?? b.speed_bucket ?? '';
+                  return { range, pct: b.readings ?? 0, count: b.readings ?? 0 };
+                })}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
                   <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   <Tooltip content={<ChartTooltip />} />
                   <Bar dataKey="pct" name={`% ${t('speedProfile.timeSpent', 'time')}`} radius={[4, 4, 0, 0]}>
                     {(data.distribution ?? []).map((b, i) => (
-                      <Cell key={i} fill={bucketColor(b.range)} fillOpacity={0.7} />
+                      <Cell key={i} fill={bucketColor(b.speedBucket ?? b.speed_bucket ?? '')} fillOpacity={0.7} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -184,24 +188,27 @@ export default function SpeedProfilePage() {
           {/* Speed bucket detail cards */}
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {(data.distribution ?? []).map((bucket) => {
-              const effData = bucketEfficiency.get(bucket.range);
+              const range = bucket.speedBucket ?? bucket.speed_bucket ?? '';
+              const totalReadings = (data.distribution ?? []).reduce((s, b) => s + (b.readings ?? 0), 0);
+              const pct = totalReadings > 0 ? ((bucket.readings ?? 0) / totalReadings) * 100 : 0;
+              const effData = bucketEfficiency.get(range);
               return (
-                <StaggerItem key={bucket.range}>
+                <StaggerItem key={range}>
                   <GlassPanel className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      {categoryIcon(bucket.range)}
-                      <span className="text-xs font-semibold text-[var(--text-primary)]">{bucket.range}</span>
+                      {categoryIcon(range)}
+                      <span className="text-xs font-semibold text-[var(--text-primary)]">{range}</span>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.timeShare', 'Time')}</span>
-                        <span className={cn('text-sm font-bold', bucketTextClass(bucket.range))}>
-                          {fmtNumber(bucket.percentage ?? 0, 1)}%
+                        <span className={cn('text-sm font-bold', bucketTextClass(range))}>
+                          {fmtNumber(pct, 1)}%
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.drives', 'Drives')}</span>
-                        <span className="text-sm font-bold text-cyan-400">{bucket.driveCount}</span>
+                        <span className="text-sm font-bold text-cyan-400">{bucket.readings ?? 0}</span>
                       </div>
                       {effData && (
                         <>

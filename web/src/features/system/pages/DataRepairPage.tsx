@@ -201,7 +201,7 @@ export default function DataRepairPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['stale-sessions'],
-    queryFn: () => request<StaleData>('/data-repair/stale'),
+    queryFn: () => request<StaleData>('/data-repair/stale-sessions'),
     refetchInterval: 30_000,
   });
 

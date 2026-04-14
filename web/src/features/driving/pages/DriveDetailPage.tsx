@@ -132,7 +132,7 @@ export default function DriveDetailPage() {
     const tele = drive.telemetry ?? [];
     if (tele.length > 0) {
       return tele.map((tp) => ({
-        time: new Date(tp.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: new Date(tp.createdAt ?? tp.created_at ?? tp.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         speed: convertSpeed(tp.speed ?? 0),
         battery: tp.batteryLevel ?? 0,
         elevation: tp.elevation ?? 0,
@@ -156,7 +156,7 @@ export default function DriveDetailPage() {
       }));
     }
     return (drive.positions ?? []).map((p) => ({
-      time: new Date(p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: new Date(p.createdAt ?? p.created_at ?? p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       speed: convertSpeed(p.speed ?? 0),
       battery: p.batteryLevel,
       elevation: p.elevation ?? 0,
@@ -409,7 +409,7 @@ export default function DriveDetailPage() {
             <StaggerItem><IconStatCard icon={Clock} color="#f59e0b" value={formatDuration(drive.durationMin)} label={t('driveDetail.duration', 'Duration')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Gauge} color="#a855f7" value={<AnimatedNumber value={stats.maxSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.maxSpeed', 'Max Speed')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={TrendingUp} color="#10b981" value={<AnimatedNumber value={stats.avgSpd} suffix={` ${speedUnit}`} />} label={t('driveDetail.avgSpeed', 'Avg Speed')} /></StaggerItem>
-            <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={`${drive.socStart ?? drive.startBatteryLevel ?? '?'}% → ${drive.socEnd ?? drive.endBatteryLevel ?? '?'}%`} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
+            <StaggerItem><IconStatCard icon={Battery} color="#10b981" value={`${fmtInt(drive.socStart ?? drive.startBatteryLevel)}% → ${fmtInt(drive.socEnd ?? drive.endBatteryLevel)}%`} label={t('driveDetail.soc', 'SOC')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Zap} color="#f59e0b" value={fmtWithUnit(stats.powerMax, 'kW')} label={t('driveDetail.maxPower', 'Max Power')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Navigation} color="#10b981" value={<AnimatedNumber value={Math.round(stats.elevGain)} suffix=" m ↑" />} label={t('driveDetail.elevGain', 'Elev. Gain')} /></StaggerItem>
             <StaggerItem><IconStatCard icon={Navigation} color="#ef4444" value={<AnimatedNumber value={Math.round(stats.elevLoss)} suffix=" m ↓" />} label={t('driveDetail.elevLoss', 'Elev. Loss')} /></StaggerItem>

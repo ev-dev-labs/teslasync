@@ -16,7 +16,12 @@ export const telemetryKeys = {
 export function useSignals(vehicleId: number) {
   return useQuery({
     queryKey: telemetryKeys.signals(vehicleId),
-    queryFn: () => request<string[]>(`/signals/${vehicleId}/available`),
+    queryFn: async () => {
+      const resp = await request<{ signals?: string[] } | string[]>(`/signals/${vehicleId}/available`);
+      // API wraps signals in { signals: [...] } but old code expected string[]
+      if (Array.isArray(resp)) return resp;
+      return (resp as { signals?: string[] }).signals ?? [];
+    },
     enabled: vehicleId > 0,
     staleTime: 60_000,
     select: safeArray,

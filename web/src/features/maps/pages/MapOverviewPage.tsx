@@ -3,14 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   MapPin, Compass, Gauge, Clock, Home, Briefcase,
-  Link2, Navigation, Map, Route, Fence, LocateFixed,
+  Link2, Navigation, Route, Fence, LocateFixed,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, type SelectOption, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import {
+  MapContainer, Marker, Popup, Polyline,
+  MapTileLayer, MapInvalidator, MapLayerSwitcher,
+  type MapStyle,
+} from '@/components/maps';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -18,6 +23,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import 'leaflet/dist/leaflet.css';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -58,6 +64,7 @@ export default function MapOverviewPage() {
 
   /* ---- vehicle selector state ---- */
   const [vehicleId, setVehicleId] = useState('');
+  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 
   /* ---- queries ---- */
   const {
@@ -105,6 +112,16 @@ export default function MapOverviewPage() {
   /* ---- derived ---- */
   const isLoading = vehiclesLoading || latestLoading;
   const hasVehicles = (vehicles?.length ?? 0) > 0;
+  const hasValidLocation = latest != null && (latest.latitude !== 0 || latest.longitude !== 0);
+
+  const trailPositions = useMemo(
+    () => (history ?? [])
+      .filter((s) => s.latitude !== 0 || s.longitude !== 0)
+      .map((s) => [s.latitude, s.longitude] as [number, number]),
+    [history],
+  );
+
+  const vehicle = vehicles?.find((v) => String(v.id) === selectedId);
 
   /* ---- history table columns ---- */
   const historyColumns: Column<LocationSnapshot>[] = useMemo(
@@ -122,14 +139,18 @@ export default function MapOverviewPage() {
         key: 'latitude',
         header: t('mapOverview.colLat', 'Lat'),
         render: (r) => (
-          <span className="font-mono text-xs">{fmtNumber(r.latitude, 5)}</span>
+          <span className="font-mono text-xs">
+            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.latitude, 5) : '—'}
+          </span>
         ),
       },
       {
         key: 'longitude',
         header: t('mapOverview.colLon', 'Lon'),
         render: (r) => (
-          <span className="font-mono text-xs">{fmtNumber(r.longitude, 5)}</span>
+          <span className="font-mono text-xs">
+            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.longitude, 5) : '—'}
+          </span>
         ),
       },
       {
@@ -176,41 +197,44 @@ export default function MapOverviewPage() {
         ) : undefined
       }
     >
-      {/* ---- Map placeholder ---- */}
-      <FadeIn>
-        <GlassPanel className="relative flex min-h-[340px] flex-col items-center justify-center gap-4 p-8">
-          <Map className="h-12 w-12 text-cyan-400 opacity-60" />
-          <Badge variant="info" size="lg">
-            {t('mapOverview.mapLabel', 'Map View')}
-          </Badge>
+      {/* ---- GPS data warning ---- */}
+      {!hasValidLocation && latest && (
+        <AlertBanner variant="info">
+          {t('mapOverview.noGps', 'GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.')}
+        </AlertBanner>
+      )}
 
-          {latestLoading ? (
-            <Skeleton width="60%" height={20} className="mt-2" />
-          ) : latest ? (
-            <GlassPanel className="mt-2 w-full max-w-md p-4 text-center">
-              <span className="block text-sm font-semibold text-[var(--text-primary)]">
-                {fmtNumber(latest.latitude, 5)}, {fmtNumber(latest.longitude, 5)}
-              </span>
-              <span className="mt-1 block text-xs text-[var(--text-muted)]">
-                {t('mapOverview.headingLabel', 'Heading')}: {fmtNumber(latest.heading, 0)}°{' '}
-                {headingToCardinal(latest.heading)} ·{' '}
-                {t('mapOverview.speedLabel', 'Speed')}: {fmtNumber(latest.speed, 1)}{' '}
-                {t('mapOverview.speedUnit', 'mph')}
-              </span>
-            </GlassPanel>
+      {/* ---- Map ---- */}
+      <FadeIn>
+        <GlassPanel className="relative overflow-hidden" style={{ height: 400 }}>
+          {hasValidLocation ? (
+            <>
+              <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+              <MapContainer
+                center={[latest!.latitude, latest!.longitude]}
+                zoom={15}
+                scrollWheelZoom
+                className="h-full w-full"
+              >
+                <MapTileLayer style={mapStyle} />
+                <MapInvalidator />
+                <Marker position={[latest!.latitude, latest!.longitude]}>
+                  <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
+                </Marker>
+                {trailPositions.length > 1 && (
+                  <Polyline positions={trailPositions} color="#00f0ff" weight={3} opacity={0.7} />
+                )}
+              </MapContainer>
+            </>
           ) : (
             <EmptyState
               icon={<MapPin className="h-8 w-8" />}
               message={t(
                 'mapOverview.noLocation',
-                'No location data available for this vehicle.',
+                'No GPS data available. Location data requires Fleet Telemetry streaming.',
               )}
             />
           )}
-
-          <span className="text-[10px] text-[var(--text-muted)]">
-            {t('mapOverview.leafletNote', 'Map requires Leaflet — showing coordinates')}
-          </span>
         </GlassPanel>
       </FadeIn>
 
@@ -238,7 +262,7 @@ export default function MapOverviewPage() {
             />
             <MetricCard
               label={t('mapOverview.latLon', 'Lat / Lon')}
-              value={`${fmtNumber(latest.latitude, 4)}, ${fmtNumber(latest.longitude, 4)}`}
+              value={hasValidLocation ? `${fmtNumber(latest!.latitude, 4)}, ${fmtNumber(latest!.longitude, 4)}` : '—'}
               icon={<MapPin className="h-4 w-4" />}
               color="green"
             />
@@ -265,20 +289,22 @@ export default function MapOverviewPage() {
                 <Home
                   className={cn(
                     'h-5 w-5',
-                    latest.located_at_home ? 'text-emerald-400' : 'text-gray-500',
+                    hasValidLocation && latest.located_at_home ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.atHome', 'At Home')}
                 </span>
                 <Badge
-                  variant={latest.located_at_home ? 'success' : 'neutral'}
+                  variant={!hasValidLocation ? 'neutral' : latest.located_at_home ? 'success' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {latest.located_at_home
-                    ? t('mapOverview.yes', 'Yes')
-                    : t('mapOverview.no', 'No')}
+                  {!hasValidLocation
+                    ? t('mapOverview.unknown', 'Unknown')
+                    : latest.located_at_home
+                      ? t('mapOverview.yes', 'Yes')
+                      : t('mapOverview.no', 'No')}
                 </Badge>
               </div>
 
@@ -287,20 +313,22 @@ export default function MapOverviewPage() {
                 <Briefcase
                   className={cn(
                     'h-5 w-5',
-                    latest.located_at_work ? 'text-emerald-400' : 'text-gray-500',
+                    hasValidLocation && latest.located_at_work ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.atWork', 'At Work')}
                 </span>
                 <Badge
-                  variant={latest.located_at_work ? 'success' : 'neutral'}
+                  variant={!hasValidLocation ? 'neutral' : latest.located_at_work ? 'success' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {latest.located_at_work
-                    ? t('mapOverview.yes', 'Yes')
-                    : t('mapOverview.no', 'No')}
+                  {!hasValidLocation
+                    ? t('mapOverview.unknown', 'Unknown')
+                    : latest.located_at_work
+                      ? t('mapOverview.yes', 'Yes')
+                      : t('mapOverview.no', 'No')}
                 </Badge>
               </div>
 

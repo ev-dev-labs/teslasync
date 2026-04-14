@@ -85,42 +85,45 @@ interface DataOverview {
 const EXPORT_TYPES: {
   value: ExportType;
   labelKey: string;
+  label: string;
   icon: typeof Car;
   descKey: string;
+  desc: string;
   color: string;
 }[] = [
-  { value: 'drives', labelKey: 'dataExport.types.drives', icon: Car, descKey: 'dataExport.types.drivesDesc', color: 'cyan' },
-  { value: 'charging', labelKey: 'dataExport.types.charging', icon: Zap, descKey: 'dataExport.types.chargingDesc', color: 'green' },
-  { value: 'analytics', labelKey: 'dataExport.types.analytics', icon: BarChart3, descKey: 'dataExport.types.analyticsDesc', color: 'purple' },
-  { value: 'full_backup', labelKey: 'dataExport.types.fullBackup', icon: Database, descKey: 'dataExport.types.fullBackupDesc', color: 'amber' },
-  { value: 'maintenance', labelKey: 'dataExport.types.maintenance', icon: Wrench, descKey: 'dataExport.types.maintenanceDesc', color: 'red' },
-  { value: 'energy', labelKey: 'dataExport.types.energy', icon: Battery, descKey: 'dataExport.types.energyDesc', color: 'green' },
+  { value: 'drives', labelKey: 'dataExport.types.drives', label: 'Drives', icon: Car, descKey: 'dataExport.types.drivesDesc', desc: 'Export drive sessions, routes, and efficiency data', color: 'cyan' },
+  { value: 'charging', labelKey: 'dataExport.types.charging', label: 'Charging', icon: Zap, descKey: 'dataExport.types.chargingDesc', desc: 'Export charging sessions and energy data', color: 'green' },
+  { value: 'analytics', labelKey: 'dataExport.types.analytics', label: 'Analytics', icon: BarChart3, descKey: 'dataExport.types.analyticsDesc', desc: 'Export analytics and aggregated statistics', color: 'purple' },
+  { value: 'full_backup', labelKey: 'dataExport.types.fullBackup', label: 'Full Backup', icon: Database, descKey: 'dataExport.types.fullBackupDesc', desc: 'Complete database backup of all vehicle data', color: 'amber' },
+  { value: 'maintenance', labelKey: 'dataExport.types.maintenance', label: 'Maintenance', icon: Wrench, descKey: 'dataExport.types.maintenanceDesc', desc: 'Export maintenance and service records', color: 'red' },
+  { value: 'energy', labelKey: 'dataExport.types.energy', label: 'Energy', icon: Battery, descKey: 'dataExport.types.energyDesc', desc: 'Export energy consumption and efficiency data', color: 'green' },
 ];
 
-const EXPORT_FORMATS: { value: ExportFormat; labelKey: string; icon: typeof FileSpreadsheet; descKey: string }[] = [
-  { value: 'csv', labelKey: 'dataExport.formats.csv', icon: FileSpreadsheet, descKey: 'dataExport.formats.csvDesc' },
-  { value: 'json', labelKey: 'dataExport.formats.json', icon: FileJson, descKey: 'dataExport.formats.jsonDesc' },
+const EXPORT_FORMATS: { value: ExportFormat; labelKey: string; label: string; icon: typeof FileSpreadsheet; descKey: string; desc: string }[] = [
+  { value: 'csv', labelKey: 'dataExport.formats.csv', label: 'CSV', icon: FileSpreadsheet, descKey: 'dataExport.formats.csvDesc', desc: 'Comma-separated values, compatible with Excel and Google Sheets' },
+  { value: 'json', labelKey: 'dataExport.formats.json', label: 'JSON', icon: FileJson, descKey: 'dataExport.formats.jsonDesc', desc: 'Structured JSON format for programmatic access' },
 ];
 
-const DATE_PRESETS: { labelKey: string; days: number }[] = [
-  { labelKey: 'dataExport.presets.last7', days: 7 },
-  { labelKey: 'dataExport.presets.last30', days: 30 },
-  { labelKey: 'dataExport.presets.last90', days: 90 },
-  { labelKey: 'dataExport.presets.lastYear', days: 365 },
-  { labelKey: 'dataExport.presets.allTime', days: 0 },
+const DATE_PRESETS: { labelKey: string; label: string; days: number }[] = [
+  { labelKey: 'dataExport.presets.last7', label: 'Last 7 Days', days: 7 },
+  { labelKey: 'dataExport.presets.last30', label: 'Last 30 Days', days: 30 },
+  { labelKey: 'dataExport.presets.last90', label: 'Last 90 Days', days: 90 },
+  { labelKey: 'dataExport.presets.lastYear', label: 'Last Year', days: 365 },
+  { labelKey: 'dataExport.presets.allTime', label: 'All Time', days: 0 },
 ];
 
 const STATUS_CONFIG: Record<ExportStatus, {
   icon: typeof Clock;
   badgeVariant: 'neutral' | 'info' | 'success' | 'danger' | 'warning';
   labelKey: string;
+  label: string;
   spinning?: boolean;
 }> = {
-  queued: { icon: Clock, badgeVariant: 'neutral', labelKey: 'dataExport.status.queued' },
-  processing: { icon: Loader2, badgeVariant: 'info', labelKey: 'dataExport.status.processing', spinning: true },
-  ready: { icon: CheckCircle2, badgeVariant: 'success', labelKey: 'dataExport.status.ready' },
-  failed: { icon: XCircle, badgeVariant: 'danger', labelKey: 'dataExport.status.failed' },
-  expired: { icon: AlertCircle, badgeVariant: 'warning', labelKey: 'dataExport.status.expired' },
+  queued: { icon: Clock, badgeVariant: 'neutral', labelKey: 'dataExport.status.queued', label: 'Queued' },
+  processing: { icon: Loader2, badgeVariant: 'info', labelKey: 'dataExport.status.processing', label: 'Processing', spinning: true },
+  ready: { icon: CheckCircle2, badgeVariant: 'success', labelKey: 'dataExport.status.ready', label: 'Ready' },
+  failed: { icon: XCircle, badgeVariant: 'danger', labelKey: 'dataExport.status.failed', label: 'Failed' },
+  expired: { icon: AlertCircle, badgeVariant: 'warning', labelKey: 'dataExport.status.expired', label: 'Expired' },
 };
 
 const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
@@ -213,11 +216,11 @@ function ExportTypeSelector({
                   active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
                 )}
               >
-                {t(et.labelKey)}
+                {t(et.labelKey, et.label)}
               </span>
             </div>
             <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
-              {t(et.descKey)}
+              {t(et.descKey, et.desc)}
             </p>
           </GlassPanel>
         );
@@ -247,7 +250,7 @@ function FormatSelector({
             icon={<Icon className="h-4 w-4" />}
             onClick={() => onChange(f.value)}
           >
-            {t(f.labelKey)}
+            {t(f.labelKey, f.label)}
           </Button>
         );
       })}
@@ -274,7 +277,7 @@ function DatePresetSelector({
             variant={active ? 'primary' : 'ghost'}
             onClick={() => onChange(p.days)}
           >
-            {t(p.labelKey)}
+            {t(p.labelKey, p.label)}
           </Button>
         );
       })}
@@ -289,7 +292,7 @@ function StatusBadge({ status }: { status: ExportStatus }) {
   return (
     <Badge variant={cfg.badgeVariant} size="sm">
       <Icon className={cn('h-3 w-3', cfg.spinning && 'animate-spin')} />
-      {t(cfg.labelKey)}
+      {t(cfg.labelKey, cfg.label)}
     </Badge>
   );
 }
@@ -300,7 +303,7 @@ function TypeBadge({ type }: { type: ExportType }) {
   const cfg = EXPORT_TYPES.find((et) => et.value === type);
   return (
     <Badge variant={variant} size="sm">
-      {cfg ? t(cfg.labelKey) : type}
+      {cfg ? t(cfg.labelKey, cfg.label) : type}
     </Badge>
   );
 }
@@ -323,11 +326,11 @@ function FormatInfoCards() {
         <div className="flex items-center gap-2 mb-3">
           <FileSpreadsheet className="h-5 w-5 text-neon-cyan" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('Csv Title')}
+            {t('dataExport.csvPreview', 'CSV Preview')}
           </span>
         </div>
         <p className="text-xs text-[var(--text-muted)] mb-3">
-          {t('Csv Desc')}
+          {t('dataExport.csvDesc', 'Comma-separated values, compatible with Excel and Google Sheets')}
         </p>
         <div className="rounded-lg bg-black/20 p-3 font-mono text-[11px] text-[var(--text-muted)]">
           <p>date,distance_km,efficiency</p>
@@ -340,11 +343,11 @@ function FormatInfoCards() {
         <div className="flex items-center gap-2 mb-3">
           <FileJson className="h-5 w-5 text-neon-purple" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('Json Title')}
+            {t('dataExport.jsonPreview', 'JSON Preview')}
           </span>
         </div>
         <p className="text-xs text-[var(--text-muted)] mb-3">
-          {t('Json Desc')}
+          {t('dataExport.jsonDesc', 'Structured JSON format for programmatic access')}
         </p>
         <div className="rounded-lg bg-black/20 p-3 font-mono text-[11px] text-[var(--text-muted)]">
           <p>{`[{ "date": "2025-01-15",`}</p>
@@ -369,7 +372,7 @@ function DataOverviewCard({
       <div className="flex items-center gap-2 mb-3">
         <Database className="h-4 w-4 text-neon-cyan" />
         <span className="text-sm font-semibold text-[var(--text-primary)]">
-          {t('Title')}
+          {t('dataExport.dataOverview', 'Data Overview')}
         </span>
       </div>
       {isLoading ? (
@@ -381,15 +384,15 @@ function DataOverviewCard({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <Car className="h-3.5 w-3.5 text-neon-cyan" />
-            <span>{fmtInt(overview.drives)} {t('Drives')}</span>
+            <span>{fmtInt(overview.drives)} {t('dataExport.drives', 'Drives')}</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <Zap className="h-3.5 w-3.5 text-neon-green" />
-            <span>{fmtInt(overview.charging_sessions)} {t('Charging Sessions')}</span>
+            <span>{fmtInt(overview.charging_sessions)} {t('dataExport.chargingSessions', 'Charging Sessions')}</span>
           </div>
         </div>
       ) : (
-        <p className="text-xs text-[var(--text-muted)]">{t('Unavailable')}</p>
+        <p className="text-xs text-[var(--text-muted)]">{t('dataExport.unavailable', 'Unavailable')}</p>
       )}
     </GlassPanel>
   );
@@ -567,14 +570,14 @@ function ExportWizard({
       <div className="flex items-center gap-2 mb-5">
         <FileDown className="h-5 w-5 text-neon-cyan" />
         <h2 className="text-base font-semibold text-[var(--text-primary)]">
-          {t('Title')}
+          {t('dataExport.wizardTitle', 'New Export')}
         </h2>
       </div>
 
       {/* Step 1: Export Type */}
       <div className="mb-5">
         <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.wizard.step1', 'Step1')}
+          {t('dataExport.wizard.step1', 'STEP 1 — Select Data Type')}
         </p>
         <ExportTypeSelector selected={exportType} onChange={setExportType} />
       </div>
@@ -582,7 +585,7 @@ function ExportWizard({
       {/* Step 2: Format */}
       <div className="mb-5">
         <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.wizard.step2', 'Step2')}
+          {t('dataExport.wizard.step2', 'STEP 2 — Choose Format')}
         </p>
         <FormatSelector selected={exportFormat} onChange={setExportFormat} />
       </div>
@@ -591,13 +594,13 @@ function ExportWizard({
       {vehicles && vehicles.length > 0 && (
         <div className="mb-5 max-w-xs">
           <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-            {t('dataExport.wizard.step3', 'Step3')}
+            {t('dataExport.wizard.step3', 'STEP 3 — Select Vehicle')}
           </p>
           <Select
             options={vehicleOptions}
             value={vehicleId}
             onChange={(e) => setVehicleId(e.target.value)}
-            placeholder={t('All Vehicles')}
+            placeholder={t('dataExport.allVehicles', 'All Vehicles')}
           />
         </div>
       )}
@@ -605,7 +608,7 @@ function ExportWizard({
       {/* Step 4: Date Range */}
       <div className="mb-6">
         <p className="text-xs font-medium text-[var(--text-secondary)] mb-2 uppercase tracking-wider">
-          {t('dataExport.wizard.step4', 'Step4')}
+          {t('dataExport.wizard.step4', 'STEP 4 — Date Range')}
         </p>
         <DatePresetSelector selected={useCustomRange ? -1 : presetDays} onChange={handlePresetChange} />
         <div className="mt-3 flex items-center gap-3">
@@ -615,7 +618,7 @@ function ExportWizard({
             icon={<Calendar className="h-3.5 w-3.5" />}
             onClick={() => setUseCustomRange(!useCustomRange)}
           >
-            {t('Custom Range')}
+            {t('dataExport.customRange', 'Custom Range')}
           </Button>
         </div>
         {useCustomRange && (
@@ -788,31 +791,31 @@ function ExportHistoryTable({
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('Title')}
+            {t('dataExport.exportHistory', 'Export History')}
           </h2>
           {activeJobs > 0 && (
             <Badge variant="info" size="sm" dot>
-              {activeJobs} {t('Active')}
+              {activeJobs} {t('dataExport.active', 'Active')}
             </Badge>
           )}
         </div>
         <Button variant="ghost" size="sm" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefresh}>
-          {t('Refresh')}
+          {t('dataExport.refresh', 'Refresh')}
         </Button>
       </div>
 
       {!jobs || jobs.length === 0 ? (
         <EmptyState
           icon={<FileDown className="h-10 w-10" />}
-          title={t('Empty Title')}
-          message={t('Empty Message')}
+          title={t('dataExport.noExports', 'No Exports Yet')}
+          message={t('dataExport.noExportsMessage', 'Create your first export above to get started.')}
         />
       ) : (
         <DataTable
           columns={columns}
           data={jobs}
           keyExtractor={(row) => row.id}
-          emptyMessage={t('No Jobs')}
+          emptyMessage={t('dataExport.noJobs', 'No export jobs')}
           compact
           pagination
         />
@@ -830,7 +833,7 @@ export default function DataExportPage() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  usePageTitle(t('Page Title'));
+  usePageTitle(t('dataExport.title', 'Data Export'));
 
   /* --- Queries --- */
 
@@ -898,8 +901,8 @@ export default function DataExportPage() {
 
   return (
     <PageContainer
-      title={t('Page Title')}
-      subtitle={t('Page Subtitle')}
+      title={t('dataExport.title', 'Data Export')}
+      subtitle={t('dataExport.subtitle', 'Export vehicle data in CSV or JSON format')}
       loading={isLoading}
       error={jobsError as Error | null}
       actions={
@@ -909,7 +912,7 @@ export default function DataExportPage() {
           icon={<RefreshCw className="h-4 w-4" />}
           onClick={handleRefresh}
         >
-          {t('Refresh')}
+          {t('dataExport.refresh', 'Refresh')}
         </Button>
       }
     >

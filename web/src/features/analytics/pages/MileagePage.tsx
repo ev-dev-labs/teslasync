@@ -32,11 +32,12 @@ interface MileageEntry {
 }
 
 interface MileageStats {
-  current_odometer: number;
-  month_distance: number;
-  daily_avg: number;
-  annual_projection: number;
-  entries: MileageEntry[];
+  total_distance: number;
+  avg_daily: number;
+  max_daily: number;
+  total_energy: number;
+  total_drives: number;
+  days_tracked: number;
 }
 
 interface MonthRow {
@@ -126,8 +127,8 @@ export default function MileagePage() {
 
   return (
     <PageContainer
-      title={t('Mileage')}
-      subtitle={t('Mileage Subtitle')}
+      title={t('mileage.title', 'Mileage')}
+      subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
       actions={selector}
       loading={isLoading}
       error={null}
@@ -142,26 +143,26 @@ export default function MileagePage() {
             : (
               <>
                 <MetricCard
-                  label={t('Current Odometer')}
-                  value={fmtInt(stats?.current_odometer)}
+                  label={t('mileage.totalDistance', 'Total Distance')}
+                  value={fmtInt(stats?.total_distance)}
                   icon={<Gauge className="h-4 w-4" />}
                   color="cyan"
                 />
                 <MetricCard
-                  label={t('Month Distance')}
-                  value={fmtInt(stats?.month_distance)}
+                  label={t('mileage.totalDrives', 'Total Drives')}
+                  value={fmtInt(stats?.total_drives)}
                   icon={<TrendingUp className="h-4 w-4" />}
                   color="green"
                 />
                 <MetricCard
-                  label={t('Daily Avg')}
-                  value={fmtNumber(stats?.daily_avg)}
+                  label={t('mileage.dailyAvg', 'Daily Avg')}
+                  value={fmtNumber(stats?.avg_daily)}
                   icon={<Calendar className="h-4 w-4" />}
                   color="purple"
                 />
                 <MetricCard
-                  label={t('Annual Projection')}
-                  value={fmtInt(stats?.annual_projection)}
+                  label={t('mileage.annualProjection', 'Annual Projection')}
+                  value={fmtInt((stats?.avg_daily ?? 0) * 365)}
                   icon={<BarChart3 className="h-4 w-4" />}
                   color="cyan"
                 />

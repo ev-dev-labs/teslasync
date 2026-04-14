@@ -247,7 +247,7 @@ export default function SignalExplorerPage() {
         </div>
 
         {/* Query controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 justify-end">
           <Select
             label={t('Per Page')}
             value={String(perPage)}

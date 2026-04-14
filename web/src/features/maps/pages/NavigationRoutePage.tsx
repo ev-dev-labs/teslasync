@@ -29,6 +29,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import {
   AreaChart,
@@ -243,6 +244,7 @@ export default function NavigationRoutePage() {
   /* ---- derived ---- */
   const isLoading = vehiclesLoading || latestLoading;
   const hasActiveRoute = latest?.active_route ?? false;
+  const hasValidLocation = latest != null && (latest.latitude !== 0 || latest.longitude !== 0);
 
   const waypoints = useMemo(
     () => (latest ? buildWaypoints(latest) : []),
@@ -334,7 +336,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {fmtNumber(row.latitude ?? 0, 6)}
+            {row.latitude !== 0 || row.longitude !== 0 ? fmtNumber(row.latitude ?? 0, 6) : '—'}
           </span>
         ),
       },
@@ -344,7 +346,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <span className="font-mono text-[var(--text-primary)]">
-            {fmtNumber(row.longitude ?? 0, 6)}
+            {row.latitude !== 0 || row.longitude !== 0 ? fmtNumber(row.longitude ?? 0, 6) : '—'}
           </span>
         ),
       },
@@ -592,6 +594,13 @@ export default function NavigationRoutePage() {
             )}
           </GlassPanel>
 
+          {/* ─────── GPS Warning Banner ─────── */}
+          {!hasValidLocation && latest && (
+            <AlertBanner variant="info" className="mb-4">
+              {t('nav.noGps', 'GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.')}
+            </AlertBanner>
+          )}
+
           {/* ─────── Location Status Cards ─────── */}
           <FadeIn delay={0.1}>
             <span className="mb-6 grid gap-4 sm:grid-cols-3">
@@ -599,33 +608,37 @@ export default function NavigationRoutePage() {
                 icon={<MapPin className="h-5 w-5" />}
                 label={t('nav.currentLocation', 'Current Location')}
                 value={
-                  latest
-                    ? `${fmtNumber(latest.latitude ?? 0, 4)}, ${fmtNumber(latest.longitude ?? 0, 4)} · ${headingToCardinal(latest.heading)} ${fmtNumber(latest.speed, 0)} mph`
-                    : '—'
+                  hasValidLocation
+                    ? `${fmtNumber(latest!.latitude, 4)}, ${fmtNumber(latest!.longitude, 4)} · ${headingToCardinal(latest!.heading)} ${fmtNumber(latest!.speed, 0)} mph`
+                    : t('nav.locationUnavailable', 'Location unavailable')
                 }
-                active={!!latest}
+                active={hasValidLocation}
               />
               <LocationStatusCard
                 icon={<Home className="h-5 w-5" />}
                 label={t('nav.homeStatus', 'Home Status')}
                 value={
-                  latest?.located_at_home
-                    ? t('nav.atHome', 'At Home')
-                    : latest?.homelink_nearby
-                      ? t('nav.homelinkNearby', 'HomeLink Nearby')
-                      : t('nav.awayFromHome', 'Away')
+                  !hasValidLocation
+                    ? t('nav.unknown', 'Unknown')
+                    : latest?.located_at_home
+                      ? t('nav.atHome', 'At Home')
+                      : latest?.homelink_nearby
+                        ? t('nav.homelinkNearby', 'HomeLink Nearby')
+                        : t('nav.awayFromHome', 'Away')
                 }
-                active={latest?.located_at_home ?? false}
+                active={hasValidLocation && (latest?.located_at_home ?? false)}
               />
               <LocationStatusCard
                 icon={<Briefcase className="h-5 w-5" />}
                 label={t('nav.workStatus', 'Work Status')}
                 value={
-                  latest?.located_at_work
-                    ? t('nav.atWork', 'At Work')
-                    : t('nav.notAtWork', 'Away')
+                  !hasValidLocation
+                    ? t('nav.unknown', 'Unknown')
+                    : latest?.located_at_work
+                      ? t('nav.atWork', 'At Work')
+                      : t('nav.notAtWork', 'Away')
                 }
-                active={latest?.located_at_work ?? false}
+                active={hasValidLocation && (latest?.located_at_work ?? false)}
               />
             </span>
           </FadeIn>

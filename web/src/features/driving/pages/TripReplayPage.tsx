@@ -234,6 +234,15 @@ export default function TripReplayPage() {
         </Link>
       }
     >
+      {positions.length === 0 && !isLoading ? (
+        <FadeIn>
+          <EmptyState
+            icon={<MapPin className="h-10 w-10" />}
+            message={t('replay.noGps', 'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.')}
+          />
+        </FadeIn>
+      ) : (
+      <>
       {/* ================================================================ */}
       {/*  Section 1 — Map                                                 */}
       {/* ================================================================ */}
@@ -556,6 +565,8 @@ export default function TripReplayPage() {
           </StaggerContainer>
         </GlassPanel>
       </FadeIn>
+      </>
+      )}
     </PageContainer>
   );
 }

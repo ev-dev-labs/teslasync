@@ -30,10 +30,10 @@ import { request } from '@/api/client';
 interface TirePressureReading {
   id: number;
   vehicle_id: number;
-  tpms_pressure_fl: number;
-  tpms_pressure_fr: number;
-  tpms_pressure_rl: number;
-  tpms_pressure_rr: number;
+  front_left: number;
+  front_right: number;
+  rear_left: number;
+  rear_right: number;
   tpms_hard_warnings: boolean;
   tpms_soft_warnings: boolean;
   created_at: string;
@@ -62,12 +62,12 @@ function getTirePressureValue(
   pos: TirePosition,
 ): number {
   const map: Record<TirePosition, number> = {
-    fl: reading.tpms_pressure_fl,
-    fr: reading.tpms_pressure_fr,
-    rl: reading.tpms_pressure_rl,
-    rr: reading.tpms_pressure_rr,
+    fl: reading.front_left,
+    fr: reading.front_right,
+    rl: reading.rear_left,
+    rr: reading.rear_right,
   };
-  return map[pos];
+  return map[pos] ?? 0;
 }
 
 type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
@@ -124,7 +124,7 @@ const LINE_COLORS: Record<TirePosition, string> = {
 
 export default function TirePressurePage() {
   const { t } = useTranslation();
-  usePageTitle(t('Title'));
+  usePageTitle(t('tirePressure.title', 'Tire Pressure'));
 
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState(200);
@@ -176,10 +176,10 @@ export default function TirePressurePage() {
     if (!history?.length) return [];
     return [...history].reverse().map((r) => ({
       time: formatDateTime(r.created_at),
-      fl: r.tpms_pressure_fl,
-      fr: r.tpms_pressure_fr,
-      rl: r.tpms_pressure_rl,
-      rr: r.tpms_pressure_rr,
+      fl: r.front_left,
+      fr: r.front_right,
+      rl: r.rear_left,
+      rr: r.rear_right,
     }));
   }, [history]);
 
@@ -195,14 +195,14 @@ export default function TirePressurePage() {
       },
       ...TIRE_POSITIONS.map(
         (pos): Column<TirePressureReading> => ({
-          key: `tpms_pressure_${pos}`,
-          header: t(`tirePressure.${pos}`),
+          key: pos,
+          header: t(`tirePressure.${pos}`, pos.toUpperCase()),
           render: (row: TirePressureReading) => {
             const val = getTirePressureValue(row, pos);
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(val ?? 0)} {t('Bar Unit')}
+                {fmtNumber(val ?? 0)} {t('tirePressure.unit', 'Bar')}
               </Badge>
             );
           },
@@ -244,8 +244,8 @@ export default function TirePressurePage() {
 
   return (
     <PageContainer
-      title={t('Title')}
-      subtitle={t('Subtitle')}
+      title={t('tirePressure.title', 'Tire Pressure')}
+      subtitle={t('tirePressure.subtitle', 'Monitor tire pressure readings and history')}
       loading={isLoading}
       error={latestError as Error | null}
       actions={
@@ -318,7 +318,7 @@ export default function TirePressurePage() {
                           value={value}
                           max={GAUGE_MAX}
                           label={t(`tirePressure.${pos}`)}
-                          unit={t('Bar Unit')}
+                          unit={t('tirePressure.unit', 'Bar')}
                           color={color}
                           size={120}
                         />
@@ -340,7 +340,7 @@ export default function TirePressurePage() {
             label={t('Avg Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(summaryStats.avg ?? 0)} ${t('Bar Unit')}`
+                ? `${fmtNumber(summaryStats.avg ?? 0)} ${t('tirePressure.unit', 'Bar')}`
                 : '—'
             }
             icon={<Activity className="h-5 w-5" />}
@@ -350,7 +350,7 @@ export default function TirePressurePage() {
             label={t('Min Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(summaryStats.min ?? 0)} ${t('Bar Unit')}`
+                ? `${fmtNumber(summaryStats.min ?? 0)} ${t('tirePressure.unit', 'Bar')}`
                 : '—'
             }
             icon={<TrendingDown className="h-5 w-5" />}

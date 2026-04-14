@@ -45,6 +45,8 @@ export interface DrivePosition {
   power: number | null;
   batteryLevel: number;
   timestamp: string;
+  createdAt?: string;
+  created_at?: string;
   insideTemp: number | null;
   outsideTemp: number | null;
   idealRange: number | null;
@@ -57,6 +59,8 @@ export interface DrivePosition {
 
 export interface DriveTelemetryPoint {
   timestamp: string;
+  createdAt?: string;
+  created_at?: string;
   speed: number | null;
   power: number | null;
   batteryLevel: number | null;
@@ -129,9 +133,15 @@ export interface SpeedProfileData {
 }
 
 export interface SpeedBucket {
-  range: string;
-  percentage: number;
-  driveCount: number;
+  speed_bucket: string;
+  speedBucket?: string;
+  readings: number;
+  avg_power_kw?: number;
+  avgPowerKw?: number;
+  // Legacy field names (may not exist from API)
+  range?: string;
+  percentage?: number;
+  driveCount?: number;
 }
 
 export interface RegenEfficiencyData {

@@ -146,18 +146,25 @@ export default function StateMachineDebuggerPage() {
 
   const flapIds = useMemo(() => detectFlaps(transitions), [transitions]);
 
-  /* ─── Pie chart data (from stats endpoint) ─── */
-  const pieData = useMemo(
-    () =>
-      Object.entries(stats).map(([name, value], i) => ({
+  /* ─── Pie chart data (from transitions — actual state distribution) ─── */
+  const pieData = useMemo(() => {
+    const byState = new Map<string, number>();
+    for (const tr of transitions) {
+      const state = tr.to_state;
+      if (state) {
+        byState.set(state, (byState.get(state) ?? 0) + 1);
+      }
+    }
+    return Array.from(byState.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value], i) => ({
         name,
         value,
         fill: CHART_COLORS[i % CHART_COLORS.length],
-      })),
-    [stats],
-  );
+      }));
+  }, [transitions]);
 
-  /* ─── Stat summary rows ─── */
+  /* ─── Stat summary rows (deduplicated — skip camelCase duplicates) ─── */
   const summaryRows: StatSummaryRow[] = useMemo(() => {
     // Compute average interval between transitions per FSM type
     const byType = new Map<string, number[]>();
@@ -166,7 +173,17 @@ export default function StateMachineDebuggerPage() {
       list.push(new Date(tr.created_at).getTime());
       byType.set(tr.fsm_name, list);
     }
-    return Object.entries(stats)
+    // Filter stats to only snake_case keys (skip camelCase duplicates from response transformer)
+    const cleanEntries = Object.entries(stats).filter(([key]) => {
+      if (!key.includes('_')) {
+        // Check if a snake_case equivalent exists — if so, this is a camelCase duplicate
+        return !Object.keys(stats).some(
+          k => k.includes('_') && k.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase()) === key
+        );
+      }
+      return true;
+    });
+    return cleanEntries
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => {
         const times = byType.get(name) ?? [];
@@ -357,23 +374,6 @@ export default function StateMachineDebuggerPage() {
                   setServerPage(1);
                 }}
               />
-              <div className="flex items-end gap-2">
-                <div className="flex flex-wrap gap-1.5">
-                  {HOURS_OPTIONS.map((opt) => (
-                    <Button
-                      key={opt.value}
-                      size="sm"
-                      variant={hours === opt.value ? 'primary' : 'ghost'}
-                      onClick={() => {
-                        setHours(opt.value);
-                        setServerPage(1);
-                      }}
-                    >
-                      {opt.value === '1' ? '1h' : opt.value === '6' ? '6h' : opt.value === '24' ? '24h' : '7d'}
-                    </Button>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : (
             <EmptyState message={t('fsm.noVehicles', 'No vehicles available')} />
