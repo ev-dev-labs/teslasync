@@ -417,7 +417,7 @@ export default function MediaPlayerPage() {
       </FadeIn>
 
       {/* ── Volume + Stats row ───────────────────────────────── */}
-      <FadeIn delay={100}>
+      <FadeIn delay={0.05}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GlassPanel className="flex items-center justify-center p-4">
             <RadialGauge
@@ -454,7 +454,7 @@ export default function MediaPlayerPage() {
       </FadeIn>
 
       {/* ── Charts row ───────────────────────────────────────── */}
-      <FadeIn delay={200}>
+      <FadeIn delay={0.1}>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Volume over Time */}
           <GlassPanel className="p-4 lg:col-span-2">
@@ -546,7 +546,7 @@ export default function MediaPlayerPage() {
       </FadeIn>
 
       {/* ── Playback History table ───────────────────────────── */}
-      <FadeIn delay={300}>
+      <FadeIn delay={0.15}>
         <GlassPanel className="p-4">
           <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
             <ListMusic className="h-4 w-4 text-cyan-400" />

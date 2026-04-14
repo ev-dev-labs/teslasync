@@ -18,6 +18,15 @@ import {
   Clock,
   BarChart3,
   Car,
+  Flashlight,
+  Lightbulb,
+  Signal,
+  Armchair,
+  Key,
+  Gauge,
+  Wrench,
+  Monitor,
+  CircleDot,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -27,6 +36,7 @@ import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
+import { EmptyState } from '@/components/feedback/EmptyState';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import {
@@ -68,7 +78,7 @@ interface SentryDayBucket {
 /*  Pure helpers                                                        */
 /* ------------------------------------------------------------------ */
 
-function parseWindowState(val: string | undefined): WindowState {
+function parseWindowState(val: string | null | undefined): WindowState {
   if (!val) return 'Unknown';
   const lower = val.toLowerCase();
   if (lower === 'closed' || lower === '0') return 'Closed';
@@ -103,13 +113,13 @@ function windowTextClass(state: WindowState): string {
   }
 }
 
-function doorClosed(state: string | undefined): boolean {
+function doorClosed(state: string | null | undefined): boolean {
   if (!state) return true;
   const lower = state.toLowerCase();
   return lower === 'closed' || lower === '0' || lower === 'false';
 }
 
-function timeSince(iso: string | undefined): string {
+function timeSince(iso: string | null | undefined): string {
   if (!iso) return '—';
   const diff = Date.now() - new Date(iso).getTime();
   if (diff < 0) return '—';
@@ -182,6 +192,163 @@ function allWindowsClosed(ev: SecurityEvent | undefined): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Live state signal helpers                                          */
+/* ------------------------------------------------------------------ */
+
+interface LiveSignal {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  active: boolean;
+}
+
+function boolLabel(val: boolean | null | undefined, t: (k: string, fb: string) => string): string {
+  if (val == null) return '—';
+  return val ? t('admin.security.on', 'On') : t('admin.security.off', 'Off');
+}
+
+function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: string) => string): LiveSignal[] {
+  if (!ev) return [];
+  return [
+    {
+      key: 'hazards',
+      label: t('admin.security.live.hazards', 'Hazards'),
+      icon: <Flashlight className="h-4 w-4" />,
+      value: boolLabel(ev.lightsHazardsActive, t),
+      active: !!ev.lightsHazardsActive,
+    },
+    {
+      key: 'highBeams',
+      label: t('admin.security.live.highBeams', 'High Beams'),
+      icon: <Lightbulb className="h-4 w-4" />,
+      value: boolLabel(ev.lightsHighBeams, t),
+      active: !!ev.lightsHighBeams,
+    },
+    {
+      key: 'turnSignal',
+      label: t('admin.security.live.turnSignal', 'Turn Signal'),
+      icon: <Signal className="h-4 w-4" />,
+      value: ev.lightsTurnSignal ?? '—',
+      active: !!ev.lightsTurnSignal && !ev.lightsTurnSignal.toLowerCase().includes('off'),
+    },
+    {
+      key: 'driverSeat',
+      label: t('admin.security.live.driverSeat', 'Driver Seat'),
+      icon: <Armchair className="h-4 w-4" />,
+      value: ev.driverSeatOccupied == null ? '—' : ev.driverSeatOccupied ? t('admin.security.live.occupied', 'Occupied') : t('admin.security.live.empty', 'Empty'),
+      active: !!ev.driverSeatOccupied,
+    },
+    {
+      key: 'pairedKeys',
+      label: t('admin.security.live.pairedKeys', 'Paired Keys'),
+      icon: <Key className="h-4 w-4" />,
+      value: ev.pairedPhoneKeyCount != null ? String(ev.pairedPhoneKeyCount) : '—',
+      active: (ev.pairedPhoneKeyCount ?? 0) > 0,
+    },
+    {
+      key: 'valetMode',
+      label: t('admin.security.live.valetMode', 'Valet Mode'),
+      icon: <Car className="h-4 w-4" />,
+      value: boolLabel(ev.valetModeEnabled, t),
+      active: !!ev.valetModeEnabled,
+    },
+    {
+      key: 'serviceMode',
+      label: t('admin.security.live.serviceMode', 'Service Mode'),
+      icon: <Wrench className="h-4 w-4" />,
+      value: boolLabel(ev.serviceMode, t),
+      active: !!ev.serviceMode,
+    },
+    {
+      key: 'speedLimit',
+      label: t('admin.security.live.speedLimit', 'Speed Limit'),
+      icon: <Gauge className="h-4 w-4" />,
+      value: ev.speedLimitMode ?? '—',
+      active: !!ev.speedLimitMode && !ev.speedLimitMode.toLowerCase().includes('off'),
+    },
+    {
+      key: 'homelinkDevices',
+      label: t('admin.security.live.homelinkDevices', 'HomeLink Devices'),
+      icon: <Home className="h-4 w-4" />,
+      value: ev.homelinkDeviceCount != null ? String(ev.homelinkDeviceCount) : '—',
+      active: (ev.homelinkDeviceCount ?? 0) > 0,
+    },
+    {
+      key: 'centerDisplay',
+      label: t('admin.security.live.centerDisplay', 'Center Display'),
+      icon: <Monitor className="h-4 w-4" />,
+      value: ev.centerDisplay ?? '—',
+      active: !!ev.centerDisplay && !ev.centerDisplay.toLowerCase().includes('off'),
+    },
+  ];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Security event timeline derivation                                 */
+/* ------------------------------------------------------------------ */
+
+interface TimelineEvent {
+  id: string;
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  variant: 'positive' | 'negative' | 'neutral';
+}
+
+function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
+  if (events.length === 0) return [];
+
+  const sorted = [...events].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  const timeline: TimelineEvent[] = [];
+
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const curr = sorted[i];
+    const prev = sorted[i + 1];
+
+    if (curr.locked !== prev.locked) {
+      timeline.push({
+        id: `lock-${curr.id}`,
+        title: curr.locked ? 'Vehicle Locked' : 'Vehicle Unlocked',
+        subtitle: curr.locked ? 'Doors secured' : 'Doors accessible',
+        timestamp: curr.createdAt,
+        variant: curr.locked ? 'positive' : 'negative',
+      });
+    }
+
+    if (curr.sentryMode !== prev.sentryMode) {
+      timeline.push({
+        id: `sentry-${curr.id}`,
+        title: curr.sentryMode ? 'Sentry Mode Activated' : 'Sentry Mode Deactivated',
+        subtitle: curr.sentryMode ? 'Camera surveillance enabled' : 'Camera surveillance disabled',
+        timestamp: curr.createdAt,
+        variant: curr.sentryMode ? 'positive' : 'negative',
+      });
+    }
+
+    if (curr.doorState !== prev.doorState) {
+      const closed = doorClosed(curr.doorState);
+      timeline.push({
+        id: `door-${curr.id}`,
+        title: closed ? 'Doors Closed' : 'Door Opened',
+        subtitle: curr.doorState ?? '—',
+        timestamp: curr.createdAt,
+        variant: closed ? 'positive' : 'negative',
+      });
+    }
+
+    if (timeline.length >= 50) break;
+  }
+
+  return timeline.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -238,6 +405,12 @@ export default function SecurityAccessPage() {
     const guestCount = history.filter((e) => e.guestMode).length;
     return { lockEvents, doorOpenCount, windowOpenCount, homelinkCount, guestCount, total: history.length };
   }, [history]);
+
+  /* ---- Live vehicle state signals ---- */
+  const liveSignals = useMemo(() => buildLiveSignals(latest, t), [latest, t]);
+
+  /* ---- Security event timeline ---- */
+  const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
   /* ---- Vehicle selector options ---- */
   const vehicleOptions = useMemo(
@@ -603,6 +776,49 @@ export default function SecurityAccessPage() {
         </div>
       </FadeIn>
 
+      {/* ---- Live Vehicle State ---- */}
+      <FadeIn delay={0.17}>
+        <GlassPanel className="p-4 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-200">
+              {t('admin.security.liveState', 'Live Vehicle State')}
+            </h2>
+            {latest && (
+              <span className="flex items-center gap-1.5 text-xs text-green-400">
+                <CircleDot className="h-3 w-3 animate-pulse" />
+                {t('admin.security.live.indicator', 'Live')}
+              </span>
+            )}
+          </div>
+          {liveSignals.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {liveSignals.map((sig) => (
+                <GlassPanel key={sig.key} className="p-3" hover>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={cn(sig.active ? 'text-cyan-400' : 'text-gray-500')}>
+                      {sig.icon}
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-400 truncate">
+                      {sig.label}
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      'text-sm font-semibold block truncate',
+                      sig.active ? 'text-white' : 'text-gray-500',
+                    )}
+                  >
+                    {sig.value}
+                  </span>
+                </GlassPanel>
+              ))}
+            </div>
+          ) : (
+            <EmptyState message={t('admin.security.live.noData', 'No live state data available')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
       {/* ---- Sentry Mode Chart ---- */}
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 mb-6">
@@ -720,7 +936,7 @@ export default function SecurityAccessPage() {
       </FadeIn>
 
       {/* ---- Security Event History Table ---- */}
-      <FadeIn delay={400}>
+      <FadeIn delay={0.3}>
         <GlassPanel className="p-4">
           <h2 className="text-lg font-semibold text-gray-200 mb-4">
             {t('admin.security.eventHistory', 'Security Event History')}
@@ -739,6 +955,65 @@ export default function SecurityAccessPage() {
               compact
               pagination={{ defaultPageSize: 50 }}
             />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ---- Security Event Timeline ---- */}
+      <FadeIn delay={0.35}>
+        <GlassPanel className="p-4">
+          <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            {t('admin.security.timeline', 'Security Event Timeline')}
+          </h2>
+          {timelineEvents.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {timelineEvents.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="flex items-start gap-3 rounded-lg bg-white/[0.02] p-3"
+                >
+                  <div
+                    className={cn(
+                      'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                      ev.variant === 'positive'
+                        ? 'bg-green-500/20 text-green-400'
+                        : ev.variant === 'negative'
+                          ? 'bg-red-500/20 text-red-400'
+                          : 'bg-gray-500/20 text-gray-400',
+                    )}
+                  >
+                    {ev.title.toLowerCase().includes('lock') ? (
+                      ev.variant === 'positive' ? (
+                        <Lock className="h-4 w-4" />
+                      ) : (
+                        <Unlock className="h-4 w-4" />
+                      )
+                    ) : ev.title.toLowerCase().includes('sentry') ? (
+                      ev.variant === 'positive' ? (
+                        <ShieldCheck className="h-4 w-4" />
+                      ) : (
+                        <ShieldAlert className="h-4 w-4" />
+                      )
+                    ) : ev.variant === 'positive' ? (
+                      <DoorClosed className="h-4 w-4" />
+                    ) : (
+                      <DoorOpen className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-200">
+                      {t(`admin.security.timeline.${ev.id.split('-')[0]}.${ev.variant}`, ev.title)}
+                    </p>
+                    <p className="text-xs text-gray-500">{ev.subtitle}</p>
+                  </div>
+                  <span className="text-[10px] text-gray-500 whitespace-nowrap shrink-0">
+                    {formatDateTime(ev.timestamp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState message={t('admin.security.timeline.noEvents', 'No state changes detected in the history.')} />
           )}
         </GlassPanel>
       </FadeIn>

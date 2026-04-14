@@ -79,15 +79,29 @@ export interface AuditLogEntry {
 export interface SecurityEvent {
   id: string;
   vehicleId: string;
-  locked: boolean;
-  sentryMode: boolean;
-  doorState: string;
-  fdWindow: string;
-  fpWindow: string;
-  rdWindow: string;
-  rpWindow: string;
-  homelinkNearby: boolean;
-  guestMode: boolean;
+  locked: boolean | null;
+  sentryMode: boolean | null;
+  doorState: string | null;
+  fdWindow: string | null;
+  fpWindow: string | null;
+  rdWindow: string | null;
+  rpWindow: string | null;
+  homelinkNearby: boolean | null;
+  guestMode: boolean | null;
+  homelinkDeviceCount: number | null;
+  guestModeMobileAccessState: string | null;
+  driverSeatOccupied: boolean | null;
+  centerDisplay: string | null;
+  speedLimitMode: string | null;
+  valetModeEnabled: boolean | null;
+  serviceMode: boolean | null;
+  currentLimitMph: number | null;
+  pairedPhoneKeyCount: number | null;
+  lightsHazardsActive: boolean | null;
+  lightsHighBeams: boolean | null;
+  lightsTurnSignal: string | null;
+  driverSeatBelt: boolean | null;
+  passengerSeatBelt: boolean | null;
   createdAt: string;
 }
 
