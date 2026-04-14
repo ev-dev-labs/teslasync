@@ -12,7 +12,7 @@ import {
   PieChart, Pie, Cell, Brush, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
 import { DateRangeFilter } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
@@ -32,6 +32,7 @@ function CostComparisonCard({
 }: {
   label: string; evCost: number; gasCost: number; icon: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const savings = (gasCost ?? 0) - (evCost ?? 0);
   const savingsPct = gasCost > 0 ? (savings / gasCost) * 100 : 0;
   return (
@@ -45,14 +46,14 @@ function CostComparisonCard({
       <div className="flex items-center gap-4 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-            EV Cost
+            {t('energy.cost.evCost', 'EV Cost')}
           </p>
           <p className="text-lg font-bold text-neon-cyan">${fmtNumber(evCost ?? 0)}</p>
         </div>
         <ArrowRight className="h-4 w-4 text-[var(--text-muted)]" />
         <div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
-            Gas Equivalent
+            {t('energy.cost.gasEquivalent', 'Gas Equivalent')}
           </p>
           <p className="text-lg font-bold text-[var(--text-secondary)]">
             ${fmtNumber(gasCost ?? 0)}
@@ -61,10 +62,10 @@ function CostComparisonCard({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold text-neon-green">
-          Saving ${fmtNumber(savings ?? 0)}
+          {t('energy.cost.saving', 'Saving')} ${fmtNumber(savings ?? 0)}
         </span>
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green font-semibold">
-          {fmtPercent(savingsPct ?? 0)} less
+          {fmtPercent(savingsPct ?? 0)} {t('energy.cost.less', 'less')}
         </span>
       </div>
     </GlassPanel>
@@ -389,9 +390,11 @@ export default function EnergyPage() {
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
-                      {t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
-                    </div>
+                    <EmptyState
+                      icon={<Zap className="h-8 w-8" />}
+                      message={t('energy.chart.noEnergyData', 'Connect vehicle to see energy data')}
+                      className="py-8"
+                    />
                   )}
                 </div>
               </ChartContainer>
@@ -433,9 +436,11 @@ export default function EnergyPage() {
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-[var(--text-muted)] text-sm">
-                      {t('energy.chart.noEfficiencyData', 'No efficiency data yet')}
-                    </div>
+                    <EmptyState
+                      icon={<Activity className="h-8 w-8" />}
+                      message={t('energy.chart.noEfficiencyData', 'No efficiency data yet')}
+                      className="py-8"
+                    />
                   )}
                 </div>
               </ChartContainer>
@@ -484,10 +489,11 @@ export default function EnergyPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                    <Activity className="h-8 w-8 opacity-20" />
-                    <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                  </div>
+                  <EmptyState
+                    icon={<Activity className="h-8 w-8" />}
+                    message={t('common.noData', 'No data available')}
+                    className="py-8"
+                  />
                 )}
               </ChartContainer>
             </FadeIn>
@@ -540,10 +546,11 @@ export default function EnergyPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                    <Activity className="h-8 w-8 opacity-20" />
-                    <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                  </div>
+                  <EmptyState
+                    icon={<Activity className="h-8 w-8" />}
+                    message={t('common.noData', 'No data available')}
+                    className="py-8"
+                  />
                 )}
               </ChartContainer>
             </FadeIn>
@@ -563,10 +570,11 @@ export default function EnergyPage() {
                   keyExtractor={(s) => s.id}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-[var(--text-muted)]">
-                  <Activity className="h-8 w-8 opacity-20" />
-                  <p className="text-xs">{t('common.noData', 'No data available')}</p>
-                </div>
+                <EmptyState
+                  icon={<Activity className="h-8 w-8" />}
+                  message={t('energy.sessions.empty', 'No charging sessions recorded')}
+                  className="py-8"
+                />
               )}
             </GlassPanel>
           </FadeIn>
