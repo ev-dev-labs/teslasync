@@ -1,5 +1,5 @@
 ---
-description: "Fix Safety Settings — add Live Safety Signals + Driving Statistics panels"
+description: "Fix Safety Settings live signals + alignment, Drive Detail tire pressure, Driving Statistics"
 ---
 
 # Fix: Safety Settings — Missing Live Safety Signals + Driving Statistics
@@ -154,6 +154,45 @@ Key changes:
 
 ---
 
+## Bug 4 — Drive Detail: Tire Pressure During Drive still empty
+
+**Page:** `web/src/features/driving/pages/DriveDetailPage.tsx`
+**Screenshot:** "Tire Pressure During Drive" panel shows "No telemetry data available".
+
+**Root Cause:** The `drive_telemetry_readings` table has `tire_pressure_fl/fr/rl/rr` columns
+but they're all NULL. The `flushDriveTelemetry()` function in `telemetry_sessions.go` doesn't
+map TPMS signals from Fleet Telemetry into these columns.
+
+Check signal names in our export:
+```bash
+node -e "const d=require('./scripts/signals-export.json'); const tpms=d.filter(s=>s.signal.match(/tpms|tire/i)); console.log([...new Set(tpms.map(s=>s.signal))])"
+```
+
+Fleet Telemetry sends: `TpmsFl`, `TpmsFr`, `TpmsRl`, `TpmsRr` (pressure in Bar).
+
+**Fix:** In `internal/api/telemetry_sessions.go`, find `flushDriveTelemetry()` and add TPMS mapping:
+
+```go
+// In the reading construction, add:
+if v, ok := toFloatOk(signals["TpmsFl"]); ok {
+    reading.TirePressureFL = &v
+}
+if v, ok := toFloatOk(signals["TpmsFr"]); ok {
+    reading.TirePressureFR = &v
+}
+if v, ok := toFloatOk(signals["TpmsRl"]); ok {
+    reading.TirePressureRL = &v
+}
+if v, ok := toFloatOk(signals["TpmsRr"]); ok {
+    reading.TirePressureRR = &v
+}
+```
+
+Also check if `flushDriveTelemetry` accumulates these signal names — the MQTT subscriber
+may deliver them as `TpmsFl` but the accumulator might use a different key.
+
+---
+
 ## Verification
 
 ```bash
@@ -171,5 +210,6 @@ cd web && npx tsc --noEmit
 - [ ] Data comes from vehicle live state (handle both snake_case and camelCase fields)
 - [ ] Sections always render (show "—" when no data)
 - [ ] Safety Score gauge + summary cards properly aligned (equal height, balanced widths)
+- [ ] Drive Detail: tire pressure columns populated in drive_telemetry_readings (map TpmsFl/Fr/Rl/Rr)
 - [ ] No inline styles, no direct recharts imports
 - [ ] TypeScript compiles clean
