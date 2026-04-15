@@ -2,7 +2,11 @@
 -- Pre-computes daily energy charged, distance driven, cost, and efficiency
 -- from charging_sessions and drives tables. Replaces expensive correlated
 -- subqueries in energy_repo.go GetDailyBreakdown().
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_energy_daily AS
+--
+-- Idempotent: drops existing view first in case a prior run partially succeeded.
+DROP MATERIALIZED VIEW IF EXISTS mv_energy_daily;
+
+CREATE MATERIALIZED VIEW mv_energy_daily AS
 SELECT
     COALESCE(c.vehicle_id, d.vehicle_id) AS vehicle_id,
     COALESCE(c.day, d.day)               AS day,
@@ -17,7 +21,7 @@ SELECT
 FROM (
     SELECT vehicle_id, DATE(start_date) AS day,
            SUM(charge_energy_added) AS energy_kwh,
-           SUM(cost) AS cost
+           SUM(COALESCE(cost, 0)) AS cost
     FROM charging_sessions
     GROUP BY vehicle_id, DATE(start_date)
 ) c
@@ -26,8 +30,9 @@ FULL OUTER JOIN (
            SUM(distance) AS distance_km
     FROM drives
     GROUP BY vehicle_id, DATE(start_date)
-) d ON c.vehicle_id = d.vehicle_id AND c.day = d.day;
+) d ON c.vehicle_id = d.vehicle_id AND c.day = d.day
+WHERE COALESCE(c.vehicle_id, d.vehicle_id) IS NOT NULL;
 
 -- Unique index required for REFRESH MATERIALIZED VIEW CONCURRENTLY
-CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_energy_daily_vehicle_day
+CREATE UNIQUE INDEX idx_mv_energy_daily_vehicle_day
     ON mv_energy_daily (vehicle_id, day);
