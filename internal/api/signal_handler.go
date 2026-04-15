@@ -85,7 +85,7 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 		if err == nil && len(rows) > 0 {
 			points := make([]map[string]interface{}, len(rows))
 			for i, row := range rows {
-				p := map[string]interface{}{"timestamp": row.CreatedAt}
+				p := map[string]interface{}{"created_at": row.CreatedAt}
 				if row.ValueNum != nil {
 					p["value_num"] = *row.ValueNum
 				}

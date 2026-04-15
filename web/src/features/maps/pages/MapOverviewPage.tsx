@@ -39,6 +39,8 @@ interface LocationSnapshot {
   odometer: number;
   located_at_home: boolean;
   located_at_work: boolean;
+  locatedAtHome?: boolean;
+  locatedAtWork?: boolean;
   homelink_nearby: boolean;
   active_route: boolean;
   destination_name: string;
@@ -292,22 +294,22 @@ export default function MapOverviewPage() {
                 <Home
                   className={cn(
                     'h-5 w-5',
-                    hasValidLocation && latest.located_at_home ? 'text-emerald-400' : 'text-gray-500',
+                    (latest?.located_at_home ?? latest?.locatedAtHome) ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.atHome', 'At Home')}
                 </span>
                 <Badge
-                  variant={!hasValidLocation ? 'neutral' : latest.located_at_home ? 'success' : 'neutral'}
+                  variant={(latest?.located_at_home ?? latest?.locatedAtHome) === true ? 'success' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {!hasValidLocation
-                    ? t('mapOverview.unknown', 'Unknown')
-                    : latest.located_at_home
-                      ? t('mapOverview.yes', 'Yes')
-                      : t('mapOverview.no', 'No')}
+                  {(latest?.located_at_home ?? latest?.locatedAtHome) === true
+                    ? t('mapOverview.yes', 'Yes')
+                    : (latest?.located_at_home ?? latest?.locatedAtHome) === false
+                      ? t('mapOverview.no', 'No')
+                      : t('mapOverview.unknown', 'Unknown')}
                 </Badge>
               </div>
 
@@ -316,22 +318,22 @@ export default function MapOverviewPage() {
                 <Briefcase
                   className={cn(
                     'h-5 w-5',
-                    hasValidLocation && latest.located_at_work ? 'text-emerald-400' : 'text-gray-500',
+                    (latest?.located_at_work ?? latest?.locatedAtWork) ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.atWork', 'At Work')}
                 </span>
                 <Badge
-                  variant={!hasValidLocation ? 'neutral' : latest.located_at_work ? 'success' : 'neutral'}
+                  variant={(latest?.located_at_work ?? latest?.locatedAtWork) === true ? 'success' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {!hasValidLocation
-                    ? t('mapOverview.unknown', 'Unknown')
-                    : latest.located_at_work
-                      ? t('mapOverview.yes', 'Yes')
-                      : t('mapOverview.no', 'No')}
+                  {(latest?.located_at_work ?? latest?.locatedAtWork) === true
+                    ? t('mapOverview.yes', 'Yes')
+                    : (latest?.located_at_work ?? latest?.locatedAtWork) === false
+                      ? t('mapOverview.no', 'No')
+                      : t('mapOverview.unknown', 'Unknown')}
                 </Badge>
               </div>
 
