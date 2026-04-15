@@ -148,6 +148,10 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	if h.telemetryHandler != nil {
 		store := h.telemetryHandler.GetSignalStore()
 		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
+		// Enrich with state-since timestamp from vehicle_states table
+		if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
+			state.Since = since
+		}
 		// Determine if we have live telemetry data vs pure DB fallback
 		hasLiveSignals := store != nil && len(store.GetAll(vehicle.ID)) > 0
 		dataSource := "signal_store"
@@ -165,6 +169,9 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	// SECONDARY: Build state from DB records (fleet telemetry snapshot tables)
 	// Only reached when telemetryHandler is nil (no MQTT configured)
 	state := h.vehicleSvc.BuildStateFromSignalStore(nil, vehicle)
+	if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
+		state.Since = since
+	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"state":       state,
 		"live":        false,

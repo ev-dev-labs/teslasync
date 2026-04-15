@@ -466,26 +466,27 @@ func (pc *PollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
 
 // VehicleState represents a snapshot of vehicle state at a point in time.
 type VehicleState struct {
-	VehicleID       int64    `json:"vehicle_id"`
-	State           string   `json:"state"`
-	Latitude        float64  `json:"latitude"`
-	Longitude       float64  `json:"longitude"`
-	Speed           float64  `json:"speed"`
-	Power           float64  `json:"power"`
-	BatteryLevel    int      `json:"battery_level"`
-	RatedRange      float64  `json:"rated_range"`
-	IdealRange      float64  `json:"ideal_range"`
-	Odometer        float64  `json:"odometer"`
-	InsideTemp      float64  `json:"inside_temp"`
-	OutsideTemp     float64  `json:"outside_temp"`
-	IsClimateOn     bool     `json:"is_climate_on"`
-	IsCharging      bool     `json:"is_charging"`
-	ChargerPower    float64  `json:"charger_power"`
-	ChargeRate      float64  `json:"charge_rate"`
-	TimeToFullChg   float64  `json:"time_to_full_charge"`
-	IsLocked        bool     `json:"is_locked"`
-	SentryMode      bool     `json:"sentry_mode"`
-	SoftwareVersion string   `json:"software_version"`
+	VehicleID       int64      `json:"vehicle_id"`
+	State           string     `json:"state"`
+	Since           *time.Time `json:"since,omitempty"`
+	Latitude        float64    `json:"latitude"`
+	Longitude       float64    `json:"longitude"`
+	Speed           float64    `json:"speed"`
+	Power           float64    `json:"power"`
+	BatteryLevel    int        `json:"battery_level"`
+	RatedRange      float64    `json:"rated_range"`
+	IdealRange      float64    `json:"ideal_range"`
+	Odometer        float64    `json:"odometer"`
+	InsideTemp      float64    `json:"inside_temp"`
+	OutsideTemp     float64    `json:"outside_temp"`
+	IsClimateOn     bool       `json:"is_climate_on"`
+	IsCharging      bool       `json:"is_charging"`
+	ChargerPower    float64    `json:"charger_power"`
+	ChargeRate      float64    `json:"charge_rate"`
+	TimeToFullChg   float64    `json:"time_to_full_charge"`
+	IsLocked        bool       `json:"is_locked"`
+	SentryMode      bool       `json:"sentry_mode"`
+	SoftwareVersion string     `json:"software_version"`
 }
 
 // Alert represents a system or vehicle alert/notification.

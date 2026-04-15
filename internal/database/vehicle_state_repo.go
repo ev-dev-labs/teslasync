@@ -145,3 +145,19 @@ func (r *VehicleStateRepo) GetCurrentState(ctx context.Context, vehicleID int64)
 	}
 	return state, nil
 }
+
+// GetCurrentStateSince returns the current open state and when it started.
+func (r *VehicleStateRepo) GetCurrentStateSince(ctx context.Context, vehicleID int64) (string, *time.Time, error) {
+	query := `SELECT state, start_date FROM vehicle_states WHERE vehicle_id = $1 AND end_date IS NULL
+		ORDER BY start_date DESC LIMIT 1`
+	var state string
+	var since time.Time
+	err := r.db.Pool.QueryRow(ctx, query, vehicleID).Scan(&state, &since)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", nil, nil
+		}
+		return "", nil, err
+	}
+	return state, &since, nil
+}
