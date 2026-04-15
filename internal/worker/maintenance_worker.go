@@ -109,11 +109,15 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		}
 	}
 
+	// Generate daily battery health snapshots from charging telemetry
+	batSnaps := generateBatterySnapshots(maintCtx, db)
+
 	log.Info().
 		Int64("positions_deleted", posDeleted).
 		Int64("states_deleted", statesDeleted).
 		Int64("api_logs_deleted", apiLogsDeleted).
 		Int64("notif_logs_deleted", notifLogsDeleted).
+		Int("battery_snapshots_created", batSnaps).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
 }
@@ -264,4 +268,106 @@ func cleanupOldLogs(ctx context.Context, db *database.DB, table string, retentio
 		log.Info().Int64("deleted", deleted).Str("table", table).Msg("cleaned up old logs")
 	}
 	return deleted, nil
+}
+
+// generateBatterySnapshots derives daily battery health metrics from charging
+// telemetry and charging sessions, then inserts one snapshot per vehicle
+// (skipping if today's snapshot already exists).
+func generateBatterySnapshots(ctx context.Context, db *database.DB) int {
+	// Nominal specs for health score derivation (Model Y LR baseline)
+	const nominalCapacity = 75.0
+	const nominalRangeKm = 531.0
+
+	rows, err := db.Pool.Query(ctx, `SELECT id FROM vehicles`)
+	if err != nil {
+		log.Error().Err(err).Msg("battery-snapshots: failed to list vehicles")
+		return 0
+	}
+	defer rows.Close()
+
+	var vehicleIDs []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err == nil {
+			vehicleIDs = append(vehicleIDs, id)
+		}
+	}
+
+	created := 0
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	for _, vid := range vehicleIDs {
+		// Skip if we already have a snapshot for today
+		var exists bool
+		_ = db.Pool.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM battery_snapshots WHERE vehicle_id=$1 AND created_at >= $2)`,
+			vid, today).Scan(&exists)
+		if exists {
+			continue
+		}
+
+		var healthScore, capacityKWh, degradation, estRange, avgTemp float64
+		var cycleCount int
+
+		// Derive capacity from latest energy_remaining in charging_telemetry
+		var latestEnergy, latestRange *float64
+		_ = db.Pool.QueryRow(ctx,
+			`SELECT energy_remaining, est_battery_range FROM charging_telemetry
+			 WHERE vehicle_id = $1 AND energy_remaining IS NOT NULL
+			 ORDER BY created_at DESC LIMIT 1`, vid).Scan(&latestEnergy, &latestRange)
+
+		if latestEnergy != nil && *latestEnergy > 0 {
+			capacityKWh = *latestEnergy
+			healthScore = (capacityKWh / nominalCapacity) * 100
+			if healthScore > 100 {
+				healthScore = 100
+			}
+			degradation = 100 - healthScore
+		}
+		if latestRange != nil && *latestRange > 0 {
+			estRange = *latestRange
+		}
+
+		// Count charge cycles from charging sessions (sum of SOC deltas / 100)
+		var totalSOCDelta *float64
+		_ = db.Pool.QueryRow(ctx,
+			`SELECT SUM(GREATEST(end_battery_level - start_battery_level, 0))
+			 FROM charging_sessions WHERE vehicle_id = $1 AND end_battery_level > start_battery_level`,
+			vid).Scan(&totalSOCDelta)
+		if totalSOCDelta != nil {
+			cycleCount = int(*totalSOCDelta / 100)
+		}
+
+		// Get average module temp from latest charging telemetry
+		var modTemp *float64
+		_ = db.Pool.QueryRow(ctx,
+			`SELECT (module_temp_max + module_temp_min) / 2.0
+			 FROM charging_telemetry WHERE vehicle_id = $1
+			 AND module_temp_max IS NOT NULL AND module_temp_min IS NOT NULL
+			 ORDER BY created_at DESC LIMIT 1`, vid).Scan(&modTemp)
+		if modTemp != nil {
+			avgTemp = *modTemp
+		}
+
+		// Only insert if we have meaningful data
+		if healthScore == 0 && capacityKWh == 0 && estRange == 0 {
+			continue
+		}
+
+		_, err := db.Pool.Exec(ctx,
+			`INSERT INTO battery_snapshots (vehicle_id, health_score, capacity_kwh, degradation_pct, est_range_km, cycle_count, avg_cell_temp_c, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			vid, healthScore, capacityKWh, degradation, estRange, cycleCount, avgTemp, time.Now().UTC())
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vid).Msg("battery-snapshots: failed to insert")
+			continue
+		}
+		created++
+		log.Info().
+			Int64("vehicle_id", vid).
+			Float64("health_score", healthScore).
+			Float64("capacity_kwh", capacityKWh).
+			Int("cycle_count", cycleCount).
+			Msg("battery-snapshots: created daily snapshot")
+	}
+	return created
 }
