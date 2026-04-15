@@ -296,7 +296,7 @@ export default function ComparePage() {
                   />
                   <XAxis dataKey="name" tick={axisTick} />
                   <YAxis tick={axisTick} />
-                  <Tooltip content={ChartTooltip as any} />
+                  <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
                   <Legend />
                   <Bar
                     dataKey="A"

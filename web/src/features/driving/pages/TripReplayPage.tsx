@@ -405,8 +405,7 @@ export default function TripReplayPage() {
               <AreaChart
                 data={timelineData}
                 className="cursor-pointer"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onClick={(state: any) => {
+                onClick={(state) => {
                   if (!state) return;
                   const idx = state.activeTooltipIndex;
                   if (typeof idx === 'number' && idx >= 0 && idx < timelineData.length) {

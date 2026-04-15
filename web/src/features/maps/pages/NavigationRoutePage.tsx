@@ -282,8 +282,8 @@ export default function NavigationRoutePage() {
         )
         .map((s) => ({
           time: formatDateTime(s.created_at),
-          miles: s.miles_to_arrival ?? (s as any).milesToArrival ?? 0,
-          minutes: s.minutes_to_arrival ?? (s as any).minutesToArrival ?? 0,
+          miles: s.miles_to_arrival ?? s.milesToArrival ?? 0,
+          minutes: s.minutes_to_arrival ?? s.minutesToArrival ?? 0,
         })),
     [history],
   );
@@ -297,14 +297,14 @@ export default function NavigationRoutePage() {
     const seen = new Set<string>();
     const result: { time: string; destination: string; distance: number; eta: number }[] = [];
     for (const s of history) {
-      const name = s.destination_name ?? (s as any).destinationName;
+      const name = s.destination_name ?? s.destinationName;
       if (!name || seen.has(name)) continue;
       seen.add(name);
       result.push({
         time: formatDateTime(s.created_at),
         destination: name,
-        distance: s.miles_to_arrival ?? (s as any).milesToArrival ?? 0,
-        eta: s.minutes_to_arrival ?? (s as any).minutesToArrival ?? 0,
+        distance: s.miles_to_arrival ?? s.milesToArrival ?? 0,
+        eta: s.minutes_to_arrival ?? s.minutesToArrival ?? 0,
       });
     }
     return result.slice(0, 20);
