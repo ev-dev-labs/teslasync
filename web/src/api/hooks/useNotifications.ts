@@ -3,7 +3,7 @@ import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { Alert, AlertRule, NotificationChannel, NotificationLog, NotificationStats, RuleConditionTree } from '@/api/types';
 
-export type { Alert, AlertRule, RuleConditionTree, NotificationLog, NotificationStats };
+export type { Alert, AlertRule, NotificationChannel, RuleConditionTree, NotificationLog, NotificationStats };
 
 export const notificationKeys = {
   alerts: ['alerts'] as const,

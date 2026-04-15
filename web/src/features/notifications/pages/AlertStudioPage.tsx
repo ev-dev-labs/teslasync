@@ -8,27 +8,22 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  getAlertRules,
-  createAlertRule,
-  updateAlertRule,
-  deleteAlertRule,
-  getNotificationChannels,
-  AlertRule,
-  RuleConditionTree,
-} from '@/api/client'
-import { PageHeader, GlassPanel, FadeIn, EmptyState, Skeleton, Badge, Button, Input, Select } from '@/components/ui'
-import RuleBuilder from '../components/RuleBuilder'
-import { useToast } from '../components/Toast'
+import type { AlertRule, NotificationChannel, RuleConditionTree } from '@/api/hooks/useNotifications'
+import { request } from '@/api/client'
+import { GlassPanel, Badge, Button, Input, Select } from '@/components/ui'
+import { PageHeader } from '@/components/layout'
+import { FadeIn } from '@/components/motion'
+import { EmptyState, Skeleton } from '@/components/feedback'
+import { RuleBuilder } from '@/components/forms'
+import { useToast } from '@/components/feedback/Toast'
 import {
   Zap, Plus, Save, Trash2, Copy, Bell, BellOff,
   AlertTriangle, AlertCircle, Info, Battery, Gauge, Lock,
   Car, Droplets, Clock, Pencil, Sparkles, Thermometer, Shield, Search,
 } from 'lucide-react'
-import clsx from 'clsx'
-import { formatDateTime } from '../lib/dateFormat'
-import { usePageTitle } from '../hooks/usePageTitle'
-import { request } from '@/api/client'
+import { cn } from '@/lib/cn'
+import { formatDateTime } from '@/lib/dateFormat'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 // ─── Severity config ─────────────────────────────────────────────────────────
 
@@ -177,8 +172,8 @@ export default function AlertStudio() {
   const toast = useToast()
 
   // Queries
-  const { data: rules, isLoading } = useQuery({ queryKey: ['alert-rules'], queryFn: getAlertRules })
-  const { data: channels } = useQuery({ queryKey: ['notification-channels'], queryFn: getNotificationChannels })
+  const { data: rules, isLoading } = useQuery({ queryKey: ['alert-rules'], queryFn: () => request<AlertRule[]>('/alerts/rules') })
+  const { data: channels } = useQuery({ queryKey: ['notification-channels'], queryFn: () => request<NotificationChannel[]>('/notifications') })
 
   // Editor state
   const [editor, setEditor] = useState<EditorState>(freshEditor)
@@ -215,9 +210,9 @@ export default function AlertStudio() {
         notify_channels: state.notify_channels,
       }
       if (state.id) {
-        return updateAlertRule(state.id, payload)
+        return request<AlertRule>(`/alerts/rules/${state.id}`, { method: 'PUT', body: JSON.stringify(payload) })
       }
-      return createAlertRule(payload)
+      return request<AlertRule>('/alerts/rules', { method: 'POST', body: JSON.stringify(payload) })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
@@ -229,7 +224,7 @@ export default function AlertStudio() {
   })
 
   const deleteMut = useMutation({
-    mutationFn: (id: number) => deleteAlertRule(id),
+    mutationFn: (id: number) => request<void>(`/alerts/rules/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
       toast.success('Rule deleted')
@@ -240,7 +235,7 @@ export default function AlertStudio() {
   })
 
   const toggleMut = useMutation({
-    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => updateAlertRule(id, { enabled }),
+    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => request<AlertRule>(`/alerts/rules/${id}`, { method: 'PUT', body: JSON.stringify({ enabled }) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alert-rules'] }),
   })
 
@@ -316,7 +311,7 @@ export default function AlertStudio() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setTemplateCategory(null)}
-                className={clsx('!text-[11px] border',
+                className={cn('!text-[11px] border',
                   templateCategory === null ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 )}
               >All ({ruleTemplates.length})</Button>
@@ -328,7 +323,7 @@ export default function AlertStudio() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setTemplateCategory(cat === templateCategory ? null : cat)}
-                    className={clsx('!text-[11px] border',
+                    className={cn('!text-[11px] border',
                       templateCategory === cat ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'border-white/[0.08] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     )}
                   >{cat} ({count})</Button>
@@ -348,8 +343,8 @@ export default function AlertStudio() {
                     onClick={() => handleCloneTemplate(tpl)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <div className={clsx('rounded-lg p-1.5', sev.bg)}>
-                        <Icon className={clsx('h-3.5 w-3.5', sev.color)} />
+                      <div className={cn('rounded-lg p-1.5', sev.bg)}>
+                        <Icon className={cn('h-3.5 w-3.5', sev.color)} />
                       </div>
                       <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-neon-cyan transition-colors">{tpl.name}</span>
                     </div>
@@ -403,14 +398,14 @@ export default function AlertStudio() {
                 return (
                   <button
                     key={rule.id}
-                    className={clsx(
+                    className={cn(
                       'w-full text-left glass-panel p-3 transition-all',
                       active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
                     )}
                     onClick={() => handleSelectRule(rule)}
                   >
                     <div className="flex items-center gap-2">
-                      <SevIcon className={clsx('h-3.5 w-3.5 shrink-0', sev.color)} />
+                      <SevIcon className={cn('h-3.5 w-3.5 shrink-0', sev.color)} />
                       <span className="text-xs font-medium text-[var(--text-primary)] truncate flex-1">{rule.name || 'Untitled'}</span>
                       <button
                         className="shrink-0"
@@ -526,7 +521,7 @@ export default function AlertStudio() {
                           <button
                             key={ch.id}
                             type="button"
-                            className={clsx(
+                            className={cn(
                               'px-3 py-1.5 text-xs rounded-lg transition-colors border',
                               isSelected
                                 ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'

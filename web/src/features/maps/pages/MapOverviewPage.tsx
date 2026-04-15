@@ -211,7 +211,7 @@ export default function MapOverviewPage() {
 
       {/* ---- Map ---- */}
       <FadeIn>
-        <GlassPanel className="relative overflow-hidden" style={{ height: 400 }}>
+        <GlassPanel className="relative overflow-hidden h-[400px]">
           {hasValidLocation ? (
             <>
               <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />

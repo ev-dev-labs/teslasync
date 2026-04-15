@@ -247,7 +247,7 @@ export default function TripReplayPage() {
       {/*  Section 1 — Map                                                 */}
       {/* ================================================================ */}
       <FadeIn>
-        <GlassPanel className="relative overflow-hidden rounded-xl" style={{ height: '450px' }}>
+        <GlassPanel className="relative overflow-hidden rounded-xl h-[450px]">
           {positions.length > 0 ? (
             <MapContainer
               center={centerPos}
@@ -405,8 +405,7 @@ export default function TripReplayPage() {
               <AreaChart
                 data={timelineData}
                 className="cursor-pointer"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onClick={(state: any) => {
+                onClick={(state) => {
                   if (!state) return;
                   const idx = state.activeTooltipIndex;
                   if (typeof idx === 'number' && idx >= 0 && idx < timelineData.length) {
