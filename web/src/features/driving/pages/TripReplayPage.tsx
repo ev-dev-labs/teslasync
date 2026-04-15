@@ -247,7 +247,7 @@ export default function TripReplayPage() {
       {/*  Section 1 — Map                                                 */}
       {/* ================================================================ */}
       <FadeIn>
-        <GlassPanel className="relative overflow-hidden rounded-xl" style={{ height: '450px' }}>
+        <GlassPanel className="relative overflow-hidden rounded-xl h-[450px]">
           {positions.length > 0 ? (
             <MapContainer
               center={centerPos}

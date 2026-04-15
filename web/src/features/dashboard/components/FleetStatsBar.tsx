@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/cn';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { MiniChart } from '@/components/charts/MiniChart';
@@ -74,7 +75,7 @@ export function FleetStatsBar({
       <StaggerItem>
         <GlassPanel className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
           <p className="metric-label mb-1 text-[10px] sm:text-xs">{t('fleet.alerts', 'Alerts')}</p>
-          <p className="text-xl sm:text-2xl font-bold" style={{ color: unreadAlerts > 0 ? '#ef4444' : '#10b981' }}>
+          <p className={cn("text-xl sm:text-2xl font-bold", unreadAlerts > 0 ? "text-red-500" : "text-emerald-500")}>
             <AnimatedNumber value={unreadAlerts} />
           </p>
           <p className="text-[10px] text-gray-600 mt-1">{t('fleet.unread', 'unread')}</p>

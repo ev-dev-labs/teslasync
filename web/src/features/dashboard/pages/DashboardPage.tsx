@@ -340,7 +340,7 @@ function OtherVehiclesStrip({ vehicles, states, convertDistance, convertTemp, di
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
                     <div>
                       <p className="text-xs text-[var(--text-muted)]">{t('other.battery', 'Battery')}</p>
-                      <p className="text-sm font-bold" style={{ color: s.battery_level > 50 ? '#10b981' : '#f59e0b' }}>{s.battery_level}%</p>
+                      <p className={cn("text-sm font-bold", s.battery_level > 50 ? "text-emerald-500" : "text-amber-500")}>{s.battery_level}%</p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--text-muted)]">{t('other.range', 'Range')}</p>
