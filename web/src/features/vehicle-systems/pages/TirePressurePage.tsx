@@ -53,11 +53,25 @@ const GAUGE_MAX_BAR = 5.0;
 const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
 type TirePosition = (typeof TIRE_POSITIONS)[number];
 
+const TIRE_LABELS: Record<TirePosition, string> = {
+  fl: 'Front Left',
+  fr: 'Front Right',
+  rl: 'Rear Left',
+  rr: 'Rear Right',
+};
+
+const STATUS_LABELS: Record<PressureStatus, string> = {
+  normal: 'Normal',
+  low: 'Low',
+  high: 'High',
+  critical: 'Critical',
+};
+
 const TIME_RANGE_OPTIONS = [
-  { value: 50, labelKey: 'tirePressure.range7d' },
-  { value: 200, labelKey: 'tirePressure.range30d' },
-  { value: 500, labelKey: 'tirePressure.range90d' },
-  { value: 2000, labelKey: 'tirePressure.rangeAll' },
+  { value: 50, label: '7 Days' },
+  { value: 200, label: '30 Days' },
+  { value: 500, label: '90 Days' },
+  { value: 2000, label: 'All' },
 ] as const;
 
 function getTirePressureValue(
@@ -204,7 +218,7 @@ export default function TirePressurePage() {
       ...TIRE_POSITIONS.map(
         (pos): Column<TirePressureReading> => ({
           key: pos,
-          header: t(`tirePressure.${pos}`, pos.toUpperCase()),
+          header: TIRE_LABELS[pos],
           render: (row: TirePressureReading) => {
             const val = getTirePressureValue(row, pos);
             const status = pressureStatus(val);
@@ -331,13 +345,13 @@ export default function TirePressurePage() {
                         <RadialGauge
                           value={convertPressure(value)}
                           max={gaugeMax}
-                          label={t(`tirePressure.${pos}`)}
+                          label={TIRE_LABELS[pos]}
                           unit={pressureUnit}
                           color={color}
                           size={120}
                         />
                         <Badge variant={statusVariant(status)} size="sm">
-                          {t(`tirePressure.status.${status}`)}
+                          {STATUS_LABELS[status]}
                         </Badge>
                       </>
                     )}
@@ -405,7 +419,7 @@ export default function TirePressurePage() {
                     size="sm"
                     onClick={() => setTimeRange(opt.value)}
                   >
-                    {t(opt.labelKey)}
+                    {t(opt.label)}
                   </Button>
                 ))}
               </div>
@@ -442,7 +456,7 @@ export default function TirePressurePage() {
                       key={pos}
                       type="monotone"
                       dataKey={pos}
-                      name={t(`tirePressure.${pos}`)}
+                      name={TIRE_LABELS[pos]}
                       stroke={LINE_COLORS[pos]}
                       strokeWidth={2}
                       dot={false}
