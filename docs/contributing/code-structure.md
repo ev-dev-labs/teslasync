@@ -184,7 +184,7 @@ All repositories use `pgx/v5` for high-performance PostgreSQL access with prepar
 | File | Purpose |
 |------|---------|
 | `worker.go` | Main polling loop — fetches vehicle data and persists to DB + MQTT + SSE |
-| `maintenance_worker.go` | Periodic cleanup based on retention configuration |
+| `maintenance_worker.go` | Periodic cleanup based on retention configuration, daily materialized view refresh, and battery health snapshot generation |
 
 ## Frontend Architecture
 
@@ -260,7 +260,7 @@ Migrations are in `migrations/` using the `golang-migrate` format:
 000039_quiet_hours.up.sql              # Quiet hours + alert digest mode
 ```
 
-Migrations run automatically on backend startup. The `positions` table uses native PostgreSQL partitioning for efficient time-series queries.
+There are currently **57 migrations** (up from 39), run automatically on backend startup. Recent additions include materialized views (`mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats`), snapshot column fixes, zero-value filtering, and the battery health backfill (migration 000057). The `positions` table uses native PostgreSQL partitioning for efficient time-series queries.
 
 ## Build System
 

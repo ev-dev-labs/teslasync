@@ -1,6 +1,6 @@
 # Analytics & Charts
 
-TeslaSync provides rich analytics across your fleet with interactive charts, trend analysis, and comparative reports — all powered by [Recharts](https://recharts.org/) and backed by PostgreSQL.
+TeslaSync provides rich analytics across your fleet with interactive charts, trend analysis, and comparative reports — all powered by [Recharts](https://recharts.org/) and backed by PostgreSQL. Frequently queried data is pre-aggregated in 3 materialized views (`mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats`) refreshed daily by the maintenance worker for fast dashboard loads.
 
 ## Fleet Analytics
 
@@ -69,6 +69,8 @@ The **Battery Health** page (`/battery`) tracks battery degradation and health o
 | **SOC Distribution** | Histogram of battery levels at charge start/end |
 | **Temperature Impact** | Correlation between temperature and range |
 | **Projected Range** | Estimated future range based on degradation trend |
+
+Battery health snapshots are generated daily by the maintenance worker from charging telemetry data. Historical data is backfilled via migration 000057.
 
 ```bash
 # Battery health report
@@ -197,7 +199,7 @@ curl http://localhost:8080/api/v1/tire-pressure?vehicle_id=123
 curl http://localhost:8080/api/v1/tire-pressure/latest?vehicle_id=123
 ```
 
-Displays a 4-wheel visualization with pressure gauges and alerts for low or uneven pressure.
+Displays a 4-wheel visualization with friendly labels (e.g., "Front Left" instead of i18n keys), pressure unit in column headers (bar/psi based on settings), and alerts for low or uneven pressure. Zero-value readings are filtered out on both insert and display. Position data with (0,0) coordinates is also filtered out to prevent map artifacts.
 
 ## Software Updates
 

@@ -228,7 +228,7 @@ curl -X DELETE http://localhost:8080/api/v1/vehicles/1
 
 ### GET `/api/v1/vehicles/{vehicleID}/positions`
 
-Retrieve GPS position history for a vehicle.
+Retrieve GPS position history for a vehicle. Positions with (0,0) coordinates are automatically filtered out.
 
 **curl:**
 ```bash

@@ -54,6 +54,17 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 - ✅ **Decimal precision setting** — configurable 0-4 decimal places globally
 - ✅ Frontend test suite (vitest, 41 tests, CI integrated)
 - ✅ Interactive database schema diagram
+- ✅ **Materialized views** — `mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats` for fast analytics (refreshed daily)
+- ✅ **Battery health snapshot generator** — daily snapshots from charging telemetry + backfill migration
+- ✅ **Alert Studio search & inline delete** — search rules by name, hover-reveal trash icon with confirm dialog
+- ✅ **Alerts pagination** — client-side pagination (20 per page) with first/prev/next/last navigation
+- ✅ **Zero-value data filtering** — (0,0) position filtering on insert/query, tire pressure zero-value filtering
+- ✅ **Trip Replay fixes** — snake_case→camelCase normalization (fixed NaN duration, missing stats)
+- ✅ **FSM Debugger improvements** — `since` field showing state duration, Sub-FSM type matching fix
+- ✅ **Tire pressure UX** — friendly labels, unit in column headers, pressure unit setting (bar/psi)
+- ✅ **Live Map positions API** — switched to `/vehicles/{id}/positions` for reliable map trail/history
+- ✅ **Dashboard charger power formatting** — formatted with `fmtNumber`
+- ✅ **Error handling on 16 pages** — consistent error states across the frontend
 
 ### Fleet Telemetry (Code-Ready)
 - ✅ Full signal ingestion (50+ signals — driving, charging, climate, TPMS, sentry, doors)
@@ -75,7 +86,8 @@ TeslaSync is actively developed with an ambitious feature roadmap. Here's what's
 - [ ] Signal-level visualization (real-time graphs per field)
 
 ### Enhanced Data Visualization
-- [ ] Interactive trip replay with elevation profile
+- [x] ~~Interactive trip replay with elevation profile~~ (delivered — Trip Replay with animated playback)
+
 - [ ] Charging station map overlay
 - [ ] Fleet heatmap showing high-traffic corridors
 - [ ] Custom dashboard builder (drag-and-drop widgets)

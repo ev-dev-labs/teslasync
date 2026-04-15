@@ -10,7 +10,7 @@ The **Live Map** page (`/live`) displays all your vehicles on an interactive [Le
 
 - **Real-time GPS markers** — Vehicle positions update via SSE every 15 seconds
 - **Vehicle info popups** — Click a marker to see battery, speed, range, and state
-- **Drive route replay** — View historical drive routes overlaid on the map
+- **Drive route replay** — View historical drive routes overlaid on the map (uses `/vehicles/{id}/positions` API for map trail and history — (0,0) coordinates are filtered out)
 - **Heatmap layer** — Toggle a heatmap showing frequently visited locations (using `leaflet.heat`)
 - **Multiple tile layers** — Switch between standard, satellite, and dark map styles
 - **Auto-center** — Map automatically centers on your fleet's bounding box
@@ -37,6 +37,21 @@ Each vehicle is shown as a marker on the map with visual indicators:
 | **Charging** | Amber | Vehicle is plugged in and charging |
 | **Asleep** | Gray | Vehicle is in sleep mode |
 | **Offline** | Red | Vehicle is unreachable |
+
+### Trip Replay
+
+The **Trip Replay** feature displays drive telemetry with animated route playback. Telemetry fields are normalized from snake_case to camelCase on the frontend, fixing previously broken duration display and missing stats (e.g., NaN values).
+
+### Navigation
+
+The **Navigation** page displays the vehicle's current destination and route. Location snapshot `current_lat`/`current_lon` fields are backfilled from the SignalStore when missing, ensuring the map always shows the latest known position.
+
+### FSM Debugger
+
+The **FSM Debugger** panel (in DevTools) displays vehicle state machine transitions:
+
+- **`since` field** — shows how long the vehicle has been in the current state (human-readable duration)
+- **Sub-FSM type matching** — correctly matches sub-state-machine types for nested state display
 
 ## Vehicle Detail Page
 
