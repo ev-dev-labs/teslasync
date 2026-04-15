@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"runtime"
 	"sync"
@@ -427,11 +428,17 @@ func CompressionStatsHandler(db *database.DB) http.HandlerFunc {
 		savedRows := estimatedOriginal - stats.Total
 		savedBytes := savedRows * 200
 
+		savingsPercent := 0.0
+		if estimatedOriginal > 0 {
+			savingsPercent = float64(savedRows) / float64(estimatedOriginal) * 100
+		}
+
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"total_positions":      stats.Total,
-			"compressed_positions": stats.Compressed,
-			"estimated_saved_rows": savedRows,
+			"total_positions":       stats.Total,
+			"compressed_positions":  stats.Compressed,
+			"estimated_saved_rows":  savedRows,
 			"estimated_saved_bytes": savedBytes,
+			"savings_percent":       math.Round(savingsPercent*100) / 100,
 		})
 	}
 }
