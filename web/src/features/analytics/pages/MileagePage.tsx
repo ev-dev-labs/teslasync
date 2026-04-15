@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Gauge, TrendingUp, Calendar, BarChart3 } from 'lucide-react';
+import { Gauge, TrendingUp, Calendar, BarChart3, AlertCircle } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, CHART_COLORS,
@@ -61,17 +62,19 @@ export default function MileagePage() {
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
-  const { data: stats, isLoading } = useQuery<MileageStats>({
+  const { data: stats, isLoading, error: statsError } = useQuery<MileageStats>({
     queryKey: ['mileage-stats', activeId],
     queryFn: () => request<MileageStats>(`/mileage/stats?vehicle_id=${activeId}`),
     enabled: activeId !== '',
   });
 
-  const { data: entries } = useQuery<MileageEntry[]>({
+  const { data: entries, error: entriesError } = useQuery<MileageEntry[]>({
     queryKey: ['mileage-entries', activeId],
     queryFn: () => request<MileageEntry[]>(`/mileage/daily?vehicle_id=${activeId}&limit=90`),
     enabled: activeId !== '',
   });
+
+  const anyError = [statsError, entriesError].find(Boolean);
 
   /* Odometer over time (area chart) */
   const odometerData = useMemo(
@@ -133,6 +136,12 @@ export default function MileagePage() {
       loading={isLoading}
       error={null}
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* Summary metric cards */}
       <FadeIn>
         <div className={cn('grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6')}>

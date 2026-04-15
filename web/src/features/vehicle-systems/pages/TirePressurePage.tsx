@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Gauge, AlertTriangle, TrendingDown, Activity, Clock,
+  Gauge, AlertTriangle, TrendingDown, Activity, Clock, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -13,7 +13,8 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -148,7 +149,7 @@ export default function TirePressurePage() {
     enabled: activeVehicleId !== null,
   });
 
-  const { data: history, isLoading: loadingHistory } = useQuery({
+  const { data: history, isLoading: loadingHistory, error: historyError } = useQuery({
     queryKey: ['tire-pressure-history', activeVehicleId, timeRange],
     queryFn: () =>
       request<TirePressureReading[]>(
@@ -156,6 +157,8 @@ export default function TirePressurePage() {
       ),
     enabled: activeVehicleId !== null,
   });
+
+  const anyError = [latestError, historyError].find(Boolean);
 
   /* ---- Derived data ---- */
 
@@ -261,6 +264,12 @@ export default function TirePressurePage() {
         ) : undefined
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       <FadeIn>
         {/* Warning banner */}
         {hasWarning && (

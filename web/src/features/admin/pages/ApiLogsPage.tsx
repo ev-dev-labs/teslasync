@@ -3,14 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   FileText, Clock, AlertTriangle, Activity, Download,
-  ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X,
+  ChevronLeft, ChevronRight, Search, Filter, ChevronDown, ChevronUp, X, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button, Select, Input, Badge } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Spinner } from '@/components/feedback';
+import { Spinner, AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -67,13 +68,13 @@ export default function ApiLogsPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 25;
 
-  const { data: stats } = useQuery<APICallLogStats>({
+  const { data: stats, error: statsError } = useQuery<APICallLogStats>({
     queryKey: ['api-log-stats'],
     queryFn: getAPICallLogStats,
     refetchInterval: 30_000,
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: logsError } = useQuery({
     queryKey: ['api-logs', page, method, status, endpoint, startDate, endDate],
     queryFn: () => getAPICallLogs({
       limit,
@@ -86,6 +87,8 @@ export default function ApiLogsPage() {
     }),
     refetchInterval: 10_000,
   });
+
+  const anyError = [statsError, logsError].find(Boolean);
 
   const logs = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -111,6 +114,12 @@ export default function ApiLogsPage() {
       title={t('apiLogs.title', 'Tesla API Logs')}
       subtitle={t('apiLogs.subtitle', 'Record of all Tesla API calls with request/response details')}
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* Stats */}
       <FadeIn>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

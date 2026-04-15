@@ -16,6 +16,8 @@ import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -23,7 +25,7 @@ import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
-import { Database, Search, Clock, Activity, Filter } from 'lucide-react';
+import { Database, Search, Clock, Activity, Filter, AlertCircle } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -124,7 +126,7 @@ export default function SignalLogViewerPage() {
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
   // ── Data query (parallel per-signal fetches) ──
-  const { data: allRows, isLoading, isFetching } = useQuery<SignalRow[]>({
+  const { data: allRows, isLoading, isFetching, error: dataError } = useQuery<SignalRow[]>({
     queryKey: ['signal-log', queryKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -146,6 +148,8 @@ export default function SignalLogViewerPage() {
     },
     enabled: queryKey !== null,
   });
+
+  const anyError = dataError as Error | undefined;
 
   const totalRecords = (allRows ?? []).length;
   const rows = useMemo(() => {
@@ -186,6 +190,12 @@ export default function SignalLogViewerPage() {
       subtitle={t('Query signal history from Postgres')}
       loading={false}
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ── Controls ──────────────────────────────────────────────── */}
       <GlassPanel className="p-4 sm:p-5 space-y-4">
         {/* Signal picker */}

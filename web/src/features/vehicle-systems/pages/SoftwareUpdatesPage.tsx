@@ -9,13 +9,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Download, CheckCircle, Clock, ArrowUpCircle, Smartphone,
-  Calendar, ExternalLink,
+  Calendar, ExternalLink, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select, Pagination } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -62,11 +63,13 @@ export default function SoftwareUpdatesPage() {
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
-  const { data: updates, isLoading } = useQuery({
+  const { data: updates, isLoading, error: dataError } = useQuery({
     queryKey: ['software-updates', vehicleId, page],
     queryFn: () => request<SoftwareUpdate[]>(`/software-updates?vehicle_id=${vehicleId}&limit=${pageSize}&offset=${(page - 1) * pageSize}`),
     enabled: vehicleId !== null,
   });
+
+  const anyError = dataError as Error | undefined;
 
   const vehicleMap = useMemo(() => {
     const m = new Map<number, { id: number; display_name: string; vin: string }>();
@@ -93,6 +96,12 @@ export default function SoftwareUpdatesPage() {
         ) : undefined
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ── Summary cards ────────────────────────────────────────── */}
       <FadeIn>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
