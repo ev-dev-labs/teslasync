@@ -3,16 +3,15 @@ const { MongoClient } = require('mongodb');
 const fs = require('fs');
 
 async function main() {
-  const pgPass = process.env.PG_PASSWORD || 'teslasyncdemo';
+  const pgPass = process.env.PG_PASSWORD || 'teslasync';
 
-  // Fleet Telemetry config
-  const ftConfig = JSON.parse(fs.readFileSync(
-    'C:/Users/AtulM/.copilot/session-state/4dfe1c4d-fb2c-4d2a-9409-0dd6bf792717/files/paste-1776230404953.txt'
-  ));
+  // Fleet Telemetry config — pass path as first arg or set FT_CONFIG env var
+  const ftConfigPath = process.argv[2] || process.env.FT_CONFIG || 'fleet-telemetry-config.json';
+  const ftConfig = JSON.parse(fs.readFileSync(ftConfigPath));
   const ftSignals = Object.keys(ftConfig.response.config.fields).sort();
 
   // Connect to Postgres
-  const pg = new Client({ host: 'localhost', port: 54321, user: 'teslasync', password: pgPass, database: 'teslasync' });
+  const pg = new Client({ host: 'localhost', port: 5432, user: 'teslasync', password: pgPass, database: 'teslasync' });
   await pg.connect();
 
   // Get PG columns
@@ -48,7 +47,7 @@ async function main() {
   let mongoSignals = new Set();
   let mongoLatestBySignal = {};
   try {
-    const mongo = new MongoClient(process.env.MONGO_URI || 'mongodb://teslasync:Y-y4vKw7cJlsfKQnmIm3sEwZS3-OBjRx@localhost:27018/teslasync');
+    const mongo = new MongoClient(process.env.MONGO_URI || 'mongodb://localhost:27017/teslasync');
     await mongo.connect();
     const db = mongo.db('teslasync');
 

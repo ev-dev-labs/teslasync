@@ -79,3 +79,4 @@ REFACTORING_PROGRESS.md
 REFACTORING_PROMPTS.md
 REFACTORING_REPORT.md
 .github/prompts/
+scripts/check-loc.js

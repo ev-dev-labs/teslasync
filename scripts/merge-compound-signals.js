@@ -1,6 +1,6 @@
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://teslasync:Y-y4vKw7cJlsfKQnmIm3sEwZS3-OBjRx@192.168.68.214:27017/teslasync?authSource=teslasync';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/teslasync';
 
 async function run() {
   const client = new MongoClient(MONGO_URI);
