@@ -611,3 +611,4 @@ export function TeslaCarMini({ batteryLevel, isCharging, model }: { batteryLevel
     </svg>
   )
 }
+

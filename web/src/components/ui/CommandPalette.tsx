@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Command, ArrowRight } from 'lucide-react'
-import { Input } from './Input'
+import { Input } from '@/components/ui'
 import { navSections } from '@/components/layout/Layout'
 import clsx from 'clsx'
 
@@ -193,3 +193,4 @@ export function CommandPaletteTrigger() {
     </button>
   )
 }
+
