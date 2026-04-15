@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface AnimatedNumberProps {
   value: number;
@@ -47,7 +48,7 @@ export function AnimatedNumber({
   return (
     <span className={cn('tabular-nums', className)}>
       {prefix}
-      {display.toFixed(decimals)}
+      {fmtNumber(display, decimals)}
       {suffix}
     </span>
   );

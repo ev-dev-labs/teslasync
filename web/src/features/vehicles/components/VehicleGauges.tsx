@@ -128,7 +128,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 max={100}
                 color={batteryColor(state.battery_level)}
                 label={t('common.batteryLevel', 'Battery Level')}
-                sublabel={`${state.battery_level}%`}
+                sublabel={`${fmtNumber(state.battery_level, 0)}%`}
               />
               <MetricBar
                 value={convertDistance(state.rated_range)}
