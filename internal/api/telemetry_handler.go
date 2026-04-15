@@ -1165,20 +1165,10 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 	}
 
 	if !hasLocation {
-		// No GPS location ╬ô├ç├╢ still create position if we have battery/temp/speed data
-		hasBattery := false
-		if _, ok := signals["BatteryLevel"]; ok {
-			hasBattery = true
-		} else if _, ok := signals["Soc"]; ok {
-			hasBattery = true
-		}
-		_, hasTemp := signals["InsideTemp"]
-		_, hasOutTemp := signals["OutsideTemp"]
-		_, hasSpeed := signals["VehicleSpeed"]
-		_, hasOdometer := signals["Odometer"]
-		if !hasBattery && !hasTemp && !hasOutTemp && !hasSpeed && !hasOdometer {
-			return nil
-		}
+		// No GPS — skip position. Battery/temp/speed are already persisted in
+		// vehicle_live_state and signal_history; writing 0,0 coordinates here
+		// pollutes the positions table and breaks map/route queries.
+		return nil
 	}
 
 	// Driving signals
