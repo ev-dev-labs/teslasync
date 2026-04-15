@@ -60,22 +60,37 @@ import { request } from '@/api/client';
 interface LocationSnapshot {
   id: number;
   vehicle_id: number;
-  latitude: number;
-  longitude: number;
-  heading: number;
-  speed: number;
-  odometer: number;
-  destination_name: string;
-  destination_location: string;
-  destination_miles_remaining: number;
-  destination_minutes_remaining: number;
-  destination_traffic_minutes_delay: number;
-  energy_at_arrival: number;
-  located_at_home: boolean;
-  located_at_work: boolean;
-  homelink_nearby: boolean;
+  current_lat: number | null;
+  current_lon: number | null;
+  destination_name: string | null;
+  destination_lat: number | null;
+  destination_lon: number | null;
+  origin_lat: number | null;
+  origin_lon: number | null;
+  miles_to_arrival: number | null;
+  minutes_to_arrival: number | null;
+  route_line: string | null;
+  route_traffic_delay_min: number | null;
+  located_at_home: boolean | null;
+  located_at_work: boolean | null;
+  located_at_favorite: boolean | null;
+  gps_state: string | null;
+  route_last_updated: string | null;
   active_route: boolean;
+  homelink_nearby?: boolean | null;
   created_at: string;
+  // camelCase duplicates from camelCaseKeys transform
+  currentLat?: number | null;
+  currentLon?: number | null;
+  locatedAtHome?: boolean | null;
+  locatedAtWork?: boolean | null;
+  locatedAtFavorite?: boolean | null;
+  homelinkNearby?: boolean;
+  destinationName?: string | null;
+  milesToArrival?: number | null;
+  minutesToArrival?: number | null;
+  routeTrafficDelayMin?: number | null;
+  energyAtArrival?: number | null;
 }
 
 interface Vehicle {
@@ -88,6 +103,8 @@ interface Vehicle {
 /*  Helper: heading label                                              */
 /* ------------------------------------------------------------------ */
 
+// @ts-ignore -- kept for future use when GPS data is available
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function headingToCardinal(deg: number): string {
   const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   return dirs[Math.round(deg / 45) % 8] ?? '—';
@@ -164,12 +181,13 @@ interface Waypoint {
 }
 
 function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
-  if (!latest.active_route || !latest.destination_name) return [];
+  const destName = latest.destination_name ?? latest.destinationName;
+  if (!latest.active_route || !destName) return [];
   return [
     {
-      name: latest.destination_name,
+      name: destName,
       type: 'destination',
-      distance: latest.destination_miles_remaining,
+      distance: latest.miles_to_arrival ?? latest.milesToArrival ?? 0,
     },
   ];
 }
@@ -244,10 +262,11 @@ export default function NavigationRoutePage() {
   /* ---- derived ---- */
   const isLoading = vehiclesLoading || latestLoading;
   const hasActiveRoute = latest?.active_route ?? false;
-  const hasValidLocation = latest != null
-    && typeof latest.latitude === 'number'
-    && typeof latest.longitude === 'number'
-    && (latest.latitude !== 0 || latest.longitude !== 0);
+  const lat = latest?.current_lat ?? latest?.currentLat ?? null;
+  const lon = latest?.current_lon ?? latest?.currentLon ?? null;
+  const hasValidLocation = lat != null && lon != null
+    && typeof lat === 'number' && typeof lon === 'number'
+    && (lat !== 0 || lon !== 0);
 
   const waypoints = useMemo(
     () => (latest ? buildWaypoints(latest) : []),
@@ -263,33 +282,29 @@ export default function NavigationRoutePage() {
         )
         .map((s) => ({
           time: formatDateTime(s.created_at),
-          speed: s.speed,
-          odometer: s.odometer,
+          miles: s.miles_to_arrival ?? (s as any).milesToArrival ?? 0,
+          minutes: s.minutes_to_arrival ?? (s as any).minutesToArrival ?? 0,
         })),
     [history],
   );
 
   /* ---- avg speed ---- */
-  const avgSpeed = useMemo(() => {
-    if (!history?.length) return 0;
-    const total = history.reduce((sum, s) => sum + s.speed, 0);
-    return total / history.length;
-  }, [history]);
+  const avgSpeed = 0; // speed not available from location_snapshots API
 
   /* ---- recent destinations (unique, from history with active routes) ---- */
   const recentDestinations = useMemo(() => {
     if (!history?.length) return [];
     const seen = new Set<string>();
-    const result: { time: string; destination: string; location: string; distance: number; eta: number }[] = [];
+    const result: { time: string; destination: string; distance: number; eta: number }[] = [];
     for (const s of history) {
-      if (!s.destination_name || seen.has(s.destination_name)) continue;
-      seen.add(s.destination_name);
+      const name = s.destination_name ?? (s as any).destinationName;
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
       result.push({
         time: formatDateTime(s.created_at),
-        destination: s.destination_name,
-        location: s.destination_location || '—',
-        distance: s.destination_miles_remaining,
-        eta: s.destination_minutes_remaining,
+        destination: name,
+        distance: s.miles_to_arrival ?? (s as any).milesToArrival ?? 0,
+        eta: s.minutes_to_arrival ?? (s as any).minutesToArrival ?? 0,
       });
     }
     return result.slice(0, 20);
@@ -302,9 +317,9 @@ export default function NavigationRoutePage() {
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .map((s) => ({
         time: formatDateTime(s.created_at),
-        home: s.located_at_home ? 1 : 0,
-        work: s.located_at_work ? 1 : 0,
-        homelink: s.homelink_nearby ? 1 : 0,
+        home: (s.located_at_home ?? s.locatedAtHome) ? 1 : 0,
+        work: (s.located_at_work ?? s.locatedAtWork) ? 1 : 0,
+        homelink: (s.homelink_nearby ?? s.homelinkNearby) ? 1 : 0,
       }));
   }, [history]);
 
@@ -313,7 +328,6 @@ export default function NavigationRoutePage() {
     () => [
       { key: 'time', header: t('nav.col.time', 'Time'), render: (row) => <span className="text-xs text-gray-400 whitespace-nowrap">{row.time}</span> },
       { key: 'destination', header: t('nav.col.destination', 'Destination'), render: (row) => <span className="text-sm text-white/80">{row.destination}</span> },
-      { key: 'location', header: t('nav.col.location', 'Location'), render: (row) => <span className="text-xs text-gray-400 truncate max-w-[200px] block">{row.location}</span> },
       { key: 'distance', header: t('nav.col.distance', 'Distance'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.distance, 1)} mi</span> },
       { key: 'eta', header: t('nav.col.eta', 'ETA'), render: (row) => <span className="text-xs text-gray-400">{fmtNumber(row.eta, 0)} min</span> },
     ],
@@ -334,52 +348,64 @@ export default function NavigationRoutePage() {
         ),
       },
       {
-        key: 'latitude',
+        key: 'current_lat',
         header: t('nav.col.lat', 'Lat'),
         sortable: true,
-        render: (row: LocationSnapshot) => (
-          <span className="font-mono text-[var(--text-primary)]">
-            {typeof row.latitude === 'number' && typeof row.longitude === 'number' && (row.latitude !== 0 || row.longitude !== 0) ? fmtNumber(row.latitude, 6) : '—'}
-          </span>
-        ),
+        render: (row: LocationSnapshot) => {
+          const la = row.current_lat ?? row.currentLat;
+          return (
+            <span className="font-mono text-[var(--text-primary)]">
+              {la != null && la !== 0 ? fmtNumber(la, 6) : '—'}
+            </span>
+          );
+        },
       },
       {
-        key: 'longitude',
+        key: 'current_lon',
         header: t('nav.col.lon', 'Lon'),
         sortable: true,
-        render: (row: LocationSnapshot) => (
-          <span className="font-mono text-[var(--text-primary)]">
-            {typeof row.latitude === 'number' && typeof row.longitude === 'number' && (row.latitude !== 0 || row.longitude !== 0) ? fmtNumber(row.longitude, 6) : '—'}
-          </span>
-        ),
+        render: (row: LocationSnapshot) => {
+          const lo = row.current_lon ?? row.currentLon;
+          return (
+            <span className="font-mono text-[var(--text-primary)]">
+              {lo != null && lo !== 0 ? fmtNumber(lo, 6) : '—'}
+            </span>
+          );
+        },
       },
       {
-        key: 'speed',
-        header: t('nav.col.speed', 'Speed'),
+        key: 'located_at_home',
+        header: t('nav.col.home', 'Home'),
         sortable: true,
-        render: (row: LocationSnapshot) => (
-          <span className="text-[var(--text-primary)]">
-            {fmtNumber(row.speed, 1)} mph
-          </span>
-        ),
+        render: (row: LocationSnapshot) => {
+          const home = row.located_at_home ?? row.locatedAtHome;
+          return (
+            <span className={home ? 'text-green-400' : 'text-[var(--text-muted)]'}>
+              {home === true ? 'Yes' : home === false ? 'No' : '—'}
+            </span>
+          );
+        },
       },
       {
-        key: 'heading',
-        header: t('nav.col.heading', 'Heading'),
+        key: 'located_at_work',
+        header: t('nav.col.work', 'Work'),
         sortable: true,
-        render: (row: LocationSnapshot) => (
-          <span className="text-[var(--text-primary)]">
-            {fmtNumber(row.heading, 0)}° {headingToCardinal(row.heading)}
-          </span>
-        ),
+        render: (row: LocationSnapshot) => {
+          const work = row.located_at_work ?? row.locatedAtWork;
+          return (
+            <span className={work ? 'text-blue-400' : 'text-[var(--text-muted)]'}>
+              {work === true ? 'Yes' : work === false ? 'No' : '—'}
+            </span>
+          );
+        },
       },
       {
-        key: 'odometer',
-        header: t('nav.col.odometer', 'Odometer'),
+        key: 'destination_name',
+        header: t('nav.col.destination', 'Destination'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <span className="font-mono text-[var(--text-muted)]">
-            {fmtNumber(row.odometer, 1)} mi
+          <span className="text-[var(--text-primary)] truncate max-w-[150px] block">
+            {row.destination_name ?? row.destinationName ?? '—'}
           </span>
         ),
       },
@@ -459,16 +485,16 @@ export default function NavigationRoutePage() {
       switch (key) {
         case 'time':
           return row.created_at;
-        case 'latitude':
-          return row.latitude;
-        case 'longitude':
-          return row.longitude;
-        case 'speed':
-          return row.speed;
-        case 'heading':
-          return row.heading;
-        case 'odometer':
-          return row.odometer;
+        case 'current_lat':
+          return row.current_lat ?? row.currentLat ?? 0;
+        case 'current_lon':
+          return row.current_lon ?? row.currentLon ?? 0;
+        case 'located_at_home':
+          return (row.located_at_home ?? row.locatedAtHome) ? 1 : 0;
+        case 'located_at_work':
+          return (row.located_at_work ?? row.locatedAtWork) ? 1 : 0;
+        case 'destination_name':
+          return row.destination_name ?? row.destinationName ?? '';
         default:
           return '';
       }
@@ -546,10 +572,7 @@ export default function NavigationRoutePage() {
                     {t('nav.destination', 'Destination')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {latest.destination_name || '—'}
-                  </span>
-                  <span className="block text-xs text-[var(--text-muted)]">
-                    {latest.destination_location || '—'}
+                    {latest.destination_name ?? latest.destinationName ?? '—'}
                   </span>
                 </span>
 
@@ -558,7 +581,7 @@ export default function NavigationRoutePage() {
                     {t('nav.eta', 'ETA')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(latest.destination_minutes_remaining, 0)}{' '}
+                    {fmtNumber(latest.minutes_to_arrival ?? latest.minutesToArrival ?? 0, 0)}{' '}
                     {t('nav.minutes', 'min')}
                   </span>
                 </span>
@@ -568,20 +591,17 @@ export default function NavigationRoutePage() {
                     {t('nav.distanceRemaining', 'Distance Remaining')}
                   </span>
                   <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(latest.destination_miles_remaining, 1)}{' '}
+                    {fmtNumber(latest.miles_to_arrival ?? latest.milesToArrival ?? 0, 1)}{' '}
                     {t('nav.mi', 'mi')}
                   </span>
                 </span>
 
                 <span className="space-y-1">
                   <span className="block text-xs text-[var(--text-muted)]">
-                    {t('nav.energyArrival', 'Energy at Arrival')}
-                  </span>
-                  <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    {fmtNumber(latest.energy_at_arrival, 0)}%
+                    {t('nav.trafficDelay', 'Traffic Delay')}
                   </span>
                   <TrafficDelayBadge
-                    minutes={latest.destination_traffic_minutes_delay}
+                    minutes={latest.route_traffic_delay_min ?? latest.routeTrafficDelayMin ?? 0}
                     t={t}
                   />
                 </span>
@@ -612,7 +632,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.currentLocation', 'Current Location')}
                 value={
                   hasValidLocation
-                    ? `${fmtNumber(latest!.latitude, 4)}, ${fmtNumber(latest!.longitude, 4)} · ${headingToCardinal(latest!.heading)} ${fmtNumber(latest!.speed, 0)} mph`
+                    ? `${fmtNumber(lat!, 4)}, ${fmtNumber(lon!, 4)}`
                     : t('nav.locationUnavailable', 'Location unavailable')
                 }
                 active={hasValidLocation}
@@ -621,27 +641,27 @@ export default function NavigationRoutePage() {
                 icon={<Home className="h-5 w-5" />}
                 label={t('nav.homeStatus', 'Home Status')}
                 value={
-                  !hasValidLocation
-                    ? t('nav.unknown', 'Unknown')
-                    : latest?.located_at_home
-                      ? t('nav.atHome', 'At Home')
-                      : latest?.homelink_nearby
+                  (latest?.located_at_home ?? latest?.locatedAtHome) === true
+                    ? t('nav.atHome', 'At Home')
+                    : (latest?.located_at_home ?? latest?.locatedAtHome) === false
+                      ? (latest?.homelink_nearby ?? latest?.homelinkNearby)
                         ? t('nav.homelinkNearby', 'HomeLink Nearby')
                         : t('nav.awayFromHome', 'Away')
+                      : t('nav.unknown', 'Unknown')
                 }
-                active={hasValidLocation && (latest?.located_at_home ?? false)}
+                active={(latest?.located_at_home ?? latest?.locatedAtHome) === true}
               />
               <LocationStatusCard
                 icon={<Briefcase className="h-5 w-5" />}
                 label={t('nav.workStatus', 'Work Status')}
                 value={
-                  !hasValidLocation
-                    ? t('nav.unknown', 'Unknown')
-                    : latest?.located_at_work
-                      ? t('nav.atWork', 'At Work')
-                      : t('nav.notAtWork', 'Away')
+                  (latest?.located_at_work ?? latest?.locatedAtWork) === true
+                    ? t('nav.atWork', 'At Work')
+                    : (latest?.located_at_work ?? latest?.locatedAtWork) === false
+                      ? t('nav.notAtWork', 'Away')
+                      : t('nav.unknown', 'Unknown')
                 }
-                active={hasValidLocation && (latest?.located_at_work ?? false)}
+                active={(latest?.located_at_work ?? latest?.locatedAtWork) === true}
               />
             </span>
           </FadeIn>
@@ -653,7 +673,7 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.distance', 'Distance')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.destination_miles_remaining ?? 0, 1)} mi`
+                    ? `${fmtNumber(latest?.miles_to_arrival ?? latest?.milesToArrival ?? 0, 1)} mi`
                     : '—'
                 }
                 icon={<Route className="h-5 w-5" />}
@@ -663,17 +683,17 @@ export default function NavigationRoutePage() {
                 label={t('nav.metric.eta', 'ETA')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.destination_minutes_remaining ?? 0, 0)} min`
+                    ? `${fmtNumber(latest?.minutes_to_arrival ?? latest?.minutesToArrival ?? 0, 0)} min`
                     : '—'
                 }
                 icon={<Clock className="h-5 w-5" />}
                 color="purple"
               />
               <MetricCard
-                label={t('nav.metric.energyArrival', 'Energy at Arrival')}
+                label={t('nav.metric.trafficDelay', 'Traffic Delay')}
                 value={
                   hasActiveRoute
-                    ? `${fmtNumber(latest?.energy_at_arrival ?? 0, 0)}%`
+                    ? `${fmtNumber(latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0, 0)} min`
                     : '—'
                 }
                 icon={<BatteryCharging className="h-5 w-5" />}
@@ -819,19 +839,19 @@ export default function NavigationRoutePage() {
                     <span
                       className={cn(
                         'text-3xl font-bold',
-                        (latest?.destination_traffic_minutes_delay ?? 0) === 0
+                        (latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0) === 0
                           ? 'text-green-400'
-                          : (latest?.destination_traffic_minutes_delay ?? 0) <= 5
+                          : (latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0) <= 5
                             ? 'text-amber-400'
                             : 'text-red-400',
                       )}
                     >
-                      {latest?.destination_traffic_minutes_delay ?? 0}
+                      {latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0}
                     </span>
                     <span className="text-sm text-white/40">{t('nav.min', 'min')}</span>
                   </div>
                   <TrafficDelayBadge
-                    minutes={latest?.destination_traffic_minutes_delay ?? 0}
+                    minutes={latest?.route_traffic_delay_min ?? latest?.routeTrafficDelayMin ?? 0}
                     t={t}
                   />
                 </div>
