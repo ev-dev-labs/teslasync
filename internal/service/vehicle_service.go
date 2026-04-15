@@ -25,6 +25,7 @@ type VehicleService struct {
 	stateRepo         *database.VehicleStateRepo
 	vehicleConfigRepo *database.VehicleConfigRepo
 	settingsRepo      *database.SettingsRepo
+	liveStateRepo     *database.LiveStateRepo
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
@@ -39,6 +40,7 @@ func NewVehicleService(db *database.DB) *VehicleService {
 		stateRepo:         database.NewVehicleStateRepo(db),
 		vehicleConfigRepo: database.NewVehicleConfigRepo(db),
 		settingsRepo:      database.NewSettingsRepo(db),
+		liveStateRepo:     database.NewLiveStateRepo(db),
 	}
 }
 
@@ -187,100 +189,81 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 
-	// --- Phase 2: DB fallbacks for every field still at zero/empty ---
+	// --- Phase 2: If SignalStore was empty (e.g., pod restart), load from
+	// vehicle_live_state (single source of truth, always current) and re-run
+	// signal parsing. This replaces scattered fallback queries to individual
+	// snapshot tables (positions, climate_snapshots, security_events, etc.)
+	// that could return inconsistent data.
 	ctx := context.Background()
-
-	// Odometer: use MAX across ALL positions (not just latest — latest may lack odometer)
-	if state.Odometer == 0 {
-		var maxOdo *float64
-		_ = s.db.Pool.QueryRow(ctx,
-			`SELECT MAX(odometer) FROM positions WHERE vehicle_id = $1 AND odometer > 0`,
-			vehicle.ID).Scan(&maxOdo)
-		if maxOdo != nil && *maxOdo > 0 {
-			state.Odometer = *maxOdo
-		}
-	}
-	// Still zero? Try drives table end_odometer
-	if state.Odometer == 0 {
-		var maxOdo *float64
-		_ = s.db.Pool.QueryRow(ctx,
-			`SELECT MAX(end_odometer) FROM drives WHERE vehicle_id = $1 AND end_odometer > 0`,
-			vehicle.ID).Scan(&maxOdo)
-		if maxOdo != nil && *maxOdo > 0 {
-			state.Odometer = *maxOdo
-		}
-	}
-
-	// Firmware: try vehicle_config_snapshots, then drives table firmware field
-	if state.SoftwareVersion == "" {
-		if cfg, err := s.vehicleConfigRepo.GetLatest(ctx, vehicle.ID); err == nil && cfg != nil {
-			if cfg.Version != nil && *cfg.Version != "" {
-				state.SoftwareVersion = *cfg.Version
-			} else if cfg.SoftwareUpdateVersion != nil && *cfg.SoftwareUpdateVersion != "" {
-				state.SoftwareVersion = *cfg.SoftwareUpdateVersion
+	if len(all) == 0 {
+		if liveSignals, err := s.liveStateRepo.LoadLiveState(ctx, vehicle.ID); err == nil && len(liveSignals) > 0 {
+			// Convert map[string]interface{} → map[string]*signal.Value
+			for k, v := range liveSignals {
+				all[k] = &signal.Value{Raw: v, Timestamp: time.Now()}
 			}
-		}
-	}
-	// Last resort: check VehicleConfigSnapshot raw SQL
-	if state.SoftwareVersion == "" {
-		var ver *string
-		_ = s.db.Pool.QueryRow(ctx,
-			`SELECT COALESCE(version, software_update_version)
-			 FROM vehicle_config_snapshots
-			 WHERE vehicle_id = $1 AND (version IS NOT NULL AND version != '' OR software_update_version IS NOT NULL AND software_update_version != '')
-			 ORDER BY created_at DESC LIMIT 1`,
-			vehicle.ID).Scan(&ver)
-		if ver != nil && *ver != "" {
-			state.SoftwareVersion = *ver
-		}
-	}
-
-	// Battery, SOC, range: fallback from charging_telemetry
-	if state.BatteryLevel == 0 || state.RatedRange == 0 || state.IdealRange == 0 {
-		if ct, err := s.chargingTelRepo.GetLatestMerged(ctx, vehicle.ID, 10); err == nil && ct != nil {
-			if state.BatteryLevel == 0 && ct.BatteryLevel != nil {
-				state.BatteryLevel = int(*ct.BatteryLevel)
+			// Re-run Phase 1 with live_state data to populate all state fields
+			if v := all["VehicleSpeed"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.Speed = f }
 			}
-			if state.BatteryLevel == 0 && ct.Soc != nil {
-				state.BatteryLevel = int(*ct.Soc)
+			if v := all["Odometer"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.Odometer = f }
 			}
-			if state.RatedRange == 0 && ct.RatedRange != nil {
-				state.RatedRange = *ct.RatedRange
+			if v := all["BatteryLevel"]; v != nil {
+				switch bv := v.Raw.(type) {
+				case float64: state.BatteryLevel = int(bv)
+				case int: state.BatteryLevel = bv
+				}
 			}
-			if state.RatedRange == 0 && ct.EstBatteryRange != nil {
-				state.RatedRange = *ct.EstBatteryRange
+			if v := all["Soc"]; v != nil && state.BatteryLevel == 0 {
+				if f, ok := v.Raw.(float64); ok { state.BatteryLevel = int(f) }
 			}
-			if state.IdealRange == 0 && ct.IdealBatteryRange != nil {
-				state.IdealRange = *ct.IdealBatteryRange
+			if v := all["IdealBatteryRange"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.IdealRange = f }
 			}
-		}
-	}
-
-	// Temperatures: fallback from climate_snapshots
-	if state.InsideTemp == 0 || state.OutsideTemp == 0 {
-		if climate, err := s.climateRepo.GetLatest(ctx, vehicle.ID); err == nil && climate != nil {
-			if state.InsideTemp == 0 && climate.InsideTemp != nil {
-				state.InsideTemp = *climate.InsideTemp
+			if v := all["RatedRange"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.RatedRange = f }
 			}
-			if state.OutsideTemp == 0 && climate.OutsideTemp != nil {
-				state.OutsideTemp = *climate.OutsideTemp
+			if v := all["EstBatteryRange"]; v != nil && state.RatedRange == 0 {
+				if f, ok := v.Raw.(float64); ok { state.RatedRange = f }
 			}
-		}
-	}
-
-	// Location: fallback from positions
-	if state.Latitude == 0 && state.Longitude == 0 {
-		if pos, err := s.positionRepo.GetLatest(ctx, vehicle.ID); err == nil && pos != nil {
-			if pos.Latitude != 0 { state.Latitude = pos.Latitude }
-			if pos.Longitude != 0 { state.Longitude = pos.Longitude }
-		}
-	}
-
-	// Security: fallback from security_events
-	if !state.IsLocked && !state.SentryMode {
-		if sec, err := s.securityRepo.GetLatest(ctx, vehicle.ID); err == nil && sec != nil {
-			if sec.Locked != nil { state.IsLocked = *sec.Locked }
-			if sec.SentryMode != nil { state.SentryMode = *sec.SentryMode }
+			if v := all["InsideTemp"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.InsideTemp = f }
+			}
+			if v := all["OutsideTemp"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.OutsideTemp = f }
+			}
+			if v := all["Latitude"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.Latitude = f }
+			}
+			if v := all["Longitude"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.Longitude = f }
+			}
+			if v := all["Power"]; v != nil {
+				if f, ok := v.Raw.(float64); ok { state.Power = f }
+			}
+			if v := all["DetailedChargeState"]; v != nil {
+				if cs, ok := v.Raw.(string); ok { state.IsCharging = enums.IsCharging(cs) }
+			}
+			if v := all["Locked"]; v != nil {
+				switch lv := v.Raw.(type) {
+				case bool: state.IsLocked = lv
+				case string: state.IsLocked = lv == "true" || lv == "1"
+				}
+			}
+			if v := all["SentryMode"]; v != nil {
+				state.SentryMode = enums.ParseEnumBool(v.Raw)
+			}
+			if v := all["Version"]; v != nil {
+				if sv, ok := v.Raw.(string); ok && sv != "" { state.SoftwareVersion = sv }
+			}
+			if v := all["HvacPower"]; v != nil {
+				switch hv := v.Raw.(type) {
+				case bool: state.IsClimateOn = hv
+				case string: state.IsClimateOn = enums.ParseHvacPower(hv)
+				case float64: state.IsClimateOn = hv > 0
+				}
+			}
+			log.Debug().Int64("vehicleID", vehicle.ID).Int("signals", len(liveSignals)).Msg("state built from vehicle_live_state")
 		}
 	}
 

@@ -17,7 +17,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { cn } from '@/lib/cn'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatDateTime } from '@/lib/dateFormat'
-import { parseSettingEnum, isSettingMiles, isSettingFahrenheit } from '@/lib/parseSettingEnum'
+import { parseSettingEnum, isSettingMiles, isSettingFahrenheit, isSettingPSI, isSettingBar } from '@/lib/parseSettingEnum'
 import {
   Settings as SettingsIcon, Save, ExternalLink, RefreshCw, Car, Shield,
   CheckCircle, XCircle, Palette, Download, Sun, Moon, Monitor, Sparkles,
@@ -58,6 +58,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState<AppSettings>({
     unit_of_length: 'km',
     unit_of_temp: 'C',
+    unit_of_pressure: 'bar',
     preferred_range: 'rated',
     language: 'en',
     base_cost_per_kwh: 0.12,
@@ -110,13 +111,16 @@ export default function SettingsPage() {
     if (isSettingFahrenheit(carPrefs.setting_temperature_unit)) updates.unit_of_temp = 'F'
     else if (carPrefs.setting_temperature_unit) updates.unit_of_temp = 'C'
 
+    if (isSettingPSI(carPrefs.setting_tire_pressure_unit)) updates.unit_of_pressure = 'psi'
+    else if (isSettingBar(carPrefs.setting_tire_pressure_unit)) updates.unit_of_pressure = 'bar'
+
     if (Object.keys(updates).length > 0) {
       const newForm = { ...form, ...updates }
       setForm(newForm)
       settingsMut.mutate(newForm)
       toast.success(
         t('toast.unitsSynced', 'Units synced from car'),
-        `${t('distance', 'Distance')}: ${updates.unit_of_length === 'mi' ? t('miles', 'Miles') : t('kilometers', 'Kilometers')}, ${t('temperature', 'Temperature')}: ${updates.unit_of_temp === 'F' ? t('fahrenheit', 'Fahrenheit') : t('celsius', 'Celsius')}`,
+        `${t('distance', 'Distance')}: ${updates.unit_of_length === 'mi' ? t('miles', 'Miles') : t('kilometers', 'Kilometers')}, ${t('temperature', 'Temperature')}: ${updates.unit_of_temp === 'F' ? t('fahrenheit', 'Fahrenheit') : t('celsius', 'Celsius')}, ${t('pressure', 'Pressure')}: ${updates.unit_of_pressure === 'psi' ? 'PSI' : 'Bar'}`,
       )
     } else {
       toast.info(t('toast.noChanges', 'No changes'), t('toast.noChangesDesc', 'Could not detect car unit preferences'))
@@ -290,6 +294,12 @@ export default function SettingsPage() {
                   value={form.unit_of_temp}
                   onChange={e => setForm({ ...form, unit_of_temp: e.target.value })}
                   options={[{ value: 'C', label: t('app.celsius', 'Celsius') }, { value: 'F', label: t('app.fahrenheit', 'Fahrenheit') }]}
+                />
+                <Select
+                  label={t('app.pressureUnit', 'Pressure Unit')}
+                  value={form.unit_of_pressure ?? 'bar'}
+                  onChange={e => setForm({ ...form, unit_of_pressure: e.target.value })}
+                  options={[{ value: 'bar', label: t('app.bar', 'Bar') }, { value: 'psi', label: t('app.psi', 'PSI') }]}
                 />
                 <Select
                   label={t('app.preferredRange', 'Preferred Range')}

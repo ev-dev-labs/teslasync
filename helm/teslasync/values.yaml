@@ -323,6 +323,15 @@ fleetTelemetry:
   # Set to "0" to disable fallback polling entirely.
   fallbackPollInterval: "5m"
 
+  # -- How often to flush accumulated signals to snapshot tables per vehicle.
+  snapshotWriteInterval: "1s"
+
+  # -- How often to run stale-session cleanup.
+  cleanupInterval: "2m"
+
+  # -- Close drive/charge sessions idle longer than this.
+  staleSessionTimeout: "5m"
+
   # -- Traefik IngressRouteTCP for TLS passthrough.
   # Required because vehicles connect with mTLS (client certificates).
   # Traefik must forward raw TCP — it must NOT terminate TLS.
@@ -417,6 +426,8 @@ ingressRoute:
 config:
   logLevel: info
   pollInterval: "30s"
+  # -- Multiplier for polling interval when vehicle is sleeping
+  sleepPollMultiplier: 4
 
   # -- Internal API endpoint used by Nginx reverse proxy to reach the backend.
   # This is a cluster-internal address — NOT reachable by browsers.
@@ -512,6 +523,12 @@ gasPrice:
   apiKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Authentication (optional — leave jwtSecret empty to disable)
+# ─────────────────────────────────────────────────────────────────────────────
+auth:
+  jwtSecret: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tesla API credentials
 # ─────────────────────────────────────────────────────────────────────────────
 tesla:
@@ -524,6 +541,10 @@ tesla:
   #   EU: https://fleet-api.prd.eu.vn.cloud.tesla.com
   #   CN: https://fleet-api.prd.cn.vn.cloud.tesla.com
   apiBaseUrl: "https://fleet-api.prd.na.vn.cloud.tesla.com"
+  # -- Tesla OAuth authorization URL (rarely needs changing)
+  authUrl: "https://auth.tesla.com"
+  # -- Timeout for Tesla API requests
+  timeout: "30s"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PostgreSQL
@@ -533,6 +554,10 @@ tesla:
 # ─────────────────────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
+
+  # -- Connection pool tuning
+  maxConns: 25
+  minConns: 5
 
   image: postgres:17-alpine
 
@@ -577,6 +602,8 @@ postgresql:
 # ─────────────────────────────────────────────────────────────────────────────
 redis:
   enabled: true
+  # -- Redis database number
+  db: 0
 
   image: redis:7-alpine
 
@@ -615,6 +642,13 @@ redis:
 # ─────────────────────────────────────────────────────────────────────────────
 mqtt:
   enabled: true
+  # -- MQTT client ID
+  clientId: "teslasync"
+  # -- MQTT topic prefix
+  prefix: "teslasync"
+  # -- MQTT auth (leave empty for no auth)
+  username: ""
+  password: ""
 
   image: eclipse-mosquitto:2
 

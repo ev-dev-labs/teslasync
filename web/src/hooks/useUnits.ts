@@ -4,7 +4,7 @@ import { fmtNumber } from '../lib/numberFormat'
 
 /**
  * Convenience formatting hook — wraps useSettings conversions with null handling.
- * DB stores: miles, mph, °C, PSI. Converts to user preference automatically.
+ * DB stores: miles, mph, °C, Bar. Converts to user preference automatically.
  */
 export function useUnits() {
   const {

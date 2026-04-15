@@ -75,7 +75,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Battery}
           label={t('common.battery', 'Battery')}
-          value={`${state.battery_level}%`}
+          value={`${fmtInt(state.battery_level)}%`}
           color={
             state.battery_level > 50
               ? 'text-neon-green'
@@ -113,7 +113,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={BatteryCharging}
           label={t('common.charger', 'Charger')}
-          value={state.is_charging ? `${state.charger_power} kW` : 'Not charging'}
+          value={state.is_charging ? `${fmtInt(state.charger_power)} kW` : 'Not charging'}
           color={state.is_charging ? 'text-neon-green' : 'text-[var(--text-muted)]'}
           sub={
             state.is_charging && state.time_to_full_charge != null

@@ -2,12 +2,14 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity,
+  Thermometer, Snowflake, Sun, Lightbulb, TrendingUp, Activity, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Select } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
+import { AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, CHART_COLORS,
@@ -78,7 +80,7 @@ export default function TemperatureImpactPage() {
   const vehicleId = selectedVehicle || String(vehicles?.[0]?.id ?? '');
 
   /* ---- temperature data ---- */
-  const { data: points, isLoading } = useQuery({
+  const { data: points, isLoading, error: dataError } = useQuery({
     queryKey: ['temperature-impact', vehicleId],
     queryFn: async () => {
       const res = await request<{ points: TempEfficiencyPoint[] }>(
@@ -88,6 +90,8 @@ export default function TemperatureImpactPage() {
     },
     enabled: vehicleId !== '',
   });
+
+  const anyError = dataError as Error | undefined;
 
   /* ---- derived stats ---- */
   const stats = useMemo(() => {
@@ -196,6 +200,12 @@ export default function TemperatureImpactPage() {
       actions={vehicleSelector}
     >
       <div className="space-y-6">
+        {anyError && (
+          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+            {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+          </AlertBanner>
+        )}
+
         {/* ── Summary MetricCards ───────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <FadeIn>

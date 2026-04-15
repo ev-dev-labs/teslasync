@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   Music, Disc3, Radio, Bluetooth, Podcast,
-  Headphones, Volume2, ListMusic, BarChart3,
+  Headphones, Volume2, ListMusic, BarChart3, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -15,6 +15,8 @@ import { Select } from '@/components/ui/Select';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { AlertBanner } from '@/components/feedback';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
@@ -131,11 +133,13 @@ export default function MediaPlayerPage() {
     refetchInterval: 10_000,
   });
 
-  const { data: history, isLoading: historyLoading } = useQuery({
+  const { data: history, isLoading: historyLoading, error: historyError } = useQuery({
     queryKey: ['media', 'history', activeId],
     queryFn: () => request<MediaSnapshot[]>(`/media?vehicle_id=${activeId}&limit=500`),
     enabled: !!activeId,
   });
+
+  const anyError = [latestError, historyError].find(Boolean);
 
   const isLoading = latestLoading || historyLoading;
 
@@ -329,6 +333,12 @@ export default function MediaPlayerPage() {
         ) : undefined
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ── Time range selector ──────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap">
         {TIME_RANGES.map((tr) => (

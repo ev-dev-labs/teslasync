@@ -18,6 +18,7 @@ import {
   Activity,
   TrendingUp,
   TrafficCone,
+  AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -51,6 +52,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -234,6 +236,7 @@ export default function NavigationRoutePage() {
   const {
     data: latest,
     isLoading: latestLoading,
+    error: latestError,
     refetch: refetchLatest,
   } = useQuery<LocationSnapshot>({
     queryKey: ['location-latest', vehicleId],
@@ -249,6 +252,7 @@ export default function NavigationRoutePage() {
   const {
     data: history,
     isLoading: historyLoading,
+    error: historyError,
     refetch: refetchHistory,
   } = useQuery<LocationSnapshot[]>({
     queryKey: ['location-history', vehicleId],
@@ -260,6 +264,7 @@ export default function NavigationRoutePage() {
   });
 
   /* ---- derived ---- */
+  const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = vehiclesLoading || latestLoading;
   const hasActiveRoute = latest?.active_route ?? false;
   const lat = latest?.current_lat ?? latest?.currentLat ?? null;
@@ -543,6 +548,12 @@ export default function NavigationRoutePage() {
         </span>
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {vehicleId !== null && (
         <FadeIn>
           {/* ─────── Navigation Status Panel ─────── */}

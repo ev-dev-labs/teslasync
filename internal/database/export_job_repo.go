@@ -57,8 +57,12 @@ func (r *ExportJobRepo) GetFileData(ctx context.Context, id string) ([]byte, str
 // List returns recent export jobs ordered by creation date (without file data).
 func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]models.ExportJobSummary, error) {
 	rows, err := r.db.Pool.Query(ctx, `
-		SELECT id, type, format, status, file_name, file_size, record_count,
-		       error_message, created_at, completed_at
+		SELECT id, type, format, status, vehicle_id, file_name, file_size, record_count,
+		       error_message,
+		       CASE WHEN completed_at IS NOT NULL
+		            THEN EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000
+		            ELSE NULL END AS duration_ms,
+		       created_at, completed_at
 		FROM export_jobs
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`, limit, offset)
@@ -70,9 +74,9 @@ func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]models.E
 	var jobs []models.ExportJobSummary
 	for rows.Next() {
 		var j models.ExportJobSummary
-		if err := rows.Scan(&j.ID, &j.Type, &j.Format, &j.Status, &j.FileName,
-			&j.FileSize, &j.RecordCount, &j.ErrorMessage,
-			&j.CreatedAt, &j.CompletedAt); err != nil {
+		if err := rows.Scan(&j.ID, &j.Type, &j.Format, &j.Status, &j.VehicleID,
+			&j.FileName, &j.FileSize, &j.RecordCount, &j.ErrorMessage,
+			&j.DurationMs, &j.CreatedAt, &j.CompletedAt); err != nil {
 			return nil, err
 		}
 		jobs = append(jobs, j)

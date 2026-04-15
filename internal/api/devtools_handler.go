@@ -382,6 +382,8 @@ func (h *DevToolsHandler) RuntimeInfo(w http.ResponseWriter, r *http.Request) {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 
+	poolStats := h.db.Pool.Stat()
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"go_version":    runtime.Version(),
 		"goroutines":    runtime.NumGoroutine(),
@@ -395,6 +397,11 @@ func (h *DevToolsHandler) RuntimeInfo(w http.ResponseWriter, r *http.Request) {
 			"num_gc":            mem.NumGC,
 			"heap_objects":      mem.HeapObjects,
 		},
+		"max_open":   poolStats.MaxConns(),
+		"open":       poolStats.TotalConns(),
+		"in_use":     poolStats.AcquiredConns(),
+		"idle":       poolStats.IdleConns(),
+		"wait_count": poolStats.EmptyAcquireCount(),
 	})
 }
 

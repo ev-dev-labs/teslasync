@@ -80,7 +80,7 @@ export function useApiLogStats() {
 export function useBackupConfigs() {
   return useQuery({
     queryKey: adminKeys.backupConfigs,
-    queryFn: () => request<BackupConfig[]>('/system/backup/stats'),
+    queryFn: () => request<BackupConfig[]>('/backup/configs'),
     select: safeArray,
   });
 }
@@ -88,7 +88,7 @@ export function useBackupConfigs() {
 export function useBackupRuns() {
   return useQuery({
     queryKey: adminKeys.backupRuns,
-    queryFn: () => request<BackupRun[]>('/system/backup'),
+    queryFn: () => request<BackupRun[]>('/backup/runs'),
     refetchInterval: 10_000,
     select: safeArray,
   });

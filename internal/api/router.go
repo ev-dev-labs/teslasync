@@ -206,6 +206,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/auth", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
 			r.Get("/login", authHandler.Login)
+			r.Post("/url", authHandler.Login)
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
@@ -236,6 +237,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/drives", func(r chi.Router) {
 			r.Get("/", driveHandler.ListByVehicle)
 			r.Get("/stats", driveHandler.Stats)
+			r.Get("/score", driveHandler.Score)
+			r.Get("/dynamics", driveHandler.Dynamics)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)

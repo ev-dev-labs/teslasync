@@ -8,14 +8,15 @@ import {
   Fingerprint, Hash, HardDrive, Palette, Timer, Network, BookOpen,
   Regex, Lock, Play, RefreshCw,
   Download, Upload, Trash2, Satellite, Eye, Zap, ListChecks, ArrowRight, ArrowLeft,
-  MapPin, FileText, ChevronRight,
+  MapPin, FileText, ChevronRight, AlertCircle,
 } from 'lucide-react'
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, Badge, Button, Input, Select, DataTable, Accordion, Textarea, type Column } from '@/components/ui'
-import { Skeleton } from '@/components/feedback'
+import { Skeleton, AlertBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { request } from '@/api/client'
+import { getErrorMessage } from '@/lib/errorMessage'
 import type { Vehicle } from '@/api/types'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -418,12 +419,13 @@ function BackendTool({
 
 function FleetApiConfigTool() {
   const { t } = useTranslation()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: configError } = useQuery({
     queryKey: ['devtools', 'fleet-api-info'],
     queryFn: () => apiFetch('fleet-api-info'),
   })
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={4} /></GlassPanel>
+  if (configError) return <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
 
   const info = data ?? {}
   const baseUrl = (info.baseUrl as string) ?? ''
@@ -541,7 +543,7 @@ function PublicKeySetupTool() {
   const queryClient = useQueryClient()
   const [pemInput, setPemInput] = useState('')
 
-  const { data: status, isLoading } = useQuery({
+  const { data: status, isLoading, error: keyError } = useQuery({
     queryKey: ['devtools', 'public-key-status'],
     queryFn: () => apiFetch('public-key-status'),
   })
@@ -562,6 +564,7 @@ function PublicKeySetupTool() {
   })
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={3} /></GlassPanel>
+  if (keyError) return <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
 
   const configured = status?.configured === true
   const fingerprint = (status?.fingerprint as string) ?? ''
@@ -970,13 +973,13 @@ function OnboardingWorkflow() {
     localStorage.setItem('devtools-onboarding', JSON.stringify(completed))
   }, [completed])
 
-  const { data: keyStatus } = useQuery({
+  const { data: keyStatus, error: keyStatusError } = useQuery({
     queryKey: ['devtools', 'public-key-status'],
     queryFn: () => apiFetch('public-key-status'),
     refetchInterval: 30000,
   })
 
-  const { data: fleetInfo } = useQuery({
+  const { data: fleetInfo, error: fleetInfoError } = useQuery({
     queryKey: ['devtools', 'fleet-api-info'],
     queryFn: () => apiFetch('fleet-api-info'),
     refetchInterval: 30000,
@@ -1001,8 +1004,16 @@ function OnboardingWorkflow() {
     if (currentStep < ONBOARDING_STEPS.length - 1) setCurrentStep(currentStep + 1)
   }
 
+  const onboardingError = [keyStatusError, fleetInfoError].find(Boolean)
+
   return (
     <div className="space-y-4">
+      {onboardingError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(onboardingError)}
+        </AlertBanner>
+      )}
+
       {/* Progress bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-white/60">

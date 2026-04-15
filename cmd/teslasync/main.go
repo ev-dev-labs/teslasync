@@ -197,6 +197,11 @@ func main() {
 	var signalHistoryWriter *database.SignalHistoryWriter
 	if cfg.FleetTelemetry.Enabled {
 		telemetryHandler = api.NewTelemetryHandler(db, mqttClient, nil, cfg.FleetTelemetry.StaleTimeout, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey)) // eventHub wired later via router
+		telemetryHandler.SetTimings(
+			cfg.FleetTelemetry.SnapshotWriteInterval,
+			cfg.FleetTelemetry.CleanupInterval,
+			cfg.FleetTelemetry.StaleSessionTimeout,
+		)
 
 		// Initialize SignalStore with write-through Postgres flusher
 		liveStateRepo := database.NewLiveStateRepo(db)

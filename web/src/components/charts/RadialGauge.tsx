@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
+import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 
 interface RadialGaugeProps {
   value: number;
@@ -8,18 +9,20 @@ interface RadialGaugeProps {
   unit?: string;
   color?: string;
   size?: number;
+  decimals?: number;
   className?: string;
 }
 
 const STROKE_WIDTH = 8;
 
 export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
-  function RadialGauge({ value, max, label, unit, color = '#3b82f6', size = 120, className }, ref) {
+  function RadialGauge({ value, max, label, unit, color = '#3b82f6', size = 120, decimals, className }, ref) {
     const radius = (size - STROKE_WIDTH) / 2;
     const center = size / 2;
     const circumference = 2 * Math.PI * radius;
     const clamped = Math.max(0, Math.min(value, max));
     const offset = circumference - (clamped / max) * circumference;
+    const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
 
     return (
       <div ref={ref} className={cn('inline-flex flex-col items-center gap-1', className)}>
@@ -52,7 +55,7 @@ export const RadialGauge = forwardRef<HTMLDivElement, RadialGaugeProps>(
           style={{ width: size, height: size }}
         >
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {clamped}
+            {fmtNumber(clamped, d)}
             {unit && <span className="text-xs font-normal text-gray-500">{unit}</span>}
           </span>
         </div>

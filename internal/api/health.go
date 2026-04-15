@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"runtime"
 	"sync"
@@ -196,6 +197,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 		// DB pool stats
 		poolStats := db.Pool.Stat()
 		results["database_pool"] = map[string]interface{}{
+			"status":         "healthy",
 			"total_conns":    poolStats.TotalConns(),
 			"idle_conns":     poolStats.IdleConns(),
 			"acquired_conns": poolStats.AcquiredConns(),
@@ -214,6 +216,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 
 		// System info
 		results["system"] = map[string]interface{}{
+			"status":         "healthy",
 			"goroutines":     runtime.NumGoroutine(),
 			"go_version":     runtime.Version(),
 			"uptime_seconds": time.Since(startTime).Seconds(),
@@ -425,11 +428,17 @@ func CompressionStatsHandler(db *database.DB) http.HandlerFunc {
 		savedRows := estimatedOriginal - stats.Total
 		savedBytes := savedRows * 200
 
+		savingsPercent := 0.0
+		if estimatedOriginal > 0 {
+			savingsPercent = float64(savedRows) / float64(estimatedOriginal) * 100
+		}
+
 		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"total_positions":      stats.Total,
-			"compressed_positions": stats.Compressed,
-			"estimated_saved_rows": savedRows,
+			"total_positions":       stats.Total,
+			"compressed_positions":  stats.Compressed,
+			"estimated_saved_rows":  savedRows,
 			"estimated_saved_bytes": savedBytes,
+			"savings_percent":       math.Round(savingsPercent*100) / 100,
 		})
 	}
 }

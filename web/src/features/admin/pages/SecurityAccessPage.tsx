@@ -27,6 +27,7 @@ import {
   Wrench,
   Monitor,
   CircleDot,
+  AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -37,6 +38,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import {
@@ -52,6 +54,7 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSecurityEvents } from '@/api/hooks/useAdmin';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import { formatDateTime, formatDateShort } from '@/lib/dateFormat';
 import type { SecurityEvent } from '@/types/admin';
@@ -357,7 +360,7 @@ export default function SecurityAccessPage() {
   usePageTitle(t('admin.security.title', 'Security & Access'));
 
   /* ---- Vehicle list ---- */
-  const { data: vehicles } = useQuery({
+  const { data: vehicles, error: vehiclesError } = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
@@ -366,7 +369,7 @@ export default function SecurityAccessPage() {
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
 
   /* ---- Latest security state (polled) ---- */
-  const { data: latest, isLoading: loadingLatest } = useQuery({
+  const { data: latest, isLoading: loadingLatest, error: latestError } = useQuery({
     queryKey: ['security-latest', activeId],
     queryFn: () => request<SecurityEvent>(`/security/latest?vehicle_id=${activeId}`),
     enabled: !!activeId,
@@ -374,8 +377,9 @@ export default function SecurityAccessPage() {
   });
 
   /* ---- Security event history ---- */
-  const { data: history = [], isLoading: loadingHistory } = useSecurityEvents(activeId);
+  const { data: history = [], isLoading: loadingHistory, error: historyError } = useSecurityEvents(activeId);
 
+  const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = loadingLatest || loadingHistory;
 
   /* ---- Computed stats ---- */
@@ -503,6 +507,12 @@ export default function SecurityAccessPage() {
         ) : undefined
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ---- Alert banner ---- */}
       {!isSecure && latest && (
         <FadeIn>

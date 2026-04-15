@@ -11,7 +11,7 @@ export const exportKeys = {
 export function useExports() {
   return useQuery({
     queryKey: exportKeys.all,
-    queryFn: () => request<ExportJob[]>('/exports'),
+    queryFn: () => request<ExportJob[]>('/export/jobs'),
     select: safeArray,
   });
 }

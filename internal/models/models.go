@@ -317,6 +317,7 @@ type Settings struct {
 	ID              int64   `json:"id" db:"id"`
 	UnitOfLength    string  `json:"unit_of_length" db:"unit_of_length"`       // km, mi
 	UnitOfTemp      string  `json:"unit_of_temp" db:"unit_of_temp"`           // C, F
+	UnitOfPressure  string  `json:"unit_of_pressure" db:"unit_of_pressure"`   // bar, psi
 	PreferredRange  string  `json:"preferred_range" db:"preferred_range"`     // ideal, rated
 	Language        string  `json:"language" db:"language"`
 	BaseCostPerKWh  float64 `json:"base_cost_per_kwh" db:"base_cost_per_kwh"`
@@ -754,10 +755,10 @@ type ExportJob struct {
 	VehicleID    *int64     `json:"vehicle_id,omitempty"`
 	StartDate    *time.Time `json:"start_date,omitempty"`
 	EndDate      *time.Time `json:"end_date,omitempty"`
-	FileName     string     `json:"file_name,omitempty"`
+	FileName     *string    `json:"file_name,omitempty"`
 	FileSize     int64      `json:"file_size"`
 	RecordCount  int        `json:"record_count"`
-	ErrorMessage string     `json:"error_message,omitempty"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	CompletedAt  *time.Time `json:"completed_at,omitempty"`
@@ -769,10 +770,12 @@ type ExportJobSummary struct {
 	Type         string     `json:"type"`
 	Format       string     `json:"format"`
 	Status       string     `json:"status"`
-	FileName     string     `json:"file_name,omitempty"`
+	VehicleID    *int64     `json:"vehicle_id,omitempty"`
+	FileName     *string    `json:"file_name,omitempty"`
 	FileSize     int64      `json:"file_size"`
 	RecordCount  int        `json:"record_count"`
-	ErrorMessage string     `json:"error_message,omitempty"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
+	DurationMs   *float64   `json:"duration_ms,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	CompletedAt  *time.Time `json:"completed_at,omitempty"`
 }

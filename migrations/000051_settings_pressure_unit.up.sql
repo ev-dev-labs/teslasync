@@ -1,0 +1,1 @@
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS unit_of_pressure VARCHAR(10) NOT NULL DEFAULT 'bar';

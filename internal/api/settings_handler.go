@@ -45,6 +45,7 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Validate allowed values
 	validUnitsLen := map[string]bool{"km": true, "mi": true}
 	validUnitsTemp := map[string]bool{"C": true, "F": true}
+	validUnitsPressure := map[string]bool{"bar": true, "psi": true}
 	validRange := map[string]bool{"ideal": true, "rated": true}
 
 	if s.UnitOfLength != "" && !validUnitsLen[s.UnitOfLength] {
@@ -53,6 +54,10 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.UnitOfTemp != "" && !validUnitsTemp[s.UnitOfTemp] {
 		writeError(w, http.StatusBadRequest, "unit_of_temp must be 'C' or 'F'")
+		return
+	}
+	if s.UnitOfPressure != "" && !validUnitsPressure[s.UnitOfPressure] {
+		writeError(w, http.StatusBadRequest, "unit_of_pressure must be 'bar' or 'psi'")
 		return
 	}
 	if s.PreferredRange != "" && !validRange[s.PreferredRange] {

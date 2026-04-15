@@ -6,6 +6,7 @@ import { UNITS } from '../lib/constants'
 const defaults: AppSettings = {
   unit_of_length: 'km',
   unit_of_temp: 'C',
+  unit_of_pressure: 'bar',
   preferred_range: 'rated',
   language: 'en',
   base_cost_per_kwh: 0.12,
@@ -52,8 +53,9 @@ export function useSettings() {
 
   const isMiles = s.unit_of_length === 'mi'
   const isFahrenheit = s.unit_of_temp === 'F'
+  const isPSI = (s.unit_of_pressure ?? 'bar') === 'psi'
 
-  // DB stores raw Tesla values: miles, mph, °C, PSI.
+  // DB stores raw Tesla values: miles, mph, °C, Bar.
   // Convert to user's preferred display unit.
 
   /** Convert miles (DB) to user's preferred distance unit */
@@ -68,14 +70,14 @@ export function useSettings() {
   /** Convert Wh/mi (DB) to user's preferred efficiency unit */
   const convertEfficiency = (whPerMi: number): number => isMiles ? whPerMi : whPerMi * UNITS.KM_TO_MI
 
-  /** Convert PSI (DB) to user's preferred pressure unit */
-  const convertPressure = (psi: number): number => isMiles ? psi : psi * UNITS.PSI_TO_BAR
+  /** Convert Bar (DB) to user's preferred pressure unit */
+  const convertPressure = (bar: number): number => isPSI ? bar * UNITS.BAR_TO_PSI : bar
 
   const distanceUnit = isMiles ? 'mi' : 'km'
   const speedUnit = isMiles ? 'mph' : 'km/h'
   const tempUnit = isFahrenheit ? '°F' : '°C'
   const efficiencyUnit = isMiles ? 'Wh/mi' : 'Wh/km'
-  const pressureUnit = isMiles ? 'psi' : 'bar'
+  const pressureUnit = isPSI ? 'psi' : 'bar'
   const rangeType = s.preferred_range as 'rated' | 'ideal'
 
   /** Format a distance value with unit (input: miles from DB) */
@@ -90,10 +92,15 @@ export function useSettings() {
   const fmtTemp = (celsius: number, d?: number): string =>
     `${fmtNumber(convertTemp(celsius), d)} ${tempUnit}`
 
+  /** Format a pressure value with unit (input: Bar from DB) */
+  const fmtPressure = (bar: number, d?: number): string =>
+    `${fmtNumber(convertPressure(bar), d)} ${pressureUnit}`
+
   return {
     settings: s,
     isMiles,
     isFahrenheit,
+    isPSI,
     decimals,
     convertDistance,
     convertSpeed,
@@ -109,5 +116,6 @@ export function useSettings() {
     fmtDistance,
     fmtSpeed,
     fmtTemp,
+    fmtPressure,
   }
 }

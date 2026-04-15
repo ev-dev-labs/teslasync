@@ -278,6 +278,31 @@ type Vehicle struct {
 - Nullable fields → pointers (`*float64`, `*string`, `*time.Time`)
 - Frontend types MUST use snake_case matching Go JSON tags
 
+### Configuration Sync (CRITICAL)
+When adding, renaming, or removing an environment variable in `internal/config/config.go`:
+```
+❌ DO NOT add a config var to only one deployment target
+✅ ALWAYS update ALL THREE locations in the same commit:
+   1. internal/config/config.go          — Go env var binding (envStr/envBool/envDuration)
+   2. docker-compose.yml                 — local dev environment variable
+   3. helm/teslasync/templates/           — configmap.yaml (non-secret) or secret.yaml (credentials)
+      helm/teslasync/values.yaml          — default value + documentation comment
+```
+- Non-sensitive values → `configmap.yaml` + `values.yaml`
+- Secrets (passwords, API keys, tokens) → `secret.yaml` + `values.yaml` (conditional)
+- If the var has a sensible default in config.go, use the same default in docker-compose and values.yaml
+- Verify with: `helm template test helm/teslasync | grep YOUR_NEW_VAR`
+
+### Signal Data — Single Source of Truth
+`vehicle_live_state` is the single source of truth for current vehicle state. It is write-through
+from the in-memory SignalStore (flushed on every telemetry batch, zero lag).
+```
+❌ DO NOT read current state from snapshot tables (positions, security_events, climate_snapshots)
+❌ DO NOT add new endpoints that query snapshot tables for "latest" current values
+✅ DO read current state from /vehicles/{id}/state which uses vehicle_live_state
+✅ DO use snapshot tables ONLY for historical data (charts, timelines, history pages)
+```
+
 ## Engineering Principles
 
 ### DRY — Don't Repeat Yourself

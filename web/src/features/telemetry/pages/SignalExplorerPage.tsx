@@ -18,6 +18,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
+import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import {
@@ -27,8 +28,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { Activity, BarChart3, Search, Clock } from 'lucide-react';
+import { Activity, BarChart3, Search, Clock, AlertCircle } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -82,7 +84,7 @@ export default function SignalExplorerPage() {
   const vehicleId = 1;
 
   // Signal selection
-  const { data: availableSignals } = useSignals(vehicleId);
+  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
   const [signalSearch, setSignalSearch] = useState('');
 
@@ -121,7 +123,7 @@ export default function SignalExplorerPage() {
   const toIso = toStr ? new Date(toStr).toISOString() : '';
 
   // ── Combined signal data query (parallel per-signal fetches) ──
-  const { data: allSignalRows, isLoading: dataLoading } = useQuery<SignalRow[]>({
+  const { data: allSignalRows, isLoading: dataLoading, error: dataError } = useQuery<SignalRow[]>({
     queryKey: ['explorer-data', exploreKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -145,6 +147,7 @@ export default function SignalExplorerPage() {
   });
 
   const hasData = exploreKey !== null;
+  const anyError = [signalsError, dataError].find(Boolean);
 
   // ── Chart data transform ──
   const chartData = useMemo(() => {
@@ -216,6 +219,12 @@ export default function SignalExplorerPage() {
       subtitle={t('Explore signal history — multi-signal charts, stats & data')}
       loading={false}
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ── Controls ──────────────────────────────────────────────── */}
       <GlassPanel className="p-4 sm:p-5 space-y-4">
         {/* Signal picker */}

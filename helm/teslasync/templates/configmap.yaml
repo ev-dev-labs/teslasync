@@ -10,18 +10,29 @@ data:
   DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}
   DATABASE_NAME: {{ include "teslasync.postgresql.database" . | quote }}
   DATABASE_SSLMODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
+  DATABASE_MAX_CONNS: {{ .Values.postgresql.maxConns | default 25 | quote }}
+  DATABASE_MIN_CONNS: {{ .Values.postgresql.minConns | default 5 | quote }}
   MQTT_HOST: {{ include "teslasync.mqtt.host" . | quote }}
   MQTT_PORT: {{ include "teslasync.mqtt.port" . | quote }}
+  MQTT_CLIENT_ID: {{ .Values.mqtt.clientId | default "teslasync" | quote }}
+  MQTT_PREFIX: {{ .Values.mqtt.prefix | default "teslasync" | quote }}
+  {{- if .Values.mqtt.username }}
+  MQTT_USERNAME: {{ .Values.mqtt.username | quote }}
+  {{- end }}
   REDIS_ENABLED: "true"
   REDIS_HOST: {{ include "teslasync.redis.host" . | quote }}
   REDIS_PORT: {{ include "teslasync.redis.port" . | quote }}
+  REDIS_DB: {{ .Values.redis.db | default 0 | quote }}
   GRAFANA_HOST: {{ include "teslasync.grafana.host" . | quote }}
   GRAFANA_PORT: {{ include "teslasync.grafana.port" . | quote }}
   {{- $apiEndpoint := .Values.config.apiEndpoint | default (printf "http://%s-api:%v" (include "teslasync.fullname" .) (int .Values.service.port)) }}
   API_ENDPOINT: {{ $apiEndpoint | quote }}
   TESLA_REDIRECT_URI: {{ .Values.tesla.redirectUri | quote }}
   TESLA_API_BASE_URL: {{ .Values.tesla.apiBaseUrl | quote }}
+  TESLA_AUTH_URL: {{ .Values.tesla.authUrl | default "https://auth.tesla.com" | quote }}
+  TESLA_TIMEOUT: {{ .Values.tesla.timeout | default "30s" | quote }}
   WORKER_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
+  WORKER_SLEEP_POLL_MULT: {{ .Values.config.sleepPollMultiplier | default 4 | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}
   HELM_CHART_VERSION: {{ .Chart.Version | quote }}
@@ -37,6 +48,9 @@ data:
   FLEET_TELEMETRY_BATCH_MS: {{ .Values.fleetTelemetry.batchMs | default 100 | quote }}
   FLEET_TELEMETRY_STALE_TIMEOUT: {{ .Values.fleetTelemetry.staleTimeout | default "15m" | quote }}
   FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL: {{ .Values.fleetTelemetry.fallbackPollInterval | default "5m" | quote }}
+  FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL: {{ .Values.fleetTelemetry.snapshotWriteInterval | default "1s" | quote }}
+  FLEET_TELEMETRY_CLEANUP_INTERVAL: {{ .Values.fleetTelemetry.cleanupInterval | default "2m" | quote }}
+  FLEET_TELEMETRY_STALE_SESSION_TIMEOUT: {{ .Values.fleetTelemetry.staleSessionTimeout | default "5m" | quote }}
   {{- end }}
   {{- if or .Values.mongodb.enabled .Values.mongodb.external.uri }}
   MONGODB_ENABLED: "true"

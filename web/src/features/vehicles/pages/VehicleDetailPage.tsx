@@ -648,15 +648,15 @@ export default function VehicleDetailPage() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   <MetricCard
                     label={t('common.locked', 'Locked')}
-                    value={securityData.locked ? t('common.yes', 'Yes') : t('common.no', 'No')}
-                    icon={securityData.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                    color={securityData.locked ? 'green' : 'cyan'}
+                    value={state.is_locked ? t('common.yes', 'Yes') : t('common.no', 'No')}
+                    icon={state.is_locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                    color={state.is_locked ? 'green' : 'cyan'}
                   />
                   <MetricCard
                     label={t('common.sentry', 'Sentry')}
-                    value={securityData.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off')}
+                    value={state.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off')}
                     icon={<Eye className="h-4 w-4" />}
-                    color={securityData.sentry_mode ? 'green' : 'cyan'}
+                    color={state.sentry_mode ? 'green' : 'cyan'}
                   />
                   <MetricCard
                     label={t('vehicles.detail.doors', 'Doors')}
