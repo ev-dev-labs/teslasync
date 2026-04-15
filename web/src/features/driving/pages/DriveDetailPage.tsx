@@ -155,18 +155,18 @@ export default function DriveDetailPage() {
         fanStatus: tp.fanStatus ?? null,
       }));
     }
-    return (drive.positions ?? []).map((p) => ({
+    return (drive.positions ?? []).map((p: any) => ({
       time: new Date(p.createdAt ?? p.created_at ?? p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       speed: convertSpeed(p.speed ?? 0),
-      battery: p.batteryLevel,
+      battery: p.batteryLevel ?? p.battery_level ?? 0,
       elevation: p.elevation ?? 0,
       power: p.power ?? 0,
-      outsideTemp: p.outsideTemp != null ? convertTemp(p.outsideTemp) : null,
-      insideTemp: p.insideTemp != null ? convertTemp(p.insideTemp) : null,
+      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTemp(p.outsideTemp ?? p.outside_temp) : null,
+      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTemp(p.insideTemp ?? p.inside_temp) : null,
       driverTemp: null as number | null,
       passengerTemp: null as number | null,
-      idealRange: p.idealRange != null ? convertDistance(p.idealRange) : null,
-      ratedRange: p.ratedRange != null ? convertDistance(p.ratedRange) : null,
+      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistance(p.idealRange ?? p.ideal_range) : null,
+      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistance(p.ratedRange ?? p.rated_range) : null,
       estRange: null as number | null,
       odometer: p.odometer != null ? convertDistance(p.odometer) : null,
       soc: null as number | null,
