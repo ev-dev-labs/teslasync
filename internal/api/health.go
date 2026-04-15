@@ -196,6 +196,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 		// DB pool stats
 		poolStats := db.Pool.Stat()
 		results["database_pool"] = map[string]interface{}{
+			"status":         "healthy",
 			"total_conns":    poolStats.TotalConns(),
 			"idle_conns":     poolStats.IdleConns(),
 			"acquired_conns": poolStats.AcquiredConns(),
@@ -214,6 +215,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 
 		// System info
 		results["system"] = map[string]interface{}{
+			"status":         "healthy",
 			"goroutines":     runtime.NumGoroutine(),
 			"go_version":     runtime.Version(),
 			"uptime_seconds": time.Since(startTime).Seconds(),
