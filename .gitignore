@@ -74,9 +74,10 @@ scripts/signals-export.json
 scripts/signal-dump/
 
 web/svg-compare.html
-# Refactoring tracking docs (generated, not committed)
+# Refactoring tracking docs (local reference, not committed)
 REFACTORING_PROGRESS.md
 REFACTORING_PROMPTS.md
 REFACTORING_REPORT.md
+ENGINEERING_GUIDELINES.md
 .github/prompts/
 scripts/check-loc.js
