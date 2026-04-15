@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   MapPin, Compass, Gauge, Clock, Home, Briefcase,
-  Link2, Navigation, Route, Fence, LocateFixed,
+  Link2, Navigation, Route, Fence, LocateFixed, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -22,6 +22,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import 'leaflet/dist/leaflet.css';
 
@@ -89,6 +90,7 @@ export default function MapOverviewPage() {
   const {
     data: latest,
     isLoading: latestLoading,
+    error: latestError,
   } = useQuery<LocationSnapshot>({
     queryKey: ['location-latest', selectedId],
     queryFn: () =>
@@ -102,6 +104,7 @@ export default function MapOverviewPage() {
   const {
     data: history,
     isLoading: historyLoading,
+    error: historyError,
   } = useQuery<LocationSnapshot[]>({
     queryKey: ['location-history', selectedId],
     queryFn: () =>
@@ -112,6 +115,7 @@ export default function MapOverviewPage() {
   });
 
   /* ---- derived ---- */
+  const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = vehiclesLoading || latestLoading;
   const hasVehicles = (vehicles?.length ?? 0) > 0;
   const hasValidLocation = latest != null
@@ -202,6 +206,12 @@ export default function MapOverviewPage() {
         ) : undefined
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ---- GPS data warning ---- */}
       {!hasValidLocation && latest && (
         <AlertBanner variant="info">

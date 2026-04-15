@@ -1,7 +1,7 @@
 import { type ReactNode, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { UserCheck, Armchair, Lock, Navigation, Cpu } from 'lucide-react';
+import { UserCheck, Armchair, Lock, Navigation, Cpu, AlertCircle } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
@@ -11,6 +11,7 @@ import { MetricCard } from '@/components/data-display/MetricCard';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import {
   LineChart,
@@ -31,6 +32,7 @@ import { useSecurityLatest } from '@/api/hooks/useVehicles';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -405,7 +407,7 @@ export default function SafetySettingsPage() {
   usePageTitle(t('Safety Settings'));
 
   /* --- vehicle selector --- */
-  const { data: vehicles } = useQuery<Vehicle[]>({
+  const { data: vehicles, error: vehiclesError } = useQuery<Vehicle[]>({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
     staleTime: 30_000,
@@ -434,6 +436,7 @@ export default function SafetySettingsPage() {
   const {
     data: history,
     isLoading: historyLoading,
+    error: historyError,
   } = useQuery<SafetySnapshot[]>({
     queryKey: ['safety-history', activeId],
     queryFn: () => request<SafetySnapshot[]>(`/safety?vehicle_id=${activeId}&limit=100`),
@@ -442,6 +445,7 @@ export default function SafetySettingsPage() {
   });
 
   /* --- derived data --- */
+  const anyError = [vehiclesError, latestError, historyError].find(Boolean);
   const isLoading = latestLoading || historyLoading;
 
   const enabled = useMemo(() => (latest ? enabledCount(latest) : 0), [latest]);
@@ -494,6 +498,13 @@ export default function SafetySettingsPage() {
         ) : undefined
       }
     >
+      {/* Error banner */}
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* Loading skeleton */}
       {isLoading && <SafetyPageSkeleton />}
 

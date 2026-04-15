@@ -20,15 +20,17 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { MetricCard } from '@/components/data-display/MetricCard';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime, formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import {
   Wrench, AlertTriangle, CheckCircle, Clock, ListChecks,
   CalendarPlus, Filter, ArrowUpDown, Gauge, Tag,
-  DollarSign, TrendingUp,
+  DollarSign, TrendingUp, AlertCircle,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -342,7 +344,7 @@ export default function MaintenancePage() {
   usePageTitle(t('Maintenance'));
 
   // ── Vehicle selection ──────────────────────────────────────────────────
-  const { data: vehicles } = useQuery({
+  const { data: vehicles, error: vehiclesError } = useQuery({
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
@@ -350,13 +352,13 @@ export default function MaintenancePage() {
   const vehicleId = selectedVehicle ?? vehicles?.[0]?.id ?? null;
 
   // ── Data fetching ──────────────────────────────────────────────────────
-  const { data: items, isLoading: loadingItems } = useQuery({
+  const { data: items, isLoading: loadingItems, error: itemsError } = useQuery({
     queryKey: ['maintenance', vehicleId],
     queryFn: () => request<MaintenanceItem[]>('/maintenance'),
     enabled: vehicleId !== null,
   });
 
-  const { data: records, isLoading: loadingRecords } = useQuery({
+  const { data: records, isLoading: loadingRecords, error: recordsError } = useQuery({
     queryKey: ['service-records', vehicleId],
     queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
     enabled: vehicleId !== null,
@@ -452,6 +454,7 @@ export default function MaintenancePage() {
     // placeholder — would open scheduling modal
   }, []);
 
+  const anyError = [vehiclesError, itemsError, recordsError].find(Boolean);
   const isLoading = loadingItems || loadingRecords;
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -473,6 +476,12 @@ export default function MaintenancePage() {
         ) : undefined
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ── Summary metric cards ─────────────────────────────────── */}
       <FadeIn>
         {loadingItems && !items ? (

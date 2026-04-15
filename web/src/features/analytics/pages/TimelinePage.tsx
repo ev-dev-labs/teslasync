@@ -2,13 +2,13 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Clock, ArrowRightLeft, Car, BatteryCharging, Moon, RefreshCw,
+  Clock, ArrowRightLeft, Car, BatteryCharging, Moon, RefreshCw, AlertCircle,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip,
@@ -21,6 +21,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 
 /* ─── Types matching actual API responses ────────────────── */
@@ -131,12 +132,12 @@ export default function TimelinePage() {
   usePageTitle(t('timeline.title', 'Timeline'));
   const [vehicleId, setVehicleId] = useState('');
 
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, error: vehiclesError } = useVehicles();
 
   const activeId = vehicleId || String(vehicles?.[0]?.id ?? '');
   const enabled = activeId !== '';
 
-  const { data: timelineData, isLoading: tlLoading, refetch } = useQuery({
+  const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = useQuery({
     queryKey: ['vehicle-timeline', activeId],
     queryFn: () =>
       request<{ transitions: StateRecord[] }>(
@@ -145,7 +146,7 @@ export default function TimelinePage() {
     enabled,
   });
 
-  const { data: summaryData, isLoading: sumLoading } = useQuery({
+  const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
     queryKey: ['vehicle-summary', activeId],
     queryFn: () =>
       request<StateSummaryRow[]>(
@@ -154,7 +155,7 @@ export default function TimelinePage() {
     enabled,
   });
 
-  const { data: dailyData, isLoading: dayLoading } = useQuery({
+  const { data: dailyData, isLoading: dayLoading, error: dailyError } = useQuery({
     queryKey: ['vehicle-daily', activeId],
     queryFn: () => request<DailyRow[]>(`/vehicle-states/daily?vehicle_id=${activeId}`),
     enabled,
@@ -163,6 +164,7 @@ export default function TimelinePage() {
   const stateRecords = timelineData?.transitions ?? [];
   const summaryRows = summaryData ?? [];
   const daily = useMemo(() => pivotDaily(dailyData ?? []), [dailyData]);
+  const anyError = [vehiclesError, timelineError, summaryError, dailyError].find(Boolean);
   const isLoading = tlLoading || sumLoading || dayLoading;
 
   // Derive transition rows from consecutive state records
@@ -278,6 +280,12 @@ export default function TimelinePage() {
       actions={actions}
       loading={isLoading && stateRecords.length === 0}
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* Summary metric cards */}
       <FadeIn>
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -25,13 +25,14 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Input, Select, Modal, Toggle, ConfirmDialog, DataTable, Textarea, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { getErrorMessage } from '@/lib/errorMessage';
 import { request, getApiBase } from '@/api/client';
 
 /* ------------------------------------------------------------------ */
@@ -209,7 +210,7 @@ export default function BackupRestorePage() {
     queryFn: () => request<BackupConfig[]>('/backup/configs'),
   });
 
-  const { data: runs = [], isLoading: loadingRuns } = useQuery<BackupRun[]>({
+  const { data: runs = [], isLoading: loadingRuns, error: runsError } = useQuery<BackupRun[]>({
     queryKey: ['backup-runs'],
     queryFn: () => request<BackupRun[]>('/backup/runs'),
     refetchInterval: (query) => {
@@ -219,6 +220,7 @@ export default function BackupRestorePage() {
     },
   });
 
+  const anyError = [configsError, runsError].find(Boolean);
   const loading = loadingConfigs || loadingRuns;
 
   /* ---- derived stats ---- */
@@ -622,6 +624,12 @@ export default function BackupRestorePage() {
         </div>
       }
     >
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+
       {/* ---- stats row ---- */}
       <FadeIn>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
