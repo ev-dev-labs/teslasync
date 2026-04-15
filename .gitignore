@@ -55,6 +55,7 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 
 # Test artifacts
+test-results/
 coverage.out
 coverage.html
 *.test.log
