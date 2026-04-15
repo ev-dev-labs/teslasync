@@ -29,7 +29,12 @@ func (r *VehicleConfigRepo) Insert(ctx context.Context, snap *models.VehicleConf
 }
 
 func (r *VehicleConfigRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.VehicleConfigSnapshot, error) {
-	query := `SELECT id, vehicle_id, car_type, trim, exterior_color, roof_color, wheel_type, rear_seat_heaters, sunroof_installed, efficiency_package, europe_vehicle, right_hand_drive, remote_start_enabled, charge_port, offroad_lightbar_present, version, vehicle_name, software_update_version, software_update_download_pct, software_update_install_pct, software_update_expected_duration, created_at
+	query := `SELECT id, vehicle_id, car_type, trim, exterior_color, roof_color, wheel_type,
+		rear_seat_heaters, sunroof_installed, efficiency_package, europe_vehicle,
+		right_hand_drive, remote_start_enabled, charge_port, offroad_lightbar_present,
+		version, vehicle_name, software_update_version, software_update_download_pct,
+		software_update_install_pct, software_update_expected_duration,
+		software_update_scheduled_start, created_at
 		FROM vehicle_config_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -46,7 +51,7 @@ func (r *VehicleConfigRepo) GetByVehicle(ctx context.Context, vehicleID int64, l
 			&s.OffroadLightbarPresent, &s.Version, &s.VehicleName,
 			&s.SoftwareUpdateVersion, &s.SoftwareUpdateDownloadPct,
 			&s.SoftwareUpdateInstallPct, &s.SoftwareUpdateExpectedDuration,
-			&s.CreatedAt); err != nil {
+			&s.SoftwareUpdateScheduledStart, &s.CreatedAt); err != nil {
 			return nil, err
 		}
 		snaps = append(snaps, s)
