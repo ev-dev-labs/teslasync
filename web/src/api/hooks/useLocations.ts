@@ -1,0 +1,28 @@
+import { useQuery } from '@tanstack/react-query';
+import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
+import type { Location, Geofence } from '@/types/location';
+
+export const locationKeys = {
+  all: (vehicleId?: string) => ['locations', vehicleId ?? 'all'] as const,
+  geofences: ['geofences'] as const,
+};
+
+export function useLocations(vehicleId?: string) {
+  return useQuery({
+    queryKey: locationKeys.all(vehicleId),
+    queryFn: () => request<Location[]>(
+      vehicleId ? `/locations?vehicle_id=${vehicleId}` : '/locations',
+    ),
+    enabled: !!vehicleId,
+    select: safeArray,
+  });
+}
+
+export function useGeofences() {
+  return useQuery({
+    queryKey: locationKeys.geofences,
+    queryFn: () => request<Geofence[]>('/geofences'),
+    select: safeArray,
+  });
+}

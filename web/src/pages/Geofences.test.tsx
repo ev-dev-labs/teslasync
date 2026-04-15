@@ -25,7 +25,7 @@ vi.mock('../api', () => ({
   }),
 }))
 
-vi.mock('../components/Toast', () => ({
+vi.mock('../components/feedback/Toast', () => ({
   useToast: vi.fn().mockReturnValue({
     toast: vi.fn(),
     success: vi.fn(),

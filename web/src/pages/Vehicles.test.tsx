@@ -25,7 +25,7 @@ vi.mock('../api', () => ({
   }),
 }))
 
-vi.mock('../components/TeslaCarViz', () => ({
+vi.mock('../components/data-display/TeslaCarViz', () => ({
   TeslaCarViz: () => <div data-testid="tesla-car-viz" />,
   TeslaCarMini: () => <div data-testid="tesla-car-mini" />,
   parseModelKey: vi.fn().mockReturnValue('model3'),

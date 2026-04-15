@@ -139,6 +139,43 @@ func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
 	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_history: TTL cleanup")
 }
 
+// GetHistory returns time-series data for a single signal within a date range.
+// Results are ordered by created_at ASC for chart rendering.
+func (w *SignalHistoryWriter) GetHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]SignalHistoryRow, error) {
+	if limit <= 0 || limit > 10000 {
+		limit = 1000
+	}
+	query := `SELECT vehicle_id, signal, value_num, value_str, value_bool, created_at
+	          FROM signal_history
+	          WHERE vehicle_id = $1 AND signal = $2 AND created_at BETWEEN $3 AND $4
+	          ORDER BY created_at ASC
+	          LIMIT $5`
+	rows, err := w.db.Pool.Query(ctx, query, vehicleID, signalName, from, to, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []SignalHistoryRow
+	for rows.Next() {
+		var r SignalHistoryRow
+		if err := rows.Scan(&r.VehicleID, &r.Signal, &r.ValueNum, &r.ValueStr, &r.ValueBool, &r.CreatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
+// GetGlobalStats returns total signal count and date range for a vehicle.
+func (w *SignalHistoryWriter) GetGlobalStats(ctx context.Context, vehicleID int64) (int64, *time.Time, *time.Time, error) {
+	var count int64
+	var oldest, newest *time.Time
+	err := w.db.Pool.QueryRow(ctx,
+		`SELECT COUNT(*), MIN(created_at), MAX(created_at)
+		 FROM signal_history WHERE vehicle_id = $1`, vehicleID).Scan(&count, &oldest, &newest)
+	return count, oldest, newest, err
+}
+
 // SignalHistoryEntry is a single row from signal_history for API responses.
 type SignalHistoryEntry struct {
 	Signal    string   `json:"signal"`

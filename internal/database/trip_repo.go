@@ -163,7 +163,7 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 
 	created := 0
 	for _, mk := range missing {
-		if _, err := r.upsertMonthTrip(ctx, mk.vehicleID, mk.monthStart, false); err != nil {
+		if _, err := r.UpsertMonthTrip(ctx, mk.vehicleID, mk.monthStart, false); err != nil {
 			return created, err
 		}
 		created++
@@ -178,7 +178,7 @@ func (r *TripRepo) GenerateMonthlyTrips(ctx context.Context) (int, error) {
 		return created, fmt.Errorf("current month vehicles: %w", err)
 	}
 	for _, vid := range curMonthVehicles {
-		if _, err := r.upsertMonthTrip(ctx, vid, currentMonth, true); err != nil {
+		if _, err := r.UpsertMonthTrip(ctx, vid, currentMonth, true); err != nil {
 			return created, fmt.Errorf("upsert current month: %w", err)
 		}
 		created++
@@ -209,9 +209,9 @@ func (r *TripRepo) vehiclesWithDrivesInMonth(ctx context.Context, monthStart tim
 	return ids, rows.Err()
 }
 
-// upsertMonthTrip creates or updates a trip summary for a given vehicle/month.
+// UpsertMonthTrip creates or updates a trip summary for a given vehicle/month.
 // For in-progress months, it updates the existing trip with fresh aggregates.
-func (r *TripRepo) upsertMonthTrip(ctx context.Context, vehicleID int64, monthStart time.Time, inProgress bool) (int64, error) {
+func (r *TripRepo) UpsertMonthTrip(ctx context.Context, vehicleID int64, monthStart time.Time, inProgress bool) (int64, error) {
 	monthEnd := monthStart.AddDate(0, 1, 0)
 	name := monthStart.Format("Jan 2006") + " Summary"
 	if inProgress {

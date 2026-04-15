@@ -27,6 +27,14 @@ import (
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+
+	// New hexagonal architecture packages
+	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
+	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 )
 
 // RouterOptions holds optional parameters for NewRouter.
@@ -68,7 +76,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(PrometheusMiddleware) // HTTP request metrics (duration, count, size)
 	r.Use(chimw.Compress(5))
 
-	// CORS — use explicit origins in production. The wildcard is kept for
+	// CORS ╬ô├ç├╢ use explicit origins in production. The wildcard is kept for
 	// development convenience but paired with AllowCredentials=false to comply
 	// with the Fetch spec. Set CORS_ORIGINS env var for production.
 	corsOrigins := []string{"*"}
@@ -90,7 +98,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(SecurityHeadersMiddleware)
 
-	// Request body size limit (1MB) — prevents DoS via large payloads
+	// Request body size limit (1MB) ╬ô├ç├╢ prevents DoS via large payloads
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			req.Body = http.MaxBytesReader(w, req.Body, 1<<20)
@@ -153,11 +161,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dataRepairHandler := NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
+	batteryCellsHandler := NewBatteryCellsHandler(db)
+	rangeProjectionHandler := NewRangeProjectionHandler(db)
+	drivetrainHealthHandler := NewDrivetrainHealthHandler(db)
+	maintenanceHandler := NewMaintenanceHandler(db)
+	periodStatsHandler := NewPeriodStatsHandler(db)
+	energyFlowHandler := NewEnergyFlowHandler(db)
+	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	} else {
-		// Reusing handler from main — wire the eventHub created by the router
+		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)
 	}
 	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
@@ -209,18 +224,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
 				r.Get("/energy", energyHandler.Stats)
+				r.Get("/energy/flow", energyFlowHandler.Get)
 				r.Get("/battery", batteryHandler.Report)
+				r.Get("/battery/cells", batteryCellsHandler.GetByVehicle)
+				r.Get("/battery/projected-range", rangeProjectionHandler.GetByVehicle)
+				r.Get("/weekly-digest", weeklyDigestHandler.Get)
 			})
 		})
 
 		// Drives
 		r.Route("/drives", func(r chi.Router) {
 			r.Get("/", driveHandler.ListByVehicle)
+			r.Get("/stats", driveHandler.Stats)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)
 				r.Get("/telemetry", driveHandler.TelemetryReadings)
 			})
+		})
+
+		// Drivetrain Health
+		r.Get("/drivetrain/health", drivetrainHealthHandler.Get)
+
+		// Maintenance
+		r.Route("/maintenance", func(r chi.Router) {
+			r.Get("/", maintenanceHandler.List)
+			r.Get("/records", maintenanceHandler.Records)
 		})
 
 		// Charging
@@ -282,11 +311,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/sleep", sleepHandler.GetSleepAnalytics)
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
+		r.Get("/analytics/battery-health", batteryDegradationHandler.Health)
 		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
 		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
 		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
 		r.Get("/analytics/route-efficiency", routeEfficiencyHandler.List)
 		r.Get("/analytics/route-efficiency/detail", routeEfficiencyHandler.Detail)
+		r.Get("/analytics/battery-cells", batteryCellsHandler.Get)
+		r.Get("/analytics/energy", energyHandler.AnalyticsStats)
+		r.Get("/analytics/range-projection", rangeProjectionHandler.Get)
+		r.Get("/analytics/period-stats", periodStatsHandler.Get)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {
@@ -474,11 +508,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			}
 			// SSE with authentik JWT validation + ForwardAuth header fallback
 			r.With(AuthentikSSEAuth(cfg.Auth.AuthentikURL, cfg.Auth.AuthentikHMACKey)).Get("/events", SSEHandler(eventHub))
-			// Token endpoint (behind ForwardAuth — returns JWT to frontend)
+			// Token endpoint (behind ForwardAuth ╬ô├ç├╢ returns JWT to frontend)
 			r.Get("/sse-token", SSETokenHandler())
 		} else {
 			// No auth on SSE (development)
 			r.Get("/events", SSEHandler(eventHub))
+			// Return empty token in dev mode so frontend doesn't get 404
+			r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
+				writeJSON(w, http.StatusOK, map[string]string{"token": ""})
+			})
 		}
 
 		// System endpoints
@@ -641,14 +679,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
-		// Signal History (MongoDB-backed per-signal log — legacy, optional)
-		if telemetryHandler != nil && telemetryHandler.signalLogRepo != nil {
-			signalHandler := NewSignalHandler(telemetryHandler.signalLogRepo)
-			r.Route("/signals/{vehicleID}", func(r chi.Router) {
-				r.Get("/available", signalHandler.AvailableSignals)
-				r.Get("/stats", signalHandler.Stats)
+		// Signal routes
+		r.Route("/signals/{vehicleID}", func(r chi.Router) {
+			// Live state from in-memory SignalStore (always available)
+			if telemetryHandler != nil {
 				r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
-					// Live state from in-memory SignalStore
 					store := telemetryHandler.GetSignalStore()
 					if store == nil {
 						writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "signal store not initialized"})
@@ -676,9 +711,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 						"signals":    signals,
 					})
 				})
+			}
+
+			// Signal History (Postgres primary, MongoDB optional fallback)
+			if telemetryHandler != nil {
+				var mongoRepo *database.SignalLogRepo
+				if telemetryHandler.signalLogRepo != nil {
+					mongoRepo = telemetryHandler.signalLogRepo
+				}
+				signalHandler := NewSignalHandler(mongoRepo)
+				if db != nil {
+					signalHandler.WithDB(db)
+				}
+				if telemetryHandler.signalHistoryWriter != nil {
+					signalHandler.WithSignalHistory(telemetryHandler.signalHistoryWriter)
+				}
+				r.Get("/available", signalHandler.AvailableSignals)
+				r.Get("/stats", signalHandler.Stats)
 				r.Get("/{signalName}/history", signalHandler.History)
-			})
-		}
+			} else {
+				// No telemetry handler at all — register with DB-only fallbacks
+				signalHandler := NewSignalHandler(nil)
+				if db != nil {
+					signalHandler.WithDB(db)
+				}
+				r.Get("/available", signalHandler.AvailableSignals)
+				r.Get("/stats", signalHandler.Stats)
+				r.Get("/{signalName}/history", signalHandler.History)
+			}
+		})
 
 		// Data Repair
 		r.Route("/data-repair", func(r chi.Router) {
@@ -728,6 +789,43 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/{jobID}", exportJobHandler.GetJob)
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
 		})
+
+		// ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç
+		// NEW ARCHITECTURE: Hexagonal handlers (adapters ╬ô├Ñ├å services ╬ô├Ñ├å v1 handlers)
+		// These complement the existing routes above.
+		// ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç
+		pool := db.Pool
+
+		// Adapters
+		vehicleRepo := pgadapter.NewVehicleRepository(pool)
+		chargingRepo := pgadapter.NewChargingSessionRepository(pool)
+		tripRepo := pgadapter.NewTripRepository(pool)
+		exportRepo := pgadapter.NewExportJobRepository(pool)
+		fsmHistoryRepo := pgadapter.NewFSMHistoryRepository(pool)
+
+		// Services
+		vehicleSvc := vehiclesvc.New(vehicleRepo, fsmHistoryRepo, nil)
+		chargingSvc := chargingsvc.New(chargingRepo, fsmHistoryRepo)
+		exportSvc := exportsvc.New(exportRepo, fsmHistoryRepo, nil)
+		dashboardSvc := dashboardsvc.New(vehicleRepo, chargingRepo, tripRepo)
+
+		// Handlers
+		v1VehicleHandler := v1handlers.NewVehicleHandler(vehicleSvc)
+		v1ChargingHandler := v1handlers.NewChargingHandler(chargingSvc)
+		v1ExportHandler := v1handlers.NewExportHandler(exportSvc)
+		v1DashboardHandler := v1handlers.NewDashboardHandler(dashboardSvc)
+		v1UserHandler := v1handlers.NewUserHandler()
+
+		// Register new routes (paths that DON'T exist in the legacy router above)
+		v1DashboardHandler.Register(r)    // /dashboard/stats ╬ô├ç├╢ NEW
+		v1ChargingHandler.Register(r)     // /charging-sessions ╬ô├ç├╢ NEW (old uses /charging)
+		v1ExportHandler.Register(r)       // /exports ╬ô├ç├╢ NEW (old uses /export/jobs)
+		v1UserHandler.Register(r)         // /users/me ╬ô├ç├╢ NEW
+		// NOTE: /vehicles conflicts with legacy vehicleHandler above; skip new vehicle handler.
+
+		// Suppress unused warnings
+		_ = vehicleSvc
+		_ = v1VehicleHandler
 	})
 
 	// Tesla public key (.well-known path required by Tesla Fleet API)
@@ -770,7 +868,7 @@ func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
 			return
 		}
 
-		// Don't intercept API paths — let them 404 naturally
+		// Don't intercept API paths ╬ô├ç├╢ let them 404 naturally
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
@@ -783,7 +881,7 @@ func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
 			return
 		}
 
-		// SPA fallback — serve index.html for client-side routing
+		// SPA fallback ╬ô├ç├╢ serve index.html for client-side routing
 		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
 	}
 }

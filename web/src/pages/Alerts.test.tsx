@@ -78,7 +78,7 @@ vi.mock('../hooks/useSettings', () => ({
   }),
 }))
 
-vi.mock('../components/Toast', () => ({
+vi.mock('../components/feedback/Toast', () => ({
   useToast: () => ({
     toast: vi.fn(),
     success: vi.fn(),
@@ -89,7 +89,7 @@ vi.mock('../components/Toast', () => ({
   }),
 }))
 
-vi.mock('../components/Widgets', () => ({
+vi.mock('../components/data-display/Widgets', () => ({
   RadialGauge: ({ label }: { label: string }) => <div data-testid={`gauge-${label}`}>{label}</div>,
   AnimatedNumber: ({ value }: { value: number }) => <span>{value}</span>,
 }))
@@ -109,7 +109,7 @@ vi.mock('recharts', () => ({
 }))
 
 // Mock Charts component used by Alerts
-vi.mock('../components/Charts', () => ({
+vi.mock('../components/charts/Charts', () => ({
   ChartTooltip: () => null,
 }))
 

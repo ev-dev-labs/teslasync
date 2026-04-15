@@ -29,6 +29,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+
+	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
 )
 
 func main() {
@@ -400,7 +402,8 @@ func main() {
 	// Gas price worker — polls EIA API for US average gasoline price
 	var gasPriceWorker *worker.GasPriceWorker
 	if cfg.GasPrice.APIKey != "" {
-		gasPriceWorker = worker.NewGasPriceWorker(db, cfg.GasPrice)
+		eiaAdapter := gasprices.NewEIAAdapter(cfg.GasPrice.APIKey)
+		gasPriceWorker = worker.NewGasPriceWorker(db, cfg.GasPrice, eiaAdapter)
 		resilience.SafeGoLoop(ctx, "gas-price-worker", func(loopCtx context.Context) {
 			gasPriceWorker.Start(loopCtx)
 		})

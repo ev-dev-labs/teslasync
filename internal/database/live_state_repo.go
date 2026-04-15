@@ -10,13 +10,13 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 )
 
-// LiveStateRepo manages the vehicle_live_state table — one row per vehicle
+// LiveStateRepo manages the vehicle_live_state table ╬ô├ç├╢ one row per vehicle
 // with always-complete signal state, updated via UPSERT.
 type LiveStateRepo struct {
 	db *DB
 }
 
-// varchar columns in vehicle_live_state — values must be written as strings
+// varchar columns in vehicle_live_state ╬ô├ç├╢ values must be written as strings
 var isVarcharCol = map[string]bool{
 	"gear": true, "charge_state": true, "detailed_charge_state": true, "charging_cable_type": true,
 	"door_state": true, "fd_window": true, "fp_window": true, "rd_window": true, "rp_window": true,
@@ -38,6 +38,7 @@ var isVarcharCol = map[string]bool{
 	"setting_temperature_unit": true, "setting_tire_pressure_unit": true,
 	"speed_limit_warning": true, "supercharger_session_trip_planner": true,
 	"tonneau_position": true, "tonneau_tent_mode": true, "tpms_hard_warnings": true, "tpms_soft_warnings": true,
+	"speed_limit_mode": true, "emergency_lane_departure_avoidance": true, "defrost_mode": true,
 }
 
 // timestamptz columns in vehicle_live_state
@@ -129,6 +130,10 @@ var signalToColumn = map[string]string{
 	"TpmsPressureFr": "tire_pressure_fr",
 	"TpmsPressureRl": "tire_pressure_rl",
 	"TpmsPressureRr": "tire_pressure_rr",
+	"TpmsFl":         "tire_pressure_fl",
+	"TpmsFr":         "tire_pressure_fr",
+	"TpmsRl":         "tire_pressure_rl",
+	"TpmsRr":         "tire_pressure_rr",
 
 	// Vehicle Info
 	"VehicleName":   "vehicle_name",
@@ -335,6 +340,31 @@ var signalToColumn = map[string]string{
 	"TonneauTentMode":          "tonneau_tent_mode",
 }
 
+// normalizeSignalValue unwraps wrapped signal values and converts types.
+// Fleet Telemetry occasionally wraps values in {"value": X, "timestamp": "..."}
+// objects (Bug 4), or sends {"invalid": true} markers.
+// Returns the unwrapped value and whether it should be used.
+func normalizeSignalValue(v interface{}) (interface{}, bool) {
+	if v == nil {
+		return nil, false
+	}
+	m, isMap := v.(map[string]interface{})
+	if !isMap {
+		return v, true
+	}
+	// Skip explicit invalid markers
+	if inv, has := m["invalid"]; has {
+		if b, isBool := inv.(bool); isBool && b {
+			return nil, false
+		}
+	}
+	// Unwrap {"value": X, ...} envelopes
+	if inner, ok := m["value"]; ok {
+		return inner, true
+	}
+	return nil, false
+}
+
 // FlushLiveState upserts the vehicle's live state into vehicle_live_state.
 // Only columns with non-nil values in the signals map are updated.
 func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
@@ -368,31 +398,39 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		}
 	}
 
-	// Handle HvacPower (enum → boolean)
-	if v, ok := signals["HvacPower"]; ok {
-		cols = append(cols, "hvac_power")
-		vals = append(vals, enums.ParseHvacPower(fmt.Sprintf("%v", v)))
+	// Handle HvacPower (enum ╬ô├Ñ├å boolean)
+	if raw, ok := signals["HvacPower"]; ok {
+		if v, use := normalizeSignalValue(raw); use {
+			cols = append(cols, "hvac_power")
+			vals = append(vals, enums.ParseHvacPower(fmt.Sprintf("%v", v)))
+		}
 	}
 
-	// Handle HvacFanSpeed
-	if v, ok := signals["HvacFanSpeed"]; ok {
-		cols = append(cols, "fan_speed")
-		vals = append(vals, v)
+	// Handle HvacFanSpeed ╬ô├Ñ├å fan_speed (special column name differs from signalToColumn)
+	if raw, ok := signals["HvacFanSpeed"]; ok {
+		if v, use := normalizeSignalValue(raw); use {
+			cols = append(cols, "fan_speed")
+			vals = append(vals, v)
+		}
 	}
 
-	// Handle SentryMode (enum → boolean)
-	if v, ok := signals["SentryMode"]; ok {
-		cols = append(cols, "sentry_mode")
-		vals = append(vals, enums.ParseEnumBool(v))
+	// Handle SentryMode (enum ╬ô├Ñ├å boolean)
+	if raw, ok := signals["SentryMode"]; ok {
+		if v, use := normalizeSignalValue(raw); use {
+			cols = append(cols, "sentry_mode")
+			vals = append(vals, enums.ParseEnumBool(v))
+		}
 	}
 
 	// Handle Locked (may be bool or string)
-	if v, ok := signals["Locked"]; ok {
-		cols = append(cols, "locked")
-		vals = append(vals, enums.ParseEnumBool(v))
+	if raw, ok := signals["Locked"]; ok {
+		if v, use := normalizeSignalValue(raw); use {
+			cols = append(cols, "locked")
+			vals = append(vals, enums.ParseEnumBool(v))
+		}
 	}
 
-	// Handle ACChargingPower → charger_power (fallback if DCChargingPower not present)
+	// Handle ACChargingPower ╬ô├Ñ├å charger_power (fallback if DCChargingPower not present)
 	// Both map to same column, so only write one to avoid "column specified more than once"
 	if _, hasDC := signals["DCChargingPower"]; !hasDC {
 		if v, ok := signals["ACChargingPower"]; ok {
@@ -404,7 +442,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 	}
 
 	// Boolean columns that come as enum strings from Fleet Telemetry.
-	// These need conversion: any non-Off/empty/false string → true.
+	// These need conversion: any non-Off/empty/false string ╬ô├Ñ├å true.
 	enumBoolSignals := map[string]string{
 		"GuestModeEnabled":        "guest_mode",
 		"HomelinkNearby":          "homelink_nearby",
@@ -451,16 +489,22 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		"WiperHeatEnabled":                    "wiper_heat_enabled",
 	}
 	for sig, col := range enumBoolSignals {
-		if v, ok := signals[sig]; ok && v != nil {
+		if raw, ok := signals[sig]; ok && raw != nil {
+			v, use := normalizeSignalValue(raw)
+			if !use {
+				continue
+			}
 			cols = append(cols, col)
 			vals = append(vals, enums.ParseEnumBool(v))
 		}
 	}
 
-	// Set of columns already handled above — skip in generic loop
+	// Set of columns already handled above ╬ô├ç├╢ skip in generic loop.
+	// hvac_fan_speed is here because HvacFanSpeed is handled specially above (╬ô├Ñ├å fan_speed).
 	skipCols := map[string]bool{
 		"latitude": true, "longitude": true, "locked": true, "sentry_mode": true,
-		"hvac_power": true, "fan_speed": true, "power": true, "charger_power": true,
+		"hvac_power": true, "fan_speed": true, "hvac_fan_speed": true,
+		"power": true, "charger_power": true,
 	}
 	for _, col := range enumBoolSignals {
 		skipCols[col] = true
@@ -471,44 +515,59 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		if skipCols[colName] {
 			continue
 		}
-		v, ok := signals[signalName]
-		if !ok || v == nil {
+		raw, ok := signals[signalName]
+		if !ok || raw == nil {
 			continue
 		}
-		// Skip invalid markers
-		if m, isMap := v.(map[string]interface{}); isMap {
-			if inv, has := m["invalid"]; has {
-				if b, isBool := inv.(bool); isBool && b {
+
+		// Normalize: unwrap map envelopes, skip invalid markers (Bug 4)
+		v, use := normalizeSignalValue(raw)
+		if !use || v == nil {
+			continue
+		}
+
+		// Convert TPMS timestamp floats to time.Time (Bug 3)
+		if isTimestampCol[colName] {
+			switch tv := v.(type) {
+			case float64:
+				if tv > 1e9 {
+					sec := int64(tv)
+					nsec := int64((tv - float64(sec)) * 1e9)
+					v = time.Unix(sec, nsec).UTC()
+				} else {
+					continue // not a valid epoch
+				}
+			case string:
+				// Try parsing as RFC3339 or unix timestamp string
+				if t, err := time.Parse(time.RFC3339, tv); err == nil {
+					v = t
+				} else {
 					continue
 				}
+			case time.Time:
+				// Already correct type
+			default:
+				continue
 			}
 		}
+
 		// Coerce value to match the Postgres column type.
 		// Tesla sends booleans for some varchar columns (e.g., Setting24HourTime)
 		// and floats for some timestamptz columns (e.g., TpmsLastSeenPressureTime*).
 		switch v.(type) {
 		case float64, int, int64, bool, string, time.Time:
-			// OK — these are base types pgx can handle
+			// OK ╬ô├ç├╢ these are base types pgx can handle
 		default:
 			continue
 		}
-		// For varchar columns, ensure we write a string (not bool/float)
+
+		// For varchar columns, ensure we write a string (not bool/float).
+		// pgx cannot encode bool→varchar or float→varchar directly.
 		if isVarcharCol[colName] {
 			vals = append(vals, fmt.Sprintf("%v", v))
 		} else if isTimestampCol[colName] {
-			// Convert Unix timestamp (float64) to time.Time for timestamptz columns
-			switch tv := v.(type) {
-			case float64:
-				if tv > 1e9 { // looks like Unix seconds
-					vals = append(vals, time.Unix(int64(tv), 0).UTC())
-				} else {
-					continue // skip non-timestamp float
-				}
-			case time.Time:
-				vals = append(vals, tv)
-			default:
-				continue
-			}
+			// Already converted to time.Time above — just append
+			vals = append(vals, v)
 		} else {
 			vals = append(vals, v)
 		}
@@ -701,6 +760,14 @@ func (r *LiveStateRepo) LoadLiveState(ctx context.Context, vehicleID int64) (map
 }
 
 func toFloat64(v interface{}) (float64, bool) {
+	// Unwrap {"value": X} envelopes
+	if m, ok := v.(map[string]interface{}); ok {
+		if inner, has := m["value"]; has {
+			v = inner
+		} else {
+			return 0, false
+		}
+	}
 	switch val := v.(type) {
 	case float64:
 		return val, true

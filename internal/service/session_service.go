@@ -68,6 +68,7 @@ type apiDriveState struct {
 type SessionService struct {
 	driveRepo  *database.DriveRepo
 	chargeRepo *database.ChargingRepo
+	tripRepo   *database.TripRepo
 	eventBus   *events.Bus
 
 	mu               sync.Mutex
@@ -81,6 +82,7 @@ func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 	return &SessionService{
 		driveRepo:        database.NewDriveRepo(db),
 		chargeRepo:       database.NewChargingRepo(db),
+		tripRepo:         database.NewTripRepo(db),
 		eventBus:         eventBus,
 		activeDrives:     make(map[int64]int64),
 		activeDriveState: make(map[int64]*apiDriveState),
@@ -442,6 +444,17 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 		Float64("distance", distance).Float64("duration_min", duration).
 		Float64("maxSpeed", maxSpeed).Int("endBattery", endBattery).
 		Msg("drive ended (API polling)")
+
+	// Update monthly trip summary for this drive's month
+	go func() {
+		tripCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		monthStart := time.Date(state.StartTime.Year(), state.StartTime.Month(), 1, 0, 0, 0, 0, time.UTC)
+		if _, err := s.tripRepo.UpsertMonthTrip(tripCtx, vehicle.ID, monthStart, true); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("api-polling: failed to update monthly trip")
+		}
+	}()
+
 	if s.eventBus != nil {
 		s.eventBus.Publish(events.Event{Type: events.DriveEnded, VehicleID: vehicle.ID, VIN: vehicle.VIN,
 			Data: map[string]interface{}{"drive_id": driveID, "battery_level": endBattery,

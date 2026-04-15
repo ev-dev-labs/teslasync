@@ -1,0 +1,79 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # ── Go toolchain ──────────────────────────────────────────
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Install Go dependencies
+        run: go mod download
+
+      - name: Install gopls (Go LSP)
+        run: go install golang.org/x/tools/gopls@latest
+
+      - name: Verify Go build
+        run: go build ./...
+
+      # ── Node.js toolchain ─────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci --legacy-peer-deps
+
+      - name: Install TypeScript LSP
+        run: npm install -g typescript-language-server typescript
+
+      - name: Verify TypeScript build
+        working-directory: web
+        run: npx tsc --noEmit
+
+      # ── Linters ───────────────────────────────────────────────
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
+      # ── Environment summary ───────────────────────────────────
+      - name: Environment summary
+        run: |
+          echo "=== Go ==="
+          go version
+          gopls version
+          echo "=== Node ==="
+          node --version
+          npm --version
+          echo "=== Tools ==="
+          which gopls
+          which typescript-language-server
+          echo "=== Project ==="
+          echo "Go modules: $(go list ./... | wc -l) packages"
+          echo "Frontend deps: $(ls web/node_modules | wc -l) packages"
+          echo "Migrations: $(ls migrations/*.up.sql | wc -l) migrations"

@@ -55,6 +55,28 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 
 # Test artifacts
+test-results/
 coverage.out
 coverage.html
+*.test.log
+
+PROMPT_COMMANDS.txt
+
+# Copilot session state (per-user, not committed)
+.copilot/
+
+# Temporary files from audits/scripts
+/tmp/old_*.tsx
+/tmp/old_*.go
+
+# Signal exports (large data files)
+scripts/signals-export.json
+scripts/signal-dump/
+
 web/svg-compare.html
+# Refactoring tracking docs (generated, not committed)
+REFACTORING_PROGRESS.md
+REFACTORING_PROMPTS.md
+REFACTORING_REPORT.md
+.github/prompts/
+scripts/check-loc.js

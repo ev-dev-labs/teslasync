@@ -2,11 +2,7 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,22 +10,14 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
 
-// eiaResponse models the JSON returned by the EIA petroleum price API.
-type eiaResponse struct {
-	Response struct {
-		Data []struct {
-			Value  string `json:"value"`
-			Period string `json:"period"`
-		} `json:"data"`
-	} `json:"response"`
-}
-
-// GasPriceWorker polls the EIA API for the latest US average gasoline price.
+// GasPriceWorker polls an external price provider for the latest gasoline price.
 type GasPriceWorker struct {
-	db  *database.DB
-	cfg config.GasPriceConfig
+	db       *database.DB
+	cfg      config.GasPriceConfig
+	provider external.GasPriceProvider
 
 	mu           sync.Mutex
 	pollInterval string
@@ -44,10 +32,11 @@ type GasPriceWorker struct {
 }
 
 // NewGasPriceWorker creates a new gas price polling worker.
-func NewGasPriceWorker(db *database.DB, cfg config.GasPriceConfig) *GasPriceWorker {
+func NewGasPriceWorker(db *database.DB, cfg config.GasPriceConfig, provider external.GasPriceProvider) *GasPriceWorker {
 	return &GasPriceWorker{
 		db:           db,
 		cfg:          cfg,
+		provider:     provider,
 		pollInterval: cfg.PollInterval,
 		stopCh:       make(chan struct{}, 1),
 		resumeCh:     make(chan struct{}, 1),
@@ -108,64 +97,20 @@ func (w *GasPriceWorker) Start(ctx context.Context) {
 	}
 }
 
-// Poll fetches the latest gas price from the EIA API and records it.
+// Poll fetches the latest gas price via the configured provider and records it.
 func (w *GasPriceWorker) Poll(ctx context.Context) {
-	if w.cfg.APIKey == "" {
-		log.Warn().Msg("gas price poll skipped: no EIA API key configured")
+	if w.provider == nil {
+		log.Warn().Msg("gas price poll skipped: no provider configured")
 		return
 	}
 
-	url := fmt.Sprintf(
-		"https://api.eia.gov/v2/petroleum/pri/gnd/data/?api_key=%s&frequency=weekly&data[]=value&facets[product][]=EPMR&facets[duoarea][]=NUS&sort[0][column]=period&sort[0][direction]=desc&length=1",
-		w.cfg.APIKey,
-	)
-
-	reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, url, nil)
+	result, err := w.provider.GetCurrentPrice(ctx, "US")
 	if err != nil {
-		log.Error().Err(err).Msg("gas price poll: failed to create request")
+		log.Error().Err(err).Msg("gas price poll: provider fetch failed")
 		return
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Error().Err(err).Msg("gas price poll: request failed")
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		log.Error().Int("status", resp.StatusCode).Str("body", string(body)).Msg("gas price poll: non-200 response from EIA")
-		return
-	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-	if err != nil {
-		log.Error().Err(err).Msg("gas price poll: failed to read response body")
-		return
-	}
-
-	var eia eiaResponse
-	if err := json.Unmarshal(body, &eia); err != nil {
-		log.Error().Err(err).Msg("gas price poll: failed to parse EIA response")
-		return
-	}
-
-	if len(eia.Response.Data) == 0 {
-		log.Warn().Msg("gas price poll: EIA returned empty data")
-		return
-	}
-
-	priceStr := eia.Response.Data[0].Value
-	period := eia.Response.Data[0].Period
-	price, err := strconv.ParseFloat(priceStr, 64)
-	if err != nil {
-		log.Error().Err(err).Str("value", priceStr).Msg("gas price poll: failed to parse price value")
-		return
-	}
+	price := result.PricePerKWh
 
 	// Record in gas_price_history (close current period, insert new)
 	if err := w.recordPrice(ctx, price); err != nil {
@@ -189,7 +134,8 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 
 	log.Info().
 		Float64("price", price).
-		Str("period", period).
+		Str("region", result.Region).
+		Str("currency", result.Currency).
 		Msg("gas price poll: updated successfully")
 }
 
