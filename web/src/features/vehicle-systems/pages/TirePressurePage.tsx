@@ -218,13 +218,13 @@ export default function TirePressurePage() {
       ...TIRE_POSITIONS.map(
         (pos): Column<TirePressureReading> => ({
           key: pos,
-          header: TIRE_LABELS[pos],
+          header: `${TIRE_LABELS[pos]} (${pressureUnit})`,
           render: (row: TirePressureReading) => {
             const val = getTirePressureValue(row, pos);
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(convertPressure(val ?? 0))} {pressureUnit}
+                {fmtNumber(convertPressure(val ?? 0))}
               </Badge>
             );
           },
