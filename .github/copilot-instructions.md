@@ -90,6 +90,39 @@ React SPA (Vite 5) ──▶ Nginx reverse proxy ──▶ Go API Server (:8080)
 
 **Services:** teslasync (:8080), web (:3000), notification-worker (:8081), export-worker (:8082), postgres, redis, mosquitto, grafana, fleet-telemetry (optional)
 
+## Language Servers (LSP) — Use for Code Intelligence
+
+When available, prefer LSP tools over grep/text matching for:
+- Finding references, callers, implementations
+- Checking type compatibility and interface conformance
+- Navigating imports and symbol definitions
+
+### Go (gopls)
+```bash
+# Already installed at C:\Users\AtulM\go\bin\gopls.exe
+# Start: gopls serve -listen=:37374
+# Use for: finding all callers of a function, checking interface implementations,
+# tracing signal flow (ProcessSignals → trackStateTransition → commitStateTransition)
+```
+
+### TypeScript (typescript-language-server)
+```bash
+# Installed globally: typescript-language-server --stdio
+# Use for: resolving @/ alias paths, checking API response types,
+# validating camelCaseKeys transform compatibility, finding unused exports
+```
+
+### When to Use LSP vs Grep
+- **LSP**: "Who calls FlushDriveTelemetry?", "What implements Flusher interface?", "What type does this function return?"
+- **Grep**: "Find all files with inline styles", "Count occurrences of empty={}", "Search for string literals"
+
+### API Response Type Validation
+Many bugs in this project stem from frontend TypeScript interfaces not matching Go API response shapes, especially after `camelCaseKeys()` transforms snake_case to camelCase. When modifying an API endpoint or frontend page:
+1. Check the Go struct's JSON tags (`json:"field_name"`)
+2. After `camelCaseKeys`, both `field_name` AND `fieldName` exist in the response
+3. Frontend can access either — prefer snake_case (original) for consistency
+4. Run `npx tsc --noEmit` to catch compile-time type errors
+
 ## ⛔ PROHIBITED PATTERNS — These will be rejected in code review
 
 ```
