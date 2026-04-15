@@ -47,8 +47,11 @@ type TelemetryHandler struct {
 	eventHub       *EventHub
 	sessionTracker *TelemetrySessionTracker
 	alertEvaluator *TelemetryAlertEvaluator
-	staleTimeout   time.Duration
-	signalStore    *signal.Store
+	staleTimeout          time.Duration
+	snapshotWriteInterval time.Duration
+	cleanupInterval       time.Duration
+	staleSessionTimeout   time.Duration
+	signalStore           *signal.Store
 
 	// Cancellable context for background goroutines ╬ô├ç├╢ cancelled on Shutdown()
 	bgCtx    context.Context
@@ -156,7 +159,10 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		eventHub:       hub,
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client { if mc != nil { return mc.Underlying() }; return nil }()),
-		staleTimeout:   staleTimeout,
+		staleTimeout:          staleTimeout,
+		snapshotWriteInterval: 10 * time.Second,
+		cleanupInterval:       2 * time.Minute,
+		staleSessionTimeout:   5 * time.Minute,
 		bgCtx:          bgCtx,
 		bgCancel:       bgCancel,
 		streamingState:     make(map[string]*VehicleStreamState),
@@ -170,6 +176,20 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 // SetRawTelemetryRepo enables raw telemetry signal capture to MongoDB.
 func (h *TelemetryHandler) SetRawTelemetryRepo(repo *database.RawTelemetryRepo) {
 	h.rawTelemetryRepo = repo
+}
+
+// SetTimings overrides default telemetry processing intervals.
+// Zero values are ignored (defaults are kept).
+func (h *TelemetryHandler) SetTimings(snapshotWrite, cleanup, staleSession time.Duration) {
+	if snapshotWrite > 0 {
+		h.snapshotWriteInterval = snapshotWrite
+	}
+	if cleanup > 0 {
+		h.cleanupInterval = cleanup
+	}
+	if staleSession > 0 {
+		h.staleSessionTimeout = staleSession
+	}
 }
 
 // SetSignalStore sets the in-memory signal store for real-time state tracking.
@@ -230,11 +250,11 @@ func (h *TelemetryHandler) IsCaptureEnabled() bool {
 func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 	// Run cleanup immediately on startup to close orphaned DB sessions
 	if h.sessionTracker != nil {
-		h.sessionTracker.CleanupStaleSessions(ctx, 10*time.Minute)
+		h.sessionTracker.CleanupStaleSessions(ctx, 2*h.staleSessionTimeout)
 	}
 
 	safeGo("telemetry-cleanup", func() {
-		ticker := time.NewTicker(2 * time.Minute)
+		ticker := time.NewTicker(h.cleanupInterval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -244,7 +264,7 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 				h.cleanupStaleEntries()
 				// Close drive/charge sessions with no signals for 5+ minutes
 				if h.sessionTracker != nil {
-					h.sessionTracker.CleanupStaleSessions(ctx, 5*time.Minute)
+					h.sessionTracker.CleanupStaleSessions(ctx, h.staleSessionTimeout)
 				}
 			}
 		}
@@ -536,7 +556,7 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 	// Signals are accumulated across batches within the throttle window so that
 	// individual MQTT messages don't cause data loss.
 	if vehicleID > 0 {
-		const snapshotWriteInterval = 10 * time.Second
+		snapshotWriteInterval := h.snapshotWriteInterval
 
 		// Accumulate signals from this batch
 		h.accumulatedSignalsMu.Lock()

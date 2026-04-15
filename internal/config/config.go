@@ -60,13 +60,16 @@ type MongoDBConfig struct {
 }
 
 type FleetTelemetryConfig struct {
-	Enabled              bool
-	Host                 string
-	Port                 int
-	TopicBase            string        // MQTT topic base for fleet-telemetry (e.g., "telemetry")
-	BatchMs              int           // Signal batching window in milliseconds
-	StaleTimeout         time.Duration // How long without signals before a vehicle is considered stale (fallback to API polling)
-	FallbackPollInterval time.Duration // How often to poll non-streaming vehicles when telemetry is enabled
+	Enabled               bool
+	Host                  string
+	Port                  int
+	TopicBase             string        // MQTT topic base for fleet-telemetry (e.g., "telemetry")
+	BatchMs               int           // Signal batching window in milliseconds
+	StaleTimeout          time.Duration // How long without signals before a vehicle is considered stale (fallback to API polling)
+	FallbackPollInterval  time.Duration // How often to poll non-streaming vehicles when telemetry is enabled
+	SnapshotWriteInterval time.Duration // How often to flush accumulated signals to DB per vehicle (default 10s)
+	CleanupInterval       time.Duration // How often to run stale-session cleanup (default 2m)
+	StaleSessionTimeout   time.Duration // Close drive/charge sessions idle longer than this (default 5m)
 }
 
 type DatabaseConfig struct {
@@ -219,13 +222,16 @@ func Load() (*Config, error) {
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{
-			Enabled:              envBool("FLEET_TELEMETRY_ENABLED", false),
-			Host:                 envStr("FLEET_TELEMETRY_HOST", ""),
-			Port:                 envInt("FLEET_TELEMETRY_PORT", 4443),
-			TopicBase:            envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
-			BatchMs:              envInt("FLEET_TELEMETRY_BATCH_MS", 100),
-			StaleTimeout:         envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 15*time.Minute),
-			FallbackPollInterval: envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 5*time.Minute),
+			Enabled:               envBool("FLEET_TELEMETRY_ENABLED", false),
+			Host:                  envStr("FLEET_TELEMETRY_HOST", ""),
+			Port:                  envInt("FLEET_TELEMETRY_PORT", 4443),
+			TopicBase:             envStr("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
+			BatchMs:               envInt("FLEET_TELEMETRY_BATCH_MS", 100),
+			StaleTimeout:          envDuration("FLEET_TELEMETRY_STALE_TIMEOUT", 15*time.Minute),
+			FallbackPollInterval:  envDuration("FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL", 5*time.Minute),
+			SnapshotWriteInterval: envDuration("FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL", 10*time.Second),
+			CleanupInterval:       envDuration("FLEET_TELEMETRY_CLEANUP_INTERVAL", 2*time.Minute),
+			StaleSessionTimeout:   envDuration("FLEET_TELEMETRY_STALE_SESSION_TIMEOUT", 5*time.Minute),
 		},
 
 		MongoDB: MongoDBConfig{
