@@ -754,10 +754,10 @@ type ExportJob struct {
 	VehicleID    *int64     `json:"vehicle_id,omitempty"`
 	StartDate    *time.Time `json:"start_date,omitempty"`
 	EndDate      *time.Time `json:"end_date,omitempty"`
-	FileName     string     `json:"file_name,omitempty"`
+	FileName     *string    `json:"file_name,omitempty"`
 	FileSize     int64      `json:"file_size"`
 	RecordCount  int        `json:"record_count"`
-	ErrorMessage string     `json:"error_message,omitempty"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	CompletedAt  *time.Time `json:"completed_at,omitempty"`
@@ -769,10 +769,10 @@ type ExportJobSummary struct {
 	Type         string     `json:"type"`
 	Format       string     `json:"format"`
 	Status       string     `json:"status"`
-	FileName     string     `json:"file_name,omitempty"`
+	FileName     *string    `json:"file_name,omitempty"`
 	FileSize     int64      `json:"file_size"`
 	RecordCount  int        `json:"record_count"`
-	ErrorMessage string     `json:"error_message,omitempty"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	CompletedAt  *time.Time `json:"completed_at,omitempty"`
 }
