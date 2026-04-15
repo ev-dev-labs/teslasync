@@ -1305,9 +1305,24 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
+	// Build streaming_vehicles map keyed by VIN (frontend expects this shape)
+	streamingMap := make(map[string]interface{}, len(vehicles))
+	var totalSignals int64
+	var avgRate float64
+	for _, v := range vehicles {
+		streamingMap[v.VIN] = v
+		totalSignals += v.SignalCount
+		avgRate += v.SignalsPerSec
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"connected": connected,
-		"vehicles":  vehicles,
+		"enabled":              true,
+		"connected":            connected,
+		"mode":                 "Fleet Telemetry",
+		"streaming_vehicles":   streamingMap,
+		"vehicles":             vehicles,
+		"total_signals":        totalSignals,
+		"avg_signals_per_sec":  avgRate,
 	})
 }
 
