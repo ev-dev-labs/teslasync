@@ -36,7 +36,7 @@ spec:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}
             - secretRef:
-                name: {{ include "teslasync.fullname" . }}
+                name: {{ include "teslasync.secretName" . }}
           resources:
             requests:
               cpu: 50m

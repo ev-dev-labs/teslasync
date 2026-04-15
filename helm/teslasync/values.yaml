@@ -245,6 +245,22 @@ encryption:
   key: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Secrets
+#
+# By default the chart creates a K8s Secret with credentials from values.
+# Set secrets.existingSecret to the name of a pre-created Secret to skip
+# chart-managed secret creation. Useful for GitOps setups with SOPS,
+# External Secrets Operator, or Sealed Secrets.
+#
+# The existing Secret must contain these keys:
+#   TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, DATABASE_PASS,
+#   REDIS_PASSWORD, ENCRYPTION_KEY, GAS_PRICE_API_KEY,
+#   AUTHENTIK_HMAC_KEY, AZURE_MAPS_API_KEY, MONGODB_URI
+# ─────────────────────────────────────────────────────────────────────────────
+secrets:
+  existingSecret: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Fleet Telemetry (Tesla streaming data)
 #
 # Deploys Tesla's official Fleet Telemetry server (bundled) alongside TeslaSync.

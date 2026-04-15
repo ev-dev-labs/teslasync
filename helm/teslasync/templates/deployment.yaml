@@ -50,7 +50,7 @@ spec:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}
             - secretRef:
-                name: {{ include "teslasync.fullname" . }}
+                name: {{ include "teslasync.secretName" . }}
           startupProbe:
             httpGet:
               path: /healthz

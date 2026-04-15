@@ -59,6 +59,20 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{/* ── Secret name helper ─────────────────────────────────────────────── */}}
+{{/*
+Name of the K8s Secret that holds sensitive env vars.
+When secrets.existingSecret is set, the chart skips secret creation
+and references the user-supplied secret name.
+*/}}
+{{- define "teslasync.secretName" -}}
+{{- if .Values.secrets.existingSecret }}
+{{- .Values.secrets.existingSecret }}
+{{- else }}
+{{- include "teslasync.fullname" . }}
+{{- end }}
+{{- end }}
+
 {{/* ── imagePullSecrets helper ─────────────────────────────────────────── */}}
 
 {{- define "teslasync.imagePullSecrets" -}}
