@@ -323,6 +323,15 @@ fleetTelemetry:
   # Set to "0" to disable fallback polling entirely.
   fallbackPollInterval: "5m"
 
+  # -- How often to flush accumulated signals to snapshot tables per vehicle.
+  snapshotWriteInterval: "1s"
+
+  # -- How often to run stale-session cleanup.
+  cleanupInterval: "2m"
+
+  # -- Close drive/charge sessions idle longer than this.
+  staleSessionTimeout: "5m"
+
   # -- Traefik IngressRouteTCP for TLS passthrough.
   # Required because vehicles connect with mTLS (client certificates).
   # Traefik must forward raw TCP — it must NOT terminate TLS.

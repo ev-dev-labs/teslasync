@@ -37,6 +37,9 @@ data:
   FLEET_TELEMETRY_BATCH_MS: {{ .Values.fleetTelemetry.batchMs | default 100 | quote }}
   FLEET_TELEMETRY_STALE_TIMEOUT: {{ .Values.fleetTelemetry.staleTimeout | default "15m" | quote }}
   FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL: {{ .Values.fleetTelemetry.fallbackPollInterval | default "5m" | quote }}
+  FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL: {{ .Values.fleetTelemetry.snapshotWriteInterval | default "1s" | quote }}
+  FLEET_TELEMETRY_CLEANUP_INTERVAL: {{ .Values.fleetTelemetry.cleanupInterval | default "2m" | quote }}
+  FLEET_TELEMETRY_STALE_SESSION_TIMEOUT: {{ .Values.fleetTelemetry.staleSessionTimeout | default "5m" | quote }}
   {{- end }}
   {{- if or .Values.mongodb.enabled .Values.mongodb.external.uri }}
   MONGODB_ENABLED: "true"
