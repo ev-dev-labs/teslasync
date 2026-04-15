@@ -1318,7 +1318,10 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"enabled":              true,
 		"connected":            connected,
-		"mode":                 "Fleet Telemetry",
+		"mode":                 "fleet_telemetry",
+		"endpoint":             "/api/v1/telemetry",
+		"protocol":             "MQTT + HTTP",
+		"mqtt_publishing":      connected,
 		"streaming_vehicles":   streamingMap,
 		"vehicles":             vehicles,
 		"total_signals":        totalSignals,
