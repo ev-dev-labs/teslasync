@@ -33,11 +33,6 @@ import 'leaflet/dist/leaflet.css';
 interface LocationSnapshot {
   id: number;
   vehicle_id: number;
-  latitude: number;
-  longitude: number;
-  heading: number;
-  speed: number;
-  odometer: number;
   located_at_home: boolean;
   located_at_work: boolean;
   locatedAtHome?: boolean;
@@ -48,14 +43,23 @@ interface LocationSnapshot {
   created_at: string;
 }
 
+interface PositionRecord {
+  id: number;
+  vehicle_id: number;
+  latitude: number;
+  longitude: number;
+  speed: number | null;
+  power: number | null;
+  heading: number | null;
+  elevation: number | null;
+  odometer: number;
+  battery_level: number;
+  created_at: string;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-
-function headingToCardinal(deg: number): string {
-  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-  return dirs[Math.round(deg / 45) % 8] ?? '—';
-}
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -91,12 +95,12 @@ export default function MapOverviewPage() {
     data: latest,
     isLoading: latestLoading,
     error: latestError,
-  } = useQuery<LocationSnapshot>({
-    queryKey: ['location-latest', selectedId],
+  } = useQuery<PositionRecord>({
+    queryKey: ['position-latest', selectedId],
     queryFn: () =>
-      request<LocationSnapshot>(
-        `/location-snapshots/latest?vehicle_id=${selectedId}`,
-      ),
+      request<PositionRecord[]>(
+        `/vehicles/${selectedId}/positions?limit=1`,
+      ).then((arr) => arr?.[0] ?? null),
     enabled: selectedId !== '',
     refetchInterval: 15_000,
   });
@@ -105,11 +109,22 @@ export default function MapOverviewPage() {
     data: history,
     isLoading: historyLoading,
     error: historyError,
-  } = useQuery<LocationSnapshot[]>({
-    queryKey: ['location-history', selectedId],
+  } = useQuery<PositionRecord[]>({
+    queryKey: ['position-history', selectedId],
     queryFn: () =>
-      request<LocationSnapshot[]>(
-        `/location-snapshots?vehicle_id=${selectedId}&limit=50`,
+      request<PositionRecord[]>(
+        `/vehicles/${selectedId}/positions?limit=50`,
+      ),
+    enabled: selectedId !== '',
+  });
+
+  const {
+    data: locationDetails,
+  } = useQuery<LocationSnapshot>({
+    queryKey: ['location-latest', selectedId],
+    queryFn: () =>
+      request<LocationSnapshot>(
+        `/location-snapshots/latest?vehicle_id=${selectedId}`,
       ),
     enabled: selectedId !== '',
   });
@@ -133,7 +148,7 @@ export default function MapOverviewPage() {
   const vehicle = vehicles?.find((v) => String(v.id) === selectedId);
 
   /* ---- history table columns ---- */
-  const historyColumns: Column<LocationSnapshot>[] = useMemo(
+  const historyColumns: Column<PositionRecord>[] = useMemo(
     () => [
       {
         key: 'time',
@@ -149,7 +164,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colLat', 'Lat'),
         render: (r) => (
           <span className="font-mono text-xs">
-            {typeof r.latitude === 'number' && typeof r.longitude === 'number' && (r.latitude !== 0 || r.longitude !== 0) ? fmtNumber(r.latitude, 5) : '—'}
+            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.latitude, 5) : '—'}
           </span>
         ),
       },
@@ -158,7 +173,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colLon', 'Lon'),
         render: (r) => (
           <span className="font-mono text-xs">
-            {typeof r.latitude === 'number' && typeof r.longitude === 'number' && (r.latitude !== 0 || r.longitude !== 0) ? fmtNumber(r.longitude, 5) : '—'}
+            {r.latitude !== 0 || r.longitude !== 0 ? fmtNumber(r.longitude, 5) : '—'}
           </span>
         ),
       },
@@ -167,7 +182,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colSpeed', 'Speed'),
         render: (r) => (
           <span className="text-xs">
-            {fmtNumber(r.speed, 1)} {t('mapOverview.speedUnit', 'mph')}
+            {fmtNumber(r.speed ?? 0, 1)} {t('mapOverview.speedUnit', 'mph')}
           </span>
         ),
       },
@@ -176,7 +191,7 @@ export default function MapOverviewPage() {
         header: t('mapOverview.colHeading', 'Heading'),
         render: (r) => (
           <span className="text-xs">
-            {fmtNumber(r.heading, 0)}° {headingToCardinal(r.heading)}
+            {r.elevation != null ? `${fmtNumber(r.elevation, 0)} m` : '—'}
           </span>
         ),
       },
@@ -265,13 +280,13 @@ export default function MapOverviewPage() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <MetricCard
               label={t('mapOverview.currentSpeed', 'Current Speed')}
-              value={`${fmtNumber(latest.speed, 1)} ${t('mapOverview.speedUnit', 'mph')}`}
+              value={`${fmtNumber(latest.speed ?? 0, 1)} ${t('mapOverview.speedUnit', 'mph')}`}
               icon={<Gauge className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
               label={t('mapOverview.heading', 'Heading')}
-              value={`${fmtNumber(latest.heading, 0)}° ${headingToCardinal(latest.heading)}`}
+              value={latest.elevation != null ? `${fmtNumber(latest.elevation, 0)} m` : '—'}
               icon={<Compass className="h-4 w-4" />}
               color="purple"
             />
@@ -297,27 +312,27 @@ export default function MapOverviewPage() {
           <span className="mb-4 block text-sm font-semibold text-[var(--text-primary)]">
             {t('mapOverview.locationDetails', 'Location Details')}
           </span>
-          {latest ? (
+          {(latest || locationDetails) ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Home */}
               <div className="flex items-center gap-3">
                 <Home
                   className={cn(
                     'h-5 w-5',
-                    (latest?.located_at_home ?? latest?.locatedAtHome) ? 'text-emerald-400' : 'text-gray-500',
+                    (locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.atHome', 'At Home')}
                 </span>
                 <Badge
-                  variant={(latest?.located_at_home ?? latest?.locatedAtHome) === true ? 'success' : 'neutral'}
+                  variant={(locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) === true ? 'success' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {(latest?.located_at_home ?? latest?.locatedAtHome) === true
+                  {(locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) === true
                     ? t('mapOverview.yes', 'Yes')
-                    : (latest?.located_at_home ?? latest?.locatedAtHome) === false
+                    : (locationDetails?.located_at_home ?? locationDetails?.locatedAtHome) === false
                       ? t('mapOverview.no', 'No')
                       : t('mapOverview.unknown', 'Unknown')}
                 </Badge>
@@ -328,20 +343,20 @@ export default function MapOverviewPage() {
                 <Briefcase
                   className={cn(
                     'h-5 w-5',
-                    (latest?.located_at_work ?? latest?.locatedAtWork) ? 'text-emerald-400' : 'text-gray-500',
+                    (locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) ? 'text-emerald-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.atWork', 'At Work')}
                 </span>
                 <Badge
-                  variant={(latest?.located_at_work ?? latest?.locatedAtWork) === true ? 'success' : 'neutral'}
+                  variant={(locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) === true ? 'success' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {(latest?.located_at_work ?? latest?.locatedAtWork) === true
+                  {(locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) === true
                     ? t('mapOverview.yes', 'Yes')
-                    : (latest?.located_at_work ?? latest?.locatedAtWork) === false
+                    : (locationDetails?.located_at_work ?? locationDetails?.locatedAtWork) === false
                       ? t('mapOverview.no', 'No')
                       : t('mapOverview.unknown', 'Unknown')}
                 </Badge>
@@ -352,18 +367,18 @@ export default function MapOverviewPage() {
                 <Link2
                   className={cn(
                     'h-5 w-5',
-                    latest.homelink_nearby ? 'text-cyan-400' : 'text-gray-500',
+                    locationDetails?.homelink_nearby ? 'text-cyan-400' : 'text-gray-500',
                   )}
                 />
                 <span className="flex-1 text-sm text-[var(--text-secondary)]">
                   {t('mapOverview.homelinkNearby', 'HomeLink Nearby')}
                 </span>
                 <Badge
-                  variant={latest.homelink_nearby ? 'info' : 'neutral'}
+                  variant={locationDetails?.homelink_nearby ? 'info' : 'neutral'}
                   size="sm"
                   dot
                 >
-                  {latest.homelink_nearby
+                  {locationDetails?.homelink_nearby
                     ? t('mapOverview.yes', 'Yes')
                     : t('mapOverview.no', 'No')}
                 </Badge>
@@ -376,7 +391,7 @@ export default function MapOverviewPage() {
                   {t('mapOverview.odometer', 'Odometer')}
                 </span>
                 <span className="text-sm font-semibold text-[var(--text-primary)]">
-                  {fmtNumber(latest.odometer, 1)}{' '}
+                  {latest ? fmtNumber(latest.odometer, 1) : '—'}{' '}
                   {t('mapOverview.distanceUnit', 'mi')}
                 </span>
               </div>
@@ -436,7 +451,7 @@ export default function MapOverviewPage() {
           {historyLoading ? (
             <Skeleton lines={6} height={16} className="mt-2" />
           ) : history && history.length > 0 ? (
-            <DataTable<LocationSnapshot>
+            <DataTable<PositionRecord>
               columns={historyColumns}
               data={history}
               keyExtractor={(r) => r.id}
