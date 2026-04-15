@@ -59,9 +59,9 @@ export function useCostBreakdown(vehicleId: string) {
 export function useTimeline(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.timeline(vehicleId),
-    queryFn: () => request<TimelineEvent[]>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`),
+    queryFn: () => request<{ transitions: TimelineEvent[] }>(`/vehicle-states/timeline?vehicle_id=${vehicleId}`),
     enabled: !!vehicleId,
-    select: safeArray,
+    select: (data) => safeArray(data?.transitions),
   });
 }
 
