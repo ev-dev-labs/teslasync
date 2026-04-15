@@ -17,6 +17,10 @@ func NewPositionRepo(db *DB) *PositionRepo {
 }
 
 func (r *PositionRepo) Insert(ctx context.Context, p *models.Position) error {
+	// Skip positions with zero lat/lon — these are telemetry noise, not real locations.
+	if p.Latitude == 0 && p.Longitude == 0 {
+		return nil
+	}
 	query := `
 		INSERT INTO positions (vehicle_id, latitude, longitude, speed, power, heading, elevation,
 			odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
@@ -35,7 +39,9 @@ func (r *PositionRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
 		fan_status, is_climate_on, created_at
-		FROM positions WHERE vehicle_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		FROM positions WHERE vehicle_id = $1
+		AND NOT (latitude = 0 AND longitude = 0)
+		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit, offset)
 	if err != nil {
 		return nil, err
@@ -68,6 +74,7 @@ func (r *PositionRepo) GetByTimeRange(ctx context.Context, vehicleID int64, star
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
 		fan_status, is_climate_on, created_at
 		FROM positions WHERE vehicle_id = $1 AND created_at >= $2 AND created_at <= $3
+		AND NOT (latitude = 0 AND longitude = 0)
 		ORDER BY created_at ASC LIMIT 10000`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, start, endTime)
 	if err != nil {
@@ -94,7 +101,9 @@ func (r *PositionRepo) GetLatest(ctx context.Context, vehicleID int64) (*models.
 	query := `SELECT id, vehicle_id, latitude, longitude, speed, power, heading, elevation,
 		odometer, ideal_range, rated_range, battery_level, inside_temp, outside_temp,
 		fan_status, is_climate_on, created_at
-		FROM positions WHERE vehicle_id = $1 ORDER BY created_at DESC LIMIT 1`
+		FROM positions WHERE vehicle_id = $1
+		AND NOT (latitude = 0 AND longitude = 0)
+		ORDER BY created_at DESC LIMIT 1`
 	p := &models.Position{}
 	err := r.db.Pool.QueryRow(ctx, query, vehicleID).Scan(
 		&p.ID, &p.VehicleID, &p.Latitude, &p.Longitude, &p.Speed, &p.Power, &p.Heading,

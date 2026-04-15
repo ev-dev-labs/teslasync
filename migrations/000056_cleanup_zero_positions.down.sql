@@ -1,0 +1,1 @@
+-- No-op: deleted rows cannot be restored.
