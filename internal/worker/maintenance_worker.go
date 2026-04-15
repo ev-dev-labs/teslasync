@@ -50,6 +50,9 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	maintCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 
+	// Refresh materialized views before any data deletion so views reflect latest data
+	refreshMaterializedViews(maintCtx, db)
+
 	// Ensure partitions exist for current and next month
 	if err := ensurePartitions(maintCtx, db); err != nil {
 		log.Error().Err(err).Msg("partition creation failed")
@@ -113,6 +116,25 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		Int64("notif_logs_deleted", notifLogsDeleted).
 		Dur("duration", time.Since(start)).
 		Msg("scheduled maintenance complete")
+}
+
+// refreshMaterializedViews refreshes all materialized views concurrently.
+// Runs before data deletion so views reflect the latest raw data.
+func refreshMaterializedViews(ctx context.Context, db *database.DB) {
+	views := []string{
+		"mv_energy_daily",
+		"mv_position_hourly",
+		"mv_signal_stats",
+	}
+	for _, v := range views {
+		start := time.Now()
+		_, err := db.Pool.Exec(ctx, fmt.Sprintf("REFRESH MATERIALIZED VIEW CONCURRENTLY %s", v))
+		if err != nil {
+			log.Error().Err(err).Str("view", v).Msg("materialized view refresh failed")
+		} else {
+			log.Info().Str("view", v).Dur("duration", time.Since(start)).Msg("materialized view refreshed")
+		}
+	}
 }
 
 // compressOldPositions aggregates positions older than 30 days into hourly

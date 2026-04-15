@@ -254,12 +254,13 @@ type SignalStats struct {
 	Count  int64   `json:"count"`
 }
 
-// Stats returns aggregate stats per signal.
+// Stats returns aggregate stats per signal using the mv_signal_stats materialized view.
 func (w *SignalHistoryWriter) Stats(ctx context.Context, vehicleID int64, signals []string, from, to time.Time) ([]SignalStats, error) {
 	rows, err := w.db.Pool.Query(ctx,
-		`SELECT signal, COALESCE(MIN(value_num), 0), COALESCE(MAX(value_num), 0), COALESCE(AVG(value_num), 0), COUNT(*)
-		 FROM signal_history
-		 WHERE vehicle_id = $1 AND signal = ANY($2) AND created_at BETWEEN $3 AND $4 AND value_num IS NOT NULL
+		`SELECT signal, COALESCE(MIN(min_val), 0), COALESCE(MAX(max_val), 0),
+		        COALESCE(SUM(avg_val * cnt) / NULLIF(SUM(cnt), 0), 0), COALESCE(SUM(cnt), 0)
+		 FROM mv_signal_stats
+		 WHERE vehicle_id = $1 AND signal = ANY($2) AND hour >= $3 AND hour < $4
 		 GROUP BY signal ORDER BY signal`,
 		vehicleID, signals, from, to)
 	if err != nil {

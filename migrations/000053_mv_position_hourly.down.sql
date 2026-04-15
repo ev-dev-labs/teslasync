@@ -1,0 +1,1 @@
+DROP MATERIALIZED VIEW IF EXISTS mv_position_hourly;
