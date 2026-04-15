@@ -6,6 +6,62 @@ All notable changes to TeslaSync are documented here.
 
 ### 🚀 New Features
 
+#### Materialized Views & Fast Analytics
+- **3 materialized views** — `mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats` for sub-second dashboard and analytics queries
+- Maintenance worker automatically refreshes materialized views on schedule
+
+#### Battery Health Generator
+- Daily automated battery snapshot generation from charging telemetry in maintenance worker
+- Historical backfill migration (000057) to generate battery health data from existing charging sessions
+
+#### Alert Studio Enhancements
+- **Search filter** — Search rules by name in Alert Studio rules list
+- **Inline delete** — Delete button with confirmation dialog on each rule row
+- **Alerts pagination** — Client-side pagination (20 per page) on alerts list page
+
+#### Zero-Value Data Filtering
+- Position (0,0) filtering on insert and all query methods + cleanup migration (000056)
+- All-zero tire pressure filtering on insert and query
+
+#### FSM Debugger Improvements
+- Added `since` field showing how long the vehicle has been in its current state
+- Sub-FSM panel now matches actual DB `fsm_type` values (drives/charging)
+
+#### Location Snapshot Backfill
+- Navigation page backfills `current_lat`/`current_lon` from SignalStore cache when snapshot columns are null
+
+### 🐛 Bug Fixes
+- **Trip Replay** — Fixed NaN:NaN duration and missing stats by normalizing snake_case → camelCase field names
+- **Live Map** — Switched from `location-snapshots` API to `positions` API (was showing all-dashes for LAT/LON due to null coordinates)
+- **Navigation page** — Added missing `current_lat`, `current_lon`, `route_last_updated` columns to location snapshot SELECT query
+- **Snapshot repo audit** — Fixed 8 missing columns across tire_pressure (6), media (1), vehicle_config (1) INSERT/SELECT queries
+- **Dashboard charger power** — Formatted with `fmtNumber` (was showing raw float64 values)
+- **Tire pressure page** — Replaced raw i18n keys with friendly labels, moved unit indicator to column headers
+- **Decimal precision** — Enforced global precision setting across all numeric displays
+- **Pressure unit setting** — Added bar/psi display-only conversion for tire pressure
+- **System Status** — Fixed display issues and data rendering
+- **Data Export** — Fixed export job handling
+- **7 API mismatches** — Fixed snake_case/camelCase mismatches across API responses
+- **Signal source-of-truth** — Established `vehicle_live_state` as canonical signal source
+- **Error handling** — Added error boundaries and error handling to 16 frontend pages
+- **Telemetry timeout** — Extracted to configuration for consistent timeout handling
+
+### 🔧 Changed
+- Maintenance worker now refreshes materialized views and generates battery snapshots daily
+- Error handling added to 16 frontend pages with consistent patterns
+- Signal source-of-truth established as `vehicle_live_state` table
+- Telemetry timeout extracted to config
+
+### 🗃️ Database Migrations (040–057)
+- **040–052**: Error handling, API normalization, config extraction, signal source-of-truth, system status fixes, data export fixes, decimal precision, pressure unit setting
+- **053**: Materialized views (`mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats`)
+- **054**: Tire pressure friendly labels and zero-value filtering
+- **055**: Cleanup migration for zero-value positions and tire pressure
+- **056**: Position (0,0) cleanup migration
+- **057**: Battery health snapshot backfill from charging telemetry
+
+### 🚀 New Features
+
 #### CEP Rule Engine & Alert Studio
 - **Complex Event Processing (CEP)** rule engine (`internal/api/rule_engine.go`) with recursive condition tree evaluation
   - Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `changed_to`, `changed_from`, `is_true`, `is_false`

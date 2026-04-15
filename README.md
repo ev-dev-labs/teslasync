@@ -34,7 +34,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 ### Highlights
 
 - **Lightweight** — Go backend with ~30 MB memory footprint and efficient connection pooling
-- **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, Alert Studio, backup & restore, and more
+- **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, Alert Studio, trip replay, backup & restore, and more
 - **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
 - **Real-time SSE streaming** — Singleton connection per browser tab, instant vehicle + alert updates pushed to connected browsers
 - **CEP Rule Engine** — Complex Event Processing with recursive condition trees, temporal sustain, transition detection, cooldown, and 50+ templates
@@ -43,6 +43,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Smart Insights** — Auto-generated data analysis with actionable recommendations
 - **28 Grafana dashboards** — Pre-built dashboards for deep analytics, CEP monitoring, SSE real-time, and infrastructure
 - **230 Tesla fleet telemetry fields** — 100% Tesla Fleet Telemetry Protocol coverage, 229/230 signals persisted in PostgreSQL
+- **57 schema migrations** — Including 3 materialized views (mv_energy_daily, mv_position_hourly, mv_signal_stats) for fast analytics
 - **In-memory SignalStore** — Always-complete vehicle state with nanosecond reads, 30KB RAM per vehicle, pod restart recovery
 - **MongoDB Signal Log** — Every telemetry signal persisted forever with per-signal queryable history
 - **8 Diagnostics Tools** — Live signal monitor, signal explorer, signal diff, gap detector, state machine debugger, MQTT inspector, DB health dashboard, signal log viewer
@@ -77,6 +78,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - 📊 **Weekly Digest** — Auto-generated weekly car summary with highlights, fun facts, week-over-week comparison
 - 🔧 **Maintenance** — Service schedule tracker with odometer-based progress bars, service log, cost estimates
 - 📦 **Data Export** — Export drives, charging, positions in CSV/JSON format with job management
+- 🔁 **Trip Replay** — Animated drive replay with duration, battery, temperature, range, and elevation stats
 - ⚡ **Energy Flow** — Pack voltage/current, cell balance, module temps, BMS status, powershare
 - 🔩 **Drivetrain Health** — Quad-motor thermal monitoring, stator/heatsink/inverter temps
 - 🎵 **Media Player** — Now playing, volume, playback history, source distribution
@@ -99,13 +101,21 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - ⚡ **Signal Explorer** — Chart any of 230 telemetry signals over time with configurable time ranges
 - 🔀 **Signal Diff** — Compare a signal's values across two time ranges side-by-side
 - ⚠️ **Signal Gap Detector** — Identify stale or missing signals with color-coded staleness indicators
-- ⚙️ **State Machine Debugger** — Vehicle state visualization with transition timeline and duration distribution
+- ⚙️ **State Machine Debugger** — Vehicle state visualization with transition timeline, duration distribution, and per-state 'since' field
 - 📡 **MQTT Inspector** — MQTT connection status, throughput chart, and per-vehicle signal breakdown
 - 🗄️ **DB Health Dashboard** — PostgreSQL table sizes, row counts, index stats, and migration status
 
+### 📊 Materialized Views & Analytics (NEW)
+- 📈 **mv_energy_daily** — Daily aggregated energy consumption metrics for fast dashboard queries
+- 🗺️ **mv_position_hourly** — Hourly position summaries for efficient map and route analytics
+- 📡 **mv_signal_stats** — Signal-level statistics for diagnostics and coverage analysis
+- 🔋 **Battery Health Generator** — Daily automated battery snapshot generation from charging telemetry in maintenance worker
+- 🧹 **Zero-Value Filtering** — Positions (0,0) and all-zero tire pressure filtered on insert and query
+- 📄 **Alerts Pagination** — Client-side pagination (20 per page) on alerts list
+
 ### ⚡ CEP Rule Engine & Alert Studio (NEW)
 - 🧠 **Complex Event Processing** — Recursive condition tree evaluation with AND/OR/NOT grouping, 11 operators, temporal `for_seconds` sustain, `changed_to`/`changed_from` transition detection
-- 🎨 **Alert Studio** — Visual rule editor at `/alert-studio` with drag-and-drop condition builder, 50+ pre-built templates across 12 categories
+- 🎨 **Alert Studio** — Visual rule editor at `/alert-studio` with drag-and-drop condition builder, 50+ pre-built templates across 12 categories, search filter, inline delete with confirm
 - 📋 **Signal Catalog** — 230 signal metadata entries with name, category, type, unit, and description for rule building
 - 🔕 **Quiet Hours** — Server-side suppression of non-critical alerts during configured hours; critical alerts always fire
 - 🧪 **Test Notifications** — Fire test alerts with real signal value interpolation (`{{BatteryLevel}}`, `{{VehicleSpeed}}`, etc.) and dispatch to selected channels
@@ -171,7 +181,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **Rate Limiting** — Configurable per-IP rate limiting
 - **Prometheus Metrics** — `/metrics` endpoint for monitoring
 - **Structured Logging** — JSON logs via zerolog
-- **PostgreSQL 17** — Natively partitioned tables for position data, 23 schema migrations, DBTX transaction support for critical paths, [interactive database diagram](https://teslasync-labs.github.io/teslasync/guide/architecture) in docs
+- **PostgreSQL 17** — Natively partitioned tables for position data, 57 schema migrations, 3 materialized views (mv_energy_daily, mv_position_hourly, mv_signal_stats), DBTX transaction support for critical paths, [interactive database diagram](https://teslasync-labs.github.io/teslasync/guide/architecture) in docs
   - `motor_snapshots` — Drivetrain telemetry (torque, RPM, G-forces, pedal position)
   - `climate_snapshots` — HVAC telemetry (temps, fan speed, power, defrost)
   - `security_events` — Security state (locks, sentry, doors, windows)
@@ -192,6 +202,7 @@ TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing d
 - **SSE Singleton** — One EventSource per browser tab shared across all hooks; 11 Prometheus metrics (active clients, events by type, drops, broadcast latency, bandwidth)
 - **Adaptive Polling** — 3s interval when SSE disconnected, 30s when connected (via `useAdaptiveInterval` hook)
 - **7-Channel Notifications**— Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
+- **Maintenance Worker** — Automated materialized view refresh, daily battery health snapshot generation, and cleanup of zero-value data
 - **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
 - **API Suspend Toggle** — Suspend all Tesla Fleet API calls from Settings UI or API when vehicle is in service
 - **Granular Endpoint Controls** — Enable/disable individual Tesla Fleet API endpoints for both automatic polling and on-demand calls (20 independent toggles across polling, on-demand, and commands)
@@ -303,7 +314,7 @@ internal/
 ├── cache/          # Redis caching layer
 ├── config/         # Environment + YAML configuration
 ├── crypto/         # ECDSA key management
-├── database/       # PostgreSQL queries, DBTX transactions, places cache, 39 migrations
+├── database/       # PostgreSQL queries, DBTX transactions, places cache, 57 migrations, 3 materialized views
 ├── events/         # SSE event hub
 ├── export/         # CSV/JSON export engine
 ├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
@@ -410,7 +421,7 @@ make lint              # golangci-lint
 
 - **14 Go test packages** covering API, cache, config, crypto, database, events, export, geocoding, models, MQTT, notification, resilience, Tesla client, and worker
 - **Race condition detection** enabled in CI (`go test -race`)
-- **Migration rollback testing** — all 23 up/down migrations verified in CI
+- **Migration rollback testing** — all 57 up/down migrations verified in CI
 
 ### Frontend
 
