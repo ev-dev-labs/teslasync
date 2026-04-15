@@ -218,6 +218,7 @@ export interface Geofence {
 export interface AppSettings {
   unit_of_length: string
   unit_of_temp: string
+  unit_of_pressure: string
   preferred_range: string
   language: string
   base_cost_per_kwh: number

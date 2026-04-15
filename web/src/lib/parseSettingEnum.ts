@@ -61,3 +61,17 @@ export function isSettingFahrenheit(value: string | undefined | null): boolean {
   const lower = value.toLowerCase()
   return lower.includes('fahr')
 }
+
+/** Detect if setting means PSI */
+export function isSettingPSI(value: string | undefined | null): boolean {
+  if (!value) return false
+  const lower = value.toLowerCase()
+  return lower.includes('psi')
+}
+
+/** Detect if setting means Bar */
+export function isSettingBar(value: string | undefined | null): boolean {
+  if (!value) return false
+  const lower = value.toLowerCase()
+  return lower.includes('bar')
+}

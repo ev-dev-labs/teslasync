@@ -19,6 +19,7 @@ import { FadeIn } from '@/components/motion';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -44,9 +45,10 @@ interface TirePressureReading {
 /*  Constants & helpers                                                */
 /* ------------------------------------------------------------------ */
 
-const NORMAL_MIN = 2.5;
-const NORMAL_MAX = 3.5;
-const GAUGE_MAX = 5.0;
+// Thresholds in Bar (internal unit — DB stores Bar)
+const NORMAL_MIN_BAR = 2.5;
+const NORMAL_MAX_BAR = 3.5;
+const GAUGE_MAX_BAR = 5.0;
 
 const TIRE_POSITIONS = ['fl', 'fr', 'rl', 'rr'] as const;
 type TirePosition = (typeof TIRE_POSITIONS)[number];
@@ -74,16 +76,16 @@ function getTirePressureValue(
 type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
 
 function pressureColor(bar: number): string {
-  if (bar >= NORMAL_MIN && bar <= NORMAL_MAX) return '#10b981';
+  if (bar >= NORMAL_MIN_BAR && bar <= NORMAL_MAX_BAR) return '#10b981';
   if (bar >= 2.0 && bar <= 4.0) return '#f59e0b';
   return '#ef4444';
 }
 
 function pressureStatus(bar: number): PressureStatus {
   if (bar < 2.0) return 'critical';
-  if (bar < NORMAL_MIN) return 'low';
+  if (bar < NORMAL_MIN_BAR) return 'low';
   if (bar > 4.0) return 'critical';
-  if (bar > NORMAL_MAX) return 'high';
+  if (bar > NORMAL_MAX_BAR) return 'high';
   return 'normal';
 }
 
@@ -126,6 +128,9 @@ const LINE_COLORS: Record<TirePosition, string> = {
 export default function TirePressurePage() {
   const { t } = useTranslation();
   usePageTitle(t('tirePressure.title', 'Tire Pressure'));
+  const { convertPressure, pressureUnit } = useSettings();
+
+  const gaugeMax = convertPressure(GAUGE_MAX_BAR);
 
   const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [timeRange, setTimeRange] = useState(200);
@@ -170,7 +175,7 @@ export default function TirePressurePage() {
     const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
     const min = Math.min(...values);
     const warningCount = values.filter(
-      (v) => v < NORMAL_MIN || v > NORMAL_MAX,
+      (v) => v < NORMAL_MIN_BAR || v > NORMAL_MAX_BAR,
     ).length;
     return { avg, min, warningCount };
   }, [latest]);
@@ -179,12 +184,12 @@ export default function TirePressurePage() {
     if (!history?.length) return [];
     return [...history].reverse().map((r) => ({
       time: formatDateTime(r.created_at),
-      fl: r.front_left,
-      fr: r.front_right,
-      rl: r.rear_left,
-      rr: r.rear_right,
+      fl: convertPressure(r.front_left),
+      fr: convertPressure(r.front_right),
+      rl: convertPressure(r.rear_left),
+      rr: convertPressure(r.rear_right),
     }));
-  }, [history]);
+  }, [history, convertPressure]);
 
   /* ---- Table columns ---- */
 
@@ -205,7 +210,7 @@ export default function TirePressurePage() {
             const status = pressureStatus(val);
             return (
               <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(val ?? 0)} {t('tirePressure.unit', 'Bar')}
+                {fmtNumber(convertPressure(val ?? 0))} {pressureUnit}
               </Badge>
             );
           },
@@ -324,10 +329,10 @@ export default function TirePressurePage() {
                     ) : (
                       <>
                         <RadialGauge
-                          value={value}
-                          max={GAUGE_MAX}
+                          value={convertPressure(value)}
+                          max={gaugeMax}
                           label={t(`tirePressure.${pos}`)}
-                          unit={t('tirePressure.unit', 'Bar')}
+                          unit={pressureUnit}
                           color={color}
                           size={120}
                         />
@@ -349,7 +354,7 @@ export default function TirePressurePage() {
             label={t('Avg Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(summaryStats.avg ?? 0)} ${t('tirePressure.unit', 'Bar')}`
+                ? `${fmtNumber(convertPressure(summaryStats.avg ?? 0))} ${pressureUnit}`
                 : '—'
             }
             icon={<Activity className="h-5 w-5" />}
@@ -359,7 +364,7 @@ export default function TirePressurePage() {
             label={t('Min Pressure')}
             value={
               summaryStats
-                ? `${fmtNumber(summaryStats.min ?? 0)} ${t('tirePressure.unit', 'Bar')}`
+                ? `${fmtNumber(convertPressure(summaryStats.min ?? 0))} ${pressureUnit}`
                 : '—'
             }
             icon={<TrendingDown className="h-5 w-5" />}

@@ -317,6 +317,7 @@ type Settings struct {
 	ID              int64   `json:"id" db:"id"`
 	UnitOfLength    string  `json:"unit_of_length" db:"unit_of_length"`       // km, mi
 	UnitOfTemp      string  `json:"unit_of_temp" db:"unit_of_temp"`           // C, F
+	UnitOfPressure  string  `json:"unit_of_pressure" db:"unit_of_pressure"`   // bar, psi
 	PreferredRange  string  `json:"preferred_range" db:"preferred_range"`     // ideal, rated
 	Language        string  `json:"language" db:"language"`
 	BaseCostPerKWh  float64 `json:"base_cost_per_kwh" db:"base_cost_per_kwh"`
