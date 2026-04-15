@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/cn';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
