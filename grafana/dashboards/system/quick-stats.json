@@ -36,10 +36,264 @@
   "panels": [
     {
       "type": "row",
-      "title": "All Time",
+      "title": "Today",
       "gridPos": {
         "x": 0,
         "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 16,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 17,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COALESCE(SUM(distance), 0)::numeric, 1) AS \"Distance\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('day', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Today Distance",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 18,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('day', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Today Drives",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 19,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COALESCE(SUM(energy_used_kwh), 0)::numeric, 1) AS \"Energy (kWh)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('day', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Today Energy",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "min",
+          "decimals": 0
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 20,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COALESCE(SUM(duration_min), 0)::numeric, 0) AS \"Drive Min\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('day', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Today Drive Min",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "type": "row",
+      "title": "All Time",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
         "w": 24,
         "h": 1
       },
@@ -75,7 +329,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "id": 2,
       "options": {
@@ -135,7 +389,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 1
+        "y": 6
       },
       "id": 3,
       "options": {
@@ -195,7 +449,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 1
+        "y": 6
       },
       "id": 4,
       "options": {
@@ -256,7 +510,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 1
+        "y": 6
       },
       "id": 5,
       "options": {
@@ -293,7 +547,7 @@
       "title": "This Month",
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 10,
         "w": 24,
         "h": 1
       },
@@ -329,7 +583,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 6
+        "y": 11
       },
       "id": 7,
       "options": {
@@ -389,7 +643,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 6
+        "y": 11
       },
       "id": 8,
       "options": {
@@ -449,7 +703,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 6
+        "y": 11
       },
       "id": 9,
       "options": {
@@ -510,7 +764,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 6
+        "y": 11
       },
       "id": 10,
       "options": {
@@ -547,7 +801,7 @@
       "title": "This Week",
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 15,
         "w": 24,
         "h": 1
       },
@@ -583,7 +837,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 11
+        "y": 16
       },
       "id": 12,
       "options": {
@@ -643,7 +897,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 11
+        "y": 16
       },
       "id": 13,
       "options": {
@@ -703,7 +957,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 11
+        "y": 16
       },
       "id": 14,
       "options": {
@@ -763,7 +1017,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 11
+        "y": 16
       },
       "id": 15,
       "options": {
@@ -833,7 +1087,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "TeslaSync 📊 Quick Stats",
+  "title": "TeslaSync ðŸ“Š Quick Stats",
   "uid": "teslasync-quick-stats",
   "version": 1,
   "weekStart": ""
