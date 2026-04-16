@@ -1,0 +1,235 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Timeline of detected anomalies from signal telemetry, plotted over time with severity-based coloring. Each point represents a z-score outlier event (>3σ from the mean).",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Each point is a signal reading that deviates >3 standard deviations from its mean. Severity: critical (red) = z>5 or critical-signal z>4, warning (orange) = z>4 or critical-signal z>3, info (blue) = z>3.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Z-Score (σ)",
+            "axisPlacement": "auto",
+            "drawStyle": "points",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Critical"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Warning"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Info"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [
+            "count"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showValues": "auto"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS time,\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Critical\",\n  sh.signal AS \"Signal\",\n  'z_score' AS \"Type\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\n  AND (\n    (sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n     AND ABS(sh.value_num - s.mean) / s.stddev > 4)\n    OR ABS(sh.value_num - s.mean) / s.stddev > 5\n  )\nORDER BY sh.created_at",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS time,\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Warning\",\n  sh.signal AS \"Signal\",\n  'z_score' AS \"Type\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\n  AND NOT (\n    (sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n     AND ABS(sh.value_num - s.mean) / s.stddev > 4)\n    OR ABS(sh.value_num - s.mean) / s.stddev > 5\n  )\n  AND (\n    ABS(sh.value_num - s.mean) / s.stddev > 4\n    OR sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n  )\nORDER BY sh.created_at",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS time,\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Info\",\n  sh.signal AS \"Signal\",\n  'z_score' AS \"Type\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\n  AND ABS(sh.value_num - s.mean) / s.stddev <= 4\n  AND sh.signal NOT IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\nORDER BY sh.created_at",
+          "refId": "C"
+        }
+      ],
+      "title": "Anomaly Timeline",
+      "type": "timeseries",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync 🔍 Anomaly Detection",
+  "uid": "teslasync-anomaly-detection",
+  "version": 1,
+  "weekStart": ""
+}
