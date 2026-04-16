@@ -2536,6 +2536,33 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 			}
 		}
 	}
+	// Carry forward contextual fields from signalStore if not in current batch.
+	// Tesla sends these only on change (e.g., arriving/leaving home), not with every location update.
+	if snap.LocatedAtHome == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtHome"); ok {
+			snap.LocatedAtHome = &v
+		}
+	}
+	if snap.LocatedAtWork == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtWork"); ok {
+			snap.LocatedAtWork = &v
+		}
+	}
+	if snap.LocatedAtFavorite == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtFavorite"); ok {
+			snap.LocatedAtFavorite = &v
+		}
+	}
+	if snap.DestinationName == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetString(vehicleID, "DestinationName"); ok && v != "" {
+			snap.DestinationName = &v
+		}
+	}
+	if snap.GpsState == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetString(vehicleID, "GpsState"); ok && v != "" {
+			snap.GpsState = &v
+		}
+	}
 	if err := h.locationRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store location snapshot")
 	}
