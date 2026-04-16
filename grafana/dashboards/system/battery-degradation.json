@@ -179,6 +179,78 @@
       "title": "Capacity Over Time",
       "type": "timeseries",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Total estimated charge cycles. Computed from cumulative energy charged divided by usable capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 10
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(\n    (SELECT cycle_count FROM battery_snapshots\n     WHERE vehicle_id = ${vehicle_id}\n     ORDER BY created_at DESC LIMIT 1),\n    (SELECT FLOOR(SUM(GREATEST(end_battery_level - start_battery_level, 0)) / 100)\n     FROM charging_sessions\n     WHERE vehicle_id = ${vehicle_id}\n       AND end_battery_level > start_battery_level),\n    0\n  ) AS \"Cycles\"",
+          "refId": "A"
+        }
+      ],
+      "title": "Charge Cycle Count",
+      "type": "stat",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
