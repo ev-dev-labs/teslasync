@@ -1272,60 +1272,41 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 // TelemetryStatus returns the telemetry endpoint configuration and streaming health.
 func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 	streamingVehicles := h.GetStreamingState()
-
-	// Build vehicle list in the format the frontend expects
-	type vehicleTelemetry struct {
-		VIN           string  `json:"vin"`
-		VehicleID     int64   `json:"vehicle_id,omitempty"`
-		State         string  `json:"state,omitempty"`
-		SignalCount   int64   `json:"signal_count"`
-		BatchCount    int64   `json:"batch_count"`
-		SignalsPerSec float64 `json:"signals_per_sec"`
-		LastReceived  string  `json:"last_received,omitempty"`
-	}
-
-	vehicles := make([]vehicleTelemetry, 0, len(streamingVehicles))
-	for _, v := range streamingVehicles {
-		vt := vehicleTelemetry{
-			VIN:           v.VIN,
-			SignalCount:   v.SignalCount,
-			BatchCount:    v.BatchCount,
-			SignalsPerSec: v.SignalsPerSecond,
-		}
-		if !v.LastReceived.IsZero() {
-			vt.LastReceived = v.LastReceived.Format(time.RFC3339)
-		}
-		if v.IsStreaming {
-			vt.State = "streaming"
-		} else {
-			vt.State = "stale"
-		}
-		vehicles = append(vehicles, vt)
-	}
-
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
-	// Build streaming_vehicles map keyed by VIN (frontend expects this shape)
-	streamingMap := make(map[string]interface{}, len(vehicles))
+	// Build streaming_vehicles map keyed by VIN — use VehicleStreamState directly
+	// (its JSON tags already match the frontend TelemetryStatus interface)
+	streamingMap := make(map[string]interface{}, len(streamingVehicles))
 	var totalSignals int64
+	var totalBatches int64
 	var avgRate float64
-	for _, v := range vehicles {
+	var streamingCount int
+	for _, v := range streamingVehicles {
 		streamingMap[v.VIN] = v
 		totalSignals += v.SignalCount
-		avgRate += v.SignalsPerSec
+		totalBatches += v.BatchCount
+		avgRate += v.SignalsPerSecond
+		if v.IsStreaming {
+			streamingCount++
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":              true,
-		"connected":            connected,
-		"mode":                 "fleet_telemetry",
-		"endpoint":             "/api/v1/telemetry",
-		"protocol":             "MQTT + HTTP",
-		"mqtt_publishing":      connected,
-		"streaming_vehicles":   streamingMap,
-		"vehicles":             vehicles,
-		"total_signals":        totalSignals,
-		"avg_signals_per_sec":  avgRate,
+		"enabled":            true,
+		"connected":          connected,
+		"mode":               "fleet_telemetry",
+		"endpoint":           "/api/v1/telemetry",
+		"protocol":           "MQTT + HTTP",
+		"mqtt_publishing":    connected,
+		"streaming_vehicles": streamingMap,
+		"aggregate_stats": map[string]interface{}{
+			"streaming_vehicles":      streamingCount,
+			"total_vehicles_seen":     len(streamingVehicles),
+			"total_signals_received":  totalSignals,
+			"total_batches_processed": totalBatches,
+			"avg_signals_per_second":  fmt.Sprintf("%.2f", avgRate),
+			"stale_timeout":           h.staleTimeout.String(),
+		},
 	})
 }
 
