@@ -14,6 +14,7 @@ import type {
   SpeedProfileData,
   RegenEfficiencyData,
   RouteEfficiencyData,
+  DrivingCoachData,
 } from '@/types/driving';
 
 /** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
@@ -34,6 +35,7 @@ export const drivingKeys = {
   speedProfile: (vehicleId?: string) => ['speed-profile', vehicleId] as const,
   regenEfficiency: (vehicleId?: string) => ['regen-efficiency', vehicleId] as const,
   routeEfficiency: (vehicleId?: string) => ['route-efficiency', vehicleId] as const,
+  coach: (vehicleId?: string, days?: number) => ['driving-coach', vehicleId, days] as const,
 };
 
 export function useDrives(vehicleId?: string) {
@@ -154,5 +156,14 @@ export function useDriveTelemetry(driveId: string) {
     queryFn: () => request<DriveTelemetryPoint[]>(`/drives/${driveId}/telemetry`),
     enabled: !!driveId,
     select: safeArray,
+  });
+}
+
+export function useDrivingCoach(vehicleId?: string, days = 30) {
+  return useQuery({
+    queryKey: drivingKeys.coach(vehicleId, days),
+    queryFn: () => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`),
+    enabled: !!vehicleId,
+    staleTime: 5 * 60_000,
   });
 }
