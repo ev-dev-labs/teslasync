@@ -15,6 +15,7 @@
       }
     ]
   },
+  "description": "Calendar-style heatmap showing number of charging sessions per day. Darker cells indicate more sessions — helps identify charging patterns over months.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -39,112 +40,65 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Bar chart showing how many charging sessions start in each hour of the day (0–23). Reveals preferred charging times.",
+      "description": "Calendar-style heatmap of daily charging sessions. Darker blue = more sessions that day.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "continuous-BlYlRd"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              },
-              {
-                "color": "cyan",
-                "value": 1
-              },
-              {
-                "color": "green",
-                "value": 10
-              }
-            ]
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Sessions"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-BlYlRd"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Hour"
-            },
-            "properties": [
-              {
-                "id": "custom.axisLabel",
-                "value": "Hour of Day"
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  { "type": "value", "options": { "0":  { "text": "12am" } } },
-                  { "type": "value", "options": { "1":  { "text": "1am" } } },
-                  { "type": "value", "options": { "2":  { "text": "2am" } } },
-                  { "type": "value", "options": { "3":  { "text": "3am" } } },
-                  { "type": "value", "options": { "4":  { "text": "4am" } } },
-                  { "type": "value", "options": { "5":  { "text": "5am" } } },
-                  { "type": "value", "options": { "6":  { "text": "6am" } } },
-                  { "type": "value", "options": { "7":  { "text": "7am" } } },
-                  { "type": "value", "options": { "8":  { "text": "8am" } } },
-                  { "type": "value", "options": { "9":  { "text": "9am" } } },
-                  { "type": "value", "options": { "10": { "text": "10am" } } },
-                  { "type": "value", "options": { "11": { "text": "11am" } } },
-                  { "type": "value", "options": { "12": { "text": "12pm" } } },
-                  { "type": "value", "options": { "13": { "text": "1pm" } } },
-                  { "type": "value", "options": { "14": { "text": "2pm" } } },
-                  { "type": "value", "options": { "15": { "text": "3pm" } } },
-                  { "type": "value", "options": { "16": { "text": "4pm" } } },
-                  { "type": "value", "options": { "17": { "text": "5pm" } } },
-                  { "type": "value", "options": { "18": { "text": "6pm" } } },
-                  { "type": "value", "options": { "19": { "text": "7pm" } } },
-                  { "type": "value", "options": { "20": { "text": "8pm" } } },
-                  { "type": "value", "options": { "21": { "text": "9pm" } } },
-                  { "type": "value", "options": { "22": { "text": "10pm" } } },
-                  { "type": "value", "options": { "23": { "text": "11pm" } } }
-                ]
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
-        "y": 8
+        "y": 0
       },
       "id": 1,
       "options": {
-        "orientation": "vertical",
-        "barWidth": 0.8,
-        "groupWidth": 0.7,
-        "showValue": "auto",
-        "stacking": "none",
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+        "calculate": false,
+        "cellGap": 2,
+        "cellRadius": 0,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "min": 0,
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Blues",
+          "steps": 64
         },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "showValue": "never",
         "tooltip": {
           "mode": "single",
-          "sort": "none"
+          "showColorScale": false,
+          "yHistogram": false
         },
-        "xTickLabelRotation": -45,
-        "xTickLabelSpacing": 0
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false
+        }
       },
       "targets": [
         {
@@ -153,15 +107,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  EXTRACT(HOUR FROM start_date) AS \"Hour\",\n  COUNT(*) AS \"Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nGROUP BY EXTRACT(HOUR FROM start_date)\nORDER BY \"Hour\"",
+          "rawSql": "SELECT\n  DATE_TRUNC('day', start_date) AS time,\n  COUNT(*) AS \"Sessions\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nGROUP BY DATE_TRUNC('day', start_date)\nORDER BY time",
           "refId": "A"
         }
       ],
-      "title": "Hourly Charging Distribution",
-      "type": "barchart",
-      "transparent": false
+      "title": "Charging Sessions per Day",
+      "type": "heatmap"
     }
   ],
   "schemaVersion": 39,
@@ -193,13 +146,13 @@
     ]
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-365d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "TeslaSync ⚡ Charging Heatmap",
   "uid": "teslasync-charging-heatmap",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
