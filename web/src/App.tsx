@@ -84,6 +84,9 @@ const SignalGapDetector = lazy(() => import('./features/telemetry/pages/SignalGa
 const LiveSignalMonitor = lazy(() => import('./features/telemetry/pages/LiveSignalMonitorPage'))
 const MQTTInspector = lazy(() => import('./features/telemetry/pages/MQTTInspectorPage'))
 
+// Diagnostics
+const AnomalyDashboard = lazy(() => import('./features/diagnostics/pages/AnomalyDashboardPage'))
+
 // Admin & DevTools
 const Admin = lazy(() => import('./features/admin/pages/AdminPage'))
 const DevTools = lazy(() => import('./features/admin/pages/DevToolsPage'))
@@ -168,6 +171,7 @@ export default function App() {
         <Route path="signal-gaps" element={<SafeRoute name="SignalGapDetector"><SignalGapDetector /></SafeRoute>} />
         <Route path="db-health" element={<SafeRoute name="DBHealthDashboard"><DBHealthDashboard /></SafeRoute>} />
         <Route path="mqtt-inspector" element={<SafeRoute name="MQTTInspector"><MQTTInspector /></SafeRoute>} />
+        <Route path="anomaly-detection" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />
