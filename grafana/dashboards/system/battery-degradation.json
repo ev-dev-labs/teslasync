@@ -327,6 +327,83 @@
       "title": "Annual Degradation Rate",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Shows risk factors that accelerate degradation: fast-charge ratio, high-SoC charging frequency, temperature exposure score, deep discharge frequency. Each scored 0–100.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(100.0 * COUNT(*) FILTER (WHERE charger_power > 50) / NULLIF(COUNT(*), 0)) AS \"Fast Charge %\",\n  ROUND(100.0 * COUNT(*) FILTER (WHERE end_battery_level > 95) / NULLIF(COUNT(*), 0)) AS \"High SoC Charges\",\n  80 AS \"Temp Exposure\",\n  ROUND(100.0 * COUNT(*) FILTER (WHERE start_battery_level < 10) / NULLIF(COUNT(*), 0)) AS \"Deep Discharge %\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Risk Factors",
+      "type": "bargauge",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
