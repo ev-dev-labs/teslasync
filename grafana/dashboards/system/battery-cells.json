@@ -103,6 +103,115 @@
       "title": "Cell Voltage Balance Delta",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Sortable table showing the latest reading for each cell: cell ID, voltage, temperature, and deviation from average. Allows quick identification of outlier cells.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellHeight": "sm",
+            "align": "auto",
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "V Deviation"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -0.05
+                    },
+                    {
+                      "color": "green",
+                      "value": -0.02
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.02
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.05
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Cell",
+            "desc": false
+          }
+        ],
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (\n  SELECT cell_id, voltage, temperature\n  FROM battery_cells\n  WHERE vehicle_id = ${vehicle_id}\n    AND created_at = (\n      SELECT MAX(created_at) FROM battery_cells WHERE vehicle_id = ${vehicle_id}\n    )\n),\nstats AS (\n  SELECT AVG(voltage) AS avg_v, AVG(temperature) AS avg_t FROM latest\n)\nSELECT\n  l.cell_id AS \"Cell\",\n  ROUND(l.voltage::numeric, 4) AS \"Voltage (V)\",\n  ROUND(l.temperature::numeric, 1) AS \"Temp (°C)\",\n  ROUND((l.voltage - s.avg_v)::numeric, 4) AS \"V Deviation\",\n  ROUND((l.temperature - s.avg_t)::numeric, 1) AS \"T Deviation\"\nFROM latest l, stats s\nORDER BY l.cell_id",
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Readings",
+      "type": "table",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
