@@ -189,6 +189,184 @@
       "title": "Anomaly Timeline",
       "type": "timeseries",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Latest anomaly events with full details. Each row is a signal reading that deviates >3σ from its rolling mean within the selected time range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Signal"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severity"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 0,
+                        "text": "Critical"
+                      },
+                      "warning": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "Warning"
+                      },
+                      "info": {
+                        "color": "blue",
+                        "index": 2,
+                        "text": "Info"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Z-Score"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 2
+                    },
+                    {
+                      "color": "red",
+                      "value": 3
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Time",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS \"Time\",\n  sh.signal AS \"Signal\",\n  'z_score_outlier' AS \"Type\",\n  CASE\n    WHEN (sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n         AND ABS(sh.value_num - s.mean) / s.stddev > 4)\n         OR ABS(sh.value_num - s.mean) / s.stddev > 5 THEN 'critical'\n    WHEN ABS(sh.value_num - s.mean) / s.stddev > 4\n         OR sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax') THEN 'warning'\n    ELSE 'info'\n  END AS \"Severity\",\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Z-Score\",\n  sh.signal || ' = ' || ROUND(sh.value_num::numeric, 2) || ' (\u03bc=' || ROUND(s.mean::numeric, 2) || ', \u03c3=' || ROUND(s.stddev::numeric, 2) || ')' AS \"Description\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\nORDER BY sh.created_at DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Anomalies",
+      "type": "table",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
