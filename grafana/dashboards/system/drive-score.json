@@ -1,0 +1,267 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "🔀 Navigate to...",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Sortable table of recent drives with computed efficiency scores, distance, average speed, and letter grade. Score is relative to the best efficiency in the time window (100 = best drive).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "📅 Date"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "📏 Distance"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "🚗 Avg Speed"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "⭐ Score"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 60
+                    },
+                    {
+                      "color": "green",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "🏅 Grade"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "⚡ Efficiency"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "📅 Date",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH raw AS (\n  SELECT\n    d.start_date,\n    d.distance,\n    d.speed_avg,\n    CASE WHEN d.distance > 0.5\n              AND COALESCE(d.soc_start, 0) > COALESCE(d.soc_end, 0)\n      THEN (COALESCE(d.soc_start, 0) - COALESCE(d.soc_end, 0)) * 750.0 / d.distance\n      ELSE NULL\n    END AS eff\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND d.distance > 0.5\n  ORDER BY d.start_date DESC\n  LIMIT 30\n),\nbest AS (\n  SELECT MIN(eff) AS best_eff FROM raw WHERE eff > 0\n)\nSELECT\n  r.start_date AS \"📅 Date\",\n  ROUND(convert_distance(r.distance, '${unit_length}')::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(COALESCE(r.speed_avg, 0), '${unit_length}')::numeric, 1) AS \"🚗 Avg Speed\",\n  COALESCE(\n    CASE WHEN r.eff > 0 AND b.best_eff > 0\n      THEN LEAST(100, ROUND((b.best_eff / r.eff * 100)::numeric))::int\n      ELSE 0\n    END, 0\n  ) AS \"⭐ Score\",\n  CASE\n    WHEN r.eff > 0 AND b.best_eff > 0 THEN\n      CASE\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 90 THEN '\uD83C\uDD70 A'\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 80 THEN '\uD83C\uDD71 B'\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 70 THEN 'C'\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 60 THEN 'D'\n        ELSE 'F'\n      END\n    ELSE 'F'\n  END AS \"🏅 Grade\",\n  CASE WHEN r.eff IS NOT NULL\n    THEN ROUND(convert_efficiency(r.eff, '${unit_length}')::numeric, 0)\n    ELSE NULL\n  END AS \"⚡ Efficiency\"\nFROM raw r\nCROSS JOIN best b\nORDER BY r.start_date DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Drive Scores",
+      "type": "table",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "mi",
+          "value": "mi",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "unit_length",
+        "label": "Distance",
+        "options": [
+          {
+            "text": "km",
+            "value": "km",
+            "selected": false
+          },
+          {
+            "text": "mi",
+            "value": "mi",
+            "selected": true
+          }
+        ],
+        "query": "km,mi",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync ⭐ Drive Scores",
+  "uid": "teslasync-drive-score",
+  "version": 1,
+  "weekStart": ""
+}
