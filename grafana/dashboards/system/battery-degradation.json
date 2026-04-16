@@ -39,6 +39,100 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
+      "description": "Shows battery State of Health (SoH) percentage trending over time. A declining trend signals battery aging.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "SoH %",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "axisSoftMax": 100,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  created_at AS time,\n  health_score AS \"SoH %\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery SoH Trend",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
       "description": "Shows estimated remaining capacity vs original capacity over time. The widening gap indicates battery degradation.",
       "fieldConfig": {
         "defaults": {
@@ -145,7 +239,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 10
       },
       "id": 1,
       "options": {
@@ -218,7 +312,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 10
+        "y": 20
       },
       "id": 2,
       "options": {
@@ -290,7 +384,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 10
+        "y": 20
       },
       "id": 3,
       "options": {
@@ -368,7 +462,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 20
       },
       "id": 4,
       "options": {
