@@ -3,9 +3,12 @@
  *
  * Select up to 5 signals, set a time range, click Explore to visualise
  * signal history with dual-axis support and paginated data tables.
+ *
+ * **Live Mode** — toggle to stream real-time signal values via SSE.
+ * Maintains a rolling 5-minute window, throttled to 2 Hz chart updates.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -25,12 +28,13 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { CHART_COLORS } from '@/lib/colors';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { Activity, BarChart3, Search, Clock, AlertCircle } from 'lucide-react';
+import { Activity, BarChart3, Search, Clock, AlertCircle, Radio } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -76,6 +80,9 @@ const PRESETS = [
   { label: '30d', hours: 720 },
 ];
 
+const LIVE_WINDOW_MS = 5 * 60 * 1000; // 5 minute rolling window
+const LIVE_THROTTLE_MS = 500;          // 2 Hz chart updates
+
 // ─── Page component ──────────────────────────────────────────────────────────
 
 export default function SignalExplorerPage() {
@@ -98,6 +105,83 @@ export default function SignalExplorerPage() {
   // Pagination
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
+
+  // ── Live mode ──
+  const [isLive, setIsLive] = useState(false);
+  const [liveData, setLiveData] = useState<Record<string, unknown>[]>([]);
+  const [liveStats, setLiveStats] = useState<SignalStat[]>([]);
+  const liveBufferRef = useRef<Record<string, unknown>[]>([]);
+  const liveAccRef = useRef<Map<string, number[]>>(new Map());
+  const lastFlushRef = useRef(0);
+  const liveCountRef = useRef(0);
+
+  // SSE handler for live mode — accumulates signal values, throttles chart updates
+  useRealtimeEvents({
+    enabled: isLive && selectedSignals.length > 0,
+    onVehicleUpdate: useCallback((raw: unknown) => {
+      const data = raw as { signals?: Record<string, unknown>; timestamp?: string };
+      if (!data?.signals) return;
+      const now = Date.now();
+      const ts = data.timestamp ?? new Date().toISOString();
+
+      // Build a data point with only selected signals
+      const point: Record<string, unknown> = { timestamp: ts };
+      let hasValue = false;
+      for (const sig of selectedSignals) {
+        const val = data.signals[sig];
+        if (val !== undefined && val !== null) {
+          const num = typeof val === 'number' ? val : typeof val === 'boolean' ? (val ? 1 : 0) : parseFloat(String(val));
+          if (!isNaN(num)) {
+            point[sig] = num;
+            hasValue = true;
+            // Accumulate for stats
+            const arr = liveAccRef.current.get(sig) ?? [];
+            arr.push(num);
+            liveAccRef.current.set(sig, arr);
+          }
+        }
+      }
+      if (!hasValue) return;
+
+      // Add to rolling buffer, trim to window
+      liveBufferRef.current.push(point);
+      liveCountRef.current++;
+      const cutoff = new Date(now - LIVE_WINDOW_MS).toISOString();
+      while (liveBufferRef.current.length > 0 && (liveBufferRef.current[0].timestamp as string) < cutoff) {
+        liveBufferRef.current.shift();
+      }
+
+      // Throttle React state updates
+      if (now - lastFlushRef.current >= LIVE_THROTTLE_MS) {
+        lastFlushRef.current = now;
+        setLiveData([...liveBufferRef.current]);
+        // Compute live stats
+        const stats: SignalStat[] = [];
+        for (const [signal, values] of liveAccRef.current) {
+          if (values.length === 0) continue;
+          stats.push({
+            signal,
+            min: Math.min(...values),
+            max: Math.max(...values),
+            avg: values.reduce((a, b) => a + b, 0) / values.length,
+            count: values.length,
+          });
+        }
+        setLiveStats(stats);
+      }
+    }, [selectedSignals]),
+  });
+
+  // Reset live buffers when toggling off or changing signals
+  useEffect(() => {
+    if (!isLive) {
+      liveBufferRef.current = [];
+      liveAccRef.current = new Map();
+      liveCountRef.current = 0;
+      setLiveData([]);
+      setLiveStats([]);
+    }
+  }, [isLive, selectedSignals]);
 
   const applyPreset = useCallback((hours: number) => {
     const end = new Date();
@@ -192,11 +276,13 @@ export default function SignalExplorerPage() {
   }, [tableRows, page, perPage]);
 
   // Dual Y-axis when scales differ significantly
+  const activeStats = isLive ? liveStats : statsData;
+  const activeChart = isLive ? liveData : chartData;
   const useRightAxis = useMemo(() => {
-    if (!statsData || statsData.length < 2) return false;
-    const ranges = statsData.map(s => Math.abs(s.max - s.min) || 1);
+    if (!activeStats || activeStats.length < 2) return false;
+    const ranges = activeStats.map(s => Math.abs(s.max - s.min) || 1);
     return ranges[0] / ranges[1] > 10 || ranges[1] / ranges[0] > 10;
-  }, [statsData]);
+  }, [activeStats]);
 
   // Signal search filter
   const filteredSignals = useMemo(() => {
@@ -216,7 +302,10 @@ export default function SignalExplorerPage() {
   return (
     <PageContainer
       title={t('Signal Explorer')}
-      subtitle={t('Explore signal history — multi-signal charts, stats & data')}
+      subtitle={isLive
+        ? t('Live streaming — real-time signal values via SSE')
+        : t('Explore signal history — multi-signal charts, stats & data')
+      }
       loading={false}
     >
       {anyError && (
@@ -272,7 +361,8 @@ export default function SignalExplorerPage() {
           </div>
         </div>
 
-        {/* DateTime range */}
+        {/* DateTime range — hidden in live mode */}
+        {!isLive && (
         <div>
           <span className="block text-xs font-medium uppercase tracking-wider mb-2 text-[var(--text-muted)]">
             <Clock className="inline h-3 w-3 mr-1" />{t('Time Range')}
@@ -289,6 +379,7 @@ export default function SignalExplorerPage() {
             <Input label={t('To')} type="datetime-local" value={toStr} onChange={e => setToStr(e.target.value)} />
           </div>
         </div>
+        )}
 
         {/* Query controls */}
         <div className="flex items-end gap-3 justify-end">
@@ -308,21 +399,34 @@ export default function SignalExplorerPage() {
             variant="primary"
             icon={<Activity className="h-4 w-4" />}
             onClick={handleExplore}
-            disabled={!canExplore}
+            disabled={!canExplore || isLive}
             loading={hasData && dataLoading}
           >
             {t('Explore')}
+          </Button>
+          <Button
+            variant={isLive ? 'danger' : 'outline'}
+            icon={<Radio className="h-4 w-4" />}
+            onClick={() => setIsLive(prev => !prev)}
+            disabled={selectedSignals.length === 0}
+          >
+            {isLive ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                {t('Stop Live')}
+              </span>
+            ) : t('Live')}
           </Button>
         </div>
       </GlassPanel>
 
       {/* ── Content ───────────────────────────────────────────────── */}
-      {!hasData ? (
+      {!hasData && !isLive ? (
         <GlassPanel className="p-4">
           <EmptyState
             icon={<Activity className="h-10 w-10" />}
             title={t('Select signals and click Explore')}
-            message={t('Choose up to 5 signals, set a time range, and click Explore to visualise signal history.')}
+            message={t('Choose up to 5 signals, set a time range, and click Explore — or toggle Live for real-time streaming.')}
           />
         </GlassPanel>
       ) : (
@@ -331,20 +435,31 @@ export default function SignalExplorerPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="h-4 w-4 text-neon-cyan" />
-                <span className="section-title">{t('Signal Chart')}</span>
-                {chartData.length > 0 && (
+                {isLive ? (
+                  <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+                ) : (
+                  <BarChart3 className="h-4 w-4 text-neon-cyan" />
+                )}
+                <span className="section-title">
+                  {isLive ? t('Live Signal Stream') : t('Signal Chart')}
+                </span>
+                {isLive ? (
+                  <span className="ml-auto flex items-center gap-1.5 text-[10px] text-red-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                    {fmtInt(liveCountRef.current)} {t('events')} · {fmtInt(liveData.length)} {t('points')}
+                  </span>
+                ) : activeChart.length > 0 && (
                   <span className="ml-auto text-[10px] text-[var(--text-muted)]">
                     {fmtInt((allSignalRows ?? []).length)} {t('points loaded')}
                   </span>
                 )}
               </div>
 
-              {dataLoading ? (
+              {dataLoading && !isLive ? (
                 <Skeleton className="h-[350px] w-full" />
-              ) : chartData.length > 0 ? (
+              ) : activeChart.length > 0 ? (
                 <ResponsiveContainer width="100%" height={350}>
-                  <LineChart data={chartData} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
+                  <LineChart data={activeChart} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis
                       dataKey="timestamp"
@@ -368,10 +483,18 @@ export default function SignalExplorerPage() {
                         name={sig}
                         yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
                         connectNulls
+                        isAnimationActive={!isLive}
                       />
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
+              ) : isLive ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <span className="text-[var(--text-muted)] flex items-center gap-2">
+                    <Radio className="h-4 w-4 animate-pulse text-red-500" />
+                    {t('Waiting for signal data…')}
+                  </span>
+                </div>
               ) : (
                 <div className="h-[350px] flex items-center justify-center">
                   <span className="text-[var(--text-muted)]">{t('No data for this time range')}</span>
@@ -384,14 +507,14 @@ export default function SignalExplorerPage() {
           <FadeIn>
             <GlassPanel className="p-4 sm:p-5">
               <span className="section-title mb-3 block">{t('Stats Summary')}</span>
-              {dataLoading ? (
+              {dataLoading && !isLive ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20" />)}
                 </div>
-              ) : statsData && statsData.length > 0 ? (
+              ) : activeStats && activeStats.length > 0 ? (
                 <DataTable
                   columns={[
-                    { key: 'signal', header: t('Signal'), render: (s) => <span className="font-mono font-semibold" style={{ color: CHART_COLORS[statsData.indexOf(s) % CHART_COLORS.length] }}>{s.signal}</span> },
+                    { key: 'signal', header: t('Signal'), render: (s) => <span className="font-mono font-semibold" style={{ color: CHART_COLORS[activeStats.indexOf(s) % CHART_COLORS.length] }}>{s.signal}</span> },
                     { key: 'min', header: t('Min'), render: (s) => <span className="font-mono text-[var(--text-secondary)]">{fmtNumber(s.min)}</span> },
                     { key: 'max', header: t('Max'), render: (s) => <span className="font-mono text-[var(--text-secondary)]">{fmtNumber(s.max)}</span> },
                     { key: 'avg', header: t('Avg'), render: (s) => <span className="font-mono text-[var(--text-primary)]">{fmtNumber(s.avg)}</span> },
