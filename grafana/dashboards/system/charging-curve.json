@@ -50,7 +50,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Real-time-style view of charge power over time during a session.\nShows the power ramp-up, plateau, and taper-down phases.",
+      "description": "The signature charging curve — plots charge power (kW) against State of Charge (%). Shows how charge rate tapers as the battery fills. Overlays the last 5 sessions for comparison.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -61,29 +61,19 @@
             "axisCenteredZero": false,
             "axisLabel": "",
             "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "lineInterpolation": "smooth",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "pointSize": {
+              "fixed": 3
+            },
+            "show": "points+lines",
             "lineWidth": 2,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
+            "lineStyle": {
+              "fill": "solid"
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
           }
         },
         "overrides": [
@@ -94,35 +84,16 @@
             },
             "properties": [
               {
-                "id": "color",
-                "value": {
-                  "fixedColor": "super-light-blue",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 25
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "left"
+                "id": "unit",
+                "value": "watt"
               },
               {
                 "id": "custom.axisLabel",
                 "value": "Power (kW)"
               },
               {
-                "id": "unit",
-                "value": "watt"
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.gradientMode",
-                "value": "opacity"
+                "id": "custom.axisPlacement",
+                "value": "left"
               }
             ]
           },
@@ -132,25 +103,6 @@
               "options": "SoC %"
             },
             "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.axisLabel",
-                "value": "SoC %"
-              },
               {
                 "id": "unit",
                 "value": "percent"
@@ -162,28 +114,48 @@
               {
                 "id": "max",
                 "value": 100
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "State of Charge (%)"
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 12,
+        "h": 12,
+        "w": 24,
         "x": 0,
-        "y": 4
+        "y": 0
       },
       "id": 1,
       "options": {
+        "dims": {
+          "x": "SoC %"
+        },
+        "series": [],
+        "seriesMapping": "auto",
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
+      "transformations": [
+        {
+          "id": "partitionByValues",
+          "options": {
+            "fields": [
+              "Session"
+            ],
+            "keepFields": false
+          }
+        }
+      ],
       "targets": [
         {
           "datasource": {
@@ -191,14 +163,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  charge_rate_kw AS \"Power (kW)\",\n  battery_level AS \"SoC %\"\nFROM charging_telemetry_readings\nWHERE session_id = ${session_id}\nORDER BY created_at",
+          "rawSql": "SELECT\n  ctr.battery_level AS \"SoC %\",\n  ctr.power_kw AS \"Power (kW)\",\n  TO_CHAR(cs.start_date, 'YYYY-MM-DD HH24:MI') AS \"Session\"\nFROM charge_telemetry_readings ctr\nJOIN charging_sessions cs ON ctr.session_id = cs.id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND ctr.power_kw IS NOT NULL\n  AND ctr.battery_level IS NOT NULL\n  AND cs.id IN (\n    SELECT id FROM charging_sessions\n    WHERE vehicle_id = ${vehicle_id}\n    ORDER BY start_date DESC\n    LIMIT 5\n  )\nORDER BY ctr.battery_level",
           "refId": "A"
         }
       ],
-      "title": "⚡ Charge Power Timeline",
-      "type": "timeseries",
+      "title": "⚡ Charge Rate vs SoC Curve",
+      "type": "xychart",
       "transparent": false
     }
   ],
@@ -227,31 +199,11 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "DS_TESLASYNC_POSTGRESQL"
-        },
-        "definition": "SELECT id AS __value, TO_CHAR(start_date, 'YYYY-MM-DD HH24:MI') AS __text FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_date DESC LIMIT 20",
-        "hide": 0,
-        "includeAll": false,
-        "multi": false,
-        "name": "session_id",
-        "label": "Charging Session",
-        "options": [],
-        "query": "SELECT id AS __value, TO_CHAR(start_date, 'YYYY-MM-DD HH24:MI') AS __text FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY start_date DESC LIMIT 20",
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-7d",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {},
