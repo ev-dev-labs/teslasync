@@ -58,3 +58,45 @@ export interface GasComparisonData {
   annual_savings: number;
   lifetime_savings: number;
 }
+
+/* ── Charging Optimizer ───────────────────────────────────── */
+
+export interface ChargingOptimizerData {
+  current_schedule: OptimizerSchedule;
+  cost_analysis: OptimizerCostAnalysis;
+  battery_health_score: number;
+  recommendations: OptimizerRecommendation[];
+  weekly_heatmap: OptimizerHeatmapEntry[];
+}
+
+export interface OptimizerSchedule {
+  most_common_start_hour: number;
+  most_common_day: string;
+  avg_sessions_per_week: number;
+  home_charging_pct: number;
+  avg_charge_to_pct: number;
+}
+
+export interface OptimizerCostAnalysis {
+  peak_hours: number[];
+  offpeak_hours: number[];
+  peak_cost_per_kwh: number;
+  offpeak_cost_per_kwh: number;
+  sessions_during_peak_pct: number;
+  potential_monthly_savings: number;
+}
+
+export interface OptimizerRecommendation {
+  type: string;
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  detail: string;
+  estimated_savings?: number;
+}
+
+export interface OptimizerHeatmapEntry {
+  day: number;
+  hour: number;
+  sessions: number;
+  avg_cost_per_kwh: number;
+}
