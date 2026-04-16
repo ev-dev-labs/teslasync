@@ -462,10 +462,34 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					return
 				}
 				stats := fh.Stats()
-				writeJSON(w, http.StatusOK, map[string]interface{}{
+				result := map[string]interface{}{
 					"enabled": true,
 					"stats":   stats,
-				})
+				}
+				// If vehicle_id provided, include active sub-FSM state
+				if vidStr := req.URL.Query().Get("vehicle_id"); vidStr != "" {
+					if vid, err := strconv.ParseInt(vidStr, 10, 64); err == nil && vid > 0 {
+						var activeSubs []map[string]interface{}
+						if driveState, dc := fh.ActiveDriveState(vid); dc != nil {
+							activeSubs = append(activeSubs, map[string]interface{}{
+								"type":       "drive",
+								"state":      driveState,
+								"start_time": dc.StartTime,
+								"drive_id":   dc.DriveID,
+							})
+						}
+						if chargeState, cc := fh.ActiveChargeState(vid); cc != nil {
+							activeSubs = append(activeSubs, map[string]interface{}{
+								"type":       "charge",
+								"state":      chargeState,
+								"start_time": cc.StartTime,
+								"session_id": cc.SessionID,
+							})
+						}
+						result["active_subs"] = activeSubs
+					}
+				}
+				writeJSON(w, http.StatusOK, result)
 			})
 			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {
 				fsmTransRepo := database.NewFSMTransitionRepo(db)
@@ -477,11 +501,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				fsmType := req.URL.Query().Get("fsm_type")
 				hours := 1
 				if h := req.URL.Query().Get("hours"); h != "" {
-					if v, err := strconv.Atoi(h); err == nil && v > 0 {
+					if v, err := strconv.Atoi(h); err == nil && v >= 0 {
 						hours = v
 					}
 				}
-				from := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+				var from time.Time
+				if hours == 0 {
+					from = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+				} else {
+					from = time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+				}
 				to := time.Now().UTC()
 				page := 1
 				if p := req.URL.Query().Get("page"); p != "" {

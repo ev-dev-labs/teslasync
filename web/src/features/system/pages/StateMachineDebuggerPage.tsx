@@ -419,7 +419,7 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── Section 4: Sub-FSM Panel (active drive/charge context) ──── */}
       <FadeIn delay={0.15}>
-        <FSMSubFSMPanel transitions={transitions} fsmType={fsmType} />
+        <FSMSubFSMPanel activeSubs={statsData?.active_subs} fsmType={fsmType} />
       </FadeIn>
 
       {/* ──── Section 5: State Diagram ──── */}

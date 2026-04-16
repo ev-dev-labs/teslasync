@@ -13,9 +13,18 @@ export interface FSMTransition {
   created_at: string;
 }
 
+export interface ActiveSubFSM {
+  type: 'drive' | 'charge';
+  state: string;
+  start_time: string;
+  drive_id?: number;
+  session_id?: number;
+}
+
 export interface FSMStats {
   enabled: boolean;
   stats: Record<string, number>;
+  active_subs?: ActiveSubFSM[];
 }
 
 export interface FSMTransitionResponse {
@@ -49,6 +58,9 @@ export const HOURS_OPTIONS = [
   { value: '6', label: 'Last 6 hours' },
   { value: '24', label: 'Last 24 hours' },
   { value: '168', label: 'Last 7 days' },
+  { value: '720', label: 'Last 30 days' },
+  { value: '2160', label: 'Last 90 days' },
+  { value: '0', label: 'All time' },
 ];
 
 /** Known states per FSM type, in typical lifecycle order */

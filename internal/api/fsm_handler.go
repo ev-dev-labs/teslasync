@@ -258,6 +258,18 @@ func (h *FSMHandler) ActiveDrive(vehicleID int64) *drive.Context {
 	return &ctx
 }
 
+// ActiveDriveState returns the state and context of the active drive sub-FSM.
+func (h *FSMHandler) ActiveDriveState(vehicleID int64) (string, *drive.Context) {
+	h.mu.Lock()
+	d, ok := h.drives[vehicleID]
+	h.mu.Unlock()
+	if !ok {
+		return "", nil
+	}
+	ctx := d.Context()
+	return string(d.State()), &ctx
+}
+
 // ActiveCharge returns the charge sub-FSM context for a vehicle, if active.
 func (h *FSMHandler) ActiveCharge(vehicleID int64) *charge.Context {
 	h.mu.Lock()
@@ -268,6 +280,18 @@ func (h *FSMHandler) ActiveCharge(vehicleID int64) *charge.Context {
 	}
 	ctx := c.Context()
 	return &ctx
+}
+
+// ActiveChargeState returns the state and context of the active charge sub-FSM.
+func (h *FSMHandler) ActiveChargeState(vehicleID int64) (string, *charge.Context) {
+	h.mu.Lock()
+	c, ok := h.charges[vehicleID]
+	h.mu.Unlock()
+	if !ok {
+		return "", nil
+	}
+	ctx := c.Context()
+	return string(c.State()), &ctx
 }
 
 // Stats returns the number of active FSM instances.
