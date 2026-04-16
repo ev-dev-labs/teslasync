@@ -251,6 +251,82 @@
       "title": "Charge Cycle Count",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Estimated annual battery degradation rate calculated from the SoH trend slope.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 14,
+          "valueSize": 32
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ROUND(\n    (MAX(health_score) - MIN(health_score)) /\n    NULLIF(EXTRACT(EPOCH FROM MAX(created_at) - MIN(created_at)) / (365.25 * 86400), 0)\n  , 2) AS \"Degradation %/yr\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND health_score IS NOT NULL",
+          "refId": "A"
+        }
+      ],
+      "title": "Annual Degradation Rate",
+      "type": "stat",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
