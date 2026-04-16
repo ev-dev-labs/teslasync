@@ -2228,9 +2228,10 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 
 // trackMedia stores media playback snapshots when relevant signals arrive.
 func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasTitle := signals["MediaNowPlayingTitle"]
-	_, hasArtist := signals["MediaNowPlayingArtist"]
-	if !hasTitle && !hasArtist {
+	// Only create a snapshot when actual track data arrives (non-empty title or artist)
+	title := toString(signals["MediaNowPlayingTitle"])
+	artist := toString(signals["MediaNowPlayingArtist"])
+	if title == "" && artist == "" {
 		return
 	}
 

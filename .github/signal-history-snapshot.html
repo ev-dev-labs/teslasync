@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeslaSync — Production Signal History Snapshot</title>
+<style>
+  :root { --bg: #0a0a0f; --surface: #12121a; --border: rgba(255,255,255,0.06); --text: #e2e8f0; --muted: #64748b; --cyan: #22d3ee; --green: #22c55e; --purple: #a855f7; --amber: #f59e0b; --red: #ef4444; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; padding: 2rem; }
+  .header { margin-bottom: 1.5rem; }
+  .header h1 { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .env { display: inline-block; margin-left: 0.75rem; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; background: rgba(239,68,68,0.15); color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; vertical-align: middle; }
+  .header p { color: var(--muted); font-size: 0.82rem; margin-top: 0.5rem; }
+  .header code { background: rgba(255,255,255,0.05); padding: 0.1rem 0.4rem; border-radius: 0.25rem; font-size: 0.78rem; }
+  .stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.75rem 1.25rem; min-width: 120px; }
+  .stat .label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat .value { font-size: 1.35rem; font-weight: 700; color: var(--cyan); margin-top: 0.15rem; }
+  .stat .value.green { color: var(--green); }
+  .stat .value.purple { color: var(--purple); }
+  .stat .value.amber { color: var(--amber); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; }
+  thead { background: rgba(255,255,255,0.03); position: sticky; top: 0; z-index: 1; }
+  th { text-align: left; padding: 0.75rem 1rem; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+  td { padding: 0.45rem 1rem; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
+  tr:hover { background: rgba(255,255,255,0.02); }
+  tr:last-child td { border-bottom: none; }
+  tr.live { background: rgba(34,197,94,0.04); }
+  tr.live .ts { color: var(--green); }
+  .idx { color: var(--muted); font-size: 0.7rem; width: 2rem; text-align: right; padding-right: 0.75rem; }
+  .sig { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-weight: 500; color: var(--cyan); white-space: nowrap; }
+  .val { font-family: 'JetBrains Mono', 'Fira Code', monospace; color: var(--text); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ts { color: var(--muted); font-size: 0.72rem; white-space: nowrap; }
+  .badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge.str { background: rgba(168,85,247,0.15); color: var(--purple); }
+  .badge.num { background: rgba(34,211,238,0.15); color: var(--cyan); }
+  .badge.bool { background: rgba(245,158,11,0.15); color: var(--amber); }
+  #search { width: 100%; padding: 0.6rem 1rem; margin-bottom: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 0.5rem; color: var(--text); font-size: 0.85rem; outline: none; }
+  #search:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(34,211,238,0.15); }
+  #search::placeholder { color: var(--muted); }
+  .footer { margin-top: 1.5rem; text-align: center; color: var(--muted); font-size: 0.72rem; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ TeslaSync — Signal History Snapshot <span class="env">Production</span></h1>
+    <p>Latest value of each signal from <code>signal_history</code> table · Vehicle ID 1 · Cluster: <code>postgres-v17-postgresql</code> · Generated 2026-04-16 13:50:22 UTC</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="label">Total Signals</div><div class="value">190</div></div>
+    <div class="stat"><div class="label">Numeric</div><div class="value">93</div></div>
+    <div class="stat"><div class="label">String</div><div class="value purple">54</div></div>
+    <div class="stat"><div class="label">Boolean</div><div class="value amber">43</div></div>
+    <div class="stat"><div class="label">Vehicle</div><div class="value green">Falcon</div></div>
+    <div class="stat"><div class="label">Model</div><div class="value purple">Model Y P74D</div></div>
+  </div>
+  <input type="text" id="search" placeholder="Filter signals… (e.g. Battery, Media, Hvac, Tire)" oninput="filterTable(this.value)">
+  <table>
+    <thead><tr><th>#</th><th>Signal</th><th>Type</th><th>Value</th><th>Last Updated (UTC)</th></tr></thead>
+    <tbody id="tbody">
+        <tr><td class='idx'>1</td><td class='sig'>ACChargingEnergyIn</td><td><span class="badge num">num</span></td><td class='val'>16.7628</td><td class='ts'>2026-04-16 20:50:21.250339+00</td></tr>
+        <tr><td class='idx'>2</td><td class='sig'>ACChargingPower</td><td><span class="badge num">num</span></td><td class='val'>1.2</td><td class='ts'>2026-04-16 20:41:44.738529+00</td></tr>
+        <tr><td class='idx'>3</td><td class='sig'>AutomaticBlindSpotCamera</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>4</td><td class='sig'>AutomaticEmergencyBrakingOff</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>5</td><td class='sig'>AutoSeatClimateLeft</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>6</td><td class='sig'>AutoSeatClimateRight</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>7</td><td class='sig'>BatteryHeaterOn</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>8</td><td class='sig'>BatteryLevel</td><td><span class="badge num">num</span></td><td class='val'>85.654</td><td class='ts'>2026-04-16 20:50:06.737054+00</td></tr>
+        <tr><td class='idx'>9</td><td class='sig'>BlindSpotCollisionWarningChime</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>10</td><td class='sig'>BmsFullchargecomplete</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 19:23:14.713874+00</td></tr>
+        <tr><td class='idx'>11</td><td class='sig'>BMSState</td><td><span class="badge str">str</span></td><td class='val'>BMSStateCharge</td><td class='ts'>2026-04-16 20:41:33.743074+00</td></tr>
+        <tr><td class='idx'>12</td><td class='sig'>BrakePedal</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>13</td><td class='sig'>BrakePedalPos</td><td><span class="badge num">num</span></td><td class='val'>0.6</td><td class='ts'>2026-04-15 02:27:47.983876+00</td></tr>
+        <tr><td class='idx'>14</td><td class='sig'>BrickVoltageMax</td><td><span class="badge num">num</span></td><td class='val'>4.11</td><td class='ts'>2026-04-16 20:50:07.749529+00</td></tr>
+        <tr><td class='idx'>15</td><td class='sig'>BrickVoltageMin</td><td><span class="badge num">num</span></td><td class='val'>4.104</td><td class='ts'>2026-04-16 20:41:49.743432+00</td></tr>
+        <tr><td class='idx'>16</td><td class='sig'>CabinOverheatProtectionMode</td><td><span class="badge str">str</span></td><td class='val'>CabinOverheatProtectionModeStateOn</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>17</td><td class='sig'>CabinOverheatProtectionTemperatureLimit</td><td><span class="badge str">str</span></td><td class='val'>ClimateOverheatProtectionTempLimitLow</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>18</td><td class='sig'>CarType</td><td><span class="badge str">str</span></td><td class='val'>CarTypeModelY</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>19</td><td class='sig'>CenterDisplay</td><td><span class="badge str">str</span></td><td class='val'>DisplayStateOff</td><td class='ts'>2026-04-16 20:41:08.244418+00</td></tr>
+        <tr><td class='idx'>20</td><td class='sig'>ChargeAmps</td><td><span class="badge num">num</span></td><td class='val'>11</td><td class='ts'>2026-04-16 20:41:44.738529+00</td></tr>
+        <tr><td class='idx'>21</td><td class='sig'>ChargeCurrentRequest</td><td><span class="badge num">num</span></td><td class='val'>11</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>22</td><td class='sig'>ChargeCurrentRequestMax</td><td><span class="badge num">num</span></td><td class='val'>12</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>23</td><td class='sig'>ChargeEnableRequest</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 20:41:33.232449+00</td></tr>
+        <tr><td class='idx'>24</td><td class='sig'>ChargeLimitSoc</td><td><span class="badge num">num</span></td><td class='val'>90</td><td class='ts'>2026-04-16 19:23:13.198863+00</td></tr>
+        <tr><td class='idx'>25</td><td class='sig'>ChargePort</td><td><span class="badge str">str</span></td><td class='val'>ChargePortUS</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>26</td><td class='sig'>ChargePortColdWeatherMode</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>27</td><td class='sig'>ChargePortDoorOpen</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>28</td><td class='sig'>ChargePortLatch</td><td><span class="badge str">str</span></td><td class='val'>ChargePortLatchEngaged</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>29</td><td class='sig'>ChargeRateMilePerHour</td><td><span class="badge num">num</span></td><td class='val'>3.423</td><td class='ts'>2026-04-16 20:50:20.754816+00</td></tr>
+        <tr><td class='idx'>30</td><td class='sig'>ChargerPhases</td><td><span class="badge num">num</span></td><td class='val'>1</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>31</td><td class='sig'>ChargerVoltage</td><td><span class="badge num">num</span></td><td class='val'>108.306</td><td class='ts'>2026-04-16 20:48:16.749324+00</td></tr>
+        <tr><td class='idx'>32</td><td class='sig'>ChargeState</td><td><span class="badge str">str</span></td><td class='val'>Enable</td><td class='ts'>2026-04-16 20:41:36.747289+00</td></tr>
+        <tr><td class='idx'>33</td><td class='sig'>ChargingCableType</td><td><span class="badge str">str</span></td><td class='val'>CableTypeSAE</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>34</td><td class='sig'>ClimateKeeperMode</td><td><span class="badge str">str</span></td><td class='val'>ClimateKeeperModeStateOff</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>35</td><td class='sig'>ClimateSeatCoolingFrontLeft</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>36</td><td class='sig'>ClimateSeatCoolingFrontRight</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>37</td><td class='sig'>CruiseFollowDistance</td><td><span class="badge str">str</span></td><td class='val'>FollowDistance7</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>38</td><td class='sig'>CruiseSetSpeed</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:46.668093+00</td></tr>
+        <tr><td class='idx'>39</td><td class='sig'>CurrentLimitMph</td><td><span class="badge num">num</span></td><td class='val'>85</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>40</td><td class='sig'>DCChargingEnergyIn</td><td><span class="badge num">num</span></td><td class='val'>6.22</td><td class='ts'>2026-04-16 20:50:16.749985+00</td></tr>
+        <tr><td class='idx'>41</td><td class='sig'>DCChargingPower</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>42</td><td class='sig'>DCDCEnable</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>43</td><td class='sig'>DefrostForPreconditioning</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>44</td><td class='sig'>DefrostMode</td><td><span class="badge str">str</span></td><td class='val'>DefrostModeStateOff</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>45</td><td class='sig'>DestinationName</td><td><span class="badge str">str</span></td><td class='val'>Home</td><td class='ts'>2026-04-15 01:53:03.553214+00</td></tr>
+        <tr><td class='idx'>46</td><td class='sig'>DetailedChargeState</td><td><span class="badge str">str</span></td><td class='val'>DetailedChargeStateCharging</td><td class='ts'>2026-04-16 20:41:36.747289+00</td></tr>
+        <tr><td class='idx'>47</td><td class='sig'>DiAxleSpeedF</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:48.484043+00</td></tr>
+        <tr><td class='idx'>48</td><td class='sig'>DiAxleSpeedR</td><td><span class="badge num">num</span></td><td class='val'>0.1</td><td class='ts'>2026-04-15 02:27:47.983876+00</td></tr>
+        <tr><td class='idx'>49</td><td class='sig'>DiHeatsinkTF</td><td><span class="badge num">num</span></td><td class='val'>24</td><td class='ts'>2026-04-15 02:27:46.668093+00</td></tr>
+        <tr><td class='idx'>50</td><td class='sig'>DiHeatsinkTR</td><td><span class="badge num">num</span></td><td class='val'>23</td><td class='ts'>2026-04-15 02:27:29.473365+00</td></tr>
+        <tr><td class='idx'>51</td><td class='sig'>DiInverterTF</td><td><span class="badge num">num</span></td><td class='val'>24</td><td class='ts'>2026-04-15 02:27:36.473253+00</td></tr>
+        <tr><td class='idx'>52</td><td class='sig'>DiInverterTR</td><td><span class="badge num">num</span></td><td class='val'>23</td><td class='ts'>2026-04-15 02:26:43.473675+00</td></tr>
+        <tr><td class='idx'>53</td><td class='sig'>DiMotorCurrentF</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:30.484835+00</td></tr>
+        <tr><td class='idx'>54</td><td class='sig'>DiMotorCurrentR</td><td><span class="badge num">num</span></td><td class='val'>1</td><td class='ts'>2026-04-15 02:27:28.473755+00</td></tr>
+        <tr><td class='idx'>55</td><td class='sig'>DiStateF</td><td><span class="badge str">str</span></td><td class='val'>DriveInverterStateUnavailable</td><td class='ts'>2026-04-15 02:27:46.668093+00</td></tr>
+        <tr><td class='idx'>56</td><td class='sig'>DiStateR</td><td><span class="badge str">str</span></td><td class='val'>DriveInverterStateAbort</td><td class='ts'>2026-04-15 02:27:47.472171+00</td></tr>
+        <tr><td class='idx'>57</td><td class='sig'>DiStatorTempF</td><td><span class="badge num">num</span></td><td class='val'>30</td><td class='ts'>2026-04-15 02:27:46.668093+00</td></tr>
+        <tr><td class='idx'>58</td><td class='sig'>DiStatorTempR</td><td><span class="badge num">num</span></td><td class='val'>39</td><td class='ts'>2026-04-15 02:27:26.485674+00</td></tr>
+        <tr><td class='idx'>59</td><td class='sig'>DiTorqueActualF</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:28.473755+00</td></tr>
+        <tr><td class='idx'>60</td><td class='sig'>DiTorqueActualR</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:28.473755+00</td></tr>
+        <tr><td class='idx'>61</td><td class='sig'>DiTorquemotor</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:28.473755+00</td></tr>
+        <tr><td class='idx'>62</td><td class='sig'>DiVBatF</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:46.668093+00</td></tr>
+        <tr><td class='idx'>63</td><td class='sig'>DiVBatR</td><td><span class="badge num">num</span></td><td class='val'>388</td><td class='ts'>2026-04-15 02:26:43.473675+00</td></tr>
+        <tr><td class='idx'>64</td><td class='sig'>DriveRail</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>65</td><td class='sig'>DriverSeatBelt</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>66</td><td class='sig'>DriverSeatOccupied</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>67</td><td class='sig'>EfficiencyPackage</td><td><span class="badge str">str</span></td><td class='val'>MY2021</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>68</td><td class='sig'>EmergencyLaneDepartureAvoidance</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>69</td><td class='sig'>EnergyRemaining</td><td><span class="badge num">num</span></td><td class='val'>61.36</td><td class='ts'>2026-04-16 20:49:59.774876+00</td></tr>
+        <tr><td class='idx'>70</td><td class='sig'>EstBatteryRange</td><td><span class="badge num">num</span></td><td class='val'>236.5549</td><td class='ts'>2026-04-16 20:50:16.749985+00</td></tr>
+        <tr><td class='idx'>71</td><td class='sig'>EstimatedHoursToChargeTermination</td><td><span class="badge num">num</span></td><td class='val'>2.9</td><td class='ts'>2026-04-16 20:49:50.759586+00</td></tr>
+        <tr><td class='idx'>72</td><td class='sig'>EuropeVehicle</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>73</td><td class='sig'>ExpectedEnergyPercentAtTripArrival</td><td><span class="badge num">num</span></td><td class='val'>76</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>74</td><td class='sig'>ExteriorColor</td><td><span class="badge str">str</span></td><td class='val'>MidnightSilver</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>75</td><td class='sig'>FastChargerPresent</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>76</td><td class='sig'>FastChargerType</td><td><span class="badge str">str</span></td><td class='val'>FastChargerMCSingleWireCAN</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>77</td><td class='sig'>FdWindow</td><td><span class="badge str">str</span></td><td class='val'>WindowStateClosed</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>78</td><td class='sig'>ForwardCollisionWarning</td><td><span class="badge str">str</span></td><td class='val'>ForwardCollisionSensitivityEarly</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>79</td><td class='sig'>FpWindow</td><td><span class="badge str">str</span></td><td class='val'>WindowStateClosed</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>80</td><td class='sig'>Gear</td><td><span class="badge str">str</span></td><td class='val'>P</td><td class='ts'>2026-04-15 02:27:28.473755+00</td></tr>
+        <tr><td class='idx'>81</td><td class='sig'>GpsHeading</td><td><span class="badge num">num</span></td><td class='val'>2.0387</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>82</td><td class='sig'>GpsState</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>83</td><td class='sig'>GuestModeEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>84</td><td class='sig'>GuestModeMobileAccessState</td><td><span class="badge str">str</span></td><td class='val'>GuestModeMobileAccessAbortedDriving</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>85</td><td class='sig'>HomelinkDeviceCount</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>86</td><td class='sig'>HomelinkNearby</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>87</td><td class='sig'>HvacACEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>88</td><td class='sig'>HvacAutoMode</td><td><span class="badge str">str</span></td><td class='val'>HvacAutoModeStateOn</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>89</td><td class='sig'>HvacFanSpeed</td><td><span class="badge num">num</span></td><td class='val'>7</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>90</td><td class='sig'>HvacFanStatus</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>91</td><td class='sig'>HvacLeftTemperatureRequest</td><td><span class="badge num">num</span></td><td class='val'>18.5</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>92</td><td class='sig'>HvacPower</td><td><span class="badge str">str</span></td><td class='val'>HvacPowerStateOff</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>93</td><td class='sig'>HvacRightTemperatureRequest</td><td><span class="badge num">num</span></td><td class='val'>18.5</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>94</td><td class='sig'>HvacSteeringWheelHeatAuto</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>95</td><td class='sig'>HvacSteeringWheelHeatLevel</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>96</td><td class='sig'>Hvil</td><td><span class="badge str">str</span></td><td class='val'>HvilStatusOK</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>97</td><td class='sig'>IdealBatteryRange</td><td><span class="badge num">num</span></td><td class='val'>229.0566</td><td class='ts'>2026-04-16 20:50:16.749985+00</td></tr>
+        <tr><td class='idx'>98</td><td class='sig'>InsideTemp</td><td><span class="badge num">num</span></td><td class='val'>20</td><td class='ts'>2026-04-16 20:48:13.746421+00</td></tr>
+        <tr><td class='idx'>99</td><td class='sig'>IsolationResistance</td><td><span class="badge num">num</span></td><td class='val'>4560</td><td class='ts'>2026-04-16 20:49:55.751752+00</td></tr>
+        <tr><td class='idx'>100</td><td class='sig'>LaneDepartureAvoidance</td><td><span class="badge str">str</span></td><td class='val'>LaneAssistLevelWarning</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>101</td><td class='sig'>LateralAcceleration</td><td><span class="badge num">num</span></td><td class='val'>-0.1125</td><td class='ts'>2026-04-15 02:28:19.421175+00</td></tr>
+        <tr><td class='idx'>102</td><td class='sig'>LifetimeEnergyUsed</td><td><span class="badge num">num</span></td><td class='val'>11196.7685</td><td class='ts'>2026-04-16 20:41:23.746755+00</td></tr>
+        <tr><td class='idx'>103</td><td class='sig'>LightsHazardsActive</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>104</td><td class='sig'>LightsHighBeams</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>105</td><td class='sig'>LightsTurnSignal</td><td><span class="badge str">str</span></td><td class='val'>TurnSignalStateOff</td><td class='ts'>2026-04-16 20:41:12.873233+00</td></tr>
+        <tr><td class='idx'>106</td><td class='sig'>LocatedAtFavorite</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>107</td><td class='sig'>LocatedAtHome</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>108</td><td class='sig'>LocatedAtWork</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>109</td><td class='sig'>Locked</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 20:41:08.74498+00</td></tr>
+        <tr><td class='idx'>110</td><td class='sig'>LongitudinalAcceleration</td><td><span class="badge num">num</span></td><td class='val'>0.2312</td><td class='ts'>2026-04-15 02:28:19.421175+00</td></tr>
+        <tr><td class='idx'>111</td><td class='sig'>MediaAudioVolume</td><td><span class="badge num">num</span></td><td class='val'>2.6667</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>112</td><td class='sig'>MediaAudioVolumeIncrement</td><td><span class="badge num">num</span></td><td class='val'>0.3333</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>113</td><td class='sig'>MediaAudioVolumeMax</td><td><span class="badge num">num</span></td><td class='val'>10.3333</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>114</td><td class='sig'>MediaNowPlayingAlbum</td><td><span class="badge str">str</span></td><td class='val'>In Love With Diljit Dosanjh</td><td class='ts'>2026-04-15 02:26:36.543326+00</td></tr>
+        <tr><td class='idx'>115</td><td class='sig'>MediaNowPlayingArtist</td><td><span class="badge str">str</span></td><td class='val'>Diljit Dosanjh</td><td class='ts'>2026-04-15 02:26:36.543326+00</td></tr>
+        <tr><td class='idx'>116</td><td class='sig'>MediaNowPlayingDuration</td><td><span class="badge num">num</span></td><td class='val'>213000</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>117</td><td class='sig'>MediaNowPlayingElapsed</td><td><span class="badge num">num</span></td><td class='val'>190000</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>118</td><td class='sig'>MediaNowPlayingStation</td><td><span class="badge str">str</span></td><td class='val'>In Love With Diljit Dosanjh</td><td class='ts'>2026-04-15 02:26:36.543326+00</td></tr>
+        <tr><td class='idx'>119</td><td class='sig'>MediaNowPlayingTitle</td><td><span class="badge str">str</span></td><td class='val'>Do You Know</td><td class='ts'>2026-04-15 02:26:36.543326+00</td></tr>
+        <tr><td class='idx'>120</td><td class='sig'>MediaPlaybackSource</td><td><span class="badge str">str</span></td><td class='val'>Spotify</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>121</td><td class='sig'>MediaPlaybackStatus</td><td><span class="badge str">str</span></td><td class='val'>MediaStatusPlaying</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>122</td><td class='sig'>MilesSinceReset</td><td><span class="badge num">num</span></td><td class='val'>602.5544</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>123</td><td class='sig'>MilesToArrival</td><td><span class="badge num">num</span></td><td class='val'>0.1245</td><td class='ts'>2026-04-15 02:24:16.550354+00</td></tr>
+        <tr><td class='idx'>124</td><td class='sig'>MinutesToArrival</td><td><span class="badge num">num</span></td><td class='val'>1.2053</td><td class='ts'>2026-04-15 02:24:16.550354+00</td></tr>
+        <tr><td class='idx'>125</td><td class='sig'>ModuleTempMax</td><td><span class="badge num">num</span></td><td class='val'>20.5</td><td class='ts'>2026-04-16 20:34:30.746311+00</td></tr>
+        <tr><td class='idx'>126</td><td class='sig'>ModuleTempMin</td><td><span class="badge num">num</span></td><td class='val'>19.5</td><td class='ts'>2026-04-16 20:29:34.738939+00</td></tr>
+        <tr><td class='idx'>127</td><td class='sig'>NumBrickVoltageMax</td><td><span class="badge num">num</span></td><td class='val'>93</td><td class='ts'>2026-04-16 20:50:15.759521+00</td></tr>
+        <tr><td class='idx'>128</td><td class='sig'>NumBrickVoltageMin</td><td><span class="badge num">num</span></td><td class='val'>35</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>129</td><td class='sig'>NumModuleTempMax</td><td><span class="badge num">num</span></td><td class='val'>5</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>130</td><td class='sig'>NumModuleTempMin</td><td><span class="badge num">num</span></td><td class='val'>1</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>131</td><td class='sig'>Odometer</td><td><span class="badge num">num</span></td><td class='val'>26573.3119</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>132</td><td class='sig'>OutsideTemp</td><td><span class="badge num">num</span></td><td class='val'>16.5</td><td class='ts'>2026-04-16 20:47:32.449556+00</td></tr>
+        <tr><td class='idx'>133</td><td class='sig'>PackCurrent</td><td><span class="badge num">num</span></td><td class='val'>2.3</td><td class='ts'>2026-04-16 20:50:01.747219+00</td></tr>
+        <tr><td class='idx'>134</td><td class='sig'>PackVoltage</td><td><span class="badge num">num</span></td><td class='val'>394.55</td><td class='ts'>2026-04-16 20:50:20.754816+00</td></tr>
+        <tr><td class='idx'>135</td><td class='sig'>PairedPhoneKeyAndKeyFobQty</td><td><span class="badge num">num</span></td><td class='val'>10</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>136</td><td class='sig'>PassengerSeatBelt</td><td><span class="badge str">str</span></td><td class='val'>BuckleStatusUnlatched</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>137</td><td class='sig'>PedalPosition</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:26.969499+00</td></tr>
+        <tr><td class='idx'>138</td><td class='sig'>PinToDriveEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>139</td><td class='sig'>PreconditioningEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>140</td><td class='sig'>RatedRange</td><td><span class="badge num">num</span></td><td class='val'>229.0566</td><td class='ts'>2026-04-16 20:50:16.749985+00</td></tr>
+        <tr><td class='idx'>141</td><td class='sig'>RdWindow</td><td><span class="badge str">str</span></td><td class='val'>WindowStateClosed</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>142</td><td class='sig'>RearDefrostEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>143</td><td class='sig'>RearDisplayHvacEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>144</td><td class='sig'>RearSeatHeaters</td><td><span class="badge str">str</span></td><td class='val'>Base</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>145</td><td class='sig'>RemoteStartEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>true</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>146</td><td class='sig'>RightHandDrive</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>147</td><td class='sig'>RoofColor</td><td><span class="badge str">str</span></td><td class='val'>RoofColorGlass</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>148</td><td class='sig'>RouteLastUpdated</td><td><span class="badge str">str</span></td><td class='val'>02:24:23</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>149</td><td class='sig'>RouteLine</td><td><span class="badge str">str</span></td><td class='val'>EgcNL/1rPhAB</td><td class='ts'>2026-04-16 02:09:36.753201+00</td></tr>
+        <tr><td class='idx'>150</td><td class='sig'>RouteTrafficMinutesDelay</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>151</td><td class='sig'>RpWindow</td><td><span class="badge str">str</span></td><td class='val'>WindowStateClosed</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>152</td><td class='sig'>ScheduledChargingMode</td><td><span class="badge str">str</span></td><td class='val'>ScheduledChargingModeOff</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>153</td><td class='sig'>ScheduledChargingPending</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>154</td><td class='sig'>SeatHeaterLeft</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>155</td><td class='sig'>SeatHeaterRearCenter</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>156</td><td class='sig'>SeatHeaterRearLeft</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>157</td><td class='sig'>SeatHeaterRearRight</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>158</td><td class='sig'>SeatHeaterRight</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>159</td><td class='sig'>SelfDrivingMilesSinceReset</td><td><span class="badge num">num</span></td><td class='val'>26.8428</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>160</td><td class='sig'>SentryMode</td><td><span class="badge str">str</span></td><td class='val'>SentryModeStateArmed</td><td class='ts'>2026-04-16 20:42:08.243341+00</td></tr>
+        <tr><td class='idx'>161</td><td class='sig'>ServiceMode</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>162</td><td class='sig'>Setting24HourTime</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>163</td><td class='sig'>SettingChargeUnit</td><td><span class="badge str">str</span></td><td class='val'>ChargeUnitPercent</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>164</td><td class='sig'>SettingDistanceUnit</td><td><span class="badge str">str</span></td><td class='val'>DistanceUnitMiles</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>165</td><td class='sig'>SettingTemperatureUnit</td><td><span class="badge str">str</span></td><td class='val'>TemperatureUnitCelsius</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>166</td><td class='sig'>SettingTirePressureUnit</td><td><span class="badge str">str</span></td><td class='val'>PressureUnitPsi</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>167</td><td class='sig'>Soc</td><td><span class="badge num">num</span></td><td class='val'>85.3727</td><td class='ts'>2026-04-16 20:50:16.749985+00</td></tr>
+        <tr><td class='idx'>168</td><td class='sig'>SoftwareUpdateDownloadPercentComplete</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>169</td><td class='sig'>SoftwareUpdateExpectedDurationMinutes</td><td><span class="badge num">num</span></td><td class='val'>45</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>170</td><td class='sig'>SoftwareUpdateInstallationPercentComplete</td><td><span class="badge num">num</span></td><td class='val'>1</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>171</td><td class='sig'>SoftwareUpdateVersion</td><td><span class="badge str">str</span></td><td class='val'> </td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>172</td><td class='sig'>SpeedLimitMode</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>173</td><td class='sig'>SpeedLimitWarning</td><td><span class="badge str">str</span></td><td class='val'>SpeedAssistLevelDisplay</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>174</td><td class='sig'>SuperchargerSessionTripPlanner</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>175</td><td class='sig'>TimeToFullCharge</td><td><span class="badge num">num</span></td><td class='val'>2.9</td><td class='ts'>2026-04-16 20:49:50.759586+00</td></tr>
+        <tr><td class='idx'>176</td><td class='sig'>TpmsLastSeenPressureTimeFl</td><td><span class="badge num">num</span></td><td class='val'>1776220127</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>177</td><td class='sig'>TpmsLastSeenPressureTimeFr</td><td><span class="badge num">num</span></td><td class='val'>1776220128</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>178</td><td class='sig'>TpmsLastSeenPressureTimeRl</td><td><span class="badge num">num</span></td><td class='val'>1776220127</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>179</td><td class='sig'>TpmsLastSeenPressureTimeRr</td><td><span class="badge num">num</span></td><td class='val'>1776220127</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>180</td><td class='sig'>TpmsPressureFl</td><td><span class="badge num">num</span></td><td class='val'>2.975</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>181</td><td class='sig'>TpmsPressureFr</td><td><span class="badge num">num</span></td><td class='val'>2.95</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>182</td><td class='sig'>TpmsPressureRl</td><td><span class="badge num">num</span></td><td class='val'>2.975</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>183</td><td class='sig'>TpmsPressureRr</td><td><span class="badge num">num</span></td><td class='val'>2.95</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>184</td><td class='sig'>Trim</td><td><span class="badge str">str</span></td><td class='val'>P74D</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>185</td><td class='sig'>ValetModeEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>186</td><td class='sig'>VehicleName</td><td><span class="badge str">str</span></td><td class='val'>Falcon</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>187</td><td class='sig'>VehicleSpeed</td><td><span class="badge num">num</span></td><td class='val'>0</td><td class='ts'>2026-04-15 02:27:17.482093+00</td></tr>
+        <tr><td class='idx'>188</td><td class='sig'>Version</td><td><span class="badge str">str</span></td><td class='val'>2026.2.9.1</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>189</td><td class='sig'>WheelType</td><td><span class="badge str">str</span></td><td class='val'>UberTurbine21Black</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+        <tr><td class='idx'>190</td><td class='sig'>WiperHeatEnabled</td><td><span class="badge bool">bool</span></td><td class='val'>false</td><td class='ts'>2026-04-16 02:09:38.26891+00</td></tr>
+    </tbody>
+  </table>
+  <div class="footer">
+    Data queried from production Kubernetes cluster via <code>kubectl exec postgres-v17-postgresql-0</code><br>
+    Green-highlighted rows were updated within the last hour (live charging data).
+  </div>
+  <script>
+    function filterTable(q) {
+      const rows = document.querySelectorAll('#tbody tr');
+      const lower = q.toLowerCase();
+      let visible = 0;
+      rows.forEach(r => { const show = r.textContent.toLowerCase().includes(lower); r.style.display = show ? '' : 'none'; if (show) visible++; });
+    }
+  </script>
+</body>
+</html>
