@@ -195,6 +195,80 @@
       "title": "Recent Drive Scores",
       "type": "table",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Breakdown of average score by category: efficiency, smoothness, speed compliance. Shows which areas need improvement.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Score$/",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH agg AS (\n  SELECT\n    AVG(CASE WHEN distance > 2\n              AND start_battery_level IS NOT NULL\n              AND end_battery_level IS NOT NULL\n         THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75\n         ELSE NULL END) AS avg_wh_km,\n    AVG(power_max) AS avg_pmax,\n    AVG(power_min) AS avg_pmin,\n    COUNT(*) AS total,\n    COUNT(*) FILTER (WHERE speed_max IS NULL OR speed_max < 130) AS disciplined\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n    AND end_date IS NOT NULL\n)\nSELECT 'Efficiency' AS \"Category\",\n  ROUND(GREATEST(0, LEAST(100,\n    CASE\n      WHEN avg_wh_km IS NULL THEN 0\n      WHEN avg_wh_km <= 150 THEN 100\n      WHEN avg_wh_km >= 300 THEN 0\n      ELSE (1 - (avg_wh_km - 150) / 150.0) * 100\n    END\n  ))::numeric) AS \"Score\"\nFROM agg\n\nUNION ALL\n\nSELECT 'Smoothness',\n  ROUND(GREATEST(0, LEAST(100,\n    CASE\n      WHEN avg_pmin IS NULL OR avg_pmin = 0 THEN 70\n      WHEN ABS(avg_pmax / avg_pmin) <= 1 THEN 100\n      WHEN ABS(avg_pmax / avg_pmin) >= 5 THEN 0\n      ELSE (1 - (ABS(avg_pmax / avg_pmin) - 1) / 4.0) * 100\n    END\n  ))::numeric)\nFROM agg\n\nUNION ALL\n\nSELECT 'Speed',\n  CASE WHEN total = 0 THEN 0\n    ELSE ROUND(disciplined::numeric / total * 100)\n  END\nFROM agg",
+          "refId": "A"
+        }
+      ],
+      "title": "Score Breakdown by Category",
+      "type": "bargauge",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
