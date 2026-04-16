@@ -2248,8 +2248,8 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 // trackMedia stores media playback snapshots when relevant signals arrive.
 func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	_, hasTitle := signals["MediaNowPlayingTitle"]
-	_, hasStatus := signals["MediaPlaybackStatus"]
-	if !hasTitle && !hasStatus {
+	_, hasArtist := signals["MediaNowPlayingArtist"]
+	if !hasTitle && !hasArtist {
 		return
 	}
 
@@ -2298,6 +2298,19 @@ func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, sign
 		f := toFloat(v)
 		snap.AudioVolumeIncrement = &f
 	}
+
+	// Carry forward source/status from signalStore if not in current batch
+	if snap.PlaybackSource == nil && h.signalStore != nil {
+		if src, ok := h.signalStore.GetString(vehicleID, "MediaPlaybackSource"); ok && src != "" {
+			snap.PlaybackSource = &src
+		}
+	}
+	if snap.PlaybackStatus == nil && h.signalStore != nil {
+		if status, ok := h.signalStore.GetString(vehicleID, "MediaPlaybackStatus"); ok && status != "" {
+			snap.PlaybackStatus = &status
+		}
+	}
+
 	if err := h.mediaRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store media snapshot")
 	}

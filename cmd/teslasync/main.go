@@ -216,6 +216,26 @@ func main() {
 		}
 		log.Info().Msg("signal store initialized")
 
+		// Postgres signal_history writer (always-on per-signal history)
+		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second)
+		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
+
+		// Hydrate remaining signals from signal_history (covers all 230+ signals)
+		// Must run before session/alert recovery so they see the full signal set.
+		if vehicles, err := database.NewVehicleRepo(db).GetAll(ctx); err == nil {
+			for _, v := range vehicles {
+				if extra, err := signalHistoryWriter.GetLatestPerSignal(ctx, v.ID); err == nil {
+					signalStore.Hydrate(v.ID, extra)
+				} else {
+					log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("signal store: hydration from signal_history failed")
+				}
+			}
+		}
+		log.Info().Msg("signal store hydrated from signal_history")
+
+		go signalHistoryWriter.FlushLoop(ctx)
+		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
+
 		// Recover active drive/charge sessions from Postgres (pod restart resilience)
 		sessionTracker := telemetryHandler.SessionTracker()
 		if sessionTracker != nil {
@@ -234,12 +254,6 @@ func main() {
 			}
 			log.Info().Msg("alert prevSignals populated from signal store")
 		}
-
-		// Postgres signal_history writer (always-on per-signal history)
-		signalHistoryWriter = database.NewSignalHistoryWriter(db, 2*time.Second)
-		telemetryHandler.SetSignalHistoryWriter(signalHistoryWriter)
-		go signalHistoryWriter.FlushLoop(ctx)
-		log.Info().Int("retention_days", cfg.Retention.SignalHistoryRetentionDays).Msg("Postgres signal_history writer started")
 
 		log.Info().Msg("FSM vehicle state engine active — declarative transition table with 20 transitions")
 
