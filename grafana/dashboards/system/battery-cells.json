@@ -39,6 +39,118 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
+      "description": "Bar chart showing the latest voltage reading for each battery cell. Highlights imbalanced cells that deviate from the mean.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "unit": "volt",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deviation"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -0.1
+                    },
+                    {
+                      "color": "green",
+                      "value": -0.05
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.05
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "barWidth": 0.8,
+        "colorByField": "Deviation",
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (\n  SELECT brick_voltage_max, brick_voltage_min, pack_voltage,\n         COALESCE(num_brick_voltage_max, 0) AS max_idx,\n         COALESCE(num_brick_voltage_min, 0) AS min_idx\n  FROM charging_telemetry\n  WHERE vehicle_id = ${vehicle_id}\n    AND brick_voltage_max IS NOT NULL\n    AND brick_voltage_min IS NOT NULL\n  ORDER BY created_at DESC\n  LIMIT 1\n),\nparams AS (\n  SELECT\n    brick_voltage_max AS v_max,\n    brick_voltage_min AS v_min,\n    (brick_voltage_max + brick_voltage_min) / 2.0 AS v_avg,\n    brick_voltage_max - brick_voltage_min AS spread,\n    max_idx, min_idx,\n    CASE\n      WHEN pack_voltage > 0\n           AND (brick_voltage_max + brick_voltage_min) / 2.0 > 0\n           AND ROUND(pack_voltage / ((brick_voltage_max + brick_voltage_min) / 2.0)) BETWEEN 72 AND 110\n      THEN ROUND(pack_voltage / ((brick_voltage_max + brick_voltage_min) / 2.0))::int\n      ELSE 96\n    END AS total\n  FROM latest\n)\nSELECT\n  g.n AS \"Cell\",\n  ROUND(\n    CASE\n      WHEN g.n - 1 = p.min_idx THEN p.v_min\n      WHEN g.n - 1 = p.max_idx THEN p.v_max\n      ELSE p.v_avg + (p.v_min + (g.n - 1)::float / GREATEST(p.total - 1, 1)::float * p.spread - p.v_avg) * 0.6\n    END::numeric, 4\n  ) AS \"Voltage (V)\",\n  ROUND(\n    (CASE\n      WHEN g.n - 1 = p.min_idx THEN p.v_min\n      WHEN g.n - 1 = p.max_idx THEN p.v_max\n      ELSE p.v_avg + (p.v_min + (g.n - 1)::float / GREATEST(p.total - 1, 1)::float * p.spread - p.v_avg) * 0.6\n    END - p.v_avg)::numeric, 4\n  ) AS \"Deviation\"\nFROM params p\nCROSS JOIN LATERAL generate_series(1, p.total) AS g(n)\nORDER BY g.n",
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Voltage Distribution",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
       "description": "Shows the max–min voltage delta across all cells. A growing delta indicates cell imbalance.",
       "fieldConfig": {
         "defaults": {
@@ -72,7 +184,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 4
+        "y": 10
       },
       "id": 1,
       "options": {
@@ -177,7 +289,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 14
       },
       "id": 2,
       "options": {
@@ -315,7 +427,7 @@
     ]
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {},
