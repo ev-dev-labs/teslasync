@@ -167,6 +167,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	maintenanceHandler := NewMaintenanceHandler(db)
 	periodStatsHandler := NewPeriodStatsHandler(db)
 	drivingCoachHandler := NewDrivingCoachHandler(db)
+	costForecastHandler := NewCostForecastHandler(db)
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	telemetryHandler := opt.TelemetryHandler
@@ -326,6 +327,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/range-projection", rangeProjectionHandler.Get)
 		r.Get("/analytics/period-stats", periodStatsHandler.Get)
 		r.Get("/analytics/driving-coach", drivingCoachHandler.GetCoaching)
+		r.Get("/analytics/cost-forecast", costForecastHandler.GetForecast)
 
 		// Notifications
 		r.Route("/notifications", func(r chi.Router) {
