@@ -166,3 +166,47 @@ export interface RouteSummary {
   bestEfficiency: number;
   worstEfficiency: number;
 }
+
+/* ── Driving Coach ────────────────────────────────────────── */
+
+export interface DrivingCoachData {
+  overall_score: number;
+  efficiency_wh_km: number;
+  best_efficiency_wh_km: number;
+  total_drives_analyzed: number;
+  style_breakdown: Record<string, number>;
+  patterns: CoachPatterns;
+  weekly_trend: CoachWeeklyTrend[];
+  recommendations: CoachRecommendation[];
+  per_drive_scores: CoachDriveScore[];
+}
+
+export interface CoachPatterns {
+  hard_accel_pct: number;
+  hard_brake_pct: number;
+  highway_pct: number;
+  short_trip_pct: number;
+  cold_start_pct: number;
+}
+
+export interface CoachWeeklyTrend {
+  week: string;
+  score: number;
+  efficiency: number;
+  drives: number;
+}
+
+export interface CoachRecommendation {
+  category: string;
+  impact: 'high' | 'medium' | 'low';
+  tip: string;
+}
+
+export interface CoachDriveScore {
+  drive_id: number;
+  date: string;
+  score: number;
+  style: 'efficient' | 'moderate' | 'aggressive';
+  efficiency: number;
+  distance: number;
+}

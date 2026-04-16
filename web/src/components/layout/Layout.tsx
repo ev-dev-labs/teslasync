@@ -237,6 +237,7 @@ export const navSections = [
       { to: '/state-debugger', icon: Cog, label: 'State Machine', color: 'text-purple-400' },
       { to: '/mqtt-inspector', icon: Radar, label: 'MQTT Inspector', color: 'text-blue-400' },
       { to: '/db-health', icon: Database, label: 'DB Health', color: 'text-emerald-400' },
+      { to: '/anomaly-detection', icon: Shield, label: 'Anomaly Detection', color: 'text-red-400' },
     ],
   },
 ]

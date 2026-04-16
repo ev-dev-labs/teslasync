@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
-import type { ChargingSession } from '@/types/charging';
+import type { ChargingSession, CostForecastData, ChargingOptimizerData } from '@/types/charging';
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
 
 /** Fetches paginated charging sessions for a vehicle, optionally filtered by date range. */
@@ -72,5 +72,23 @@ export function useChargingSessionsPaginated(
     queryFn: () => getChargingSessions(vehicleId!, limit, offset, start, end),
     enabled: vehicleId !== null,
     select: safeArray,
+  });
+}
+
+export function useCostForecast(vehicleId: string | null, months = 6) {
+  return useQuery({
+    queryKey: ['cost-forecast', vehicleId, months],
+    queryFn: () => request<CostForecastData>(`/analytics/cost-forecast?vehicle_id=${vehicleId}&months=${months}`),
+    enabled: vehicleId !== null,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useChargingOptimizer(vehicleId: string | null) {
+  return useQuery({
+    queryKey: ['charging-optimizer', vehicleId],
+    queryFn: () => request<ChargingOptimizerData>(`/analytics/charging-optimizer?vehicle_id=${vehicleId}`),
+    enabled: vehicleId !== null,
+    staleTime: 5 * 60_000,
   });
 }
