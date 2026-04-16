@@ -425,6 +425,107 @@
       "title": "Driving Style Summary",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Scatter plot of average speed vs energy efficiency (Wh/km) per drive.\nReveals the optimal cruising speed for maximum efficiency.\nEfficiency is estimated from rated range consumption per km driven.\nLower Wh/km = more efficient.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "pointSize": {
+              "fixed": 5
+            },
+            "show": "points",
+            "lineWidth": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Speed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "velocitykmh"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Avg Speed (km/h)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wh/km"
+            },
+            "properties": [
+              {
+                "id": "custom.axisLabel",
+                "value": "Efficiency (Wh/km)"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 5,
+      "options": {
+        "dims": {
+          "x": "Avg Speed"
+        },
+        "series": [],
+        "seriesMapping": "auto",
+        "legend": {
+          "displayMode": "hidden"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  speed_avg AS \"Avg Speed\",\n  CASE WHEN distance > 0\n    THEN ROUND(((start_rated_range_km - end_rated_range_km) / distance * 150)::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND distance > 1\n  AND speed_avg > 0\n  AND speed_avg IS NOT NULL\n  AND start_rated_range_km IS NOT NULL\n  AND end_rated_range_km IS NOT NULL\n  AND (start_rated_range_km - end_rated_range_km) > 0",
+          "refId": "A"
+        }
+      ],
+      "title": "Speed vs Efficiency",
+      "type": "xychart",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
