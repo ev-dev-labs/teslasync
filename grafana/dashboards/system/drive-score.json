@@ -39,6 +39,135 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
+      "description": "Overall drive score trending over time. Each point is one drive's composite score.\nShows whether driving habits are improving or degrading.\nOrange line is the 7-drive rolling average.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Score",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "axisSoftMax": 100,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "area"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "7-Drive Avg"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "smooth"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH scored AS (\n  SELECT\n    d.start_date AS time,\n    CASE WHEN d.distance > 0.5\n              AND COALESCE(d.soc_start, 0) > COALESCE(d.soc_end, 0)\n      THEN (COALESCE(d.soc_start, 0) - COALESCE(d.soc_end, 0)) * 750.0 / d.distance\n      ELSE NULL\n    END AS eff\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND d.distance > 0.5\n  ORDER BY d.start_date\n),\nbest AS (\n  SELECT MIN(eff) AS best_eff FROM scored WHERE eff > 0\n),\nwith_score AS (\n  SELECT\n    s.time,\n    CASE WHEN s.eff > 0 AND b.best_eff > 0\n      THEN LEAST(100, ROUND((b.best_eff / s.eff * 100)::numeric))::int\n      ELSE NULL\n    END AS score\n  FROM scored s\n  CROSS JOIN best b\n)\nSELECT\n  time,\n  score AS \"Score\",\n  ROUND(AVG(score) OVER (ORDER BY time ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))::int AS \"7-Drive Avg\"\nFROM with_score\nORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Drive Score Trend",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
       "description": "Sortable table of recent drives with computed efficiency scores, distance, average speed, and letter grade. Score is relative to the best efficiency in the time window (100 = best drive).",
       "fieldConfig": {
         "defaults": {
@@ -163,7 +292,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 10
       },
       "id": 1,
       "options": {
@@ -233,7 +362,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 18
       },
       "id": 2,
       "options": {
@@ -312,7 +441,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 8
+        "y": 18
       },
       "id": 3,
       "options": {
@@ -336,7 +465,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT drive_score AS \"Score\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND drive_score IS NOT NULL",
+          "rawSql": "WITH scored AS (\n  SELECT\n    CASE WHEN d.distance > 0.5\n              AND COALESCE(d.soc_start, 0) > COALESCE(d.soc_end, 0)\n      THEN (COALESCE(d.soc_start, 0) - COALESCE(d.soc_end, 0)) * 750.0 / d.distance\n      ELSE NULL\n    END AS eff\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND d.distance > 0.5\n),\nbest AS (\n  SELECT MIN(eff) AS best_eff FROM scored WHERE eff > 0\n)\nSELECT\n  CASE WHEN s.eff > 0 AND b.best_eff > 0\n    THEN LEAST(100, ROUND((b.best_eff / s.eff * 100)::numeric))::int\n    ELSE NULL\n  END AS \"Score\"\nFROM scored s\nCROSS JOIN best b\nWHERE s.eff > 0",
           "refId": "A"
         }
       ],
@@ -403,7 +532,7 @@
     ]
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-90d",
     "to": "now"
   },
   "timepicker": {},
