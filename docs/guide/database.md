@@ -76,11 +76,11 @@ The central table is **`vehicles`** — nearly every other table references it v
 
 ## Migrations
 
-TeslaSync uses `golang-migrate` for schema versioning. All 39 migrations run automatically on startup.
+TeslaSync uses `golang-migrate` for schema versioning. All 57 migrations run automatically on startup.
 
-### Recent Migrations (030–039)
+### Recent Migrations (030–057)
 
-These migrations were added for the CEP Rule Engine, signal coverage, and state machine features:
+Migrations 030–039 were added for the CEP Rule Engine, signal coverage, and state machine features. Migrations 040–057 cover materialized views, snapshot fixes, battery health, and data quality improvements:
 
 | Migration | Description |
 |-----------|-------------|
@@ -94,6 +94,18 @@ These migrations were added for the CEP Rule Engine, signal coverage, and state 
 | **037** | Fix column types: boolean → varchar for enum signals (e.g., `HvacAutoModeState`) |
 | **038** | Fix `vehicle_config` column types: boolean → varchar |
 | **039** | Add `quiet_hours_start`, `quiet_hours_end`, `quiet_hours_enabled`, `alert_digest_mode` to `settings` |
+| **040–056** | Materialized views (`mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats`), snapshot column fixes, zero-value filtering, tire pressure labels, decimal precision enforcement |
+| **057** | Battery health snapshot backfill — generates daily snapshots from historical charging telemetry |
+
+### Materialized Views
+
+TeslaSync uses 3 materialized views to accelerate analytics queries. Each has a unique index to support `REFRESH CONCURRENTLY`, and the maintenance worker refreshes them daily.
+
+| View | Purpose |
+|------|---------|
+| **`mv_energy_daily`** | Daily energy stats per vehicle — FULL OUTER JOIN of charging sessions and drives to produce combined consumption/regen totals per day |
+| **`mv_position_hourly`** | Hourly averages of speed, power, battery level, and coordinates per vehicle — used for map trail rendering and driving pattern analysis |
+| **`mv_signal_stats`** | Per (vehicle, signal, hour) aggregation of min/max/avg/count — powers the signal analytics dashboards |
 
 ### vehicle_live_state
 

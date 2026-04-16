@@ -2508,6 +2508,21 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 			}
 		}
 	}
+	// Backfill current position from SignalStore if Location wasn't in this batch
+	if snap.CurrentLat == nil && h.signalStore != nil {
+		if locVal := h.signalStore.Get(vehicleID, "Location"); locVal != nil {
+			if loc, ok := locVal.Raw.(map[string]interface{}); ok {
+				if lat, ok2 := loc["latitude"]; ok2 {
+					f := toFloat(lat)
+					snap.CurrentLat = &f
+				}
+				if lon, ok2 := loc["longitude"]; ok2 {
+					f := toFloat(lon)
+					snap.CurrentLon = &f
+				}
+			}
+		}
+	}
 	if err := h.locationRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store location snapshot")
 	}

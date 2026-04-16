@@ -26,7 +26,9 @@ func (r *MediaRepo) Insert(ctx context.Context, snap *models.MediaSnapshot) erro
 }
 
 func (r *MediaRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.MediaSnapshot, error) {
-	query := `SELECT id, vehicle_id, now_playing_title, now_playing_artist, now_playing_album, now_playing_station, now_playing_duration, now_playing_elapsed, playback_status, playback_source, audio_volume, audio_volume_max, created_at
+	query := `SELECT id, vehicle_id, now_playing_title, now_playing_artist, now_playing_album,
+		now_playing_station, now_playing_duration, now_playing_elapsed, playback_status,
+		playback_source, audio_volume, audio_volume_max, audio_volume_increment, created_at
 		FROM media_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -40,7 +42,7 @@ func (r *MediaRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int
 		if err := rows.Scan(&s.ID, &s.VehicleID, &s.NowPlayingTitle, &s.NowPlayingArtist, &s.NowPlayingAlbum,
 			&s.NowPlayingStation, &s.NowPlayingDuration, &s.NowPlayingElapsed,
 			&s.PlaybackStatus, &s.PlaybackSource, &s.AudioVolume, &s.AudioVolumeMax,
-			&s.CreatedAt); err != nil {
+			&s.AudioVolumeIncrement, &s.CreatedAt); err != nil {
 			return nil, err
 		}
 		snaps = append(snaps, s)

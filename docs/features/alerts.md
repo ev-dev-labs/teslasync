@@ -73,6 +73,8 @@ The **Alert Studio** page (`/alert-studio`) provides a visual rule editor:
 - **50+ pre-built templates** across 12 categories (Battery, Charging, Climate, Driving, Security, Geofence, Maintenance, Software, Efficiency, Fleet, Safety, Custom)
 - **Visual RuleBuilder** — condition tree editor with signal picker, category grouping, and context-aware operators
 - **Signal Catalog** — browse all 230 signals with metadata (name, category, type, unit, description)
+- **Search filter** — search rules by name in the rules list (appears automatically when there are more than 3 rules)
+- **Inline delete** — hover-reveal trash icon on each rule row with a confirmation dialog for quick deletion
 - **Test notifications** — fire a test alert with real signal values interpolated into templates
 - **Channel selection** — choose which notification channels receive alerts per rule
 - **Severity & cooldown** — configure per-rule severity (info/warning/critical) and cooldown period
@@ -171,6 +173,7 @@ The **Alerts** page (`/alerts`) shows all alerts with:
 
 - Sortable table with type, severity, vehicle, message, and timestamp
 - Filter by type, severity, or vehicle
+- Client-side pagination (20 alerts per page) with first/prev/next/last navigation — page resets when filters change
 - Mark individual alerts as read
 - Bulk mark as read
 - Unread count badge in the sidebar navigation

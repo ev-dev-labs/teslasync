@@ -31,10 +31,14 @@ export function FSMSubFSMPanel({ transitions, fsmType }: FSMSubFSMPanelProps) {
     if (!isVehicleView) return [];
 
     const summaries: SubFSMSummary[] = [];
-    const subTypes: ('drive_session' | 'charge_session')[] = ['drive_session', 'charge_session'];
+    // Match actual fsm_type values from the backend (drives, charging, drive_session, charge_session)
+    const subTypes: { match: string[]; label: 'drive_session' | 'charge_session' }[] = [
+      { match: ['drive_session', 'drives', 'drive'], label: 'drive_session' },
+      { match: ['charge_session', 'charging', 'charge'], label: 'charge_session' },
+    ];
 
     for (const subType of subTypes) {
-      const sub = transitions.filter(tr => tr.fsm_type === subType);
+      const sub = transitions.filter(tr => subType.match.includes(tr.fsm_type));
       if (sub.length === 0) continue;
 
       // Find latest transition
@@ -46,7 +50,7 @@ export function FSMSubFSMPanel({ transitions, fsmType }: FSMSubFSMPanelProps) {
       }
 
       summaries.push({
-        type: subType,
+        type: subType.label,
         latestState: latest.to_state,
         latestTime: latest.created_at,
         instanceId: latest.fsm_instance_id ?? null,

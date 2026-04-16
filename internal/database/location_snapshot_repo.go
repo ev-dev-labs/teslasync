@@ -27,7 +27,10 @@ func (r *LocationSnapshotRepo) Insert(ctx context.Context, snap *models.Location
 }
 
 func (r *LocationSnapshotRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.LocationSnapshot, error) {
-	query := `SELECT id, vehicle_id, destination_name, destination_lat, destination_lon, origin_lat, origin_lon, miles_to_arrival, minutes_to_arrival, route_line, route_traffic_delay_min, located_at_home, located_at_work, located_at_favorite, gps_state, created_at
+	query := `SELECT id, vehicle_id, destination_name, destination_lat, destination_lon,
+		origin_lat, origin_lon, miles_to_arrival, minutes_to_arrival, route_line,
+		route_traffic_delay_min, located_at_home, located_at_work, located_at_favorite,
+		gps_state, route_last_updated, current_lat, current_lon, created_at
 		FROM location_snapshots WHERE vehicle_id=$1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, vehicleID, limit)
 	if err != nil {
@@ -42,6 +45,7 @@ func (r *LocationSnapshotRepo) GetByVehicle(ctx context.Context, vehicleID int64
 			&s.OriginLat, &s.OriginLon, &s.MilesToArrival, &s.MinutesToArrival,
 			&s.RouteLine, &s.RouteTrafficDelayMin,
 			&s.LocatedAtHome, &s.LocatedAtWork, &s.LocatedAtFavorite, &s.GpsState,
+			&s.RouteLastUpdated, &s.CurrentLat, &s.CurrentLon,
 			&s.CreatedAt); err != nil {
 			return nil, err
 		}

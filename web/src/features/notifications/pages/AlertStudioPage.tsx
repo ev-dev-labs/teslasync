@@ -181,6 +181,7 @@ export default function AlertStudio() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [templateSearch, setTemplateSearch] = useState('')
   const [templateCategory, setTemplateCategory] = useState<string | null>(null)
+  const [ruleSearch, setRuleSearch] = useState('')
 
   const filteredTemplates = useMemo(() => {
     let list = ruleTemplates
@@ -269,6 +270,11 @@ export default function AlertStudio() {
 
   // Filter CEP rules (have conditions)
   const cepRules = useMemo(() => (rules ?? []).filter(r => r.conditions), [rules])
+  const filteredRules = useMemo(() => {
+    if (!ruleSearch) return cepRules
+    const q = ruleSearch.toLowerCase()
+    return cepRules.filter(r => (r.name || '').toLowerCase().includes(q))
+  }, [cepRules, ruleSearch])
 
   return (
     <div className="space-y-6">
@@ -376,6 +382,19 @@ export default function AlertStudio() {
               <span className="text-[10px] text-[var(--text-muted)]">{cepRules.length} rule{cepRules.length !== 1 ? 's' : ''}</span>
             </div>
 
+            {cepRules.length > 3 && (
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
+                <input
+                  type="text"
+                  placeholder="Search rules…"
+                  value={ruleSearch}
+                  onChange={e => setRuleSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white/[0.04] border border-white/[0.06] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-neon-cyan/30"
+                />
+              </div>
+            )}
+
             {isLoading && (
               <div className="space-y-2">
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
@@ -390,8 +409,12 @@ export default function AlertStudio() {
               />
             )}
 
+            {!isLoading && cepRules.length > 0 && filteredRules.length === 0 && (
+              <p className="text-xs text-center text-[var(--text-muted)] py-4">No rules match "{ruleSearch}"</p>
+            )}
+
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-              {cepRules.map(rule => {
+              {filteredRules.map(rule => {
                 const sev = severityConfig[(rule.severity as Severity) ?? 'info'] ?? severityConfig.info
                 const SevIcon = sev.icon
                 const active = selectedId === rule.id
@@ -399,7 +422,7 @@ export default function AlertStudio() {
                   <button
                     key={rule.id}
                     className={cn(
-                      'w-full text-left glass-panel p-3 transition-all',
+                      'group w-full text-left glass-panel p-3 transition-all',
                       active ? 'border-neon-cyan/30 bg-neon-cyan/5' : 'hover:border-white/10',
                     )}
                     onClick={() => handleSelectRule(rule)}
@@ -415,6 +438,13 @@ export default function AlertStudio() {
                         {rule.enabled
                           ? <Bell className="h-3.5 w-3.5 text-neon-green" />
                           : <BellOff className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
+                      </button>
+                      <button
+                        className="shrink-0 opacity-0 group-hover:opacity-100 hover:text-neon-red transition-opacity"
+                        onClick={e => { e.stopPropagation(); if (confirm(`Delete "${rule.name || 'Untitled'}"?`)) deleteMut.mutate(rule.id) }}
+                        title="Delete rule"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-[var(--text-muted)] hover:text-neon-red" />
                       </button>
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">

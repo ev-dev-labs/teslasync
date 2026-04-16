@@ -1,6 +1,7 @@
 import { forwardRef, type HTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { RadialGauge } from '@/components/charts/RadialGauge';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
@@ -133,7 +134,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               value={vs.sentry_mode ? 'On' : 'Off'}
             />
             <StatCard label="Firmware" value={vs.software_version} />
-            <StatCard label="Power" value={vs.power} unit="kW" />
+            <StatCard label="Power" value={fmtNumber(vs.power)} unit="kW" />
           </Grid>
         )}
 

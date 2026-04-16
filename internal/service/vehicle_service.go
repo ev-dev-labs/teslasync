@@ -60,6 +60,11 @@ func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
 	return s.settingsRepo
 }
 
+// StateRepo returns the vehicle state repository.
+func (s *VehicleService) StateRepo() *database.VehicleStateRepo {
+	return s.stateRepo
+}
+
 // BuildStateFromSignalStore constructs a VehicleState from the in-memory
 // SignalStore, with comprehensive DB fallbacks for every field.
 // NEVER returns nil — always builds a complete state from whatever data

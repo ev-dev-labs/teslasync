@@ -92,7 +92,7 @@ export function VehicleHero({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center text-xs">
                   <div>
                     <p className="text-[var(--text-muted)]">{t('hero.chargePower', 'Power')}</p>
-                    <p className="text-sm font-bold text-neon-green">{state.charger_power} kW</p>
+                    <p className="text-sm font-bold text-neon-green">{fmtNumber(state.charger_power)} kW</p>
                   </div>
                   <div>
                     <p className="text-[var(--text-muted)]">{t('hero.chargeRate', 'Rate')}</p>

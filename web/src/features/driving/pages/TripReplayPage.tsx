@@ -117,9 +117,24 @@ export default function TripReplayPage() {
   const positions: DrivePosition[] = useMemo(() => {
     if (!drive) return [];
     const pos = drive.positions ?? [];
-    return pos.filter(
-      (p) => p.latitude !== 0 || p.longitude !== 0,
-    );
+    return pos
+      .map((p: any) => ({
+        latitude: p.latitude ?? 0,
+        longitude: p.longitude ?? 0,
+        speed: p.speed ?? null,
+        power: p.power ?? null,
+        batteryLevel: p.batteryLevel ?? p.battery_level ?? 0,
+        timestamp: p.timestamp ?? p.created_at ?? p.createdAt ?? '',
+        elevation: p.elevation ?? null,
+        insideTemp: p.insideTemp ?? p.inside_temp ?? null,
+        outsideTemp: p.outsideTemp ?? p.outside_temp ?? null,
+        idealRange: p.idealRange ?? p.ideal_range ?? null,
+        ratedRange: p.ratedRange ?? p.rated_range ?? null,
+        odometer: p.odometer ?? null,
+        fanStatus: p.fanStatus ?? p.fan_status ?? null,
+        isClimateOn: p.isClimateOn ?? p.is_climate_on ?? null,
+      } as DrivePosition))
+      .filter((p) => p.latitude !== 0 || p.longitude !== 0);
   }, [drive]);
 
   /* ---- Replay hook ---- */

@@ -402,6 +402,8 @@ export default function AlertsPage() {
 
   const [tab, setTab] = useState<'alerts' | 'history' | 'preferences'>('alerts');
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all');
+  const [alertPage, setAlertPage] = useState(1);
+  const alertsPerPage = 20;
 
   // Queries
   const { data: alerts, isLoading, error } = useAlerts();
@@ -414,6 +416,11 @@ export default function AlertsPage() {
     if (filter === 'critical') return a.severity === 'critical';
     return true;
   }) ?? [], [alerts, filter]);
+
+  // Reset page when filter changes
+  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / alertsPerPage));
+  const safeAlertPage = Math.min(alertPage, totalPages);
+  const pagedAlerts = filteredAlerts.slice((safeAlertPage - 1) * alertsPerPage, safeAlertPage * alertsPerPage);
 
   const totalCount = alerts?.length ?? 0;
   const unreadCount = useMemo(() => alerts?.filter(a => !a.is_read).length ?? 0, [alerts]);
@@ -641,7 +648,7 @@ export default function AlertsPage() {
                   { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
                 ]}
                 active={filter}
-                onChange={k => setFilter(k as 'all' | 'unread' | 'critical')}
+                onChange={k => { setFilter(k as 'all' | 'unread' | 'critical'); setAlertPage(1); }}
               />
             </div>
           </FadeIn>
@@ -651,13 +658,31 @@ export default function AlertsPage() {
               {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-20" />)}
             </div>
           ) : filteredAlerts.length > 0 ? (
+            <>
             <StaggerContainer className="space-y-2">
-              {filteredAlerts.map(a => (
+              {pagedAlerts.map(a => (
                 <StaggerItem key={a.id}>
                   <AlertCard alert={a} onMarkRead={() => handleMarkRead(a.id)} t={t} />
                 </StaggerItem>
               ))}
             </StaggerContainer>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4">
+                <span className="text-xs text-[var(--text-muted)]">
+                  Showing {(safeAlertPage - 1) * alertsPerPage + 1}–{Math.min(safeAlertPage * alertsPerPage, filteredAlerts.length)} of {filteredAlerts.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" disabled={safeAlertPage <= 1} onClick={() => setAlertPage(1)}>«</Button>
+                  <Button variant="ghost" size="sm" disabled={safeAlertPage <= 1} onClick={() => setAlertPage(p => Math.max(1, p - 1))}>‹</Button>
+                  <span className="px-3 text-xs text-[var(--text-secondary)]">{safeAlertPage} / {totalPages}</span>
+                  <Button variant="ghost" size="sm" disabled={safeAlertPage >= totalPages} onClick={() => setAlertPage(p => Math.min(totalPages, p + 1))}>›</Button>
+                  <Button variant="ghost" size="sm" disabled={safeAlertPage >= totalPages} onClick={() => setAlertPage(totalPages)}>»</Button>
+                </div>
+              </div>
+            )}
+            </>
           ) : (
             <EmptyState
               icon={<BellOff className="h-8 w-8" />}

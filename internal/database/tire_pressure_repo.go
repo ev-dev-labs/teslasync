@@ -33,7 +33,10 @@ func (r *TirePressureRepo) Insert(ctx context.Context, snap *models.TirePressure
 }
 
 func (r *TirePressureRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.TirePressureSnapshot, error) {
-	query := `SELECT id, vehicle_id, front_left, front_right, rear_left, rear_right, created_at
+	query := `SELECT id, vehicle_id, front_left, front_right, rear_left, rear_right,
+		tpms_hard_warnings, tpms_soft_warnings,
+		last_seen_time_fl, last_seen_time_fr, last_seen_time_rl, last_seen_time_rr,
+		created_at
 		FROM tire_pressure_snapshots
 		WHERE vehicle_id=$1
 		  AND NOT (front_left = 0 AND front_right = 0 AND rear_left = 0 AND rear_right = 0)
@@ -47,7 +50,10 @@ func (r *TirePressureRepo) GetByVehicle(ctx context.Context, vehicleID int64, li
 	var snaps []*models.TirePressureSnapshot
 	for rows.Next() {
 		s := &models.TirePressureSnapshot{}
-		if err := rows.Scan(&s.ID, &s.VehicleID, &s.FrontLeft, &s.FrontRight, &s.RearLeft, &s.RearRight, &s.CreatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.VehicleID, &s.FrontLeft, &s.FrontRight, &s.RearLeft, &s.RearRight,
+			&s.TpmsHardWarn, &s.TpmsSoftWarn,
+			&s.LastSeenTimeFl, &s.LastSeenTimeFr, &s.LastSeenTimeRl, &s.LastSeenTimeRr,
+			&s.CreatedAt); err != nil {
 			return nil, err
 		}
 		snaps = append(snaps, s)

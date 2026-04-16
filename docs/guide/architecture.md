@@ -97,7 +97,7 @@ internal/
 ├── mqtt/           # MQTT telemetry publisher
 ├── notification/   # Notification worker & channel senders
 ├── resilience/     # Circuit breaker, health checks
-├── signal/         # In-memory SignalStore with DB flush (per-vehicle signal map)
+├── signal/         # In-memory SignalStore with DB flush (per-vehicle signal map, source-of-truth: vehicle_live_state)
 ├── backup/         # Backup processor and storage provider abstraction
 ├── tracing/        # OpenTelemetry tracer initialization and span helpers
 ├── tesla/          # Tesla Fleet API client
@@ -362,7 +362,7 @@ erDiagram
 
 ## Database Tables
 
-The schema spans 23 migrations and 47+ tables (778 columns). The data access layer uses a `DBTX` interface for transaction support, allowing repositories to operate within explicit transactions or directly on the pool. Column names, types, and constraints are taken directly from the migration SQL files.
+The schema spans 57 migrations and 47+ tables (778 columns), plus 3 materialized views (`mv_energy_daily`, `mv_position_hourly`, `mv_signal_stats`) for accelerated analytics. The data access layer uses a `DBTX` interface for transaction support, allowing repositories to operate within explicit transactions or directly on the pool. Column names, types, and constraints are taken directly from the migration SQL files.
 
 ### Core Tables
 
@@ -895,10 +895,12 @@ Single-row table for global application preferences.
 
 ### Data Retention
 
-A background maintenance worker periodically cleans up old data:
+A background maintenance worker periodically cleans up old data and refreshes analytics:
 
 - **General data** (drives, charging, etc.): Retained for `DATA_RETENTION_DAYS` (default 365)
 - **GPS positions:** Retained for `POSITION_RETENTION_DAYS` (default 90)
+- **Materialized view refresh:** Refreshes `mv_energy_daily`, `mv_position_hourly`, and `mv_signal_stats` daily (concurrent, non-blocking)
+- **Battery health snapshots:** Generates daily battery health snapshots from charging telemetry data (backfill migration 000057 covers historical data)
 
 ## Resilience Patterns
 
