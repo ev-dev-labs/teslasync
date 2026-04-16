@@ -11,7 +11,7 @@ import { MetricCard } from '@/components/data-display';
 import {
   RadialGauge, ChartTooltip,
   chartGrid, axisTickSm, CHART_COLORS,
-  AreaChart, Area, LineChart, Line,
+  AreaChart, Area, ComposedChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from '@/components/charts';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
@@ -23,6 +23,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import type { RiskFactorData } from '@/types/energy';
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -48,10 +49,33 @@ function scoreVariant(score: number): 'success' | 'warning' | 'danger' {
   return 'danger';
 }
 
-function riskLevel(count: number, low: number, high: number): 'success' | 'warning' | 'danger' {
-  if (count <= low) return 'success';
-  if (count <= high) return 'warning';
+function riskScoreColor(score: number): string {
+  if (score <= 25) return 'text-neon-green';
+  if (score <= 50) return 'text-neon-amber';
+  return 'text-red-500';
+}
+
+function riskBarColor(score: number): string {
+  if (score <= 25) return 'bg-neon-green';
+  if (score <= 50) return 'bg-neon-amber';
+  return 'bg-red-500';
+}
+
+function riskBadgeVariant(score: number): 'success' | 'warning' | 'danger' {
+  if (score <= 25) return 'success';
+  if (score <= 50) return 'warning';
   return 'danger';
+}
+
+function riskFactorIcon(name: string) {
+  switch (name) {
+    case 'fast_charge_ratio': return Zap;
+    case 'high_soc_charging': return Battery;
+    case 'temperature_exposure': return Thermometer;
+    case 'cycle_count_rate': return Activity;
+    case 'deep_discharge_frequency': return TrendingDown;
+    default: return Shield;
+  }
 }
 
 function ageLabel(
@@ -95,17 +119,22 @@ export default function BatteryDegradationPage() {
     }));
   }, [data]);
 
-  /* Projection chart: actual history + predicted future */
+  /* Projection chart: actual history + predicted future with confidence band */
   const projectionChartData = useMemo(() => {
     const hist = (data?.history ?? []).map((h) => ({
       label: formatDate(h.date),
       health: h.soh_pct,
       projected: undefined as number | undefined,
+      confidence_low: undefined as number | undefined,
+      confidence_band: undefined as number | undefined,
     }));
-    const proj = (degradation?.prediction?.projection_points ?? []).map((p) => ({
-      label: p.month,
+    const projections = degradation?.projections ?? [];
+    const proj = projections.map((p) => ({
+      label: p.date,
       health: undefined as number | undefined,
-      projected: p.health,
+      projected: p.health_pct,
+      confidence_low: p.confidence_low,
+      confidence_band: Math.max(0, p.confidence_high - p.confidence_low),
     }));
     if (hist.length > 0 && proj.length > 0) {
       proj[0] = { ...proj[0], health: hist[hist.length - 1].health };
@@ -324,15 +353,46 @@ export default function BatteryDegradationPage() {
             <div className="mb-4 text-sm font-semibold">
               {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={projectionChartData}>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={projectionChartData}>
                 {chartGrid}
+                <defs>
+                  <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#a855f7" stopOpacity={0.18} />
+                    <stop offset="100%" stopColor="#a855f7" stopOpacity={0.04} />
+                  </linearGradient>
+                </defs>
                 <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend />
-                <ReferenceLine y={80} stroke="#f59e0b" strokeDasharray="6 4" />
+                <ReferenceLine
+                  y={80}
+                  stroke="#f59e0b"
+                  strokeDasharray="6 4"
+                  label={{ value: t('battery.degradation.warranty', '80% Warranty'), fill: '#f59e0b', fontSize: 11, position: 'insideTopRight' }}
+                />
                 <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="6 4" />
+                {/* Confidence band (stacked areas: transparent base + visible band) */}
+                <Area
+                  type="monotone"
+                  dataKey="confidence_low"
+                  stackId="ci"
+                  stroke="none"
+                  fill="transparent"
+                  fillOpacity={0}
+                  legendType="none"
+                  connectNulls={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="confidence_band"
+                  stackId="ci"
+                  stroke="none"
+                  fill="url(#ciBand)"
+                  name={t('battery.degradation.confidence', '95% Confidence')}
+                  connectNulls={false}
+                />
                 <Line
                   type="monotone"
                   dataKey="health"
@@ -352,7 +412,7 @@ export default function BatteryDegradationPage() {
                   dot={false}
                   connectNulls={false}
                 />
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </GlassPanel>
         </FadeIn>
@@ -413,67 +473,77 @@ export default function BatteryDegradationPage() {
         </FadeIn>
       )}
 
-      {/* ── Risk Factors ──────────────────────────────── */}
+      {/* ── Risk Factors (Scored Gauges) ────────────── */}
       <FadeIn delay={0.25}>
         <GlassPanel className="p-6">
           <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
             <Shield className="h-4 w-4 text-neon-amber" />
             {t('battery.degradation.riskFactors', 'Risk Factors')}
           </div>
-          <Grid cols={{ default: 2, sm: 4 }} gap={3}>
-            <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
-                {t('battery.degradation.risk.fastCharges', 'Fast Charges')}
-              </p>
-              <p className={cn('text-2xl font-bold',
-                riskLevel(habits?.fast_charge_count ?? 0, 20, 50) === 'success' ? 'text-neon-green' :
-                riskLevel(habits?.fast_charge_count ?? 0, 20, 50) === 'warning' ? 'text-neon-amber' : 'text-neon-red'
-              )}>
-                {habits?.fast_charge_count ?? 0}
-              </p>
-              <p className="text-[10px] text-white/40">{fastChargePct}% {t('battery.degradation.ofAll', 'of all charges')}</p>
-            </GlassPanel>
-            <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
-                {t('battery.degradation.risk.deepDischarges', 'Deep Discharges')}
-              </p>
-              <p className={cn('text-2xl font-bold',
-                riskLevel(habits?.deep_discharge_count ?? 0, 5, 15) === 'success' ? 'text-neon-green' :
-                riskLevel(habits?.deep_discharge_count ?? 0, 5, 15) === 'warning' ? 'text-neon-amber' : 'text-neon-red'
-              )}>
-                {habits?.deep_discharge_count ?? 0}
-              </p>
-              <p className="text-[10px] text-white/40">{t('battery.degradation.below10', 'Below 10% SOC')}</p>
-            </GlassPanel>
-            <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
-                {t('battery.degradation.risk.chargedFull', 'Charged to Full')}
-              </p>
-              <p className={cn('text-2xl font-bold',
-                riskLevel(habits?.charge_to_full_count ?? 0, 10, 30) === 'success' ? 'text-neon-green' :
-                riskLevel(habits?.charge_to_full_count ?? 0, 10, 30) === 'warning' ? 'text-neon-amber' : 'text-neon-red'
-              )}>
-                {habits?.charge_to_full_count ?? 0}
-              </p>
-              <p className="text-[10px] text-white/40">{t('battery.degradation.above95', 'Above 95% SOC')}</p>
-            </GlassPanel>
-            <GlassPanel className="p-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1">
-                {t('battery.degradation.risk.cellTemp', 'Avg Cell Temp')}
-              </p>
-              <p className={cn('text-2xl font-bold',
-                (degradation?.current_temp ?? 25) > 40 ? 'text-neon-red' :
-                (degradation?.current_temp ?? 25) > 35 ? 'text-neon-amber' : 'text-neon-green'
-              )}>
-                {fmtNumber(degradation?.current_temp ?? 0)}°C
-              </p>
-              <p className="text-[10px] text-white/40">
-                {(degradation?.current_temp ?? 25) <= 35
-                  ? t('battery.degradation.optimalRange', 'Optimal range')
-                  : t('battery.degradation.elevated', 'Elevated')}
-              </p>
-            </GlassPanel>
-          </Grid>
+          {(degradation?.risk_factors ?? []).length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(degradation?.risk_factors ?? []).map((rf: RiskFactorData) => {
+                const Icon = riskFactorIcon(rf.name);
+                return (
+                  <GlassPanel key={rf.name} className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Icon className={cn('h-4 w-4', riskScoreColor(rf.score))} />
+                        <span className="text-xs font-medium capitalize">
+                          {t(`battery.degradation.risk.${rf.name}`, rf.name.replace(/_/g, ' '))}
+                        </span>
+                      </div>
+                      <Badge variant={riskBadgeVariant(rf.score)} size="sm">
+                        {rf.label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex-1 relative h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all', riskBarColor(rf.score))}
+                          style={{ width: `${rf.score}%` }}
+                        />
+                      </div>
+                      <span className={cn('text-sm font-bold tabular-nums', riskScoreColor(rf.score))}>
+                        {rf.score}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-white/50">{rf.detail}</p>
+                  </GlassPanel>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Shield className="h-8 w-8" />}
+              message={t('battery.degradation.noRiskData', 'Risk data will appear once charging history is available.')}
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
+
+      {/* ── Recommendations ────────────────────────────── */}
+      <FadeIn delay={0.27}>
+        <GlassPanel className="p-6">
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+            <AlertTriangle className="h-4 w-4 text-neon-amber" />
+            {t('battery.degradation.recommendations', 'Recommendations')}
+          </div>
+          {(degradation?.recommendations ?? []).length > 0 ? (
+            <div className="space-y-3">
+              {(degradation?.recommendations ?? []).map((rec, i) => (
+                <div key={i} className="flex items-start gap-3 rounded-xl p-3 bg-neon-amber/[0.05] border border-neon-amber/10">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-neon-amber" />
+                  <p className="text-sm text-white/80">{rec}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<AlertTriangle className="h-8 w-8" />}
+              message={t('battery.degradation.noRecommendations', 'Recommendations will appear based on your usage patterns.')}
+            />
+          )}
         </GlassPanel>
       </FadeIn>
 

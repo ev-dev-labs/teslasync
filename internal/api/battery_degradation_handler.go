@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -124,11 +125,13 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 	// Charging habits that affect battery
 	type chargingHabits struct {
-		FastChargeCount   int     `json:"fast_charge_count"`
-		SlowChargeCount   int     `json:"slow_charge_count"`
-		DeepDischargeCount int    `json:"deep_discharge_count"`
-		ChargeToFullCount int     `json:"charge_to_full_count"`
+		FastChargeCount    int     `json:"fast_charge_count"`
+		SlowChargeCount    int     `json:"slow_charge_count"`
+		DeepDischargeCount int     `json:"deep_discharge_count"`
+		ChargeToFullCount  int     `json:"charge_to_full_count"`
+		HighSocCount       int     `json:"high_soc_count"`
 		AvgEnergyPerSession float64 `json:"avg_energy_per_session"`
+		TotalCount         int     `json:"total_count"`
 	}
 
 	var habits chargingHabits
@@ -138,12 +141,15 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			COUNT(*) FILTER (WHERE charger_power <= 50 OR charger_power IS NULL),
 			COUNT(*) FILTER (WHERE start_battery_level < 10),
 			COUNT(*) FILTER (WHERE end_battery_level > 95),
-			COALESCE(AVG(charge_energy_added), 0)
+			COUNT(*) FILTER (WHERE end_battery_level > 90),
+			COALESCE(AVG(charge_energy_added), 0),
+			COUNT(*)
 		FROM charging_sessions
 		WHERE vehicle_id = $1`, vehicleID).Scan(
 		&habits.FastChargeCount, &habits.SlowChargeCount,
 		&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-		&habits.AvgEnergyPerSession)
+		&habits.HighSocCount, &habits.AvgEnergyPerSession,
+		&habits.TotalCount)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
 		// Non-fatal
@@ -200,7 +206,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Linear regression to predict when health reaches 80%
-	prediction := h.predictDegradation(snapshots)
+	result := h.predictDegradation(snapshots)
 
 	// Stress level assessment
 	totalCharges := habits.FastChargeCount + habits.SlowChargeCount
@@ -215,7 +221,35 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		stressLevel = "Medium"
 	}
 
+	// Risk factor scoring
+	ageMonths := 0
+	if len(snapshots) > 0 {
+		ageMonths = int(time.Since(snapshots[0].CreatedAt).Hours() / (24 * 30.44))
+	}
+	avgTemp := 25.0
+	if len(snapshots) > 0 {
+		var totalTemp float64
+		for _, s := range snapshots {
+			totalTemp += s.AvgCellTempC
+		}
+		avgTemp = totalTemp / float64(len(snapshots))
+	}
+	cyclesPerMonth := 0.0
+	if ageMonths > 0 {
+		cyclesPerMonth = float64(currentCycles) / float64(ageMonths)
+	}
+	highSocPct := 0.0
+	deepDischargePct := 0.0
+	if totalCharges > 0 {
+		highSocPct = float64(habits.HighSocCount) / float64(totalCharges) * 100
+		deepDischargePct = float64(habits.DeepDischargeCount) / float64(totalCharges) * 100
+	}
+
+	riskFactors := computeRiskFactors(fastChargeRatio, highSocPct, avgTemp, cyclesPerMonth, deepDischargePct)
+	recommendations := generateRecommendations(riskFactors)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
+		// Existing fields (backward compatible)
 		"vehicle_id":          vehicleID,
 		"current_health":      currentHealth,
 		"current_capacity":    currentCapacity,
@@ -226,9 +260,16 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 		"monthly_trend":       monthlyData,
 		"snapshots":           snapshots,
 		"charging_habits":     habits,
-		"prediction":          prediction,
+		"prediction":          result.Prediction,
 		"stress_level":        stressLevel,
 		"fast_charge_ratio":   math.Round(fastChargeRatio*10) / 10,
+		// New predictive fields
+		"current_health_pct":            currentHealth,
+		"degradation_rate_pct_per_month": math.Round(result.RatePerMonth*1000) / 1000,
+		"projected_80pct_date":          result.Prediction.PredictedDate,
+		"projections":                   result.Projections,
+		"risk_factors":                  riskFactors,
+		"recommendations":               recommendations,
 	})
 }
 
@@ -243,11 +284,33 @@ type degradationPrediction struct {
 	} `json:"projection_points"`
 }
 
-func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapshotData) degradationPrediction {
-	pred := degradationPrediction{}
+type predictiveProjection struct {
+	Date           string  `json:"date"`
+	HealthPct      float64 `json:"health_pct"`
+	ConfidenceLow  float64 `json:"confidence_low"`
+	ConfidenceHigh float64 `json:"confidence_high"`
+}
+
+type riskFactor struct {
+	Name   string `json:"name"`
+	Score  int    `json:"score"`
+	Label  string `json:"label"`
+	Detail string `json:"detail"`
+}
+
+type regressionResult struct {
+	Prediction   degradationPrediction
+	Projections  []predictiveProjection
+	RatePerMonth float64
+}
+
+func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
+	res := regressionResult{}
+	pred := &res.Prediction
 
 	if len(snapshots) < 3 {
-		return pred
+		res.Projections = []predictiveProjection{}
+		return res
 	}
 
 	pred.HasEnoughData = true
@@ -268,16 +331,36 @@ func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapsh
 
 	xBar := sumX / n
 	yBar := sumY / n
-	denominator := sumX2 - n*xBar*xBar
+	ssx := sumX2 - n*xBar*xBar
 
-	if math.Abs(denominator) < 1e-10 {
-		return pred
+	if math.Abs(ssx) < 1e-10 {
+		res.Projections = []predictiveProjection{}
+		return res
 	}
 
-	slope := (sumXY - n*xBar*yBar) / denominator
+	slope := (sumXY - n*xBar*yBar) / ssx
 	intercept := yBar - slope*xBar
 
 	pred.SlopePerYear = math.Round(slope*100) / 100
+	res.RatePerMonth = math.Abs(slope) / 12
+
+	// Residual standard error for confidence intervals
+	var sse float64
+	for _, s := range snapshots {
+		x := s.CreatedAt.Sub(firstTime).Hours() / (24 * 365.25)
+		residual := s.HealthScore - (intercept + slope*x)
+		sse += residual * residual
+	}
+	se := 0.0
+	if n > 2 {
+		se = math.Sqrt(sse / (n - 2))
+	}
+
+	// t-value for 95% prediction interval (approximate)
+	tValue := 2.0
+	if n > 30 {
+		tValue = 1.96
+	}
 
 	// Predict when health reaches 80%
 	if slope < 0 {
@@ -291,14 +374,17 @@ func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapsh
 		}
 	}
 
-	// Generate projection points (24 months forward from now)
+	// Generate projection points (36 months / 3 years forward)
 	currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
+
 	type projPoint struct {
 		Month  string  `json:"month"`
 		Health float64 `json:"health"`
 	}
-	var projections []projPoint
-	for i := 0; i <= 24; i++ {
+	var oldProjections []projPoint
+	var enhancedProjections []predictiveProjection
+
+	for i := 0; i <= 36; i++ {
 		futureYears := currentYears + float64(i)/12.0
 		health := intercept + slope*futureYears
 		if health < 0 {
@@ -308,23 +394,149 @@ func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapsh
 			health = 100
 		}
 		month := time.Now().AddDate(0, i, 0).Format("2006-01")
-		projections = append(projections, projPoint{
+
+		oldProjections = append(oldProjections, projPoint{
 			Month:  month,
 			Health: math.Round(health*10) / 10,
 		})
+
+		// Prediction interval width at this point
+		xDev := futureYears - xBar
+		piWidth := 0.0
+		if ssx > 1e-10 && n > 2 {
+			piWidth = tValue * se * math.Sqrt(1+1/n+(xDev*xDev)/ssx)
+		}
+		low := math.Max(0, health-piWidth)
+		high := math.Min(100, health+piWidth)
+
+		enhancedProjections = append(enhancedProjections, predictiveProjection{
+			Date:           month,
+			HealthPct:      math.Round(health*10) / 10,
+			ConfidenceLow:  math.Round(low*10) / 10,
+			ConfidenceHigh: math.Round(high*10) / 10,
+		})
 	}
 
-	// We need to copy projections into pred in a compatible way
 	pred.ProjectionPoints = make([]struct {
 		Month  string  `json:"month"`
 		Health float64 `json:"health"`
-	}, len(projections))
-	for i, p := range projections {
+	}, len(oldProjections))
+	for i, p := range oldProjections {
 		pred.ProjectionPoints[i].Month = p.Month
 		pred.ProjectionPoints[i].Health = p.Health
 	}
 
-	return pred
+	res.Projections = enhancedProjections
+	return res
+}
+
+// computeRiskFactors scores 5 battery risk categories (0-100, higher = more risk).
+func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, deepDischargePct float64) []riskFactor {
+	factors := make([]riskFactor, 0, 5)
+
+	// 1. Fast charge ratio
+	fastScore := int(math.Min(100, fastChargePct*1.4))
+	factors = append(factors, riskFactor{
+		Name:   "fast_charge_ratio",
+		Score:  fastScore,
+		Label:  riskLabel(fastScore),
+		Detail: fmt.Sprintf("%.0f%% of sessions are DC fast charge", fastChargePct),
+	})
+
+	// 2. High SOC charging (sessions ending above 90%)
+	socScore := int(math.Min(100, highSocPct*1.3))
+	factors = append(factors, riskFactor{
+		Name:   "high_soc_charging",
+		Score:  socScore,
+		Label:  riskLabel(socScore),
+		Detail: fmt.Sprintf("%.0f%% of sessions charge above 90%%", highSocPct),
+	})
+
+	// 3. Temperature exposure
+	tempScore := 10
+	switch {
+	case avgCellTemp > 45:
+		tempScore = 90
+	case avgCellTemp > 40:
+		tempScore = 70
+	case avgCellTemp > 35:
+		tempScore = 50
+	case avgCellTemp > 30:
+		tempScore = 25
+	}
+	factors = append(factors, riskFactor{
+		Name:   "temperature_exposure",
+		Score:  tempScore,
+		Label:  riskLabel(tempScore),
+		Detail: fmt.Sprintf("Average cell temperature: %.1f°C", avgCellTemp),
+	})
+
+	// 4. Cycle count rate (vs ~25 cycles/month typical baseline)
+	cycleScore := 15
+	switch {
+	case cyclesPerMonth > 40:
+		cycleScore = 80
+	case cyclesPerMonth > 30:
+		cycleScore = 55
+	case cyclesPerMonth > 20:
+		cycleScore = 35
+	}
+	factors = append(factors, riskFactor{
+		Name:   "cycle_count_rate",
+		Score:  cycleScore,
+		Label:  riskLabel(cycleScore),
+		Detail: fmt.Sprintf("%.0f cycles/month vs ~25 typical", cyclesPerMonth),
+	})
+
+	// 5. Deep discharge frequency (sessions starting below 10% SOC)
+	deepScore := int(math.Min(100, deepDischargePct*4))
+	factors = append(factors, riskFactor{
+		Name:   "deep_discharge_frequency",
+		Score:  deepScore,
+		Label:  riskLabel(deepScore),
+		Detail: fmt.Sprintf("%.0f%% of sessions start below 10%% SOC", deepDischargePct),
+	})
+
+	return factors
+}
+
+func riskLabel(score int) string {
+	switch {
+	case score <= 25:
+		return "Low"
+	case score <= 50:
+		return "Moderate"
+	case score <= 75:
+		return "Elevated"
+	default:
+		return "High"
+	}
+}
+
+// generateRecommendations produces actionable tips based on elevated risk factors.
+func generateRecommendations(factors []riskFactor) []string {
+	recs := make([]string, 0)
+	for _, f := range factors {
+		if f.Score <= 40 {
+			continue
+		}
+		switch f.Name {
+		case "fast_charge_ratio":
+			recs = append(recs, "Reduce Supercharging frequency — prefer Level 2 home or destination charging")
+		case "high_soc_charging":
+			recs = append(recs, "Reduce daily charge limit to 80% for everyday driving")
+		case "temperature_exposure":
+			recs = append(recs, "Park in shade or climate-controlled garage to reduce heat exposure")
+		case "cycle_count_rate":
+			recs = append(recs, "Combine short trips when possible to reduce charge cycle frequency")
+		case "deep_discharge_frequency":
+			recs = append(recs, "Avoid letting battery drop below 20% regularly — plug in nightly")
+		}
+	}
+	if len(recs) == 0 {
+		recs = append(recs, "Your battery habits are excellent — keep it up!")
+	}
+	return recs
 }
 
 // Health handles GET /analytics/battery-health?vehicle_id=X

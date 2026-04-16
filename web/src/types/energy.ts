@@ -68,6 +68,13 @@ export interface DegradationData {
   monthly_trend: DegradationTrend[];
   prediction: DegradationPrediction | null;
   charging_habits: ChargingHabits | null;
+  // Predictive model fields
+  current_health_pct: number;
+  degradation_rate_pct_per_month: number;
+  projected_80pct_date: string | null;
+  projections: PredictiveProjection[];
+  risk_factors: RiskFactorData[];
+  recommendations: string[];
 }
 
 export interface DegradationTrend {
@@ -90,6 +97,22 @@ export interface ChargingHabits {
   slow_charge_count: number;
   deep_discharge_count: number;
   charge_to_full_count: number;
+  high_soc_count: number;
+  total_count: number;
+}
+
+export interface PredictiveProjection {
+  date: string;
+  health_pct: number;
+  confidence_low: number;
+  confidence_high: number;
+}
+
+export interface RiskFactorData {
+  name: string;
+  score: number;
+  label: string;
+  detail: string;
 }
 
 export interface BatteryHealthAnalytics {
