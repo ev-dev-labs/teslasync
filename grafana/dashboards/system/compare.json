@@ -265,6 +265,186 @@
       "title": "Efficiency Δ%",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Side-by-side comparison of key metrics between the current time range and an equivalent prior period. Prior period is auto-calculated as an equal-length window immediately before the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "distance" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#00d1ff", "mode": "fixed" } },
+              { "id": "displayName", "value": "Distance" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "drives" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#a3a3a3", "mode": "fixed" } },
+              { "id": "displayName", "value": "Drives" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "energy" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#06b6d4", "mode": "fixed" } },
+              { "id": "displayName", "value": "Energy (kWh)" }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 5,
+      "options": {
+        "barWidth": 0.8,
+        "fullHighlight": true,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "xField": "period",
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH current_period AS (\n  SELECT\n    'Current' AS period,\n    COALESCE(SUM(distance), 0) AS distance,\n    COUNT(*) AS drives,\n    COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\nprior_period AS (\n  SELECT\n    'Prior' AS period,\n    COALESCE(SUM(distance), 0) AS distance,\n    COUNT(*) AS drives,\n    COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n)\nSELECT * FROM current_period UNION ALL SELECT * FROM prior_period",
+          "refId": "A"
+        }
+      ],
+      "title": "Period Comparison",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Overlays the current period's daily distance on top of the prior period's. Both aligned to Day 1, Day 2, ... for direct comparison.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Distance (km)",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "km"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Current Period" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#00d1ff", "mode": "fixed" } },
+              { "id": "custom.fillOpacity", "value": 15 },
+              { "id": "custom.lineWidth", "value": 2 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Prior Period" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#a3a3a3", "mode": "fixed" } },
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } },
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineWidth", "value": 2 }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH current_daily AS (\n  SELECT\n    ROW_NUMBER() OVER (ORDER BY DATE_TRUNC('day', start_date)) AS day_num,\n    DATE_TRUNC('day', start_date) AS day,\n    SUM(distance) AS dist\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n  GROUP BY DATE_TRUNC('day', start_date)\n),\nprior_daily AS (\n  SELECT\n    ROW_NUMBER() OVER (ORDER BY DATE_TRUNC('day', start_date)) AS day_num,\n    DATE_TRUNC('day', start_date) AS day,\n    SUM(distance) AS dist\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n  GROUP BY DATE_TRUNC('day', start_date)\n)\nSELECT\n  c.day AS time,\n  ROUND(c.dist::numeric, 1) AS \"Current Period\",\n  ROUND(p.dist::numeric, 1) AS \"Prior Period\"\nFROM current_daily c\nLEFT JOIN prior_daily p ON c.day_num = p.day_num\nORDER BY c.day",
+          "refId": "A"
+        }
+      ],
+      "title": "Trend Overlay",
+      "type": "timeseries",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
