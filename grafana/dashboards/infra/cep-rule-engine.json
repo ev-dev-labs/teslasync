@@ -1,137 +1,496 @@
 {
   "uid": "teslasync-infra-cep",
   "title": "TeslaSync - CEP Rule Engine",
-  "tags": ["teslasync", "infra", "cep", "alerts"],
+  "tags": [
+    "teslasync",
+    "infra",
+    "cep",
+    "alerts"
+  ],
   "timezone": "browser",
   "editable": true,
   "refresh": "15s",
-  "time": {"from": "now-6h", "to": "now"},
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "type": "stat",
       "title": "Active CEP Rules",
-      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "teslasync_cep_active_rules", "refId": "A"}],
-      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}]}}},
-      "options": {"colorMode": "value", "graphMode": "none", "textMode": "value"}
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "teslasync_cep_active_rules",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
     },
     {
       "type": "stat",
       "title": "Rules Evaluated / sec",
-      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_cep_rules_evaluated_total[5m])", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "ops", "thresholds": {"steps": [{"color": "green", "value": null}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value"}
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_cep_rules_evaluated_total[5m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
     },
     {
       "type": "stat",
       "title": "Alerts Fired / hour",
-      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_alerts_fired_total[1h]) * 3600", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 50}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value"}
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_alerts_fired_total[1h]) * 3600",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
     },
     {
       "type": "stat",
       "title": "Cooldown Skips / min",
-      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_cep_rules_cooldown_skipped_total[5m]) * 60", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"steps": [{"color": "green", "value": null}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value"}
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_cep_rules_cooldown_skipped_total[5m]) * 60",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
     },
     {
       "type": "stat",
       "title": "Eval Latency P95",
-      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.01}, {"color": "red", "value": 0.1}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value"}
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      }
     },
     {
       "type": "stat",
       "title": "Notifications Dispatched",
-      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "sum(teslasync_notifications_dispatched_total)", "refId": "A"}],
-      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}]}}},
-      "options": {"colorMode": "value", "graphMode": "none", "textMode": "value"}
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "sum(teslasync_notifications_dispatched_total)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
     },
     {
       "type": "timeseries",
       "title": "Alerts Fired Over Time (by Severity)",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "sum by (severity) (rate(teslasync_alerts_fired_total[5m]))", "legendFormat": "{{severity}}", "refId": "A"}
+        {
+          "expr": "sum by (severity) (rate(teslasync_alerts_fired_total[5m]))",
+          "legendFormat": "{{severity}}",
+          "refId": "A"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "ops"}},
-      "options": {"legend": {"displayMode": "list"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "CEP Evaluation Latency",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "histogram_quantile(0.50, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "A"},
-        {"expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "B"},
-        {"expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))", "legendFormat": "p99", "refId": "C"}
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_cep_eval_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "s"}},
-      "options": {"legend": {"displayMode": "list"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "CEP Rules Fired by Rule",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "sum by (rule_name) (rate(teslasync_cep_rules_fired_total[5m]))", "legendFormat": "{{rule_name}}", "refId": "A"}
+        {
+          "expr": "sum by (rule_name) (rate(teslasync_cep_rules_fired_total[5m]))",
+          "legendFormat": "{{rule_name}}",
+          "refId": "A"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "ops"}},
-      "options": {"legend": {"displayMode": "table", "placement": "right"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Notifications Dispatched by Channel",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "sum by (channel_type) (rate(teslasync_notifications_dispatched_total[5m]))", "legendFormat": "{{channel_type}}", "refId": "A"}
+        {
+          "expr": "sum by (channel_type) (rate(teslasync_notifications_dispatched_total[5m]))",
+          "legendFormat": "{{channel_type}}",
+          "refId": "A"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "ops"}},
-      "options": {"legend": {"displayMode": "list"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Cooldown Skips vs Fired",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "rate(teslasync_cep_rules_cooldown_skipped_total[5m])", "legendFormat": "Cooldown Skipped", "refId": "A"},
-        {"expr": "sum(rate(teslasync_alerts_fired_total[5m]))", "legendFormat": "Alerts Fired", "refId": "B"}
+        {
+          "expr": "rate(teslasync_cep_rules_cooldown_skipped_total[5m])",
+          "legendFormat": "Cooldown Skipped",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(teslasync_alerts_fired_total[5m]))",
+          "legendFormat": "Alerts Fired",
+          "refId": "B"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "ops"}},
-      "options": {"legend": {"displayMode": "list"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      }
     },
     {
       "type": "table",
       "title": "Recent Alerts (from PostgreSQL)",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
-      "datasource": {"type": "grafana-postgresql-datasource", "uid": "DS_TESLASYNC_POSTGRESQL"},
-      "targets": [{
-        "rawSql": "SELECT a.created_at AS \"Time\", a.severity AS \"Severity\", a.title AS \"Rule\", a.message AS \"Message\", a.type AS \"Type\" FROM alerts a ORDER BY a.created_at DESC LIMIT 20",
-        "format": "table",
-        "refId": "A"
-      }],
-      "fieldConfig": {"defaults": {}},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT a.created_at AS \"Time\", a.severity AS \"Severity\", a.title AS \"Rule\", a.message AS \"Message\", a.type AS \"Type\" FROM alerts a ORDER BY a.created_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      },
       "options": {}
     }
   ],
-  "schemaVersion": 39
+  "schemaVersion": 39,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - API Performance",
+      "type": "link",
+      "url": "/d/teslasync-infra-api-perf"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Infrastructure Health",
+      "type": "link",
+      "url": "/d/teslasync-infra-health"
+    }
+  ]
 }

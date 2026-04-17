@@ -1,212 +1,991 @@
 {
   "uid": "teslasync-infra-sse",
   "title": "TeslaSync - SSE & Real-Time",
-  "tags": ["teslasync", "infra", "sse", "realtime", "mqtt"],
+  "tags": [
+    "teslasync",
+    "infra",
+    "sse",
+    "realtime",
+    "mqtt"
+  ],
   "timezone": "browser",
   "editable": true,
   "refresh": "10s",
-  "time": {"from": "now-3h", "to": "now"},
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
   "panels": [
-
-    {"type": "row", "title": "SSE Overview", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "collapsed": false},
-
+    {
+      "type": "row",
+      "title": "SSE Overview",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false
+    },
     {
       "type": "stat",
       "title": "Active SSE Clients",
-      "gridPos": {"h": 5, "w": 4, "x": 0, "y": 1},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "teslasync_sse_connections_active", "refId": "A"}],
-      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 50}]}}},
-      "options": {"colorMode": "value", "graphMode": "none", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "teslasync_sse_connections_active",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Total Connections",
       "description": "SSE connections established since startup",
-      "gridPos": {"h": 5, "w": 4, "x": 4, "y": 1},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "teslasync_sse_connections_total", "refId": "A"}],
-      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "blue", "value": null}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "teslasync_sse_connections_total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Events / sec",
-      "gridPos": {"h": 5, "w": 4, "x": 8, "y": 1},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "sum(rate(teslasync_sse_events_sent_total[5m]))", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "ops", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100}, {"color": "red", "value": 500}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(teslasync_sse_events_sent_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Events Dropped",
       "description": "Events dropped due to full client buffers",
-      "gridPos": {"h": 5, "w": 4, "x": 12, "y": 1},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "sum(rate(teslasync_sse_events_dropped_total[5m])) * 60", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 10}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(teslasync_sse_events_dropped_total[5m])) * 60",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Broadcast Latency P95",
-      "gridPos": {"h": 5, "w": 4, "x": 16, "y": 1},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "histogram_quantile(0.95, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "s", "decimals": 4, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.01}, {"color": "red", "value": 0.1}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 4,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "Bandwidth",
       "description": "SSE bytes sent rate",
-      "gridPos": {"h": 5, "w": 4, "x": 20, "y": 1},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_sse_bytes_sent_total[5m])", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "Bps", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 102400}, {"color": "red", "value": 1048576}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_sse_bytes_sent_total[5m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 102400
+              },
+              {
+                "color": "red",
+                "value": 1048576
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
-
     {
       "type": "timeseries",
       "title": "Active SSE Connections",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "teslasync_sse_connections_active", "legendFormat": "Active clients", "refId": "A"}],
-      "fieldConfig": {
-        "defaults": {"color": {"mode": "fixed", "fixedColor": "#00f0ff"}, "custom": {"fillOpacity": 15, "lineWidth": 2, "spanNulls": true}}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
       },
-      "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "teslasync_sse_connections_active",
+          "legendFormat": "Active clients",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#00f0ff"
+          },
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "spanNulls": true
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "SSE Events by Type",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_sse_events_sent_total[5m])", "legendFormat": "{{event_type}}", "refId": "A"}],
-      "fieldConfig": {
-        "defaults": {"unit": "ops", "custom": {"fillOpacity": 20, "lineWidth": 1, "stacking": {"mode": "normal"}, "spanNulls": true}}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
       },
-      "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "sum"]}}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_sse_events_sent_total[5m])",
+          "legendFormat": "{{event_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal"
+            },
+            "spanNulls": true
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "mean",
+            "max",
+            "sum"
+          ]
+        }
+      }
     },
-
     {
       "type": "timeseries",
       "title": "SSE Bandwidth",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_sse_bytes_sent_total[5m])", "legendFormat": "Bytes/sec", "refId": "A"}],
-      "fieldConfig": {
-        "defaults": {"unit": "Bps", "color": {"mode": "fixed", "fixedColor": "#73bf69"}, "custom": {"fillOpacity": 20, "lineWidth": 2, "spanNulls": true}}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
       },
-      "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_sse_bytes_sent_total[5m])",
+          "legendFormat": "Bytes/sec",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#73bf69"
+          },
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "spanNulls": true
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Broadcast Latency Distribution",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "histogram_quantile(0.50, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))", "legendFormat": "p50", "refId": "A"},
-        {"expr": "histogram_quantile(0.95, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))", "legendFormat": "p95", "refId": "B"},
-        {"expr": "histogram_quantile(0.99, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))", "legendFormat": "p99", "refId": "C"}
+        {
+          "expr": "histogram_quantile(0.50, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(teslasync_sse_broadcast_duration_seconds_bucket[5m]))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
       ],
       "fieldConfig": {
-        "defaults": {"unit": "s", "custom": {"fillOpacity": 10, "lineWidth": 2, "spanNulls": true}},
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "spanNulls": true
+          }
+        },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "p50"}, "properties": [{"id": "color", "value": {"fixedColor": "#73bf69", "mode": "fixed"}}]},
-          {"matcher": {"id": "byName", "options": "p95"}, "properties": [{"id": "color", "value": {"fixedColor": "#f59e0b", "mode": "fixed"}}]},
-          {"matcher": {"id": "byName", "options": "p99"}, "properties": [{"id": "color", "value": {"fixedColor": "#ef4444", "mode": "fixed"}}]}
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73bf69",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#f59e0b",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p99"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ef4444",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
         ]
       },
-      "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}}
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
-
     {
       "type": "timeseries",
       "title": "Dropped Events by Type",
       "description": "Events lost because client read buffer was full (client too slow)",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_sse_events_dropped_total[5m])", "legendFormat": "{{event_type}}", "refId": "A"}],
-      "fieldConfig": {
-        "defaults": {"unit": "ops", "color": {"mode": "palette-classic"}, "custom": {"fillOpacity": 30, "lineWidth": 1, "stacking": {"mode": "normal"}, "spanNulls": true}}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
       },
-      "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_sse_events_dropped_total[5m])",
+          "legendFormat": "{{event_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal"
+            },
+            "spanNulls": true
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "Connection Churn",
       "description": "Rate of new SSE connections (connect/disconnect velocity)",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "rate(teslasync_sse_connections_total[5m]) * 60", "legendFormat": "Connects / min", "refId": "A"}
+        {
+          "expr": "rate(teslasync_sse_connections_total[5m]) * 60",
+          "legendFormat": "Connects / min",
+          "refId": "A"
+        }
       ],
       "fieldConfig": {
-        "defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "#8ab8ff"}, "custom": {"fillOpacity": 20, "lineWidth": 2, "spanNulls": true}}
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8ab8ff"
+          },
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "spanNulls": true
+          }
+        }
       },
-      "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}}
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
-
-    {"type": "row", "title": "MQTT Transport", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 30}, "collapsed": false},
-
+    {
+      "type": "row",
+      "title": "MQTT Transport",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "collapsed": false
+    },
     {
       "type": "stat",
       "title": "MQTT Connected",
-      "gridPos": {"h": 5, "w": 4, "x": 0, "y": 31},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "teslasync_mqtt_connected", "refId": "A"}],
-      "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "Disconnected", "color": "red"}, "1": {"text": "Connected", "color": "green"}}}], "thresholds": {"steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
-      "options": {"colorMode": "background", "graphMode": "none", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 31
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "teslasync_mqtt_connected",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disconnected",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Connected",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "MQTT Msgs / sec",
-      "gridPos": {"h": 5, "w": 4, "x": 4, "y": 31},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_mqtt_messages_published_total[5m])", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "ops", "thresholds": {"steps": [{"color": "green", "value": null}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 31
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_mqtt_messages_published_total[5m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "stat",
       "title": "MQTT Reconnects",
-      "gridPos": {"h": 5, "w": 4, "x": 8, "y": 31},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "teslasync_mqtt_reconnects_total", "refId": "A"}],
-      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "orange", "value": 5}, {"color": "red", "value": 20}]}}},
-      "options": {"colorMode": "value", "graphMode": "area", "textMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 31
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "teslasync_mqtt_reconnects_total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "MQTT Message Rate",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
-      "targets": [{"expr": "rate(teslasync_mqtt_messages_published_total[5m])", "legendFormat": "Published / sec", "refId": "A"}],
-      "fieldConfig": {
-        "defaults": {"unit": "ops", "color": {"mode": "fixed", "fixedColor": "#b877d9"}, "custom": {"fillOpacity": 20, "lineWidth": 2, "spanNulls": true}}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
       },
-      "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "targets": [
+        {
+          "expr": "rate(teslasync_mqtt_messages_published_total[5m])",
+          "legendFormat": "Published / sec",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#b877d9"
+          },
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "spanNulls": true
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     },
     {
       "type": "timeseries",
       "title": "MQTT Connection Status & Reconnects",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
-      "datasource": {"type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS"},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
       "targets": [
-        {"expr": "teslasync_mqtt_connected", "legendFormat": "Connected", "refId": "A"},
-        {"expr": "increase(teslasync_mqtt_reconnects_total[5m])", "legendFormat": "Reconnects (5m)", "refId": "B"}
+        {
+          "expr": "teslasync_mqtt_connected",
+          "legendFormat": "Connected",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(teslasync_mqtt_reconnects_total[5m])",
+          "legendFormat": "Reconnects (5m)",
+          "refId": "B"
+        }
       ],
       "fieldConfig": {
-        "defaults": {"custom": {"fillOpacity": 10, "lineWidth": 2, "spanNulls": true}},
+        "defaults": {
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "spanNulls": true
+          }
+        },
         "overrides": [
-          {"matcher": {"id": "byName", "options": "Connected"}, "properties": [{"id": "color", "value": {"fixedColor": "#73bf69", "mode": "fixed"}}, {"id": "custom.axisPlacement", "value": "left"}]},
-          {"matcher": {"id": "byName", "options": "Reconnects (5m)"}, "properties": [{"id": "color", "value": {"fixedColor": "#ff6b6b", "mode": "fixed"}}, {"id": "custom.axisPlacement", "value": "right"}]}
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Connected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73bf69",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reconnects (5m)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ff6b6b",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
         ]
       },
-      "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}}
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync - Sessions & Business Metrics",
+      "type": "link",
+      "url": "/d/teslasync-infra-sessions"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync - Telemetry Pipeline",
+      "type": "link",
+      "url": "/d/teslasync-infra-telemetry"
     }
   ]
 }
