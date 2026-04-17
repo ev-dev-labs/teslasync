@@ -244,6 +244,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/stats", driveHandler.Stats)
 			r.Get("/score", driveHandler.Score)
 			r.Get("/dynamics", driveHandler.Dynamics)
+			r.Get("/acceleration-distribution", driveHandler.AccelerationDistribution)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
 				r.Get("/positions", driveHandler.Positions)

@@ -182,6 +182,7 @@ type DriveTelemetryReading struct {
 	TirePressureRL  *float64  `json:"tire_pressure_rl,omitempty" db:"tire_pressure_rl"`
 	TirePressureRR  *float64  `json:"tire_pressure_rr,omitempty" db:"tire_pressure_rr"`
 	BatteryHeaterOn *bool     `json:"battery_heater_on,omitempty" db:"battery_heater_on"`
+	AccelerationGs  *float64  `json:"acceleration_gs,omitempty" db:"acceleration_gs"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 }
 

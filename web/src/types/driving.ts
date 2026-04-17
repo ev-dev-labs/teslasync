@@ -116,6 +116,10 @@ export interface DrivingDynamicsData {
   smoothnessScore: number;
 }
 
+export interface AccelerationDistributionData {
+  values: number[];
+}
+
 export interface DrivetrainHealthData {
   frontMotorTempC: number | null;
   rearMotorTempC: number | null;
