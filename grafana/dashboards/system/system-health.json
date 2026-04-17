@@ -644,7 +644,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT created_at AS \"Time\", action AS \"Action\", entity_type AS \"Entity\", details AS \"Details\" FROM audit_logs ORDER BY created_at DESC LIMIT 30",
+          "rawSql": "SELECT created_at AS \"Time\", action AS \"Action\", resource AS \"Resource\", details AS \"Details\", ip AS \"IP\" FROM audit_logs ORDER BY created_at DESC LIMIT 30",
           "refId": "A"
         }
       ],
