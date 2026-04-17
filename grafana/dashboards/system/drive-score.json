@@ -155,7 +155,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH scored AS (\n  SELECT\n    d.start_date AS time,\n    CASE WHEN d.distance > 0.5\n              AND COALESCE(d.soc_start, 0) > COALESCE(d.soc_end, 0)\n      THEN (COALESCE(d.soc_start, 0) - COALESCE(d.soc_end, 0)) * 750.0 / d.distance\n      ELSE NULL\n    END AS eff\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND d.distance > 0.5\n  ORDER BY d.start_date\n),\nbest AS (\n  SELECT MIN(eff) AS best_eff FROM scored WHERE eff > 0\n),\nwith_score AS (\n  SELECT\n    s.time,\n    CASE WHEN s.eff > 0 AND b.best_eff > 0\n      THEN LEAST(100, ROUND((b.best_eff / s.eff * 100)::numeric))::int\n      ELSE NULL\n    END AS score\n  FROM scored s\n  CROSS JOIN best b\n)\nSELECT\n  time,\n  score AS \"Score\",\n  ROUND(AVG(score) OVER (ORDER BY time ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))::int AS \"7-Drive Avg\"\nFROM with_score\nORDER BY time",
+          "rawSql": "SELECT\n  time,\n  score AS \"Score\",\n  ROUND(AVG(score) OVER (ORDER BY time ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))::int AS \"7-Drive Avg\"\nFROM fn_drive_score_trend(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -317,7 +317,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH raw AS (\n  SELECT\n    d.start_date,\n    d.distance,\n    d.speed_avg,\n    CASE WHEN d.distance > 0.5\n              AND COALESCE(d.soc_start, 0) > COALESCE(d.soc_end, 0)\n      THEN (COALESCE(d.soc_start, 0) - COALESCE(d.soc_end, 0)) * 750.0 / d.distance\n      ELSE NULL\n    END AS eff\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND d.distance > 0.5\n  ORDER BY d.start_date DESC\n  LIMIT 30\n),\nbest AS (\n  SELECT MIN(eff) AS best_eff FROM raw WHERE eff > 0\n)\nSELECT\n  r.start_date AS \"📅 Date\",\n  ROUND(convert_distance(r.distance, '${unit_length}')::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(COALESCE(r.speed_avg, 0), '${unit_length}')::numeric, 1) AS \"🚗 Avg Speed\",\n  COALESCE(\n    CASE WHEN r.eff > 0 AND b.best_eff > 0\n      THEN LEAST(100, ROUND((b.best_eff / r.eff * 100)::numeric))::int\n      ELSE 0\n    END, 0\n  ) AS \"⭐ Score\",\n  CASE\n    WHEN r.eff > 0 AND b.best_eff > 0 THEN\n      CASE\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 90 THEN '\uD83C\uDD70 A'\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 80 THEN '\uD83C\uDD71 B'\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 70 THEN 'C'\n        WHEN LEAST(100, b.best_eff / r.eff * 100) >= 60 THEN 'D'\n        ELSE 'F'\n      END\n    ELSE 'F'\n  END AS \"🏅 Grade\",\n  CASE WHEN r.eff IS NOT NULL\n    THEN ROUND(convert_efficiency(r.eff, '${unit_length}')::numeric, 0)\n    ELSE NULL\n  END AS \"⚡ Efficiency\"\nFROM raw r\nCROSS JOIN best b\nORDER BY r.start_date DESC",
+          "rawSql": "SELECT\n  date AS \"📅 Date\",\n  ROUND(convert_distance(distance, '${unit_length}')::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(avg_speed, '${unit_length}')::numeric, 1) AS \"🚗 Avg Speed\",\n  score AS \"⭐ Score\",\n  grade AS \"🏅 Grade\",\n  CASE WHEN wh_per_km IS NOT NULL\n    THEN ROUND(convert_efficiency(wh_per_km, '${unit_length}')::numeric, 0)\n    ELSE NULL\n  END AS \"⚡ Efficiency\"\nFROM fn_drive_scores_recent(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -391,7 +391,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH agg AS (\n  SELECT\n    AVG(CASE WHEN distance > 2\n              AND start_battery_level IS NOT NULL\n              AND end_battery_level IS NOT NULL\n         THEN (start_battery_level - end_battery_level)::float / distance * 100 * 0.75\n         ELSE NULL END) AS avg_wh_km,\n    AVG(power_max) AS avg_pmax,\n    AVG(power_min) AS avg_pmin,\n    COUNT(*) AS total,\n    COUNT(*) FILTER (WHERE speed_max IS NULL OR speed_max < 130) AS disciplined\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n    AND end_date IS NOT NULL\n)\nSELECT 'Efficiency' AS \"Category\",\n  ROUND(GREATEST(0, LEAST(100,\n    CASE\n      WHEN avg_wh_km IS NULL THEN 0\n      WHEN avg_wh_km <= 150 THEN 100\n      WHEN avg_wh_km >= 300 THEN 0\n      ELSE (1 - (avg_wh_km - 150) / 150.0) * 100\n    END\n  ))::numeric) AS \"Score\"\nFROM agg\n\nUNION ALL\n\nSELECT 'Smoothness',\n  ROUND(GREATEST(0, LEAST(100,\n    CASE\n      WHEN avg_pmin IS NULL OR avg_pmin = 0 THEN 70\n      WHEN ABS(avg_pmax / avg_pmin) <= 1 THEN 100\n      WHEN ABS(avg_pmax / avg_pmin) >= 5 THEN 0\n      ELSE (1 - (ABS(avg_pmax / avg_pmin) - 1) / 4.0) * 100\n    END\n  ))::numeric)\nFROM agg\n\nUNION ALL\n\nSELECT 'Speed',\n  CASE WHEN total = 0 THEN 0\n    ELSE ROUND(disciplined::numeric / total * 100)\n  END\nFROM agg",
+          "rawSql": "SELECT category AS \"Category\", score AS \"Score\"\nFROM fn_drive_score_breakdown(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -465,7 +465,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH scored AS (\n  SELECT\n    CASE WHEN d.distance > 0.5\n              AND COALESCE(d.soc_start, 0) > COALESCE(d.soc_end, 0)\n      THEN (COALESCE(d.soc_start, 0) - COALESCE(d.soc_end, 0)) * 750.0 / d.distance\n      ELSE NULL\n    END AS eff\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND d.distance > 0.5\n),\nbest AS (\n  SELECT MIN(eff) AS best_eff FROM scored WHERE eff > 0\n)\nSELECT\n  CASE WHEN s.eff > 0 AND b.best_eff > 0\n    THEN LEAST(100, ROUND((b.best_eff / s.eff * 100)::numeric))::int\n    ELSE NULL\n  END AS \"Score\"\nFROM scored s\nCROSS JOIN best b\nWHERE s.eff > 0",
+          "rawSql": "SELECT score AS \"Score\"\nFROM fn_drive_score_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
