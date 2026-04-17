@@ -587,13 +587,31 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			bgCtx, cancel := context.WithTimeout(h.bgCtx, 30*time.Second)
 			defer cancel()
 
-			// Drain accumulated signals for this write cycle
+			// Drain accumulated signals for this write cycle, merging with
+			// SignalStore context so change-only signals (Gear, Locked, etc.)
+			// are carried forward between drain cycles.
 			var writeSignals map[string]interface{}
 			if shouldWrite {
 				h.accumulatedSignalsMu.Lock()
-				writeSignals = h.accumulatedSignals[vin]
+				batchSignals := h.accumulatedSignals[vin]
 				h.accumulatedSignals[vin] = make(map[string]interface{})
 				h.accumulatedSignalsMu.Unlock()
+
+				// Start with full SignalStore context (last-known-good for ALL signals),
+				// then overlay the fresh batch on top (fresh values win).
+				if h.signalStore != nil && vehicleID > 0 {
+					base := h.signalStore.GetRawMap(vehicleID)
+					if base != nil {
+						for k, v := range batchSignals {
+							base[k] = v
+						}
+						writeSignals = base
+					} else {
+						writeSignals = batchSignals
+					}
+				} else {
+					writeSignals = batchSignals
+				}
 			}
 
 			// Throttled snapshot writes ╬ô├ç├╢ only run every 10s per vehicle
@@ -929,7 +947,7 @@ func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID 
 		_, err := h.db.Pool.Exec(ctx,
 			`INSERT INTO fsm_transitions (vehicle_id, fsm_type, from_state, to_state, trigger, mode)
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			vehicleID, "vehicle_state",
+			vehicleID, "vehicle",
 			fromState, newState, "signal_change", "immediate",
 		)
 		if err != nil {

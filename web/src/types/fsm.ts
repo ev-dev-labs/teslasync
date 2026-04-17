@@ -36,7 +36,6 @@ export interface FSMTransitionResponse {
 
 export type FSMType =
   | 'all'
-  | 'vehicle_state'
   | 'vehicle'
   | 'drive_session'
   | 'charge_session'
@@ -46,7 +45,7 @@ export type FSMType =
 
 export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'all', label: 'All FSMs' },
-  { value: 'vehicle_state', label: 'Vehicle State' },
+  { value: 'vehicle', label: 'Vehicle' },
   { value: 'drive_session', label: 'Drive Sessions' },
   { value: 'charge_session', label: 'Charge Sessions' },
   { value: 'command', label: 'Commands' },
@@ -65,7 +64,6 @@ export const HOURS_OPTIONS = [
 
 /** Known states per FSM type, in typical lifecycle order */
 export const FSM_STATES: Record<string, string[]> = {
-  vehicle_state: ['online', 'driving', 'charging', 'parked', 'asleep', 'offline'],
   vehicle: ['online', 'driving', 'charging', 'parked', 'asleep', 'offline'],
   drive_session: ['pending', 'active', 'ending', 'completed', 'recovered'],
   charge_session: ['pending', 'active', 'completing', 'done', 'recovered'],
@@ -76,14 +74,6 @@ export const FSM_STATES: Record<string, string[]> = {
 
 /** Typical transition edges per FSM type: [from, to][] */
 export const FSM_EDGES: Record<string, [string, string][]> = {
-  vehicle_state: [
-    ['online', 'driving'], ['online', 'charging'], ['online', 'parked'],
-    ['driving', 'parked'], ['driving', 'charging'], ['driving', 'online'],
-    ['charging', 'parked'], ['charging', 'online'], ['charging', 'driving'],
-    ['parked', 'driving'], ['parked', 'charging'], ['parked', 'asleep'], ['parked', 'online'],
-    ['asleep', 'online'], ['asleep', 'offline'],
-    ['offline', 'online'],
-  ],
   vehicle: [
     ['online', 'driving'], ['online', 'charging'], ['online', 'parked'],
     ['driving', 'parked'], ['driving', 'charging'], ['driving', 'online'],
@@ -120,7 +110,7 @@ export const FSM_EDGES: Record<string, [string, string][]> = {
 
 /** Per-FSM-type state color maps (Tailwind classes) */
 export const STATE_COLORS: Record<string, Record<string, { bg: string; text: string; dot: string }>> = {
-  vehicle_state: {
+  vehicle: {
     online:   { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
     driving:  { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
     charging: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
@@ -128,7 +118,7 @@ export const STATE_COLORS: Record<string, Record<string, { bg: string; text: str
     asleep:   { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-400' },
     offline:  { bg: 'bg-gray-600/10', text: 'text-gray-500', dot: 'bg-gray-500' },
   },
-  drive_session: {
+  drive_session:{
     pending:   { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
     active:    { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
     ending:    { bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-400' },
@@ -172,6 +162,6 @@ export const STATE_COLORS: Record<string, Record<string, { bg: string; text: str
 
 /** Resolve state colors — vehicle FSM is also used for 'vehicle' type */
 export function getStateColor(fsmType: string, state: string) {
-  const colors = STATE_COLORS[fsmType] ?? STATE_COLORS.vehicle_state;
+  const colors = STATE_COLORS[fsmType] ?? STATE_COLORS.vehicle;
   return colors?.[state.toLowerCase()] ?? { bg: 'bg-gray-500/10', text: 'text-gray-400', dot: 'bg-gray-400' };
 }

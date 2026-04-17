@@ -4,7 +4,6 @@ const FSM_COLORS: Record<
   string,
   { variant: 'success' | 'warning' | 'info' | 'danger' | 'neutral'; label: string }
 > = {
-  vehicle_state: { variant: 'info', label: 'Vehicle' },
   vehicle: { variant: 'info', label: 'Vehicle' },
   drive_session: { variant: 'success', label: 'Drive' },
   charge_session: { variant: 'warning', label: 'Charge' },

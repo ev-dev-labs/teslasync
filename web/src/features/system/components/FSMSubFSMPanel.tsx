@@ -16,7 +16,7 @@ export function FSMSubFSMPanel({ activeSubs, fsmType }: FSMSubFSMPanelProps) {
   const { t } = useTranslation();
 
   // Only show when viewing vehicle-level FSMs
-  const isVehicleView = fsmType === 'vehicle_state' || fsmType === 'vehicle' || fsmType === 'all';
+  const isVehicleView = fsmType === 'vehicle' || fsmType === 'all';
   if (!isVehicleView) return null;
 
   const subs = activeSubs ?? [];

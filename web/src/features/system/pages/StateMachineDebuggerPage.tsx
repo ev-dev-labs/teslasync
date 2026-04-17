@@ -425,7 +425,7 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 5: State Diagram ──── */}
       <FadeIn delay={0.2}>
         <FSMStateDiagram
-          fsmType={fsmType === 'all' ? 'vehicle_state' : fsmType}
+          fsmType={fsmType === 'all' ? 'vehicle' : fsmType}
           transitions={transitions}
         />
       </FadeIn>
