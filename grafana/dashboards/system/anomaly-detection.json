@@ -160,30 +160,8 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS time,\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Critical\",\n  sh.signal AS \"Signal\",\n  'z_score' AS \"Type\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\n  AND (\n    (sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n     AND ABS(sh.value_num - s.mean) / s.stddev > 4)\n    OR ABS(sh.value_num - s.mean) / s.stddev > 5\n  )\nORDER BY sh.created_at",
+          "rawSql": "SELECT\n  time,\n  CASE WHEN severity = 'critical' THEN z_score END AS \"Critical\",\n  CASE WHEN severity = 'warning' THEN z_score END AS \"Warning\",\n  CASE WHEN severity = 'info' THEN z_score END AS \"Info\",\n  signal AS \"Signal\",\n  type AS \"Type\"\nFROM fn_anomaly_timeline(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS time,\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Warning\",\n  sh.signal AS \"Signal\",\n  'z_score' AS \"Type\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\n  AND NOT (\n    (sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n     AND ABS(sh.value_num - s.mean) / s.stddev > 4)\n    OR ABS(sh.value_num - s.mean) / s.stddev > 5\n  )\n  AND (\n    ABS(sh.value_num - s.mean) / s.stddev > 4\n    OR sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n  )\nORDER BY sh.created_at",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "DS_TESLASYNC_POSTGRESQL"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS time,\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Info\",\n  sh.signal AS \"Signal\",\n  'z_score' AS \"Type\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\n  AND ABS(sh.value_num - s.mean) / s.stddev <= 4\n  AND sh.signal NOT IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\nORDER BY sh.created_at",
-          "refId": "C"
         }
       ],
       "title": "Anomaly Timeline",
@@ -296,7 +274,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  severity AS \"Severity\",\n  COUNT(*) AS \"Count\"\nFROM anomalies\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(detected_at)\nGROUP BY severity\nORDER BY\n  CASE severity\n    WHEN 'critical' THEN 1\n    WHEN 'warning' THEN 2\n    WHEN 'info' THEN 3\n    ELSE 4\n  END",
+          "rawSql": "SELECT severity AS \"Severity\", count AS \"Count\"\nFROM fn_anomaly_severity_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -474,12 +452,86 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH stats AS (\n  SELECT signal, AVG(value_num) AS mean, STDDEV(value_num) AS stddev\n  FROM signal_history\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(created_at)\n    AND value_num IS NOT NULL\n  GROUP BY signal\n  HAVING STDDEV(value_num) > 0 AND COUNT(*) >= 30\n)\nSELECT\n  sh.created_at AS \"Time\",\n  sh.signal AS \"Signal\",\n  'z_score_outlier' AS \"Type\",\n  CASE\n    WHEN (sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax')\n         AND ABS(sh.value_num - s.mean) / s.stddev > 4)\n         OR ABS(sh.value_num - s.mean) / s.stddev > 5 THEN 'critical'\n    WHEN ABS(sh.value_num - s.mean) / s.stddev > 4\n         OR sh.signal IN ('IsolationResistance','TpmsPressureFl','TpmsPressureFr','TpmsPressureRl','TpmsPressureRr','ModuleTempMax') THEN 'warning'\n    ELSE 'info'\n  END AS \"Severity\",\n  ROUND(CAST(ABS(sh.value_num - s.mean) / s.stddev AS numeric), 2) AS \"Z-Score\",\n  sh.signal || ' = ' || ROUND(sh.value_num::numeric, 2) || ' (\u03bc=' || ROUND(s.mean::numeric, 2) || ', \u03c3=' || ROUND(s.stddev::numeric, 2) || ')' AS \"Description\"\nFROM signal_history sh\nJOIN stats s ON sh.signal = s.signal\nWHERE sh.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(sh.created_at)\n  AND ABS(sh.value_num - s.mean) / s.stddev > 3\nORDER BY sh.created_at DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  time AS \"Time\",\n  signal AS \"Signal\",\n  type AS \"Type\",\n  severity AS \"Severity\",\n  z_score AS \"Z-Score\",\n  description AS \"Description\"\nFROM fn_anomaly_recent(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
       "title": "Recent Anomalies",
       "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Anomaly counts grouped by signal category/type.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.6,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM fn_anomaly_count_by_type(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Count by Type",
+      "type": "barchart",
       "transparent": false
     }
   ],
