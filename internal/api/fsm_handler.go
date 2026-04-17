@@ -196,6 +196,13 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	m := h.getOrCreate(ctx, vehicleID)
 
+	// Wake vehicle from asleep/offline when any signal arrives
+	if state := m.Current(); state == fsm.Asleep || state == fsm.Offline {
+		if err := m.HandleSignalReceived(ctx, vehicleID); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: HandleSignalReceived error")
+		}
+	}
+
 	// Run vehicle FSM (may trigger sub-FSM creation/finalization via fsmAction)
 	if err := m.ProcessSignals(ctx, vehicleID, signals); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: ProcessSignals error")
