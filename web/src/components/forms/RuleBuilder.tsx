@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
-import type { RuleConditionTree } from '../../api'
+import type { RuleConditionTree } from '@/api/types'
 import { signalCatalog, getSignalMeta } from '../../lib/signalCatalog'
 import type { SignalMeta } from '../../lib/signalCatalog'
 import { Plus, Trash2, ChevronDown, Layers, Clock, Search } from 'lucide-react'

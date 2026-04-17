@@ -59,7 +59,9 @@ import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
 import OnboardingWizard from '../feedback/OnboardingWizard'
-import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../../api'
+import { request } from '@/api/client'
+import { getVehicleState } from '@/api/vehicles'
+import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
@@ -260,12 +262,12 @@ export default function Layout() {
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
-  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: 60_000, refetchInterval: 60_000 })
-  const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: checkForUpdates, staleTime: 3600_000, refetchInterval: 3600_000 })
+  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
+  const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: () => request<UpdateCheckResult>('/system/update-check'), staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
-  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000, retry: 1 })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: getVehicles, refetchInterval: 60_000, retry: 1 })
+  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: () => request<Vehicle[]>('/vehicles'), refetchInterval: 60_000, retry: 1 })
   const primaryVehicle = vehicles?.[0]
   const { data: primaryState } = useQuery({
     queryKey: ['primary-state-sidebar', primaryVehicle?.id],
@@ -278,7 +280,7 @@ export default function Layout() {
   const isConnected = !!primaryState?.live
 
   // Stale sessions count for Data Repair badge
-  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: getStaleSessions, refetchInterval: 60_000, retry: 1 })
+  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
   const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
 
   const uptimeStr= (() => {

@@ -1,7 +1,7 @@
 import { TileLayer, useMap } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { getMapConfig } from '../../api'
+import { getMapConfig } from '@/api/settings'
 
 export type MapStyle = 'dark' | 'satellite' | 'streets' | 'terrain'
 

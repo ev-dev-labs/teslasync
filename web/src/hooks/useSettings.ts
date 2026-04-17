@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { getSettings, type AppSettings } from '../api'
+import { getSettings } from '@/api/settings'
+import type { AppSettings } from '@/api/types'
 import { setGlobalPrecision, fmtNumber } from '../lib/numberFormat'
 import { UNITS } from '../lib/constants'
 

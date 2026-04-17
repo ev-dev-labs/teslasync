@@ -1,8 +1,10 @@
 /**
- * @module api
+ * @deprecated — Do not import from this barrel. Use hooks from @/api/hooks/ instead.
+ * This file exists only for backward compatibility and will be removed.
  *
- * Barrel file — re-exports every type and function so that existing
- * imports like `import { getVehicles, Vehicle } from '../api'` keep working.
+ * For types: import from @/api/types
+ * For data fetching: use hooks from @/api/hooks/
+ * For imperative requests (in queryFn): import request from @/api/client
  */
 
 export { ApiError, getApiBase, request } from './client'
