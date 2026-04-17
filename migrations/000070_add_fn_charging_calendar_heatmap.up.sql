@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION fn_charging_calendar_heatmap(
   p_vehicle_id BIGINT, p_from TIMESTAMPTZ DEFAULT NULL, p_to TIMESTAMPTZ DEFAULT NULL
 )
-RETURNS TABLE (time TIMESTAMPTZ, sessions BIGINT) AS $$
+RETURNS TABLE ("time" TIMESTAMPTZ, sessions BIGINT) AS $$
 BEGIN
   RETURN QUERY
   SELECT DATE_TRUNC('day', cs.start_date), COUNT(*)::bigint

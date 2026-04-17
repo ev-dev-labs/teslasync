@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION fn_driving_braking_intensity(
   p_vehicle_id BIGINT, p_from TIMESTAMPTZ DEFAULT NULL, p_to TIMESTAMPTZ DEFAULT NULL
 )
-RETURNS TABLE (time TIMESTAMPTZ, hard_brakes BIGINT, moderate_brakes BIGINT, avg_decel NUMERIC) AS $$
+RETURNS TABLE ("time" TIMESTAMPTZ, hard_brakes BIGINT, moderate_brakes BIGINT, avg_decel NUMERIC) AS $$
 BEGIN
   RETURN QUERY
   SELECT

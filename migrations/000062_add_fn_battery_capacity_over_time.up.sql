@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION fn_battery_capacity_over_time(
   p_vehicle_id BIGINT, p_from TIMESTAMPTZ DEFAULT NULL, p_to TIMESTAMPTZ DEFAULT NULL
 )
-RETURNS TABLE (time TIMESTAMPTZ, estimated_capacity NUMERIC, original_capacity NUMERIC) AS $$
+RETURNS TABLE ("time" TIMESTAMPTZ, estimated_capacity NUMERIC, original_capacity NUMERIC) AS $$
 BEGIN
   RETURN QUERY
   SELECT bs.created_at,

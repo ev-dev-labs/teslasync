@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION fn_anomaly_recent(
   p_vehicle_id BIGINT, p_from TIMESTAMPTZ DEFAULT NULL, p_to TIMESTAMPTZ DEFAULT NULL,
   p_limit INTEGER DEFAULT 50
 )
-RETURNS TABLE (time TIMESTAMPTZ, signal TEXT, type TEXT, severity TEXT, z_score NUMERIC, description TEXT) AS $$
+RETURNS TABLE ("time" TIMESTAMPTZ, signal TEXT, type TEXT, severity TEXT, z_score NUMERIC, description TEXT) AS $$
 BEGIN
   RETURN QUERY
   SELECT a.detected_at, a.signal_name::text, a.anomaly_type::text, a.severity::text,
