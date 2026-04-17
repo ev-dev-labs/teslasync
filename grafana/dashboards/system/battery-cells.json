@@ -406,6 +406,12 @@
           "reverse": false
         }
       },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No cell temperature data available"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "datasource": {
@@ -413,14 +419,14 @@
             "uid": "DS_TESLASYNC_POSTGRESQL"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time, cell_id AS \"Cell\", temp AS \"Temp °C\" FROM fn_battery_cell_temp_heatmap(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "rawSql": "SELECT \"time\", cell_id AS metric, temp AS value FROM fn_battery_cell_temp_heatmap(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
       "title": "Cell Temperature Heatmap",
-      "type": "heatmap",
+      "type": "timeseries",
       "transparent": false
     }
   ],
