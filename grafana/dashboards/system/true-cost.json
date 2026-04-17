@@ -118,6 +118,71 @@
       "title": "Cost Per Mile Trend",
       "type": "timeseries",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Net savings: gas equivalent cost minus actual EV electricity cost. The key ROI metric for EV ownership.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 10
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH ev_cost AS (\n  SELECT SUM(COALESCE(cost, 0)) AS total\n  FROM charging_sessions\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\ndistance AS (\n  SELECT SUM(distance) AS total_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\ngas AS (\n  SELECT AVG(price) AS avg_price FROM gas_prices WHERE $__timeFilter(recorded_at)\n)\nSELECT\n  ROUND((d.total_km / 1.60934 / 30.0) * g.avg_price - e.total, 2) AS \"Savings ($)\"\nFROM ev_cost e, distance d, gas g",
+          "refId": "A"
+        }
+      ],
+      "title": "💰 EV Savings",
+      "type": "stat",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
