@@ -362,8 +362,7 @@ export function InsightsEngine({ data }: { data: InsightData }) {
     <FadeIn delay={0.15}>
       <div className="space-y-4">
         <h3
-          className="section-title flex items-center gap-2"
-          style={{ color: 'var(--text-primary)' }}
+          className="section-title flex items-center gap-2 text-white/90"
         >
           <Lightbulb className="h-4 w-4 text-neon-amber" />
           Smart Insights
@@ -396,16 +395,14 @@ export function InsightsEngine({ data }: { data: InsightData }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span
-                        className="text-sm font-semibold"
-                        style={{ color: 'var(--text-primary)' }}
+                        className="text-sm font-semibold text-white/90"
                       >
                         {insight.title}
                       </span>
                       <TrendIcon className="h-3.5 w-3.5" style={{ color: trendClr }} />
                     </div>
                     <p
-                      className="text-xs leading-relaxed"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="text-xs leading-relaxed text-white/60"
                     >
                       {insight.description}
                     </p>

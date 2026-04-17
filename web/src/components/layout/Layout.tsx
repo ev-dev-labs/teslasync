@@ -59,7 +59,9 @@ import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner, SystemHealthDot } from '../data-display/ServiceStatus'
 import Logo from '../ui/Logo'
 import OnboardingWizard from '../feedback/OnboardingWizard'
-import { getAlerts, getVehicles, getVehicleState, getVersionInfo, checkForUpdates, getStaleSessions } from '../../api'
+import { request } from '@/api/client'
+import { getVehicleState } from '@/api/vehicles'
+import type { Alert, Vehicle, VersionInfo, UpdateCheckResult, StaleSessionsResponse } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useToast } from '../feedback/Toast'
 import { useSettings } from '../../hooks/useSettings'
@@ -260,12 +262,12 @@ export default function Layout() {
   const { convertDistance, distanceUnit } = useSettings()
 
   // Version info
-  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: getVersionInfo, staleTime: 60_000, refetchInterval: 60_000 })
-  const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: checkForUpdates, staleTime: 3600_000, refetchInterval: 3600_000 })
+  const { data: versionInfo } = useQuery({ queryKey: ['version-info'], queryFn: () => request<VersionInfo>('/system/version'), staleTime: 60_000, refetchInterval: 60_000 })
+  const { data: updateCheck } = useQuery({ queryKey: ['update-check'], queryFn: () => request<UpdateCheckResult>('/system/update-check'), staleTime: 3600_000, refetchInterval: 3600_000 })
 
   // Live data for sidebar
-  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => getAlerts(50), refetchInterval: 30_000, retry: 1 })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: getVehicles, refetchInterval: 60_000, retry: 1 })
+  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: () => request<Vehicle[]>('/vehicles'), refetchInterval: 60_000, retry: 1 })
   const primaryVehicle = vehicles?.[0]
   const { data: primaryState } = useQuery({
     queryKey: ['primary-state-sidebar', primaryVehicle?.id],
@@ -278,7 +280,7 @@ export default function Layout() {
   const isConnected = !!primaryState?.live
 
   // Stale sessions count for Data Repair badge
-  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: getStaleSessions, refetchInterval: 60_000, retry: 1 })
+  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
   const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
 
   const uptimeStr= (() => {
@@ -295,7 +297,7 @@ export default function Layout() {
   const mainRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="flex h-dvh" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
+    <div className="flex h-dvh bg-[var(--bg)] text-white/90">
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -333,13 +335,12 @@ export default function Layout() {
         data-sidebar-open={sidebarOpen}
         className={clsx(
           'fixed left-0 bottom-0 top-14 z-[56] w-[clamp(240px,70vw,256px)] transform transition-transform duration-300 ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
-          'border-r backdrop-blur-xl flex flex-col',
+          'border-r border-white/[0.06] backdrop-blur-xl flex flex-col bg-white/[0.04]',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
-        style={{ borderColor: 'var(--glass-border)', background: 'var(--surface-1)' }}
       >
         {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-3 px-5 py-5 border-b shrink-0 hover:bg-white/[0.02] transition-colors" style={{ borderColor: 'var(--glass-border)' }} onClick={() => setSidebarOpen(false)}>
+        <NavLink to="/" className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06] shrink-0 hover:bg-white/[0.02] transition-colors" onClick={() => setSidebarOpen(false)}>
           <Logo size={32} showWordmark />
           <span className="ml-auto rounded-md bg-neon-cyan/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-cyan">
             {versionInfo?.chart_version && versionInfo.chart_version !== 'unknown'
@@ -351,7 +352,7 @@ export default function Layout() {
         </NavLink>
 
         {/* Sticky search trigger */}
-        <div className="px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--glass-border)' }}>
+        <div className="px-4 py-3 border-b border-white/[0.06] shrink-0">
           <CommandPaletteTrigger />
         </div>
 
@@ -424,7 +425,7 @@ export default function Layout() {
         </nav>
 
         {/* Bottom status */}
-        <div className="border-t px-4 py-3 space-y-2 shrink-0 safe-bottom" style={{ borderColor: 'var(--glass-border)' }}>
+        <div className="border-t border-white/[0.06] px-4 py-3 space-y-2 shrink-0 safe-bottom">
           {/* Update available banner */}
           {updateCheck?.update_available && (
             <GlassPanel className="!p-2.5 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">

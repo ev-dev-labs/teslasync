@@ -114,7 +114,11 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 			e.cooldownMu.Lock()
 			cd, exists := e.cooldowns[cooldownKey]
 			if !exists {
-				cd = notifFSM.NewCooldownFSM(rule.ID, vehicleID, notifFSM.DefaultCooldownConfig())
+				cfg := notifFSM.DefaultCooldownConfig()
+				if rule.CooldownMin > 0 {
+					cfg.CooldownDuration = time.Duration(rule.CooldownMin) * time.Minute
+				}
+				cd = notifFSM.NewCooldownFSM(rule.ID, vehicleID, cfg)
 				e.cooldowns[cooldownKey] = cd
 			}
 			e.cooldownMu.Unlock()
@@ -125,6 +129,14 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 				log.Debug().Int64("rule_id", rule.ID).Int64("vehicle_id", vehicleID).
 					Msg("cep: alert suppressed by cooldown FSM")
 			}
+		} else if isTransitionRule(rule) {
+			// Condition is false for a transition rule — reset cooldown FSM
+			cooldownKey := fmt.Sprintf("%d:%d", rule.ID, vehicleID)
+			e.cooldownMu.Lock()
+			if cd, exists := e.cooldowns[cooldownKey]; exists {
+				cd.Reset()
+			}
+			e.cooldownMu.Unlock()
 		}
 	}
 	metrics.CEPActiveRules.Set(float64(enabledCount))

@@ -586,6 +586,14 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 		drive.StartLatitude = floatPtr(lat)
 		drive.StartLongitude = floatPtr(lon)
 	}
+	// Populate start_range_km from best available range signal
+	if ratedRange > 0 {
+		drive.StartRangeKm = floatPtr(ratedRange)
+	} else if idealRange > 0 {
+		drive.StartRangeKm = floatPtr(idealRange)
+	} else if estRange > 0 {
+		drive.StartRangeKm = floatPtr(estRange)
+	}
 
 	if err := t.driveRepo.Create(ctx, drive); err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to create drive")
@@ -927,11 +935,13 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	if v, ok := signals["IsClimateOn"]; ok {
 		if b, ok2 := v.(bool); ok2 { reading.IsClimateOn = boolPtr(b) }
 	}
-	// Fleet Telemetry sends tire pressure in bar via TpmsPressure* signals
-	if v, ok := signalFloat(signals, "TpmsFl", "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TpmsFr", "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TpmsRl", "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
-	if v, ok := signalFloat(signals, "TpmsRr", "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
+	// Fleet Telemetry sends tire pressure in bar via TpmsPressure* signals.
+	// TPMS reports infrequently (~every 25 min) so we fall back to the SignalStore
+	// for last-known values — otherwise most drive telemetry rows have NULL tire data.
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsFl", "TpmsPressureFl", "TirePressureFL", "TPMS_PressureFL"); ok { reading.TirePressureFL = floatPtr(v) }
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsFr", "TpmsPressureFr", "TirePressureFR", "TPMS_PressureFR"); ok { reading.TirePressureFR = floatPtr(v) }
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsRl", "TpmsPressureRl", "TirePressureRL", "TPMS_PressureRL"); ok { reading.TirePressureRL = floatPtr(v) }
+	if v, ok := t.resolveFloat(drive.VehicleID, signals, nil, "TpmsRr", "TpmsPressureRr", "TirePressureRR", "TPMS_PressureRR"); ok { reading.TirePressureRR = floatPtr(v) }
 	if v, ok := signals["BatteryHeaterOn"]; ok {
 		if b, ok2 := v.(bool); ok2 { reading.BatteryHeaterOn = boolPtr(b) }
 	}
@@ -1034,7 +1044,10 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	if speedMin != nil { enhancedFields["speed_min"] = *speedMin }
 
 	// Range stats
-	if active.StartRatedRange != nil { enhancedFields["start_rated_range_km"] = *active.StartRatedRange }
+	if active.StartRatedRange != nil {
+		enhancedFields["start_rated_range_km"] = *active.StartRatedRange
+		enhancedFields["start_range_km"] = *active.StartRatedRange
+	}
 	if endRatedRange != nil { enhancedFields["end_rated_range_km"] = *endRatedRange }
 	if active.RangeCount > 0 {
 		enhancedFields["rated_range_avg"] = active.RatedRangeSum / float64(active.RangeCount)
@@ -1171,6 +1184,7 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 			}
 			if (active.StartRatedRange == nil || *active.StartRatedRange == 0) && startPos.RatedRange != nil && *startPos.RatedRange > 0 {
 				backfill["start_rated_range_km"] = *startPos.RatedRange
+				backfill["start_range_km"] = *startPos.RatedRange
 			}
 			if active.StartIdealRange == nil && startPos.IdealRange != nil && *startPos.IdealRange > 0 {
 				backfill["start_ideal_range_km"] = *startPos.IdealRange

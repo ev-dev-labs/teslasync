@@ -107,9 +107,9 @@ export function CommandPalette() {
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
             className="fixed left-1/2 top-[10%] sm:top-[15%] z-[201] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2"
           >
-            <div className="overflow-hidden rounded-2xl shadow-2xl" style={{ border: '1px solid var(--glass-border)', background: 'var(--surface-1)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
+            <div className="overflow-hidden rounded-2xl shadow-2xl border border-white/[0.06] bg-white/[0.04]" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}>
               {/* Search input */}
-              <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--glass-border)' }}>
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
                 <Search className="h-5 w-5 text-[var(--text-muted)] flex-shrink-0" />
                 <div className="flex-1">
                   <Input
@@ -118,8 +118,7 @@ export function CommandPalette() {
                     onChange={e => setQuery(e.target.value)}
                     onKeyDown={handleInputKey}
                     placeholder="Search commands, pages..."
-                    className="!bg-transparent !border-0 !ring-0 !shadow-none !p-0 !rounded-none text-sm"
-                    style={{ color: 'var(--text-primary)' }}
+                    className="!bg-transparent !border-0 !ring-0 !shadow-none !p-0 !rounded-none text-sm text-white/90"
                   />
                 </div>
                 <kbd className="hidden sm:flex items-center gap-1 rounded-lg bg-white/[0.05] border border-white/[0.08] px-2 py-1 text-[10px] text-[var(--text-muted)] font-mono">

@@ -71,14 +71,18 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	}
 	e.mu.RUnlock()
 
+	inCooldown := false
 	if hasState && lastFiredAt != nil {
 		cooldown := time.Duration(rule.CooldownMin) * time.Minute
 		if cooldown <= 0 {
 			cooldown = 15 * time.Minute
 		}
 		if time.Since(*lastFiredAt) < cooldown {
-			metrics.CEPRulesCooldownSkipped.Inc()
-			return EvalResult{} // still in cooldown
+			if !isTransitionRule(rule) {
+				metrics.CEPRulesCooldownSkipped.Inc()
+				return EvalResult{} // still in cooldown — non-transition rules skip evaluation
+			}
+			inCooldown = true // transition rules continue to evaluate for reset detection
 		}
 	}
 
@@ -118,10 +122,13 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 		st.ConditionTrueSince = nil
 		e.mu.Unlock()
 	} else if !matched {
-		// Condition is false — reset temporal tracker
+		// Condition is false — reset temporal tracker and cooldown for transition rules
 		e.mu.Lock()
 		if st != nil {
 			st.ConditionTrueSince = nil
+			if st.LastFiredAt != nil && isTransitionRule(rule) {
+				st.LastFiredAt = nil
+			}
 		}
 		e.mu.Unlock()
 	}
@@ -130,6 +137,12 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	e.updatePrevSignals(key, signals)
 
 	if !matched {
+		return EvalResult{}
+	}
+
+	// Transition rules that matched but are still in cooldown get suppressed
+	if inCooldown {
+		metrics.CEPRulesCooldownSkipped.Inc()
 		return EvalResult{}
 	}
 
@@ -229,6 +242,8 @@ func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[strin
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+
+	// Update existing state entries
 	for key, st := range e.state {
 		if key.VehicleID == vehicleID || key.VehicleID == 0 {
 			if st.PrevSignals == nil {
@@ -237,6 +252,19 @@ func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[strin
 			for k, v := range signals {
 				st.PrevSignals[k] = v
 			}
+		}
+	}
+
+	// Also create a "baseline" entry for this vehicle so new rules
+	// get prevSignals on their first evaluation
+	baselineKey := ruleKey{RuleID: 0, VehicleID: vehicleID}
+	if _, exists := e.state[baselineKey]; !exists {
+		baseline := make(map[string]interface{}, len(signals))
+		for k, v := range signals {
+			baseline[k] = v
+		}
+		e.state[baselineKey] = &ruleState{
+			PrevSignals: baseline,
 		}
 	}
 }
@@ -316,8 +344,9 @@ func evalNode(node *models.RuleCondition, signals, prevSignals map[string]interf
 	case "changed_to":
 		prev, hasPrev := prevSignals[node.Signal]
 		if !hasPrev {
-			// First time seeing this signal — treat as change if value matches
-			return compareEq(current, node.Value)
+			// No baseline — record current value but don't fire.
+			// The next evaluation will have prevSignals and can detect real changes.
+			return false
 		}
 		return !compareEq(prev, node.Value) && compareEq(current, node.Value)
 	case "changed_from":
@@ -380,6 +409,17 @@ func compareNum(a, b interface{}) int {
 // ──────────────────────────────────────────────────────────────────────
 // Template rendering
 // ──────────────────────────────────────────────────────────────────────
+
+// isTransitionRule returns true if the rule's conditions contain a changed_to or
+// changed_from operator. Cooldown reset only applies to transition rules — threshold
+// rules should NOT reset on brief bounces to avoid notification storms.
+func isTransitionRule(rule *models.AlertRule) bool {
+	if rule.Conditions == nil {
+		return false
+	}
+	raw := string(rule.Conditions)
+	return strings.Contains(raw, `"changed_to"`) || strings.Contains(raw, `"changed_from"`)
+}
 
 var templateRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
 

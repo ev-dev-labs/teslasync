@@ -1,0 +1,571 @@
+{
+  "uid": "teslasync-infra-fleet-telemetry",
+  "title": "TeslaSync - Fleet Telemetry Server",
+  "tags": [
+    "teslasync",
+    "infra",
+    "fleet-telemetry"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Connection Health",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Active Connections",
+      "description": "Current WebSocket connections from vehicles",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "num_connections",
+          "legendFormat": "connections",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Server Uptime",
+      "description": "Fleet Telemetry server uptime",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "orange", "value": null },
+              { "color": "green", "value": 3600 }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "uptime_sec",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Records Dispatched",
+      "description": "Total records dispatched to TeslaSync",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "dispatch_total",
+          "legendFormat": "dispatched",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total Signals",
+      "description": "Total signals received from vehicles",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "signal_count",
+          "legendFormat": "signals",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Socket Errors",
+      "description": "WebSocket connection errors",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "socket_err_total",
+          "legendFormat": "errors",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Rate Limits",
+      "description": "Times a client was rate limited",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 50 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "rate_limit_exceeded_total",
+          "legendFormat": "rate limited",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Throughput",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Records Dispatched Rate",
+      "description": "Records dispatched per second over time",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "rate(dispatch_total{record_type=\"V\"}[1m])",
+          "legendFormat": "vehicle data",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(record_total[1m])",
+          "legendFormat": "all records",
+          "refId": "B"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Signal Rate",
+      "description": "Signals received per second",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "rate(signal_count[1m])",
+          "legendFormat": "signals/s",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Data Throughput",
+      "description": "Bytes processed and published per second",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "Bps"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "rate(record_size_bytes_total[1m])",
+          "legendFormat": "records ingested",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(mqtt_publish_total_bytes[1m])",
+          "legendFormat": "MQTT published",
+          "refId": "B"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "MQTT Publish Rate",
+      "description": "MQTT messages published per second",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "ops"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "rate(mqtt_publish_total[1m])",
+          "legendFormat": "publishes/s",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Errors & Rate Limiting",
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "WebSocket Errors",
+      "description": "Socket errors over time — spikes indicate connectivity issues",
+      "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "rate(socket_err_total[5m])",
+          "legendFormat": "errors/s",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Rate Limit Events",
+      "description": "Client rate limiting events — indicates vehicle sending too fast",
+      "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "rate(rate_limit_exceeded_total[5m])",
+          "legendFormat": "rate limits/s",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 400,
+      "type": "row",
+      "title": "Server Resources",
+      "gridPos": { "x": 0, "y": 31, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Memory Usage",
+      "description": "Heap and stack memory allocation",
+      "gridPos": { "x": 0, "y": 32, "w": 8, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "bytes"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "memory_heap",
+          "legendFormat": "heap",
+          "refId": "A"
+        },
+        {
+          "expr": "memory_stack",
+          "legendFormat": "stack",
+          "refId": "B"
+        },
+        {
+          "expr": "memory_allocated_bytes",
+          "legendFormat": "allocated",
+          "refId": "C"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Goroutines",
+      "description": "Active goroutines — indicates concurrency level",
+      "gridPos": { "x": 8, "y": 32, "w": 8, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "num_goroutine",
+          "legendFormat": "goroutines",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "GC Pause",
+      "description": "Garbage collection pause time per second",
+      "gridPos": { "x": 16, "y": 32, "w": 8, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "yellow", "mode": "fixed" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "ms"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "gc_pause_per_second",
+          "legendFormat": "GC pause ms/s",
+          "refId": "A"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "prometheus" }
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{{- if and .Values.fleetTelemetry.enabled (or .Values.fleetTelemetry.metrics.serviceMonitor.enabled (and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled)) }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+  {{- with .Values.metrics.serviceMonitor.namespace }}
+  namespace: {{ . }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: fleet-telemetry
+  {{- with .Values.metrics.serviceMonitor.namespaceSelector }}
+  namespaceSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.fleetTelemetry.metrics.serviceMonitor.interval | default "30s" }}
+{{- end }}

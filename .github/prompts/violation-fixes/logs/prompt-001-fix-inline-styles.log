@@ -1,0 +1,13 @@
+Now I have all the context. Let me apply all the edits across the 11 files.
+
+Let me fix the Toast.tsx properly and view its context, then continue with the remaining files.
+
+Now let me fix the sidebar properly ΓÇö add Tailwind classes to the className and remove the style, then fix the NavLink and search div:
+
+All 25 edits applied. Now let me run TypeScript compilation and verify no remaining `var(--` inline styles in the fixed files.
+
+TypeScript compiles clean (exit code 0). All 25 listed violations are fixed. The 2 remaining `var(--` occurrences in Layout.tsx and CommandPalette.tsx are outside the scope of the 25 violations listed in the task.
+
+Let me commit the changes:
+
+

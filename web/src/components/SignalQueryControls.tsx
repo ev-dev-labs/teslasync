@@ -5,10 +5,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../api/client'
-import { GlassPanel, Badge, Button, Input } from './ui'
+import { GlassPanel, Badge, Button, Input, DataTable, type Column } from './ui'
 import { fmtInt } from '../lib/numberFormat'
 import { Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import clsx from 'clsx'
+
 
 /* ── Shared Types ── */
 
@@ -66,7 +66,7 @@ export const TYPE_BADGE_COLOR: Record<string, 'cyan' | 'green' | 'amber' | 'neut
 }
 
 export const TYPE_VALUE_COLOR: Record<string, string> = {
-  num: 'text-neon-cyan', str: 'text-neon-green', bool: 'text-neon-amber', null: 'text-[var(--text-muted)]',
+  num: 'text-neon-cyan', str: 'text-neon-green', bool: 'text-neon-amber', null: 'text-white/40',
 }
 
 export const PAGE_SIZES = [25, 50, 100]
@@ -265,47 +265,68 @@ export function SignalDataTable({ rows, page, totalPages, total, perPage, onPage
     return <GlassPanel className="p-4"><div className="space-y-2">{Array.from({length: 5}).map((_, i) => <div key={i} className="h-8 rounded bg-white/[0.03] animate-pulse" />)}</div></GlassPanel>
   }
 
+  type IndexedEntry = SignalLogEntry & { _rowNum: number }
+  const indexedRows: IndexedEntry[] = rows.map((entry, i) => ({
+    ...entry,
+    _rowNum: (page - 1) * perPage + i + 1,
+  }))
+
+  const columns: Column<IndexedEntry>[] = [
+    {
+      key: 'index',
+      header: '#',
+      render: (row) => row._rowNum,
+      className: 'text-white/40 font-mono',
+    },
+    {
+      key: 'created_at',
+      header: 'Timestamp',
+      render: (row) => formatTimestampMs(row.created_at),
+      className: 'font-mono text-white/60',
+    },
+    {
+      key: 'signal',
+      header: 'Signal',
+      render: (row) => row.signal,
+      className: 'font-mono text-white/90',
+    },
+    {
+      key: 'value',
+      header: 'Value',
+      render: (row) => {
+        const vt = getValueType(row)
+        return <span className={TYPE_VALUE_COLOR[vt]}>{formatValue(row)}</span>
+      },
+      className: 'font-mono',
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      render: (row) => {
+        const vt = getValueType(row)
+        return <Badge color={TYPE_BADGE_COLOR[vt]}>{vt}</Badge>
+      },
+    },
+  ]
+
   return (
     <GlassPanel className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-white/[0.06]">
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">#</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Timestamp</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Signal</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Value</th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((entry, i) => {
-              const vt = getValueType(entry)
-              return (
-                <tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                  <td className="px-3 py-2 text-[var(--text-muted)] font-mono">{(page - 1) * perPage + i + 1}</td>
-                  <td className="px-3 py-2 font-mono text-[var(--text-secondary)]">{formatTimestampMs(entry.created_at)}</td>
-                  <td className="px-3 py-2 font-mono text-[var(--text-primary)]">{entry.signal}</td>
-                  <td className={clsx('px-3 py-2 font-mono', TYPE_VALUE_COLOR[vt])}>{formatValue(entry)}</td>
-                  <td className="px-3 py-2"><Badge color={TYPE_BADGE_COLOR[vt]}>{vt}</Badge></td>
-                </tr>
-              )
-            })}
-            {rows.length === 0 && (
-              <tr><td colSpan={5} className="px-3 py-8 text-center text-[var(--text-muted)]">No results</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={indexedRows}
+        keyExtractor={(row) => row._rowNum}
+        emptyMessage="No results"
+        compact
+      />
 
-      {/* Pagination */}
+      {/* Server-side pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <span className="text-[10px] text-[var(--text-muted)]">{fmtInt(total)} records</span>
+          <span className="text-[10px] text-white/40">{fmtInt(total)} records</span>
           <div className="flex items-center gap-1">
             <button onClick={() => onPageChange(1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
-            <span className="px-2 text-xs text-[var(--text-secondary)]">Page {page} of {totalPages}</span>
+            <span className="px-2 text-xs text-white/60">Page {page} of {totalPages}</span>
             <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5" /></button>
             <button onClick={() => onPageChange(totalPages)} disabled={page >= totalPages} className="p-1 rounded hover:bg-white/[0.05] disabled:opacity-30"><ChevronsRight className="h-3.5 w-3.5" /></button>
           </div>

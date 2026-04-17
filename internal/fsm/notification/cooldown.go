@@ -102,6 +102,21 @@ func (c *CooldownFSM) ShouldFire() bool {
 	return true
 }
 
+// Reset clears the cooldown state when the alert condition resolves.
+// This ensures the next occurrence is treated as a new event.
+func (c *CooldownFSM) Reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.state == Fired || c.state == Suppressed {
+		c.logger.Info().
+			Str("prev_state", string(c.state)).
+			Msg("cooldown reset — condition resolved")
+		c.state = Armed
+		c.lastFiredAt = time.Time{} // zero value = no cooldown
+		// Note: do NOT reset fireCountHour — hourly rate limit is still valid
+	}
+}
+
 // State returns the current cooldown state.
 func (c *CooldownFSM) State() CooldownState {
 	c.mu.Lock()

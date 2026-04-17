@@ -18,11 +18,11 @@ const INTERVAL_OPTIONS = [
 ]
 
 const PRESETS = [
-  { name: '⚡ Real-time Driving', desc: 'Driving signals at 500ms, battery at 10s, config at 24h',
+  { name: '⚡ Real-time Driving', desc: 'Driving signals at 1s, battery at 10s, config at 24h',
     apply: (fields: SignalConfig[]) => fields.map(f => ({
       ...f,
       selected: true,
-      interval: ['Driving','Powertrain','Location'].includes(f.category) ? 0 :
+      interval: ['Driving','Powertrain','Location'].includes(f.category) ? 1 :
                 ['Charging','Climate','Tires & Service'].includes(f.category) ? 10 :
                 ['Vehicle Config','User Preference'].includes(f.category) ? 86400 : 10,
     })),
@@ -33,13 +33,47 @@ const PRESETS = [
   { name: '🔋 Low Power', desc: 'All signals at 60s — minimal battery impact',
     apply: (fields: SignalConfig[]) => fields.map(f => ({ ...f, selected: true, interval: 60 })),
   },
-  { name: '🏎️ Track Mode', desc: 'Driving & powertrain at 500ms, everything else at 30s',
+  { name: '🏎️ Track Mode', desc: 'Driving & powertrain at 1s, everything else at 30s',
     apply: (fields: SignalConfig[]) => fields.map(f => ({
       ...f,
       selected: true,
-      interval: ['Driving','Powertrain'].includes(f.category) ? 0 :
-                f.category === 'Location' ? 0 :
+      interval: ['Driving','Powertrain','Location'].includes(f.category) ? 1 :
                 ['Vehicle Config','User Preference'].includes(f.category) ? 3600 : 30,
+    })),
+  },
+  { name: '💰 Cost Saver', desc: 'Essential signals only at 5–15min, non-essentials off',
+    apply: (fields: SignalConfig[]) => fields.map(f => ({
+      ...f,
+      selected: ['Location','Charging','Vehicle State','Safety'].includes(f.category),
+      interval: f.category === 'Vehicle State' ? 900 :
+                ['Location','Charging','Safety'].includes(f.category) ? 300 : 300,
+    })),
+  },
+  { name: '😴 Sleep Watch', desc: 'Security & location at 60s, charging at 1min, rest off',
+    apply: (fields: SignalConfig[]) => fields.map(f => ({
+      ...f,
+      selected: ['Safety','Vehicle State','Location','Charging','Climate'].includes(f.category),
+      interval: ['Safety','Vehicle State','Charging'].includes(f.category) ? 60 :
+                ['Location','Climate'].includes(f.category) ? 300 : 300,
+    })),
+  },
+  { name: '🔧 Diagnostics', desc: 'Powertrain/tires/climate at 5s, driving at 10s',
+    apply: (fields: SignalConfig[]) => fields.map(f => ({
+      ...f,
+      selected: true,
+      interval: ['Powertrain','Tires & Service','Climate'].includes(f.category) ? 5 :
+                ['Driving','Charging','Vehicle State','Safety','Location'].includes(f.category) ? 10 :
+                f.category === 'Media' ? 60 : 3600,
+    })),
+  },
+  { name: '🗺️ Trip Logger', desc: 'Location at 1s, driving at 5s — optimized for routes',
+    apply: (fields: SignalConfig[]) => fields.map(f => ({
+      ...f,
+      selected: !['Media','User Preference','Vehicle Config'].includes(f.category),
+      interval: f.category === 'Location' ? 1 :
+                f.category === 'Driving' ? 5 :
+                ['Powertrain','Charging'].includes(f.category) ? 30 :
+                ['Climate','Vehicle State','Safety'].includes(f.category) ? 60 : 300,
     })),
   },
 ]

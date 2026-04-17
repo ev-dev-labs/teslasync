@@ -28,6 +28,9 @@ spec:
             - name: wss
               containerPort: 4443
               protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
           volumeMounts:
             - name: config
               mountPath: /etc/fleet-telemetry
@@ -62,6 +65,10 @@ spec:
       targetPort: wss
       protocol: TCP
       name: wss
+    - port: 9090
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
   selector:
     {{- include "teslasync.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: fleet-telemetry
