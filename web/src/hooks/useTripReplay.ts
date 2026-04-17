@@ -5,7 +5,7 @@ import type { DrivePosition } from '@/types/driving';
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-export type ReplaySpeed = 1 | 2 | 5 | 10;
+export type ReplaySpeed = 1 | 10 | 25 | 50 | 100;
 
 export interface ReplayState {
   isPlaying: boolean;

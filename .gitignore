@@ -80,5 +80,6 @@ REFACTORING_PROMPTS.md
 REFACTORING_REPORT.md
 ENGINEERING_GUIDELINES.md
 .github/prompts/
+.github/issues/
 !.github/prompts/features/
 scripts/check-loc.js

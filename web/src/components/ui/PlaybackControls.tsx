@@ -29,7 +29,7 @@ interface PlaybackControlsProps {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-const SPEEDS: ReplaySpeed[] = [1, 2, 5, 10];
+const SPEEDS: ReplaySpeed[] = [1, 10, 25, 50, 100];
 
 function nextSpeed(current: ReplaySpeed): ReplaySpeed {
   const idx = SPEEDS.indexOf(current);
