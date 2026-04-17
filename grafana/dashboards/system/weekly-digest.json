@@ -48,6 +48,246 @@
       "panels": []
     },
     {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 10,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COALESCE(SUM(distance), 0)::numeric, 1) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Distance (km)",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 11,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Drives",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 12,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COALESCE(SUM(energy_used_kwh), 0)::numeric, 1) AS \"Energy (kWh)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Energy (kWh)",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 13,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(COALESCE(SUM(duration_min), 0)::numeric, 0) AS \"Drive Time (min)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "refId": "A"
+        }
+      ],
+      "title": "Drive Time (min)",
+      "type": "stat",
+      "transparent": false
+    },
+    {
       "type": "row",
       "title": "Daily Analysis",
       "gridPos": {
