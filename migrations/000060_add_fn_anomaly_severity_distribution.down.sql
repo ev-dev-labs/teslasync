@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_anomaly_severity_distribution(BIGINT, TIMESTAMPTZ, TIMESTAMPTZ);
