@@ -120,7 +120,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  health_score AS \"SoH %\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT * FROM fn_battery_soh_trend(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -179,7 +179,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Original Capacity kWh"
+              "options": "original_capacity"
             },
             "properties": [
               {
@@ -206,14 +206,14 @@
               },
               {
                 "id": "custom.fillBelowTo",
-                "value": "Estimated Capacity kWh"
+                "value": "estimated_capacity"
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Estimated Capacity kWh"
+              "options": "estimated_capacity"
             },
             "properties": [
               {
@@ -266,7 +266,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  capacity_kwh AS \"Estimated Capacity kWh\",\n  75.0 AS \"Original Capacity kWh\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at",
+          "rawSql": "SELECT * FROM fn_battery_capacity_over_time(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -338,7 +338,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(\n    (SELECT cycle_count FROM battery_snapshots\n     WHERE vehicle_id = ${vehicle_id}\n     ORDER BY created_at DESC LIMIT 1),\n    (SELECT FLOOR(SUM(GREATEST(end_battery_level - start_battery_level, 0)) / 100)\n     FROM charging_sessions\n     WHERE vehicle_id = ${vehicle_id}\n       AND end_battery_level > start_battery_level),\n    0\n  ) AS \"Cycles\"",
+          "rawSql": "SELECT * FROM fn_battery_charge_cycles(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -414,7 +414,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(\n    (MAX(health_score) - MIN(health_score)) /\n    NULLIF(EXTRACT(EPOCH FROM MAX(created_at) - MIN(created_at)) / (365.25 * 86400), 0)\n  , 2) AS \"Degradation %/yr\"\nFROM battery_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND health_score IS NOT NULL",
+          "rawSql": "SELECT * FROM fn_battery_degradation_rate(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -491,7 +491,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(100.0 * COUNT(*) FILTER (WHERE charger_power > 50) / NULLIF(COUNT(*), 0)) AS \"Fast Charge %\",\n  ROUND(100.0 * COUNT(*) FILTER (WHERE end_battery_level > 95) / NULLIF(COUNT(*), 0)) AS \"High SoC Charges\",\n  80 AS \"Temp Exposure\",\n  ROUND(100.0 * COUNT(*) FILTER (WHERE start_battery_level < 10) / NULLIF(COUNT(*), 0)) AS \"Deep Discharge %\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT * FROM fn_battery_risk_factors(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
