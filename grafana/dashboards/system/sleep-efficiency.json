@@ -97,7 +97,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(\n    100.0 * COALESCE(SUM(CASE WHEN state = 'asleep' THEN duration_min END), 0) /\n    NULLIF(SUM(duration_min), 0)\n  , 1) AS \"Sleep Efficiency %\"\nFROM vehicle_states\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)",
+          "rawSql": "SELECT * FROM fn_sleep_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -173,7 +173,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(AVG(drain_rate_pct_per_hour)::numeric, 2) AS \"Drain %/hr\"\nFROM vampire_drain_events\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)",
+          "rawSql": "SELECT * FROM fn_sleep_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -328,7 +328,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  state AS \"State\",\n  ROUND(EXTRACT(EPOCH FROM SUM(COALESCE(ended_at, NOW()) - started_at)) / 3600, 1) AS \"Hours\"\nFROM vehicle_states\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nGROUP BY state\nORDER BY \"Hours\" DESC",
+          "rawSql": "SELECT * FROM fn_sleep_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -421,7 +421,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_date AS \"Start\",\n  end_date AS \"End\",\n  ROUND(duration_hours::numeric, 1) AS \"Duration (hrs)\",\n  battery_lost AS \"Battery Lost %\",\n  ROUND(drain_rate_pct_per_hour::numeric, 2) AS \"Drain %/hr\",\n  CASE WHEN sentry_mode THEN '🛡 Yes' ELSE 'No' END AS \"Sentry\"\nFROM vampire_drain_events\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nORDER BY start_date DESC\nLIMIT 50",
+          "rawSql": "SELECT * FROM fn_sleep_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
