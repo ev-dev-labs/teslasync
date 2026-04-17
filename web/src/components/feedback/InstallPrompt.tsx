@@ -72,10 +72,10 @@ export default function InstallPrompt() {
               <Download className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--text-primary, #fff)' }}>
+              <p className="text-sm font-semibold leading-tight text-white/90">
                 Install TeslaSync
               </p>
-              <p className="text-xs leading-tight mt-0.5" style={{ color: 'var(--text-muted, rgba(255,255,255,0.5))' }}>
+              <p className="text-xs leading-tight mt-0.5 text-white/40">
                 Add to home screen for native experience
               </p>
             </div>
@@ -91,7 +91,7 @@ export default function InstallPrompt() {
               className="shrink-0 rounded-lg p-1.5 transition-colors hover:bg-white/10"
               aria-label="Dismiss install prompt"
             >
-              <X className="h-4 w-4" style={{ color: 'var(--text-muted, rgba(255,255,255,0.5))' }} />
+              <X className="h-4 w-4 text-white/40" />
             </button>
           </div>
         </motion.div>

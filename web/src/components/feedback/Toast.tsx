@@ -87,10 +87,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 exit={{ opacity: 0, x: 80, scale: 0.95 }}
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                 className={clsx(
-                  'pointer-events-auto rounded-xl border backdrop-blur-xl p-4',
+                  'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
                   s.border, s.glow
                 )}
-                style={{ background: 'var(--surface-2)' }}
               >
                 <div className="flex items-start gap-3">
                   <div className={clsx('mt-0.5 flex-shrink-0', s.icon)}>

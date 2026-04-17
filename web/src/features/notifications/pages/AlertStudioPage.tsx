@@ -533,11 +533,11 @@ export default function AlertStudio() {
                 {/* Always-on: SSE + DB */}
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span style={{ color: 'var(--text-primary)' }}>Browser toast notification (real-time via SSE)</span>
+                  <span className="text-white/90">Browser toast notification (real-time via SSE)</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-neon-green" />
-                  <span style={{ color: 'var(--text-primary)' }}>Alert history (saved to database)</span>
+                  <span className="text-white/90">Alert history (saved to database)</span>
                 </div>
 
                 {/* Channels */}

@@ -11,7 +11,7 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: string; 
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">{title}</h1>
             <div className="mt-1.5 sm:mt-2 h-0.5 w-12 sm:w-16 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple opacity-60" />
-            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>{subtitle}</p>}
+            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-white/60">{subtitle}</p>}
           </div>
         </div>
         {actions && <div className="flex items-center gap-2 sm:gap-3">{actions}</div>}
