@@ -99,7 +99,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(distance), 0)::numeric, 1) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT distance AS \"Distance (km)\" FROM fn_weekly_summary(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -159,7 +159,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT drives AS \"Drives\" FROM fn_weekly_summary(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -219,7 +219,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(energy_used_kwh), 0)::numeric, 1) AS \"Energy (kWh)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT energy_kwh AS \"Energy (kWh)\" FROM fn_weekly_summary(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -279,7 +279,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COALESCE(SUM(duration_min), 0)::numeric, 0) AS \"Drive Time (min)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())",
+          "rawSql": "SELECT drive_min AS \"Drive Time (min)\" FROM fn_weekly_summary(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -396,7 +396,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH this_week AS (\n  SELECT 'This Week' AS period,\n    COALESCE(SUM(distance), 0) AS km,\n    COUNT(*) AS drives,\n    COALESCE(SUM(energy_used_kwh), 0) AS kwh\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= DATE_TRUNC('week', NOW())\n),\nlast_week AS (\n  SELECT 'Last Week' AS period,\n    COALESCE(SUM(distance), 0) AS km,\n    COUNT(*) AS drives,\n    COALESCE(SUM(energy_used_kwh), 0) AS kwh\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= DATE_TRUNC('week', NOW()) - INTERVAL '7 days'\n    AND start_date < DATE_TRUNC('week', NOW())\n)\nSELECT * FROM this_week\nUNION ALL\nSELECT * FROM last_week",
+          "rawSql": "SELECT * FROM fn_driving_week_over_week(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -496,7 +496,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  DATE_TRUNC('day', start_date) AS time,\n  ROUND(SUM(distance)::numeric, 1) AS \"Distance (km)\",\n  ROUND(SUM(energy_used_kwh)::numeric, 1) AS \"Energy (kWh)\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND start_date >= DATE_TRUNC('week', NOW())\nGROUP BY DATE_TRUNC('day', start_date)\nORDER BY time",
+          "rawSql": "SELECT time, distance AS \"Distance (km)\", energy_kwh AS \"Energy (kWh)\" FROM fn_driving_daily_breakdown(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -661,7 +661,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  'Drive' AS \"Type\",\n  start_date AS \"Start\",\n  COALESCE(start_address, '—') AS \"From\",\n  COALESCE(end_address, '—') AS \"To\",\n  ROUND(distance::numeric, 1) AS \"Distance\",\n  ROUND(duration_min::numeric, 0) AS \"Duration (min)\",\n  NULL AS \"Energy Added\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())\n\nUNION ALL\n\nSELECT\n  'Charge',\n  start_date,\n  COALESCE(location_name, '—'),\n  '—',\n  NULL,\n  ROUND(EXTRACT(EPOCH FROM end_date - start_date) / 60, 0),\n  ROUND(energy_added_kwh::numeric, 1)\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND start_date >= DATE_TRUNC('week', NOW())\n\nORDER BY \"Start\" DESC",
+          "rawSql": "SELECT type AS \"Type\", start_time AS \"Start\", from_loc AS \"From\", to_loc AS \"To\", distance AS \"Distance\", duration_min AS \"Duration (min)\", energy_added AS \"Energy Added\" FROM fn_weekly_activity(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
