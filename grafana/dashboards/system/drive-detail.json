@@ -21,6 +21,18 @@
   "id": null,
   "links": [
     {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 💰 Cost Analysis",
+      "type": "link",
+      "url": "/d/teslasync-cost-analysis"
+    },
+    {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
@@ -29,7 +41,7 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "🔀 Navigate to...",
+      "title": "⚡ TeslaSync",
       "type": "dashboards"
     },
     {
@@ -42,6 +54,18 @@
       "title": "⬅️ Back to Drive History",
       "type": "link",
       "url": "/d/teslasync-drives?var-vehicle_id=${vehicle_id}"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync ⭐ Drive Scores",
+      "type": "link",
+      "url": "/d/teslasync-drive-score"
     }
   ],
   "panels": [

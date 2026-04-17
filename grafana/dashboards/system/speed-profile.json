@@ -1,0 +1,269 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 📦 Software Updates",
+      "type": "link",
+      "url": "/d/teslasync-software-updates"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync 📈 Monthly Statistics",
+      "type": "link",
+      "url": "/d/teslasync-statistics"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Distribution of telemetry speed readings in 10 km/h bands. Shows how much time is spent at each speed range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "cyan"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Readings",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "lineWidth": 1,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": -45
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM fn_speed_profile_histogram(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Speed Histogram",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Distribution of average drive speeds in 10 km/h bands. Shows whether your drives tend to be city or highway.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "yellow"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Drives",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "lineWidth": 1,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": -45
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM fn_driving_speed_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Speed Distribution",
+      "type": "barchart"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-365d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync 🏎️ Speed Profile",
+  "uid": "teslasync-speed-profile",
+  "version": 1,
+  "weekStart": ""
+}

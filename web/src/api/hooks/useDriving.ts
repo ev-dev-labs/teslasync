@@ -10,6 +10,7 @@ import type {
   DriveScore,
   DrivingStats,
   DrivingDynamicsData,
+  AccelerationDistributionData,
   DrivetrainHealthData,
   SpeedProfileData,
   RegenEfficiencyData,
@@ -31,6 +32,7 @@ export const drivingKeys = {
   score: (vehicleId?: string) => ['drive-score', vehicleId] as const,
   stats: (vehicleId?: string) => ['driving-stats', vehicleId] as const,
   dynamics: (vehicleId?: string) => ['driving-dynamics', vehicleId] as const,
+  accelerationDistribution: (vehicleId?: string) => ['acceleration-distribution', vehicleId] as const,
   drivetrainHealth: (vehicleId?: string) => ['drivetrain-health', vehicleId] as const,
   speedProfile: (vehicleId?: string) => ['speed-profile', vehicleId] as const,
   regenEfficiency: (vehicleId?: string) => ['regen-efficiency', vehicleId] as const,
@@ -86,6 +88,20 @@ export function useDrivingDynamics(vehicleId?: string) {
     queryFn: () =>
       request<DrivingDynamicsData>(
         vehicleId ? `/drives/dynamics?vehicle_id=${vehicleId}` : '/drives/dynamics',
+      ),
+    enabled: !!vehicleId,
+    retry: false,
+  });
+}
+
+export function useAccelerationDistribution(vehicleId?: string) {
+  return useQuery({
+    queryKey: drivingKeys.accelerationDistribution(vehicleId),
+    queryFn: () =>
+      request<AccelerationDistributionData>(
+        vehicleId
+          ? `/drives/acceleration-distribution?vehicle_id=${vehicleId}`
+          : '/drives/acceleration-distribution',
       ),
     enabled: !!vehicleId,
     retry: false,

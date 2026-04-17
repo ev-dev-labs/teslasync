@@ -21,6 +21,18 @@
   "id": null,
   "links": [
     {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync ⚡ Charging Sessions",
+      "type": "link",
+      "url": "/d/teslasync-charging-sessions"
+    },
+    {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
@@ -29,8 +41,20 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "🔀 Navigate to...",
+      "title": "⚡ TeslaSync",
       "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync ⚡ Charging History",
+      "type": "link",
+      "url": "/d/teslasync-charging"
     }
   ],
   "panels": [
@@ -649,7 +673,7 @@
           "color": "rgba(255,0,255,0.7)"
         },
         "filterValues": {
-          "le": 1e-09
+          "le": 1E-09
         },
         "legend": {
           "show": true

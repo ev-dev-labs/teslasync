@@ -1,0 +1,471 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 🔍 Anomaly Detection",
+      "type": "link",
+      "url": "/d/teslasync-anomaly-detection"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync 📉 Battery Degradation",
+      "type": "link",
+      "url": "/d/teslasync-battery-degradation"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Bar chart showing the latest voltage reading for each battery cell. Highlights imbalanced cells that deviate from the mean.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "unit": "volt",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Deviation"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -0.1
+                    },
+                    {
+                      "color": "green",
+                      "value": -0.05
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.05
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "barWidth": 0.8,
+        "colorByField": "Deviation",
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT cell_id AS \"Cell\", voltage AS \"Voltage (V)\", v_deviation AS \"Deviation\" FROM fn_battery_cell_readings(${vehicle_id}::bigint)",
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Voltage Distribution",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Shows the max–min voltage delta across all cells. A growing delta indicates cell imbalance.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "unit": "volt",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 10
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT voltage_delta AS \"Voltage Delta (V)\" FROM fn_battery_cell_balance(${vehicle_id}::bigint)",
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Voltage Balance Delta",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Sortable table showing the latest reading for each cell: cell ID, voltage, temperature, and deviation from average. Allows quick identification of outlier cells.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "cellHeight": "sm",
+            "align": "auto",
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "V Deviation"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -0.05
+                    },
+                    {
+                      "color": "green",
+                      "value": -0.02
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.02
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.05
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Cell",
+            "desc": false
+          }
+        ],
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT cell_id AS \"Cell\", voltage AS \"Voltage (V)\", temp AS \"Temp (°C)\", v_deviation AS \"V Deviation\", t_deviation AS \"T Deviation\" FROM fn_battery_cell_readings(${vehicle_id}::bigint)",
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Readings",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Heatmap showing temperature readings per cell over time. Hot spots indicate cells under thermal stress.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-multi",
+          "min": 10,
+          "max": 50,
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Turbo",
+          "steps": 128
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1E-09
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "showColorScale": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisLabel": "Cell ID",
+          "axisPlacement": "left",
+          "reverse": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No cell temperature data available"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", cell_id AS metric, temp AS value FROM fn_battery_cell_temp_heatmap(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Cell Temperature Heatmap",
+      "type": "timeseries",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync",
+    "battery"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync 🔋 Battery Cells",
+  "uid": "teslasync-battery-cells",
+  "version": 1,
+  "weekStart": ""
+}

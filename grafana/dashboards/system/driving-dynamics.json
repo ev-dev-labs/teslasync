@@ -1,0 +1,630 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 🌡️ Drivetrain Thermal",
+      "type": "link",
+      "url": "/d/teslasync-drivetrain-thermal"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync ⚙️ Driving Efficiency",
+      "type": "link",
+      "url": "/d/teslasync-efficiency"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Distribution of longitudinal acceleration values across all drives.\nComputed from consecutive speed readings in drive telemetry.\nTaller bars at higher absolute g values indicate more aggressive driving.\nGreen = mild (< 0.2g), yellow = moderate, red = aggressive (> 0.3g).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "lineWidth": 1
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": -0.5
+              },
+              {
+                "color": "yellow",
+                "value": -0.3
+              },
+              {
+                "color": "green",
+                "value": -0.2
+              },
+              {
+                "color": "green",
+                "value": 0.2
+              },
+              {
+                "color": "yellow",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
+            ]
+          },
+          "min": -0.5,
+          "max": 0.5
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "bucketSize": 0.05,
+        "combine": false,
+        "fillOpacity": 80,
+        "gradientMode": "scheme",
+        "legend": {
+          "displayMode": "hidden"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM fn_driving_acceleration_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Acceleration Distribution",
+      "type": "histogram",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Summary statistics for acceleration across all drives in the selected time range.\nShows mean, standard deviation, and percentile values to quantify driving aggressiveness.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.15
+              },
+              {
+                "color": "red",
+                "value": 0.25
+              }
+            ]
+          },
+          "unit": "accG"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH readings AS (\n  SELECT\n    dtr.speed,\n    dtr.created_at,\n    LAG(dtr.speed)      OVER (PARTITION BY dtr.drive_id ORDER BY dtr.created_at) AS prev_speed,\n    LAG(dtr.created_at) OVER (PARTITION BY dtr.drive_id ORDER BY dtr.created_at) AS prev_time\n  FROM drive_telemetry_readings dtr\n  JOIN drives d ON d.id = dtr.drive_id\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND dtr.speed IS NOT NULL\n),\naccel AS (\n  SELECT\n    ((speed - prev_speed) * 0.44704)\n    / NULLIF(EXTRACT(EPOCH FROM (created_at - prev_time)), 0)\n    / 9.81 AS g\n  FROM readings\n  WHERE prev_speed IS NOT NULL\n    AND prev_time IS NOT NULL\n    AND EXTRACT(EPOCH FROM (created_at - prev_time)) BETWEEN 1 AND 30\n    AND ABS(\n      ((speed - prev_speed) * 0.44704)\n      / NULLIF(EXTRACT(EPOCH FROM (created_at - prev_time)), 0)\n      / 9.81\n    ) <= 0.5\n)\nSELECT\n  ROUND(AVG(ABS(g))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(g)::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(g))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(g))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM accel",
+          "refId": "A"
+        }
+      ],
+      "title": "Acceleration Statistics",
+      "type": "stat",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Tracks braking intensity per drive over time. Hard braking events indicate aggressive driving or emergency situations.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "axisBorderShow": false,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hard Brakes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Moderate Brakes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Decel (g)"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "B",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "cyan",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "accG"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM fn_driving_braking_intensity(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Braking Intensity Over Time",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Driving style breakdown: gentle / moderate / aggressive percentages based on average speed and energy efficiency per drive. Uses fn_driving_style_summary().",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gentle"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Moderate"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Aggressive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F2495C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM fn_driving_style_summary(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Driving Style Summary",
+      "transformations": [
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "style",
+                "type": "field"
+              },
+              {
+                "fieldName": "percent",
+                "type": "field"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "piechart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Scatter plot of average speed vs energy efficiency (Wh/km) per drive.\nReveals the optimal cruising speed for maximum efficiency.\nEfficiency is estimated from rated range consumption per km driven.\nLower Wh/km = more efficient.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00d3ff",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "pointSize": {
+              "fixed": 5
+            },
+            "show": "points",
+            "lineWidth": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Speed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "velocitykmh"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "Avg Speed (km/h)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Wh/km"
+            },
+            "properties": [
+              {
+                "id": "custom.axisLabel",
+                "value": "Efficiency (Wh/km)"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 5,
+      "options": {
+        "dims": {
+          "x": "Avg Speed"
+        },
+        "series": [],
+        "seriesMapping": "auto",
+        "legend": {
+          "displayMode": "hidden"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT avg_speed AS \"Avg Speed\", wh_per_km AS \"Wh/km\" FROM fn_driving_speed_vs_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
+          "refId": "A"
+        }
+      ],
+      "title": "Speed vs Efficiency",
+      "type": "xychart",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync 🏎️ Driving Dynamics",
+  "uid": "teslasync-driving-dynamics",
+  "version": 1,
+  "weekStart": ""
+}

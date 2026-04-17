@@ -245,6 +245,41 @@ func (w *SignalHistoryWriter) AvailableSignals(ctx context.Context, vehicleID in
 	return signals, rows.Err()
 }
 
+// GetLatestPerSignal returns the most recent value for every signal for a given vehicle.
+// Used on startup to warm the in-memory SignalStore after a pod restart.
+// Uses DISTINCT ON for an efficient single-pass scan.
+func (w *SignalHistoryWriter) GetLatestPerSignal(ctx context.Context, vehicleID int64) (map[string]interface{}, error) {
+	query := `SELECT DISTINCT ON (signal) signal, value_num, value_str, value_bool
+	          FROM signal_history
+	          WHERE vehicle_id = $1
+	          ORDER BY signal, created_at DESC, id DESC`
+	rows, err := w.db.Pool.Query(ctx, query, vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]interface{})
+	for rows.Next() {
+		var signal string
+		var vNum *float64
+		var vStr *string
+		var vBool *bool
+		if err := rows.Scan(&signal, &vNum, &vStr, &vBool); err != nil {
+			return nil, err
+		}
+		switch {
+		case vStr != nil:
+			result[signal] = *vStr
+		case vNum != nil:
+			result[signal] = *vNum
+		case vBool != nil:
+			result[signal] = *vBool
+		}
+	}
+	return result, rows.Err()
+}
+
 // SignalStats holds min/max/avg/count for a signal.
 type SignalStats struct {
 	Signal string  `json:"signal"`

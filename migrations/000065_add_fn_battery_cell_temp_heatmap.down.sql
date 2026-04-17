@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_battery_cell_temp_heatmap(BIGINT, TIMESTAMPTZ, TIMESTAMPTZ);

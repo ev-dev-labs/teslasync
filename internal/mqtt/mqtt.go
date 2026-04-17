@@ -15,8 +15,9 @@ import (
 
 // Client wraps MQTT publishing.
 type Client struct {
-	client pahomqtt.Client
-	prefix string
+	client    pahomqtt.Client
+	prefix    string
+	brokerURL string
 }
 
 // NewClient creates a new MQTT client.
@@ -52,8 +53,9 @@ func NewClient(cfg config.MQTTConfig) (*Client, error) {
 	}
 
 	return &Client{
-		client: client,
-		prefix: cfg.Prefix,
+		client:    client,
+		prefix:    cfg.Prefix,
+		brokerURL: cfg.BrokerURL(),
 	}, nil
 }
 
@@ -121,6 +123,16 @@ func (c *Client) PublishVehicleData(vin string, data *tesla.VehicleDataResponse)
 // IsConnected returns whether the MQTT client is currently connected to the broker.
 func (c *Client) IsConnected() bool {
 	return c.client.IsConnected()
+}
+
+// BrokerURL returns the broker URL this client is connected to.
+func (c *Client) BrokerURL() string {
+	return c.brokerURL
+}
+
+// Prefix returns the topic prefix used for publishing.
+func (c *Client) Prefix() string {
+	return c.prefix
 }
 
 // Underlying returns the raw Paho MQTT client for advanced usage

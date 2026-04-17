@@ -21,6 +21,18 @@
   "id": null,
   "links": [
     {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 📈 Monthly Statistics",
+      "type": "link",
+      "url": "/d/teslasync-statistics"
+    },
+    {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
@@ -29,8 +41,20 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "🔀 Navigate to...",
+      "title": "⚡ TeslaSync",
       "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync 🛞 Tire Pressure",
+      "type": "link",
+      "url": "/d/teslasync-tire-pressure"
     }
   ],
   "panels": [

@@ -1,0 +1,618 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync ♻️ Regen Efficiency",
+      "type": "link",
+      "url": "/d/teslasync-regen-efficiency"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync 🔒 Security & Access",
+      "type": "link",
+      "url": "/d/teslasync-security-access"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Horizontal bar chart showing average Wh/km for frequently driven routes (3+ trips). Routes are identified by start → end address pairs. Green = more efficient, red = less efficient.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Wh/km",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "lineWidth": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 150
+              },
+              {
+                "color": "red",
+                "value": 250
+              }
+            ]
+          },
+          "unit": "Wh/km"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trips"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "hidden"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "text",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "barWidth": 0.75,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT route AS \"Route\", avg_wh_per_km AS \"Avg Wh/km\", trips AS \"Trips\"\nFROM fn_route_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\nWHERE trips >= 3\nORDER BY avg_wh_per_km\nLIMIT 15",
+          "refId": "A"
+        }
+      ],
+      "title": "Efficiency by Route (Wh/km)",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Detailed table of all frequent routes with efficiency stats: best, average, worst Wh/km, trip count, and total distance.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Wh/km"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 150
+                    },
+                    {
+                      "color": "red",
+                      "value": 200
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Best Wh/km"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "Wh/km"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Worst Wh/km"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "Wh/km"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Dist"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "km"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Trips"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(start_address, '?') || ' → ' || COALESCE(end_address, '?') AS \"Route\",\n  COUNT(*) AS \"Trips\",\n  ROUND(AVG(distance)::numeric, 1) AS \"Avg Dist (km)\",\n  ROUND(MIN(CASE WHEN distance > 0 THEN (COALESCE(start_rated_range_km,0) - COALESCE(end_rated_range_km,0)) * 1000 / distance END)::numeric, 0) AS \"Best Wh/km\",\n  ROUND(AVG(CASE WHEN distance > 0 THEN (COALESCE(start_rated_range_km,0) - COALESCE(end_rated_range_km,0)) * 1000 / distance END)::numeric, 0) AS \"Avg Wh/km\",\n  ROUND(MAX(CASE WHEN distance > 0 THEN (COALESCE(start_rated_range_km,0) - COALESCE(end_rated_range_km,0)) * 1000 / distance END)::numeric, 0) AS \"Worst Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND distance > 1\n  AND start_rated_range_km IS NOT NULL AND end_rated_range_km IS NOT NULL\nGROUP BY start_address, end_address\nHAVING COUNT(*) >= 2\nORDER BY COUNT(*) DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Routes",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "For the top 10 most-driven routes, shows the min/avg/max efficiency range. A wide range indicates high variability (weather, traffic, driving style).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "cyan"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Wh/km",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Wh/km"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Best"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Average"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "cyan",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Worst"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 2,
+      "options": {
+        "barWidth": 0.75,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH routes AS (\n  SELECT\n    COALESCE(start_address, '?') || ' → ' || COALESCE(end_address, '?') AS route,\n    CASE WHEN distance > 0 THEN (COALESCE(start_rated_range_km,0) - COALESCE(end_rated_range_km,0)) * 1000 / distance ELSE NULL END AS whkm\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n    AND distance > 1\n    AND start_rated_range_km IS NOT NULL AND end_rated_range_km IS NOT NULL\n)\nSELECT\n  route AS \"Route\",\n  ROUND(MIN(whkm)::numeric, 0) AS \"Best\",\n  ROUND(AVG(whkm)::numeric, 0) AS \"Average\",\n  ROUND(MAX(whkm)::numeric, 0) AS \"Worst\"\nFROM routes\nGROUP BY route\nHAVING COUNT(*) >= 3\nORDER BY COUNT(*) DESC\nLIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "title": "Route Efficiency Consistency",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Efficiency trend for a selected frequent route over time. Shows how weather, seasons, and driving habits affect the same commute.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "cyan",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Wh/km",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 150
+              },
+              {
+                "color": "red",
+                "value": 250
+              }
+            ]
+          },
+          "unit": "Wh/km"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "min",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  start_date AS time,\n  ROUND(((COALESCE(start_rated_range_km,0) - COALESCE(end_rated_range_km,0)) * 1000 / NULLIF(distance, 0))::numeric, 0) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND start_address = '${route_start}'\n  AND end_address = '${route_end}'\n  AND distance > 1\n  AND start_rated_range_km IS NOT NULL AND end_rated_range_km IS NOT NULL\nORDER BY start_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Route Efficiency Over Time",
+      "type": "timeseries",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync",
+    "efficiency",
+    "routes"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT DISTINCT start_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address IS NOT NULL ORDER BY start_address",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Route Start",
+        "multi": false,
+        "name": "route_start",
+        "options": [],
+        "query": "SELECT DISTINCT start_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address IS NOT NULL ORDER BY start_address",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT DISTINCT end_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address = '${route_start}' AND end_address IS NOT NULL ORDER BY end_address",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Route End",
+        "multi": false,
+        "name": "route_end",
+        "options": [],
+        "query": "SELECT DISTINCT end_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address = '${route_start}' AND end_address IS NOT NULL ORDER BY end_address",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-365d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Route Efficiency",
+  "uid": "teslasync-route-efficiency",
+  "version": 1
+}

@@ -52,6 +52,7 @@ type TelemetryHandler struct {
 	cleanupInterval       time.Duration
 	staleSessionTimeout   time.Duration
 	signalStore           *signal.Store
+	startTime             time.Time
 
 	// Cancellable context for background goroutines ╬ô├ç├╢ cancelled on Shutdown()
 	bgCtx    context.Context
@@ -163,6 +164,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		snapshotWriteInterval: 10 * time.Second,
 		cleanupInterval:       2 * time.Minute,
 		staleSessionTimeout:   5 * time.Minute,
+		startTime:             time.Now().UTC(),
 		bgCtx:          bgCtx,
 		bgCancel:       bgCancel,
 		streamingState:     make(map[string]*VehicleStreamState),
@@ -585,13 +587,31 @@ func (h *TelemetryHandler) ProcessSignals(ctx context.Context, vin string, signa
 			bgCtx, cancel := context.WithTimeout(h.bgCtx, 30*time.Second)
 			defer cancel()
 
-			// Drain accumulated signals for this write cycle
+			// Drain accumulated signals for this write cycle, merging with
+			// SignalStore context so change-only signals (Gear, Locked, etc.)
+			// are carried forward between drain cycles.
 			var writeSignals map[string]interface{}
 			if shouldWrite {
 				h.accumulatedSignalsMu.Lock()
-				writeSignals = h.accumulatedSignals[vin]
+				batchSignals := h.accumulatedSignals[vin]
 				h.accumulatedSignals[vin] = make(map[string]interface{})
 				h.accumulatedSignalsMu.Unlock()
+
+				// Start with full SignalStore context (last-known-good for ALL signals),
+				// then overlay the fresh batch on top (fresh values win).
+				if h.signalStore != nil && vehicleID > 0 {
+					base := h.signalStore.GetRawMap(vehicleID)
+					if base != nil {
+						for k, v := range batchSignals {
+							base[k] = v
+						}
+						writeSignals = base
+					} else {
+						writeSignals = batchSignals
+					}
+				} else {
+					writeSignals = batchSignals
+				}
 			}
 
 			// Throttled snapshot writes ╬ô├ç├╢ only run every 10s per vehicle
@@ -927,7 +947,7 @@ func (h *TelemetryHandler) commitStateTransition(ctx context.Context, vehicleID 
 		_, err := h.db.Pool.Exec(ctx,
 			`INSERT INTO fsm_transitions (vehicle_id, fsm_type, from_state, to_state, trigger, mode)
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			vehicleID, "vehicle_state",
+			vehicleID, "vehicle",
 			fromState, newState, "signal_change", "immediate",
 		)
 		if err != nil {
@@ -1272,60 +1292,54 @@ func (h *TelemetryHandler) extractPosition(signals map[string]interface{}) *mode
 // TelemetryStatus returns the telemetry endpoint configuration and streaming health.
 func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 	streamingVehicles := h.GetStreamingState()
-
-	// Build vehicle list in the format the frontend expects
-	type vehicleTelemetry struct {
-		VIN           string  `json:"vin"`
-		VehicleID     int64   `json:"vehicle_id,omitempty"`
-		State         string  `json:"state,omitempty"`
-		SignalCount   int64   `json:"signal_count"`
-		BatchCount    int64   `json:"batch_count"`
-		SignalsPerSec float64 `json:"signals_per_sec"`
-		LastReceived  string  `json:"last_received,omitempty"`
-	}
-
-	vehicles := make([]vehicleTelemetry, 0, len(streamingVehicles))
-	for _, v := range streamingVehicles {
-		vt := vehicleTelemetry{
-			VIN:           v.VIN,
-			SignalCount:   v.SignalCount,
-			BatchCount:    v.BatchCount,
-			SignalsPerSec: v.SignalsPerSecond,
-		}
-		if !v.LastReceived.IsZero() {
-			vt.LastReceived = v.LastReceived.Format(time.RFC3339)
-		}
-		if v.IsStreaming {
-			vt.State = "streaming"
-		} else {
-			vt.State = "stale"
-		}
-		vehicles = append(vehicles, vt)
-	}
-
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
-	// Build streaming_vehicles map keyed by VIN (frontend expects this shape)
-	streamingMap := make(map[string]interface{}, len(vehicles))
+	// Build vehicles array (frontend expects []VehicleTelemetry, not a map)
+	vehicles := make([]interface{}, 0, len(streamingVehicles))
 	var totalSignals int64
+	var totalBatches int64
 	var avgRate float64
-	for _, v := range vehicles {
-		streamingMap[v.VIN] = v
+	var streamingCount int
+	for _, v := range streamingVehicles {
+		vehicles = append(vehicles, v)
 		totalSignals += v.SignalCount
-		avgRate += v.SignalsPerSec
+		totalBatches += v.BatchCount
+		avgRate += v.SignalsPerSecond
+		if v.IsStreaming {
+			streamingCount++
+		}
+	}
+
+	// Broker URL and topic patterns from MQTT client
+	var broker string
+	var topics []string
+	if h.mqttClient != nil {
+		broker = h.mqttClient.BrokerURL()
+		prefix := h.mqttClient.Prefix()
+		if prefix != "" {
+			topics = []string{prefix + "/+/v/#"}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":              true,
-		"connected":            connected,
-		"mode":                 "fleet_telemetry",
-		"endpoint":             "/api/v1/telemetry",
-		"protocol":             "MQTT + HTTP",
-		"mqtt_publishing":      connected,
-		"streaming_vehicles":   streamingMap,
-		"vehicles":             vehicles,
-		"total_signals":        totalSignals,
-		"avg_signals_per_sec":  avgRate,
+		"enabled":         true,
+		"connected":       connected,
+		"broker":          broker,
+		"uptime_seconds":  time.Since(h.startTime).Seconds(),
+		"topics":          topics,
+		"mode":            "fleet_telemetry",
+		"endpoint":        "/api/v1/telemetry",
+		"protocol":        "MQTT + HTTP",
+		"mqtt_publishing": connected,
+		"vehicles":        vehicles,
+		"aggregate_stats": map[string]interface{}{
+			"streaming_vehicles":      streamingCount,
+			"total_vehicles_seen":     len(streamingVehicles),
+			"total_signals_received":  totalSignals,
+			"total_batches_processed": totalBatches,
+			"avg_signals_per_second":  fmt.Sprintf("%.2f", avgRate),
+			"stale_timeout":           h.staleTimeout.String(),
+		},
 	})
 }
 
@@ -2247,9 +2261,10 @@ func (h *TelemetryHandler) trackCharging(ctx context.Context, vehicleID int64, s
 
 // trackMedia stores media playback snapshots when relevant signals arrive.
 func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	_, hasTitle := signals["MediaNowPlayingTitle"]
-	_, hasStatus := signals["MediaPlaybackStatus"]
-	if !hasTitle && !hasStatus {
+	// Only create a snapshot when actual track data arrives (non-empty title or artist)
+	title := toString(signals["MediaNowPlayingTitle"])
+	artist := toString(signals["MediaNowPlayingArtist"])
+	if title == "" && artist == "" {
 		return
 	}
 
@@ -2298,6 +2313,19 @@ func (h *TelemetryHandler) trackMedia(ctx context.Context, vehicleID int64, sign
 		f := toFloat(v)
 		snap.AudioVolumeIncrement = &f
 	}
+
+	// Carry forward source/status from signalStore if not in current batch
+	if snap.PlaybackSource == nil && h.signalStore != nil {
+		if src, ok := h.signalStore.GetString(vehicleID, "MediaPlaybackSource"); ok && src != "" {
+			snap.PlaybackSource = &src
+		}
+	}
+	if snap.PlaybackStatus == nil && h.signalStore != nil {
+		if status, ok := h.signalStore.GetString(vehicleID, "MediaPlaybackStatus"); ok && status != "" {
+			snap.PlaybackStatus = &status
+		}
+	}
+
 	if err := h.mediaRepo.Insert(ctx, snap); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("telemetry: failed to store media snapshot")
 	}
@@ -2521,6 +2549,33 @@ func (h *TelemetryHandler) trackLocation(ctx context.Context, vehicleID int64, s
 					snap.CurrentLon = &f
 				}
 			}
+		}
+	}
+	// Carry forward contextual fields from signalStore if not in current batch.
+	// Tesla sends these only on change (e.g., arriving/leaving home), not with every location update.
+	if snap.LocatedAtHome == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtHome"); ok {
+			snap.LocatedAtHome = &v
+		}
+	}
+	if snap.LocatedAtWork == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtWork"); ok {
+			snap.LocatedAtWork = &v
+		}
+	}
+	if snap.LocatedAtFavorite == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetBool(vehicleID, "LocatedAtFavorite"); ok {
+			snap.LocatedAtFavorite = &v
+		}
+	}
+	if snap.DestinationName == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetString(vehicleID, "DestinationName"); ok && v != "" {
+			snap.DestinationName = &v
+		}
+	}
+	if snap.GpsState == nil && h.signalStore != nil {
+		if v, ok := h.signalStore.GetString(vehicleID, "GpsState"); ok && v != "" {
+			snap.GpsState = &v
 		}
 	}
 	if err := h.locationRepo.Insert(ctx, snap); err != nil {

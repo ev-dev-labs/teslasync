@@ -21,6 +21,18 @@
   "id": null,
   "links": [
     {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync ⏱️ State Timeline",
+      "type": "link",
+      "url": "/d/teslasync-timeline"
+    },
+    {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
@@ -29,8 +41,20 @@
         "teslasync"
       ],
       "targetBlank": false,
-      "title": "🔀 Navigate to...",
+      "title": "⚡ TeslaSync",
       "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync ✈️ Trip History",
+      "type": "link",
+      "url": "/d/teslasync-trips"
     }
   ],
   "panels": [

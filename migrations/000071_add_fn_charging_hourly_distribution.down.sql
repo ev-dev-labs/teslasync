@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_charging_hourly_distribution(BIGINT, TIMESTAMPTZ, TIMESTAMPTZ);

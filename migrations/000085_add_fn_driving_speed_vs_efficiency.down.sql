@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_driving_speed_vs_efficiency(BIGINT, TIMESTAMPTZ, TIMESTAMPTZ);

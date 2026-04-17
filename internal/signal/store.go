@@ -204,6 +204,36 @@ func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 	log.Info().Int64("vehicle_id", vehicleID).Int("signals", len(m)).Msg("signal store: loaded from DB")
 }
 
+// Hydrate merges signals into the store WITHOUT triggering a write-through flush.
+// Used on startup to warm the store from Postgres signal_history.
+// Does NOT overwrite values already loaded from vehicle_live_state (LoadFromDB).
+func (s *Store) Hydrate(vehicleID int64, signals map[string]interface{}) {
+	if len(signals) == 0 {
+		return
+	}
+	now := time.Now().UTC()
+	s.mu.Lock()
+	m, ok := s.vehicles[vehicleID]
+	if !ok {
+		m = make(map[string]*Value, len(signals))
+		s.vehicles[vehicleID] = m
+	}
+	added := 0
+	for k, v := range signals {
+		if v == nil {
+			continue
+		}
+		// Don't overwrite values already loaded from vehicle_live_state
+		if _, exists := m[k]; exists {
+			continue
+		}
+		m[k] = &Value{Raw: v, Timestamp: now}
+		added++
+	}
+	s.mu.Unlock()
+	log.Debug().Int64("vehicle_id", vehicleID).Int("hydrated", added).Int("skipped", len(signals)-added).Msg("signal store: hydrated from signal_history")
+}
+
 // flushNow asynchronously flushes the vehicle's live state to Postgres.
 // Called on every batch for write-through persistence.
 func (s *Store) flushNow(vehicleID int64) {

@@ -67,7 +67,7 @@ function buildVehicleColumns(t: (key: string, fallback: string) => string): Colu
       key: 'sigPerSec',
       header: t('mqtt.sigPerSec', 'Sig/sec'),
       className: 'text-right',
-      render: (v) => <span className="font-mono text-[var(--text-secondary)]">{v.signalsPerSec != null ? fmtNumber(v.signalsPerSec) : '—'}</span>,
+      render: (v) => <span className="font-mono text-[var(--text-secondary)]">{v.signalsPerSecond != null ? fmtNumber(v.signalsPerSecond) : '—'}</span>,
     },
     {
       key: 'lastReceived',
@@ -104,7 +104,7 @@ export default function MQTTInspectorPage() {
   const vehicles = status?.vehicles ?? [];
   const totalSignals = vehicles.reduce((sum, v) => sum + v.signalCount, 0);
   const totalBatches = vehicles.reduce((sum, v) => sum + v.batchCount, 0);
-  const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSec ?? 0), 0);
+  const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? 0), 0);
 
   useEffect(() => {
     if (totalSignals === 0 && prevTotalRef.current === null) return;

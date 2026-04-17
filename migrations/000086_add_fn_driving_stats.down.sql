@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_driving_stats(BIGINT, TEXT);

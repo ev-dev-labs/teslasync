@@ -22,8 +22,8 @@ func (r *DriveTelemetryRepo) Insert(ctx context.Context, reading *models.DriveTe
 			inside_temp, outside_temp, driver_temp, passenger_temp,
 			fan_status, is_climate_on,
 			tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr,
-			battery_heater_on
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+			battery_heater_on, acceleration_gs
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
 		RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
 		reading.DriveID, reading.VehicleID,
@@ -33,7 +33,7 @@ func (r *DriveTelemetryRepo) Insert(ctx context.Context, reading *models.DriveTe
 		reading.InsideTemp, reading.OutsideTemp, reading.DriverTemp, reading.PassengerTemp,
 		reading.FanStatus, reading.IsClimateOn,
 		reading.TirePressureFL, reading.TirePressureFR, reading.TirePressureRL, reading.TirePressureRR,
-		reading.BatteryHeaterOn,
+		reading.BatteryHeaterOn, reading.AccelerationGs,
 	).Scan(&reading.ID)
 }
 
@@ -43,7 +43,7 @@ func (r *DriveTelemetryRepo) GetByDriveID(ctx context.Context, driveID int64) ([
 		inside_temp, outside_temp, driver_temp, passenger_temp,
 		fan_status, is_climate_on,
 		tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr,
-		battery_heater_on, created_at
+		battery_heater_on, acceleration_gs, created_at
 		FROM drive_telemetry_readings WHERE drive_id = $1
 		ORDER BY created_at ASC`
 	rows, err := r.db.Pool.Query(ctx, query, driveID)
@@ -63,7 +63,7 @@ func (r *DriveTelemetryRepo) GetByDriveID(ctx context.Context, driveID int64) ([
 			&rd.InsideTemp, &rd.OutsideTemp, &rd.DriverTemp, &rd.PassengerTemp,
 			&rd.FanStatus, &rd.IsClimateOn,
 			&rd.TirePressureFL, &rd.TirePressureFR, &rd.TirePressureRL, &rd.TirePressureRR,
-			&rd.BatteryHeaterOn, &rd.CreatedAt,
+			&rd.BatteryHeaterOn, &rd.AccelerationGs, &rd.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

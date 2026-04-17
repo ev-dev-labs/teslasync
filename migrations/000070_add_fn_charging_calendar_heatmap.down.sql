@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_charging_calendar_heatmap(BIGINT, TIMESTAMPTZ, TIMESTAMPTZ);

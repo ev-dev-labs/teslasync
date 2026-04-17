@@ -7,7 +7,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Clock, Hash, Trophy, Navigation } from 'lucide-react';
+import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Select, Pagination } from '@/components/ui';
@@ -64,7 +64,20 @@ export default function LocationsPage() {
   const topLocation = locations?.[0];
   const avgDurationMin = totalVisits > 0 ? totalTime / totalVisits : 0;
 
-  const visitsChartData = useMemo(() =>
+  const uniqueCities = useMemo(() => {
+    if (!locations?.length) return 0;
+    const cities = new Set<string>();
+    for (const loc of locations) {
+      const parts = (loc.address_name ?? '').split(',').map(s => s.trim());
+      const city = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+      if (city && city !== 'Unknown') {
+        cities.add(city);
+      }
+    }
+    return cities.size;
+  }, [locations]);
+
+  const visitsChartData= useMemo(() =>
     (locations ?? []).slice(0, 15).map(l => ({
       name: (l.address_name ?? '').length > 25 ? (l.address_name ?? '').slice(0, 22) + '…' : (l.address_name ?? ''),
       visits: l.visit_count,
@@ -101,8 +114,9 @@ export default function LocationsPage() {
 
       {/* ── Summary stats ────────────────────────────────────────── */}
       <FadeIn>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
           <MetricCard label={t('Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
+          <MetricCard label={t('Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
           <MetricCard label={t('Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
           <MetricCard label={t('Total Time')} value={`${fmtInt(totalTime / 60)}h`} icon={<Clock className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />

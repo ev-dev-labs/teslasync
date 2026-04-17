@@ -580,3 +580,57 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 		"smoothness_score":  smoothScore,
 	})
 }
+
+// AccelerationDistribution returns raw acceleration G readings for histogram analysis.
+func (h *DriveHandler) AccelerationDistribution(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := r.URL.Query().Get("vehicle_id")
+	if vehicleIDStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		return
+	}
+	vehicleID, err := parseInt64(vehicleIDStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
+
+	startTime, endTime := parseDateRange(r)
+
+	ctx := r.Context()
+	query := `SELECT acceleration_gs FROM fn_driving_acceleration_distribution($1, $2, $3)`
+
+	var pStart, pEnd interface{}
+	if !startTime.IsZero() {
+		pStart = startTime
+	}
+	if !endTime.IsZero() {
+		pEnd = endTime
+	}
+
+	rows, err := h.db.Pool.Query(ctx, query, vehicleID, pStart, pEnd)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("acceleration distribution: query failed")
+		writeError(w, http.StatusInternalServerError, "failed to get acceleration distribution")
+		return
+	}
+	defer rows.Close()
+
+	values := make([]float64, 0)
+	for rows.Next() {
+		var g float64
+		if err := rows.Scan(&g); err != nil {
+			log.Warn().Err(err).Msg("acceleration distribution: scan error")
+			continue
+		}
+		values = append(values, g)
+	}
+	if err := rows.Err(); err != nil {
+		log.Error().Err(err).Msg("acceleration distribution: rows iteration error")
+		writeError(w, http.StatusInternalServerError, "failed to read acceleration data")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"values": values,
+	})
+}
