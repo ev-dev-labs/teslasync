@@ -138,7 +138,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT brick_voltage_max, brick_voltage_min, pack_voltage,\n         COALESCE(num_brick_voltage_max, 0) AS max_idx,\n         COALESCE(num_brick_voltage_min, 0) AS min_idx\n  FROM charging_telemetry\n  WHERE vehicle_id = ${vehicle_id}\n    AND brick_voltage_max IS NOT NULL\n    AND brick_voltage_min IS NOT NULL\n  ORDER BY created_at DESC\n  LIMIT 1\n),\nparams AS (\n  SELECT\n    brick_voltage_max AS v_max,\n    brick_voltage_min AS v_min,\n    (brick_voltage_max + brick_voltage_min) / 2.0 AS v_avg,\n    brick_voltage_max - brick_voltage_min AS spread,\n    max_idx, min_idx,\n    CASE\n      WHEN pack_voltage > 0\n           AND (brick_voltage_max + brick_voltage_min) / 2.0 > 0\n           AND ROUND(pack_voltage / ((brick_voltage_max + brick_voltage_min) / 2.0)) BETWEEN 72 AND 110\n      THEN ROUND(pack_voltage / ((brick_voltage_max + brick_voltage_min) / 2.0))::int\n      ELSE 96\n    END AS total\n  FROM latest\n)\nSELECT\n  g.n AS \"Cell\",\n  ROUND(\n    CASE\n      WHEN g.n - 1 = p.min_idx THEN p.v_min\n      WHEN g.n - 1 = p.max_idx THEN p.v_max\n      ELSE p.v_avg + (p.v_min + (g.n - 1)::float / GREATEST(p.total - 1, 1)::float * p.spread - p.v_avg) * 0.6\n    END::numeric, 4\n  ) AS \"Voltage (V)\",\n  ROUND(\n    (CASE\n      WHEN g.n - 1 = p.min_idx THEN p.v_min\n      WHEN g.n - 1 = p.max_idx THEN p.v_max\n      ELSE p.v_avg + (p.v_min + (g.n - 1)::float / GREATEST(p.total - 1, 1)::float * p.spread - p.v_avg) * 0.6\n    END - p.v_avg)::numeric, 4\n  ) AS \"Deviation\"\nFROM params p\nCROSS JOIN LATERAL generate_series(1, p.total) AS g(n)\nORDER BY g.n",
+          "rawSql": "SELECT cell_id AS \"Cell\", voltage AS \"Voltage (V)\", v_deviation AS \"Deviation\" FROM fn_battery_cell_readings(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -208,7 +208,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND((MAX(voltage) - MIN(voltage))::numeric, 4) AS \"Voltage Delta (V)\"\nFROM battery_cells\nWHERE vehicle_id = ${vehicle_id}\n  AND created_at = (\n    SELECT MAX(created_at) FROM battery_cells WHERE vehicle_id = ${vehicle_id}\n  )",
+          "rawSql": "SELECT voltage_delta AS \"Voltage Delta (V)\" FROM fn_battery_cell_balance(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -317,7 +317,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT cell_id, voltage, temperature\n  FROM battery_cells\n  WHERE vehicle_id = ${vehicle_id}\n    AND created_at = (\n      SELECT MAX(created_at) FROM battery_cells WHERE vehicle_id = ${vehicle_id}\n    )\n),\nstats AS (\n  SELECT AVG(voltage) AS avg_v, AVG(temperature) AS avg_t FROM latest\n)\nSELECT\n  l.cell_id AS \"Cell\",\n  ROUND(l.voltage::numeric, 4) AS \"Voltage (V)\",\n  ROUND(l.temperature::numeric, 1) AS \"Temp (°C)\",\n  ROUND((l.voltage - s.avg_v)::numeric, 4) AS \"V Deviation\",\n  ROUND((l.temperature - s.avg_t)::numeric, 1) AS \"T Deviation\"\nFROM latest l, stats s\nORDER BY l.cell_id",
+          "rawSql": "SELECT cell_id AS \"Cell\", voltage AS \"Voltage (V)\", temp AS \"Temp (°C)\", v_deviation AS \"V Deviation\", t_deviation AS \"T Deviation\" FROM fn_battery_cell_readings(${vehicle_id}::bigint)",
           "refId": "A"
         }
       ],
@@ -389,7 +389,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  created_at AS time,\n  cell_id AS \"Cell\",\n  temperature AS \"Temp °C\"\nFROM battery_cells\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(created_at)\nORDER BY created_at, cell_id",
+          "rawSql": "SELECT time, cell_id AS \"Cell\", temp AS \"Temp °C\" FROM fn_battery_cell_temp_heatmap(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
