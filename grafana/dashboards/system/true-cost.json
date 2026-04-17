@@ -183,6 +183,75 @@
       "title": "💰 EV Savings",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "What the same distance would have cost in gasoline, using average gas prices and a reference ICE vehicle MPG (30). Shows the savings potential.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH distance AS (\n  SELECT SUM(distance) AS total_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\ngas AS (\n  SELECT AVG(price) AS avg_price FROM gas_prices WHERE $__timeFilter(recorded_at)\n)\nSELECT\n  ROUND((d.total_km / 1.60934 / 30.0) * g.avg_price, 2) AS \"Gas Equivalent ($)\"\nFROM distance d, gas g",
+          "refId": "A"
+        }
+      ],
+      "title": "⛽ Gas Equivalent",
+      "type": "stat",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
