@@ -111,7 +111,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  DATE_TRUNC('month', cs.start_date) AS time,\n  ROUND(\n    SUM(cs.cost)::numeric /\n    NULLIF((SELECT SUM(d.distance) FROM drives d\n            WHERE d.vehicle_id = ${vehicle_id}\n            AND DATE_TRUNC('month', d.start_date) = DATE_TRUNC('month', cs.start_date)), 0)\n  , 4) AS \"Cost/km\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.start_date)\n  AND cs.cost > 0\nGROUP BY DATE_TRUNC('month', cs.start_date)\nORDER BY time",
+          "rawSql": "SELECT month AS time, ev_per_km AS \"Cost/km\"\nFROM fn_true_cost_per_km(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -180,7 +180,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(SUM(COALESCE(cost, 0))::numeric, 2) AS \"Total EV Cost ($)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)",
+          "rawSql": "SELECT ev_total AS \"Total EV Cost ($)\"\nFROM fn_true_cost_totals(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -245,7 +245,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH ev_cost AS (\n  SELECT SUM(COALESCE(cost, 0)) AS total\n  FROM charging_sessions\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\ndistance AS (\n  SELECT SUM(distance) AS total_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\ngas AS (\n  SELECT AVG(price) AS avg_price FROM gas_prices WHERE $__timeFilter(recorded_at)\n)\nSELECT\n  ROUND((d.total_km / 1.60934 / 30.0) * g.avg_price - e.total, 2) AS \"Savings ($)\"\nFROM ev_cost e, distance d, gas g",
+          "rawSql": "SELECT savings AS \"Savings ($)\"\nFROM fn_true_cost_totals(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -314,7 +314,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH distance AS (\n  SELECT SUM(distance) AS total_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\ngas AS (\n  SELECT AVG(price) AS avg_price FROM gas_prices WHERE $__timeFilter(recorded_at)\n)\nSELECT\n  ROUND((d.total_km / 1.60934 / 30.0) * g.avg_price, 2) AS \"Gas Equivalent ($)\"\nFROM distance d, gas g",
+          "rawSql": "SELECT gas_total AS \"Gas Equivalent ($)\"\nFROM fn_true_cost_totals(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -450,7 +450,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH monthly_ev AS (\n  SELECT\n    DATE_TRUNC('month', cs.start_date) AS month,\n    SUM(COALESCE(cs.cost, 0)) AS ev_cost\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(cs.start_date)\n  GROUP BY DATE_TRUNC('month', cs.start_date)\n),\nmonthly_km AS (\n  SELECT\n    DATE_TRUNC('month', d.start_date) AS month,\n    SUM(d.distance) AS km\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n  GROUP BY DATE_TRUNC('month', d.start_date)\n),\nmonthly_gas AS (\n  SELECT\n    DATE_TRUNC('month', recorded_at) AS month,\n    AVG(price) AS avg_price\n  FROM gas_prices\n  WHERE $__timeFilter(recorded_at)\n  GROUP BY DATE_TRUNC('month', recorded_at)\n)\nSELECT\n  e.month AS time,\n  ROUND(e.ev_cost::numeric, 2) AS \"EV Cost\",\n  ROUND((COALESCE(k.km, 0) / 1.60934 / 30.0 * COALESCE(g.avg_price, 3.50))::numeric, 2) AS \"Gas Equivalent\",\n  ROUND((COALESCE(k.km, 0) / 1.60934 / 30.0 * COALESCE(g.avg_price, 3.50) - e.ev_cost)::numeric, 2) AS \"Savings\"\nFROM monthly_ev e\nLEFT JOIN monthly_km k ON k.month = e.month\nLEFT JOIN monthly_gas g ON g.month = e.month\nORDER BY e.month",
+          "rawSql": "SELECT month AS time, ev_cost AS \"EV Cost\", gas_cost AS \"Gas Equivalent\",\n  (gas_cost - ev_cost) AS \"Savings\"\nFROM fn_true_cost_monthly(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
