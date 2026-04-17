@@ -6,9 +6,9 @@ BEGIN
   RETURN QUERY
   SELECT
     TO_CHAR(cs.start_date, 'Dy')::text,
-    EXTRACT(ISODOW FROM cs.start_date),
+    EXTRACT(ISODOW FROM cs.start_date)::double precision,
     COUNT(*)::bigint,
-    ROUND(SUM(COALESCE(cs.energy_added_kwh, 0))::numeric, 1)
+    ROUND(SUM(COALESCE(cs.charge_energy_added, 0))::numeric, 1)
   FROM charging_sessions cs
   WHERE cs.vehicle_id = p_vehicle_id
     AND (p_from IS NULL OR cs.start_date >= p_from)

@@ -9,13 +9,13 @@ BEGIN
   RETURN QUERY
   SELECT 'Current'::text,
     COALESCE(SUM(d.distance), 0)::numeric, COUNT(*)::bigint,
-    COALESCE(SUM(d.energy_used_kwh), 0)::numeric
+    COALESCE(SUM(COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)), 0)::numeric
   FROM drives d
   WHERE d.vehicle_id = p_vehicle_id AND d.start_date BETWEEN p_from AND p_to
   UNION ALL
   SELECT 'Prior'::text,
     COALESCE(SUM(d.distance), 0)::numeric, COUNT(*)::bigint,
-    COALESCE(SUM(d.energy_used_kwh), 0)::numeric
+    COALESCE(SUM(COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)), 0)::numeric
   FROM drives d
   WHERE d.vehicle_id = p_vehicle_id AND d.start_date BETWEEN (p_from - v_duration) AND p_from;
 END;

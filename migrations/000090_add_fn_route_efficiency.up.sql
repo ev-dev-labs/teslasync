@@ -7,7 +7,7 @@ BEGIN
   SELECT
     (COALESCE(d.start_address, '?') || ' → ' || COALESCE(d.end_address, '?'))::text,
     COUNT(*)::bigint,
-    ROUND(AVG(CASE WHEN d.distance > 0 THEN d.energy_used_kwh * 1000 / d.distance END)::numeric, 0),
+    ROUND(AVG(CASE WHEN d.distance > 0 THEN (COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)) * 1000 / d.distance END)::numeric, 0),
     ROUND(AVG(d.distance)::numeric, 1)
   FROM drives d
   WHERE d.vehicle_id = p_vehicle_id

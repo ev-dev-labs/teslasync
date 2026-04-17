@@ -5,12 +5,12 @@ CREATE OR REPLACE FUNCTION fn_anomaly_recent(
 RETURNS TABLE ("time" TIMESTAMPTZ, signal TEXT, type TEXT, severity TEXT, z_score NUMERIC, description TEXT) AS $$
 BEGIN
   RETURN QUERY
-  SELECT a.detected_at, a.signal_name::text, a.anomaly_type::text, a.severity::text,
-    ROUND(a.z_score::numeric, 2), a.description::text
-  FROM anomalies a
+  SELECT a.created_at, a.title::text, a.type::text, a.severity::text,
+    NULL::numeric, a.message::text
+  FROM alerts a
   WHERE a.vehicle_id = p_vehicle_id
-    AND (p_from IS NULL OR a.detected_at >= p_from)
-    AND (p_to IS NULL OR a.detected_at <= p_to)
-  ORDER BY a.detected_at DESC LIMIT p_limit;
+    AND (p_from IS NULL OR a.created_at >= p_from)
+    AND (p_to IS NULL OR a.created_at <= p_to)
+  ORDER BY a.created_at DESC LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql STABLE;

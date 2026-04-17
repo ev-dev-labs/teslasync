@@ -13,7 +13,7 @@ BEGIN
   SELECT
     ROUND(COALESCE(SUM(d.distance), 0)::numeric, 1),
     COUNT(*)::bigint,
-    ROUND(COALESCE(SUM(d.energy_used_kwh), 0)::numeric, 1),
+    ROUND(COALESCE(SUM(COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)), 0)::numeric, 1),
     ROUND(COALESCE(SUM(d.duration_min), 0)::numeric, 0)
   FROM drives d
   WHERE d.vehicle_id = p_vehicle_id

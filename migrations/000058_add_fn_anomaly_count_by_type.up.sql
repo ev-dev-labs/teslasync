@@ -4,12 +4,12 @@ CREATE OR REPLACE FUNCTION fn_anomaly_count_by_type(
 RETURNS TABLE (category TEXT, count BIGINT) AS $$
 BEGIN
   RETURN QUERY
-  SELECT COALESCE(a.signal_category, a.signal_name)::text, COUNT(*)::bigint
-  FROM anomalies a
+  SELECT a.type::text, COUNT(*)::bigint
+  FROM alerts a
   WHERE a.vehicle_id = p_vehicle_id
-    AND (p_from IS NULL OR a.detected_at >= p_from)
-    AND (p_to IS NULL OR a.detected_at <= p_to)
-  GROUP BY COALESCE(a.signal_category, a.signal_name)
+    AND (p_from IS NULL OR a.created_at >= p_from)
+    AND (p_to IS NULL OR a.created_at <= p_to)
+  GROUP BY a.type
   ORDER BY COUNT(*) DESC;
 END;
 $$ LANGUAGE plpgsql STABLE;

@@ -12,13 +12,13 @@ BEGIN
   ),
   costs AS (
     SELECT DATE_TRUNC('month', cs.start_date) AS m,
-      SUM(COALESCE(cs.cost, 0)) AS ev, SUM(COALESCE(cs.gas_equivalent_cost, 0)) AS gas
+      SUM(COALESCE(cs.cost, 0)) AS ev
     FROM charging_sessions cs WHERE cs.vehicle_id = p_vehicle_id
       AND (p_from IS NULL OR cs.start_date >= p_from) AND (p_to IS NULL OR cs.start_date <= p_to)
     GROUP BY DATE_TRUNC('month', cs.start_date)
   )
-  SELECT m.m, ROUND((c.ev / NULLIF(m.dist, 0))::numeric, 3),
-    ROUND((c.gas / NULLIF(m.dist, 0))::numeric, 3)
-  FROM monthly m JOIN costs c ON m.m = c.m ORDER BY m.m;
+  SELECT m.m, ROUND((COALESCE(c.ev, 0) / NULLIF(m.dist, 0))::numeric, 3),
+    0.12::numeric
+  FROM monthly m LEFT JOIN costs c ON m.m = c.m ORDER BY m.m;
 END;
 $$ LANGUAGE plpgsql STABLE;

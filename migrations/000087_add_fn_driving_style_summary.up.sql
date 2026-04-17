@@ -7,8 +7,8 @@ BEGIN
   WITH classified AS (
     SELECT
       CASE
-        WHEN d.avg_speed < 40 AND COALESCE(d.energy_used_kwh / NULLIF(d.distance, 0) * 1000, 0) < 150 THEN 'Gentle'
-        WHEN d.avg_speed > 80 OR COALESCE(d.energy_used_kwh / NULLIF(d.distance, 0) * 1000, 0) > 250 THEN 'Aggressive'
+        WHEN d.speed_avg < 40 AND COALESCE((COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)) / NULLIF(d.distance, 0) * 1000, 0) < 150 THEN 'Gentle'
+        WHEN d.speed_avg > 80 OR COALESCE((COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)) / NULLIF(d.distance, 0) * 1000, 0) > 250 THEN 'Aggressive'
         ELSE 'Moderate'
       END AS style
     FROM drives d

@@ -278,7 +278,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(100.0 * SUM(regen_kwh) / NULLIF(SUM(energy_used_kwh), 0), 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND regen_kwh IS NOT NULL",
+          "rawSql": "SELECT\n  ROUND((100.0 * SUM(ABS(LEAST(COALESCE(power_min, 0), 0))) / NULLIF(SUM(GREATEST(COALESCE(power_max, 0), 0)), 0))::numeric, 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND power_min IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -477,7 +477,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  start_date AS \"Date\",\n  ROUND(distance::numeric, 1) AS \"Distance\",\n  ROUND(avg_speed::numeric, 0) AS \"Avg Speed\",\n  ROUND(COALESCE(regen_kwh, 0)::numeric, 2) AS \"Regen kWh\",\n  ROUND(COALESCE(energy_used_kwh, 0)::numeric, 2) AS \"Total kWh\",\n  CASE WHEN energy_used_kwh > 0\n    THEN ROUND((100.0 * regen_kwh / energy_used_kwh)::numeric, 1)\n    ELSE 0 END AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nORDER BY start_date DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  start_date AS \"Date\",\n  ROUND(distance::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE(speed_avg, 0)::numeric, 0) AS \"Avg Speed\",\n  ROUND(ABS(LEAST(COALESCE(power_min, 0), 0))::numeric, 1) AS \"Peak Regen kW\",\n  ROUND(COALESCE(power_max, 0)::numeric, 1) AS \"Peak Power kW\",\n  CASE WHEN COALESCE(power_max, 0) > 0\n    THEN ROUND((100.0 * ABS(LEAST(COALESCE(power_min, 0), 0)) / power_max)::numeric, 1)\n    ELSE 0 END AS \"Regen Ratio %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\nORDER BY start_date DESC\nLIMIT 30",
           "refId": "A"
         }
       ],

@@ -10,9 +10,9 @@ BEGIN
   UNION ALL
   SELECT 'Charge', cs.start_date, COALESCE(cs.location_name, '—')::text, '—'::text, NULL,
     ROUND(EXTRACT(EPOCH FROM cs.end_date - cs.start_date) / 60, 0)::numeric,
-    ROUND(cs.energy_added_kwh::numeric, 1)
+    ROUND(cs.charge_energy_added::numeric, 1)
   FROM charging_sessions cs
   WHERE cs.vehicle_id = p_vehicle_id AND cs.start_date >= DATE_TRUNC('week', NOW())
-  ORDER BY start_time DESC;
+  ORDER BY 2 DESC;
 END;
 $$ LANGUAGE plpgsql STABLE;

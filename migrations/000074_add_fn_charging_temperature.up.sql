@@ -3,7 +3,7 @@ RETURNS TABLE ("time" TIMESTAMPTZ, battery_temp DOUBLE PRECISION, outside_temp D
 BEGIN
   RETURN QUERY
   SELECT ct.created_at, ct.battery_temp, ct.outside_temp
-  FROM charging_telemetry_readings ct
+  FROM charge_telemetry_readings ct
   WHERE ct.session_id = p_session_id
   ORDER BY ct.created_at;
 END;

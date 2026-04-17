@@ -6,10 +6,12 @@ CREATE OR REPLACE FUNCTION fn_drive_score_distribution(
 RETURNS TABLE (score INTEGER) AS $$
 BEGIN
   RETURN QUERY
-  SELECT d.drive_score
+  SELECT LEAST(100, ROUND(100.0 * d.distance
+    / (d.start_rated_range_km - d.end_rated_range_km))::integer)
   FROM drives d
   WHERE d.vehicle_id = p_vehicle_id
-    AND d.drive_score IS NOT NULL
+    AND d.distance > 0
+    AND (COALESCE(d.start_rated_range_km, 0) - COALESCE(d.end_rated_range_km, 0)) > 0
     AND (p_from IS NULL OR d.start_date >= p_from)
     AND (p_to IS NULL OR d.start_date <= p_to);
 END;
