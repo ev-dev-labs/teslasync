@@ -153,6 +153,216 @@
       "title": "Efficiency by Route (Wh/km)",
       "type": "barchart",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "For the top 10 most-driven routes, shows the min/avg/max efficiency range. A wide range indicates high variability (weather, traffic, driving style).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "cyan"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Wh/km",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Wh/km"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Best"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Average"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "cyan",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Worst"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 2,
+      "options": {
+        "barWidth": 0.75,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH routes AS (\n  SELECT\n    COALESCE(start_address, '?') || ' → ' || COALESCE(end_address, '?') AS route,\n    CASE WHEN distance > 0 THEN energy_used_kwh * 1000 / distance ELSE NULL END AS whkm\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n    AND distance > 1\n)\nSELECT\n  route AS \"Route\",\n  ROUND(MIN(whkm)::numeric, 0) AS \"Best\",\n  ROUND(AVG(whkm)::numeric, 0) AS \"Average\",\n  ROUND(MAX(whkm)::numeric, 0) AS \"Worst\"\nFROM routes\nGROUP BY route\nHAVING COUNT(*) >= 3\nORDER BY COUNT(*) DESC\nLIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "title": "Route Efficiency Consistency",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Efficiency trend for a selected frequent route over time. Shows how weather, seasons, and driving habits affect the same commute.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "cyan",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Wh/km",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "showPoints": "always",
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 150
+              },
+              {
+                "color": "red",
+                "value": 250
+              }
+            ]
+          },
+          "unit": "Wh/km"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "min",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  start_date AS time,\n  ROUND((energy_used_kwh * 1000 / NULLIF(distance, 0))::numeric, 0) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND start_address = '${route_start}'\n  AND end_address = '${route_end}'\n  AND distance > 1\nORDER BY start_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Route Efficiency Over Time",
+      "type": "timeseries",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
@@ -184,6 +394,46 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT DISTINCT start_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address IS NOT NULL ORDER BY start_address",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Route Start",
+        "multi": false,
+        "name": "route_start",
+        "options": [],
+        "query": "SELECT DISTINCT start_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address IS NOT NULL ORDER BY start_address",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT DISTINCT end_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address = '${route_start}' AND end_address IS NOT NULL ORDER BY end_address",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Route End",
+        "multi": false,
+        "name": "route_end",
+        "options": [],
+        "query": "SELECT DISTINCT end_address AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_address = '${route_start}' AND end_address IS NOT NULL ORDER BY end_address",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
         "type": "query"
       }
     ]
