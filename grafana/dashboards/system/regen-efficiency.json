@@ -205,7 +205,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  DATE_TRUNC('month', start_date) AS time,\n  ROUND(SUM(\n    CASE WHEN power_min < 0\n         THEN ABS(power_min) * duration_min / 60\n         ELSE 0 END\n  )::numeric, 1) AS \"Regen kWh\",\n  ROUND(100.0 * SUM(\n    CASE WHEN power_min < 0\n         THEN ABS(power_min) * duration_min / 60\n         ELSE 0 END\n  ) / NULLIF(SUM(distance * 0.15), 0), 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND power_min IS NOT NULL\nGROUP BY DATE_TRUNC('month', start_date)\nORDER BY time",
+          "rawSql": "SELECT time, regen_pct AS \"Regen %\" FROM fn_regen_efficiency_trend(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],

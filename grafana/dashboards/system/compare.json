@@ -84,7 +84,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH curr AS (\n  SELECT COALESCE(SUM(distance), 0) AS dist\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n),\nprev AS (\n  SELECT COALESCE(SUM(distance), 0) AS dist\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n)\nSELECT\n  CASE WHEN p.dist > 0\n    THEN ROUND(100.0 * (c.dist - p.dist) / p.dist, 1)\n    ELSE NULL\n  END AS \"Distance Δ%\"\nFROM curr c, prev p",
+          "rawSql": "WITH cmp AS (\n  SELECT * FROM fn_compare_periods(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\n)\nSELECT\n  CASE WHEN p.distance > 0\n    THEN ROUND(100.0 * (c.distance - p.distance) / p.distance, 1)\n    ELSE NULL\n  END AS \"Distance Δ%\"\nFROM (SELECT distance FROM cmp WHERE period = 'Current') c,\n     (SELECT distance FROM cmp WHERE period = 'Prior') p",
           "refId": "A"
         }
       ],
@@ -142,7 +142,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH curr AS (\n  SELECT COUNT(*) AS drives\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n),\nprev AS (\n  SELECT COUNT(*) AS drives\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n)\nSELECT\n  CASE WHEN p.drives > 0\n    THEN ROUND(100.0 * (c.drives - p.drives) / p.drives, 1)\n    ELSE NULL\n  END AS \"Drives Δ%\"\nFROM curr c, prev p",
+          "rawSql": "WITH cmp AS (\n  SELECT * FROM fn_compare_periods(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\n)\nSELECT\n  CASE WHEN p.drives > 0\n    THEN ROUND(100.0 * (c.drives - p.drives)::numeric / p.drives, 1)\n    ELSE NULL\n  END AS \"Drives Δ%\"\nFROM (SELECT drives FROM cmp WHERE period = 'Current') c,\n     (SELECT drives FROM cmp WHERE period = 'Prior') p",
           "refId": "A"
         }
       ],
@@ -200,7 +200,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH curr AS (\n  SELECT COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n),\nprev AS (\n  SELECT COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n)\nSELECT\n  CASE WHEN p.energy > 0\n    THEN ROUND(100.0 * (c.energy - p.energy) / p.energy, 1)\n    ELSE NULL\n  END AS \"Energy Δ%\"\nFROM curr c, prev p",
+          "rawSql": "WITH cmp AS (\n  SELECT * FROM fn_compare_periods(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\n)\nSELECT\n  CASE WHEN p.energy > 0\n    THEN ROUND(100.0 * (c.energy - p.energy) / p.energy, 1)\n    ELSE NULL\n  END AS \"Energy Δ%\"\nFROM (SELECT energy FROM cmp WHERE period = 'Current') c,\n     (SELECT energy FROM cmp WHERE period = 'Prior') p",
           "refId": "A"
         }
       ],
@@ -258,7 +258,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH curr AS (\n  SELECT\n    COALESCE(SUM(distance), 0) AS dist,\n    COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(start_date)\n),\nprev AS (\n  SELECT\n    COALESCE(SUM(distance), 0) AS dist,\n    COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n)\nSELECT\n  CASE WHEN p.dist > 0 AND c.dist > 0\n    THEN ROUND(100.0 * ((c.energy / c.dist) - (p.energy / p.dist)) / (p.energy / p.dist), 1)\n    ELSE NULL\n  END AS \"Efficiency Δ%\"\nFROM curr c, prev p",
+          "rawSql": "WITH cmp AS (\n  SELECT * FROM fn_compare_periods(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\n)\nSELECT\n  CASE WHEN p.distance > 0 AND c.distance > 0\n    THEN ROUND(100.0 * ((c.energy / c.distance) - (p.energy / p.distance)) / (p.energy / p.distance), 1)\n    ELSE NULL\n  END AS \"Efficiency Δ%\"\nFROM (SELECT distance, energy FROM cmp WHERE period = 'Current') c,\n     (SELECT distance, energy FROM cmp WHERE period = 'Prior') p",
           "refId": "A"
         }
       ],
@@ -351,7 +351,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH current_period AS (\n  SELECT\n    'Current' AS period,\n    COALESCE(SUM(distance), 0) AS distance,\n    COUNT(*) AS drives,\n    COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n),\nprior_period AS (\n  SELECT\n    'Prior' AS period,\n    COALESCE(SUM(distance), 0) AS distance,\n    COUNT(*) AS drives,\n    COALESCE(SUM(energy_used_kwh), 0) AS energy\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND start_date >= $__timeFrom()::timestamp - ($__timeTo()::timestamp - $__timeFrom()::timestamp)\n    AND start_date < $__timeFrom()::timestamp\n)\nSELECT * FROM current_period UNION ALL SELECT * FROM prior_period",
+          "rawSql": "SELECT * FROM fn_compare_periods(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],

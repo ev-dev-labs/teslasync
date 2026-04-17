@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS fn_drive_score_distribution(BIGINT, TIMESTAMPTZ, TIMESTAMPTZ);

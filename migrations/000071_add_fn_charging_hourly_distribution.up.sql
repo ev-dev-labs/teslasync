@@ -1,0 +1,17 @@
+CREATE OR REPLACE FUNCTION fn_charging_hourly_distribution(
+  p_vehicle_id BIGINT,
+  p_from TIMESTAMPTZ DEFAULT NULL,
+  p_to TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS TABLE (hour DOUBLE PRECISION, sessions BIGINT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT EXTRACT(HOUR FROM cs.start_date), COUNT(*)::bigint
+  FROM charging_sessions cs
+  WHERE cs.vehicle_id = p_vehicle_id
+    AND (p_from IS NULL OR cs.start_date >= p_from)
+    AND (p_to IS NULL OR cs.start_date <= p_to)
+  GROUP BY EXTRACT(HOUR FROM cs.start_date)
+  ORDER BY 1;
+END;
+$$ LANGUAGE plpgsql STABLE;

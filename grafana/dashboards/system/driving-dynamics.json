@@ -116,7 +116,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH readings AS (\n  SELECT\n    dtr.drive_id,\n    dtr.speed,\n    dtr.created_at,\n    LAG(dtr.speed)      OVER (PARTITION BY dtr.drive_id ORDER BY dtr.created_at) AS prev_speed,\n    LAG(dtr.created_at) OVER (PARTITION BY dtr.drive_id ORDER BY dtr.created_at) AS prev_time\n  FROM drive_telemetry_readings dtr\n  JOIN drives d ON d.id = dtr.drive_id\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n    AND dtr.speed IS NOT NULL\n)\nSELECT\n  ROUND(\n    CAST(\n      ((speed - prev_speed) * 0.44704)\n      / NULLIF(EXTRACT(EPOCH FROM (created_at - prev_time)), 0)\n      / 9.81\n    AS numeric),\n  4) AS \"Acceleration (g)\"\nFROM readings\nWHERE prev_speed IS NOT NULL\n  AND prev_time IS NOT NULL\n  AND EXTRACT(EPOCH FROM (created_at - prev_time)) BETWEEN 1 AND 30\n  AND ABS(\n    ((speed - prev_speed) * 0.44704)\n    / NULLIF(EXTRACT(EPOCH FROM (created_at - prev_time)), 0)\n    / 9.81\n  ) <= 0.5",
+          "rawSql": "SELECT * FROM fn_driving_acceleration_distribution(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
@@ -553,7 +553,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  speed_avg AS \"Avg Speed\",\n  CASE WHEN distance > 0\n    THEN ROUND(((start_rated_range_km - end_rated_range_km) / distance * 150)::numeric, 0)\n    ELSE NULL END AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND distance > 1\n  AND speed_avg > 0\n  AND speed_avg IS NOT NULL\n  AND start_rated_range_km IS NOT NULL\n  AND end_rated_range_km IS NOT NULL\n  AND (start_rated_range_km - end_rated_range_km) > 0",
+          "rawSql": "SELECT avg_speed AS \"Avg Speed\", wh_per_km AS \"Wh/km\" FROM fn_driving_speed_vs_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
