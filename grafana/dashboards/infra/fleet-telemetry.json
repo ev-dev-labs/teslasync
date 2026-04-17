@@ -150,8 +150,8 @@
       },
       "targets": [
         {
-          "expr": "signal_count",
-          "legendFormat": "signals",
+          "expr": "record_total",
+          "legendFormat": "records",
           "refId": "A"
         }
       ],
@@ -160,8 +160,8 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Socket Errors",
-      "description": "WebSocket connection errors",
+      "title": "Dropped Records",
+      "description": "Records received but not dispatched",
       "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": {
         "defaults": {
@@ -184,8 +184,8 @@
       },
       "targets": [
         {
-          "expr": "socket_err_total",
-          "legendFormat": "errors",
+          "expr": "record_total - dispatch_total",
+          "legendFormat": "dropped",
           "refId": "A"
         }
       ],
@@ -295,8 +295,8 @@
       },
       "targets": [
         {
-          "expr": "rate(signal_count[1m])",
-          "legendFormat": "signals/s",
+          "expr": "rate(record_total[1m])",
+          "legendFormat": "records/s",
           "refId": "A"
         }
       ],
@@ -382,12 +382,12 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "WebSocket Errors",
-      "description": "Socket errors over time — spikes indicate connectivity issues",
+      "title": "Records vs Dispatches",
+      "description": "Compare records received vs dispatched — gap indicates drops",
       "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "red", "mode": "fixed" },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 30,
@@ -404,9 +404,14 @@
       },
       "targets": [
         {
-          "expr": "rate(socket_err_total[5m])",
-          "legendFormat": "errors/s",
+          "expr": "rate(record_total[5m])",
+          "legendFormat": "received/s",
           "refId": "A"
+        },
+        {
+          "expr": "rate(dispatch_total[5m])",
+          "legendFormat": "dispatched/s",
+          "refId": "B"
         }
       ],
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
