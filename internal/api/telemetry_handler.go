@@ -1294,14 +1294,14 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	streamingVehicles := h.GetStreamingState()
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
-	// Build vehicles array (frontend expects []VehicleTelemetry, not a map)
-	vehicles := make([]interface{}, 0, len(streamingVehicles))
+	// Build vehicles map keyed by VIN (frontend expects Record<string, VehicleStreamState>)
+	vehicleMap := make(map[string]interface{}, len(streamingVehicles))
 	var totalSignals int64
 	var totalBatches int64
 	var avgRate float64
 	var streamingCount int
-	for _, v := range streamingVehicles {
-		vehicles = append(vehicles, v)
+	for vin, v := range streamingVehicles {
+		vehicleMap[vin] = v
 		totalSignals += v.SignalCount
 		totalBatches += v.BatchCount
 		avgRate += v.SignalsPerSecond
@@ -1322,16 +1322,17 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":         true,
-		"connected":       connected,
-		"broker":          broker,
-		"uptime_seconds":  time.Since(h.startTime).Seconds(),
-		"topics":          topics,
-		"mode":            "fleet_telemetry",
-		"endpoint":        "/api/v1/telemetry",
-		"protocol":        "MQTT + HTTP",
-		"mqtt_publishing": connected,
-		"vehicles":        vehicles,
+		"enabled":              true,
+		"connected":            connected,
+		"broker":               broker,
+		"uptime_seconds":       time.Since(h.startTime).Seconds(),
+		"topics":               topics,
+		"mode":                 "fleet_telemetry",
+		"endpoint":             "/api/v1/telemetry",
+		"protocol":             "MQTT + HTTP",
+		"mqtt_publishing":      connected,
+		"vehicles":             vehicleMap,
+		"streaming_vehicles":   vehicleMap,
 		"aggregate_stats": map[string]interface{}{
 			"streaming_vehicles":      streamingCount,
 			"total_vehicles_seen":     len(streamingVehicles),
