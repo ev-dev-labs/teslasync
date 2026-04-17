@@ -58,7 +58,7 @@ export interface VehicleTelemetry {
   state?: string;
   signalCount: number;
   batchCount: number;
-  signalsPerSec?: number;
+  signalsPerSecond?: number;
   lastReceived?: string;
 }
 

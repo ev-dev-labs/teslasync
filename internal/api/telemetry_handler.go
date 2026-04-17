@@ -52,6 +52,7 @@ type TelemetryHandler struct {
 	cleanupInterval       time.Duration
 	staleSessionTimeout   time.Duration
 	signalStore           *signal.Store
+	startTime             time.Time
 
 	// Cancellable context for background goroutines ╬ô├ç├╢ cancelled on Shutdown()
 	bgCtx    context.Context
@@ -163,6 +164,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		snapshotWriteInterval: 10 * time.Second,
 		cleanupInterval:       2 * time.Minute,
 		staleSessionTimeout:   5 * time.Minute,
+		startTime:             time.Now().UTC(),
 		bgCtx:          bgCtx,
 		bgCancel:       bgCancel,
 		streamingState:     make(map[string]*VehicleStreamState),
@@ -1274,15 +1276,14 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 	streamingVehicles := h.GetStreamingState()
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
-	// Build streaming_vehicles map keyed by VIN — use VehicleStreamState directly
-	// (its JSON tags already match the frontend TelemetryStatus interface)
-	streamingMap := make(map[string]interface{}, len(streamingVehicles))
+	// Build vehicles array (frontend expects []VehicleTelemetry, not a map)
+	vehicles := make([]interface{}, 0, len(streamingVehicles))
 	var totalSignals int64
 	var totalBatches int64
 	var avgRate float64
 	var streamingCount int
 	for _, v := range streamingVehicles {
-		streamingMap[v.VIN] = v
+		vehicles = append(vehicles, v)
 		totalSignals += v.SignalCount
 		totalBatches += v.BatchCount
 		avgRate += v.SignalsPerSecond
@@ -1291,14 +1292,28 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	// Broker URL and topic patterns from MQTT client
+	var broker string
+	var topics []string
+	if h.mqttClient != nil {
+		broker = h.mqttClient.BrokerURL()
+		prefix := h.mqttClient.Prefix()
+		if prefix != "" {
+			topics = []string{prefix + "/+/v/#"}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":            true,
-		"connected":          connected,
-		"mode":               "fleet_telemetry",
-		"endpoint":           "/api/v1/telemetry",
-		"protocol":           "MQTT + HTTP",
-		"mqtt_publishing":    connected,
-		"streaming_vehicles": streamingMap,
+		"enabled":         true,
+		"connected":       connected,
+		"broker":          broker,
+		"uptime_seconds":  time.Since(h.startTime).Seconds(),
+		"topics":          topics,
+		"mode":            "fleet_telemetry",
+		"endpoint":        "/api/v1/telemetry",
+		"protocol":        "MQTT + HTTP",
+		"mqtt_publishing": connected,
+		"vehicles":        vehicles,
 		"aggregate_stats": map[string]interface{}{
 			"streaming_vehicles":      streamingCount,
 			"total_vehicles_seen":     len(streamingVehicles),
