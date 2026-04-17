@@ -607,7 +607,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN valet_mode_enabled THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN service_mode THEN 'ON' ELSE 'Off' END AS \"Service\",\n  CASE WHEN speed_limit_mode THEN 'ON' ELSE 'Off' END AS \"Speed Limit\",\n  CASE WHEN guest_mode THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  current_limit_mph AS \"Speed Limit (mph)\",\n  paired_phone_key_count AS \"Paired Keys\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 50",
+          "rawSql": "SELECT created_at AS \"Time\",\n  CASE WHEN valet_mode_enabled THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN service_mode THEN 'ON' ELSE 'Off' END AS \"Service\",\n  COALESCE(speed_limit_mode, 'Off') AS \"Speed Limit\",\n  CASE WHEN guest_mode THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  current_limit_mph AS \"Speed Limit (mph)\",\n  paired_phone_key_count AS \"Paired Keys\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(created_at)\nORDER BY created_at DESC LIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
