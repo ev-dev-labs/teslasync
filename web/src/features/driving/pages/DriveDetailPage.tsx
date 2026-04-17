@@ -223,8 +223,10 @@ export default function DriveDetailPage() {
     const avgFanSpeed = fanValues.length > 0 ? fanValues.reduce((a, b) => a + b, 0) / fanValues.length : null;
     const maxFanSpeed = fanValues.length > 0 ? Math.max(...fanValues) : null;
 
-    const startRange = chartData.length > 0 ? (chartData[0].idealRange ?? chartData[0].ratedRange) : null;
-    const endRange = chartData.length > 0 ? (chartData[chartData.length - 1].idealRange ?? chartData[chartData.length - 1].ratedRange) : null;
+    const firstWithRange = chartData.find((d) => d.idealRange != null || d.ratedRange != null);
+    const lastWithRange = [...chartData].reverse().find((d) => d.idealRange != null || d.ratedRange != null);
+    const startRange = firstWithRange ? (firstWithRange.idealRange ?? firstWithRange.ratedRange) : null;
+    const endRange = lastWithRange ? (lastWithRange.idealRange ?? lastWithRange.ratedRange) : null;
 
     const odometerStart = drive.startOdometer != null ? convertDistance(drive.startOdometer) : (chartData.length > 0 ? (chartData[0].odometer ?? 0) : 0);
     const odometerEnd = drive.endOdometer != null ? convertDistance(drive.endOdometer) : (chartData.length > 0 ? (chartData[chartData.length - 1].odometer ?? 0) : 0);

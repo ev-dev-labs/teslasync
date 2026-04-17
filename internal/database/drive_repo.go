@@ -157,6 +157,7 @@ var drivePartialAllowed = map[string]string{
 	"distance":           "distance",
 	"duration_min":       "duration_min",
 	"end_range_km":       "end_range_km",
+	"start_range_km":     "start_range_km",
 	"end_battery_level":  "end_battery_level",
 	"speed_max":          "speed_max",
 	"power_max":          "power_max",
