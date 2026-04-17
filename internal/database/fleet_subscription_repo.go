@@ -17,12 +17,12 @@ func NewFleetSubscriptionRepo(db *DB) *FleetSubscriptionRepo {
 func (r *FleetSubscriptionRepo) Create(ctx context.Context, sub *models.FleetTelemetrySubscription) error {
 	query := `
 		INSERT INTO fleet_telemetry_subscriptions (
-			vehicle_id, vin, signals, interval_seconds, hostname, port, protocol,
+			vehicle_id, vin, signals, interval_seconds, field_intervals, hostname, port, protocol,
 			ca_pem, subscribed_at, expires_at, status, response_code, response_body
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		RETURNING id`
 	return r.db.Pool.QueryRow(ctx, query,
-		sub.VehicleID, sub.VIN, sub.Signals, sub.IntervalSeconds,
+		sub.VehicleID, sub.VIN, sub.Signals, sub.IntervalSeconds, sub.FieldIntervals,
 		sub.Hostname, sub.Port, sub.Protocol, sub.CaPEM,
 		sub.SubscribedAt, sub.ExpiresAt, sub.Status,
 		sub.ResponseCode, sub.ResponseBody,
@@ -30,13 +30,13 @@ func (r *FleetSubscriptionRepo) Create(ctx context.Context, sub *models.FleetTel
 }
 
 func (r *FleetSubscriptionRepo) GetLatestByVIN(ctx context.Context, vin string) (*models.FleetTelemetrySubscription, error) {
-	query := `SELECT id, vehicle_id, vin, signals, interval_seconds, hostname, port, protocol,
+	query := `SELECT id, vehicle_id, vin, signals, interval_seconds, field_intervals, hostname, port, protocol,
 		ca_pem, subscribed_at, expires_at, status, response_code, response_body, created_at
 		FROM fleet_telemetry_subscriptions WHERE vin = $1
 		ORDER BY created_at DESC LIMIT 1`
 	sub := &models.FleetTelemetrySubscription{}
 	err := r.db.Pool.QueryRow(ctx, query, vin).Scan(
-		&sub.ID, &sub.VehicleID, &sub.VIN, &sub.Signals, &sub.IntervalSeconds,
+		&sub.ID, &sub.VehicleID, &sub.VIN, &sub.Signals, &sub.IntervalSeconds, &sub.FieldIntervals,
 		&sub.Hostname, &sub.Port, &sub.Protocol, &sub.CaPEM,
 		&sub.SubscribedAt, &sub.ExpiresAt, &sub.Status,
 		&sub.ResponseCode, &sub.ResponseBody, &sub.CreatedAt,
@@ -48,7 +48,7 @@ func (r *FleetSubscriptionRepo) GetLatestByVIN(ctx context.Context, vin string) 
 }
 
 func (r *FleetSubscriptionRepo) List(ctx context.Context, limit int) ([]*models.FleetTelemetrySubscription, error) {
-	query := `SELECT id, vehicle_id, vin, signals, interval_seconds, hostname, port, protocol,
+	query := `SELECT id, vehicle_id, vin, signals, interval_seconds, field_intervals, hostname, port, protocol,
 		ca_pem, subscribed_at, expires_at, status, response_code, response_body, created_at
 		FROM fleet_telemetry_subscriptions
 		ORDER BY created_at DESC LIMIT $1`
@@ -62,7 +62,7 @@ func (r *FleetSubscriptionRepo) List(ctx context.Context, limit int) ([]*models.
 	for rows.Next() {
 		sub := &models.FleetTelemetrySubscription{}
 		if err := rows.Scan(
-			&sub.ID, &sub.VehicleID, &sub.VIN, &sub.Signals, &sub.IntervalSeconds,
+			&sub.ID, &sub.VehicleID, &sub.VIN, &sub.Signals, &sub.IntervalSeconds, &sub.FieldIntervals,
 			&sub.Hostname, &sub.Port, &sub.Protocol, &sub.CaPEM,
 			&sub.SubscribedAt, &sub.ExpiresAt, &sub.Status,
 			&sub.ResponseCode, &sub.ResponseBody, &sub.CreatedAt,

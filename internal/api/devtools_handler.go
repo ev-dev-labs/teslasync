@@ -802,6 +802,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 				VIN:             vin,
 				Signals:         signalNames,
 				IntervalSeconds: req.Interval,
+				FieldIntervals:  req.FieldIntervals,
 				Hostname:        req.Hostname,
 				Port:            req.Port,
 				Protocol:        "wss",
