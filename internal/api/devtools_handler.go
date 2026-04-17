@@ -749,32 +749,11 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		"MilesSinceReset":           1.0,
 	}
 
-	// Tiered intervals: driving-critical signals get faster updates
-	fastDrivingSignals := map[string]bool{
-		"VehicleSpeed": true, "Location": true, "Gear": true,
-		"PackVoltage": true, "PackCurrent": true,
-		"BrakePedal": true, "PedalPosition": true,
-		"LateralAcceleration": true, "LongitudinalAcceleration": true,
-		"GpsHeading": true, "DiTorquemotor": true,
-	}
-	slowConfigSignals := map[string]bool{
-		"CarType": true, "VehicleName": true, "Version": true, "WheelType": true,
-		"ExteriorColor": true, "RoofColor": true, "Trim": true,
-		"EfficiencyPackage": true, "RearSeatHeaters": true,
-		"RightHandDrive": true, "EuropeVehicle": true,
-		"OffroadLightbarPresent": true, "SunroofInstalled": true,
-		"RemoteStartEnabled": true,
-	}
-
 	for _, f := range req.Fields {
-		// Priority: per-signal interval from UI > tiered defaults > global interval
+		// Per-signal interval from UI takes priority, otherwise use global interval
 		interval := req.Interval
 		if perSignal, ok := req.FieldIntervals[f]; ok {
 			interval = perSignal
-		} else if fastDrivingSignals[f] && req.Interval >= 10 {
-			interval = 0
-		} else if slowConfigSignals[f] {
-			interval = 300
 		}
 		field := tesla.FleetTelemetryField{IntervalSeconds: interval}
 		if delta, ok := minDeltaFields[f]; ok {
