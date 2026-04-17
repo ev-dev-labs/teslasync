@@ -243,7 +243,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) FROM alerts WHERE vehicle_id = ${vehicle_id} AND acknowledged = false AND $__timeFilter(created_at)",
+          "rawSql": "SELECT COUNT(*) FROM alerts WHERE vehicle_id = ${vehicle_id} AND is_read = false AND $__timeFilter(created_at)",
           "refId": "A"
         }
       ],
@@ -303,7 +303,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE status = 'sent') / NULLIF(COUNT(*), 0), 1) FROM notification_logs WHERE $__timeFilter(created_at)",
+          "rawSql": "SELECT ROUND((100.0 * COUNT(*) FILTER (WHERE status = 'sent') / NULLIF(COUNT(*), 0))::numeric, 1) FROM notification_logs WHERE $__timeFilter(created_at)",
           "refId": "A"
         }
       ],
@@ -449,7 +449,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT name AS \"Rule\", signal_name AS \"Signal\", condition AS \"Condition\", threshold::text AS \"Threshold\", severity AS \"Severity\", CASE WHEN enabled THEN '✅' ELSE '❌' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
+          "rawSql": "SELECT name AS \"Rule\", type AS \"Type\", expression AS \"Expression\", threshold::text AS \"Threshold\", severity AS \"Severity\", CASE WHEN enabled THEN '✅' ELSE '❌' END AS \"Enabled\" FROM alert_rules ORDER BY severity, name",
           "refId": "A"
         }
       ],
@@ -516,7 +516,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT a.created_at AS \"Time\", r.name AS \"Rule\", a.severity AS \"Severity\", a.message AS \"Message\", CASE WHEN a.acknowledged THEN '✅' ELSE '⏳' END AS \"Ack\" FROM alerts a LEFT JOIN alert_rules r ON a.rule_id = r.id WHERE a.vehicle_id = ${vehicle_id} AND $__timeFilter(a.created_at) ORDER BY a.created_at DESC LIMIT 50",
+          "rawSql": "SELECT a.created_at AS \"Time\", a.title AS \"Alert\", a.severity AS \"Severity\", a.message AS \"Message\", CASE WHEN a.is_read THEN '✅' ELSE '⏳' END AS \"Read\" FROM alerts a WHERE a.vehicle_id = ${vehicle_id} AND $__timeFilter(a.created_at) ORDER BY a.created_at DESC LIMIT 50",
           "refId": "A"
         }
       ],
@@ -583,7 +583,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT nl.created_at AS \"Time\", nc.name AS \"Channel\", nc.type AS \"Type\", nl.status AS \"Status\", nl.error_message AS \"Error\" FROM notification_logs nl LEFT JOIN notification_channels nc ON nl.channel_id = nc.id WHERE $__timeFilter(nl.created_at) ORDER BY nl.created_at DESC LIMIT 50",
+          "rawSql": "SELECT nl.created_at AS \"Time\", nc.name AS \"Channel\", nc.type AS \"Type\", nl.status AS \"Status\", nl.error AS \"Error\" FROM notification_logs nl LEFT JOIN notification_channels nc ON nl.channel_id = nc.id WHERE $__timeFilter(nl.created_at) ORDER BY nl.created_at DESC LIMIT 50",
           "refId": "A"
         }
       ],
