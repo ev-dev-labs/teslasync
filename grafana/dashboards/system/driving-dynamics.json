@@ -319,7 +319,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  d.start_date AS time,\n  COUNT(*) FILTER (WHERE dt.acceleration_gs < -0.3) AS \"Hard Brakes\",\n  COUNT(*) FILTER (WHERE dt.acceleration_gs < -0.2 AND dt.acceleration_gs >= -0.3) AS \"Moderate Brakes\",\n  ROUND(AVG(dt.acceleration_gs) FILTER (WHERE dt.acceleration_gs < 0)::numeric, 3) AS \"Avg Decel (g)\"\nFROM drive_telemetry_readings dt\nJOIN drives d ON dt.drive_id = d.id\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.start_date)\nGROUP BY d.id, d.start_date\nORDER BY d.start_date",
+          "rawSql": "SELECT * FROM fn_driving_braking_intensity(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
