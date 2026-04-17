@@ -350,7 +350,14 @@ fleetTelemetry:
       cpu: 100m
       memory: 64Mi
 
-  # External Fleet Telemetry — used when fleetTelemetry.enabled is false
+  # -- Prometheus metrics for fleet-telemetry server health.
+  metrics:
+    serviceMonitor:
+      # -- Create a ServiceMonitor for fleet-telemetry Prometheus metrics (port 9090).
+      enabled: true
+      interval: "30s"
+
+  # External Fleet Telemetry— used when fleetTelemetry.enabled is false
   # but you want TeslaSync's MQTT subscriber to connect to a Fleet Telemetry
   # server deployed separately (e.g., Tesla's own Helm chart or bare-metal).
   # TeslaSync still subscribes to MQTT topics regardless — just set the
