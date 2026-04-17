@@ -1,0 +1,402 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 🔔 Alerts & Notifications",
+      "type": "link",
+      "url": "/d/teslasync-alerts-notifications"
+    },
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "teslasync"
+      ],
+      "targetBlank": false,
+      "title": "⚡ TeslaSync",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync 🖥️ System Health",
+      "type": "link",
+      "url": "/d/teslasync-system-health"
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Daily Summary",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "id": 1,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COALESCE(d.day, c.day) AS \"Date\",\n  COALESCE(d.drives, 0) AS \"Drives\",\n  ROUND(COALESCE(d.distance, 0)::numeric, 1) AS \"Distance (km)\",\n  COALESCE(c.charges, 0) AS \"Charges\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\",\n  ROUND(COALESCE(c.cost, 0)::numeric, 2) AS \"Cost ($)\"\nFROM (\n  SELECT start_date::date AS day, COUNT(*) AS drives, SUM(distance) AS distance\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n  GROUP BY start_date::date\n) d\nFULL OUTER JOIN (\n  SELECT start_date::date AS day, COUNT(*) AS charges, SUM(charge_energy_added) AS energy_added, SUM(cost) AS cost\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n  GROUP BY start_date::date\n) c ON d.day = c.day\nORDER BY COALESCE(d.day, c.day) DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Combined Daily View",
+      "type": "table",
+      "transparent": false
+    },
+    {
+      "type": "row",
+      "title": "Overlaid Timeline",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 1
+      },
+      "id": 3,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 4,
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT start_date::date AS time, SUM(distance) AS \"Distance (km)\" FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) GROUP BY start_date::date ORDER BY time",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT start_date::date AS time, SUM(charge_energy_added) AS \"Energy Added (kWh)\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date) GROUP BY start_date::date ORDER BY time",
+          "refId": "B"
+        }
+      ],
+      "title": "Distance vs Energy Added",
+      "type": "timeseries",
+      "transparent": false
+    },
+    {
+      "type": "row",
+      "title": "Distance vs Energy Correlation",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      },
+      "id": 5,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 6,
+      "options": {
+        "xField": "Date",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  d.day::text AS \"Date\",\n  ROUND(d.distance::numeric, 1) AS \"Distance (km)\",\n  ROUND(COALESCE(c.energy_added, 0)::numeric, 1) AS \"Energy Added (kWh)\"\nFROM (\n  SELECT start_date::date AS day, SUM(distance) AS distance\n  FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n  GROUP BY start_date::date\n) d\nLEFT JOIN (\n  SELECT start_date::date AS day, SUM(charge_energy_added) AS energy_added\n  FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date)\n  GROUP BY start_date::date\n) c ON d.day = c.day\nORDER BY d.day",
+          "refId": "A"
+        }
+      ],
+      "title": "Daily Distance vs Energy",
+      "type": "barchart",
+      "transparent": false
+    },
+    {
+      "type": "row",
+      "title": "SoC Bridge",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 1
+      },
+      "id": 7,
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 8,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "(SELECT start_date AS \"Time\", 'Drive' AS \"Type\", start_battery_level AS \"Start SoC\", end_battery_level AS \"End SoC\"\n FROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date))\nUNION ALL\n(SELECT start_date AS \"Time\", 'Charge' AS \"Type\", start_battery_level AS \"Start SoC\", end_battery_level AS \"End SoC\"\n FROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(start_date))\nORDER BY \"Time\" DESC LIMIT 30",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Level Changes (Last 30 Events)",
+      "type": "table",
+      "transparent": false
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "teslasync"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "1",
+          "value": "1"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "TeslaSync 🔄 Charging vs Driving",
+  "uid": "teslasync-charging-driving",
+  "version": 1,
+  "weekStart": ""
+}
