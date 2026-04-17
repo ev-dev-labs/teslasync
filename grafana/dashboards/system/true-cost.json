@@ -252,6 +252,142 @@
       "title": "⛽ Gas Equivalent",
       "type": "stat",
       "transparent": false
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "description": "Side-by-side monthly comparison of actual EV electricity cost vs what gas would have cost. Makes savings visually obvious every month.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "EV Cost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#00d4ff",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gas Equivalent"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ff6347",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Savings"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73bf69",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 4,
+      "options": {
+        "barRadius": 0.05,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH monthly_ev AS (\n  SELECT\n    DATE_TRUNC('month', cs.start_date) AS month,\n    SUM(COALESCE(cs.cost, 0)) AS ev_cost\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(cs.start_date)\n  GROUP BY DATE_TRUNC('month', cs.start_date)\n),\nmonthly_km AS (\n  SELECT\n    DATE_TRUNC('month', d.start_date) AS month,\n    SUM(d.distance) AS km\n  FROM drives d\n  WHERE d.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(d.start_date)\n  GROUP BY DATE_TRUNC('month', d.start_date)\n),\nmonthly_gas AS (\n  SELECT\n    DATE_TRUNC('month', recorded_at) AS month,\n    AVG(price) AS avg_price\n  FROM gas_prices\n  WHERE $__timeFilter(recorded_at)\n  GROUP BY DATE_TRUNC('month', recorded_at)\n)\nSELECT\n  e.month AS time,\n  ROUND(e.ev_cost::numeric, 2) AS \"EV Cost\",\n  ROUND((COALESCE(k.km, 0) / 1.60934 / 30.0 * COALESCE(g.avg_price, 3.50))::numeric, 2) AS \"Gas Equivalent\",\n  ROUND((COALESCE(k.km, 0) / 1.60934 / 30.0 * COALESCE(g.avg_price, 3.50) - e.ev_cost)::numeric, 2) AS \"Savings\"\nFROM monthly_ev e\nLEFT JOIN monthly_km k ON k.month = e.month\nLEFT JOIN monthly_gas g ON g.month = e.month\nORDER BY e.month",
+          "refId": "A"
+        }
+      ],
+      "title": "📊 Monthly Cost Comparison (EV vs Gas)",
+      "type": "barchart",
+      "transparent": false
     }
   ],
   "schemaVersion": 39,
