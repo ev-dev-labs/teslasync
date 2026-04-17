@@ -146,7 +146,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(start_address, 'Unknown') || ' → ' || COALESCE(end_address, 'Unknown') AS \"Route\",\n  ROUND(AVG(CASE WHEN distance > 0 THEN energy_used_kwh * 1000 / distance END)::numeric, 0) AS \"Avg Wh/km\",\n  COUNT(*) AS \"Trips\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(start_date)\n  AND distance > 1\nGROUP BY start_address, end_address\nHAVING COUNT(*) >= 3\nORDER BY \"Avg Wh/km\"\nLIMIT 15",
+          "rawSql": "SELECT route AS \"Route\", avg_wh_per_km AS \"Avg Wh/km\", trips AS \"Trips\"\nFROM fn_route_efficiency(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)\nWHERE trips >= 3\nORDER BY avg_wh_per_km\nLIMIT 15",
           "refId": "A"
         }
       ],
