@@ -17,7 +17,7 @@ ARG COMMIT=unknown
 ARG BUILD_TIME=unknown
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" \
+    -ldflags="-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.buildTime=${BUILD_TIME}" \
     -o /bin/teslasync ./cmd/teslasync
 
 # Build stage — frontend assets
