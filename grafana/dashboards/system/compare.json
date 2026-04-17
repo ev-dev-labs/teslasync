@@ -21,6 +21,18 @@
   "id": null,
   "links": [
     {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "◀ Prev",
+      "tooltip": "TeslaSync 🎵 Comfort & Media",
+      "type": "link",
+      "url": "/d/teslasync-comfort-media"
+    },
+    {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
@@ -31,6 +43,18 @@
       "targetBlank": false,
       "title": "⚡ TeslaSync",
       "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Next ▶",
+      "tooltip": "TeslaSync 💰 Cost Analysis",
+      "type": "link",
+      "url": "/d/teslasync-cost-analysis"
     }
   ],
   "panels": [
@@ -48,8 +72,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#F2495C", "value": null },
-              { "color": "#73BF69", "value": 0 }
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 0
+              }
             ]
           },
           "unit": "percent"
@@ -69,7 +99,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -106,8 +138,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#F2495C", "value": null },
-              { "color": "#73BF69", "value": 0 }
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 0
+              }
             ]
           },
           "unit": "percent"
@@ -127,7 +165,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -164,8 +204,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#F2495C", "value": null },
-              { "color": "#73BF69", "value": 0 }
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 0
+              }
             ]
           },
           "unit": "percent"
@@ -185,7 +231,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -222,8 +270,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#73BF69", "value": null },
-              { "color": "#F2495C", "value": 0 }
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 0
+              }
             ]
           },
           "unit": "percent"
@@ -243,7 +297,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -289,30 +345,69 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "distance" },
+            "matcher": {
+              "id": "byName",
+              "options": "distance"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#00d1ff", "mode": "fixed" } },
-              { "id": "displayName", "value": "Distance" }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#00d1ff",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Distance"
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "drives" },
+            "matcher": {
+              "id": "byName",
+              "options": "drives"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#a3a3a3", "mode": "fixed" } },
-              { "id": "displayName", "value": "Drives" }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#a3a3a3",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Drives"
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "energy" },
+            "matcher": {
+              "id": "byName",
+              "options": "energy"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#06b6d4", "mode": "fixed" } },
-              { "id": "displayName", "value": "Energy (kWh)" }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#06b6d4",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Energy (kWh)"
+              }
             ]
           }
         ]
@@ -387,27 +482,69 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null }
+              {
+                "color": "green",
+                "value": null
+              }
             ]
           },
           "unit": "km"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Current Period" },
+            "matcher": {
+              "id": "byName",
+              "options": "Current Period"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#00d1ff", "mode": "fixed" } },
-              { "id": "custom.fillOpacity", "value": 15 },
-              { "id": "custom.lineWidth", "value": 2 }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#00d1ff",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 15
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Prior Period" },
+            "matcher": {
+              "id": "byName",
+              "options": "Prior Period"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#a3a3a3", "mode": "fixed" } },
-              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } },
-              { "id": "custom.fillOpacity", "value": 0 },
-              { "id": "custom.lineWidth", "value": 2 }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#a3a3a3",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
             ]
           }
         ]
