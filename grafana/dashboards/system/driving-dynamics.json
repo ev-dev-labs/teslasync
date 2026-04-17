@@ -332,57 +332,63 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Quick summary stats: average acceleration, average deceleration, max speed recorded, and driving style classification (Conservative / Moderate / Aggressive) based on power and speed patterns from the driving coach analysis.",
+      "description": "Driving style breakdown: gentle / moderate / aggressive percentages based on average speed and energy efficiency per drive. Uses fn_driving_style_summary().",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#00d3ff",
-            "mode": "fixed"
+            "mode": "palette-classic"
           },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#00d3ff",
-                "value": null
-              }
-            ]
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
           }
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "Avg Accel (g)"
+              "options": "Gentle"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "accG"
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Avg Decel (g)"
+              "options": "Moderate"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "accG"
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Max Speed (km/h)"
+              "options": "Aggressive"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "velocitykmh"
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F2495C",
+                  "mode": "fixed"
+                }
               }
             ]
           }
@@ -396,18 +402,29 @@
       },
       "id": 4,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "donut",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
-          "values": false
+          "values": true
         },
-        "textMode": "auto"
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
@@ -418,12 +435,29 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (SELECT ROUND(AVG(dt.acceleration_gs)::numeric, 3)\n   FROM drive_telemetry_readings dt\n   JOIN drives d ON dt.drive_id = d.id\n   WHERE d.vehicle_id = ${vehicle_id}\n     AND $__timeFilter(d.start_date)\n     AND dt.acceleration_gs > 0\n  ) AS \"Avg Accel (g)\",\n\n  (SELECT ROUND(AVG(dt.acceleration_gs)::numeric, 3)\n   FROM drive_telemetry_readings dt\n   JOIN drives d ON dt.drive_id = d.id\n   WHERE d.vehicle_id = ${vehicle_id}\n     AND $__timeFilter(d.start_date)\n     AND dt.acceleration_gs < 0\n  ) AS \"Avg Decel (g)\",\n\n  (SELECT ROUND(MAX(speed_max)::numeric, 0)\n   FROM drives\n   WHERE vehicle_id = ${vehicle_id}\n     AND $__timeFilter(start_date)\n  ) AS \"Max Speed (km/h)\",\n\n  (SELECT style FROM (\n     SELECT\n       CASE\n         WHEN COALESCE(power_max, 0) > 150\n           OR COALESCE(speed_max, 0) > 130 THEN 'Aggressive'\n         WHEN COALESCE(power_max, 0) < 80\n          AND (COALESCE(speed_max, 0) - COALESCE(speed_avg, 0)) < 30\n          AND power_max > 0\n          AND ABS(COALESCE(power_min, 0)) / power_max > 0.3\n           THEN 'Conservative'\n         ELSE 'Moderate'\n       END AS style,\n       COUNT(*) AS cnt\n     FROM drives\n     WHERE vehicle_id = ${vehicle_id}\n       AND $__timeFilter(start_date)\n       AND distance > 0.5\n     GROUP BY 1\n     ORDER BY cnt DESC\n     LIMIT 1\n  ) sub) AS \"Driving Style\"",
+          "rawSql": "SELECT * FROM fn_driving_style_summary(${vehicle_id}::bigint, $__timeFrom()::timestamptz, $__timeTo()::timestamptz)",
           "refId": "A"
         }
       ],
       "title": "Driving Style Summary",
-      "type": "stat",
+      "transformations": [
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "style",
+                "type": "field"
+              },
+              {
+                "fieldName": "percent",
+                "type": "field"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "piechart",
       "transparent": false
     },
     {
