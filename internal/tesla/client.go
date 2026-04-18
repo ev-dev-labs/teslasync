@@ -725,6 +725,13 @@ var commands = map[string]commandDef{
 	"set_vehicle_name": {endpoint: "set_vehicle_name"},
 }
 
+// IsKnownCommand reports whether the given name is a supported Tesla command.
+// Used by the automation action executor for parse-time validation.
+func IsKnownCommand(name string) bool {
+	_, ok := commands[name]
+	return ok
+}
+
 // SendCommand sends a named command to a vehicle via the Fleet API or the
 // Vehicle Command Proxy (if configured). Commands that require signing are
 // routed through the proxy; wake_up goes directly to Fleet API.
