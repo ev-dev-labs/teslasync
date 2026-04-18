@@ -320,7 +320,7 @@ func TestSendCommand_WithParams(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(server)
-	err := client.SendCommand(context.Background(), "5YJ3E1EA1PF000001", "frunk", map[string]string{"which_trunk": "front"})
+	err := client.SendCommand(context.Background(), "5YJ3E1EA1PF000001", "frunk", map[string]interface{}{"which_trunk": "front"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

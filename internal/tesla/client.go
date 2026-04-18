@@ -684,12 +684,17 @@ var commands = map[string]commandDef{
 	"remove_charge_schedule":       {endpoint: "remove_charge_schedule"},
 	"add_precondition_schedule":    {endpoint: "add_precondition_schedule"},
 	"remove_precondition_schedule": {endpoint: "remove_precondition_schedule"},
+
+	// Navigation
+	"navigation_request":     {endpoint: "navigation_request"},
+	"navigation_gps_request": {endpoint: "navigation_gps_request"},
+	"navigation_sc_request":  {endpoint: "navigation_sc_request"},
 }
 
 // SendCommand sends a named command to a vehicle via the Fleet API or the
 // Vehicle Command Proxy (if configured). Commands that require signing are
 // routed through the proxy; wake_up goes directly to Fleet API.
-func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]string) error {
+func (c *Client) SendCommand(ctx context.Context, vin string, command string, params map[string]interface{}) error {
 	def, ok := commands[command]
 	if !ok {
 		return fmt.Errorf("unknown command: %s", command)

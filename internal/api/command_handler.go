@@ -85,6 +85,9 @@ var allowedCommands = map[string]bool{
 	"media_prev_fav":               true,
 	"media_volume_down":            true,
 	"adjust_volume":                true,
+	"navigation_request":           true,
+	"navigation_gps_request":       true,
+	"navigation_sc_request":        true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
@@ -105,8 +108,8 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Command string            `json:"command"`
-		Params  map[string]string `json:"params"`
+		Command string                 `json:"command"`
+		Params  map[string]interface{} `json:"params"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")

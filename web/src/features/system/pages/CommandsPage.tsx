@@ -27,7 +27,7 @@ import {
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
-  ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser,
+  ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation,
   Play, SkipForward, SkipBack, Heart, VolumeX,
 } from 'lucide-react';
 
@@ -369,6 +369,59 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
               const lon = lat ? window.prompt(t('commands.homelink.enterLon', 'Enter vehicle longitude:')) : null;
               if (lat && lon) {
                 cmd.mutate({ command: 'trigger_homelink', params: { lat, lon } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
+        </CommandGroup>
+
+        <CommandGroup title="Navigation" t={t}>
+          <CommandButton
+            icon={<Navigation className="h-5 w-5" />}
+            label={t('commands.nav.sendAddress', 'Send Address')}
+            sublabel={t('commands.nav.toVehicleNav', 'To vehicle nav')}
+            onClick={() => {
+              const address = window.prompt(t('commands.nav.enterAddress', 'Enter destination address:'));
+              if (address) {
+                cmd.mutate({
+                  command: 'navigation_request',
+                  params: {
+                    type: 'share_ext_content_raw',
+                    value: { 'android.intent.extra.TEXT': address },
+                    locale: 'en-US',
+                  },
+                });
+              }
+            }}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<MapPin className="h-5 w-5" />}
+            label={t('commands.nav.sendGPS', 'Send GPS')}
+            sublabel={t('commands.nav.coordinates', 'Lat / Lon')}
+            onClick={() => {
+              const lat = window.prompt(t('commands.nav.enterLat', 'Enter latitude:'));
+              const lon = lat ? window.prompt(t('commands.nav.enterLon', 'Enter longitude:')) : null;
+              if (lat && lon) {
+                cmd.mutate({
+                  command: 'navigation_gps_request',
+                  params: { lat: parseFloat(lat), lon: parseFloat(lon), order: 0 },
+                });
+              }
+            }}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Zap className="h-5 w-5" />}
+            label={t('commands.nav.supercharger', 'Supercharger')}
+            sublabel={t('commands.nav.byId', 'By ID')}
+            onClick={() => {
+              const id = window.prompt(t('commands.nav.enterScId', 'Enter Supercharger ID:'));
+              if (id) {
+                cmd.mutate({
+                  command: 'navigation_sc_request',
+                  params: { id: parseInt(id, 10), order: 0 },
+                });
               }
             }}
             loading={cmd.isPending}
