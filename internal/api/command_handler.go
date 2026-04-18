@@ -97,6 +97,8 @@ var allowedCommands = map[string]bool{
 	"navigation_request":           true,
 	"navigation_gps_request":       true,
 	"navigation_sc_request":        true,
+	"schedule_software_update":     true,
+	"cancel_software_update":       true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

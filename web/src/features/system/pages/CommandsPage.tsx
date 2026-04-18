@@ -29,6 +29,7 @@ import {
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
   ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation, KeyRound,
   Play, SkipForward, SkipBack, Heart, VolumeX, Snowflake, CircleDot,
+  Download, XCircle,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -476,6 +477,34 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
               }
             }}
             loading={cmd.isPending}
+          />
+        </CommandGroup>
+
+        <CommandGroup title="Software" t={t}>
+          <CommandButton
+            icon={<Download className="h-5 w-5" />}
+            label={t('commands.software.scheduleUpdate', 'Schedule Update')}
+            sublabel={t('commands.software.installNow', 'Install now')}
+            onClick={() => {
+              const minutes = window.prompt(
+                t('commands.software.enterDelay', 'Install in how many minutes? (0 = now, 120 = 2 hours)'),
+                '0'
+              );
+              if (minutes != null) {
+                const secs = parseInt(minutes, 10) * 60;
+                cmd.mutate({ command: 'schedule_software_update', params: { offset_sec: String(secs) } });
+              }
+            }}
+            loading={cmd.isPending}
+            variant="success"
+          />
+          <CommandButton
+            icon={<XCircle className="h-5 w-5" />}
+            label={t('commands.software.cancelUpdate', 'Cancel Update')}
+            sublabel={t('commands.software.stopPending', 'Stop pending')}
+            onClick={() => sendCmd('cancel_software_update')}
+            loading={cmd.isPending}
+            variant="danger"
           />
         </CommandGroup>
 

@@ -702,6 +702,10 @@ var commands = map[string]commandDef{
 	"navigation_request":     {endpoint: "navigation_request"},
 	"navigation_gps_request": {endpoint: "navigation_gps_request"},
 	"navigation_sc_request":  {endpoint: "navigation_sc_request"},
+
+	// Software Updates
+	"schedule_software_update": {endpoint: "schedule_software_update"},
+	"cancel_software_update":   {endpoint: "cancel_software_update"},
 }
 
 // SendCommand sends a named command to a vehicle via the Fleet API or the
