@@ -609,6 +609,20 @@ var commands = map[string]commandDef{
 	"climate_off": {endpoint: "auto_conditioning_stop"},
 	"set_temps":   {endpoint: "set_temps"},
 
+	// Climate Protection
+	"bioweapon_on":          {endpoint: "set_bioweapon_mode", params: map[string]interface{}{"on": true, "manual_override": true}},
+	"bioweapon_off":         {endpoint: "set_bioweapon_mode", params: map[string]interface{}{"on": false, "manual_override": false}},
+	"cop_on":                {endpoint: "set_cabin_overheat_protection", params: map[string]interface{}{"on": true, "fan_only": false}},
+	"cop_fan_only":          {endpoint: "set_cabin_overheat_protection", params: map[string]interface{}{"on": true, "fan_only": true}},
+	"cop_off":               {endpoint: "set_cabin_overheat_protection", params: map[string]interface{}{"on": false, "fan_only": false}},
+	"set_cop_temp":          {endpoint: "set_cop_temp"},
+	"climate_keeper_off":    {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 0}},
+	"climate_keeper_on":     {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 1}},
+	"dog_mode":              {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 2}},
+	"camp_mode":             {endpoint: "set_climate_keeper_mode", params: map[string]interface{}{"climate_keeper_mode": 3}},
+	"preconditioning_max":   {endpoint: "set_preconditioning_max", params: map[string]interface{}{"on": true}},
+	"preconditioning_reset": {endpoint: "set_preconditioning_max", params: map[string]interface{}{"on": false}},
+
 	// Charging
 	"open_charge_port":  {endpoint: "charge_port_door_open"},
 	"close_charge_port": {endpoint: "charge_port_door_close"},

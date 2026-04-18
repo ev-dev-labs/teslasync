@@ -75,9 +75,9 @@ func TestAllowedCommandsWhitelist(t *testing.T) {
 		}
 	}
 
-	// Total should be exactly 31
-	if len(allowedCommands) != 31 {
-		t.Errorf("allowedCommands has %d entries, want 31", len(allowedCommands))
+	// Total should be exactly 43
+	if len(allowedCommands) != 43 {
+		t.Errorf("allowedCommands has %d entries, want 43", len(allowedCommands))
 	}
 
 	// Should reject unknown commands

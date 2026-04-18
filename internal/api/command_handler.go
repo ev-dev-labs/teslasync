@@ -60,8 +60,20 @@ var allowedCommands = map[string]bool{
 	"add_precondition_schedule":    true,
 	"remove_precondition_schedule": true,
 	"boombox_fart":                 true,
-	"boombox_ping":            true,
-	"remote_boombox":          true,
+	"boombox_ping":                 true,
+	"remote_boombox":               true,
+	"bioweapon_on":                 true,
+	"bioweapon_off":                true,
+	"cop_on":                       true,
+	"cop_fan_only":                 true,
+	"cop_off":                      true,
+	"set_cop_temp":                 true,
+	"climate_keeper_off":           true,
+	"climate_keeper_on":            true,
+	"dog_mode":                     true,
+	"camp_mode":                    true,
+	"preconditioning_max":          true,
+	"preconditioning_reset":        true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

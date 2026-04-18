@@ -27,6 +27,7 @@ import {
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
+  ShieldAlert, Dog, Tent, Flame,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -106,7 +107,10 @@ function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'def
 
 // ─── Command Group ───────────────────────────────────────────────────────────
 
-function CommandGroup({ title, children, t }: { title: string; children: React.ReactNode; t: (k: string) => string }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TranslateFn = (...args: any[]) => any;
+
+function CommandGroup({ title, children, t }: { title: string; children: React.ReactNode; t: TranslateFn }) {
   return (
     <div>
       <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-2 font-medium block">{t(title)}</span>
@@ -118,7 +122,7 @@ function CommandGroup({ title, children, t }: { title: string; children: React.R
 // ─── Vehicle Command Center ──────────────────────────────────────────────────
 
 function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance, tempUnit, distanceUnit }: {
-  vehicle: Vehicle; state: VehicleState | null; t: (k: string) => string;
+  vehicle: Vehicle; state: VehicleState | null; t: TranslateFn;
   convertTemp: (c: number) => number; convertDistance: (km: number) => number;
   tempUnit: string; distanceUnit: string;
 }) {
@@ -207,6 +211,46 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
 
         <CommandGroup title="Climate & Comfort" t={t}>
           <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${fmtNumber(convertTemp(state.inside_temp), 0)}${tempUnit}` : t('ON')) : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
+        </CommandGroup>
+
+        <CommandGroup title="Climate Protection" t={t}>
+          <CommandButton
+            icon={<ShieldAlert className="h-5 w-5" />}
+            label={t('commands.climate.bioweapon', 'Bioweapon')}
+            sublabel={t('commands.climate.defenseMode', 'Defense Mode')}
+            onClick={() => sendCmd('bioweapon_on')}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<Thermometer className="h-5 w-5" />}
+            label={t('commands.climate.cop', 'Overheat Protect')}
+            sublabel={t('commands.climate.copOn', 'On (AC)')}
+            onClick={() => sendCmd('cop_on')}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Dog className="h-5 w-5" />}
+            label={t('commands.climate.dogMode', 'Dog Mode')}
+            onClick={() => sendCmd('dog_mode')}
+            loading={cmd.isPending}
+            variant="success"
+          />
+          <CommandButton
+            icon={<Tent className="h-5 w-5" />}
+            label={t('commands.climate.campMode', 'Camp Mode')}
+            onClick={() => sendCmd('camp_mode')}
+            loading={cmd.isPending}
+            variant="success"
+          />
+          <CommandButton
+            icon={<Flame className="h-5 w-5" />}
+            label={t('commands.climate.maxPrecondition', 'Max Precondition')}
+            sublabel={t('commands.climate.override', 'Override')}
+            onClick={() => sendCmd('preconditioning_max')}
+            loading={cmd.isPending}
+            variant="danger"
+          />
         </CommandGroup>
 
         <CommandGroup title="Charging" t={t}>
