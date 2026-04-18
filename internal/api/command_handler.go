@@ -102,6 +102,9 @@ var allowedCommands = map[string]bool{
 	"speed_limit_set_limit":        true,
 	"speed_limit_clear_pin":        true,
 	"speed_limit_clear_pin_admin":  true,
+	"sunroof_vent":                 true,
+	"sunroof_close":                true,
+	"sunroof_stop":                 true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

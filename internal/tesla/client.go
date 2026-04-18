@@ -676,6 +676,11 @@ var commands = map[string]commandDef{
 	"vent_windows":  {endpoint: "window_control", params: map[string]interface{}{"command": "vent"}},
 	"close_windows": {endpoint: "window_control", params: map[string]interface{}{"command": "close"}},
 
+	// Sunroof
+	"sunroof_vent":  {endpoint: "sun_roof_control", params: map[string]interface{}{"state": "vent"}},
+	"sunroof_close": {endpoint: "sun_roof_control", params: map[string]interface{}{"state": "close"}},
+	"sunroof_stop":  {endpoint: "sun_roof_control", params: map[string]interface{}{"state": "stop"}},
+
 	// HomeLink
 	"trigger_homelink": {endpoint: "trigger_homelink"},
 

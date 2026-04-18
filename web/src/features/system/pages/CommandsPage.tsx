@@ -29,7 +29,7 @@ import {
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
   ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation, KeyRound,
   Play, SkipForward, SkipBack, Heart, VolumeX, Snowflake, CircleDot,
-  Download, XCircle,
+  Download, XCircle, ArrowUpFromDot, ArrowDownToDot, CircleStop,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -404,6 +404,12 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         <CommandGroup title="Doors & Trunk" t={t}>
           <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Frunk')} sublabel={t('Open')} onClick={() => sendCmd('frunk_open')} loading={cmd.isPending} />
           <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Trunk')} sublabel={t('Open')} onClick={() => sendCmd('trunk_open')} loading={cmd.isPending} />
+        </CommandGroup>
+
+        <CommandGroup title="Sunroof" t={t}>
+          <CommandButton icon={<ArrowUpFromDot className="h-5 w-5" />} label={t('Sunroof')} sublabel={t('Vent')} onClick={() => sendCmd('sunroof_vent')} loading={cmd.isPending} />
+          <CommandButton icon={<ArrowDownToDot className="h-5 w-5" />} label={t('Sunroof')} sublabel={t('Close')} onClick={() => sendCmd('sunroof_close')} loading={cmd.isPending} />
+          <CommandButton icon={<CircleStop className="h-5 w-5" />} label={t('Sunroof')} sublabel={t('Stop')} onClick={() => sendCmd('sunroof_stop')} loading={cmd.isPending} />
         </CommandGroup>
 
         <CommandGroup title="Schedules" t={t}>
