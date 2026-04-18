@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -17,9 +19,14 @@ type mockVehicleRepo struct {
 	vehicles []*models.Vehicle
 	byID     map[int64]*models.Vehicle
 	err      error
+	// getByIDFunc allows per-call state overrides for polling tests.
+	getByIDFunc func(id int64) (*models.Vehicle, error)
 }
 
 func (m *mockVehicleRepo) GetByID(_ context.Context, id int64) (*models.Vehicle, error) {
+	if m.getByIDFunc != nil {
+		return m.getByIDFunc(id)
+	}
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -66,9 +73,12 @@ func (m *mockSettingsChecker) GetPollingConfig(_ context.Context) (*models.Polli
 
 type mockTeslaCommander struct {
 	hasToken   bool
+	wakeErr    error
+	wakeErrFor map[string]error // per-VIN wake errors
 	sendErr    error
 	sendErrFor map[string]error // per-VIN errors
 	calls      []sendCall
+	wakeCalls  []string // VINs that WakeUp was called for
 }
 
 type sendCall struct {
@@ -79,6 +89,16 @@ type sendCall struct {
 
 func (m *mockTeslaCommander) HasValidToken() bool {
 	return m.hasToken
+}
+
+func (m *mockTeslaCommander) WakeUp(_ context.Context, vin string) error {
+	m.wakeCalls = append(m.wakeCalls, vin)
+	if m.wakeErrFor != nil {
+		if e, ok := m.wakeErrFor[vin]; ok {
+			return e
+		}
+	}
+	return m.wakeErr
 }
 
 func (m *mockTeslaCommander) SendCommand(_ context.Context, vin string, command string, params map[string]interface{}) error {
@@ -100,7 +120,11 @@ func defaultPollingConfig() *models.PollingConfig {
 }
 
 func testVehicle(id int64, vin, name string) *models.Vehicle {
-	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name}
+	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name, State: "online"}
+}
+
+func testVehicleWithState(id int64, vin, name, state string) *models.Vehicle {
+	return &models.Vehicle{ID: id, VIN: vin, DisplayName: name, State: state}
 }
 
 func makeConfig(t *testing.T, typ, command string, params map[string]interface{}) json.RawMessage {
@@ -505,5 +529,402 @@ func TestExecute_AllCommandsFromWhitelist(t *testing.T) {
 				t.Errorf("command = %q, want %q", cfg.Command, cmd)
 			}
 		})
+	}
+}
+
+// --- Auto-Wake Tests ---
+
+func TestAutoWake_VehicleOnline_NoWakeAttempted(t *testing.T) {
+	v := testVehicle(1, "VIN001", "Model 3") // State: "online"
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "lock", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].WakeResult != nil {
+		t.Errorf("expected no wake result for online vehicle, got %+v", results[0].WakeResult)
+	}
+	if !results[0].Success {
+		t.Errorf("expected success, got error: %s", results[0].Error)
+	}
+	if len(teslaCmd.wakeCalls) != 0 {
+		t.Errorf("expected 0 wake calls, got %d", len(teslaCmd.wakeCalls))
+	}
+}
+
+func TestAutoWake_VehicleAsleep_WakeSucceeds(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
+
+	// getByIDFunc is called once for the initial lookup (returns asleep),
+	// then again on each wake poll. Simulate the vehicle waking on the 2nd poll.
+	var callCount atomic.Int32
+	vehicleRepo := &mockVehicleRepo{
+		byID: map[int64]*models.Vehicle{1: v},
+		getByIDFunc: func(id int64) (*models.Vehicle, error) {
+			n := callCount.Add(1)
+			// Call 1: initial lookup in Execute → asleep
+			// Call 2: first wake poll → still asleep
+			// Call 3+: second wake poll → online
+			if n >= 3 {
+				return testVehicle(1, "VIN001", "Model 3"), nil
+			}
+			return testVehicleWithState(1, "VIN001", "Model 3", "asleep"), nil
+		},
+	}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+	exec.wakePollInterval = 10 * time.Millisecond // speed up test
+	exec.wakeTimeout = 200 * time.Millisecond
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "climate_on", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	r := results[0]
+	if !r.Success {
+		t.Errorf("expected success, got error: %s", r.Error)
+	}
+	if r.WakeResult == nil {
+		t.Fatal("expected wake result, got nil")
+	}
+	if !r.WakeResult.Attempted {
+		t.Error("expected wake attempted")
+	}
+	if !r.WakeResult.Success {
+		t.Errorf("expected wake success, got error: %s", r.WakeResult.Error)
+	}
+	if r.WakeResult.PollCount < 2 {
+		t.Errorf("expected at least 2 polls, got %d", r.WakeResult.PollCount)
+	}
+
+	// Verify WakeUp was called.
+	if len(teslaCmd.wakeCalls) != 1 {
+		t.Fatalf("expected 1 wake call, got %d", len(teslaCmd.wakeCalls))
+	}
+	if teslaCmd.wakeCalls[0] != "VIN001" {
+		t.Errorf("wake VIN = %q, want %q", teslaCmd.wakeCalls[0], "VIN001")
+	}
+
+	// Verify the actual command was sent after wake.
+	if len(teslaCmd.calls) != 1 {
+		t.Fatalf("expected 1 send call, got %d", len(teslaCmd.calls))
+	}
+	if teslaCmd.calls[0].Command != "climate_on" {
+		t.Errorf("command = %q, want %q", teslaCmd.calls[0].Command, "climate_on")
+	}
+}
+
+func TestAutoWake_VehicleOffline_WakeSucceeds(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "offline")
+
+	// Call 1: initial lookup → offline. Call 2+: first wake poll → online.
+	var callCount atomic.Int32
+	vehicleRepo := &mockVehicleRepo{
+		byID: map[int64]*models.Vehicle{1: v},
+		getByIDFunc: func(_ int64) (*models.Vehicle, error) {
+			n := callCount.Add(1)
+			if n >= 2 {
+				return testVehicle(1, "VIN001", "Model 3"), nil
+			}
+			return testVehicleWithState(1, "VIN001", "Model 3", "offline"), nil
+		},
+	}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+	exec.wakePollInterval = 10 * time.Millisecond
+	exec.wakeTimeout = 200 * time.Millisecond
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "lock", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	r := results[0]
+	if !r.Success {
+		t.Errorf("expected success, got error: %s", r.Error)
+	}
+	if r.WakeResult == nil || !r.WakeResult.Success {
+		t.Error("expected successful wake result for offline vehicle")
+	}
+}
+
+func TestAutoWake_WakeCommandFails(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{
+		hasToken: true,
+		wakeErr:  errors.New("network timeout"),
+	}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+	exec.wakePollInterval = 10 * time.Millisecond
+	exec.wakeTimeout = 50 * time.Millisecond
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "lock", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	r := results[0]
+	if r.Success {
+		t.Error("expected failure when wake fails")
+	}
+	if !strings.Contains(r.Error, "auto-wake failed") {
+		t.Errorf("error %q should contain 'auto-wake failed'", r.Error)
+	}
+	if !strings.Contains(r.Error, "network timeout") {
+		t.Errorf("error %q should contain 'network timeout'", r.Error)
+	}
+
+	// Command should NOT be sent when wake fails.
+	if len(teslaCmd.calls) != 0 {
+		t.Errorf("expected 0 send calls when wake fails, got %d", len(teslaCmd.calls))
+	}
+
+	// Command log should still be recorded (audit trail).
+	if len(commandRepo.logs) != 1 {
+		t.Fatalf("expected 1 command log, got %d", len(commandRepo.logs))
+	}
+	if commandRepo.logs[0].Status != "failed" {
+		t.Errorf("log status = %q, want %q", commandRepo.logs[0].Status, "failed")
+	}
+}
+
+func TestAutoWake_WakeTimeout(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
+
+	// Vehicle never comes online.
+	vehicleRepo := &mockVehicleRepo{
+		byID: map[int64]*models.Vehicle{1: v},
+		getByIDFunc: func(_ int64) (*models.Vehicle, error) {
+			return testVehicleWithState(1, "VIN001", "Model 3", "asleep"), nil
+		},
+	}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+	exec.wakePollInterval = 10 * time.Millisecond
+	exec.wakeTimeout = 35 * time.Millisecond
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "lock", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	r := results[0]
+	if r.Success {
+		t.Error("expected failure on wake timeout")
+	}
+	if !strings.Contains(r.Error, "auto-wake failed") {
+		t.Errorf("error %q should contain 'auto-wake failed'", r.Error)
+	}
+	if !strings.Contains(r.Error, "did not wake up within timeout") {
+		t.Errorf("error %q should contain 'did not wake up within timeout'", r.Error)
+	}
+	if r.WakeResult == nil {
+		t.Fatal("expected wake result")
+	}
+	if r.WakeResult.PollCount == 0 {
+		t.Error("expected at least 1 poll before timeout")
+	}
+
+	// Command should not be sent.
+	if len(teslaCmd.calls) != 0 {
+		t.Errorf("expected 0 send calls after wake timeout, got %d", len(teslaCmd.calls))
+	}
+}
+
+func TestAutoWake_WakeUpCommand_SkipsAutoWake(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "wake_up", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	r := results[0]
+	if !r.Success {
+		t.Errorf("expected success for wake_up command, got error: %s", r.Error)
+	}
+	if r.WakeResult != nil {
+		t.Error("expected no WakeResult for wake_up command itself")
+	}
+
+	// Should only have the SendCommand call, no WakeUp call.
+	if len(teslaCmd.wakeCalls) != 0 {
+		t.Errorf("expected 0 WakeUp calls for wake_up command, got %d", len(teslaCmd.wakeCalls))
+	}
+	if len(teslaCmd.calls) != 1 {
+		t.Fatalf("expected 1 send call, got %d", len(teslaCmd.calls))
+	}
+	if teslaCmd.calls[0].Command != "wake_up" {
+		t.Errorf("command = %q, want %q", teslaCmd.calls[0].Command, "wake_up")
+	}
+}
+
+func TestAutoWake_WakeDisabledInPollingConfig(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
+	vehicleRepo := &mockVehicleRepo{byID: map[int64]*models.Vehicle{1: v}}
+	commandRepo := &mockCommandLogRepo{}
+
+	pc := defaultPollingConfig()
+	pc.WakeUp = false
+	settings := &mockSettingsChecker{pollingCfg: pc}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "lock", nil)
+
+	resultJSON, err := exec.Execute(context.Background(), &vid, cfg)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	r := results[0]
+	if r.Success {
+		t.Error("expected failure when wake is disabled")
+	}
+	if !strings.Contains(r.Error, "wake_up endpoint is disabled") {
+		t.Errorf("error %q should mention wake_up disabled", r.Error)
+	}
+
+	// No WakeUp or SendCommand calls should be made.
+	if len(teslaCmd.wakeCalls) != 0 {
+		t.Errorf("expected 0 wake calls, got %d", len(teslaCmd.wakeCalls))
+	}
+	if len(teslaCmd.calls) != 0 {
+		t.Errorf("expected 0 send calls, got %d", len(teslaCmd.calls))
+	}
+}
+
+func TestAutoWake_ContextCancelledDuringWake(t *testing.T) {
+	v := testVehicleWithState(1, "VIN001", "Model 3", "asleep")
+
+	vehicleRepo := &mockVehicleRepo{
+		byID: map[int64]*models.Vehicle{1: v},
+		getByIDFunc: func(_ int64) (*models.Vehicle, error) {
+			return testVehicleWithState(1, "VIN001", "Model 3", "asleep"), nil
+		},
+	}
+	commandRepo := &mockCommandLogRepo{}
+	settings := &mockSettingsChecker{pollingCfg: defaultPollingConfig()}
+	teslaCmd := &mockTeslaCommander{hasToken: true}
+
+	exec := NewCommandExecutor(vehicleRepo, commandRepo, settings, teslaCmd)
+	exec.wakePollInterval = 10 * time.Millisecond
+	exec.wakeTimeout = 5 * time.Second
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel after a short delay (long enough for wake command but not polling).
+	go func() {
+		time.Sleep(30 * time.Millisecond)
+		cancel()
+	}()
+
+	vid := int64(1)
+	cfg := makeConfig(t, "", "lock", nil)
+
+	resultJSON, err := exec.Execute(ctx, &vid, cfg)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var results []CommandResult
+	if err := json.Unmarshal(resultJSON, &results); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	r := results[0]
+	if r.Success {
+		t.Error("expected failure on context cancellation during wake")
+	}
+	if !strings.Contains(r.Error, "auto-wake failed") {
+		t.Errorf("error %q should contain 'auto-wake failed'", r.Error)
 	}
 }

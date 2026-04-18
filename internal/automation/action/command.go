@@ -35,6 +35,7 @@ type SettingsChecker interface {
 // TeslaCommander abstracts the Tesla client for testability.
 type TeslaCommander interface {
 	HasValidToken() bool
+	WakeUp(ctx context.Context, vin string) error
 	SendCommand(ctx context.Context, vin string, command string, params map[string]interface{}) error
 }
 
@@ -45,14 +46,24 @@ type CommandConfig struct {
 	Params  map[string]interface{} `json:"params"`  // optional command parameters
 }
 
+// WakeResult captures the outcome of an auto-wake attempt before command execution.
+type WakeResult struct {
+	Attempted  bool   `json:"attempted"`
+	Success    bool   `json:"success"`
+	Error      string `json:"error,omitempty"`
+	DurationMs int64  `json:"duration_ms"`
+	PollCount  int    `json:"poll_count"`
+}
+
 // CommandResult captures the outcome of a single vehicle command execution.
 type CommandResult struct {
-	VehicleID   int64  `json:"vehicle_id"`
-	VehicleName string `json:"vehicle_name"`
-	Command     string `json:"command"`
-	Success     bool   `json:"success"`
-	Error       string `json:"error,omitempty"`
-	DurationMs  int64  `json:"duration_ms"`
+	VehicleID   int64       `json:"vehicle_id"`
+	VehicleName string      `json:"vehicle_name"`
+	Command     string      `json:"command"`
+	Success     bool        `json:"success"`
+	Error       string      `json:"error,omitempty"`
+	DurationMs  int64       `json:"duration_ms"`
+	WakeResult  *WakeResult `json:"wake_result,omitempty"`
 }
 
 // CommandExecutor sends Tesla vehicle commands as an automation action.
@@ -62,7 +73,17 @@ type CommandExecutor struct {
 	settingsRepo SettingsChecker
 	teslaClient  TeslaCommander
 	logger       zerolog.Logger
+
+	// Overridable for testing.
+	wakeTimeout      time.Duration
+	wakePollInterval time.Duration
 }
+
+// Default wake timing constants.
+const (
+	defaultWakeTimeout      = 30 * time.Second
+	defaultWakePollInterval = 5 * time.Second
+)
 
 // NewCommandExecutor creates a command action executor.
 func NewCommandExecutor(
@@ -72,10 +93,12 @@ func NewCommandExecutor(
 	teslaClient TeslaCommander,
 ) *CommandExecutor {
 	return &CommandExecutor{
-		vehicleRepo:  vehicleRepo,
-		commandRepo:  commandRepo,
-		settingsRepo: settingsRepo,
-		teslaClient:  teslaClient,
+		vehicleRepo:      vehicleRepo,
+		commandRepo:      commandRepo,
+		settingsRepo:     settingsRepo,
+		teslaClient:      teslaClient,
+		wakeTimeout:      defaultWakeTimeout,
+		wakePollInterval: defaultWakePollInterval,
 		logger: log.With().
 			Str("component", "command_action").
 			Logger(),
@@ -184,6 +207,7 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 }
 
 // sendToVehicle sends a single command to one vehicle, logs it, and returns the result.
+// If the vehicle is asleep or offline it automatically attempts to wake it first.
 func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, cfg *CommandConfig) CommandResult {
 	start := time.Now()
 
@@ -191,6 +215,20 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 		VehicleID:   v.ID,
 		VehicleName: v.DisplayName,
 		Command:     cfg.Command,
+	}
+
+	// Auto-wake: if the vehicle is not online and the command isn't wake_up itself.
+	if cfg.Command != "wake_up" {
+		wr := e.wakeIfNeeded(ctx, v)
+		if wr != nil {
+			result.WakeResult = wr
+			if !wr.Success {
+				result.DurationMs = time.Since(start).Milliseconds()
+				result.Error = fmt.Sprintf("auto-wake failed: %s", wr.Error)
+				e.logCommand(ctx, v, cfg, "failed", result.Error)
+				return result
+			}
+		}
 	}
 
 	cmdErr := e.teslaClient.SendCommand(ctx, v.VIN, cfg.Command, cfg.Params)
@@ -206,7 +244,91 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 		result.Success = true
 	}
 
-	// Log the command execution to command_logs.
+	e.logCommand(ctx, v, cfg, status, errMsg)
+
+	e.logger.Info().
+		Int64("vehicle_id", v.ID).
+		Str("vehicle_name", v.DisplayName).
+		Str("command", cfg.Command).
+		Str("status", status).
+		Int64("duration_ms", result.DurationMs).
+		Msg("automation command executed")
+
+	return result
+}
+
+// wakeIfNeeded checks whether the vehicle needs waking and attempts it.
+// Returns nil when no wake is needed, a WakeResult otherwise.
+func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *WakeResult {
+	if v.State != "asleep" && v.State != "offline" {
+		return nil
+	}
+
+	// Respect the wake_up safety gate in polling config.
+	if pc, err := e.settingsRepo.GetPollingConfig(ctx); err == nil && !pc.WakeUp {
+		return &WakeResult{
+			Attempted: true,
+			Error:     "wake_up endpoint is disabled in polling config",
+		}
+	}
+
+	wr := &WakeResult{Attempted: true}
+	start := time.Now()
+
+	e.logger.Info().
+		Int64("vehicle_id", v.ID).
+		Str("vehicle_name", v.DisplayName).
+		Str("state", v.State).
+		Msg("vehicle not online, attempting auto-wake")
+
+	if err := e.teslaClient.WakeUp(ctx, v.VIN); err != nil {
+		wr.Error = fmt.Sprintf("wake command failed: %v", err)
+		wr.DurationMs = time.Since(start).Milliseconds()
+		return wr
+	}
+
+	// Poll vehicle state until it reports online or we hit the timeout.
+	deadline := time.NewTimer(e.wakeTimeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(e.wakePollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			wr.Error = fmt.Sprintf("context cancelled during wake: %v", ctx.Err())
+			wr.DurationMs = time.Since(start).Milliseconds()
+			return wr
+		case <-deadline.C:
+			wr.Error = "vehicle did not wake up within timeout"
+			wr.DurationMs = time.Since(start).Milliseconds()
+			return wr
+		case <-ticker.C:
+			wr.PollCount++
+			fresh, err := e.vehicleRepo.GetByID(ctx, v.ID)
+			if err != nil {
+				e.logger.Warn().Err(err).
+					Int64("vehicle_id", v.ID).
+					Int("poll_count", wr.PollCount).
+					Msg("failed to poll vehicle state during wake")
+				continue
+			}
+			if fresh != nil && fresh.State == "online" {
+				wr.Success = true
+				wr.DurationMs = time.Since(start).Milliseconds()
+				e.logger.Info().
+					Int64("vehicle_id", v.ID).
+					Int("poll_count", wr.PollCount).
+					Int64("duration_ms", wr.DurationMs).
+					Msg("vehicle woke up successfully")
+				return wr
+			}
+		}
+	}
+}
+
+// logCommand writes a command_logs row for audit. Errors are logged but not propagated.
+func (e *CommandExecutor) logCommand(ctx context.Context, v *models.Vehicle, cfg *CommandConfig, status, errMsg string) {
 	paramsJSON, _ := json.Marshal(cfg.Params)
 	cl := &models.CommandLog{
 		VehicleID: v.ID,
@@ -221,14 +343,4 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 			Str("command", cfg.Command).
 			Msg("failed to log command")
 	}
-
-	e.logger.Info().
-		Int64("vehicle_id", v.ID).
-		Str("vehicle_name", v.DisplayName).
-		Str("command", cfg.Command).
-		Str("status", status).
-		Int64("duration_ms", result.DurationMs).
-		Msg("automation command executed")
-
-	return result
 }
