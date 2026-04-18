@@ -50,8 +50,15 @@ var allowedCommands = map[string]bool{
 	"vent_windows":            true,
 	"close_windows":           true,
 	"remote_start_drive":      true,
-	"set_scheduled_departure": true,
-	"set_scheduled_charging":  true,
+	"set_scheduled_departure":      true,
+	"set_scheduled_charging":       true,
+	"add_charge_schedule":          true,
+	"remove_charge_schedule":       true,
+	"add_precondition_schedule":    true,
+	"remove_precondition_schedule": true,
+	"boombox_fart":                 true,
+	"boombox_ping":            true,
+	"remote_boombox":          true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

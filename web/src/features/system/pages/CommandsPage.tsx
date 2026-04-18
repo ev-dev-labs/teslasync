@@ -25,7 +25,8 @@ import { request } from '@/api/client';
 import {
   Lock, Unlock, Wind, Car, Zap, Power, Shield,
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
-  Loader2, Battery, Wifi, Activity, Thermometer,
+  Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
+  CalendarPlus, CalendarMinus,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -219,9 +220,73 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Trunk')} sublabel={t('Open')} onClick={() => sendCmd('trunk_open')} loading={cmd.isPending} />
         </CommandGroup>
 
+        <CommandGroup title="Schedules" t={t}>
+          <CommandButton
+            icon={<CalendarPlus className="h-5 w-5" />}
+            label={t('Add Charge Schedule')}
+            sublabel={t('Midnight daily')}
+            onClick={() => cmd.mutate({
+              command: 'add_charge_schedule',
+              params: {
+                id: '0',
+                name: 'Default',
+                days_of_week: '127',
+                start_enabled: 'true',
+                start_time: '0',
+                end_enabled: 'false',
+                end_time: '0',
+                one_time: 'false',
+              },
+            })}
+            loading={cmd.isPending}
+            variant="success"
+          />
+          <CommandButton
+            icon={<CalendarMinus className="h-5 w-5" />}
+            label={t('Remove Charge Schedule')}
+            sublabel={t('By ID')}
+            onClick={() => {
+              const id = window.prompt(t('Enter schedule ID to remove:'));
+              if (id) cmd.mutate({ command: 'remove_charge_schedule', params: { id } });
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<CalendarPlus className="h-5 w-5" />}
+            label={t('Add Precondition')}
+            sublabel={t('7 AM daily')}
+            onClick={() => cmd.mutate({
+              command: 'add_precondition_schedule',
+              params: {
+                id: '0',
+                name: 'Morning',
+                days_of_week: '127',
+                precondition_time: '420',
+                one_time: 'false',
+              },
+            })}
+            loading={cmd.isPending}
+            variant="success"
+          />
+          <CommandButton
+            icon={<CalendarMinus className="h-5 w-5" />}
+            label={t('Remove Precondition')}
+            sublabel={t('By ID')}
+            onClick={() => {
+              const id = window.prompt(t('Enter schedule ID to remove:'));
+              if (id) cmd.mutate({ command: 'remove_precondition_schedule', params: { id } });
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+        </CommandGroup>
+
         <CommandGroup title="Alerts & Location" t={t}>
           <CommandButton icon={<Volume2 className="h-5 w-5" />} label={t('Horn')} onClick={() => sendCmd('honk_horn')} loading={cmd.isPending} variant="danger" />
           <CommandButton icon={<MapPin className="h-5 w-5" />} label={t('Flash Lights')} onClick={() => sendCmd('flash_lights')} loading={cmd.isPending} />
+          <CommandButton icon={<Speaker className="h-5 w-5" />} label={t('Boombox')} sublabel={t('Random fart')} onClick={() => sendCmd('boombox_fart')} loading={cmd.isPending} />
+          <CommandButton icon={<Locate className="h-5 w-5" />} label={t('Locate Ping')} sublabel={t('Find my car')} onClick={() => sendCmd('boombox_ping')} loading={cmd.isPending} />
         </CommandGroup>
       </div>
     </GlassPanel>

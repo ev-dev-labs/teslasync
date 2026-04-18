@@ -632,6 +632,11 @@ var commands = map[string]commandDef{
 	"flash_lights": {endpoint: "flash_lights"},
 	"flash":        {endpoint: "flash_lights"},
 
+	// Boombox
+	"boombox_fart":   {endpoint: "remote_boombox", params: map[string]interface{}{"sound": 0}},
+	"boombox_ping":   {endpoint: "remote_boombox", params: map[string]interface{}{"sound": 2000}},
+	"remote_boombox": {endpoint: "remote_boombox"},
+
 	// Windows
 	"vent_windows":  {endpoint: "window_control", params: map[string]interface{}{"command": "vent"}},
 	"close_windows": {endpoint: "window_control", params: map[string]interface{}{"command": "close"}},
@@ -639,9 +644,15 @@ var commands = map[string]commandDef{
 	// Drive
 	"remote_start_drive": {endpoint: "remote_start_drive"},
 
-	// Scheduling
+	// Scheduling (legacy)
 	"set_scheduled_departure": {endpoint: "set_scheduled_departure"},
 	"set_scheduled_charging":  {endpoint: "set_scheduled_charging"},
+
+	// Schedules (firmware 2024.26+)
+	"add_charge_schedule":          {endpoint: "add_charge_schedule"},
+	"remove_charge_schedule":       {endpoint: "remove_charge_schedule"},
+	"add_precondition_schedule":    {endpoint: "add_precondition_schedule"},
+	"remove_precondition_schedule": {endpoint: "remove_precondition_schedule"},
 }
 
 // SendCommand sends a named command to a vehicle via the Fleet API or the
