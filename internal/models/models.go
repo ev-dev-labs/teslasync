@@ -1127,3 +1127,78 @@ type RawTelemetrySignal struct {
 	SignalCount int                    `json:"signal_count" bson:"signal_count"`
 	CreatedAt   time.Time              `json:"created_at" bson:"created_at"`
 }
+
+// Automation represents a user-defined automation rule with trigger, conditions, and actions.
+type Automation struct {
+	ID                  int64           `json:"id" db:"id"`
+	Name                string          `json:"name" db:"name"`
+	Description         string          `json:"description" db:"description"`
+	VehicleID           *int64          `json:"vehicle_id" db:"vehicle_id"`
+	Enabled             bool            `json:"enabled" db:"enabled"`
+	TriggerType         string          `json:"trigger_type" db:"trigger_type"`
+	TriggerConfig       json.RawMessage `json:"trigger_config" db:"trigger_config"`
+	Conditions          json.RawMessage `json:"conditions" db:"conditions"`
+	Actions             json.RawMessage `json:"actions" db:"actions"`
+	CooldownMinutes     int             `json:"cooldown_minutes" db:"cooldown_minutes"`
+	MaxExecutionsHour   int             `json:"max_executions_hour" db:"max_executions_hour"`
+	StopOnFailure       bool            `json:"stop_on_failure" db:"stop_on_failure"`
+	NotifyOnRun         bool            `json:"notify_on_run" db:"notify_on_run"`
+	NotifyOnFailure     bool            `json:"notify_on_failure" db:"notify_on_failure"`
+	SeasonalStart       *int            `json:"seasonal_start" db:"seasonal_start"`
+	SeasonalEnd         *int            `json:"seasonal_end" db:"seasonal_end"`
+	Priority            int             `json:"priority" db:"priority"`
+	LastTriggeredAt     *time.Time      `json:"last_triggered_at" db:"last_triggered_at"`
+	LastSuccessAt       *time.Time      `json:"last_success_at" db:"last_success_at"`
+	LastFailureAt       *time.Time      `json:"last_failure_at" db:"last_failure_at"`
+	ExecutionCount      int64           `json:"execution_count" db:"execution_count"`
+	FailureCount        int64           `json:"failure_count" db:"failure_count"`
+	ConsecutiveFailures int             `json:"consecutive_failures" db:"consecutive_failures"`
+	AutoDisabled        bool            `json:"auto_disabled" db:"auto_disabled"`
+	AutoDisabledReason  *string         `json:"auto_disabled_reason" db:"auto_disabled_reason"`
+	PresetID            *string         `json:"preset_id" db:"preset_id"`
+	Tags                []string        `json:"tags" db:"tags"`
+	CreatedAt           time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+// AutomationHistory records the result of a single automation execution.
+type AutomationHistory struct {
+	ID                int64           `json:"id" db:"id"`
+	AutomationID      int64           `json:"automation_id" db:"automation_id"`
+	AutomationName    string          `json:"automation_name" db:"automation_name"`
+	VehicleID         *int64          `json:"vehicle_id" db:"vehicle_id"`
+	TriggeredAt       time.Time       `json:"triggered_at" db:"triggered_at"`
+	CompletedAt       *time.Time      `json:"completed_at" db:"completed_at"`
+	DurationMs        *int            `json:"duration_ms" db:"duration_ms"`
+	TriggerType       string          `json:"trigger_type" db:"trigger_type"`
+	TriggerSnapshot   json.RawMessage `json:"trigger_snapshot" db:"trigger_snapshot"`
+	ConditionsMet     bool            `json:"conditions_met" db:"conditions_met"`
+	ConditionsSnapshot json.RawMessage `json:"conditions_snapshot" db:"conditions_snapshot"`
+	ActionsExecuted   json.RawMessage `json:"actions_executed" db:"actions_executed"`
+	ActionsTotal      int             `json:"actions_total" db:"actions_total"`
+	ActionsSucceeded  int             `json:"actions_succeeded" db:"actions_succeeded"`
+	ActionsFailed     int             `json:"actions_failed" db:"actions_failed"`
+	Status            string          `json:"status" db:"status"`
+	Error             *string         `json:"error" db:"error"`
+	FSMState          *string         `json:"fsm_state" db:"fsm_state"`
+	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+}
+
+// TeslaEnergyLiveStatus represents the live status of a Tesla Energy (Powerwall/Solar) site.
+type TeslaEnergyLiveStatus struct {
+	SolarPower      float64 `json:"solar_power"`       // watts produced by solar
+	BatteryPower    float64 `json:"battery_power"`     // watts (positive = discharging, negative = charging)
+	BatteryLevel    float64 `json:"battery_level"`     // percent 0-100
+	GridPower       float64 `json:"grid_power"`        // watts (negative = exporting to grid)
+	GridStatus      string  `json:"grid_status"`       // "Active" or "Islanded"
+	StormModeActive bool    `json:"storm_mode_active"`
+}
+
+// AutomationVariable stores cross-automation key-value state.
+type AutomationVariable struct {
+	ID        int64     `json:"id" db:"id"`
+	Key       string    `json:"key" db:"key"`
+	Value     string    `json:"value" db:"value"`
+	VehicleID *int64    `json:"vehicle_id" db:"vehicle_id"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
