@@ -27,7 +27,7 @@ import {
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
-  ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation,
+  ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation, KeyRound,
   Play, SkipForward, SkipBack, Heart, VolumeX,
 } from 'lucide-react';
 
@@ -162,7 +162,7 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
     onError: (err: Error) => toast.error(`${t('Failed to wake')} ${name}: ${err.message}`),
   });
 
-  const sendCmd = (command: string) => { setLastResult(null); cmd.mutate({ command }); };
+  const sendCmd = (command: string, params?: Record<string, unknown>) => { setLastResult(null); cmd.mutate({ command, params }); };
 
   return (
     <GlassPanel className="p-6">
@@ -218,6 +218,27 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
                 sendCmd('erase_user_data');
               }
             }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<KeyRound className="h-5 w-5" />}
+            label={t('commands.security.pinToDrive', 'PIN to Drive')}
+            sublabel={t('commands.security.enable', 'Enable')}
+            onClick={() => {
+              const pin = window.prompt(t('commands.security.enterPin', 'Enter 4-digit PIN:'));
+              if (pin && /^\d{4}$/.test(pin)) {
+                sendCmd('set_pin_to_drive', { on: 'true', password: pin });
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<KeyRound className="h-5 w-5" />}
+            label={t('commands.security.clearPin', 'Clear PIN')}
+            sublabel={t('commands.security.admin', 'Admin')}
+            onClick={() => sendCmd('clear_pin_to_drive_admin')}
             loading={cmd.isPending}
             variant="danger"
           />

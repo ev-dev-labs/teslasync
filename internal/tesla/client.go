@@ -607,6 +607,11 @@ var commands = map[string]commandDef{
 	"guest_mode_off":   {endpoint: "guest_mode", params: map[string]interface{}{"enable": false}},
 	"erase_user_data":  {endpoint: "erase_user_data"},
 
+	// PIN to Drive
+	"set_pin_to_drive":         {endpoint: "set_pin_to_drive"},
+	"reset_pin_to_drive_pin":   {endpoint: "reset_pin_to_drive_pin"},
+	"clear_pin_to_drive_admin": {endpoint: "clear_pin_to_drive_admin"},
+
 	// Climate
 	"climate_on":  {endpoint: "auto_conditioning_start"},
 	"climate_off": {endpoint: "auto_conditioning_stop"},
