@@ -41,7 +41,8 @@ export type FSMType =
   | 'charge_session'
   | 'command'
   | 'notification'
-  | 'alert_cooldown';
+  | 'alert_cooldown'
+  | 'automation';
 
 export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'all', label: 'All FSMs' },
@@ -50,6 +51,7 @@ export const FSM_TYPE_OPTIONS: { value: FSMType; label: string }[] = [
   { value: 'charge_session', label: 'Charge Sessions' },
   { value: 'command', label: 'Commands' },
   { value: 'notification', label: 'Notifications' },
+  { value: 'automation', label: 'Automations' },
 ];
 
 export const HOURS_OPTIONS = [
@@ -70,6 +72,10 @@ export const FSM_STATES: Record<string, string[]> = {
   command: ['queued', 'waking', 'wake_confirmed', 'wake_timeout', 'sending', 'succeeded', 'failed', 'timed_out', 'retrying', 'gave_up'],
   notification: ['created', 'sending', 'delivered', 'partial', 'failed', 'retrying', 'dead'],
   alert_cooldown: ['armed', 'fired', 'suppressed'],
+  automation: [
+    'idle', 'evaluating', 'executing', 'succeeded', 'partial',
+    'failed', 'retrying', 'gave_up', 'skipped', 'cooldown', 'disabled',
+  ],
 };
 
 /** Typical transition edges per FSM type: [from, to][] */
@@ -105,6 +111,19 @@ export const FSM_EDGES: Record<string, [string, string][]> = {
   ],
   alert_cooldown: [
     ['armed', 'fired'], ['armed', 'suppressed'], ['fired', 'armed'], ['suppressed', 'armed'],
+  ],
+  automation: [
+    ['idle', 'evaluating'],
+    ['evaluating', 'executing'], ['evaluating', 'skipped'],
+    ['executing', 'succeeded'], ['executing', 'partial'], ['executing', 'failed'],
+    ['failed', 'retrying'],
+    ['retrying', 'executing'], ['retrying', 'gave_up'],
+    ['succeeded', 'cooldown'], ['succeeded', 'idle'],
+    ['partial', 'cooldown'], ['partial', 'idle'],
+    ['gave_up', 'idle'], ['gave_up', 'disabled'],
+    ['skipped', 'idle'],
+    ['cooldown', 'idle'],
+    ['disabled', 'idle'],
   ],
 };
 
@@ -157,6 +176,19 @@ export const STATE_COLORS: Record<string, Record<string, { bg: string; text: str
     armed:      { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
     fired:      { bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
     suppressed: { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+  },
+  automation: {
+    idle:       { bg: 'bg-gray-500/10', text: 'text-white/50', dot: 'bg-gray-400' },
+    evaluating: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
+    executing:  { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    succeeded:  { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
+    partial:    { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    failed:     { bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
+    retrying:   { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    gave_up:    { bg: 'bg-red-600/10', text: 'text-red-500', dot: 'bg-red-500' },
+    skipped:    { bg: 'bg-gray-600/10', text: 'text-white/30', dot: 'bg-gray-500' },
+    cooldown:   { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
+    disabled:   { bg: 'bg-red-500/5', text: 'text-red-400/50', dot: 'bg-red-400/50' },
   },
 };
 

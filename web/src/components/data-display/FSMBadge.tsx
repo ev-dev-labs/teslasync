@@ -10,6 +10,7 @@ const FSM_COLORS: Record<
   command: { variant: 'danger', label: 'Command' },
   notification: { variant: 'neutral', label: 'Notify' },
   alert_cooldown: { variant: 'neutral', label: 'Cooldown' },
+  automation: { variant: 'info', label: 'Automation' },
 };
 
 export function FSMBadge({ type }: { type: string }) {
