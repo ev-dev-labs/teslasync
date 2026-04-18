@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -32,10 +33,13 @@ func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 // Names must match the frontend command names and the `commands` map in tesla/client.go.
 var allowedCommands = map[string]bool{
 	"wake_up":                 true,
+	"wake":                    true,
 	"lock":                    true,
 	"unlock":                  true,
 	"honk_horn":               true,
+	"honk":                    true,
 	"flash_lights":            true,
+	"flash":                   true,
 	"climate_on":              true,
 	"climate_off":             true,
 	"set_temps":               true,
@@ -44,12 +48,21 @@ var allowedCommands = map[string]bool{
 	"set_charge_limit":        true,
 	"open_charge_port":        true,
 	"close_charge_port":       true,
+	"charge_port_open":        true,
+	"charge_port_close":       true,
 	"charge_max_range":        true,
 	"charge_standard":         true,
 	"set_charging_amps":       true,
 	"actuate_frunk":           true,
 	"actuate_trunk":           true,
+	"frunk":                   true,
+	"frunk_open":              true,
+	"trunk_open":              true,
 	"set_sentry_mode":         true,
+	"sentry_on":               true,
+	"sentry_off":              true,
+	"speed_limit_on":          true,
+	"speed_limit_off":         true,
 	"vent_windows":            true,
 	"close_windows":           true,
 	"remote_start_drive":      true,
@@ -225,4 +238,51 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 		"result":  status,
 	})
+}
+
+// LatestCommands returns the most recent command per command name for a vehicle.
+func (h *CommandHandler) LatestCommands(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := urlParamInt64(r, "vehicleID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		return
+	}
+
+	items, err := h.commandRepo.GetLatestByVehicle(r.Context(), vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest commands")
+		writeError(w, http.StatusInternalServerError, "failed to fetch command history")
+		return
+	}
+	if items == nil {
+		items = []*models.CommandLog{}
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+// CommandHistory returns recent command logs for a vehicle.
+func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := urlParamInt64(r, "vehicleID")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		return
+	}
+
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	items, err := h.commandRepo.GetHistoryByVehicle(r.Context(), vehicleID, limit)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get command history")
+		writeError(w, http.StatusInternalServerError, "failed to fetch command history")
+		return
+	}
+	if items == nil {
+		items = []*models.CommandLog{}
+	}
+	writeJSON(w, http.StatusOK, items)
 }

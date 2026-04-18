@@ -28,8 +28,8 @@ import {
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
   ShieldAlert, Dog, Tent, Flame, UserPlus, UserCheck, UserX, Eraser, Navigation, KeyRound,
-  Play, SkipForward, SkipBack, Heart, VolumeX, Snowflake, CircleDot,
-  Download, XCircle, ArrowUpFromDot, ArrowDownToDot, CircleStop, Pencil,
+  Play, SkipForward, SkipBack, Heart, VolumeX, Volume1, Snowflake, CircleDot,
+  Download, XCircle, X, ArrowUpFromDot, ArrowDownToDot, CircleStop, Pencil,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -55,12 +55,23 @@ interface VehicleState {
   speed: number;
 }
 
+interface CommandLogEntry {
+  id: number;
+  vehicle_id: number;
+  command: string;
+  params: string;
+  status: string;
+  error: string;
+  created_at: string;
+}
+
 // ─── Command Button ──────────────────────────────────────────────────────────
 
-function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'default', active }: {
+function CommandButton({ icon, label, sublabel, lastStatus, onClick, loading, variant = 'default', active }: {
   icon: React.ReactNode;
   label: string;
   sublabel?: string;
+  lastStatus?: string;
   onClick: () => void;
   loading?: boolean;
   variant?: 'default' | 'danger' | 'success';
@@ -102,9 +113,27 @@ function CommandButton({ icon, label, sublabel, onClick, loading, variant = 'def
             active ? (variant === 'danger' ? 'text-neon-red' : variant === 'success' ? 'text-neon-green' : 'text-neon-cyan') : 'text-[var(--text-muted)]',
           )}>{sublabel}</span>
         )}
+        {lastStatus && (
+          <span className={cn('text-[9px] mt-0.5 block',
+            lastStatus.startsWith('✓') ? 'text-neon-green/60' : 'text-neon-red/60',
+          )}>{lastStatus}</span>
+        )}
       </div>
     </GlassPanel>
   );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 // ─── Command Group ───────────────────────────────────────────────────────────
@@ -134,6 +163,20 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
   const name = vehicle.display_name || vehicle.vin;
   const isAsleep = vehicle.state === 'asleep' || vehicle.state === 'offline';
 
+  // Fetch latest command state per command name
+  const { data: latestCmds } = useQuery({
+    queryKey: ['command-latest', vehicle.id],
+    queryFn: () => request<CommandLogEntry[]>(`/vehicles/${vehicle.id}/commands/latest`),
+    refetchInterval: 30_000,
+  });
+  const cmdMap = new Map((latestCmds ?? []).map(c => [c.command, c]));
+  const cmdStatus = (command: string): string | undefined => {
+    const entry = cmdMap.get(command);
+    if (!entry) return undefined;
+    const ago = timeAgo(entry.created_at);
+    return entry.status === 'success' ? `✓ ${ago}` : `✗ ${ago}`;
+  };
+
   const cmd = useMutation({
     mutationFn: ({ command, params }: { command: string; params?: Record<string, unknown> }) =>
       request<{ success: boolean; message: string }>(`/vehicles/${vehicle.id}/command/${command}`, {
@@ -145,6 +188,7 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
       setLastResult(data);
       qc.invalidateQueries({ queryKey: ['command-vehicle-states'] });
       qc.invalidateQueries({ queryKey: ['vehicle-state'] });
+      qc.invalidateQueries({ queryKey: ['command-latest', vehicle.id] });
       if (data.success) toast.success(`${t('Command sent to')} ${name}`);
       else toast.error(data.message || `${t('Command failed on')} ${name}`);
     },
@@ -205,9 +249,9 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
       {/* Commands */}
       <div className="space-y-5">
         <CommandGroup title="Security & Access" t={t}>
-          <CommandButton icon={<Power className="h-5 w-5" />} label={t('Wake Up')} sublabel={isAsleep ? t('Required') : t('Awake')} onClick={() => wakeMut.mutate()} loading={wakeMut.isPending} variant="success" active={!isAsleep} />
-          <CommandButton icon={state?.is_locked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />} label={state?.is_locked ? t('Locked') : t('Unlocked')} sublabel={state?.is_locked ? t('Tap to unlock') : t('Tap to lock')} onClick={() => sendCmd(state?.is_locked ? 'unlock' : 'lock')} loading={cmd.isPending} active={state?.is_locked} />
-          <CommandButton icon={<Shield className="h-5 w-5" />} label={t('Sentry')} sublabel={state?.sentry_mode ? t('Active') : t('Inactive')} onClick={() => sendCmd(state?.sentry_mode ? 'sentry_off' : 'sentry_on')} loading={cmd.isPending} active={state?.sentry_mode} variant={state?.sentry_mode ? 'danger' : 'default'} />
+          <CommandButton icon={<Power className="h-5 w-5" />} label={t('Wake Up')} sublabel={isAsleep ? t('Required') : t('Awake')} lastStatus={cmdStatus('wake_up')} onClick={() => wakeMut.mutate()} loading={wakeMut.isPending} variant="success" active={!isAsleep} />
+          <CommandButton icon={state?.is_locked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />} label={state?.is_locked ? t('Locked') : t('Unlocked')} sublabel={state?.is_locked ? t('Tap to unlock') : t('Tap to lock')} lastStatus={cmdStatus('lock') ?? cmdStatus('unlock')} onClick={() => sendCmd(state?.is_locked ? 'unlock' : 'lock')} loading={cmd.isPending} active={state?.is_locked} />
+          <CommandButton icon={<Shield className="h-5 w-5" />} label={t('Sentry')} sublabel={state?.sentry_mode ? t('Active') : t('Inactive')} lastStatus={cmdStatus('sentry_on') ?? cmdStatus('sentry_off')} onClick={() => sendCmd(state?.sentry_mode ? 'sentry_off' : 'sentry_on')} loading={cmd.isPending} active={state?.sentry_mode} variant={state?.sentry_mode ? 'danger' : 'default'} />
           <CommandButton
             icon={<GaugeCircle className="h-5 w-5" />}
             label={t('commands.security.speedLimit', 'Speed Limit')}
@@ -299,6 +343,7 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             variant="danger"
           />
           <CommandButton icon={<UserPlus className="h-5 w-5" />} label={t('commands.security.guestMode', 'Guest Mode')} sublabel={t('commands.security.enable', 'Enable')} onClick={() => sendCmd('guest_mode_on')} loading={cmd.isPending} />
+          <CommandButton icon={<UserX className="h-5 w-5" />} label={t('commands.security.guestOff', 'Guest Off')} sublabel={t('commands.security.disable', 'Disable')} onClick={() => sendCmd('guest_mode_off')} loading={cmd.isPending} />
           <CommandButton
             icon={<Eraser className="h-5 w-5" />}
             label={t('commands.security.eraseData', 'Erase Data')}
@@ -324,6 +369,14 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             loading={cmd.isPending}
             variant="danger"
           />
+           <CommandButton
+            icon={<KeyRound className="h-5 w-5" />}
+            label={t('commands.security.resetPin', 'Reset PIN')}
+            sublabel={t('commands.security.pinToDrive', 'PIN to Drive')}
+            onClick={() => sendCmd('reset_pin_to_drive_pin')}
+            loading={cmd.isPending}
+            variant="danger"
+          />
           <CommandButton
             icon={<KeyRound className="h-5 w-5" />}
             label={t('commands.security.clearPin', 'Clear PIN')}
@@ -335,7 +388,19 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         </CommandGroup>
 
         <CommandGroup title="Climate & Comfort" t={t}>
-          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${fmtNumber(convertTemp(state.inside_temp), 0)}${tempUnit}` : t('ON')) : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
+          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${fmtNumber(convertTemp(state.inside_temp), 0)}${tempUnit}` : t('ON')) : t('OFF')} lastStatus={cmdStatus('climate_on') ?? cmdStatus('climate_off')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
+          <CommandButton
+            icon={<Thermometer className="h-5 w-5" />}
+            label={t('commands.climate.setTemps', 'Set Temps')}
+            sublabel={t('commands.climate.driverPassenger', 'Driver/Passenger')}
+            onClick={() => {
+              const temp = window.prompt(t('commands.climate.enterTemp', 'Enter temperature in °C (e.g., 21):'));
+              if (temp) {
+                cmd.mutate({ command: 'set_temps', params: { driver_temp: temp, passenger_temp: temp } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
           <CommandButton
             icon={<Flame className="h-5 w-5" />}
             label={t('commands.climate.seatHeat', 'Seat Heat')}
@@ -372,10 +437,17 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           <CommandButton
             icon={<ShieldAlert className="h-5 w-5" />}
             label={t('commands.climate.bioweapon', 'Bioweapon')}
-            sublabel={t('commands.climate.defenseMode', 'Defense Mode')}
+            sublabel={t('commands.climate.defenseOn', 'ON')}
             onClick={() => sendCmd('bioweapon_on')}
             loading={cmd.isPending}
             variant="danger"
+          />
+          <CommandButton
+            icon={<ShieldAlert className="h-5 w-5" />}
+            label={t('commands.climate.bioweaponOff', 'Bioweapon')}
+            sublabel={t('commands.climate.defenseOff', 'OFF')}
+            onClick={() => sendCmd('bioweapon_off')}
+            loading={cmd.isPending}
           />
           <CommandButton
             icon={<Thermometer className="h-5 w-5" />}
@@ -383,6 +455,40 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             sublabel={t('commands.climate.copOn', 'On (AC)')}
             onClick={() => sendCmd('cop_on')}
             loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Thermometer className="h-5 w-5" />}
+            label={t('commands.climate.copFan', 'Overheat Protect')}
+            sublabel={t('commands.climate.fanOnly', 'Fan only')}
+            onClick={() => sendCmd('cop_fan_only')}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Thermometer className="h-5 w-5" />}
+            label={t('commands.climate.copOff', 'Overheat Protect')}
+            sublabel={t('commands.climate.off', 'OFF')}
+            onClick={() => sendCmd('cop_off')}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Thermometer className="h-5 w-5" />}
+            label={t('commands.climate.copTemp', 'COP Temp')}
+            sublabel={t('commands.climate.setLevel', 'Low/Med/High')}
+            onClick={() => {
+              const level = window.prompt(t('commands.climate.enterCopTemp', 'Enter COP temp level:\n0 = Low (90°F/30°C)\n1 = Medium (95°F/35°C)\n2 = High (100°F/40°C)'), '1');
+              if (level != null) {
+                cmd.mutate({ command: 'set_cop_temp', params: { cop_temp: level } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Wind className="h-5 w-5" />}
+            label={t('commands.climate.climateKeeper', 'Climate Keeper')}
+            sublabel={t('commands.climate.keepMode', 'Keep')}
+            onClick={() => sendCmd('climate_keeper_on')}
+            loading={cmd.isPending}
+            variant="success"
           />
           <CommandButton
             icon={<Dog className="h-5 w-5" />}
@@ -399,6 +505,13 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             variant="success"
           />
           <CommandButton
+            icon={<X className="h-5 w-5" />}
+            label={t('commands.climate.climateKeeperOff', 'Climate Keeper')}
+            sublabel={t('commands.climate.off', 'OFF')}
+            onClick={() => sendCmd('climate_keeper_off')}
+            loading={cmd.isPending}
+          />
+          <CommandButton
             icon={<Flame className="h-5 w-5" />}
             label={t('commands.climate.maxPrecondition', 'Max Precondition')}
             sublabel={t('commands.climate.override', 'Override')}
@@ -406,13 +519,20 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             loading={cmd.isPending}
             variant="danger"
           />
+          <CommandButton
+            icon={<Flame className="h-5 w-5" />}
+            label={t('commands.climate.resetPrecondition', 'Reset Precondition')}
+            sublabel={t('commands.climate.default', 'Default')}
+            onClick={() => sendCmd('preconditioning_reset')}
+            loading={cmd.isPending}
+          />
         </CommandGroup>
 
         <CommandGroup title="Charging" t={t}>
-          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Charge Port')} sublabel={t('Open')} onClick={() => sendCmd('charge_port_open')} loading={cmd.isPending} />
-          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Charge Port')} sublabel={t('Close')} onClick={() => sendCmd('close_charge_port')} loading={cmd.isPending} />
-          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Start Charge')} sublabel={state?.is_charging ? t('Charging') : t('Idle')} onClick={() => sendCmd('charge_start')} loading={cmd.isPending} variant="success" active={state?.is_charging} />
-          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Stop Charge')} onClick={() => sendCmd('charge_stop')} loading={cmd.isPending} variant="danger" />
+          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Charge Port')} sublabel={t('Open')} lastStatus={cmdStatus('charge_port_open')} onClick={() => sendCmd('charge_port_open')} loading={cmd.isPending} />
+          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Charge Port')} sublabel={t('Close')} lastStatus={cmdStatus('close_charge_port')} onClick={() => sendCmd('close_charge_port')} loading={cmd.isPending} />
+          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Start Charge')} sublabel={state?.is_charging ? t('Charging') : t('Idle')} lastStatus={cmdStatus('charge_start')} onClick={() => sendCmd('charge_start')} loading={cmd.isPending} variant="success" active={state?.is_charging} />
+          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Stop Charge')} lastStatus={cmdStatus('charge_stop')} onClick={() => sendCmd('charge_stop')} loading={cmd.isPending} variant="danger" />
           <CommandButton icon={<BatteryFull className="h-5 w-5" />} label={t('Max Range')} sublabel={t('Trip mode')} onClick={() => sendCmd('charge_max_range')} loading={cmd.isPending} variant="danger" />
           <CommandButton icon={<BatteryMedium className="h-5 w-5" />} label={t('Standard')} sublabel={t('Daily mode')} onClick={() => sendCmd('charge_standard')} loading={cmd.isPending} variant="success" />
           <CommandButton
@@ -427,11 +547,43 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             }}
             loading={cmd.isPending}
           />
+          <CommandButton
+            icon={<Battery className="h-5 w-5" />}
+            label={t('commands.charging.setLimit', 'Set Limit')}
+            sublabel={t('commands.charging.percent', 'Charge %')}
+            onClick={() => {
+              const pct = window.prompt(t('commands.charging.enterLimit', 'Enter charge limit % (50–100):'), '80');
+              if (pct) {
+                cmd.mutate({ command: 'set_charge_limit', params: { percent: pct } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
         </CommandGroup>
 
         <CommandGroup title="Doors & Trunk" t={t}>
-          <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Frunk')} sublabel={t('Open')} onClick={() => sendCmd('frunk_open')} loading={cmd.isPending} />
-          <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Trunk')} sublabel={t('Open')} onClick={() => sendCmd('trunk_open')} loading={cmd.isPending} />
+          <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Frunk')} sublabel={t('Open')} lastStatus={cmdStatus('frunk_open')} onClick={() => sendCmd('frunk_open')} loading={cmd.isPending} />
+          <CommandButton icon={<DoorOpen className="h-5 w-5" />} label={t('Trunk')} sublabel={t('Open')} lastStatus={cmdStatus('trunk_open')} onClick={() => sendCmd('trunk_open')} loading={cmd.isPending} />
+        </CommandGroup>
+
+        <CommandGroup title="Drive" t={t}>
+          <CommandButton
+            icon={<Car className="h-5 w-5" />}
+            label={t('commands.drive.remoteStart', 'Remote Start')}
+            sublabel={t('commands.drive.keylessDrive', 'Keyless drive')}
+            onClick={() => {
+              if (window.confirm(t('commands.drive.confirmRemoteStart', 'This will enable keyless driving for 2 minutes. Continue?'))) {
+                sendCmd('remote_start_drive');
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+        </CommandGroup>
+
+        <CommandGroup title="Windows" t={t}>
+          <CommandButton icon={<Wind className="h-5 w-5" />} label={t('commands.windows.vent', 'Vent Windows')} onClick={() => sendCmd('vent_windows')} loading={cmd.isPending} />
+          <CommandButton icon={<X className="h-5 w-5" />} label={t('commands.windows.close', 'Close Windows')} onClick={() => sendCmd('close_windows')} loading={cmd.isPending} />
         </CommandGroup>
 
         <CommandGroup title="Sunroof" t={t}>
@@ -503,8 +655,8 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
         </CommandGroup>
 
         <CommandGroup title="Alerts & Location" t={t}>
-          <CommandButton icon={<Volume2 className="h-5 w-5" />} label={t('Horn')} onClick={() => sendCmd('honk_horn')} loading={cmd.isPending} variant="danger" />
-          <CommandButton icon={<MapPin className="h-5 w-5" />} label={t('Flash Lights')} onClick={() => sendCmd('flash_lights')} loading={cmd.isPending} />
+          <CommandButton icon={<Volume2 className="h-5 w-5" />} label={t('Horn')} lastStatus={cmdStatus('honk_horn')} onClick={() => sendCmd('honk_horn')} loading={cmd.isPending} variant="danger" />
+          <CommandButton icon={<MapPin className="h-5 w-5" />} label={t('Flash Lights')} lastStatus={cmdStatus('flash_lights')} onClick={() => sendCmd('flash_lights')} loading={cmd.isPending} />
           <CommandButton icon={<Speaker className="h-5 w-5" />} label={t('Boombox')} sublabel={t('Random fart')} onClick={() => sendCmd('boombox_fart')} loading={cmd.isPending} />
           <CommandButton icon={<Locate className="h-5 w-5" />} label={t('Locate Ping')} sublabel={t('Find my car')} onClick={() => sendCmd('boombox_ping')} loading={cmd.isPending} />
           <CommandButton
@@ -627,6 +779,10 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           <CommandButton icon={<SkipForward className="h-5 w-5" />} label={t('commands.media.nextTrack', 'Next Track')} onClick={() => sendCmd('media_next_track')} loading={cmd.isPending} />
           <CommandButton icon={<Heart className="h-5 w-5" />} label={t('commands.media.prevFav', 'Prev Favorite')} onClick={() => sendCmd('media_prev_fav')} loading={cmd.isPending} />
           <CommandButton icon={<Heart className="h-5 w-5" />} label={t('commands.media.nextFav', 'Next Favorite')} onClick={() => sendCmd('media_next_fav')} loading={cmd.isPending} />
+          <CommandButton icon={<Volume1 className="h-5 w-5" />} label={t('commands.media.volumeUp', 'Volume Up')} onClick={() => {
+            const vol = window.prompt(t('commands.media.enterVolume', 'Enter volume level (0.0 – 11.0):'), '5');
+            if (vol) cmd.mutate({ command: 'adjust_volume', params: { volume: vol } });
+          }} loading={cmd.isPending} />
           <CommandButton icon={<VolumeX className="h-5 w-5" />} label={t('commands.media.volumeDown', 'Volume Down')} onClick={() => sendCmd('media_volume_down')} loading={cmd.isPending} />
         </CommandGroup>
       </div>

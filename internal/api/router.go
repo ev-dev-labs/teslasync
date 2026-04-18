@@ -229,6 +229,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/state", vehicleHandler.CurrentState)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/wake", vehicleHandler.Wake)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/command", commandHandler.SendCommand)
+				r.Get("/commands/latest", commandHandler.LatestCommands)
+				r.Get("/commands/history", commandHandler.CommandHistory)
 				r.Get("/energy", energyHandler.Stats)
 				r.Get("/energy/flow", energyFlowHandler.Get)
 				r.Get("/battery", batteryHandler.Report)
