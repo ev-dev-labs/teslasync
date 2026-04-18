@@ -78,6 +78,13 @@ var allowedCommands = map[string]bool{
 	"guest_mode_off":               true,
 	"erase_user_data":              true,
 	"trigger_homelink":             true,
+	"media_toggle_playback":        true,
+	"media_next_track":             true,
+	"media_prev_track":             true,
+	"media_next_fav":               true,
+	"media_prev_fav":               true,
+	"media_volume_down":            true,
+	"adjust_volume":                true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

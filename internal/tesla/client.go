@@ -666,6 +666,15 @@ var commands = map[string]commandDef{
 	// Drive
 	"remote_start_drive": {endpoint: "remote_start_drive"},
 
+	// Media
+	"media_toggle_playback": {endpoint: "media_toggle_playback"},
+	"media_next_track":      {endpoint: "media_next_track"},
+	"media_prev_track":      {endpoint: "media_prev_track"},
+	"media_next_fav":        {endpoint: "media_next_fav"},
+	"media_prev_fav":        {endpoint: "media_prev_fav"},
+	"media_volume_down":     {endpoint: "media_volume_down"},
+	"adjust_volume":         {endpoint: "adjust_volume"},
+
 	// Scheduling (legacy)
 	"set_scheduled_departure": {endpoint: "set_scheduled_departure"},
 	"set_scheduled_charging":  {endpoint: "set_scheduled_charging"},

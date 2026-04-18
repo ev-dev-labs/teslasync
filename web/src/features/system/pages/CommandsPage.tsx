@@ -28,6 +28,7 @@ import {
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
   ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser,
+  Play, SkipForward, SkipBack, Heart, VolumeX,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -372,6 +373,15 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             }}
             loading={cmd.isPending}
           />
+        </CommandGroup>
+
+        <CommandGroup title="Media" t={t}>
+          <CommandButton icon={<Play className="h-5 w-5" />} label={t('commands.media.playPause', 'Play / Pause')} onClick={() => sendCmd('media_toggle_playback')} loading={cmd.isPending} />
+          <CommandButton icon={<SkipBack className="h-5 w-5" />} label={t('commands.media.prevTrack', 'Prev Track')} onClick={() => sendCmd('media_prev_track')} loading={cmd.isPending} />
+          <CommandButton icon={<SkipForward className="h-5 w-5" />} label={t('commands.media.nextTrack', 'Next Track')} onClick={() => sendCmd('media_next_track')} loading={cmd.isPending} />
+          <CommandButton icon={<Heart className="h-5 w-5" />} label={t('commands.media.prevFav', 'Prev Favorite')} onClick={() => sendCmd('media_prev_fav')} loading={cmd.isPending} />
+          <CommandButton icon={<Heart className="h-5 w-5" />} label={t('commands.media.nextFav', 'Next Favorite')} onClick={() => sendCmd('media_next_fav')} loading={cmd.isPending} />
+          <CommandButton icon={<VolumeX className="h-5 w-5" />} label={t('commands.media.volumeDown', 'Volume Down')} onClick={() => sendCmd('media_volume_down')} loading={cmd.isPending} />
         </CommandGroup>
       </div>
     </GlassPanel>
