@@ -617,6 +617,14 @@ var commands = map[string]commandDef{
 	"climate_off": {endpoint: "auto_conditioning_stop"},
 	"set_temps":   {endpoint: "set_temps"},
 
+	// Seat & Steering Wheel Climate
+	"seat_heater":          {endpoint: "remote_seat_heater_request"},
+	"seat_cooler":          {endpoint: "remote_seat_cooler_request"},
+	"auto_seat_climate":    {endpoint: "remote_auto_seat_climate_request"},
+	"steering_wheel_heat":  {endpoint: "remote_steering_wheel_heater_request"},
+	"steering_wheel_level": {endpoint: "remote_steering_wheel_heat_level_request"},
+	"auto_steering_heat":   {endpoint: "remote_auto_steering_wheel_heat_climate_request"},
+
 	// Climate Protection
 	"bioweapon_on":          {endpoint: "set_bioweapon_mode", params: map[string]interface{}{"on": true, "manual_override": true}},
 	"bioweapon_off":         {endpoint: "set_bioweapon_mode", params: map[string]interface{}{"on": false, "manual_override": false}},

@@ -28,7 +28,7 @@ import {
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
   ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation, KeyRound,
-  Play, SkipForward, SkipBack, Heart, VolumeX,
+  Play, SkipForward, SkipBack, Heart, VolumeX, Snowflake, CircleDot,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -246,6 +246,36 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
 
         <CommandGroup title="Climate & Comfort" t={t}>
           <CommandButton icon={<Wind className="h-5 w-5" />} label={t('Climate')} sublabel={state?.is_climate_on ? (state.inside_temp != null ? `${t('ON')} · ${fmtNumber(convertTemp(state.inside_temp), 0)}${tempUnit}` : t('ON')) : t('OFF')} onClick={() => sendCmd(state?.is_climate_on ? 'climate_off' : 'climate_on')} loading={cmd.isPending} active={state?.is_climate_on} />
+          <CommandButton
+            icon={<Flame className="h-5 w-5" />}
+            label={t('commands.climate.seatHeat', 'Seat Heat')}
+            sublabel={t('commands.climate.driver', 'Driver')}
+            onClick={() => cmd.mutate({
+              command: 'seat_heater',
+              params: { heater: '0', level: '3' },
+            })}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<Snowflake className="h-5 w-5" />}
+            label={t('commands.climate.seatCool', 'Seat Cool')}
+            sublabel={t('commands.climate.driver', 'Driver')}
+            onClick={() => cmd.mutate({
+              command: 'seat_cooler',
+              params: { seat_position: '0', seat_cooler_level: '3' },
+            })}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<CircleDot className="h-5 w-5" />}
+            label={t('commands.climate.steeringHeat', 'Steering Heat')}
+            sublabel={t('commands.climate.toggle', 'Toggle')}
+            onClick={() => cmd.mutate({
+              command: 'steering_wheel_heat',
+              params: { on: 'true' },
+            })}
+            loading={cmd.isPending}
+          />
         </CommandGroup>
 
         <CommandGroup title="Climate Protection" t={t}>
