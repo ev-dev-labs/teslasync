@@ -27,7 +27,7 @@ import {
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
-  ShieldAlert, Dog, Tent, Flame,
+  ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -207,6 +207,19 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           <CommandButton icon={state?.is_locked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />} label={state?.is_locked ? t('Locked') : t('Unlocked')} sublabel={state?.is_locked ? t('Tap to unlock') : t('Tap to lock')} onClick={() => sendCmd(state?.is_locked ? 'unlock' : 'lock')} loading={cmd.isPending} active={state?.is_locked} />
           <CommandButton icon={<Shield className="h-5 w-5" />} label={t('Sentry')} sublabel={state?.sentry_mode ? t('Active') : t('Inactive')} onClick={() => sendCmd(state?.sentry_mode ? 'sentry_off' : 'sentry_on')} loading={cmd.isPending} active={state?.sentry_mode} variant={state?.sentry_mode ? 'danger' : 'default'} />
           <CommandButton icon={<GaugeCircle className="h-5 w-5" />} label={t('Speed Limit')} sublabel={t('Enable')} onClick={() => sendCmd('speed_limit_on')} loading={cmd.isPending} variant="danger" />
+          <CommandButton icon={<UserPlus className="h-5 w-5" />} label={t('commands.security.guestMode', 'Guest Mode')} sublabel={t('commands.security.enable', 'Enable')} onClick={() => sendCmd('guest_mode_on')} loading={cmd.isPending} />
+          <CommandButton
+            icon={<Eraser className="h-5 w-5" />}
+            label={t('commands.security.eraseData', 'Erase Data')}
+            sublabel={t('commands.security.guestOnly', 'Guest mode only')}
+            onClick={() => {
+              if (window.confirm(t('commands.security.confirmErase', 'This will erase all user data from the vehicle touchscreen. Continue?'))) {
+                sendCmd('erase_user_data');
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
         </CommandGroup>
 
         <CommandGroup title="Climate & Comfort" t={t}>

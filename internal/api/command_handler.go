@@ -74,6 +74,9 @@ var allowedCommands = map[string]bool{
 	"camp_mode":                    true,
 	"preconditioning_max":          true,
 	"preconditioning_reset":        true,
+	"guest_mode_on":                true,
+	"guest_mode_off":               true,
+	"erase_user_data":              true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

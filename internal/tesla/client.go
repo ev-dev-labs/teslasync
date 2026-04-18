@@ -603,6 +603,9 @@ var commands = map[string]commandDef{
 	"sentry_off":       {endpoint: "set_sentry_mode", params: map[string]interface{}{"on": false}},
 	"speed_limit_on":   {endpoint: "speed_limit_activate"},
 	"speed_limit_off":  {endpoint: "speed_limit_deactivate"},
+	"guest_mode_on":    {endpoint: "guest_mode", params: map[string]interface{}{"enable": true}},
+	"guest_mode_off":   {endpoint: "guest_mode", params: map[string]interface{}{"enable": false}},
+	"erase_user_data":  {endpoint: "erase_user_data"},
 
 	// Climate
 	"climate_on":  {endpoint: "auto_conditioning_start"},
