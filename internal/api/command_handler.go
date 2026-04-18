@@ -77,6 +77,7 @@ var allowedCommands = map[string]bool{
 	"guest_mode_on":                true,
 	"guest_mode_off":               true,
 	"erase_user_data":              true,
+	"trigger_homelink":             true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

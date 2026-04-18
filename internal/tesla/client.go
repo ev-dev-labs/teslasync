@@ -660,6 +660,9 @@ var commands = map[string]commandDef{
 	"vent_windows":  {endpoint: "window_control", params: map[string]interface{}{"command": "vent"}},
 	"close_windows": {endpoint: "window_control", params: map[string]interface{}{"command": "close"}},
 
+	// HomeLink
+	"trigger_homelink": {endpoint: "trigger_homelink"},
+
 	// Drive
 	"remote_start_drive": {endpoint: "remote_start_drive"},
 

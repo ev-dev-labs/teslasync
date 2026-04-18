@@ -23,7 +23,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSettings } from '@/hooks/useSettings';
 import { request } from '@/api/client';
 import {
-  Lock, Unlock, Wind, Car, Zap, Power, Shield,
+  Lock, Unlock, Wind, Car, Zap, Power, Shield, Home,
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
@@ -359,6 +359,19 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           <CommandButton icon={<MapPin className="h-5 w-5" />} label={t('Flash Lights')} onClick={() => sendCmd('flash_lights')} loading={cmd.isPending} />
           <CommandButton icon={<Speaker className="h-5 w-5" />} label={t('Boombox')} sublabel={t('Random fart')} onClick={() => sendCmd('boombox_fart')} loading={cmd.isPending} />
           <CommandButton icon={<Locate className="h-5 w-5" />} label={t('Locate Ping')} sublabel={t('Find my car')} onClick={() => sendCmd('boombox_ping')} loading={cmd.isPending} />
+          <CommandButton
+            icon={<Home className="h-5 w-5" />}
+            label={t('commands.homelink.trigger', 'HomeLink')}
+            sublabel={t('commands.homelink.garage', 'Garage door')}
+            onClick={() => {
+              const lat = window.prompt(t('commands.homelink.enterLat', 'Enter vehicle latitude:'));
+              const lon = lat ? window.prompt(t('commands.homelink.enterLon', 'Enter vehicle longitude:')) : null;
+              if (lat && lon) {
+                cmd.mutate({ command: 'trigger_homelink', params: { lat, lon } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
         </CommandGroup>
       </div>
     </GlassPanel>
