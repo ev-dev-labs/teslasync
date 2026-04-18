@@ -610,6 +610,12 @@ var commands = map[string]commandDef{
 	"guest_mode_off":   {endpoint: "guest_mode", params: map[string]interface{}{"enable": false}},
 	"erase_user_data":  {endpoint: "erase_user_data"},
 
+	// Valet Mode
+	"valet_on":        {endpoint: "set_valet_mode", params: map[string]interface{}{"on": true}},
+	"valet_off":       {endpoint: "set_valet_mode", params: map[string]interface{}{"on": false}},
+	"set_valet_mode":  {endpoint: "set_valet_mode"},
+	"reset_valet_pin": {endpoint: "reset_valet_pin"},
+
 	// PIN to Drive
 	"set_pin_to_drive":         {endpoint: "set_pin_to_drive"},
 	"reset_pin_to_drive_pin":   {endpoint: "reset_pin_to_drive_pin"},

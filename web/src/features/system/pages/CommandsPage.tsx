@@ -27,7 +27,7 @@ import {
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
-  ShieldAlert, Dog, Tent, Flame, UserPlus, Eraser, Navigation, KeyRound,
+  ShieldAlert, Dog, Tent, Flame, UserPlus, UserCheck, UserX, Eraser, Navigation, KeyRound,
   Play, SkipForward, SkipBack, Heart, VolumeX, Snowflake, CircleDot,
   Download, XCircle, ArrowUpFromDot, ArrowDownToDot, CircleStop,
 } from 'lucide-react';
@@ -267,6 +267,34 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             label={t('commands.security.clearSpeedPin', 'Clear Speed PIN')}
             sublabel={t('commands.security.admin', 'Admin')}
             onClick={() => sendCmd('speed_limit_clear_pin_admin')}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<UserCheck className="h-5 w-5" />}
+            label={t('commands.security.valetMode', 'Valet Mode')}
+            sublabel={t('commands.security.enable', 'Enable')}
+            onClick={() => {
+              const pin = window.prompt(t('commands.security.enterValetPin', 'Enter 4-digit valet PIN:'));
+              if (pin && /^\d{4}$/.test(pin)) {
+                cmd.mutate({ command: 'set_valet_mode', params: { on: 'true', password: pin } });
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<UserX className="h-5 w-5" />}
+            label={t('commands.security.valetOff', 'Valet Off')}
+            sublabel={t('commands.security.disable', 'Disable')}
+            onClick={() => sendCmd('valet_off')}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<UserX className="h-5 w-5" />}
+            label={t('commands.security.resetValetPin', 'Reset Valet PIN')}
+            sublabel={t('commands.security.admin', 'Admin')}
+            onClick={() => sendCmd('reset_valet_pin')}
             loading={cmd.isPending}
             variant="danger"
           />
