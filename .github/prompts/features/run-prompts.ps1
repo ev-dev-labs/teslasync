@@ -1,23 +1,28 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-  TeslaSync — Runs enhanced-commands prompts sequentially, each in a fresh Copilot session.
+  TeslaSync — Runs feature prompts sequentially, each in a fresh Copilot session.
 
 .DESCRIPTION
-  Discovers feat-cmd-*.prompt.md files under .github/prompts/ and runs them via
-  `copilot -p "..." --yolo --autopilot`. Tracks which prompts are done. Logs output.
+  Discovers .prompt.md files under .github/prompts/features/ sub-folders (commands,
+  tesla-api, automations, etc.) and runs them via `copilot -p "..." --yolo --autopilot`.
+  Tracks which prompts are done. Logs every session output.
 
 .USAGE
-  .\.github\prompts\run-cmd-prompts.ps1                          # Run all pending
-  .\.github\prompts\run-cmd-prompts.ps1 -DryRun                  # Preview without executing
-  .\.github\prompts\run-cmd-prompts.ps1 -StartFrom 5             # Resume from prompt #5
-  .\.github\prompts\run-cmd-prompts.ps1 -Model "claude-sonnet-4" # Use a specific model
-  .\.github\prompts\run-cmd-prompts.ps1 -Single "feat-cmd-media-controls.prompt.md"  # Run one prompt
+  .\.github\prompts\features\run-prompts.ps1                              # Run ALL pending
+  .\.github\prompts\features\run-prompts.ps1 -Category commands           # Only commands/
+  .\.github\prompts\features\run-prompts.ps1 -Category tesla-api          # Only tesla-api/
+  .\.github\prompts\features\run-prompts.ps1 -Category automations        # Only automations/
+  .\.github\prompts\features\run-prompts.ps1 -DryRun                      # Preview without executing
+  .\.github\prompts\features\run-prompts.ps1 -StartFrom 5                 # Resume from prompt #5
+  .\.github\prompts\features\run-prompts.ps1 -Model "claude-sonnet-4"     # Use a specific model
+  .\.github\prompts\features\run-prompts.ps1 -Single "commands/feat-cmd-media-controls.prompt.md"
 #>
 
 param(
     [string]$RepoRoot     = "D:\repos\teslasync",
-    [string]$Single       = "",              # Run a single prompt by filename
+    [string]$Category     = "",              # Filter: "commands", "tesla-api", "automations", or "" for all
+    [string]$Single       = "",              # Run a single prompt by relative path (e.g. "commands/feat-cmd-boombox.prompt.md")
     [string]$Model        = "",              # claude-sonnet-4, claude-opus-4.6-1m, gpt-5.2, etc.
     [switch]$DryRun       = $false,
     [int]$StartFrom       = 1,
@@ -30,10 +35,10 @@ $ErrorActionPreference = "Stop"
 # ---------------------------------------------------------------------------
 # Discover prompts
 # ---------------------------------------------------------------------------
-$promptsRoot = Join-Path $RepoRoot ".github\prompts"
+$featuresRoot = Join-Path $RepoRoot ".github\prompts\features"
 
 if ($Single) {
-    $singlePath = Join-Path $promptsRoot $Single
+    $singlePath = Join-Path $featuresRoot $Single
     if (-not (Test-Path $singlePath)) {
         Write-Host "ERROR: Prompt not found: $singlePath" -ForegroundColor Red
         exit 1
@@ -41,12 +46,24 @@ if ($Single) {
     $files = @(Get-Item $singlePath)
 }
 else {
-    # Auto-discover all feat-cmd-*.prompt.md files
-    $files = Get-ChildItem -Path $promptsRoot -Filter "feat-cmd-*.prompt.md" | Sort-Object Name
+    if ($Category) {
+        $catDir = Join-Path $featuresRoot $Category
+        if (-not (Test-Path $catDir)) {
+            Write-Host "ERROR: Category directory not found: $catDir" -ForegroundColor Red
+            Write-Host "Available categories:" -ForegroundColor Yellow
+            Get-ChildItem $featuresRoot -Directory | ForEach-Object { Write-Host "  - $($_.Name)" }
+            exit 1
+        }
+        $files = Get-ChildItem -Path $catDir -Filter "*.prompt.md" -Recurse | Sort-Object FullName
+    }
+    else {
+        # All categories
+        $files = Get-ChildItem -Path $featuresRoot -Filter "*.prompt.md" -Recurse | Sort-Object FullName
+    }
 }
 
 if ($files.Count -eq 0) {
-    Write-Host "ERROR: No feat-cmd-*.prompt.md prompts found." -ForegroundColor Red
+    Write-Host "ERROR: No .prompt.md files found." -ForegroundColor Red
     exit 1
 }
 
@@ -55,12 +72,15 @@ $prompts = @()
 $index = 0
 foreach ($file in $files) {
     $index++
-    $label = $file.BaseName -replace "\.prompt$", ""
+    $relPath  = $file.FullName.Substring($featuresRoot.Length + 1) -replace "\\", "/"
+    $category = ($relPath -split "/")[0]
+    $label    = $file.BaseName -replace "\.prompt$", ""
 
     $prompts += [PSCustomObject]@{
         Index    = $index
-        Label    = $label
-        RelPath  = $file.Name
+        Category = $category
+        Label    = "$category/$label"
+        RelPath  = $relPath
         FullPath = $file.FullName
     }
 }
@@ -70,16 +90,16 @@ $total = $prompts.Count
 # ---------------------------------------------------------------------------
 # Setup logging
 # ---------------------------------------------------------------------------
-$logDir = Join-Path $promptsRoot "logs"
+$logDir = Join-Path $featuresRoot "logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
 # Done-tracking file — persists across runs
-$doneFile = Join-Path $logDir "done-cmd.txt"
+$doneFile = Join-Path $logDir "done.txt"
 if (-not (Test-Path $doneFile)) { Set-Content -Path $doneFile -Value "" -Encoding UTF8 }
 $doneSet = New-Object 'System.Collections.Generic.HashSet[string]'
 Get-Content $doneFile | Where-Object { $_.Trim() -ne "" } | ForEach-Object { $doneSet.Add($_) | Out-Null }
 
-$runLog = Join-Path $logDir "run-cmd-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
+$runLog = Join-Path $logDir "run-$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
 
 function Log([string]$msg) {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -94,11 +114,18 @@ function Log([string]$msg) {
 $doneCount    = ($prompts | Where-Object { $doneSet.Contains($_.RelPath) }).Count
 $pendingCount = $total - $doneCount
 
+# Category breakdown
+$categories = $prompts | Group-Object Category | ForEach-Object {
+    $catDone = ($_.Group | Where-Object { $doneSet.Contains($_.RelPath) }).Count
+    "$($_.Name): $($_.Count) total, $catDone done"
+}
+
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  TeslaSync — Enhanced Commands Runner" -ForegroundColor Cyan
+Write-Host "  TeslaSync — Feature Prompt Runner" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  Prompt root   : $promptsRoot"
+Write-Host "  Features root : $featuresRoot"
+Write-Host "  Category      : $(if ($Category) { $Category } else { 'all' })"
 Write-Host "  Total prompts : $total"
 Write-Host "  Already done  : $doneCount" -ForegroundColor DarkGray
 Write-Host "  Pending       : $pendingCount" -ForegroundColor Green
@@ -107,6 +134,8 @@ Write-Host "  Model         : $(if ($Model) { $Model } else { '(default)' })"
 Write-Host "  Timeout       : $TimeoutMinutes min per prompt"
 Write-Host "  Dry run       : $DryRun"
 Write-Host "  Run log       : $runLog"
+Write-Host "--------------------------------------------" -ForegroundColor DarkGray
+$categories | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -150,7 +179,7 @@ foreach ($p in $prompts) {
 
     # Read prompt content
     $promptContent = (Get-Content $p.FullPath -Raw).Trim()
-    $logFile       = Join-Path $logDir "cmd-$($p.Index.ToString('D2'))-$($p.Label).log"
+    $logFile       = Join-Path $logDir "$($p.Category)-$($p.Index.ToString('D2'))-$($p.Label -replace '[^a-zA-Z0-9\-]', '-').log"
 
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
@@ -160,7 +189,7 @@ foreach ($p in $prompts) {
 
     # Progress bar
     $overallPct = [math]::Round((($successCount + $failCount + $skipCount) / $total) * 100)
-    Write-Progress -Activity "Enhanced Commands Runner" `
+    Write-Progress -Activity "Feature Prompt Runner" `
         -Status "$($p.Label) [$($successCount + $skipCount + $failCount + 1)/$total]" `
         -PercentComplete $overallPct
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
@@ -185,7 +214,7 @@ foreach ($p in $prompts) {
     $startTime = Get-Date
     Log "$tag START  $($p.Label)"
 
-    $tempArgsFile = Join-Path $env:TEMP "teslasync-cmd-$($p.Index).json"
+    $tempArgsFile = Join-Path $env:TEMP "teslasync-feat-$($p.Index).json"
     $copilotArgs | ConvertTo-Json | Set-Content -Path $tempArgsFile -Encoding UTF8
 
     $job = Start-Job -ScriptBlock {
@@ -291,7 +320,7 @@ foreach ($p in $prompts) {
 }
 
 # Close progress bar
-Write-Progress -Activity "Enhanced Commands Runner" -Completed
+Write-Progress -Activity "Feature Prompt Runner" -Completed
 
 # ---------------------------------------------------------------------------
 # Final summary
