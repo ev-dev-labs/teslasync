@@ -197,6 +197,26 @@ func (r *AutomationRepo) GetEnabledByVehicleAndTrigger(ctx context.Context, vehi
 	return results, rows.Err()
 }
 
+// GetByWebhookToken looks up an enabled automation by its webhook_token
+// stored inside the trigger_config JSONB column.
+func (r *AutomationRepo) GetByWebhookToken(ctx context.Context, token string) (*models.Automation, error) {
+	query := fmt.Sprintf(
+		`SELECT %s FROM automations
+		 WHERE trigger_type = 'webhook'
+		   AND trigger_config->>'webhook_token' = $1
+		 LIMIT 1`,
+		automationColumns,
+	)
+	a, err := scanAutomation(r.db.Pool.QueryRow(ctx, query, token))
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get automation by webhook token: %w", err)
+	}
+	return a, nil
+}
+
 func (r *AutomationRepo) Update(ctx context.Context, a *models.Automation) error {
 	now := time.Now().UTC()
 	query := `UPDATE automations SET
