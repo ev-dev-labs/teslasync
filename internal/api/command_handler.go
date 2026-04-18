@@ -109,6 +109,7 @@ var allowedCommands = map[string]bool{
 	"sunroof_vent":                 true,
 	"sunroof_close":                true,
 	"sunroof_stop":                 true,
+	"set_vehicle_name":             true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {

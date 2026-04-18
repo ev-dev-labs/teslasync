@@ -29,7 +29,7 @@ import {
   CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
   ShieldAlert, Dog, Tent, Flame, UserPlus, UserCheck, UserX, Eraser, Navigation, KeyRound,
   Play, SkipForward, SkipBack, Heart, VolumeX, Snowflake, CircleDot,
-  Download, XCircle, ArrowUpFromDot, ArrowDownToDot, CircleStop,
+  Download, XCircle, ArrowUpFromDot, ArrowDownToDot, CircleStop, Pencil,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -600,6 +600,24 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
             onClick={() => sendCmd('cancel_software_update')}
             loading={cmd.isPending}
             variant="danger"
+          />
+        </CommandGroup>
+
+        <CommandGroup title="Vehicle" t={t}>
+          <CommandButton
+            icon={<Pencil className="h-5 w-5" />}
+            label={t('commands.vehicle.rename', 'Rename')}
+            sublabel={t('commands.vehicle.changeName', 'Change name')}
+            onClick={() => {
+              const newName = window.prompt(
+                t('commands.vehicle.enterName', 'Enter new vehicle name:'),
+                vehicle.display_name
+              );
+              if (newName && newName.trim()) {
+                cmd.mutate({ command: 'set_vehicle_name', params: { vehicle_name: newName.trim() } });
+              }
+            }}
+            loading={cmd.isPending}
           />
         </CommandGroup>
 

@@ -720,6 +720,9 @@ var commands = map[string]commandDef{
 	// Software Updates
 	"schedule_software_update": {endpoint: "schedule_software_update"},
 	"cancel_software_update":   {endpoint: "cancel_software_update"},
+
+	// Vehicle
+	"set_vehicle_name": {endpoint: "set_vehicle_name"},
 }
 
 // SendCommand sends a named command to a vehicle via the Fleet API or the
