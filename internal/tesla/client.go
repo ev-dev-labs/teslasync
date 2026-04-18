@@ -618,6 +618,8 @@ var commands = map[string]commandDef{
 	"charge_stop":       {endpoint: "charge_stop"},
 	"set_charge_limit":  {endpoint: "set_charge_limit"},
 	"set_charging_amps": {endpoint: "set_charging_amps"},
+	"charge_max_range":  {endpoint: "charge_max_range"},
+	"charge_standard":   {endpoint: "charge_standard"},
 
 	// Doors & Trunk
 	"actuate_frunk": {endpoint: "actuate_trunk", params: map[string]interface{}{"which_trunk": "front"}},

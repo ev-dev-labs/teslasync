@@ -26,7 +26,7 @@ import {
   Lock, Unlock, Wind, Car, Zap, Power, Shield,
   Volume2, MapPin, GaugeCircle, DoorOpen, AlertTriangle, CheckCircle,
   Loader2, Battery, Wifi, Activity, Thermometer, Speaker, Locate,
-  CalendarPlus, CalendarMinus,
+  CalendarPlus, CalendarMinus, BatteryFull, BatteryMedium, Gauge,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -211,8 +211,23 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
 
         <CommandGroup title="Charging" t={t}>
           <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Charge Port')} sublabel={t('Open')} onClick={() => sendCmd('charge_port_open')} loading={cmd.isPending} />
+          <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Charge Port')} sublabel={t('Close')} onClick={() => sendCmd('close_charge_port')} loading={cmd.isPending} />
           <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Start Charge')} sublabel={state?.is_charging ? t('Charging') : t('Idle')} onClick={() => sendCmd('charge_start')} loading={cmd.isPending} variant="success" active={state?.is_charging} />
           <CommandButton icon={<Zap className="h-5 w-5" />} label={t('Stop Charge')} onClick={() => sendCmd('charge_stop')} loading={cmd.isPending} variant="danger" />
+          <CommandButton icon={<BatteryFull className="h-5 w-5" />} label={t('Max Range')} sublabel={t('Trip mode')} onClick={() => sendCmd('charge_max_range')} loading={cmd.isPending} variant="danger" />
+          <CommandButton icon={<BatteryMedium className="h-5 w-5" />} label={t('Standard')} sublabel={t('Daily mode')} onClick={() => sendCmd('charge_standard')} loading={cmd.isPending} variant="success" />
+          <CommandButton
+            icon={<Gauge className="h-5 w-5" />}
+            label={t('Set Amps')}
+            sublabel={t('Amperage')}
+            onClick={() => {
+              const amps = window.prompt(t('Enter charging amps (e.g., 16, 32, 48):'));
+              if (amps) {
+                cmd.mutate({ command: 'set_charging_amps', params: { charging_amps: amps } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
         </CommandGroup>
 
         <CommandGroup title="Doors & Trunk" t={t}>
