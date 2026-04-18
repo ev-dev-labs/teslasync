@@ -208,7 +208,68 @@ function VehicleCommandCenter({ vehicle, state, t, convertTemp, convertDistance,
           <CommandButton icon={<Power className="h-5 w-5" />} label={t('Wake Up')} sublabel={isAsleep ? t('Required') : t('Awake')} onClick={() => wakeMut.mutate()} loading={wakeMut.isPending} variant="success" active={!isAsleep} />
           <CommandButton icon={state?.is_locked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />} label={state?.is_locked ? t('Locked') : t('Unlocked')} sublabel={state?.is_locked ? t('Tap to unlock') : t('Tap to lock')} onClick={() => sendCmd(state?.is_locked ? 'unlock' : 'lock')} loading={cmd.isPending} active={state?.is_locked} />
           <CommandButton icon={<Shield className="h-5 w-5" />} label={t('Sentry')} sublabel={state?.sentry_mode ? t('Active') : t('Inactive')} onClick={() => sendCmd(state?.sentry_mode ? 'sentry_off' : 'sentry_on')} loading={cmd.isPending} active={state?.sentry_mode} variant={state?.sentry_mode ? 'danger' : 'default'} />
-          <CommandButton icon={<GaugeCircle className="h-5 w-5" />} label={t('Speed Limit')} sublabel={t('Enable')} onClick={() => sendCmd('speed_limit_on')} loading={cmd.isPending} variant="danger" />
+          <CommandButton
+            icon={<GaugeCircle className="h-5 w-5" />}
+            label={t('commands.security.speedLimit', 'Speed Limit')}
+            sublabel={t('commands.security.setMph', 'Set MPH')}
+            onClick={() => {
+              const mph = window.prompt(t('commands.security.enterSpeedLimit', 'Enter speed limit (50-90 MPH):'));
+              if (mph) {
+                const val = parseInt(mph, 10);
+                if (val >= 50 && val <= 90) {
+                  cmd.mutate({ command: 'speed_limit_set_limit', params: { limit_mph: mph } });
+                }
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<GaugeCircle className="h-5 w-5" />}
+            label={t('commands.security.speedActivate', 'Activate')}
+            sublabel={t('commands.security.speedLimitMode', 'Speed Limit')}
+            onClick={() => {
+              const pin = window.prompt(t('commands.security.enterSpeedPin', 'Enter 4-digit PIN:'));
+              if (pin && /^\d{4}$/.test(pin)) {
+                cmd.mutate({ command: 'speed_limit_on', params: { pin } });
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<GaugeCircle className="h-5 w-5" />}
+            label={t('commands.security.speedDeactivate', 'Deactivate')}
+            sublabel={t('commands.security.speedLimitMode', 'Speed Limit')}
+            onClick={() => {
+              const pin = window.prompt(t('commands.security.enterSpeedPin', 'Enter 4-digit PIN:'));
+              if (pin && /^\d{4}$/.test(pin)) {
+                cmd.mutate({ command: 'speed_limit_off', params: { pin } });
+              }
+            }}
+            loading={cmd.isPending}
+          />
+          <CommandButton
+            icon={<GaugeCircle className="h-5 w-5" />}
+            label={t('commands.security.clearSpeedPin', 'Clear Speed PIN')}
+            sublabel={t('commands.security.requiresPin', 'Requires PIN')}
+            onClick={() => {
+              const pin = window.prompt(t('commands.security.enterSpeedPin', 'Enter 4-digit PIN:'));
+              if (pin && /^\d{4}$/.test(pin)) {
+                cmd.mutate({ command: 'speed_limit_clear_pin', params: { pin } });
+              }
+            }}
+            loading={cmd.isPending}
+            variant="danger"
+          />
+          <CommandButton
+            icon={<GaugeCircle className="h-5 w-5" />}
+            label={t('commands.security.clearSpeedPin', 'Clear Speed PIN')}
+            sublabel={t('commands.security.admin', 'Admin')}
+            onClick={() => sendCmd('speed_limit_clear_pin_admin')}
+            loading={cmd.isPending}
+            variant="danger"
+          />
           <CommandButton icon={<UserPlus className="h-5 w-5" />} label={t('commands.security.guestMode', 'Guest Mode')} sublabel={t('commands.security.enable', 'Enable')} onClick={() => sendCmd('guest_mode_on')} loading={cmd.isPending} />
           <CommandButton
             icon={<Eraser className="h-5 w-5" />}

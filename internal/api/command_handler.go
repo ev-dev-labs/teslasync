@@ -99,6 +99,9 @@ var allowedCommands = map[string]bool{
 	"navigation_sc_request":        true,
 	"schedule_software_update":     true,
 	"cancel_software_update":       true,
+	"speed_limit_set_limit":        true,
+	"speed_limit_clear_pin":        true,
+	"speed_limit_clear_pin_admin":  true,
 }
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
