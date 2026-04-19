@@ -230,6 +230,17 @@ func (c *Client) GetPartnerFleetTelemetryErrors(ctx context.Context) ([]byte, in
 	return c.doRequestWithToken(ctx, http.MethodGet, "/api/1/partner_accounts/fleet_telemetry_errors", nil, partnerToken)
 }
 
+// GetPartnerPublicKey calls GET /api/1/partner_accounts/public_key?domain={domain}
+// using a partner token to verify the registered public key for the given domain.
+func (c *Client) GetPartnerPublicKey(ctx context.Context, domain string) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	path := "/api/1/partner_accounts/public_key?domain=" + url.QueryEscape(domain)
+	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
+}
+
 // GetNearbyChargingSites returns charging sites near the vehicle's current location.
 // GET /api/1/vehicles/{vin}/nearby_charging_sites
 func (c *Client) GetNearbyChargingSites(ctx context.Context, vin string) ([]byte, int, error) {

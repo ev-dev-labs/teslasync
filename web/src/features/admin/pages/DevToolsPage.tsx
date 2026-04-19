@@ -543,6 +543,89 @@ function PartnerRegistrationTool() {
   )
 }
 
+function PartnerPublicKeyTool() {
+  const { t } = useTranslation()
+  const [domain, setDomain] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: () => apiFetch(`partner-public-key?domain=${encodeURIComponent(domain)}`),
+  })
+
+  const response = mutation.data ?? {}
+  const verification = (response.verification ?? {}) as Record<string, unknown>
+  const remoteFound = verification.remote_key_found === true
+  const matchesLocal = verification.matches_local === true
+  const localConfigured = verification.local_key_configured === true
+  const publicKey = ((response.response as Record<string, unknown>)?.public_key as string) ?? ''
+
+  return (
+    <ToolCard icon={Shield} color="cyan" title={t('devtools.partnerKey.title', 'Public Key Verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
+      <div className="space-y-3">
+        <Input
+          label={t('Domain')}
+          placeholder="yourapp.example.com"
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          icon={<Globe className="h-4 w-4" />}
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          loading={mutation.isPending}
+          disabled={!domain.trim()}
+          onClick={() => mutation.mutate()}
+          icon={<Play className="h-3.5 w-3.5" />}
+        >
+          {t('devtools.partnerKey.verify', 'Verify')}
+        </Button>
+
+        {mutation.data && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {remoteFound ? (
+                <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.keyRegistered', 'Key Registered')}</Badge>
+              ) : (
+                <Badge variant="danger" size="sm" dot>{t('devtools.partnerKey.keyNotFound', 'Key Not Found')}</Badge>
+              )}
+              {remoteFound && localConfigured && (
+                matchesLocal ? (
+                  <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.matchesLocal', 'Matches Local Key')}</Badge>
+                ) : (
+                  <Badge variant="warning" size="sm" dot>{t('devtools.partnerKey.mismatch', 'Does Not Match Local Key')}</Badge>
+                )
+              )}
+              {remoteFound && !localConfigured && (
+                <Badge variant="neutral" size="sm">{t('devtools.partnerKey.noLocal', 'No Local Key Configured')}</Badge>
+              )}
+            </div>
+
+            {publicKey && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-white/70">{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</span>
+                <div className="rounded bg-black/30 p-3">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-white/80">
+                    {publicKey}
+                  </pre>
+                  <div className="mt-2 flex justify-end">
+                    <CopyButton text={publicKey} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ResultPanel
+              title={t('devtools.partnerKey.rawResponse', 'Raw Response')}
+              data={response.error ? undefined : response}
+              error={typeof response.error === 'string' ? (response.error as string) : undefined}
+              idle={false}
+            />
+          </>
+        )}
+      </div>
+    </ToolCard>
+  )
+}
+
 function PublicKeySetupTool() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -1100,6 +1183,7 @@ function FleetApiSection() {
     <div className="grid gap-4 lg:grid-cols-2">
       <FleetApiConfigTool />
       <PartnerRegistrationTool />
+      <PartnerPublicKeyTool />
       <PublicKeySetupTool />
       <VehicleKeyPairingTool />
       <FleetTelemetrySubscribeTool />

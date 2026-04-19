@@ -754,6 +754,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/fleet-api-info", devToolsHandler.FleetAPIInfo)
 			r.Get("/detect-region", devToolsHandler.DetectRegion)
 			r.Post("/register-partner", devToolsHandler.RegisterPartner)
+			r.Get("/partner-public-key", devToolsHandler.PartnerPublicKey)
 			r.Get("/test-api", devToolsHandler.TestAPIConnectivity)
 			r.Get("/token-info", devToolsHandler.TokenInfo)
 			r.Get("/db-stats", devToolsHandler.DatabaseStats)
