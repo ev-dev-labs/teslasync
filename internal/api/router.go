@@ -321,8 +321,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/automations", func(r chi.Router) {
 			r.Get("/", automationHandler.List)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+
+			// Execution history (static routes before {id} param)
+			r.Route("/history", func(r chi.Router) {
+				r.Get("/", automationHandler.ListHistory)
+				r.Get("/{historyId}", automationHandler.GetHistoryDetail)
+			})
+
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", automationHandler.Get)
+				r.Get("/history", automationHandler.ListAutomationHistory)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
