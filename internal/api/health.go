@@ -216,8 +216,16 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 		// DB write circuit breaker
 		if db.WriteBreaker != nil {
 			counts := db.WriteBreaker.Counts()
+			cbState := db.WriteBreaker.State().String()
+			cbStatus := "healthy"
+			if cbState == "half-open" {
+				cbStatus = "degraded"
+			} else if cbState == "open" {
+				cbStatus = "unhealthy"
+			}
 			results["db_circuit_breaker"] = map[string]interface{}{
-				"state":                db.WriteBreaker.State().String(),
+				"status":               cbStatus,
+				"state":                cbState,
 				"consecutive_failures": counts.ConsecutiveFailures,
 				"total_failures":       counts.TotalFailures,
 				"total_successes":      counts.TotalSuccesses,
@@ -239,6 +247,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 		if bufferStats != nil {
 			driveBuf, chargeBuf := bufferStats()
 			results["telemetry_buffers"] = map[string]interface{}{
+				"status":          "healthy",
 				"drive_buffered":  driveBuf,
 				"charge_buffered": chargeBuf,
 			}
