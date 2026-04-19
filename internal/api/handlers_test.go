@@ -67,7 +67,10 @@ func TestAllowedCommandsWhitelist(t *testing.T) {
 		"set_sentry_mode", "vent_windows", "close_windows", "actuate_trunk", "actuate_frunk",
 		"open_charge_port", "close_charge_port", "set_charge_limit", "set_temps",
 		"remote_start_drive", "set_scheduled_departure", "set_scheduled_charging",
-		"charge_max_range", "charge_standard", "set_charging_amps"}
+		"charge_max_range", "charge_standard", "set_charging_amps",
+		"bioweapon_on", "bioweapon_off", "cop_on", "cop_fan_only", "cop_off",
+		"set_cop_temp", "climate_keeper_off", "climate_keeper_on",
+		"dog_mode", "camp_mode", "preconditioning_max", "preconditioning_reset"}
 
 	for _, cmd := range allowed {
 		if !allowedCommands[cmd] {
@@ -75,9 +78,9 @@ func TestAllowedCommandsWhitelist(t *testing.T) {
 		}
 	}
 
-	// Total should be exactly 43
-	if len(allowedCommands) != 43 {
-		t.Errorf("allowedCommands has %d entries, want 43", len(allowedCommands))
+	// Total should be exactly 91
+	if len(allowedCommands) != 91 {
+		t.Errorf("allowedCommands has %d entries, want 91", len(allowedCommands))
 	}
 
 	// Should reject unknown commands
