@@ -4,6 +4,9 @@
 -- BlindSpotCollisionWarningChime is TypeBool in the signal registry and always arrives
 -- as a boolean from Fleet Telemetry. Convert back to BOOLEAN.
 
+-- Disable statement_timeout: ALTER TYPE rewrites every row and can exceed the default 30s.
+SET statement_timeout = 0;
+
 DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns

@@ -521,6 +521,7 @@ func (r *LiveStateRepo) FlushLiveState(ctx context.Context, vehicleID int64, sig
 		"latitude": true, "longitude": true, "locked": true, "sentry_mode": true,
 		"hvac_power": true, "fan_speed": true, "hvac_fan_speed": true,
 		"power": true, "charger_power": true,
+		"driver_seat_belt": true, "passenger_seat_belt": true,
 	}
 	for _, col := range enumBoolSignals {
 		skipCols[col] = true
