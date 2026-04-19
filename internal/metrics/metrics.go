@@ -399,6 +399,16 @@ var (
 	}, []string{"endpoint"})
 )
 
+// ── Circuit Breaker ────────────────────────────────────────
+
+var (
+	DBCircuitBreakerState = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "db_circuit_breaker_state",
+		Help:      "DB circuit breaker state: 0=closed, 1=half-open, 2=open",
+	}, []string{"breaker"})
+)
+
 // ── Data Freshness & Pipeline ──────────────────────────────
 
 var (

@@ -2,12 +2,14 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"github.com/sony/gobreaker"
 )
 
 // SignalHistoryRow represents a single signal value at a point in time.
@@ -114,19 +116,33 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 	w.buffer = make([]SignalHistoryRow, 0, cap(rows))
 	w.mu.Unlock()
 
-	err := RetryOnTransient(ctx, "signal_history_flush", func(ctx context.Context) error {
-		_, copyErr := w.db.Pool.CopyFrom(ctx,
-			pgx.Identifier{"signal_history"},
-			[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "created_at"},
-			pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
-				r := rows[i]
-				return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.CreatedAt}, nil
-			}),
-		)
-		return copyErr
-	})
+	flushFn := func() error {
+		return RetryOnTransient(ctx, "signal_history_flush", func(ctx context.Context) error {
+			_, copyErr := w.db.Pool.CopyFrom(ctx,
+				pgx.Identifier{"signal_history"},
+				[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "created_at"},
+				pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
+					r := rows[i]
+					return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.CreatedAt}, nil
+				}),
+			)
+			return copyErr
+		})
+	}
+
+	var err error
+	if w.db.WriteBreaker != nil {
+		err = w.db.WriteBreaker.Execute(flushFn)
+	} else {
+		err = flushFn()
+	}
+
 	if err != nil {
-		log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_history: batch insert failed after retries")
+		if errors.Is(err, gobreaker.ErrOpenState) {
+			log.Debug().Int("rows", len(rows)).Msg("signal_history: circuit breaker open, re-queuing")
+		} else {
+			log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_history: batch insert failed after retries")
+		}
 		// Re-queue failed rows for the next flush (bounded to prevent memory leak)
 		w.mu.Lock()
 		const maxRequeue = 10000

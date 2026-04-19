@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sony/gobreaker"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -38,6 +39,18 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 			checks["database"] = "unhealthy"
 		} else {
 			checks["database"] = "ok"
+		}
+
+		// Check write circuit breaker — if open, DB writes are failing
+		if db.WriteBreaker != nil {
+			state := db.WriteBreaker.State()
+			if state == gobreaker.StateOpen {
+				checks["database_writes"] = "unhealthy"
+			} else if state == gobreaker.StateHalfOpen {
+				checks["database_writes"] = "degraded"
+			} else {
+				checks["database_writes"] = "ok"
+			}
 		}
 
 		if tc.HasValidToken() {
@@ -199,6 +212,17 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor) http
 		poolStatsMap["status"] = "healthy"
 		results["database_pool"] = poolStatsMap
 
+		// DB write circuit breaker
+		if db.WriteBreaker != nil {
+			counts := db.WriteBreaker.Counts()
+			results["db_circuit_breaker"] = map[string]interface{}{
+				"state":                db.WriteBreaker.State().String(),
+				"consecutive_failures": counts.ConsecutiveFailures,
+				"total_failures":       counts.TotalFailures,
+				"total_successes":      counts.TotalSuccesses,
+			}
+		}
+
 		// Component statuses from health monitor — don't overwrite direct checks
 		for name, comp := range health.GetStatus() {
 			if _, exists := results[name]; !exists {
@@ -287,6 +311,7 @@ func MetricsCatalogHandler() http.HandlerFunc {
 		{Name: "teslasync_db_query_duration_seconds", Type: "histogram", Help: "Database query duration", Labels: []string{"operation", "table"}},
 		{Name: "teslasync_db_pool_connections", Type: "gauge", Help: "Database connection pool stats", Labels: []string{"state"}},
 		{Name: "teslasync_db_transactions_total", Type: "counter", Help: "Database transactions", Labels: []string{"result"}},
+		{Name: "teslasync_db_circuit_breaker_state", Type: "gauge", Help: "DB circuit breaker state: 0=closed, 1=half-open, 2=open", Labels: []string{"breaker"}},
 
 		// Alerts & Notifications
 		{Name: "teslasync_alerts_evaluated_total", Type: "counter", Help: "Total alert rule evaluations"},

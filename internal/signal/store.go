@@ -9,11 +9,13 @@ package signal
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/sony/gobreaker"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
@@ -31,7 +33,8 @@ type Store struct {
 	mu       sync.RWMutex
 	vehicles map[int64]map[string]*Value
 
-	flusher Flusher
+	flusher      Flusher
+	writeBreaker *database.DBCircuitBreaker
 }
 
 // Flusher persists the in-memory state to a durable store (e.g. Postgres).
@@ -42,10 +45,13 @@ type Flusher interface {
 
 // New creates a new SignalStore with write-through persistence.
 // If flusher is nil, no DB persistence occurs.
-func New(flusher Flusher, flushInterval time.Duration) *Store {
+// If writeBreaker is non-nil, flushes are guarded by the circuit breaker
+// to prevent goroutine accumulation during Postgres outages.
+func New(flusher Flusher, flushInterval time.Duration, writeBreaker *database.DBCircuitBreaker) *Store {
 	return &Store{
-		vehicles: make(map[int64]map[string]*Value),
-		flusher:  flusher,
+		vehicles:     make(map[int64]map[string]*Value),
+		flusher:      flusher,
+		writeBreaker: writeBreaker,
 	}
 }
 
@@ -237,6 +243,8 @@ func (s *Store) Hydrate(vehicleID int64, signals map[string]interface{}) {
 
 // flushNow asynchronously flushes the vehicle's live state to Postgres.
 // Called on every batch for write-through persistence.
+// If a circuit breaker is set and open, skips the flush to prevent
+// goroutine accumulation during Postgres outages.
 func (s *Store) flushNow(vehicleID int64) {
 	if s.flusher == nil {
 		return
@@ -246,6 +254,14 @@ func (s *Store) flushNow(vehicleID int64) {
 	if raw == nil {
 		return
 	}
+
+	// Fast-fail: if breaker is open, don't even spawn a goroutine.
+	// This is the key optimization — prevents goroutine accumulation.
+	if s.writeBreaker != nil && s.writeBreaker.State() == gobreaker.StateOpen {
+		log.Debug().Int64("vehicle_id", vehicleID).Msg("signal store: circuit breaker open, skipping flush")
+		return
+	}
+
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -256,11 +272,25 @@ func (s *Store) flushNow(vehicleID int64) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		err := database.RetryOnTransient(ctx, "live_state_flush", func(ctx context.Context) error {
-			return s.flusher.FlushLiveState(ctx, vehicleID, raw)
-		})
+		flushFn := func() error {
+			return database.RetryOnTransient(ctx, "live_state_flush", func(ctx context.Context) error {
+				return s.flusher.FlushLiveState(ctx, vehicleID, raw)
+			})
+		}
+
+		var err error
+		if s.writeBreaker != nil {
+			err = s.writeBreaker.Execute(flushFn)
+		} else {
+			err = flushFn()
+		}
+
 		if err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: flush to DB failed after retries")
+			if errors.Is(err, gobreaker.ErrOpenState) {
+				log.Debug().Int64("vehicle_id", vehicleID).Msg("signal store: circuit breaker opened during flush")
+			} else {
+				log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: flush to DB failed after retries")
+			}
 		}
 		metrics.SignalFlushDuration.Observe(time.Since(flushStart).Seconds())
 	}()

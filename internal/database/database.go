@@ -23,7 +23,8 @@ type DBTX interface {
 
 // DB wraps a pgx connection pool and provides repository methods.
 type DB struct {
-	Pool *pgxpool.Pool
+	Pool         *pgxpool.Pool
+	WriteBreaker *DBCircuitBreaker
 }
 
 // New creates a new database connection pool from the given config, verifies
@@ -74,7 +75,10 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 		Int("statement_timeout_ms", cfg.StatementTimeout).
 		Dur("health_check_period", cfg.HealthCheckPeriod).
 		Msg("database connected")
-	return &DB{Pool: pool}, nil
+	return &DB{
+		Pool:         pool,
+		WriteBreaker: NewDBCircuitBreaker("writes"),
+	}, nil
 }
 
 // Close shuts down the connection pool.

@@ -205,7 +205,7 @@ func main() {
 
 		// Initialize SignalStore with write-through Postgres flusher
 		liveStateRepo := database.NewLiveStateRepo(db)
-		signalStore = sigsvc.New(liveStateRepo, 0)
+		signalStore = sigsvc.New(liveStateRepo, 0, db.WriteBreaker)
 		telemetryHandler.SetSignalStore(signalStore)
 
 		// Load existing live state from DB (pod restart recovery)
