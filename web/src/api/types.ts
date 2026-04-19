@@ -1475,6 +1475,90 @@ export interface BatteryDegradationData {
   fast_charge_ratio: number
 }
 
+// === Automation Types ===
+
+export interface AutomationConflict {
+  automation_id: number
+  automation_name: string
+  reason: string
+  severity: 'warning' | 'info'
+}
+
+export interface Automation {
+  id: number
+  name: string
+  description: string
+  vehicle_id: number | null
+  enabled: boolean
+  trigger_type: string
+  trigger_config: Record<string, unknown> | null
+  conditions: Record<string, unknown>[] | null
+  actions: Record<string, unknown>[] | null
+  cooldown_minutes: number
+  max_executions_hour: number
+  stop_on_failure: boolean
+  notify_on_run: boolean
+  notify_on_failure: boolean
+  seasonal_start: number | null
+  seasonal_end: number | null
+  priority: number
+  last_triggered_at: string | null
+  last_success_at: string | null
+  last_failure_at: string | null
+  execution_count: number
+  failure_count: number
+  consecutive_failures: number
+  auto_disabled: boolean
+  auto_disabled_reason: string | null
+  preset_id: string | null
+  tags: string[]
+  created_at: string
+  updated_at: string
+  next_fire_time?: string | null
+  conflicts?: AutomationConflict[]
+}
+
+export type AutomationHistoryStatus = 'running' | 'success' | 'partial' | 'failed' | 'skipped' | 'cancelled' | 'test' | 'undo'
+
+export interface AutomationHistory {
+  id: number
+  automation_id: number
+  automation_name: string
+  vehicle_id: number | null
+  triggered_at: string
+  completed_at: string | null
+  duration_ms: number | null
+  trigger_type: string
+  trigger_snapshot: Record<string, unknown> | null
+  conditions_met: boolean
+  conditions_snapshot: Record<string, unknown>[] | null
+  actions_executed: Record<string, unknown>[] | null
+  actions_total: number
+  actions_succeeded: number
+  actions_failed: number
+  status: AutomationHistoryStatus
+  error: string | null
+  fsm_state: string | null
+  created_at: string
+}
+
+export interface AutomationHistoryStats {
+  total_executions: number
+  succeeded: number
+  failed: number
+  partial: number
+  success_rate: number
+  avg_duration_ms: number
+}
+
+export interface AutomationHistoryListResponse {
+  items: AutomationHistory[]
+  total: number
+  limit: number
+  offset: number
+  summary: AutomationHistoryStats
+}
+
 // === Automation SSE Events ===
 
 export type AutomationSSEEventType =

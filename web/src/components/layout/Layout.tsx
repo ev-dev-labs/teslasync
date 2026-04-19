@@ -96,6 +96,7 @@ const navI18nKeys: Record<string, string> = {
   'Security & Access': 'nav.securityAccess',
   'Temperature Impact': 'nav.temperatureImpact',
   'Route Efficiency': 'nav.routeEfficiency',
+  'Automations': 'nav.automations',
 }
 
 type SSEState = 'connected' | 'reconnecting' | 'unavailable'
@@ -188,6 +189,7 @@ export const navSections = [
     title: 'Control',
     items: [
       { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400' },
+      { to: '/automations', icon: Zap, label: 'Automations', color: 'text-neon-cyan' },
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
       { to: '/alert-studio', icon: Zap, label: 'Alert Studio', color: 'text-neon-cyan' },
       { to: '/geofences', icon: MapPin, label: 'Geofences', color: 'text-lime-400' },
