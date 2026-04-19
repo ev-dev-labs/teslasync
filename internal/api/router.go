@@ -299,6 +299,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/options/refresh", vehicleInfoHandler.RefreshVehicleOptions)
 				r.Get("/specs", vehicleInfoHandler.VehicleSpecs)
 				r.With(httprate.LimitByIP(2, 1*time.Minute)).Post("/specs/refresh", vehicleInfoHandler.RefreshVehicleSpecs)
+
+				// Vehicle lifecycle: subscriptions & upgrades
+				r.Get("/subscriptions", vehicleInfoHandler.SubscriptionEligibility)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/subscriptions/refresh", vehicleInfoHandler.RefreshSubscriptionEligibility)
+				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 			})
 		})
 
@@ -393,6 +399,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/profile", teslaUserProfileHandler.Profile)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/profile/refresh", teslaUserProfileHandler.RefreshProfile)
 		})
+
+		// Tesla Warranty Details (account-level)
+		r.Get("/tesla/warranty", vehicleInfoHandler.WarrantyDetails)
+		r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/warranty/refresh", vehicleInfoHandler.RefreshWarrantyDetails)
 
 		// Geofences
 		r.Route("/geofences", func(r chi.Router) {

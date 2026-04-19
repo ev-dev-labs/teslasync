@@ -153,6 +153,77 @@ func (h *VehicleInfoHandler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.
 	}, true)
 }
 
+// ---------- Subscription Eligibility ----------
+
+// SubscriptionEligibility returns stored subscription eligibility from DB.
+// GET /api/v1/vehicles/{vehicleID}/subscriptions
+func (h *VehicleInfoHandler) SubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
+	vin, err := h.resolveVIN(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.getVehicleConfig(w, r, "subscriptions:"+vin)
+}
+
+// RefreshSubscriptionEligibility fetches subscription eligibility from Tesla and saves to DB.
+// POST /api/v1/vehicles/{vehicleID}/subscriptions/refresh
+func (h *VehicleInfoHandler) RefreshSubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
+	vin, err := h.resolveVIN(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	configKey := "subscriptions:" + vin
+	h.refreshVehicleConfig(w, r, configKey, "subscriptions", vin, func() ([]byte, int, error) {
+		return h.teslaClient.GetSubscriptionEligibility(r.Context(), vin)
+	}, false)
+}
+
+// ---------- Upgrade Eligibility ----------
+
+// UpgradeEligibility returns stored upgrade eligibility from DB.
+// GET /api/v1/vehicles/{vehicleID}/upgrades
+func (h *VehicleInfoHandler) UpgradeEligibility(w http.ResponseWriter, r *http.Request) {
+	vin, err := h.resolveVIN(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.getVehicleConfig(w, r, "upgrades:"+vin)
+}
+
+// RefreshUpgradeEligibility fetches upgrade eligibility from Tesla and saves to DB.
+// POST /api/v1/vehicles/{vehicleID}/upgrades/refresh
+func (h *VehicleInfoHandler) RefreshUpgradeEligibility(w http.ResponseWriter, r *http.Request) {
+	vin, err := h.resolveVIN(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	configKey := "upgrades:" + vin
+	h.refreshVehicleConfig(w, r, configKey, "upgrades", vin, func() ([]byte, int, error) {
+		return h.teslaClient.GetUpgradeEligibility(r.Context(), vin)
+	}, false)
+}
+
+// ---------- Warranty Details ----------
+
+// WarrantyDetails returns stored warranty details from DB.
+// GET /api/v1/tesla/warranty
+func (h *VehicleInfoHandler) WarrantyDetails(w http.ResponseWriter, r *http.Request) {
+	h.getVehicleConfig(w, r, "warranty")
+}
+
+// RefreshWarrantyDetails fetches warranty details from Tesla and saves to DB.
+// POST /api/v1/tesla/warranty/refresh
+func (h *VehicleInfoHandler) RefreshWarrantyDetails(w http.ResponseWriter, r *http.Request) {
+	configKey := "warranty"
+	h.refreshVehicleConfig(w, r, configKey, "warranty", "", func() ([]byte, int, error) {
+		return h.teslaClient.GetWarrantyDetails(r.Context())
+	}, false)
+}
+
 // ---------- Shared helpers ----------
 
 // getVehicleConfig returns stored per-vehicle config data with fetched_at metadata.

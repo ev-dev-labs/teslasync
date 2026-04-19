@@ -314,6 +314,23 @@ func (c *Client) GetVehicleSpecs(ctx context.Context, vin string) ([]byte, int, 
 	return c.doRequestWithToken(ctx, http.MethodGet, path, nil, partnerToken)
 }
 
+// GetSubscriptionEligibility calls GET /api/1/dx/vehicles/subscriptions/eligibility?vin={vin}.
+func (c *Client) GetSubscriptionEligibility(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/subscriptions/eligibility?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetUpgradeEligibility calls GET /api/1/dx/vehicles/upgrades/eligibility?vin={vin}.
+func (c *Client) GetUpgradeEligibility(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/vehicles/upgrades/eligibility?vin=%s", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetWarrantyDetails calls GET /api/1/dx/warranty/details.
+func (c *Client) GetWarrantyDetails(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/dx/warranty/details", nil)
+}
+
 // GetVehicleDrivers calls GET /api/1/vehicles/{vin}/drivers to list allowed drivers.
 func (c *Client) GetVehicleDrivers(ctx context.Context, vin string) ([]byte, int, error) {
 	path := fmt.Sprintf("/api/1/vehicles/%s/drivers", vin)

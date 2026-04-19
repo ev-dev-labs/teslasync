@@ -317,3 +317,65 @@ export function useRefreshVehicleSpecs(vehicleId?: string) {
     },
   });
 }
+
+// ---------- Vehicle Subscriptions ----------
+
+export function useVehicleSubscriptions(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-subscriptions', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions`),
+    enabled: !!vehicleId,
+    staleTime: 60 * 60_000, // 1 hour — rarely changes
+  });
+}
+
+export function useRefreshVehicleSubscriptions(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/subscriptions/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-subscriptions', vehicleId] });
+    },
+  });
+}
+
+// ---------- Vehicle Upgrades ----------
+
+export function useVehicleUpgrades(vehicleId?: string) {
+  return useQuery({
+    queryKey: ['vehicle-upgrades', vehicleId],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades`),
+    enabled: !!vehicleId,
+    staleTime: 60 * 60_000, // 1 hour — rarely changes
+  });
+}
+
+export function useRefreshVehicleUpgrades(vehicleId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>(`/vehicles/${vehicleId}/upgrades/refresh`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-upgrades', vehicleId] });
+    },
+  });
+}
+
+// ---------- Warranty Details ----------
+
+export function useWarrantyDetails() {
+  return useQuery({
+    queryKey: ['warranty-details'],
+    queryFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty'),
+    staleTime: 24 * 60 * 60_000, // 1 day
+  });
+}
+
+export function useRefreshWarrantyDetails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<VehicleInfoEnvelope<Record<string, unknown>>>('/tesla/warranty/refresh', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warranty-details'] });
+    },
+  });
+}
