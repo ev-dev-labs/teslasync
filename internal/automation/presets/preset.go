@@ -51,6 +51,8 @@ func NewRegistry() *Registry {
 	r.presets = append(r.presets, securityPresets...)
 	r.registerCategory(climateCategory)
 	r.presets = append(r.presets, climatePresets...)
+	r.registerCategory(chargingCategory)
+	r.presets = append(r.presets, chargingPresets...)
 	return r
 }
 

@@ -9,12 +9,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 )
 
-func TestClimatePresetsValid(t *testing.T) {
+func TestChargingPresetsValid(t *testing.T) {
 	registry := presets.NewRegistry()
-	all := registry.Presets("climate")
+	all := registry.Presets("charging")
 
 	if len(all) != 8 {
-		t.Fatalf("expected 8 climate presets, got %d", len(all))
+		t.Fatalf("expected 8 charging presets, got %d", len(all))
 	}
 
 	for _, p := range all {
@@ -25,8 +25,8 @@ func TestClimatePresetsValid(t *testing.T) {
 			if p.Name == "" {
 				t.Error("preset Name is empty")
 			}
-			if p.Category != "climate" {
-				t.Errorf("expected category 'climate', got %q", p.Category)
+			if p.Category != "charging" {
+				t.Errorf("expected category 'charging', got %q", p.Category)
 			}
 			if p.TriggerType == "" {
 				t.Error("preset TriggerType is empty")
@@ -78,26 +78,26 @@ func TestClimatePresetsValid(t *testing.T) {
 				t.Error("preset has no tags")
 			}
 
-			// Every climate preset must be tagged "climate".
-			hasClimateTag := false
+			// Every charging preset must be tagged "charging".
+			hasChargingTag := false
 			for _, tag := range p.Tags {
-				if tag == "climate" {
-					hasClimateTag = true
+				if tag == "charging" {
+					hasChargingTag = true
 					break
 				}
 			}
-			if !hasClimateTag {
-				t.Error("preset missing 'climate' tag")
+			if !hasChargingTag {
+				t.Error("preset missing 'charging' tag")
 			}
 		})
 	}
 }
 
-func TestClimatePresetIDsUnique(t *testing.T) {
+func TestChargingPresetIDsUnique(t *testing.T) {
 	registry := presets.NewRegistry()
 	seen := make(map[string]bool)
 
-	for _, p := range registry.Presets("climate") {
+	for _, p := range registry.Presets("charging") {
 		if seen[p.ID] {
 			t.Errorf("duplicate preset ID: %s", p.ID)
 		}
@@ -105,66 +105,52 @@ func TestClimatePresetIDsUnique(t *testing.T) {
 	}
 }
 
-func TestClimatePresetIDPrefix(t *testing.T) {
+func TestChargingPresetIDPrefix(t *testing.T) {
 	registry := presets.NewRegistry()
 
-	for _, p := range registry.Presets("climate") {
-		if len(p.ID) < 8 || p.ID[:8] != "climate-" {
-			t.Errorf("climate preset ID %q should start with 'climate-'", p.ID)
+	for _, p := range registry.Presets("charging") {
+		if len(p.ID) < 9 || p.ID[:9] != "charging-" {
+			t.Errorf("charging preset ID %q should start with 'charging-'", p.ID)
 		}
 	}
 }
 
-func TestClimateCategory(t *testing.T) {
+func TestChargingCategory(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	cats := registry.Categories()
 	found := false
 	for _, c := range cats {
-		if c.ID == "climate" {
+		if c.ID == "charging" {
 			found = true
-			if c.Name != "Climate" {
-				t.Errorf("expected category name 'Climate', got %q", c.Name)
+			if c.Name != "Charging" {
+				t.Errorf("expected category name 'Charging', got %q", c.Name)
 			}
-			if c.Icon != "Thermometer" {
-				t.Errorf("expected category icon 'Thermometer', got %q", c.Icon)
+			if c.Icon != "BatteryCharging" {
+				t.Errorf("expected category icon 'BatteryCharging', got %q", c.Icon)
 			}
 		}
 	}
 	if !found {
-		t.Error("climate category not found")
+		t.Error("charging category not found")
 	}
 }
 
-func TestRegistryTotalPresetsIncludesClimate(t *testing.T) {
-	registry := presets.NewRegistry()
-
-	all := registry.Presets("")
-	security := registry.Presets("security")
-	climate := registry.Presets("climate")
-	charging := registry.Presets("charging")
-
-	if len(all) != len(security)+len(climate)+len(charging) {
-		t.Errorf("total presets (%d) != security (%d) + climate (%d) + charging (%d)",
-			len(all), len(security), len(climate), len(charging))
-	}
-}
-
-func TestClimatePresetGetByID(t *testing.T) {
+func TestChargingPresetGetByID(t *testing.T) {
 	registry := presets.NewRegistry()
 
 	tests := []struct {
 		id   string
 		name string
 	}{
-		{"climate-morning-commute-prep", "Morning Commute Prep"},
-		{"climate-summer-cool-down", "Summer Cool Down"},
-		{"climate-winter-warm-up", "Winter Warm Up"},
-		{"climate-dog-mode-auto", "Dog Mode Auto"},
-		{"climate-camp-mode-night", "Camp Mode Night"},
-		{"climate-bioweapon-defense", "Bioweapon Defense"},
-		{"climate-pre-cool-departure", "Pre-cool Before Departure"},
-		{"climate-off-saver", "Climate Off Saver"},
+		{"charging-smart-stop", "Smart Charge Stop"},
+		{"charging-off-peak", "Off-Peak Charging"},
+		{"charging-trip-prep", "Trip Prep"},
+		{"charging-daily-reset", "Daily Limit Reset"},
+		{"charging-low-alert", "Low Battery Alert"},
+		{"charging-complete-notify", "Charge Complete Notify"},
+		{"charging-amperage-saver", "Amperage Saver"},
+		{"charging-solar", "Solar Charging"},
 	}
 
 	for _, tt := range tests {
@@ -177,5 +163,19 @@ func TestClimatePresetGetByID(t *testing.T) {
 				t.Errorf("expected name %q, got %q", tt.name, p.Name)
 			}
 		})
+	}
+}
+
+func TestRegistryTotalPresetsIncludesCharging(t *testing.T) {
+	registry := presets.NewRegistry()
+
+	all := registry.Presets("")
+	security := registry.Presets("security")
+	climate := registry.Presets("climate")
+	charging := registry.Presets("charging")
+
+	if len(all) != len(security)+len(climate)+len(charging) {
+		t.Errorf("total presets (%d) != security (%d) + climate (%d) + charging (%d)",
+			len(all), len(security), len(climate), len(charging))
 	}
 }

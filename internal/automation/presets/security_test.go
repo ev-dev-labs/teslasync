@@ -84,6 +84,7 @@ func TestRegistryPresetsFilterByCategory(t *testing.T) {
 
 	all := registry.Presets("")
 	security := registry.Presets("security")
+	charging := registry.Presets("charging")
 	none := registry.Presets("nonexistent")
 
 	if len(all) == 0 {
@@ -91,6 +92,9 @@ func TestRegistryPresetsFilterByCategory(t *testing.T) {
 	}
 	if len(security) != 7 {
 		t.Errorf("expected 7 security presets, got %d", len(security))
+	}
+	if len(charging) != 8 {
+		t.Errorf("expected 8 charging presets, got %d", len(charging))
 	}
 	if len(none) != 0 {
 		t.Errorf("expected 0 presets for nonexistent category, got %d", len(none))
