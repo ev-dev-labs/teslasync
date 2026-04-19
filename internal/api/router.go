@@ -179,6 +179,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
+	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -316,6 +317,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/", teslaChargingSessionHandler.List)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingSessionHandler.Refresh)
 			})
+		})
+
+		// Tesla Energy Site History (calendar_history + telemetry_history)
+		r.Route("/tesla/energy-sites/{siteID}", func(r chi.Router) {
+			r.Get("/energy-history", teslaEnergyHistoryHandler.EnergyHistory)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/energy-history/refresh", teslaEnergyHistoryHandler.RefreshEnergyHistory)
+			r.Get("/backup-history", teslaEnergyHistoryHandler.BackupHistory)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/backup-history/refresh", teslaEnergyHistoryHandler.RefreshBackupHistory)
+			r.Get("/charging-history", teslaEnergyHistoryHandler.ChargingHistory)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/charging-history/refresh", teslaEnergyHistoryHandler.RefreshChargingHistory)
 		})
 
 		// Geofences

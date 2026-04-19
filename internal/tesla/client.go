@@ -942,3 +942,31 @@ func (c *Client) GetChargingSessions(ctx context.Context, vin, dateFrom, dateTo 
 	path := "/api/1/dx/charging/sessions?" + params.Encode()
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
+
+// GetEnergySiteCalendarHistory calls GET /api/1/energy_sites/{id}/calendar_history.
+// kind: "backup" or "energy". period: "day", "week", "month", "year".
+// Dates are ISO 8601 (YYYY-MM-DD). timeZone is IANA (e.g. "America/Los_Angeles").
+func (c *Client) GetEnergySiteCalendarHistory(ctx context.Context, energySiteID int64, kind, startDate, endDate, period, timeZone string) ([]byte, int, error) {
+	params := url.Values{}
+	params.Set("kind", kind)
+	params.Set("start_date", startDate)
+	params.Set("end_date", endDate)
+	params.Set("period", period)
+	params.Set("time_zone", timeZone)
+
+	path := fmt.Sprintf("/api/1/energy_sites/%d/calendar_history?%s", energySiteID, params.Encode())
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// GetEnergySiteTelemetryHistory calls GET /api/1/energy_sites/{id}/telemetry_history.
+// kind: "charge" for wall connector history. Dates are ISO 8601 (YYYY-MM-DD).
+func (c *Client) GetEnergySiteTelemetryHistory(ctx context.Context, energySiteID int64, kind, startDate, endDate, timeZone string) ([]byte, int, error) {
+	params := url.Values{}
+	params.Set("kind", kind)
+	params.Set("start_date", startDate)
+	params.Set("end_date", endDate)
+	params.Set("time_zone", timeZone)
+
+	path := fmt.Sprintf("/api/1/energy_sites/%d/telemetry_history?%s", energySiteID, params.Encode())
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}

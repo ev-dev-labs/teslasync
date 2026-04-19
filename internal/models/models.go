@@ -1271,3 +1271,43 @@ type TeslaChargingSessionSummary struct {
 	AvgCostPerKWh *float64 `json:"avg_cost_per_kwh"`
 	PeakPowerKW   *float64 `json:"peak_power_kw"`
 }
+
+// TeslaEnergyHistory represents an energy measurement from Tesla calendar_history (kind=energy).
+// Values are stored in watt-hours as returned by the Tesla API.
+type TeslaEnergyHistory struct {
+	ID                 int64      `json:"id" db:"id"`
+	EnergySiteID       int64      `json:"energy_site_id" db:"energy_site_id"`
+	Period             string     `json:"period" db:"period"`
+	Timestamp          time.Time  `json:"timestamp" db:"timestamp"`
+	SolarEnergyWh      *float64   `json:"solar_energy_wh" db:"solar_energy_wh"`
+	BatteryEnergyInWh  *float64   `json:"battery_energy_in_wh" db:"battery_energy_in_wh"`
+	BatteryEnergyOutWh *float64   `json:"battery_energy_out_wh" db:"battery_energy_out_wh"`
+	GridEnergyInWh     *float64   `json:"grid_energy_in_wh" db:"grid_energy_in_wh"`
+	GridEnergyOutWh    *float64   `json:"grid_energy_out_wh" db:"grid_energy_out_wh"`
+	ConsumerEnergyWh   *float64   `json:"consumer_energy_wh" db:"consumer_energy_wh"`
+	RawJSON            string     `json:"raw_json,omitempty" db:"raw_json"`
+	FetchedAt          time.Time  `json:"fetched_at" db:"fetched_at"`
+}
+
+// TeslaEnergyBackupEvent represents an off-grid backup event from Tesla calendar_history (kind=backup).
+type TeslaEnergyBackupEvent struct {
+	ID              int64     `json:"id" db:"id"`
+	EnergySiteID    int64     `json:"energy_site_id" db:"energy_site_id"`
+	Period          string    `json:"period" db:"period"`
+	Timestamp       time.Time `json:"timestamp" db:"timestamp"`
+	DurationSeconds int       `json:"duration_seconds" db:"duration_seconds"`
+	RawJSON         string    `json:"raw_json,omitempty" db:"raw_json"`
+	FetchedAt       time.Time `json:"fetched_at" db:"fetched_at"`
+}
+
+// TeslaEnergyWCCharging represents a wall connector charging record from Tesla telemetry_history (kind=charge).
+// Energy is stored in watt-hours as returned by the Tesla API.
+type TeslaEnergyWCCharging struct {
+	ID             int64     `json:"id" db:"id"`
+	EnergySiteID   int64     `json:"energy_site_id" db:"energy_site_id"`
+	DIN            *string   `json:"din" db:"din"`
+	Timestamp      time.Time `json:"timestamp" db:"timestamp"`
+	EnergyWh       *float64  `json:"energy_wh" db:"energy_wh"`
+	RawJSON        string    `json:"raw_json,omitempty" db:"raw_json"`
+	FetchedAt      time.Time `json:"fetched_at" db:"fetched_at"`
+}

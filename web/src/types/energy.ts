@@ -201,3 +201,37 @@ export interface SleepDrainEvent {
   sentry_mode: boolean;
   outside_temp: number | null;
 }
+
+// Tesla Energy Site History types
+
+export interface TeslaEnergyHistoryEntry {
+  id: number;
+  energy_site_id: number;
+  period: string;
+  timestamp: string;
+  solar_energy_wh: number | null;
+  battery_energy_in_wh: number | null;
+  battery_energy_out_wh: number | null;
+  grid_energy_in_wh: number | null;
+  grid_energy_out_wh: number | null;
+  consumer_energy_wh: number | null;
+  fetched_at: string;
+}
+
+export interface TeslaBackupEvent {
+  id: number;
+  energy_site_id: number;
+  period: string;
+  timestamp: string;
+  duration_seconds: number;
+  fetched_at: string;
+}
+
+export interface TeslaWCChargingEntry {
+  id: number;
+  energy_site_id: number;
+  din: string | null;
+  timestamp: string;
+  energy_wh: number | null;
+  fetched_at: string;
+}
