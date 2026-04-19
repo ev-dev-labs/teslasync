@@ -2,11 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
@@ -1031,4 +1034,338 @@ type duplicateTokenError struct{}
 
 func (e *duplicateTokenError) Error() string {
 	return "webhook_token is already in use by another automation"
+}
+
+// ── Import / Export ─────────────────────────────────────────────────────
+
+const exportVersion = 1
+
+// automationExportEnvelope is the top-level JSON document for import/export.
+type automationExportEnvelope struct {
+	Version     int                    `json:"version"`
+	ExportedAt  string                 `json:"exported_at"`
+	Automations []automationPortable   `json:"automations"`
+}
+
+// automationPortable is a shareable automation definition stripped of
+// instance-specific state (IDs, counters, timestamps, secrets).
+type automationPortable struct {
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	TriggerType       string          `json:"trigger_type"`
+	TriggerConfig     json.RawMessage `json:"trigger_config"`
+	Conditions        json.RawMessage `json:"conditions,omitempty"`
+	Actions           json.RawMessage `json:"actions"`
+	CooldownMinutes   int             `json:"cooldown_minutes"`
+	MaxExecutionsHour int             `json:"max_executions_hour"`
+	StopOnFailure     bool            `json:"stop_on_failure"`
+	NotifyOnRun       bool            `json:"notify_on_run"`
+	NotifyOnFailure   bool            `json:"notify_on_failure"`
+	SeasonalStart     *int            `json:"seasonal_start,omitempty"`
+	SeasonalEnd       *int            `json:"seasonal_end,omitempty"`
+	Priority          int             `json:"priority"`
+	Tags              []string        `json:"tags,omitempty"`
+}
+
+// automationToPortable converts a stored automation to a portable definition,
+// stripping instance-specific fields and scrubbing webhook secrets.
+func automationToPortable(a *models.Automation) automationPortable {
+	tc := a.TriggerConfig
+	if a.TriggerType == "webhook" {
+		tc = scrubWebhookSecrets(tc)
+	}
+	return automationPortable{
+		Name:              a.Name,
+		Description:       a.Description,
+		TriggerType:       a.TriggerType,
+		TriggerConfig:     tc,
+		Conditions:        a.Conditions,
+		Actions:           a.Actions,
+		CooldownMinutes:   a.CooldownMinutes,
+		MaxExecutionsHour: a.MaxExecutionsHour,
+		StopOnFailure:     a.StopOnFailure,
+		NotifyOnRun:       a.NotifyOnRun,
+		NotifyOnFailure:   a.NotifyOnFailure,
+		SeasonalStart:     a.SeasonalStart,
+		SeasonalEnd:       a.SeasonalEnd,
+		Priority:          a.Priority,
+		Tags:              a.Tags,
+	}
+}
+
+// scrubWebhookSecrets removes webhook_token and secret from a webhook
+// trigger_config to prevent credential leakage in shared exports.
+func scrubWebhookSecrets(raw json.RawMessage) json.RawMessage {
+	var m map[string]interface{}
+	if json.Unmarshal(raw, &m) != nil {
+		return raw
+	}
+	delete(m, "webhook_token")
+	delete(m, "secret")
+	result, err := json.Marshal(m)
+	if err != nil {
+		return raw
+	}
+	return result
+}
+
+// injectWebhookToken generates a new unique webhook token and injects it
+// into the trigger_config. Returns the updated config and the generated token.
+func injectWebhookToken(raw json.RawMessage) (json.RawMessage, string, error) {
+	var m map[string]interface{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return raw, "", fmt.Errorf("invalid trigger_config JSON: %w", err)
+	}
+	token := uuid.New().String()
+	m["webhook_token"] = token
+	result, err := json.Marshal(m)
+	if err != nil {
+		return raw, "", fmt.Errorf("marshal trigger_config: %w", err)
+	}
+	return result, token, nil
+}
+
+// buildExportEnvelope creates the top-level export document.
+func buildExportEnvelope(automations []automationPortable) automationExportEnvelope {
+	return automationExportEnvelope{
+		Version:     exportVersion,
+		ExportedAt:  time.Now().UTC().Format(time.RFC3339),
+		Automations: automations,
+	}
+}
+
+// ExportOne exports a single automation as a portable JSON document.
+//
+//	GET /automations/{id}/export
+func (h *AutomationHandler) ExportOne(w http.ResponseWriter, r *http.Request) {
+	id, err := urlParamInt64(r, "id")
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid automation ID")
+		return
+	}
+
+	a, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("export: failed to get automation")
+		writeError(w, http.StatusInternalServerError, "failed to get automation")
+		return
+	}
+	if a == nil {
+		writeError(w, http.StatusNotFound, "automation not found")
+		return
+	}
+
+	envelope := buildExportEnvelope([]automationPortable{automationToPortable(a)})
+
+	w.Header().Set("Content-Disposition",
+		fmt.Sprintf(`attachment; filename="automation-%d.json"`, a.ID))
+
+	writeJSONIndent(w, http.StatusOK, envelope)
+}
+
+// ExportBatch exports multiple automations as a single portable JSON document.
+//
+//	POST /automations/export
+func (h *AutomationHandler) ExportBatch(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(req.IDs) == 0 {
+		writeError(w, http.StatusBadRequest, "ids is required and must not be empty")
+		return
+	}
+	if len(req.IDs) > 100 {
+		writeError(w, http.StatusBadRequest, "cannot export more than 100 automations at once")
+		return
+	}
+
+	portables := make([]automationPortable, 0, len(req.IDs))
+	for _, id := range req.IDs {
+		a, err := h.repo.GetByID(r.Context(), id)
+		if err != nil {
+			log.Error().Err(err).Int64("id", id).Msg("export: failed to get automation")
+			writeError(w, http.StatusInternalServerError, "failed to get automation")
+			return
+		}
+		if a == nil {
+			writeError(w, http.StatusNotFound,
+				fmt.Sprintf("automation %d not found", id))
+			return
+		}
+		portables = append(portables, automationToPortable(a))
+	}
+
+	envelope := buildExportEnvelope(portables)
+
+	w.Header().Set("Content-Disposition", `attachment; filename="automations.json"`)
+
+	writeJSONIndent(w, http.StatusOK, envelope)
+}
+
+// importedAutomation describes a successfully imported automation.
+type importedAutomation struct {
+	ID           int64  `json:"id"`
+	Name         string `json:"name"`
+	WebhookToken string `json:"webhook_token,omitempty"`
+}
+
+// importError describes a single import failure within a batch.
+type importError struct {
+	Index int    `json:"index"`
+	Name  string `json:"name"`
+	Error string `json:"error"`
+}
+
+// importResult is the response body for the import endpoint.
+type importResult struct {
+	Imported []importedAutomation `json:"imported"`
+	Errors   []importError        `json:"errors,omitempty"`
+}
+
+// Import creates automations from a portable JSON document. All imported
+// automations start with enabled=false so the user can review before activating.
+// Webhook triggers receive a newly generated token to avoid collisions.
+//
+//	POST /automations/import
+func (h *AutomationHandler) Import(w http.ResponseWriter, r *http.Request) {
+	var envelope automationExportEnvelope
+	if err := json.NewDecoder(r.Body).Decode(&envelope); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+
+	if envelope.Version < 1 || envelope.Version > exportVersion {
+		writeError(w, http.StatusBadRequest,
+			fmt.Sprintf("unsupported export version %d (supported: 1–%d)", envelope.Version, exportVersion))
+		return
+	}
+	if len(envelope.Automations) == 0 {
+		writeError(w, http.StatusBadRequest, "no automations to import")
+		return
+	}
+	if len(envelope.Automations) > 100 {
+		writeError(w, http.StatusBadRequest, "cannot import more than 100 automations at once")
+		return
+	}
+
+	result := importResult{
+		Imported: make([]importedAutomation, 0, len(envelope.Automations)),
+	}
+
+	for i, def := range envelope.Automations {
+		imported, importErr := h.importSingle(r, i, def)
+		if importErr != nil {
+			result.Errors = append(result.Errors, *importErr)
+			continue
+		}
+		result.Imported = append(result.Imported, *imported)
+	}
+
+	status := http.StatusCreated
+	if len(result.Imported) == 0 {
+		status = http.StatusUnprocessableEntity
+	}
+
+	log.Info().
+		Int("imported", len(result.Imported)).
+		Int("errors", len(result.Errors)).
+		Msg("automations imported")
+
+	writeJSON(w, status, result)
+}
+
+// importSingle validates and creates a single automation from a portable definition.
+func (h *AutomationHandler) importSingle(
+	r *http.Request, index int, def automationPortable,
+) (*importedAutomation, *importError) {
+	name := strings.TrimSpace(def.Name)
+	mkErr := func(msg string) *importError {
+		return &importError{Index: index, Name: name, Error: msg}
+	}
+
+	// Validate required fields.
+	if name == "" {
+		return nil, mkErr("name is required")
+	}
+	if def.TriggerType == "" {
+		return nil, mkErr("trigger_type is required")
+	}
+
+	triggerConfig := def.TriggerConfig
+	var webhookToken string
+
+	// For webhook triggers, inject a fresh token since exports strip secrets.
+	if def.TriggerType == "webhook" {
+		var err error
+		triggerConfig, webhookToken, err = injectWebhookToken(triggerConfig)
+		if err != nil {
+			return nil, mkErr("failed to generate webhook token: " + err.Error())
+		}
+
+		// Verify uniqueness of the generated token.
+		if err := h.checkWebhookTokenUniqueness(r, triggerConfig, 0); err != nil {
+			return nil, mkErr(err.Error())
+		}
+	}
+
+	// Validate trigger_config schema.
+	if err := trigger.ValidateTriggerConfig(def.TriggerType, triggerConfig); err != nil {
+		return nil, mkErr("invalid trigger_config: " + err.Error())
+	}
+
+	// Validate actions are parseable.
+	if len(def.Actions) > 0 {
+		if _, err := action.ParseActions(def.Actions); err != nil {
+			return nil, mkErr("invalid actions: " + err.Error())
+		}
+	}
+
+	a := &models.Automation{
+		Name:              name,
+		Description:       def.Description,
+		Enabled:           false, // always disabled on import
+		TriggerType:       def.TriggerType,
+		TriggerConfig:     triggerConfig,
+		Conditions:        def.Conditions,
+		Actions:           def.Actions,
+		CooldownMinutes:   def.CooldownMinutes,
+		MaxExecutionsHour: def.MaxExecutionsHour,
+		StopOnFailure:     def.StopOnFailure,
+		NotifyOnRun:       def.NotifyOnRun,
+		NotifyOnFailure:   def.NotifyOnFailure,
+		SeasonalStart:     def.SeasonalStart,
+		SeasonalEnd:       def.SeasonalEnd,
+		Priority:          def.Priority,
+		Tags:              def.Tags,
+	}
+
+	if err := h.repo.Create(r.Context(), a); err != nil {
+		log.Error().Err(err).Str("name", name).Msg("import: failed to create automation")
+		return nil, mkErr("failed to create automation")
+	}
+
+	log.Info().
+		Int64("automation_id", a.ID).
+		Str("automation", name).
+		Str("trigger_type", def.TriggerType).
+		Msg("automation imported")
+
+	return &importedAutomation{
+		ID:           a.ID,
+		Name:         name,
+		WebhookToken: webhookToken,
+	}, nil
+}
+
+// writeJSONIndent writes an indented JSON response for human-readable export files.
+func writeJSONIndent(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(data)
 }
