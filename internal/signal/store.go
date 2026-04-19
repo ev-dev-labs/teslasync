@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
@@ -252,10 +253,14 @@ func (s *Store) flushNow(vehicleID int64) {
 			}
 		}()
 		flushStart := time.Now()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if err := s.flusher.FlushLiveState(ctx, vehicleID, raw); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: flush to DB failed")
+
+		err := database.RetryOnTransient(ctx, "live_state_flush", func(ctx context.Context) error {
+			return s.flusher.FlushLiveState(ctx, vehicleID, raw)
+		})
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("signal store: flush to DB failed after retries")
 		}
 		metrics.SignalFlushDuration.Observe(time.Since(flushStart).Seconds())
 	}()
@@ -273,8 +278,11 @@ func (s *Store) FlushAll(ctx context.Context) {
 		if raw == nil {
 			continue
 		}
-		if err := s.flusher.FlushLiveState(ctx, vid, raw); err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vid).Msg("signal store: shutdown flush failed")
+		err := database.RetryOnTransient(ctx, "shutdown_flush", func(ctx context.Context) error {
+			return s.flusher.FlushLiveState(ctx, vid, raw)
+		})
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vid).Msg("signal store: shutdown flush failed after retries")
 		}
 	}
 	log.Info().Int("vehicles", len(ids)).Msg("signal store: graceful shutdown flush complete")

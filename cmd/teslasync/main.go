@@ -580,7 +580,7 @@ func main() {
 
 	// Phase 2: Flush SignalStore to Postgres (write-through belt-and-suspenders)
 	if signalStore != nil {
-		flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		flushCtx, flushCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		signalStore.FlushAll(flushCtx)
 		flushCancel()
 	}

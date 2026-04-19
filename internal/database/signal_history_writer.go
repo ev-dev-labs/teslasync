@@ -114,16 +114,29 @@ func (w *SignalHistoryWriter) flush(ctx context.Context) {
 	w.buffer = make([]SignalHistoryRow, 0, cap(rows))
 	w.mu.Unlock()
 
-	_, err := w.db.Pool.CopyFrom(ctx,
-		pgx.Identifier{"signal_history"},
-		[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "created_at"},
-		pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
-			r := rows[i]
-			return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.CreatedAt}, nil
-		}),
-	)
+	err := RetryOnTransient(ctx, "signal_history_flush", func(ctx context.Context) error {
+		_, copyErr := w.db.Pool.CopyFrom(ctx,
+			pgx.Identifier{"signal_history"},
+			[]string{"vehicle_id", "signal", "value_num", "value_str", "value_bool", "created_at"},
+			pgx.CopyFromSlice(len(rows), func(i int) ([]interface{}, error) {
+				r := rows[i]
+				return []interface{}{r.VehicleID, r.Signal, r.ValueNum, r.ValueStr, r.ValueBool, r.CreatedAt}, nil
+			}),
+		)
+		return copyErr
+	})
 	if err != nil {
-		log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_history: batch insert failed")
+		log.Warn().Err(err).Int("rows", len(rows)).Msg("signal_history: batch insert failed after retries")
+		// Re-queue failed rows for the next flush (bounded to prevent memory leak)
+		w.mu.Lock()
+		const maxRequeue = 10000
+		if len(rows) <= maxRequeue {
+			w.buffer = append(rows, w.buffer...)
+		} else {
+			log.Warn().Int("dropped", len(rows)-maxRequeue).Msg("signal_history: dropping oldest rows (requeue limit)")
+			w.buffer = append(rows[len(rows)-maxRequeue:], w.buffer...)
+		}
+		w.mu.Unlock()
 	}
 }
 
