@@ -1491,6 +1491,30 @@ func toBool(v interface{}) bool {
 	}
 }
 
+// parseBuckleStatus converts Tesla's BuckleStatus enum to a boolean.
+// Tesla sends seatbelt signals as enum strings: "BuckleStatusLatched" (buckled)
+// or "BuckleStatusUnlatched" (unbuckled), but may also send booleans.
+func parseBuckleStatus(v interface{}) bool {
+	// Unwrap {"value": X, ...} envelopes
+	if m, ok := v.(map[string]interface{}); ok {
+		if inner, has := m["value"]; has {
+			v = inner
+		} else {
+			return false
+		}
+	}
+	switch val := v.(type) {
+	case bool:
+		return val
+	case string:
+		return val == "BuckleStatusLatched"
+	case float64:
+		return val != 0
+	default:
+		return false
+	}
+}
+
 func toTimestamp(v interface{}) *time.Time {
 	switch val := v.(type) {
 	case string:
@@ -1976,11 +2000,11 @@ func (h *TelemetryHandler) trackSecurity(ctx context.Context, vehicleID int64, s
 		ev.TonneauTentMode = &s
 	}
 	if v, ok := signals["DriverSeatBelt"]; ok {
-		b := toBool(v)
+		b := parseBuckleStatus(v)
 		ev.DriverSeatBelt = &b
 	}
 	if v, ok := signals["PassengerSeatBelt"]; ok {
-		b := toBool(v)
+		b := parseBuckleStatus(v)
 		ev.PassengerSeatBelt = &b
 	}
 	if err := h.securityRepo.Insert(ctx, ev); err != nil {
