@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { cn } from '@/lib/cn';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  RefreshCw, Bell, Radio, ArrowUpRight, Car, Activity,
-  Route, BatteryCharging, Shield, AlertCircle,
+  RefreshCw, Bell, Radio, ArrowUpRight, Activity,
+  Route, BatteryCharging, Shield, AlertCircle, Settings, Plus, RotateCcw,
 } from 'lucide-react';
 import { request } from '@/api/client';
 import { useAuthStatus } from '@/api/hooks/useSettings';
@@ -15,34 +14,27 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, EmptyState } from '@/components/feedback';
-import { StatusBadge } from '@/components/data-display/StatusBadge';
-import { FreshnessIndicator } from '@/components/data-display';
+import { AlertBanner } from '@/components/feedback';
 import { Skeleton } from '@/components/feedback/Skeleton';
-import { useSettings } from '@/hooks/useSettings';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
-import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
-import { VehicleHero } from '../components/VehicleHero';
-import { FleetStatsBar } from '../components/FleetStatsBar';
-import { RecentActivity } from '../components/RecentActivity';
-import { LiveTelemetry } from '../components/LiveTelemetry';
-import { QuickNav } from '../components/QuickNav';
-import type {
-  Vehicle, VehicleState, FleetAnalytics, Alert,
-  Drive, ChargingSession,
-  MotorData, ClimateData, SecurityData, TirePressureData, MediaData, LocationData,
-} from '../types';
+import { DashboardGrid } from '../components/DashboardGrid';
+import { WidgetPicker } from '../components/WidgetPicker';
+import { useDashboardLayout } from '../hooks/useDashboardLayout';
+import type { Vehicle, Alert } from '../types';
 
 export default function DashboardPage() {
   usePageTitle('Dashboard');
   const { t } = useTranslation('dashboard');
   const queryClient = useQueryClient();
+
+  /* ——— Dashboard layout state ——— */
   const {
-    convertDistance, convertSpeed, convertTemp, convertEfficiency, convertPressure,
-    isFahrenheit, distanceUnit, speedUnit, tempUnit, efficiencyUnit, pressureUnit,
-  } = useSettings();
+    layout, editMode, setEditMode,
+    addWidget, removeWidget, reorderWidgets,
+    resetLayout, applyPreset,
+  } = useDashboardLayout();
+  const [showPicker, setShowPicker] = useState(false);
 
   /* ——— Auth status ——— */
   const { data: auth } = useAuthStatus();
@@ -59,79 +51,19 @@ export default function DashboardPage() {
     queryKey: ['vehicles'],
     queryFn: () => request<Vehicle[]>('/vehicles'),
   });
-  const { data: analytics, error: analyticsError } = useQuery({
-    queryKey: ['fleet-analytics', '30'],
-    queryFn: () => request<FleetAnalytics>('/analytics/fleet?days=30'),
-  });
   const { data: alerts, error: alertsError } = useQuery({
     queryKey: ['alerts'],
     queryFn: () => request<Alert[]>('/alerts?limit=10'),
   });
 
-  /* ——— Primary vehicle state ——— */
-  const primaryVehicle = vehicles?.[0];
-  const { data: primaryStateData, dataUpdatedAt, error: stateError } = useQuery({
-    queryKey: ['vehicle-state', primaryVehicle?.id],
-    queryFn: () => request<{ state: VehicleState }>(`/vehicles/${primaryVehicle!.id}/state`),
-    enabled: !!primaryVehicle,
-    refetchInterval: 30_000,
-  });
-  const primaryState = primaryStateData?.state ?? null;
-
-  /* SSE live signals for firmware etc. */
-  const { state: live } = useVehicleLive(primaryVehicle?.id);
-  const firmwareVersion = live.version || live.swUpdateVersion || primaryState?.software_version || '—';
-
-  /* ——— Recent drives & charges ——— */
-  const { data: recentDrives } = useQuery({
-    queryKey: ['drives', primaryVehicle?.id, 'recent-5'],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${primaryVehicle!.id}&limit=5`),
-    enabled: !!primaryVehicle,
-  });
-  const { data: recentCharges } = useQuery({
-    queryKey: ['charging', primaryVehicle?.id, 'recent-5'],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${primaryVehicle!.id}&limit=5`),
-    enabled: !!primaryVehicle,
-  });
-
-  /* ——— Other vehicles ——— */
-  const otherVehicles = vehicles?.slice(1) ?? [];
-  const { data: otherStates } = useQuery({
-    queryKey: ['other-vehicle-states', otherVehicles.map((v) => v.id).sort()],
-    queryFn: async () => {
-      const entries = await Promise.all(
-        otherVehicles.map(async (v) => {
-          try { return [v.id, (await request<{ state: VehicleState }>(`/vehicles/${v.id}/state`)).state] as const; }
-          catch { return [v.id, null] as const; }
-        }),
-      );
-      return Object.fromEntries(entries) as Record<number, VehicleState | null>;
-    },
-    enabled: otherVehicles.length > 0,
-  });
-
-  /* ——— Live telemetry queries ——— */
-  const telemetryOpts = { enabled: !!primaryVehicle, refetchInterval: 5_000, staleTime: 30_000 };
-  const { data: motorData } = useQuery({ queryKey: ['motor-latest', primaryVehicle?.id], queryFn: () => request<MotorData>(`/motor/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: climateData } = useQuery({ queryKey: ['climate-latest', primaryVehicle?.id], queryFn: () => request<ClimateData>(`/climate/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: securityData } = useQuery({ queryKey: ['security-latest', primaryVehicle?.id], queryFn: () => request<SecurityData>(`/security/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: tireData } = useQuery({ queryKey: ['tire-latest', primaryVehicle?.id], queryFn: () => request<TirePressureData>(`/tire-pressure/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: mediaData } = useQuery({ queryKey: ['media-latest', primaryVehicle?.id], queryFn: () => request<MediaData>(`/media/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-  const { data: locationData } = useQuery({ queryKey: ['location-latest', primaryVehicle?.id], queryFn: () => request<LocationData>(`/location-snapshots/latest?vehicle_id=${primaryVehicle!.id}`), ...telemetryOpts });
-
   /* ——— Derived values ——— */
-  const onlineCount = vehicles?.filter((v) => v.state === 'online').length ?? 0;
   const unreadAlerts = alerts?.filter((a) => !a.is_read).length ?? 0;
-  const anyError = [vehiclesError, analyticsError, alertsError, stateError].find(Boolean) as Error | undefined;
+  const anyError = [vehiclesError, alertsError].find(Boolean) as Error | undefined;
 
   /* ——— Refresh logic ——— */
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setTick] = useState(0);
   useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 60_000); return () => clearInterval(id); }, []);
-
-  const lastUpdatedLabel = dataUpdatedAt
-    ? `Updated ${formatTimeAgo(new Date(dataUpdatedAt))}`
-    : undefined;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -152,14 +84,33 @@ export default function DashboardPage() {
 
   /* ——— Header actions ——— */
   const headerActions = (
-    <div className="flex items-center gap-3">
-      {lastUpdatedLabel && (
-        <span className="text-[10px] text-[var(--text-muted)] hidden sm:inline">{lastUpdatedLabel}</span>
+    <div className="flex items-center gap-2">
+      {editMode ? (
+        <>
+          <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.addWidget', 'Add Widget')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={resetLayout}>
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.reset', 'Reset')}
+          </Button>
+          <Button size="sm" onClick={() => setEditMode(false)}>
+            {t('dashboard.done', 'Done')}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
+            <Settings className="h-3.5 w-3.5 mr-1" />
+            {t('dashboard.customize', 'Customize')}
+          </Button>
+        </>
       )}
-      <Button variant="ghost" size="sm" onClick={handleRefresh} loading={isRefreshing}>
-        <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-      </Button>
-      {unreadAlerts > 0 && (
+      {!editMode && unreadAlerts > 0 && (
         <Link to="/alerts" className="relative">
           <Bell className="h-5 w-5 text-[var(--text-secondary)] hover:text-neon-cyan transition-colors" />
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-neon-red text-[9px] font-bold text-[var(--text-primary)]">
@@ -210,86 +161,24 @@ export default function DashboardPage() {
           <LoadingSkeleton />
         ) : vehicles && vehicles.length > 0 ? (
           <>
-            {/* Primary Vehicle Hero */}
-            {primaryVehicle && (
+            {/* Edit mode hint */}
+            {editMode && (
               <FadeIn>
-                <VehicleHero
-                  vehicle={primaryVehicle}
-                  state={primaryState}
-                  firmwareVersion={firmwareVersion}
-                  convertDistance={convertDistance}
-                  convertSpeed={convertSpeed}
-                  convertTemp={convertTemp}
-                  isFahrenheit={isFahrenheit}
-                  distanceUnit={distanceUnit}
-                  speedUnit={speedUnit}
-                  tempUnit={tempUnit}
-                />
+                <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-3 text-center">
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    {t('dashboard.editHint', 'Drag widgets to reorder. Click "Add Widget" to add new ones.')}
+                  </p>
+                </div>
               </FadeIn>
             )}
 
-            {/* Fleet Stats Bar */}
-            <FleetStatsBar
-              analytics={analytics}
-              vehicleCount={vehicles.length}
-              onlineCount={onlineCount}
-              unreadAlerts={unreadAlerts}
-              recentDrives={recentDrives}
-              recentCharges={recentCharges}
-              convertDistance={convertDistance}
-              convertEfficiency={convertEfficiency}
-              distanceUnit={distanceUnit}
-              efficiencyUnit={efficiencyUnit}
-            />
-
-            {/* Activity + Charts Grid */}
-            <FadeIn delay={0.1}>
-              <RecentActivity
-                recentDrives={recentDrives}
-                recentCharges={recentCharges}
-                analytics={analytics}
-                convertDistance={convertDistance}
-                convertEfficiency={convertEfficiency}
-                distanceUnit={distanceUnit}
-                efficiencyUnit={efficiencyUnit}
-              />
-            </FadeIn>
-
-            {/* Other Vehicles Strip */}
-            <FadeIn delay={0.15}>
-              {otherVehicles.length > 0 ? (
-                <OtherVehiclesStrip
-                  vehicles={otherVehicles}
-                  states={otherStates}
-                  convertDistance={convertDistance}
-                  convertTemp={convertTemp}
-                  distanceUnit={distanceUnit}
-                />
-              ) : (
-                <EmptyState message={t('dashboard.noOtherVehicles', 'No other vehicles')} />
-              )}
-            </FadeIn>
-
-            {/* Quick Navigation */}
-            <FadeIn delay={0.2}>
-              <QuickNav />
-            </FadeIn>
-
-            {/* Live Telemetry */}
-            <FadeIn delay={0.25}>
-              <LiveTelemetry
-                motorData={motorData}
-                climateData={climateData}
-                securityData={securityData}
-                tireData={tireData}
-                mediaData={mediaData}
-                locationData={locationData}
-                convertTemp={convertTemp}
-                convertDistance={convertDistance}
-                convertPressure={convertPressure}
-                tempUnit={tempUnit}
-                distanceUnit={distanceUnit}
-                pressureUnit={pressureUnit}
+            {/* Widget Grid */}
+            <FadeIn>
+              <DashboardGrid
+                widgets={layout.widgets}
+                editMode={editMode}
+                onReorder={reorderWidgets}
+                onRemove={removeWidget}
               />
             </FadeIn>
           </>
@@ -303,68 +192,16 @@ export default function DashboardPage() {
           </FadeIn>
         )}
       </div>
-    </PageContainer>
-  );
-}
 
-/* ——— Other Vehicles Strip ——— */
-function OtherVehiclesStrip({ vehicles, states, convertDistance, convertTemp, distanceUnit }: {
-  vehicles: Vehicle[];
-  states: Record<number, VehicleState | null> | undefined;
-  convertDistance: (km: number) => number;
-  convertTemp: (c: number) => number;
-  distanceUnit: string;
-}) {
-  const { t } = useTranslation('dashboard');
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="section-title flex items-center gap-2">
-          <Car className="h-4 w-4 text-[var(--text-secondary)]" /> {t('other.title', 'Other Vehicles')}
-        </h3>
-        <Link to="/vehicles" className="text-xs text-[var(--text-muted)] hover:text-neon-cyan transition-colors flex items-center gap-1">
-          {t('other.manage', 'Manage fleet')} <ArrowUpRight className="h-3 w-3" />
-        </Link>
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
-        {vehicles.map((v) => {
-          const s = states?.[v.id];
-          return (
-            <Link key={v.id} to={`/vehicles/${v.id}`} className="block group">
-              <GlassPanel hover glow="cyan" className="p-3 sm:p-4 min-w-[180px] transition-all group-hover:scale-[1.02]">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{v.display_name || v.vin}</p>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={v.state} size="sm" />
-                      <FreshnessIndicator timestamp={v.updated_at} size="sm" />
-                    </div>
-                  </div>
-                </div>
-                {s ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{t('other.battery', 'Battery')}</p>
-                      <p className={cn("text-sm font-bold", s.battery_level > 50 ? "text-emerald-500" : "text-amber-500")}>{s.battery_level}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{t('other.range', 'Range')}</p>
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{fmtNumber(convertDistance(s.rated_range), 0)} {distanceUnit}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{t('other.temp', 'Temp')}</p>
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{s.inside_temp != null ? `${fmtNumber(convertTemp(s.inside_temp), 0)}°` : '—'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-600 text-center">{t('other.asleep', 'Asleep')}</p>
-                )}
-              </GlassPanel>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+      {/* Widget Picker Drawer */}
+      <WidgetPicker
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        onAddWidget={addWidget}
+        onApplyPreset={applyPreset}
+        activeWidgetIds={layout.widgets.map((w) => w.widgetId)}
+      />
+    </PageContainer>
   );
 }
 
@@ -430,16 +267,4 @@ function LoadingSkeleton() {
       </div>
     </div>
   );
-}
-
-/* ——— Relative time helper ——— */
-function formatTimeAgo(date: Date): string {
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
 }
