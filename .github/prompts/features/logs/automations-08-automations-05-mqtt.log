@@ -1,0 +1,75 @@
+Now let me look at the cron_test.go mock repo to understand the `GetByTriggerType` method, and check the database automation repo for available methods:
+
+Now I have a clear picture of all existing trigger patterns. Let me get a rubber-duck critique before implementing:
+
+A few real problems stand out:
+
+- **Blocking ΓÇö retained messages can fire stale automations.**  
+  The shared MQTT client publishes with `retain=true` by default (`internal/mqtt/mqtt.go:63-66`). That means `Start`, `Reload`, or reconnect can immediately replay old state and trigger automations from stale data.  
+  **Fix:** treat `msg.Retained()` as non-triggering by default, or make retained-triggering explicit in config. Include `retained` in the snapshot.
+
+- **Blocking ΓÇö reconnect will drop subscriptions.**  
+  The client uses `CleanSession(true)` (`internal/mqtt/mqtt.go:27-39`). If you only subscribe in `Start`, those subscriptions disappear after reconnect.  
+  **Fix:** keep the desired subscription set and resubscribe in `OnConnect`, or use a dedicated client configured for durable subscriptions.
+
+- **Blocking ΓÇö overlapping subscriptions can double-fire automations.**  
+  Your plan subscribes to multiple topic filters, then `onMessage` scans **all** MQTT automations. If one publish matches two subscribed filters, Paho/broker may deliver it twice; your scan-all handler can then fire the same automation twice.  
+  **Fix:** donΓÇÖt scan all automations per callback. Index automations by the specific subscribed filter and evaluate only that filterΓÇÖs automations, or otherwise dedupe deliveries.
+
+- **High ΓÇö using the shared underlying client makes `Unsubscribe` dangerous.**  
+  The same client is shared across the app (`cmd/teslasync/main.go:293-313` and other uses). MQTT subscriptions are client-wide, not caller-scoped. If an automation subscribes to a topic another component also uses, your `Reload/Stop` unsubscribe can break that component.  
+  **Fix:** use a dedicated MQTT client for automation triggers, or a subscription manager with ref-counting. At minimum, block internal app topic prefixes from user automations.
+
+- **High ΓÇö ambiguous config should be rejected, not prioritized.**  
+  ΓÇ£`payload_match` wins over JSON-path rulesΓÇ¥ will silently ignore part of user config and create hard-to-debug behavior.  
+  **Fix:** make these modes mutually exclusive in `parseMQTTConfig`; auto-disable invalid mixes.
+
+- **High ΓÇö pre-parse/compile configs at reload time.**  
+  DonΓÇÖt leave parsing/validation to `onMessage`. Invalid configs should be auto-disabled once during `Start/Reload`, not retried on every message.  
+  **Fix:** cache a compiled form like `{automation, parsedConfig}`.
+
+- **High ΓÇö `gt/lt` is easy to get wrong.**  
+  JSON numbers unmarshal as `float64`; payloads may also be strings/bools. A naive compare risks lexicographic bugs (`"10" < "2"`). Missing JSON paths also need explicit behavior.  
+  **Fix:** define strict type rules:
+  - `gt/lt` numeric only
+  - `contains` string only
+  - `eq/neq` typed compare
+  - missing path = no match, not panic
+
+- **Medium ΓÇö validate MQTT filter syntax, not just ΓÇ£topic requiredΓÇ¥.**  
+  `+` and `#` have placement rules. A bad filter should be auto-disabled early, not handled by a homegrown matcher at runtime.  
+  **Fix:** validate `#` only as final full segment, `+` only as full segment, and preserve empty segments correctly.
+
+- **Medium ΓÇö your ΓÇ£many automationsΓÇ¥ concern is real, but thereΓÇÖs already a hidden cap.**  
+  `GetByTriggerType` is limited to 500 rows (`internal/database/automation_repo.go:134-159`). That makes the global-scan design more fragile for MQTT than cron, because every message pays the full scan cost and anything beyond 500 is ignored.  
+  **Fix:** if MQTT is meant to scale, remove/raise that cap and index automations by topic filter.
+
+- **Use `RWMutex` or atomic snapshot, not `sync.Map`.**  
+  You need coordinated updates across `automations`, `topics`, and lifecycle state. `sync.Map` is a poor fit for multi-structure consistency.  
+  **Fix:** build an immutable compiled snapshot on reload, then atomically swap it; otherwise use `RWMutex`.
+
+If you address only 3 things first, IΓÇÖd prioritize: **retained-message behavior**, **reconnect resubscribe**, and **duplicate-fire from overlapping subscriptions**. Those are the most likely correctness bugs.Good feedback. Key takeaways I'm adopting: pre-compile configs at load time, mutually exclusive `payload_match` vs `json_path`, skip retained messages by default, validate MQTT filter syntax, follow existing `AddRoute` + `Subscribe` pattern for reconnect resilience. Let me implement.
+
+Now let me create the test file:
+
+Now let me verify the code compiles and tests pass:
+
+Build passes. Now run the tests:
+
+Two issues: `strPtr` redeclared (exists in vehicle_state_test.go) and `mockToken.WaitTimeout` has wrong signature. Let me fix:
+
+Now replace all `strPtr` usages in the test file with `mqttStrPtr`:
+
+The regex replacement hit the function definition too, creating `mqttmqttStrPtr`. Let me fix:
+
+Good, no more double-prefix. Now test again:
+
+All 54 tests pass. Let me also verify no existing tests are broken:
+
+The only failure is `TestLiveScheduler_FiresWithinWindow` ΓÇö a pre-existing cron test that's timing-sensitive (90s timeout). Let me confirm it's not related to my changes:
+
+All MQTT tests pass. The `TestLiveScheduler_FiresWithinWindow` failure is a pre-existing timing-dependent cron test unrelated to my changes. Let me also verify the full package builds:
+
+Full project builds clean. Let me commit:
+
+

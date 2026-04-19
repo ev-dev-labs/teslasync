@@ -1,0 +1,13 @@
+The commands already exist in all three locations. Let me verify the implementations are complete and correct.
+
+All three speed limit commands are already fully implemented across all three layers:
+
+1. **Backend `client.go`** (lines 606ΓÇô608): `speed_limit_set_limit`, `speed_limit_clear_pin`, `speed_limit_clear_pin_admin` in `commandMap` Γ£à
+2. **Backend `command_handler.go`** (lines 119ΓÇô121): All three in `allowedCommands` Γ£à
+3. **Frontend `CommandsPage.tsx`** (lines 255ΓÇô316): All five speed limit buttons (set limit, activate, deactivate, clear PIN, admin clear PIN) with proper prompts, validation, and i18n Γ£à
+
+Let me run the verification steps from the spec.
+
+Both `go build ./...` and `npx tsc --noEmit` pass cleanly.
+
+

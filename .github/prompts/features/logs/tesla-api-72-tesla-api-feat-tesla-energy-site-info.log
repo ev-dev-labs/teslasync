@@ -1,0 +1,483 @@
+Perfect! Now let me view the key files to understand the patterns:Now let me view the Tesla client file in sections, and look at the router more closely:Now let me look at the doRequest method in the Tesla client and look for GetProducts:Perfect! Let me get the doRequest and GetProducts implementations:Let me get line numbers and view those sections:Now let me find the router configuration section and search for the energy sites pages:Now let me look at the existing Tesla client methods pattern and the `parseSiteID` helper:Let me get line numbers and view those sections:
+
+Now let me check for the energy site detail page in the frontend:Let me check if there's any page that uses the energy sites hooks:Good! Let me look at the EnergyProductsPage which seems to be for energy sites:Perfect! Now let me get the doRequest method details with better line numbers:Perfect! Now let me create a comprehensive summary report:
+
+## Comprehensive Codebase Exploration Report
+
+Based on my analysis of the Tesla Energy Sites feature, here are all the requested findings:
+
+---
+
+### 1. **Tesla Client** (`D:\repos\teslasync\internal\tesla\client.go`)
+
+#### `doRequest` Method (Lines 345-432)
+**Function Signature:**
+```go
+func (c *Client) doRequest(ctx context.Context, method, path string, body io.Reader) ([]byte, int, error)
+```
+
+**Parameters:**
+- `ctx context.Context` - Context for request cancellation/timeout
+- `method string` - HTTP method (GET, POST, etc.)
+- `path string` - API endpoint path (appended to baseURL)
+- `body io.Reader` - Request body (can be nil)
+
+**Return Values:**
+- `[]byte` - Response body as bytes
+- `int` - HTTP status code
+- `error` - Error if request failed
+
+**Key Details (Lines 345-432):**
+- Uses rate limiter to throttle requests (~10 req/sec)
+- Runs through circuit breaker to detect Tesla API health issues
+- Captures request/response body for audit logging
+- Sets `Authorization: Bearer {token}` header
+- Handles 401 Unauthorized and 429 Rate Limited specially (don't trigger circuit breaker)
+- Server errors (5xx) trigger the circuit breaker
+- Logs all requests via callback if configured
+
+#### `GetProducts` Method (Lines 946-949)
+```go
+func (c *Client) GetProducts(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/products", nil)
+}
+```
+**Pattern:** Simple GET request to `/api/1/products` endpoint. Returns vehicles AND energy products (filtered by `resource_type` in the handler).
+
+---
+
+### 2. **Energy Site Handler** (`D:\repos\teslasync\internal\api\energy_site_handler.go`)
+
+#### Handler Struct and Constructor (Lines 14-26)
+```go
+type EnergySiteHandler struct {
+	teslaClient *tesla.Client
+	repo        *database.TeslaEnergySiteRepo
+}
+
+func NewEnergySiteHandler(tc *tesla.Client, db *database.DB) *EnergySiteHandler {
+	return &EnergySiteHandler{
+		teslaClient: tc,
+		repo:        database.NewTeslaEnergySiteRepo(db),
+	}
+}
+```
+
+#### Handler Methods:
+
+**List Method (Lines 29-40)** - Fetch all stored energy sites from DB
+```go
+func (h *EnergySiteHandler) List(w http.ResponseWriter, r *http.Request) {
+	sites, err := h.repo.GetAll(r.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to list energy sites")
+		writeError(w, http.StatusInternalServerError, "failed to list energy sites")
+		return
+	}
+	if sites == nil {
+		sites = []*models.TeslaEnergySite{}
+	}
+	writeJSON(w, http.StatusOK, sites)
+}
+```
+
+**Refresh Method (Lines 42-89)** - Fetch from Tesla API, parse, save to DB
+```go
+func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		return
+	}
+	// Calls h.teslaClient.GetProducts() ΓåÆ parses JSON ΓåÆ h.repo.ReplaceAll() ΓåÆ returns stored sites
+}
+```
+
+#### How it accesses configRepo:
+The handler does **NOT** use a config repo. It uses:
+- `teslaClient *tesla.Client` - for API calls (has token management)
+- `repo *database.TeslaEnergySiteRepo` - for database operations (not a config repo, a data repo)
+
+---
+
+### 3. **Router Configuration** (`D:\repos\teslasync\internal\api\router.go`)
+
+#### Energy Site Routes (Lines 324-341)
+```go
+// Tesla Energy Sites (product discovery)
+r.Get("/tesla/energy-sites", energySiteHandler.List)
+r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/energy-sites/refresh", energySiteHandler.Refresh)
+
+// Tesla Energy Site History (calendar_history + telemetry_history)
+r.Route("/tesla/energy-sites/{siteID}", func(r chi.Router) {
+	r.Get("/energy-history", teslaEnergyHistoryHandler.EnergyHistory)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/energy-history/refresh", teslaEnergyHistoryHandler.RefreshEnergyHistory)
+	r.Get("/backup-history", teslaEnergyHistoryHandler.BackupHistory)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/backup-history/refresh", teslaEnergyHistoryHandler.RefreshBackupHistory)
+	r.Get("/charging-history", teslaEnergyHistoryHandler.ChargingHistory)
+	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/charging-history/refresh", teslaEnergyHistoryHandler.RefreshChargingHistory)
+
+	// Live status (power flow snapshots)
+	r.Get("/live-status", teslaEnergyLiveStatusHandler.LiveStatus)
+	r.Get("/live-status/history", teslaEnergyLiveStatusHandler.LiveStatusHistory)
+	r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/live-status/refresh", teslaEnergyLiveStatusHandler.RefreshLiveStatus)
+})
+```
+
+#### Route Group Structure:
+- Rate limiting using `httprate.LimitByIP()` with 5-10 requests per minute for API calls
+- All routes nested under `/api/v1` (full path: `/api/v1/tesla/energy-sites`)
+- Site-specific routes use `{siteID}` path parameter
+
+---
+
+### 4. **Config Repo** (`D:\repos\teslasync\internal\database\tesla_energy_site_repo.go`)
+
+**Note:** There is NO `tesla_user_config` repo. There IS a `TeslaEnergySiteRepo` which stores energy site product data.
+
+#### Repo Struct and Constructor (Lines 11-19)
+```go
+type TeslaEnergySiteRepo struct {
+	db *DB
+}
+
+func NewTeslaEnergySiteRepo(db *DB) *TeslaEnergySiteRepo {
+	return &TeslaEnergySiteRepo{db: db}
+}
+```
+
+#### GetAll Method (Lines 21-54)
+```go
+func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergySite, error) {
+	query := `SELECT id, energy_site_id, resource_type, site_name,
+		gateway_id, total_pack_energy, percentage_charged, battery_type,
+		backup_capable, storm_mode_enabled,
+		has_solar, has_battery, has_grid, has_load_meter,
+		tou_capable, storm_mode_capable,
+		raw_json, fetched_at, created_at, updated_at
+		FROM tesla_energy_sites
+		ORDER BY site_name ASC`
+	// Returns []*models.TeslaEnergySite
+}
+```
+
+#### ReplaceAll Method (Lines 56-97)
+```go
+func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*models.TeslaEnergySite) error {
+	tx, err := r.db.Pool.Begin(ctx)
+	// DELETE FROM tesla_energy_sites
+	// INSERT INTO tesla_energy_sites (energy_site_id, resource_type, site_name, ...) VALUES (...)
+	// Returns error
+}
+```
+**Pattern:** Transaction-based atomic replace - deletes all old sites, inserts new batch.
+
+#### Model Struct (implicit from queries and usage):
+```go
+type TeslaEnergySite struct {
+	ID                int64
+	EnergySiteID      int64
+	ResourceType      string
+	SiteName          string
+	GatewayID         *string
+	TotalPackEnergy   *float64
+	PercentageCharged *float64
+	BatteryType       *string
+	BackupCapable     bool
+	StormModeEnabled  bool
+	HasSolar          bool
+	HasBattery        bool
+	HasGrid           bool
+	HasLoadMeter      bool
+	TOUCapable        bool
+	StormModeCapable  bool
+	RawJSON           string
+	FetchedAt         time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+```
+
+---
+
+### 5. **Frontend Hooks** (`D:\repos\teslasync\web\src\api\hooks\useEnergy.ts`)
+
+#### Import Patterns (Lines 1-20)
+```typescript
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { request } from '../client';
+import { safeArray } from '@/lib/safeArray';
+import type {
+  EnergyStats,
+  BatteryHealth,
+  // ... other types
+  TeslaEnergySite,
+  TeslaEnergyHistoryEntry,
+  TeslaBackupEvent,
+  TeslaWCChargingEntry,
+  TeslaEnergyLiveStatus,
+} from '@/types/energy';
+```
+
+#### Existing Energy Site Hooks (Lines 114-132):
+```typescript
+export function useTeslaEnergySites() {
+  return useQuery({
+    queryKey: ['tesla-energy-sites'],
+    queryFn: () => request<TeslaEnergySite[]>('/tesla/energy-sites'),
+    staleTime: 60_000,
+    select: safeArray,
+  });
+}
+
+export function useRefreshTeslaEnergySites() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaEnergySite[]>('/tesla/energy-sites/refresh', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tesla-energy-sites'] });
+    },
+  });
+}
+```
+
+#### Energy History Hooks (Lines 138-158, 210-227):
+```typescript
+export function useTeslaEnergyHistory(
+  siteId?: number,
+  period = 'day',
+  since?: string,
+  until?: string,
+) {
+  const params = new URLSearchParams({ period });
+  if (since) params.set('since', since);
+  if (until) params.set('until', until);
+
+  return useQuery({
+    queryKey: ['tesla-energy-history', siteId, period, since, until],
+    queryFn: () =>
+      request<TeslaEnergyHistoryEntry[]>(
+        `/tesla/energy-sites/${siteId}/energy-history?${params.toString()}`,
+      ),
+    enabled: !!siteId,
+    staleTime: 5 * 60_000,
+    select: safeArray,
+  });
+}
+```
+
+#### Live Status Hooks (Lines 271-317):
+```typescript
+export function useTeslaEnergyLiveStatus(siteId?: number) {
+  return useQuery({
+    queryKey: ['tesla-live-status', siteId],
+    queryFn: () =>
+      request<TeslaEnergyLiveStatus>(`/tesla/energy-sites/${siteId}/live-status`),
+    enabled: !!siteId,
+    refetchInterval: 30_000,
+  });
+}
+```
+
+---
+
+### 6. **Energy Site Detail Pages** (`D:\repos\teslasync\web\src\features\battery\pages/`)
+
+#### EnergyProductsPage.tsx (Lines 1-220)
+**Structure:**
+- **Sections:**
+  1. Summary stats (total sites, with solar, with battery, backup capable)
+  2. Energy site cards (one per Powerwall/Solar system)
+
+- **Key Components:**
+  - `EnergySiteCard` component (lines 63-129) - displays individual site info
+  - Stats grid showing: Charge %, Capacity (Wh), Type
+  - Capability badges: Solar, Battery, Grid, Backup, Storm Watch
+
+- **Hooks Used:**
+  - `useTeslaEnergySites()` - fetch list
+  - `useRefreshTeslaEnergySites()` - refresh from Tesla
+
+- **Helper Functions:**
+  - `fmtEnergy(wh)` - formats Wh/kWh
+  - `resourceIcon(type)` - maps type to icon
+  - `resourceLabel(type)` - maps type to label (batteryΓåÆ"Powerwall", solarΓåÆ"Solar")
+
+#### PowerFlowDashboardPage.tsx (Lines 1-422)
+**Structure:**
+- **Sections:**
+  1. Status badges (grid status, storm mode, backup capability, last update)
+  2. Current power stats (Solar Production, Battery, Home Consumption, Grid)
+  3. Battery state (SOC %, energy remaining, total capacity)
+  4. Power flow diagram (solarΓåÆhome, batteryΓåÆhome, gridΓåÆhome, grid services)
+  5. Historical charts (area chart for power, line chart for SOC)
+
+- **Hooks Used:**
+  - `useTeslaEnergyLiveStatus(siteId)` - current snapshot (30s refresh)
+  - `useTeslaEnergyLiveStatusHistory(siteId, since, until, limit)` - historical data
+  - `useRefreshTeslaEnergyLiveStatus()` - manual refresh
+
+- **Helper Functions:**
+  - `fmtWatts(watts)` - formats W/kW with sign
+  - `fmtWh(wh)` - formats Wh/kWh with sign
+  - `FlowArrow` component - visualizes power flow direction
+
+---
+
+### 7. **Helper Functions** (`D:\repos\teslasync\internal\api\helpers.go`)
+
+#### urlParamInt64 (Lines 103-106)
+```go
+func urlParamInt64(r *http.Request, key string) (int64, error) {
+	return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
+}
+```
+**Usage:** Extract int64 from URL parameters like `{siteID}`. Returns parsed int64 or parse error.
+
+#### writeJSON (Lines 16-23)
+```go
+func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	if dataLet me check if the `tesla_user_config` table/migration exists: != nil {
+		_ = json.NewEncoder(w).Encode(data)
+	}
+}
+```
+**Usage:** Write JSON response with given HTTP status and data structure.
+
+#### writeError (Lines 55-61)
+```go
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{
+		"error": msg,
+		"code":  httpStatusCode(
+
+status),
+	})
+}
+```
+**Usage:** Write standardized error response with `{"error": msg, "code": "CODE_NAME"}` structure.
+
+---
+
+### Summary of Patterns
+
+| Component | Pattern | Key Detail |
+|-----------|---------|-----------|
+| **Tesla Client** | `doRequest(ctx, method, path, body)` | Returns `([]byte, int, error)`. Rate-limited + circuit-breaker wrapped |
+| **API Handler** | Constructor takes `*tesla.Client` + `*database.DB` | List fetches from DB, Refresh calls Tesla API then DB |
+| **Router** | Rate-limited POST endpoints with 5 req/min limit | Path params like `{siteID}` for detail endpoints |
+| **Database Repo** | Single `GetAll()` and `ReplaceAll()` methods | Atomic transaction-based replace pattern |
+| **Frontend Hooks** | `useQuery`/`useMutation` with TanStack Query | Uses `safeArray` selector + query key invalidation on mutations |
+| **Frontend Pages** | Container + components pattern | Separate list page (EnergyProductsPage) + detail view (PowerFlowDashboardPage) |I now have a thorough understanding of the codebase. Let me consult the rubber duck before implementing.
+
+Your plan is workable, but I see **2 blocking issues** and a couple of contract/design tweaks worth making.
+
+## Blocking issues
+
+1. **`ReplaceAll` will destroy `site_info` unless you change it**
+   - `TeslaEnergySiteRepo.ReplaceAll` currently does `DELETE FROM tesla_energy_sites` and then reinserts everything. That will wipe any `site_info_*` columns on every products refresh.  
+   - Source: `internal/database/tesla_energy_site_repo.go:56-96`
+   - **Fix:** either:
+     - change `ReplaceAll` to **upsert by `energy_site_id`** and preserve `site_info_json/site_info_fetched_at`, then delete only rows no longer returned by Tesla, or
+     - use a separate table keyed by `energy_site_id`.
+   - If you keep same-table storage **without** fixing `ReplaceAll`, the feature is fragile.
+
+2. **`UpdateSiteInfo` can silently ΓÇ£succeedΓÇ¥ without persisting anything**
+   - Your repo method uses `UPDATE ... WHERE energy_site_id = $4`. If that site row doesnΓÇÖt exist yet, it updates 0 rows and returns no error.
+   - ThatΓÇÖs especially risky because same-table storage depends on `/products` having been refreshed first.
+   - **Fix:** check `RowsAffected() == 1` and return not-found/error, or do an upsert-style write.
+
+## Strong recommendation
+
+3. **Use `JSONB`, not `TEXT`, for `site_info_json`**
+   - The codebase already stores Tesla raw payloads as `JSONB` (`raw_json` on energy/history/live-status/sites migrations).
+   - Sources: `migrations/000112...`, `000113...`, `000114_add_tesla_energy_sites.up.sql:18`
+   - **Impact:** `TEXT` allows invalid JSON, makes raw-write handlers riskier, and is inconsistent with existing storage.
+   - **Fix:** `site_info_json JSONB DEFAULT NULL`.
+
+## Answers to your 5 concerns
+
+### 1) Storage approach
+- **Same table is fine** **if** you fix `ReplaceAll`.
+- **2KB is trivial** for Postgres.
+- If you expect more per-site cached endpoints later, a separate table may age better. But for one payload, co-location is reasonable.
+
+### 2) ReplaceAll impact
+- **Yes, this is real and blocking.**
+- Preserve by `energy_site_id`, not by DB `id`.
+- Best fix: make `ReplaceAll` an **upsert + delete-missing** flow.
+
+### 3) `{siteID}` routing
+- **Yes, using Tesla `energy_site_id` is correct.**
+- `parseSiteID` returns the URL `{siteID}` as `int64`, and your repo query should use `energy_site_id`, not internal `id`.
+- Source: `internal/api/tesla_energy_history_handler.go:326-329`, router at `internal/api/router.go:329-341`
+
+### 4) Empty response format
+- **Prefer `null`, not `{}`.**
+- `{}` hides the difference between:
+  - ΓÇ£never fetchedΓÇ¥
+  - ΓÇ£fetched, but empty objectΓÇ¥
+- That distinction matters for UI state and refresh UX.
+- Even better: return a small envelope like `{ data, fetched_at }`, but if you want raw-object semantics, `null` is cleaner.
+
+### 5) Frontend type
+- **DonΓÇÖt leave it as `Record<string, unknown>` everywhere.**
+- You do **not** need the full Tesla schema, but define a typed subset for fields you render:
+  - `default_real_mode`
+  - `backup_reserve_percent`
+  - `battery_count`
+  - `version`
+- Keep extra fields loose if needed, but typed render fields will prevent brittle casts.
+
+## One more design concern
+
+4. **If you show this on `EnergyProductsPage`, avoid N+1 fetches**
+- Since that page renders a list of cards, adding one `useTeslaEnergySiteInfo(siteId)` per card means one extra API request per site.
+- Because youΓÇÖre storing site info on `tesla_energy_sites`, it may be cleaner to expose it on the existing `/tesla/energy-sites` response, or at least include ΓÇ£has site info / fetched_atΓÇ¥ there.
+
+## Bottom line
+
+**Good direction overall**, but I would not proceed without:
+1. fixing `ReplaceAll`,
+2. making `UpdateSiteInfo` detect missing rows,
+3. switching `site_info_json` to `JSONB`.
+
+If you want, I can turn this into a **revised implementation plan** with the safest backend contract.The rubber duck caught two critical issues: (1) `ReplaceAll` wipes the table on every product refresh, which would destroy stored site_info; (2) `UpdateSiteInfo` could silently succeed on missing rows. I'll fix both. Let me implement.
+
+Good ΓÇö `raw_json` is already `JSONB`, confirming the rubber duck's advice. Now let me implement everything:
+
+Now add the Tesla client method:
+
+Now update the model to add the new fields:
+
+Now update the repo ΓÇö fix `ReplaceAll` to preserve site_info, and add `GetSiteInfo` + `UpdateSiteInfo`:
+
+Now add the handler methods. Let me update the `EnergySiteHandler`:
+
+Now wire the routes in the router:
+
+Now add the frontend hooks and types. First, add the type:
+
+Now add the frontend hooks:
+
+Now add the hooks at the end of the energy sites section:
+
+Now let me add the site info display to the EnergyProductsPage. I'll enhance the `EnergySiteCard` to show site info details:
+
+Now let me verify everything compiles. Let me run Go build and TypeScript check:
+
+Go builds clean. Now TypeScript:
+
+Let me fix the `RadialGauge` prop:
+
+`RadialGauge` requires a `label` prop and doesn't accept `strokeWidth`. Let me fix the usage:
+
+TypeScript compiles clean. Let me verify the routes are wired correctly:
+
+All good. Now let me commit the changes:
+
+There are many unrelated files staged. Let me be selective:
+
+

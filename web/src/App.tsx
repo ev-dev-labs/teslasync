@@ -114,6 +114,7 @@ const Commands = lazy(() => import('./features/system/pages/CommandsPage'))
 const Chatbot = lazy(() => import('./features/system/pages/ChatbotPage'))
 const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
 const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
+const TeslaAccount = lazy(() => import('./features/system/pages/TeslaAccountPage'))
 
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
@@ -212,6 +213,7 @@ export default function App() {
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
+        <Route path="tesla-account" element={<SafeRoute name="TeslaAccount"><TeslaAccount /></SafeRoute>} />
       </Route>
     </Routes>
   )

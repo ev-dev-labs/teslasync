@@ -7,6 +7,7 @@ export const userKeys = {
   teslaFeatureConfig: ['tesla-feature-config'] as const,
   teslaRegion: ['tesla-user-region'] as const,
   teslaOrders: ['tesla-user-orders'] as const,
+  teslaProfile: ['tesla-user-profile'] as const,
 };
 
 export function useCurrentUser() {
@@ -110,5 +111,39 @@ export function useRefreshTeslaOrders() {
     mutationFn: () =>
       request<TeslaOrdersEnvelope>('/tesla/user/orders/refresh', { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaOrders }),
+  });
+}
+
+// ─── Tesla User Profile ──────────────────────────────────────────────────────
+
+export interface TeslaUserProfile {
+  id: number;
+  email: string;
+  full_name: string;
+  profile_image_url: string | null;
+  fetched_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TeslaProfileEnvelope {
+  profile: TeslaUserProfile | null;
+  fetched_at: string | null;
+}
+
+export function useTeslaUserProfile() {
+  return useQuery({
+    queryKey: userKeys.teslaProfile,
+    queryFn: () => request<TeslaProfileEnvelope>('/tesla/user/profile'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRefreshTeslaProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaProfile }),
   });
 }

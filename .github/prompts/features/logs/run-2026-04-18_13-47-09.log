@@ -1,0 +1,155 @@
+[2026-04-18 13:47:09] [1/81] START  automations/01-migrations-and-models
+[2026-04-18 13:49:54] [1/81] DONE in 2.8 min
+[2026-04-18 13:50:04] [2/81] START  automations/01-state-machine
+[2026-04-18 13:55:30] [2/81] DONE in 5.4 min
+[2026-04-18 13:55:40] [3/81] START  automations/02-debugger-integration
+[2026-04-18 13:57:37] [3/81] DONE in 2 min
+[2026-04-18 13:57:47] [4/81] START  automations/01-cron
+[2026-04-18 14:03:52] [4/81] DONE in 6.1 min
+[2026-04-18 14:04:02] [5/81] START  automations/02-battery
+[2026-04-18 14:10:30] [5/81] DONE in 6.5 min
+[2026-04-18 14:10:40] [6/81] START  automations/03-vehicle-state
+[2026-04-18 14:23:22] [6/81] DONE in 12.7 min
+[2026-04-18 14:23:32] [7/81] START  automations/04-geofence
+[2026-04-18 14:40:11] [7/81] DONE in 16.7 min
+[2026-04-18 14:40:21] [8/81] START  automations/05-mqtt
+[2026-04-18 14:54:36] [8/81] DONE in 14.3 min
+[2026-04-18 14:54:46] [9/81] START  automations/06-webhook
+[2026-04-18 15:01:51] [9/81] DONE in 7.1 min
+[2026-04-18 15:02:01] [10/81] START  automations/07-sunrise-sunset
+[2026-04-18 15:15:31] [10/81] DONE in 13.5 min
+[2026-04-18 15:15:41] [11/81] START  automations/08-energy
+[2026-04-18 15:28:14] [11/81] DONE in 12.5 min
+[2026-04-18 15:28:24] [12/81] START  automations/09-calendar
+[2026-04-18 15:36:04] [12/81] DONE in 7.7 min
+[2026-04-18 15:36:14] [13/81] START  automations/01-time-window
+[2026-04-18 15:40:34] [13/81] DONE in 4.3 min
+[2026-04-18 15:40:44] [14/81] START  automations/02-day-filter
+[2026-04-18 15:42:44] [14/81] DONE in 2 min
+[2026-04-18 15:42:54] [15/81] START  automations/03-state-check
+[2026-04-18 15:50:23] [15/81] DONE in 7.5 min
+[2026-04-18 15:50:33] [16/81] START  automations/04-cooldown
+[2026-04-18 15:52:31] [16/81] DONE in 2 min
+[2026-04-18 15:52:41] [17/81] START  automations/05-seasonal
+[2026-04-18 15:54:42] [17/81] DONE in 2 min
+[2026-04-18 15:54:52] [18/81] START  automations/06-location
+[2026-04-18 16:00:11] [18/81] DONE in 5.3 min
+[2026-04-18 16:00:21] [19/81] START  automations/07-conflict-detection
+[2026-04-18 16:08:59] [19/81] DONE in 8.6 min
+[2026-04-18 16:09:09] [20/81] START  automations/01-command-executor
+[2026-04-18 16:16:29] [20/81] DONE in 7.3 min
+[2026-04-18 16:16:39] [21/81] START  automations/02-action-chains
+[2026-04-18 16:23:22] [21/81] DONE in 6.7 min
+[2026-04-18 16:23:32] [22/81] START  automations/03-delays
+[2026-04-18 16:25:45] [22/81] DONE in 2.2 min
+[2026-04-18 16:25:55] [23/81] START  automations/04-notifications
+[2026-04-18 16:29:50] [23/81] DONE in 3.9 min
+[2026-04-18 16:30:00] [24/81] START  automations/05-variables
+[2026-04-18 16:35:52] [24/81] DONE in 5.9 min
+[2026-04-18 16:36:02] [25/81] START  automations/06-auto-wake
+[2026-04-18 16:44:31] [25/81] DONE in 8.5 min
+[2026-04-18 16:44:41] [26/81] START  automations/01-rate-limits
+[2026-04-18 16:50:52] [26/81] DONE in 6.2 min
+[2026-04-18 16:51:02] [27/81] START  automations/02-loop-detection
+[2026-04-18 16:56:48] [27/81] DONE in 5.8 min
+[2026-04-18 16:56:58] [28/81] START  automations/03-retry-policy
+[2026-04-18 17:06:57] [28/81] DONE in 10 min
+[2026-04-18 17:07:07] [29/81] START  automations/04-priority-queue
+[2026-04-18 17:11:57] [29/81] DONE in 4.8 min
+[2026-04-18 17:12:07] [30/81] START  automations/05-auto-disable
+[2026-04-18 17:18:14] [30/81] DONE in 6.1 min
+[2026-04-18 17:18:24] [31/81] START  automations/06-failure-alerts
+[2026-04-18 17:23:56] [31/81] DONE in 5.5 min
+[2026-04-18 17:24:06] [32/81] START  automations/01-crud
+[2026-04-18 17:39:51] [32/81] DONE in 15.8 min
+[2026-04-18 17:40:01] [33/81] START  automations/02-history
+[2026-04-18 17:47:45] [33/81] DONE in 7.7 min
+[2026-04-18 17:47:55] [34/81] START  automations/03-test-run
+[2026-04-18 18:01:13] [34/81] DONE in 13.3 min
+[2026-04-18 18:01:23] [35/81] START  automations/04-import-export
+[2026-04-18 18:11:49] [35/81] DONE in 10.4 min
+[2026-04-18 18:11:59] [36/81] START  automations/05-webhook-receiver
+[2026-04-18 18:27:20] [36/81] DONE in 15.4 min
+[2026-04-18 18:27:30] [37/81] START  automations/06-undo
+[2026-04-18 18:38:36] [37/81] DONE in 11.1 min
+[2026-04-18 18:38:46] [38/81] START  automations/01-sse-feed
+[2026-04-18 18:49:21] [38/81] DONE in 10.6 min
+[2026-04-18 18:49:31] [39/81] START  automations/02-audit-trail
+[2026-04-18 19:03:16] [39/81] DONE in 13.8 min
+[2026-04-18 19:03:26] [40/81] START  automations/01-automations-list
+[2026-04-18 19:13:46] [40/81] DONE in 10.3 min
+[2026-04-18 19:13:56] [41/81] START  automations/01-automation-builder
+[2026-04-18 19:28:33] [41/81] DONE in 14.6 min
+[2026-04-18 19:28:43] [42/81] START  automations/01-security
+[2026-04-18 19:48:32] [42/81] DONE in 19.8 min
+[2026-04-18 19:48:42] [43/81] START  automations/02-climate
+[2026-04-18 19:57:13] [43/81] DONE in 8.5 min
+[2026-04-18 19:57:23] [44/81] START  automations/03-charging
+[2026-04-18 20:03:46] [44/81] DONE in 6.4 min
+[2026-04-18 20:03:56] [45/81] START  automations/04-home-garage
+[2026-04-18 20:10:15] [45/81] DONE in 6.3 min
+[2026-04-18 20:10:25] [46/81] START  automations/05-driving
+[2026-04-18 20:15:15] [46/81] DONE in 4.8 min
+[2026-04-18 20:15:25] [47/81] START  automations/06-comfort
+[2026-04-18 20:19:01] [47/81] DONE in 3.6 min
+[2026-04-18 20:19:11] [48/81] START  automations/07-maintenance
+[2026-04-18 20:25:43] [48/81] DONE in 6.5 min
+[2026-04-18 20:25:53] [49/81] START  automations/08-energy-powerwall
+[2026-04-18 20:34:34] [49/81] DONE in 8.7 min
+[2026-04-18 20:34:44] [50/81] START  commands/feat-cmd-boombox
+[2026-04-18 20:36:17] [50/81] DONE in 1.6 min
+[2026-04-18 20:36:27] [51/81] START  commands/feat-cmd-charge-schedules
+[2026-04-18 20:38:16] [51/81] DONE in 1.8 min
+[2026-04-18 20:38:26] [52/81] START  commands/feat-cmd-charging-advanced
+[2026-04-18 20:39:41] [52/81] DONE in 1.3 min
+[2026-04-18 20:39:51] [53/81] START  commands/feat-cmd-climate-protection
+[2026-04-18 20:41:46] [53/81] DONE in 1.9 min
+[2026-04-18 20:41:56] [54/81] START  commands/feat-cmd-guest-mode
+[2026-04-18 20:43:21] [54/81] DONE in 1.4 min
+[2026-04-18 20:43:31] [55/81] START  commands/feat-cmd-homelink
+[2026-04-18 20:44:58] [55/81] DONE in 1.5 min
+[2026-04-18 20:45:08] [56/81] START  commands/feat-cmd-media-controls
+[2026-04-18 20:46:27] [56/81] DONE in 1.3 min
+[2026-04-18 20:46:37] [57/81] START  commands/feat-cmd-navigation
+[2026-04-18 20:48:52] [57/81] DONE in 2.3 min
+[2026-04-18 20:49:02] [58/81] START  commands/feat-cmd-pin-to-drive
+[2026-04-18 20:50:27] [58/81] DONE in 1.4 min
+[2026-04-18 20:50:37] [59/81] START  commands/feat-cmd-seat-climate
+[2026-04-18 20:51:53] [59/81] DONE in 1.3 min
+[2026-04-18 20:52:03] [60/81] START  commands/feat-cmd-software-update
+[2026-04-18 20:53:39] [60/81] DONE in 1.6 min
+[2026-04-18 20:53:49] [61/81] START  commands/feat-cmd-speed-limit
+[2026-04-18 20:55:08] [61/81] DONE in 1.3 min
+[2026-04-18 20:55:18] [62/81] START  commands/feat-cmd-sunroof
+[2026-04-18 20:56:39] [62/81] DONE in 1.4 min
+[2026-04-18 20:56:49] [63/81] START  commands/feat-cmd-valet-mode
+[2026-04-18 20:58:20] [63/81] DONE in 1.5 min
+[2026-04-18 20:58:30] [64/81] START  commands/feat-cmd-vehicle-name
+[2026-04-18 21:00:03] [64/81] DONE in 1.6 min
+[2026-04-18 21:00:13] [65/81] START  commands/feat-cmd-windows-sunroof
+[2026-04-18 21:00:56] [65/81] DONE in 0.7 min
+[2026-04-18 21:01:06] [66/81] START  tesla-api/feat-tesla-charging-history
+[2026-04-18 21:12:29] [66/81] DONE in 11.4 min
+[2026-04-18 21:12:39] [67/81] START  tesla-api/feat-tesla-charging-invoice
+[2026-04-18 21:15:52] [67/81] DONE in 3.2 min
+[2026-04-18 21:16:02] [68/81] START  tesla-api/feat-tesla-charging-sessions
+[2026-04-18 21:22:15] [68/81] DONE in 6.2 min
+[2026-04-18 21:22:25] [69/81] START  tesla-api/feat-tesla-energy-history
+[2026-04-18 21:31:03] [69/81] DONE in 8.6 min
+[2026-04-18 21:31:13] [70/81] START  tesla-api/feat-tesla-energy-live-status
+[2026-04-18 21:47:53] [70/81] DONE in 16.7 min
+[2026-04-18 21:48:03] [71/81] START  tesla-api/feat-tesla-energy-products
+[2026-04-18 21:54:46] [71/81] DONE in 6.7 min
+[2026-04-18 21:54:56] [72/81] START  tesla-api/feat-tesla-energy-site-info
+[2026-04-18 22:05:50] [72/81] DONE in 10.9 min
+[2026-04-18 22:06:00] [73/81] START  tesla-api/feat-tesla-energy-tou-settings
+[2026-04-18 22:16:14] [73/81] DONE in 10.2 min
+[2026-04-18 22:16:24] [74/81] START  tesla-api/feat-tesla-fleet-telemetry-errors
+[2026-04-18 22:27:09] [74/81] DONE in 10.7 min
+[2026-04-18 22:27:19] [75/81] START  tesla-api/feat-tesla-partner-public-key
+[2026-04-18 22:33:56] [75/81] DONE in 6.6 min
+[2026-04-18 22:34:06] [76/81] START  tesla-api/feat-tesla-user-feature-config
+[2026-04-18 22:44:14] [76/81] DONE in 10.1 min
+[2026-04-18 22:44:24] [77/81] START  tesla-api/feat-tesla-user-orders
+[2026-04-18 22:53:38] [77/81] DONE in 9.2 min
+[2026-04-18 22:53:49] [78/81] START  tesla-api/feat-tesla-user-profile

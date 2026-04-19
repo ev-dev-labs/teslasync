@@ -1,0 +1,23 @@
+Some entries already exist. Let me check the exact state and the frontend commands page.
+
+All three PIN to Drive commands already exist in all three locations. Let me verify the exact frontend implementation:
+
+All three PIN to Drive commands are already fully implemented:
+
+**Backend (`internal/tesla/client.go` lines 619-622):**
+- `set_pin_to_drive` Γ£à
+- `reset_pin_to_drive_pin` Γ£à
+- `clear_pin_to_drive_admin` Γ£à
+
+**Backend (`internal/api/command_handler.go` lines 103-105):**
+- All three in `allowedCommands` Γ£à
+
+**Frontend (`CommandsPage.tsx` lines 359-387):**
+- Set PIN to Drive with 4-digit PIN prompt + regex validation Γ£à
+- Reset PIN to Drive Γ£à
+- Clear PIN (Admin) Γ£à
+- All use `KeyRound` icon, `variant="danger"`, proper i18n Γ£à
+
+Let me run the verification commands to confirm everything compiles:
+
+

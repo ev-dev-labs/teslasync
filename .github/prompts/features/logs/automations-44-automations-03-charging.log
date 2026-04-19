@@ -1,0 +1,152 @@
+Now let me check available trigger types, action types, and Tesla command names to ensure validity.
+
+Let me check the energy trigger config and available vehicle_state events for the charging presets.
+
+HereΓÇÖs the critical review.
+
+## Biggest issues
+
+### 1) **`charging-smart-stop` is logically wrong**
+**Severity:** Blocking  
+Your config is valid, but `battery.operator="reaches"` only fires when `currentLevel == threshold` exactly, not when it crosses past it.  
+So 79 ΓåÆ 81 will **not** fire.  
+**Fix:** Use `{"operator":"above","threshold":80}` if you want a reliable stop near 80.
+
+---
+
+### 2) **`charging-trip-prep` condition is not supported**
+**Severity:** Blocking  
+You proposed a `state_check` on `charging_state` / ΓÇ£plugged inΓÇ¥. That field is not supported by `state_check`. Supported fields are only:
+- `is_locked`
+- `is_charging`
+- `is_climate_on`
+- `sentry_mode`
+- `battery_level`
+- `inside_temp`
+- `outside_temp`
+- `speed`
+- `state`
+
+So this preset will be invalid if you use `charging_state` or `plugged_in`.  
+**Fix:** Either drop that condition, or add engine support for a plugged-in field first.
+
+---
+
+### 3) **Your cron presets will run in UTC if you omit timezone**
+**Severity:** Blocking for user-facing ΓÇ£11 PM / 6 AM / 4 PMΓÇ¥ claims  
+Empty cron timezone defaults to UTC. So:
+- Off-Peak at `0 23 * * *`
+- Daily Reset at `0 6 * * *`
+- Amperage Saver at `0 16 * * *`
+
+ΓÇªwill not mean local time unless you set a timezone.  
+**Fix:** Include `timezone` in all time-of-day charging presets, or explicitly describe them as UTC-based templates.
+
+---
+
+### 4) **`charging-solar` with `energy_site_id: 1` is valid but effectively broken**
+**Severity:** Blocking  
+The validator accepts it, but the trigger only fires for the exact site ID. A placeholder `1` will be wrong for most users, so the preset will silently never run.  
+**Fix:** DonΓÇÖt ship this preset unless the install flow can substitute the userΓÇÖs real energy site ID.
+
+---
+
+## Design issues
+
+### 5) **Trip Prep conflicts with Smart Stop**
+**Severity:** Blocking  
+If a user enables both:
+- Trip Prep sets limit to 100
+- Smart Stop stops charging at 80
+
+Trip Prep loses. The car stops at 80 anyway.  
+**Fix:** Either make these presets explicitly mutually exclusive, or redesign Smart Stop as a charge-limit preset instead of `charge_stop`.
+
+---
+
+### 6) **Daily Limit Reset conflicts with Trip Prep**
+**Severity:** Blocking  
+Trip Prep sets charge limit to 100 twelve hours before an event.  
+Daily Reset sets it back to 80 at 6 AM.  
+For many trips, Daily Reset will undo Trip Prep on the morning of the trip.  
+**Fix:** DonΓÇÖt include both as independent presets unless one is scoped/conditional in a way that prevents this conflict.
+
+---
+
+### 7) **Off-Peak and Amperage Saver are not really ΓÇ£single-half is good enoughΓÇ¥**
+**Severity:** Blocking for product correctness
+
+- **Off-Peak** start-only does **not** implement ΓÇ£Start at 11 PM, Stop at 6 AMΓÇ¥.
+- **Amperage Saver** reduce-only is worse: `set_charging_amps` persists, so the car may stay at 16A indefinitely until something else changes it.
+
+**Fix:** Split these into paired presets, like security does:
+- `charging-off-peak-start`
+- `charging-off-peak-stop`
+- `charging-peak-amps-reduce`
+- `charging-off-peak-amps-restore`
+
+If you must keep exactly 8, IΓÇÖd drop weaker ideas and use the slots for the missing second halves.
+
+---
+
+### 8) **Solar Charging is also only half a solution**
+**Severity:** Non-blocking but important  
+`solar_above -> charge_start` starts charging, but nothing stops charging when solar drops. That means it can continue on grid power.  
+**Fix:** Either rename it to something weaker (ΓÇ£Start Charging When Solar Surplus AppearsΓÇ¥) or pair it with `solar_below -> charge_stop`.
+
+---
+
+## Validity check by item
+
+- **#1 Smart Stop** ΓÇö trigger valid, command valid, but wrong operator semantics
+- **#2 Off-Peak** ΓÇö trigger valid, command valid, but timezone + missing stop
+- **#3 Trip Prep** ΓÇö trigger valid, command valid, but planned condition invalid
+- **#4 Daily Reset** ΓÇö valid, but conflicts with Trip Prep
+- **#5 Low Battery Alert** ΓÇö valid
+- **#6 Charge Complete Notify** ΓÇö valid
+- **#7 Amperage Saver** ΓÇö valid, but missing restore is a real problem
+- **#8 Solar Charging** ΓÇö syntactically valid, practically broken with placeholder site ID
+
+---
+
+## Command/params
+Your command names and param shapes are correct:
+- `charge_start`
+- `charge_stop`
+- `set_charge_limit` with `{"percent":N}`
+- `set_charging_amps` with `{"amps":N}`
+- notify with `{"type":"notify","channel":"all","message":"..."}`
+
+---
+
+## Test issue you should not miss
+Adding charging presets will likely require updating the registry total-count test too, not just adding `charging_test.go`. The existing total-count check only sums security + climate.
+
+---
+
+## Recommendation
+If you want this to ship cleanly, IΓÇÖd change the plan to:
+1. Fix Smart Stop to use `above`, not `reaches`
+2. Remove unsupported Trip Prep condition
+3. Add timezone to all cron-based charging presets
+4. Do **not** ship Solar until site ID can be user-specific
+5. Split Off-Peak / Amperage Saver into paired presets, or rename them so they donΓÇÖt promise two-part behavior
+6. Reconsider having Trip Prep, Daily Reset, and Smart Stop all in the same preset pack without exclusivity
+
+If you want, I can turn this into a concrete revised set of 8 presets that avoids these conflicts.Good feedback from the rubber-duck. Let me verify state_check fields and refine my approach.
+
+Good ΓÇö `reaches` requires exact equality which is fragile. I'll use `above` for Smart Stop. Now let me implement.
+
+Now register the charging category and presets in the registry, and create the test file.
+
+Now update the existing total-count test in `security_test.go` that only sums security + climate.
+
+Now update the climate_test.go total-count assertion which only expects security + climate:
+
+Now run the tests:
+
+All 23 tests pass. Let me also verify the full output to confirm the charging tests ran:
+
+All 14 charging tests pass. Now let me commit:
+
+

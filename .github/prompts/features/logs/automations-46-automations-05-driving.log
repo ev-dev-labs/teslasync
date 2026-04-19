@@ -1,0 +1,40 @@
+Now let me check a test file to understand the testing pattern, and also look at trigger types available:
+
+Let me check valid trigger types and the `vehicle_state` trigger config options:
+
+Now let me check what action types exist (specifically for "sequence" or "delay" actions for the Remote Start Timer preset):
+
+Let me check the wait action's config format:
+
+Let me check the available Tesla commands and the `navigate` command:
+
+Now I have all the context needed. Let me check the command validation to make sure `navigation_request` passes:
+
+Now I have full context. Let me create the implementation and test files. First, let me plan the 6 presets:
+
+1. **Drive Start Log** ΓÇö `vehicle_state` trigger `drive_starts` ΓåÆ notify
+2. **Speed Alert** ΓÇö `cron` every minute + `state_check` speed > 136.8 km/h (85 mph) + driving ΓåÆ notify
+3. **Long Drive Break** ΓÇö `cron` every 15 min + `state_check` driving ΓåÆ notify (cooldown 120 min)
+4. **Efficiency Coach** ΓÇö `vehicle_state` `drive_ends` ΓåÆ notify with tips
+5. **Remote Start Timer** ΓÇö `webhook` ΓåÆ wait 300s ΓåÆ lock ΓåÆ notify
+6. **Navigate to Work** ΓÇö `cron` weekday 7:30 AM + `location` inside home geofence ΓåÆ `navigation_request`
+
+Now register the driving category in the registry:
+
+Now create the test file:
+
+Now I need to update the existing test files that assert total counts ΓÇö they'll break because the total presets changed:
+
+Now check the other test files for the same total-count assertion:
+
+Good ΓÇö only climate_test.go still needs updating:
+
+Now let's run the tests:
+
+All 30+ tests pass, including all driving preset validation tests. Let me verify the driving-specific tests ran:
+
+All tests pass. Let me also verify the build compiles:
+
+Clean compile. Now let me commit:
+
+

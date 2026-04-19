@@ -1,0 +1,13 @@
+Let me check the existing boombox area in client.go and the Commands page:
+
+Backend already has the boombox commands. I just need the frontend buttons. Let me see the Commands page imports and the Alerts & Location section:
+
+All three changes are already in place:
+
+1. **Backend `commandMap`** (client.go:676-679) ΓÇö Γ£à `boombox_fart`, `boombox_ping`, `remote_boombox` already present
+2. **Backend `allowedCommands`** (command_handler.go:75-77) ΓÇö Γ£à all three already whitelisted
+3. **Frontend CommandsPage** (lines 660-661) ΓÇö Γ£à Boombox + Locate Ping buttons already added with `Speaker` and `Locate` icons imported (line 28)
+
+Let me verify the build passes:
+
+

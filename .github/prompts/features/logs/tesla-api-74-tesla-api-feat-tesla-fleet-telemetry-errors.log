@@ -1,0 +1,464 @@
+Now let me read the larger files with specific sections and search for the features page:The highest migration is 000115. The issue says 000107 but I'll use 000116. Let me read the key reference files now.
+
+Now let me get the detailed information from specific functions and the DevTools/FleetAPI pages:Now let me get the detailed function implementations:Now let me search for the specific function implementations and DevTools routes:Let me continue reading the router to see DevTools wiring:Now let me read the existing models and the Tesla client's existing fleet telemetry methods, plus the frontend hooks file.Let me search for line numbers of the Tesla models and continue looking at the router for devtools:
+
+Let me search more specifically for devtools routes:Perfect! Now let me get the line numbers for the devtools routes and see the exact location:Now let me get the exact implementation of FleetTelemetryErrors and the doRequestWithToken/GetPartnerToken functions:Let me find the exact line numbers and full implementations:Let me search for line numbers more directly:Now let me see the Tesla route area where the new routes should be added:
+
+Let me try a different approach to find line numbers:Excellent! Now let me read those specific sections:Now let me check the explore agent and also look at the frontend page for fleet API/devtools:
+
+Perfect! Now let me find the line number for the devtools route grouping:Perfect! Now let me get the DevTools page from the frontend and look for last 5 migrations:Excellent! Now let me get a full view of the Tesla energy site model:Now let me find the exact line numbers and content for the Tesla model:Perfect! Now let me compile all findings. Let me create a comprehensive summary:
+
+## CODEBASE INVESTIGATION COMPLETE
+
+Here are all the findings you requested:
+
+---
+
+### **1. EXISTING MIGRATION NUMBERING** Γ£à
+**File location:** `D:\repos\teslasync\migrations\`
+
+**Last 5 migrations (in order):**
+- `000111_add_tesla_charging_sessions.up.sql`
+- `000112_add_tesla_energy_history.up.sql`
+- `000113_add_tesla_energy_live_status.up.sql`
+- `000114_add_tesla_energy_sites.up.sql`
+- `000115_add_energy_site_info.up.sql` ΓåÉ **HIGHEST (000115)**
+
+**Next migration number should be: `000116`**
+
+---
+
+### **2. TESLA CLIENT PATTERN** Γ£à
+**File:** `D:\repos\teslasync\internal\tesla\client.go`
+
+#### **doRequestWithToken signature:**
+```
+Lines 439-465: func (c *Client) doRequestWithToken(ctx context.Context, method, path string, body io.Reader, token string) ([]byte, int, error)
+```
+- Uses custom bearer token instead of stored user access token
+- Runs through circuit breaker and rate limiter
+- Logs request for audit
+
+#### **GetPartnerToken signature:**
+```
+Lines 270-295: func (c *Client) GetPartnerToken(ctx context.Context) (string, error)
+```
+- Obtains client_credentials token for partner-level API calls
+- Uses separate auth endpoint (fleet-auth)
+- Scope: `"openid vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds"`
+
+#### **Existing partner-level API call (per-vehicle):**
+```
+Lines 206-211: func (c *Client) GetFleetTelemetryErrors(ctx context.Context, vin string) ([]byte, int, error)
+  - Path: /api/1/vehicles/{vin}/fleet_telemetry_errors
+  - Method: GET
+  - Returns: Raw JSON bytes and HTTP status
+```
+
+**Other similar per-vehicle calls:**
+- `GetFleetTelemetryConfig` (line ~190)
+- `DeleteFleetTelemetryConfig` (line ~200)
+
+---
+
+### **3. HANDLER PATTERN** Γ£à
+**File:** `D:\repos\teslasync\internal\api\devtools_handler.go`
+
+#### **DevToolsHandler struct definition:**
+```go
+Lines 32-39:
+type DevToolsHandler struct {
+	teslaClient      *tesla.Client
+	db               *database.DB
+	mqttClient       *mqtt.Client
+	cfg              *config.Config
+	fleetSubRepo     *database.FleetSubscriptionRepo
+	settingsRepo     *database.SettingsRepo
+}
+```
+
+#### **Constructor with functional options:**
+```go
+Lines 41-71:
+- type DevToolsOption func(*DevToolsHandler)
+- WithDB(db *database.DB) DevToolsOption
+- WithMQTTClient(mc *mqtt.Client) DevToolsOption
+- WithConfig(cfg *config.Config) DevToolsOption
+- func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandler
+```
+
+#### **Example handler method (FleetTelemetryErrors):**
+```go
+Lines 906-935:
+func (h *DevToolsHandler) FleetTelemetryErrors(w http.ResponseWriter, r *http.Request) {
+	// Check auth
+	// Extract vin from query params
+	// Call h.teslaClient.GetFleetTelemetryErrors(r.Context(), vin)
+	// Handle response (JSON or error)
+	// Write back to client
+}
+```
+
+---
+
+### **4. ROUTER WIRING** Γ£à
+**File:** `D:\repos\teslasync\internal\api\router.go`
+
+#### **DevToolsHandler instantiation:**
+```go
+Line 206:
+devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg))
+```
+
+#### **Route grouping for devtools:**
+```go
+Lines 743-779:
+r.Route("/dev-tools", func(r chi.Router) {
+    r.Use(httprate.LimitByIP(30, 1*time.Minute))
+    
+    // Fleet Telemetry endpoints (lines 762-770):
+    r.Post("/fleet-telemetry-subscribe", devToolsHandler.FleetTelemetrySubscribe)
+    r.Get("/fleet-telemetry-config", devToolsHandler.FleetTelemetryGetConfig)
+    r.Delete("/fleet-telemetry-config", devToolsHandler.FleetTelemetryDeleteConfig)
+    r.Get("/fleet-telemetry-errors", devToolsHandler.FleetTelemetryErrors)  // ΓåÉ Your reference
+    r.Post("/fleet-status", devToolsHandler.FleetStatus)
+    
+    // Other endpoints...
+})
+```
+
+**Pattern:** Routes grouped under `/dev-tools`, rate limited at 30 req/min per IP, handlers injected with database/mqtt/config.
+
+---
+
+### **5. REPOSITORY PATTERN** Γ£à
+**File:** `D:\repos\teslasync\internal\database\tesla_energy_site_repo.go`
+
+#### **Constructor pattern:**
+```go
+Lines 12-20:
+type TeslaEnergySiteRepo struct {
+    db *DB
+}
+
+func NewTeslaEnergySiteRepo(db *DB) *TeslaEnergySiteRepo {
+    return &TeslaEnergySiteRepo{db: db}
+}
+```
+
+#### **Bulk upsert pattern (ReplaceAll):**
+```go
+Lines 61-133:
+- Starts transaction
+- Loops through incoming sites
+- Uses ON CONFLICT (energy_site_id) DO UPDATE
+- Preserves certain columns across refreshes
+- Deletes stale records not in incoming slice
+- Commits transaction
+```
+
+#### **Get methods:**
+```go
+Lines 23-57:
+func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergySite, error)
+  - Query all sites with filters
+  - Scan into models
+  - Return slice
+```
+
+---
+
+### **6. MODELS PATTERN** Γ£à
+**File:** `D:\repos\teslasync\internal\models\models.go`
+
+#### **TeslaEnergySite model with RawJSON:**
+```go
+Lines 1189-1212:
+type TeslaEnergySite struct {
+    ID                int64      `json:"id" db:"id"`
+    EnergI have enough context now. Let me look at where the DevToolsPage handles fleet telemetry to understand the UI pattern, then read the end of the models file to know where to add new models.ySiteID      int64      `json:"energy_site_id" db:"energy_site_id"`
+    ResourceType      string     `json:"resource_type" db:"resource_type"`
+    SiteName          string     `json:"site_name" db:"site_name"`
+    GatewayID         *string    `json:"gateway_id" db:"gateway_id"`
+    TotalPackEnergy   *float64   `json:"total_pack_energy" db:"total_pack_energy"`
+    PercentageCharged *float64   `json:"percentage_charged" db:"percentage_charged"`
+    BatteryType       *string    `json:"battery_type" db:"battery_type"`
+    BackupCapable     bool       `json:"backup_capable" db:"backup_capable"`
+    StormModeEnabled  bool       `json:"storm_mode_enabled" db:"storm_mode_enabled"`
+    HasSolar          bool       `json:"has_solar" db:"has_solar"`
+    HasBattery        bool       `json:"has_battery" db:"has_battery"`
+    HasGrid           bool       `json:"has_grid" db:"has_grid"`
+    HasLoadMeter      bool       `json:"has_load_meter" db:"has_load_meter"`
+    TOUCapable        bool       `json:"tou_capable" db:"tou_capable"`
+    StormModeCapable  bool       `json:"storm_mode_capable" db:"storm_mode_capable"`
+    RawJSON           string     `json:"raw_json,omitempty" db:"raw_json"`  ΓåÉ RawJSON pattern
+    SiteInfoJSON      *string    `json:"site_info_json,omitempty" db:"site_info_json"`
+    SiteInfoFetchedAt *time.Time `json:"site_info_fetched_at,omitempty" db:"site_info_fetched_at"`
+    FetchedAt         time.Time  `json:"fetched_at" db:"fetched_at"`
+    CreatedAt         time.Time  `json:"created_at" db:"created_at"`
+    UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
+}
+```
+
+#### **TeslaEnergyLiveStatus model (similar with RawJSON):**
+```go
+Lines 1214-1230:
+type TeslaEnergyLiveStatus struct {
+    ID                int64     `json:"id" db:"id"`
+    
+
+EnergySiteID      int64     `json:"energy_site_id" db:"energy_site_id"`
+    SolarPower        *float64  `json:"solar_power" db:"solar_power"`
+    BatteryPower      *float64  `json:"battery_power" db:"battery_power"`
+    LoadPower         *float64  `json:"load_power" db:"load_power"`
+    GridPower         *float64  `json:"grid_power" db:"grid_power"`
+    GridServicesPower *float64  `json:"grid_services_power" db:"grid_services_power"`
+    EnergyLeft        *float64  `json:"energy_left" db:"energy_left"`
+    TotalPackEnergy   *float64  `json:"total_pack_energy" db:"total_pack_energy"`
+    PercentageCharged *float64  `json:"percentage_charged" db:"percentage_charged"`
+    GridStatus        *string   `json:"grid_status" db:"grid_status"`
+    BackupCapable     *bool     `json:"backup_capable" db:"backup_capable"`
+    StormModeActive   *bool     `json:"storm_mode_active" db:"storm_mode_active"`
+    RawJSON           string    `json:"raw_json,omitempty" db:"raw_json"`
+    ...
+}
+```
+
+---
+
+### **7. FRONTEND HOOKS** Γ£à
+**File:** `D:\repos\teslasync\web\src\api\hooks\useTelemetry.ts`
+
+#### **Hook structure pattern:**
+```typescript
+Lines 6-14:
+export const telemetryKeys = {
+  signals: (vehicleId: number) => ['signals', vehicleId] as const,
+  signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
+  signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
+  // ... more key factories
+};
+
+Lines 16-29:
+export function useSignals(vehicleId: number) {
+  return useQuery({
+    queryKey: telemetryKeys.signals(vehicleId),
+    queryFn: async () => {
+      const resp = await request<{ signals?: string[] } | string[]>(`/signals/${vehicleId}/available`);
+      // ... handle response
+    },
+    enabled: vehicleId > 0,
+    staleTime: 60_000,
+    select: safeArray,
+  });
+}
+```
+
+#### **Import patterns:**
+```typescript
+Line 1: import { useQuery } from '@tanstack/react-query';
+Line 2: import { request } from '../client';
+Line 3: import { safeArray } from '@/lib/safeArray';
+Line 4: import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
+```
+
+---
+
+### **8. FRONTEND PAGE (DevTools/Fleet)** Γ£à
+**File:** `D:\repos\teslasync\web\src\features\admin\pages\DevToolsPage.tsx`
+
+**Page structure:**
+- Lines 1-24: Imports (React, icons, UI components, hooks)
+- Lines 26-92: Constants and utility maps (ICON_COLOR_MAP, VIN decoders, HTTP codes)
+- Full page component with multiple sections for:
+  - Fleet API configuration
+  - Public key management
+  - Telemetry captureI have a thorough understanding of the codebase. Let me now get the rubber-duck critique before implementing, then proceed to build everything.
+  - Token info
+  - Database stats
+  - Signal configuration
+
+---
+
+## SUMMARY FOR IMPLEMENTATION
+
+**For implementing "Tesla fleet telemetry errors" feature:**
+
+1. **Database migration:** Create `000116_add_fleet_telemetry_errors_table.up.sql`
+2. **Model:** Add `TeslaFleetTelemetryError` struct in `internal/models/models.go` (with RawJSON field)
+3. **Repository:** Create `internal/database/tesla_fleet_telemetry_errors_repo.go` following `tesla_energy_site_repo.go` pattern
+4. **API client:** Already exists: `GetFleetTelemetryErrors()` at line 206-211 of `client.go` (per-vehicle)
+5. **Handler:** Extend `devtools_handler.go` or add new handler with `NewDevToolsHandler` pattern
+6. **Router:** Add route under `/dev-tools` group (lines 743-779) following existing telemetry patterns
+7. **Frontend:** Add hook in `useTelemetry.ts`, create page in `web/src/features/admin/pages/`
+
+Overall: **good direction**, but there are a few substantive gaps.
+
+## Biggest issues
+
+### 1. **`InsertErrors` as append-only will likely create duplicates** ΓÇö **blocking**
+The partner error endpoint looks like a **recent-errors snapshot**, not a delta feed. If you insert every refresh blindly, the same error will be stored over and over.
+
+**Fix:** make refresh idempotent:
+- add a natural unique key such as `(vin, error_code, error_message, reported_at)`, or
+- store a refresh batch/source timestamp and upsert, not plain insert.
+
+---
+
+### 2. **Deleting stale VIN rows loses history** ΓÇö **blocking**
+Your plan says ΓÇ£persist to DB for historical tracking,ΓÇ¥ but `ReplaceErrorVINs(... delete stale ...)` destroys that history. A VIN that clears and reappears later will lose its original `first_seen_at`.
+
+**Fix:** instead of deleting, keep the row and add something like:
+- `active BOOLEAN`
+- or `resolved_at TIMESTAMPTZ`
+
+Then update active/current state on each refresh.
+
+---
+
+### 3. **Your index doesnΓÇÖt cover the default ΓÇ£all vehiclesΓÇ¥ query** ΓÇö **high**
+`(vin, fetched_at DESC)` helps `WHERE vin = ?`, but not `GET /errors` with no VIN filter.
+
+**Fix:** add either:
+- `INDEX ON tesla_fleet_telemetry_errors (fetched_at DESC)`, or better
+- order/read by `reported_at DESC, fetched_at DESC` and index that.
+
+Also add pagination (`limit` + `offset`) to `GetErrors`.
+
+---
+
+### 4. **YouΓÇÖre missing TeslaΓÇÖs `updated_at` semantics** ΓÇö **medium**
+For these partner endpoints, Tesla returns envelope-level `response.updated_at`. That is **not the same** as your local `fetched_at`.
+
+**Fix:** store or return TeslaΓÇÖs `updated_at` separately, especially for the VIN snapshot endpoint.
+
+---
+
+### 5. **Concurrent refreshes can race** ΓÇö **medium**
+Two refreshes can interleave:
+- VIN refreshes can overwrite/delete based on stale snapshots
+- errors refreshes can duplicate rows unless idempotent
+
+**Fix:** serialize refreshes with a DB advisory lock / mutex, or make writes fully idempotent.
+
+---
+
+## Answers to your questions
+
+### 1. Is migration `000116` correct?
+**Yes**, if highest existing is `000115`.  
+One correction: migrations live under **`/migrations`**, not `internal/database/migrations`.
+
+---
+
+### 2. Separate handler or DevToolsHandler?
+**Separate handler.**  
+That matches newer Tesla features better and keeps `DevToolsHandler` from getting even more overloaded. You can still render it on DevToolsPage while serving it from `/api/v1/tesla/...`.
+
+---
+
+### 3. Is Tesla response parsing correct?
+**Mostly yes, but be precise.**
+You should parse:
+- VINs: `response.vins`, `response.updated_at`
+- Errors: `response.errors`, `response.updated_at`
+
+DonΓÇÖt just assume generic `{"response": {...}}`; the inner shape matters. Also handle non-JSON auth/error responses like existing dev-tools code does.
+
+---
+
+### 4. Should refresh routes be rate-limited?
+**Yes.**  
+ThatΓÇÖs consistent with existing `/tesla/*/refresh` routes, and these are partner-level fleet-wide calls, so rate limiting matters even more.
+
+---
+
+### 5. Any race/transaction issues?
+**Yes:**
+- duplicate error rows on repeated refresh
+- stale-delete behavior on VIN snapshot refresh
+- concurrent refreshes producing inconsistent state
+
+**Fixes:** idempotent upsert, no hard-delete for history, pagination, and refresh serialization.
+
+---
+
+## Recommended course adjustment
+If you change only 3 things, make them these:
+
+1. **Upsert errors instead of append-only insert**
+2. **Do not delete VIN history; mark active/resolved**
+3. **Add pagination + an unfiltered sort/index path for `/errors`**
+
+With those fixes, the plan looks solid.
+
+Good critique. Let me incorporate the key findings:
+
+1. **Upsert errors** instead of blind insert ΓÇö use `(vin, error_code, reported_at)` as natural key
+2. **Don't delete VIN history** ΓÇö add `active` boolean, mark resolved instead of deleting
+3. **Add unfiltered index** on `fetched_at DESC` and pagination support
+4. **Store Tesla's `updated_at`** separately from local `fetched_at`
+
+Now let me implement everything.
+
+Now let me add the Tesla client methods, models, repository, and handler in parallel:
+
+Now add models:
+
+Now create the repository:
+
+Wait, I used an interface type for `rows` which won't work with pgx. Let me fix the repo to use the proper pgx pattern:
+
+Now create the handler:
+
+Now wire the routes in the router. Let me find the right place to add them:
+
+I'll add the new routes between the energy sites section and geofences section, and the handler construction near the other Tesla handlers:
+
+Now let me verify the router edit is correct by checking context:
+
+Good. Now let's build the Go backend to verify:
+
+Go builds clean. Now let me add the frontend hooks:
+
+Now append the new hooks and types at the end of the file:
+
+Now let me add the Fleet Telemetry Health UI section to the DevToolsPage. Let me first understand the page structure better:
+
+Let me find the main page component and tabs structure:
+
+Now let me check how ToolCard is used in the page (it's a local component):
+
+Now I need to add the FleetTelemetryHealthSection component. Let me add it between FleetApiSection and the Onboarding section, and include it as a new Accordion in the main page:
+
+Now let me look at the existing Column import for DataTable and how the page components reference each other to know where to place my new section:
+
+Now I'll add the FleetTelemetryHealthSection. I'll place it right before the `FleetApiSection` function (line 941) and add it as a new Accordion in the page. Let me add the new section:
+
+Now I need to add the imports for the new hooks and types. Let me check current imports:
+
+I need to add the import for the fleet telemetry hooks. Let me add it after the existing imports:
+
+Now add the new Accordion section to the main page component. Let me find and edit it:
+
+Now let me verify TypeScript compiles:
+
+TypeScript compiles clean. Now let me run the verification checklist:
+
+The router grep didn't show the routes - let me check that the edit was correct:
+
+Routes are wired correctly. Let me now verify the frontend hooks match the backend routes:
+
+All 4 frontend hook URLs match the backend routes exactly:
+- `/tesla/fleet-telemetry/error-vins` ΓåÆ `r.Get("/error-vins", ...)`
+- `/tesla/fleet-telemetry/error-vins/refresh` ΓåÆ `r.Post("/error-vins/refresh", ...)`
+- `/tesla/fleet-telemetry/errors` ΓåÆ `r.Get("/errors", ...)`
+- `/tesla/fleet-telemetry/errors/refresh` ΓåÆ `r.Post("/errors/refresh", ...)`
+
+Now let me commit the changes:
+
+There's a lot of untracked files from other work. Let me be more targeted - only stage my changes:
+
+Let me store a useful memory about the migration numbering:
+
+

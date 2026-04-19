@@ -1,0 +1,54 @@
+Now let me check how conditions are dispatched/evaluated and what position data is available on VehicleState:
+
+Now I have full context on the patterns. Let me implement the location condition and tests.
+
+Overall: the shape is good and matches the existing condition package well. IΓÇÖd make 4 substantive adjustments:
+
+1. **Blocking ΓÇö validate the passed geofence matches `cfg.GeofenceID`**
+   - **Issue:** `EvaluateLocation(cfg, state, geofence)` can silently evaluate the wrong geofence if the caller prefetches the wrong one.
+   - **Impact:** false positives/negatives with no obvious signal.
+   - **Fix:** add `if geofence.ID != cfg.GeofenceID { return error }` and test it.
+
+2. **Blocking ΓÇö keep parser behavior consistent with existing conditions**
+   - **Issue:** existing parsers allow `type` to be omitted and only reject a non-empty wrong type.
+   - **Impact:** making `location` stricter would create an inconsistent config contract.
+   - **Fix:** use the same pattern: accept empty `type`, reject only non-empty values other than `"location"`. Add a ΓÇ£minimal valid without typeΓÇ¥ test.
+
+3. **High ΓÇö your ΓÇ£same formula as DBΓÇ¥ assumption is not quite true**
+   - **Issue:** `FindByCoordinates` currently uses the **spherical law of cosines** in SQL (`6371000 * acos(...) <= radius`), not haversine.
+   - **Impact:** near the boundary, Go and SQL can disagree by small floating-point differences.
+   - **Fix:** if consistency with trigger/repo behavior matters most, use the **same acos formula** in Go or otherwise accept that exact-edge cases may differ and avoid brittle boundary assertions.
+
+4. **Medium ΓÇö reason strings should be rounded**
+   - **Issue:** raw float distances in reason text will be noisy and test-fragile.
+   - **Impact:** brittle tests and ugly diagnostics.
+   - **Fix:** round in the reason (`%.1fm` or integer meters), keep full precision in the snapshot.
+
+Answers to your concerns:
+
+- **1. `<=` for inside?**  
+  **Yes.** That matches `FindByCoordinates` (`<= radius`) and is the least surprising boundary rule.
+
+- **2. Is haversine correct?**  
+  **Yes physically, but it is not the same implementation the DB currently uses.**
+
+- **3. Risk of inconsistency?**  
+  **Yes, mostly at the radius edge.** ThatΓÇÖs exactly where automations can misfire, so choose either:
+  - same formula as SQL for consistency, or
+  - haversine + explicit acceptance of tiny edge drift.
+
+Also: use the real model fields (`state.Latitude/Longitude`, `geofence.Latitude/Longitude`) ΓÇö your sketch uses shortened names that donΓÇÖt exist.Good critique. I'll adopt all 4 findings: validate geofence ID match, allow empty type, use acos formula matching SQL, and round reason strings. Let me implement:
+
+Now let me run the tests:
+
+There's a failure ΓÇö let me see the failing tests:
+
+Tiny float precision issue ΓÇö same-point distance isn't exactly 0 due to acos rounding. Let me fix the test:
+
+Same float precision issue in the same-point distance test. Fix it:
+
+All tests pass. Let me also verify the full package compiles cleanly:
+
+Clean build, all tests pass. Let me commit:
+
+

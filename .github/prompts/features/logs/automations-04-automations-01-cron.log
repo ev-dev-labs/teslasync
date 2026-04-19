@@ -1,0 +1,64 @@
+Now let me check the existing trigger infrastructure and understand how the trigger directory should be structured.
+
+Good, I have a clear picture. Let me consult rubber-duck on my plan before implementing.
+
+A few material issues stand out.
+
+1. **Blocking ΓÇö one bad automation can break `Start/Reload` for all cron automations**
+   - If `Start()` returns on the first bad JSON / cron expr / timezone, one malformed row prevents every valid cron automation from scheduling.
+   - **Fix:** make startup/reload best-effort: iterate all rows, auto-disable invalid ones with a reason (`SetAutoDisabled`), log them, continue registering the rest.
+
+2. **Blocking ΓÇö current one-time design can re-fire incorrectly**
+   - ΓÇ£Disable after `Evaluate` only on successΓÇ¥ violates one-time semantics. If `Evaluate` fails, the cron will fire again on the next matching tick.
+   - **Fix:** treat one-time as ΓÇ£consume on first eligible fire,ΓÇ¥ not ΓÇ£first successful execution.ΓÇ¥ Disable/unregister regardless of downstream execution result, or persist a fired marker before evaluation.
+
+3. **Blocking ΓÇö `one_time_date` needs to be validated against the actual next scheduled occurrence**
+   - Comparing only ΓÇ£today matches dateΓÇ¥ is too weak. It misses cases like:
+     - scheduler starts after the target time on that date,
+     - cron expression never matches that date,
+     - date passes and automation stays enabled forever.
+   - **Fix:** parse cron + timezone, compute the next occurrence relative to a fixed base, and ensure it lands on the requested date/time window. If the target occurrence is already past or impossible, auto-disable with reason.
+
+4. **Blocking ΓÇö overlapping executions are likely**
+   - A cron job can fire again while a previous run is still executing. Nothing in this plan prevents duplicate concurrent `Evaluate` calls for the same automation.
+   - **Fix:** add per-automation in-flight protection or use a scheduler chain equivalent to `SkipIfStillRunning`. DonΓÇÖt rely on the FSM unless the engine already serializes by automation ID.
+
+5. **Non-blocking but important ΓÇö donΓÇÖt use `Start(ctx)`ΓÇÖs context as the long-lived job context**
+   - If caller passes a short-lived startup/request context, future cron executions will inherit a canceled context.
+   - **Fix:** create an internal lifecycle context (`context.WithCancel(context.Background())`) for the trigger instance. Use the passed `ctx` only for initial DB load/reload.
+
+6. **Non-blocking ΓÇö repo should be an interface, not `*database.AutomationRepo`**
+   - As planned, unit tests will be awkward or DB-bound.
+   - **Fix:** define a narrow interface in the consumer package, e.g. `GetByTriggerType`, `SetAutoDisabled` (and only add others if needed). Same for time source if you want deterministic tests.
+
+7. **Non-blocking ΓÇö prefer per-entry `CRON_TZ=` over custom per-automation parser logic**
+   - ItΓÇÖs simpler and less error-prone than trying to manage parser/location coupling yourself.
+   - **Fix:** normalize specs to `CRON_TZ=<tz> <expr>` and use one scheduler/parser configuration.
+
+8. **Non-blocking ΓÇö `scheduled_time` in snapshot is ambiguous**
+   - If you use `time.Now()` inside the job, that is fire time, not necessarily scheduled time.
+   - **Fix:** either rename it to `fired_at`, or compute/store both `scheduled_for` and `fired_at`.
+
+9. **Test gap**
+   - The proposed tests miss the most failure-prone behavior:
+     - bad automation does not break startup,
+     - one-time disables even when `Evaluate` errors,
+     - past/impossible `one_time_date` auto-disables,
+     - overlapping ticks donΓÇÖt double-execute.
+   - **Fix:** test the job callback directly with injected repo/clock/engine; keep real scheduler tests minimal.
+
+Overall: the shape is good, but IΓÇÖd change **startup error handling**, **one-time semantics**, **context ownership**, and **concurrency control** before implementing.Good critique. Key adjustments: best-effort startup (skip bad automations), one-time disables on fire (not on success), overlapping execution protection via `SkipIfStillRunning`, internal lifecycle context, repo as interface, and `CRON_TZ=` prefix for timezone.
+
+Let me implement.
+
+Now create the test file:
+
+Now let me build and test:
+
+All 34 tests pass (1 skipped in short mode). Let me verify the full build still works:
+
+Full build passes. Let me also run `go vet` on the new package:
+
+Clean. Let me commit:
+
+

@@ -1,0 +1,15 @@
+The backend `commandMap` already has the seat/steering commands (lines 630-635). Let me check if `allowedCommands` and the frontend are also already done.
+
+All three changes are already implemented:
+
+1. **Backend `commandMap`** (client.go:630-635) ΓÇö Γ£à All 6 seat/steering commands present
+2. **Backend `allowedCommands`** (command_handler.go:90-95) ΓÇö Γ£à All 6 commands whitelisted
+3. **Frontend CommandsPage** (lines 404-433) ΓÇö Γ£à Seat Heat, Seat Cool, and Steering Heat buttons in Climate & Comfort group with correct icons (Flame, Snowflake, CircleDot)
+
+Let me verify the icon imports exist:
+
+Let me quickly verify everything compiles:
+
+Both Go and TypeScript compile cleanly.
+
+

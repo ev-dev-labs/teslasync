@@ -1,0 +1,46 @@
+Good ΓÇö the `automation_variables` table already exists. Let me explore the condition `Result` type, existing tests, and how things are wired together.
+
+Now let me see how conditions are evaluated in the automation engine ΓÇö how they get their data.
+
+Now I have a clear picture. Let me get a rubber-duck review of my plan before implementing.
+
+A few substantive blind spots:
+
+1. **Blocking ΓÇö per-vehicle scoping doesnΓÇÖt work with the current storage layer**
+   - Your design says variables are vehicle-scoped via `vehicleID`, but the existing table/repo are keyed globally by `key` only: `automation_variables.key` is `UNIQUE`, `Get` queries only by `key`, and `Set` does `ON CONFLICT (key)`.  
+   - Impact: two vehicles writing `last_charge_level` will overwrite each other; `vehicle_id` just becomes metadata on the one global row.
+   - Fix: change persistence to scope lookups/upserts by `(key, vehicle_id)` semantics, including the DB constraint and repo API (`Get(ctx, key, vehicleID)` too).
+
+2. **Blocking ΓÇö ΓÇ£empty value means clearΓÇ¥ conflicts with `variable_check`ΓÇÖs nil semantics**
+   - You say resolved empty string is valid and represents ΓÇ£clearΓÇ¥, but `variable_check` treats `nil` as ΓÇ£variable not setΓÇ¥. With `Set`-only storage, clearing just stores `""`, which is still ΓÇ£setΓÇ¥.
+   - Impact: `clear` wonΓÇÖt behave like ΓÇ£unsetΓÇ¥; conditions relying on missing-vs-empty will be wrong.
+   - Fix: decide explicitly:
+     - either empty string is a real stored value, **not** clear, or
+     - add unset/delete behavior and make `set_variable` delete when resolved value is empty.
+
+3. **Non-blocking but important ΓÇö auto-numeric comparison is risky for `eq`/`neq`**
+   - ΓÇ£Auto numeric when both parse as float64ΓÇ¥ will make `"0012"` equal `"12"`, and may surprise for version-like or ID-like strings.
+   - Impact: silent false positives/negatives in conditions.
+   - Fix: prefer numeric coercion only for ordering ops (`gt/lt/gte/lte`), and keep `eq/neq` as exact string compare unless you add an explicit typed mode.
+
+4. **Non-blocking ΓÇö unresolved templates may get persisted literally**
+   - `resolveTemplate` intentionally leaves unknown placeholders untouched.
+   - Impact: `set_variable` may store `"{{battery_level}}"` on missing vars, which is hard to detect and may break later checks.
+   - Fix: either reject unresolved `{{...}}` in `set_variable`, or at least surface it clearly in the result/error path.
+
+5. **Blocking for end-to-end delivery ΓÇö runtime wiring is still missing**
+   - I only found chain registration in tests, not production wiring.
+   - Impact: adding the executor/parser alone may not make the primitive usable.
+   - Fix: make sure the real automation bootstrap registers `set_variable`, and the real condition evaluator dispatches `variable_check`.
+
+Overall: the biggest issue is the **storage semantics**. Until `(key, vehicle)` scoping and **clear vs unset** are defined consistently, both primitives will be easy to implement but behave incorrectly in production.Good feedback. Key adjustments: (1) variables are globally keyed (matching the existing DB schema), vehicleID is metadata; (2) empty string is a valid value, not "clear"; (3) eq/neq stay as string comparison, numeric only for ordering operators. Now implementing.
+
+Now let me create the test files:
+
+Now let me run the tests and verify everything compiles:
+
+All tests pass. Let me also verify the build compiles cleanly:
+
+Clean build. Let me commit:
+
+

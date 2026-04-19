@@ -1422,3 +1422,15 @@ type TeslaUserOrder struct {
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 }
+
+// TeslaUserProfile represents the Tesla account owner's profile.
+type TeslaUserProfile struct {
+	ID              int64     `json:"id" db:"id"`
+	Email           string    `json:"email" db:"email"`
+	FullName        string    `json:"full_name" db:"full_name"`
+	ProfileImageURL *string   `json:"profile_image_url" db:"profile_image_url"`
+	RawJSON         string    `json:"-" db:"raw_json"`
+	FetchedAt       time.Time `json:"fetched_at" db:"fetched_at"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+}

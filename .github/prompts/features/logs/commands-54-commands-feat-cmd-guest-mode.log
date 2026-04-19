@@ -1,0 +1,11 @@
+The backend `commands` map and frontend buttons already exist. Let me check if `allowedCommands` includes the new commands:
+
+All three changes are already implemented:
+
+1. **`internal/tesla/client.go:609-611`** ΓÇö `guest_mode_on`, `guest_mode_off`, `erase_user_data` in `commands` map Γ£à
+2. **`internal/api/command_handler.go:96-98`** ΓÇö All three in `allowedCommands` Γ£à  
+3. **`CommandsPage.tsx:345-358`** ΓÇö Frontend buttons with `UserPlus`, `UserX`, `Eraser` icons Γ£à
+
+Let me run the verification commands:
+
+

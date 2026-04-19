@@ -1,0 +1,82 @@
+Let me explore the Tesla client, vehicle model, and existing wake patterns.
+
+Good, `GetByID` returns the `State` field. Now I have enough context to plan the implementation. Let me get a rubber-duck review before implementing.
+
+Main issues I see:
+
+- **Blocking: DB polling is likely too unreliable for a 30s gate.**  
+  `vehicle.State` is repo-backed, and worker refresh can be **60s** in telemetry-primary mode, not just ~30s (`internal/worker/worker.go:117-123`). That means `WakeUp` can succeed but your loop still times out and suppresses the command.  
+  **Fix:** donΓÇÖt make command dispatch depend on DB state becoming `"online"` within 30s. Prefer direct Tesla polling (`GetVehicleState`) or, if you avoid that, use a much looser strategy (wake + short wait + single send attempt / retry).
+
+- **Blocking: auto-wake should respect `pc.WakeUp`, not just `pc.Commands`.**  
+  The REST wake handler already enforces that separately (`internal/api/vehicle_handler.go:187-190`). If automation wakes anyway, it bypasses the same safety gate.  
+  **Fix:** explicitly check `pc.WakeUp` before auto-waking and fail the command with a clear reason if wake is needed but disabled.
+
+- **High: this will create inconsistent behavior across command paths.**  
+  YouΓÇÖre adding wake logic only in automation, but `internal/api/command_handler.go` already assumes asleep/offline commands have wake lifecycle handling (`:181-186`) while the Tesla client itself does **not** auto-wake in `SendCommand` (`internal/tesla/client.go:735-776`).  
+  **Impact:** manual commands and automation commands will behave differently.  
+  **Fix:** consider centralizing wake-before-command in a shared command service/wrapper, not only in `CommandExecutor`.
+
+- **High: failed wake may skip command logging entirely unless you handle it carefully.**  
+  Today `sendToVehicle` always writes a `command_logs` row for the requested command. If you return early on wake failure, you may lose the audit trail for the attempted automation command.  
+  **Fix:** still log the original command as failed with an error like `auto-wake failed: ...`; optionally include wake metadata in the result only.
+
+- **Medium: `CommandResult.DurationMs` will become misleading.**  
+  Right now it measures end-to-end per-vehicle execution time. If you only put wake timing in `WakeResult.DurationMs` and leave `CommandResult.DurationMs` around the send call, total latency will look much smaller than reality.  
+  **Fix:** keep `CommandResult.DurationMs` as total `sendToVehicle` duration, and use `WakeResult.DurationMs` as the wake subset.
+
+- **Medium: treating `"offline"` the same as `"asleep"` may cause bad delays.**  
+  `"offline"` can mean unreachable, not merely sleeping. Auto-waking every offline vehicle can add 30s delays across fleet automations with low success odds.  
+  **Fix:** either only auto-wake `"asleep"`, or use a different/shorter strategy for `"offline"` (possibly based on `UpdatedAt` freshness).
+
+- **Medium: if youΓÇÖre growing the interface, consider adding direct state polling now instead of churning twice.**  
+  ThereΓÇÖs already a broader Tesla port with both `WakeUp` and `GetVehicleState` (`internal/port/external/tesla.go:36-44`).  
+  **Fix:** either align `TeslaCommander` with that subset now, or be prepared to revisit the interface immediately after merging.
+
+Overall: **the biggest risk is the DB-poll wait loop falsely failing commands.** IΓÇÖd change that before implementing.Good critique. Key changes to my plan:
+1. Check `pc.WakeUp` before auto-waking
+2. Still log command on wake failure for audit trail
+3. `CommandResult.DurationMs` stays as total time; `WakeResult.DurationMs` is the wake subset
+4. Skip auto-wake for `wake_up` command itself
+
+Let me implement.
+
+Now add the constants and the `wakeIfNeeded` method, and integrate it into `sendToVehicle`:
+
+Now add the `wakeIfNeeded` method and update `sendToVehicle`:
+
+Now let me verify the final file looks correct:
+
+Good. Now I need to check if there are any other files that implement `TeslaCommander` that need the `WakeUp` method, and then update the tests.
+
+Now let me also check if chain_test.go has its own mock:
+
+Good, chain_test.go doesn't directly reference TeslaCommander. Now let me update the test file. I'll add `WakeUp` to the mock, update `testVehicle` to accept state, and add all the new tests:
+
+Now update the `testVehicle` helper and `mockVehicleRepo` to support state-based polling:
+
+Now I need to make the mock vehicle repo support state changes for polling. Let me update it:
+
+Now add the new auto-wake tests at the end of the test file:
+
+Now let me add the auto-wake tests. I need to import `sync/atomic` for the poll counter:
+
+Now add the auto-wake tests at the end of the file:
+
+Now let me run the tests to verify everything compiles and passes:
+
+Let me see the failing tests:
+
+The issue is `getByIDFunc` is also called for the initial vehicle lookup in `Execute`, not just during wake polling. Let me fix both tests:
+
+All 100+ tests pass, including all 8 new auto-wake tests. Let me also verify there are no compile issues anywhere that might reference the old `TeslaCommander` interface:
+
+Let me also check if any code outside the action package references `TeslaCommander` and might need updating:
+
+Good ΓÇö `TeslaCommander` and `NewCommandExecutor` are only used within the action package. The real Tesla client (`internal/tesla/client.go`) already has `WakeUp(ctx, vin)` and will satisfy the updated interface.
+
+Let me do a broader build check to make sure nothing is broken:
+
+Full project builds clean. Now let me commit:
+
+

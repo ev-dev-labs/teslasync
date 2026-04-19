@@ -1,0 +1,76 @@
+Now let me understand the vehicle state model and how it's fetched:
+
+Now I have the full picture. Let me check how the automation engine dispatches conditions:
+
+I have a clear understanding of the pattern. Let me verify the module path and then implement:
+
+Now let me get the rubber duck's input on my design before implementing:
+
+Overall: solid shape and consistent with the existing parse/evaluate split, but IΓÇÖd change two things before locking it in.
+
+1. `interface{}` for `value`  
+**Severity: blocking-ish**  
+It works, but the hidden invariant is risky: `cfg.Field` determines the runtime type of `cfg.value`, and that state only exists if `ParseStateCheckConfig` was used. That breaks the current package pattern where configs are plain data structs and tests can construct them directly (`TimeWindowConfig`/`DayFilterConfig` do this today).
+
+**Why it may bite you**
+- direct `&StateCheckConfig{...}` construction gives an unusable config
+- missing `"value"` vs `"value": null` is harder to distinguish cleanly
+- the config no longer round-trips as JSON-shaped data
+
+**Recommended fix**
+Use a temporary parse struct with `Value json.RawMessage`, then return a self-contained config, e.g.:
+- `Kind string` + `BoolValue *bool` / `NumberValue *float64` / `StringValue *string`, or
+- one internal typed wrapper struct instead of bare `interface{}`
+
+2. Converting `battery_level` to `float64`  
+**Severity: non-blocking**  
+For `battery_level`, this is fine. Small ints are exactly representable in `float64`.
+
+**Caveat**
+Exact `eq`/`neq` on float fields like `speed` / temps is brittle.
+
+**Recommended fix**
+- keep unified numeric comparison if you want simplicity
+- but either:
+  - disallow `eq`/`neq` for non-integer numeric fields, or
+  - define epsilon semantics for float equality
+
+3. Nil `state` behavior  
+**Severity: blocking**  
+Return an **error**, not `Met:false`.
+
+A nil state is not ΓÇ£condition not metΓÇ¥; itΓÇÖs ΓÇ£evaluation could not happenΓÇ¥. Returning false will hide data-fetch/integration bugs and silently skip automations.
+
+4. Duplicated `supportedFields` metadata  
+**Severity: non-blocking**  
+An explicit allowlist is good; reflection would be more fragile, not less.
+
+**But** donΓÇÖt duplicate metadata in multiple places.  
+Best version: one registry like:
+
+- field name
+- kind (`bool`/`number`/`string`)
+- getter func from `VehicleState`
+- allowed operators
+
+That becomes the single source of truth for parse + evaluate.
+
+5. Missing edge cases  
+**Most important ones**
+- reject missing `value` and explicit `null`
+- reject fractional values for integer-like fields such as `battery_level`
+- define case sensitivity for `state`
+- if `state` is really an enum, validate allowed values at parse time
+- think about ΓÇ£unknownΓÇ¥ telemetry: if absent data is represented as zero/false in `VehicleState`, some checks may produce false positives/negatives
+
+Net: the design is good, but IΓÇÖd make the config self-contained, error on nil state, and centralize field metadata. Those are the main things that could otherwise cause subtle bugs.Good feedback. Key adoptions: use typed pointer fields instead of `interface{}`, error on nil state, centralize field metadata with getter funcs. Let me implement:
+
+Now create the test file:
+
+Now let's run the tests:
+
+All tests pass. Let me also verify the build compiles:
+
+Clean build, all tests pass. Let me commit:
+
+

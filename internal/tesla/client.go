@@ -177,6 +177,11 @@ func (c *Client) GetUserOrders(ctx context.Context) ([]byte, int, error) {
 	return c.doRequest(ctx, http.MethodGet, "/api/1/users/orders", nil)
 }
 
+// GetUserProfile calls GET /api/1/users/me to fetch the Tesla account owner's profile.
+func (c *Client) GetUserProfile(ctx context.Context) ([]byte, int, error) {
+	return c.doRequest(ctx, http.MethodGet, "/api/1/users/me", nil)
+}
+
 // RegisterPartner calls POST /api/1/partner_accounts to register this app in the current region.
 // It requires the partner token (client_credentials), not the user's OAuth token.
 func (c *Client) RegisterPartner(ctx context.Context, partnerToken, domain string) ([]byte, int, error) {

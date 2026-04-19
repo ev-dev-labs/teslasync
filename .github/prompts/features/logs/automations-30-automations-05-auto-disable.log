@@ -1,0 +1,23 @@
+Now let me explore the domain models, FSM handler, automation handler, and the existing tests to understand the patterns better.
+
+Let me read the key files: Automation model, database repo, FSM machine, and notification patterns.
+
+Now let me look at the FSM test and the frontend automation pages to understand the full picture.
+
+Let me check the router, notification handler, and the existing automations frontend pages.
+
+Let me check if there's an automations API endpoint and the frontend notification patterns.
+
+Now I have a complete understanding. The DB schema, models, repo, and FSM all already support `consecutive_failures` and `auto_disabled`. I need to create the standalone `AutoDisableChecker` component with notification support.
+
+Let me create the files.
+
+Now let me run the tests to verify everything compiles and passes.
+
+All tests pass. Let me also verify the build compiles cleanly.
+
+Clean build. Let me also verify the full project still compiles:
+
+Full project compiles. Let me commit.
+
+
