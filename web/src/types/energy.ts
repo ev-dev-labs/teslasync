@@ -258,6 +258,36 @@ export interface TeslaEnergySite {
   fetched_at: string;
   created_at: string;
   updated_at: string;
+  site_info_fetched_at: string | null;
+}
+
+// Tesla Energy Site Info (detailed site configuration from /site_info)
+
+export interface TeslaEnergySiteInfo {
+  site_name?: string;
+  time_zone_offset?: number;
+  installation_time_zone?: string;
+  backup_reserve_percent?: number;
+  default_real_mode?: string;
+  version?: string;
+  battery_count?: number;
+  nameplate_power?: number;
+  nameplate_energy?: number;
+  components?: {
+    solar?: boolean;
+    battery?: boolean;
+    grid?: boolean;
+    load_meter?: boolean;
+    tou_capable?: boolean;
+    storm_mode_capable?: boolean;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface TeslaEnergySiteInfoResponse {
+  data: TeslaEnergySiteInfo | null;
+  fetched_at: string | null;
 }
 
 // Tesla Energy Live Status (power flow snapshot)

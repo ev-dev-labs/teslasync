@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import {
   Sun, Battery, Zap, Grid3x3, RefreshCw, Shield,
-  CloudLightning, Gauge, Activity,
+  CloudLightning, Gauge, Activity, Settings, Cpu, Info,
 } from 'lucide-react';
 
 import { PageContainer, Grid } from '@/components/layout';
@@ -9,6 +9,7 @@ import { GlassPanel, Badge, Button } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { RadialGauge } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -17,9 +18,11 @@ import { formatDateTime } from '@/lib/dateFormat';
 import {
   useTeslaEnergySites,
   useRefreshTeslaEnergySites,
+  useTeslaEnergySiteInfo,
+  useRefreshTeslaEnergySiteInfo,
 } from '@/api/hooks/useEnergy';
 
-import type { TeslaEnergySite } from '@/types/energy';
+import type { TeslaEnergySite, TeslaEnergySiteInfo } from '@/types/energy';
 
 /* ───────── Helpers ───────── */
 
@@ -27,6 +30,12 @@ function fmtEnergy(wh: number | null | undefined): string {
   if (wh == null) return '—';
   if (wh >= 1000) return `${fmtNumber(wh / 1000, 1)} kWh`;
   return `${fmtNumber(wh, 0)} Wh`;
+}
+
+function fmtPower(w: number | null | undefined): string {
+  if (w == null) return '—';
+  if (w >= 1000) return `${fmtNumber(w / 1000, 1)} kW`;
+  return `${fmtNumber(w, 0)} W`;
 }
 
 function resourceIcon(type: string) {
@@ -39,6 +48,13 @@ function resourceLabel(type: string): string {
   if (type === 'battery') return 'Powerwall';
   if (type === 'solar') return 'Solar';
   return type;
+}
+
+function operationModeLabel(mode: string | undefined): string {
+  if (mode === 'self_consumption') return 'Self-Powered';
+  if (mode === 'autonomous') return 'Time-Based Control';
+  if (mode === 'backup') return 'Backup Only';
+  return mode ?? '—';
 }
 
 /* ───────── Capability Badge ───────── */
@@ -55,6 +71,144 @@ function CapBadge({ active, label, icon: Icon }: CapBadgeProps) {
       <Icon className="h-3 w-3 mr-1" />
       {label}
     </Badge>
+  );
+}
+
+/* ───────── Site Info Section ───────── */
+
+function SiteInfoSection({ siteId }: { siteId: number }) {
+  const { t } = useTranslation();
+  const { data: response, isLoading } = useTeslaEnergySiteInfo(siteId);
+  const refreshMutation = useRefreshTeslaEnergySiteInfo();
+
+  const info: TeslaEnergySiteInfo | null = response?.data ?? null;
+
+  if (isLoading) {
+    return <Skeleton className="h-32 mt-4" />;
+  }
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-white/70 flex items-center gap-1.5">
+          <Settings className="h-3.5 w-3.5" />
+          {t('energy.siteInfo.title', 'Site Configuration')}
+        </h4>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => refreshMutation.mutate(siteId)}
+          loading={refreshMutation.isPending}
+          disabled={refreshMutation.isPending}
+          aria-label={t('energy.siteInfo.refresh', 'Refresh site info')}
+        >
+          <RefreshCw className="h-3 w-3" />
+        </Button>
+      </div>
+
+      {info ? (
+        <div className="space-y-3">
+          {/* Operation mode + backup reserve */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+              <p className="text-xs text-white/50 mb-1">
+                {t('energy.siteInfo.operationMode', 'Operation Mode')}
+              </p>
+              <p className="text-sm font-medium text-white/90">
+                {operationModeLabel(info.default_real_mode)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+              <p className="text-xs text-white/50 mb-1">
+                {t('energy.siteInfo.backupReserve', 'Backup Reserve')}
+              </p>
+              {info.backup_reserve_percent != null ? (
+                <div className="flex items-center gap-2">
+                  <RadialGauge
+                    value={info.backup_reserve_percent}
+                    max={100}
+                    size={32}
+                    label=""
+                  />
+                  <span className="text-sm font-medium text-white/90">
+                    {fmtNumber(info.backup_reserve_percent, 0)}%
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-white/50">—</p>
+              )}
+            </div>
+          </div>
+
+          {/* Battery count + capacity */}
+          <Grid cols={{ default: 2, md: 3 }} gap={3}>
+            {info.battery_count != null && (
+              <StatCard
+                label={t('energy.siteInfo.batteryCount', 'Powerwalls')}
+                value={info.battery_count}
+                icon={<Battery className="h-4 w-4" />}
+              />
+            )}
+            {info.nameplate_power != null && (
+              <StatCard
+                label={t('energy.siteInfo.ratedPower', 'Rated Power')}
+                value={fmtPower(info.nameplate_power)}
+                icon={<Zap className="h-4 w-4" />}
+              />
+            )}
+            {info.nameplate_energy != null && (
+              <StatCard
+                label={t('energy.siteInfo.ratedEnergy', 'Rated Energy')}
+                value={fmtEnergy(info.nameplate_energy)}
+                icon={<Gauge className="h-4 w-4" />}
+              />
+            )}
+          </Grid>
+
+          {/* Firmware + timezone */}
+          <div className="flex flex-wrap gap-2 text-xs text-white/40">
+            {info.version && (
+              <span className="flex items-center gap-1">
+                <Cpu className="h-3 w-3" /> {t('energy.siteInfo.firmware', 'Firmware')}: {info.version}
+              </span>
+            )}
+            {info.installation_time_zone && (
+              <span>· {info.installation_time_zone}</span>
+            )}
+          </div>
+
+          {/* Component badges from site_info (may differ from /products) */}
+          {info.components && (
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(info.components).map(([key, val]) =>
+                typeof val === 'boolean' ? (
+                  <Badge key={key} variant={val ? 'success' : 'neutral'} className="text-xs">
+                    {key.replace(/_/g, ' ')}
+                  </Badge>
+                ) : null,
+              )}
+            </div>
+          )}
+
+          {/* Fetched timestamp */}
+          {response?.fetched_at && (
+            <p className="text-xs text-white/30">
+              {t('energy.siteInfo.lastFetched', 'Site info fetched')}: {formatDateTime(response.fetched_at)}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-4">
+          <EmptyState
+            icon={<Info className="h-5 w-5" />}
+            message={t(
+              'energy.siteInfo.empty',
+              'No site configuration loaded yet. Click refresh to fetch from Tesla.',
+            )}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -119,6 +273,9 @@ function EnergySiteCard({ site }: { site: TeslaEnergySite }) {
           </Badge>
         )}
       </div>
+
+      {/* Site Info section */}
+      <SiteInfoSection siteId={site.energy_site_id} />
 
       {/* Footer */}
       <p className="text-xs text-white/30">

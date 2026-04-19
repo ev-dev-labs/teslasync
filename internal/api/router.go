@@ -327,6 +327,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Tesla Energy Site History (calendar_history + telemetry_history)
 		r.Route("/tesla/energy-sites/{siteID}", func(r chi.Router) {
+			// Site info (configuration, components, firmware)
+			r.Get("/site-info", energySiteHandler.SiteInfo)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/site-info/refresh", energySiteHandler.RefreshSiteInfo)
+
 			r.Get("/energy-history", teslaEnergyHistoryHandler.EnergyHistory)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/energy-history/refresh", teslaEnergyHistoryHandler.RefreshEnergyHistory)
 			r.Get("/backup-history", teslaEnergyHistoryHandler.BackupHistory)

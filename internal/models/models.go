@@ -1187,26 +1187,28 @@ type AutomationHistory struct {
 // TeslaEnergySite represents a Tesla energy product (Powerwall, Solar Roof, Wall Connector).
 // Discovered via GET /api/1/products and persisted for reference by other energy endpoints.
 type TeslaEnergySite struct {
-	ID                int64     `json:"id" db:"id"`
-	EnergySiteID      int64     `json:"energy_site_id" db:"energy_site_id"`
-	ResourceType      string    `json:"resource_type" db:"resource_type"`
-	SiteName          string    `json:"site_name" db:"site_name"`
-	GatewayID         *string   `json:"gateway_id" db:"gateway_id"`
-	TotalPackEnergy   *float64  `json:"total_pack_energy" db:"total_pack_energy"`
-	PercentageCharged *float64  `json:"percentage_charged" db:"percentage_charged"`
-	BatteryType       *string   `json:"battery_type" db:"battery_type"`
-	BackupCapable     bool      `json:"backup_capable" db:"backup_capable"`
-	StormModeEnabled  bool      `json:"storm_mode_enabled" db:"storm_mode_enabled"`
-	HasSolar          bool      `json:"has_solar" db:"has_solar"`
-	HasBattery        bool      `json:"has_battery" db:"has_battery"`
-	HasGrid           bool      `json:"has_grid" db:"has_grid"`
-	HasLoadMeter      bool      `json:"has_load_meter" db:"has_load_meter"`
-	TOUCapable        bool      `json:"tou_capable" db:"tou_capable"`
-	StormModeCapable  bool      `json:"storm_mode_capable" db:"storm_mode_capable"`
-	RawJSON           string    `json:"raw_json,omitempty" db:"raw_json"`
-	FetchedAt         time.Time `json:"fetched_at" db:"fetched_at"`
-	CreatedAt         time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	ID                int64      `json:"id" db:"id"`
+	EnergySiteID      int64      `json:"energy_site_id" db:"energy_site_id"`
+	ResourceType      string     `json:"resource_type" db:"resource_type"`
+	SiteName          string     `json:"site_name" db:"site_name"`
+	GatewayID         *string    `json:"gateway_id" db:"gateway_id"`
+	TotalPackEnergy   *float64   `json:"total_pack_energy" db:"total_pack_energy"`
+	PercentageCharged *float64   `json:"percentage_charged" db:"percentage_charged"`
+	BatteryType       *string    `json:"battery_type" db:"battery_type"`
+	BackupCapable     bool       `json:"backup_capable" db:"backup_capable"`
+	StormModeEnabled  bool       `json:"storm_mode_enabled" db:"storm_mode_enabled"`
+	HasSolar          bool       `json:"has_solar" db:"has_solar"`
+	HasBattery        bool       `json:"has_battery" db:"has_battery"`
+	HasGrid           bool       `json:"has_grid" db:"has_grid"`
+	HasLoadMeter      bool       `json:"has_load_meter" db:"has_load_meter"`
+	TOUCapable        bool       `json:"tou_capable" db:"tou_capable"`
+	StormModeCapable  bool       `json:"storm_mode_capable" db:"storm_mode_capable"`
+	RawJSON           string     `json:"raw_json,omitempty" db:"raw_json"`
+	SiteInfoJSON      *string    `json:"site_info_json,omitempty" db:"site_info_json"`
+	SiteInfoFetchedAt *time.Time `json:"site_info_fetched_at,omitempty" db:"site_info_fetched_at"`
+	FetchedAt         time.Time  `json:"fetched_at" db:"fetched_at"`
+	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // TeslaEnergyLiveStatus represents a point-in-time power flow snapshot from a Tesla Energy site.

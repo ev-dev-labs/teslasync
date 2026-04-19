@@ -88,6 +88,97 @@ func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stored)
 }
 
+// SiteInfo returns stored site_info JSON from DB for a given energy site.
+func (h *EnergySiteHandler) SiteInfo(w http.ResponseWriter, r *http.Request) {
+	siteID, err := parseSiteID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid site ID")
+		return
+	}
+
+	siteInfoJSON, fetchedAt, err := h.repo.GetSiteInfo(r.Context(), siteID)
+	if err != nil {
+		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to get site info")
+		writeError(w, http.StatusInternalServerError, "failed to fetch site info")
+		return
+	}
+
+	if siteInfoJSON == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"data":       nil,
+			"fetched_at": nil,
+		})
+		return
+	}
+
+	// Write envelope with raw JSON data inside to avoid double-serialization
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"data":%s,"fetched_at":"%s"}`, *siteInfoJSON, fetchedAt.Format("2006-01-02T15:04:05Z"))
+}
+
+// RefreshSiteInfo fetches site_info from Tesla, saves to DB, and returns the data.
+func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Request) {
+	siteID, err := parseSiteID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid site ID")
+		return
+	}
+
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		return
+	}
+
+	log.Info().Int64("site_id", siteID).Msg("refreshing energy site info from Tesla")
+
+	body, status, err := h.teslaClient.GetEnergySiteInfo(r.Context(), siteID)
+	if err != nil {
+		log.Error().Err(err).Msg("tesla energy site info API error")
+		writeError(w, http.StatusBadGateway, "failed to fetch site info from Tesla")
+		return
+	}
+	if status < 200 || status >= 300 {
+		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla energy site info non-2xx")
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		return
+	}
+
+	// Unwrap the Tesla envelope: {"response": {...}}
+	var envelope struct {
+		Response json.RawMessage `json:"response"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		log.Error().Err(err).Msg("failed to parse site info envelope")
+		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		return
+	}
+
+	innerJSON := string(envelope.Response)
+	if innerJSON == "" || innerJSON == "null" {
+		innerJSON = "{}"
+	}
+
+	if err := h.repo.UpdateSiteInfo(r.Context(), siteID, innerJSON); err != nil {
+		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to save site info")
+		writeError(w, http.StatusInternalServerError, "failed to save site info")
+		return
+	}
+
+	// Return the freshly stored data
+	siteInfoJSON, fetchedAt, err := h.repo.GetSiteInfo(r.Context(), siteID)
+	if err != nil || siteInfoJSON == nil {
+		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to read back site info after save")
+		writeError(w, http.StatusInternalServerError, "failed to read site info after save")
+		return
+	}
+
+	log.Info().Int64("site_id", siteID).Msg("energy site info refresh complete")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"data":%s,"fetched_at":"%s"}`, *siteInfoJSON, fetchedAt.Format("2006-01-02T15:04:05Z"))
+}
+
 // parseProductsResponse parses the Tesla /products response, filtering to energy products only.
 func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
 	var envelope struct {

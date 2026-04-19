@@ -982,3 +982,10 @@ func (c *Client) GetEnergySiteLiveStatus(ctx context.Context, energySiteID int64
 	path := fmt.Sprintf("/api/1/energy_sites/%d/live_status", energySiteID)
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
+
+// GetEnergySiteInfo calls GET /api/1/energy_sites/{id}/site_info.
+// Returns detailed site configuration: components, backup reserve, operation mode, firmware version.
+func (c *Client) GetEnergySiteInfo(ctx context.Context, energySiteID int64) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/energy_sites/%d/site_info", energySiteID)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}

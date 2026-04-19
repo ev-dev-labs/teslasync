@@ -17,6 +17,7 @@ import type {
   TeslaWCChargingEntry,
   TeslaEnergyLiveStatus,
   TeslaEnergySite,
+  TeslaEnergySiteInfoResponse,
 } from '@/types/energy';
 
 export function useEnergyStats(vehicleId: string | null, days = 30) {
@@ -127,6 +128,30 @@ export function useRefreshTeslaEnergySites() {
       request<TeslaEnergySite[]>('/tesla/energy-sites/refresh', { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-energy-sites'] });
+    },
+  });
+}
+
+export function useTeslaEnergySiteInfo(siteId?: number) {
+  return useQuery({
+    queryKey: ['tesla-site-info', siteId],
+    queryFn: () =>
+      request<TeslaEnergySiteInfoResponse>(`/tesla/energy-sites/${siteId}/site-info`),
+    enabled: !!siteId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRefreshTeslaEnergySiteInfo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (siteId: number) =>
+      request<TeslaEnergySiteInfoResponse>(
+        `/tesla/energy-sites/${siteId}/site-info/refresh`,
+        { method: 'POST' },
+      ),
+    onSuccess: (_data, siteId) => {
+      queryClient.invalidateQueries({ queryKey: ['tesla-site-info', siteId] });
     },
   });
 }
