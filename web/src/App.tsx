@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { PageLoader } from './components/feedback/PageLoader'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { AuthExpiredOverlay } from './components/feedback/AuthExpiredOverlay'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -130,8 +131,29 @@ function SafeRoute({ children, name }: { children: React.ReactNode; name: string
 }
 
 export default function App() {
+  const navigate = useNavigate()
+
+  // After re-authentication, redirect back to the page the user was on
+  useEffect(() => {
+    const returnUrl = sessionStorage.getItem('teslasync-return-url')
+    if (returnUrl) {
+      sessionStorage.removeItem('teslasync-return-url')
+      try {
+        const url = new URL(returnUrl)
+        if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+          navigate(url.pathname + url.search + url.hash)
+        }
+      } catch {
+        // Invalid URL stored — ignore
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
-    <Routes>
+    <>
+      <AuthExpiredOverlay />
+      <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
@@ -217,6 +239,7 @@ export default function App() {
         <Route path="speed-profile" element={<SafeRoute name="SpeedProfile"><SpeedProfile /></SafeRoute>} />
         <Route path="tesla-account" element={<SafeRoute name="TeslaAccount"><TeslaAccount /></SafeRoute>} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }
