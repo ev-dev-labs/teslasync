@@ -9,6 +9,7 @@ interface ToggleCommandTileProps {
   def: CommandDef;
   state: VehicleState | null;
   onExecute: (command: string, params?: Record<string, unknown>) => void;
+  onRequestDialog: (def: CommandDef) => void;
   loading: boolean;
   lastStatus?: string;
   isFavorite: boolean;
@@ -21,7 +22,7 @@ const onStyles = {
   success: { panel: 'border-neon-green/20 bg-neon-green/5', icon: 'bg-neon-green/20 text-neon-green', dot: 'bg-neon-green', text: 'text-neon-green' },
 } as const;
 
-export function ToggleCommandTile({ def, state, onExecute, loading, lastStatus, isFavorite, onToggleFavorite }: ToggleCommandTileProps) {
+export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, loading, lastStatus, isFavorite, onToggleFavorite }: ToggleCommandTileProps) {
   const { t } = useTranslation();
   const [localToggle, setLocalToggle] = useState(false);
 
@@ -40,20 +41,8 @@ export function ToggleCommandTile({ def, state, onExecute, loading, lastStatus, 
       if (!def.stateField) setLocalToggle(false);
       onExecute(def.commandOff!);
     } else {
-      // May need input when turning ON (e.g., valet mode PIN)
       if (def.inputConfig) {
-        const value = window.prompt(
-          t(def.inputConfig.promptKey, def.inputConfig.promptFallback),
-          def.inputConfig.defaultValue,
-        );
-        if (value == null) return;
-        if (def.inputConfig.validation === 'pin' && !/^\d{4}$/.test(value)) return;
-        const finalParams: Record<string, unknown> = {
-          ...def.params,
-          [def.inputConfig.paramName]: value,
-        };
-        if (!def.stateField) setLocalToggle(true);
-        onExecute(def.command, finalParams);
+        onRequestDialog(def);
       } else {
         if (!def.stateField) setLocalToggle(true);
         onExecute(def.command, def.params);

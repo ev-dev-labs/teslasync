@@ -21,6 +21,9 @@ import { InputCommandTile } from './InputCommandTile';
 import { CollapsibleCommandGroup } from './CollapsibleCommandGroup';
 import { CommandSearch } from './CommandSearch';
 import { FavoritesBar } from './FavoritesBar';
+import { CommandInputDialog } from './CommandInputDialog';
+import { CommandConfirmDialog } from './CommandConfirmDialog';
+import { CommandSelectDialog } from './CommandSelectDialog';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -137,6 +140,62 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ─── Centralized dialog state ──────────────────────────────────────────
+
+  interface DialogState {
+    kind: 'input' | 'select' | 'confirm';
+    def: CommandDef;
+  }
+
+  const [activeDialog, setActiveDialog] = useState<DialogState | null>(null);
+
+  const requestDialog = useCallback((def: CommandDef) => {
+    if (def.selectConfig) {
+      setActiveDialog({ kind: 'select', def });
+    } else if (def.inputConfig) {
+      setActiveDialog({ kind: 'input', def });
+    } else if (def.dangerous) {
+      setActiveDialog({ kind: 'confirm', def });
+    }
+  }, []);
+
+  const closeDialog = useCallback(() => {
+    setActiveDialog(null);
+  }, []);
+
+  const handleInputSubmit = useCallback((values: Record<string, string>) => {
+    if (!activeDialog) return;
+    const { def } = activeDialog;
+    const ic = def.inputConfig!;
+
+    let params: Record<string, unknown>;
+    if (ic.buildParams) {
+      params = ic.buildParams(values);
+    } else {
+      const rawValue = values[ic.paramName];
+      const finalValue = ic.transform ? ic.transform(rawValue) : rawValue;
+      params = { ...def.params, [ic.paramName]: finalValue };
+    }
+
+    executeCommand(def.command, params);
+    closeDialog();
+  }, [activeDialog, executeCommand, closeDialog]);
+
+  const handleSelectSubmit = useCallback((value: string) => {
+    if (!activeDialog) return;
+    const { def } = activeDialog;
+    const sc = def.selectConfig!;
+    executeCommand(def.command, { ...def.params, [sc.paramName]: value });
+    closeDialog();
+  }, [activeDialog, executeCommand, closeDialog]);
+
+  const handleConfirmSubmit = useCallback(() => {
+    if (!activeDialog) return;
+    const { def } = activeDialog;
+    executeCommand(def.command, def.params);
+    closeDialog();
+  }, [activeDialog, executeCommand, closeDialog]);
+
   // ─── Filtering ──────────────────────────────────────────────────────────
 
   const filteredCommands = useMemo(() => {
@@ -168,17 +227,18 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
       loading: isLoading,
       isFavorite: favorites.includes(def.id),
       onToggleFavorite: () => toggleFavorite(def.id),
+      onRequestDialog: requestDialog,
     };
 
     switch (def.type) {
       case 'toggle':
         return <ToggleCommandTile {...common} def={def} state={state} onExecute={executeCommand} />;
       case 'input':
-        return <InputCommandTile {...common} def={def} vehicle={vehicle} onExecute={executeCommand} />;
+        return <InputCommandTile {...common} def={def} />;
       default:
         return <CommandTile {...common} def={def} onExecute={executeCommand} />;
     }
-  }, [cmdStatus, isLoading, favorites, toggleFavorite, state, executeCommand, vehicle]);
+  }, [cmdStatus, isLoading, favorites, toggleFavorite, state, executeCommand, requestDialog]);
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
@@ -284,6 +344,36 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
           })
         )}
       </div>
+
+      {/* Centralized command dialogs */}
+      {activeDialog?.kind === 'input' && (
+        <CommandInputDialog
+          open
+          onClose={closeDialog}
+          onSubmit={handleInputSubmit}
+          def={activeDialog.def}
+          vehicle={vehicle}
+          loading={isLoading}
+        />
+      )}
+      {activeDialog?.kind === 'select' && (
+        <CommandSelectDialog
+          open
+          onClose={closeDialog}
+          onSelect={handleSelectSubmit}
+          def={activeDialog.def}
+          loading={isLoading}
+        />
+      )}
+      {activeDialog?.kind === 'confirm' && (
+        <CommandConfirmDialog
+          open
+          onClose={closeDialog}
+          onConfirm={handleConfirmSubmit}
+          def={activeDialog.def}
+          loading={isLoading}
+        />
+      )}
     </GlassPanel>
   );
 }

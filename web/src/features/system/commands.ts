@@ -21,24 +21,47 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TranslateFn = (...args: any[]) => any;
-
 export type CommandCategory =
   | 'security' | 'climate' | 'climate_protection' | 'charging'
   | 'doors' | 'drive' | 'windows' | 'sunroof'
   | 'schedules' | 'alerts' | 'navigation' | 'software'
   | 'vehicle' | 'media';
 
+export interface InputField {
+  name: string;
+  labelKey: string;
+  labelFallback: string;
+  placeholder?: string;
+  type?: 'text' | 'number' | 'password';
+  validation?: 'pin' | 'number' | 'decimal' | 'text';
+  min?: number;
+  max?: number;
+}
+
 export interface InputConfig {
   promptKey: string;
   promptFallback: string;
   paramName: string;
   defaultValue?: string;
-  validation?: 'pin' | 'number' | 'text';
+  validation?: 'pin' | 'number' | 'decimal' | 'text';
   min?: number;
   max?: number;
   transform?: (value: string) => unknown;
+  fields?: InputField[];
+  buildParams?: (values: Record<string, string>) => Record<string, unknown>;
+  getDefaultValue?: (ctx: { vehicle?: { display_name: string } }) => string;
+}
+
+export interface SelectOption {
+  value: string;
+  labelKey: string;
+  labelFallback: string;
+  description?: string;
+}
+
+export interface SelectConfig {
+  paramName: string;
+  options: SelectOption[];
 }
 
 export interface CommandDef {
@@ -60,12 +83,10 @@ export interface CommandDef {
   confirmFallback?: string;
   defaultFavorite?: boolean;
   inputConfig?: InputConfig;
+  selectConfig?: SelectConfig;
   params?: Record<string, unknown>;
-  customExecute?: (
-    sendCmd: (cmd: string, params?: Record<string, unknown>) => void,
-    t: TranslateFn,
-    vehicle?: { display_name: string },
-  ) => void;
+  countdown?: number;
+  confirmInput?: string;
 }
 
 export interface Vehicle {
@@ -233,6 +254,8 @@ export const COMMANDS: CommandDef[] = [
     dangerous: true,
     confirmKey: 'commands.security.confirmErase',
     confirmFallback: 'This will erase all user data from the vehicle touchscreen. Continue?',
+    countdown: 5,
+    confirmInput: 'ERASE',
   },
   {
     id: 'pin_to_drive', command: 'set_pin_to_drive',
@@ -276,11 +299,11 @@ export const COMMANDS: CommandDef[] = [
     labelKey: 'commands.climate.setTemps', labelFallback: 'Set Temps',
     sublabelKey: 'commands.climate.driverPassenger', sublabelFallback: 'Driver/Passenger',
     icon: Thermometer, category: 'climate', type: 'input',
-    customExecute: (sendCmd, t) => {
-      const temp = window.prompt(t('commands.climate.enterTemp', 'Enter temperature in °C (e.g., 21):'));
-      if (temp) {
-        sendCmd('set_temps', { driver_temp: temp, passenger_temp: temp });
-      }
+    inputConfig: {
+      promptKey: 'commands.climate.enterTemp',
+      promptFallback: 'Enter temperature in °C (e.g., 21):',
+      paramName: 'driver_temp', validation: 'decimal', min: 15, max: 30,
+      buildParams: (values) => ({ driver_temp: values.driver_temp, passenger_temp: values.driver_temp }),
     },
   },
   {
@@ -337,10 +360,13 @@ export const COMMANDS: CommandDef[] = [
     labelKey: 'commands.climate.copTemp', labelFallback: 'COP Temp',
     sublabelKey: 'commands.climate.setLevel', sublabelFallback: 'Low/Med/High',
     icon: Thermometer, category: 'climate_protection', type: 'input',
-    inputConfig: {
-      promptKey: 'commands.climate.enterCopTemp',
-      promptFallback: 'Enter COP temp level:\n0 = Low (90°F/30°C)\n1 = Medium (95°F/35°C)\n2 = High (100°F/40°C)',
-      paramName: 'cop_temp', defaultValue: '1',
+    selectConfig: {
+      paramName: 'cop_temp',
+      options: [
+        { value: '0', labelKey: 'commands.climate.copLow', labelFallback: 'Low', description: '90°F / 30°C' },
+        { value: '1', labelKey: 'commands.climate.copMedium', labelFallback: 'Medium', description: '95°F / 35°C' },
+        { value: '2', labelKey: 'commands.climate.copHigh', labelFallback: 'High', description: '100°F / 40°C' },
+      ],
     },
   },
   {
@@ -455,6 +481,7 @@ export const COMMANDS: CommandDef[] = [
     dangerous: true,
     confirmKey: 'commands.drive.confirmRemoteStart',
     confirmFallback: 'This will enable keyless driving for 2 minutes. Continue?',
+    countdown: 3,
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -571,10 +598,15 @@ export const COMMANDS: CommandDef[] = [
     labelKey: 'commands.homelink.trigger', labelFallback: 'HomeLink',
     sublabelKey: 'commands.homelink.garage', sublabelFallback: 'Garage door',
     icon: Home, category: 'alerts', type: 'input',
-    customExecute: (sendCmd, t) => {
-      const lat = window.prompt(t('commands.homelink.enterLat', 'Enter vehicle latitude:'));
-      const lon = lat ? window.prompt(t('commands.homelink.enterLon', 'Enter vehicle longitude:')) : null;
-      if (lat && lon) sendCmd('trigger_homelink', { lat, lon });
+    inputConfig: {
+      promptKey: 'commands.homelink.triggerTitle',
+      promptFallback: 'Enter vehicle coordinates',
+      paramName: '',
+      fields: [
+        { name: 'lat', labelKey: 'commands.homelink.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const },
+        { name: 'lon', labelKey: 'commands.homelink.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const },
+      ],
+      buildParams: (values) => ({ lat: values.lat, lon: values.lon }),
     },
   },
 
@@ -586,15 +618,15 @@ export const COMMANDS: CommandDef[] = [
     labelKey: 'commands.nav.sendAddress', labelFallback: 'Send Address',
     sublabelKey: 'commands.nav.toVehicleNav', sublabelFallback: 'To vehicle nav',
     icon: Navigation, category: 'navigation', type: 'input',
-    customExecute: (sendCmd, t) => {
-      const address = window.prompt(t('commands.nav.enterAddress', 'Enter destination address:'));
-      if (address) {
-        sendCmd('navigation_request', {
-          type: 'share_ext_content_raw',
-          value: { 'android.intent.extra.TEXT': address },
-          locale: 'en-US',
-        });
-      }
+    inputConfig: {
+      promptKey: 'commands.nav.enterAddress',
+      promptFallback: 'Enter destination address:',
+      paramName: 'address', validation: 'text',
+      buildParams: (values) => ({
+        type: 'share_ext_content_raw',
+        value: { 'android.intent.extra.TEXT': values.address },
+        locale: 'en-US',
+      }),
     },
   },
   {
@@ -602,12 +634,15 @@ export const COMMANDS: CommandDef[] = [
     labelKey: 'commands.nav.sendGPS', labelFallback: 'Send GPS',
     sublabelKey: 'commands.nav.coordinates', sublabelFallback: 'Lat / Lon',
     icon: MapPin, category: 'navigation', type: 'input',
-    customExecute: (sendCmd, t) => {
-      const lat = window.prompt(t('commands.nav.enterLat', 'Enter latitude:'));
-      const lon = lat ? window.prompt(t('commands.nav.enterLon', 'Enter longitude:')) : null;
-      if (lat && lon) {
-        sendCmd('navigation_gps_request', { lat: parseFloat(lat), lon: parseFloat(lon), order: 0 });
-      }
+    inputConfig: {
+      promptKey: 'commands.nav.sendGPSTitle',
+      promptFallback: 'Enter GPS coordinates',
+      paramName: '',
+      fields: [
+        { name: 'lat', labelKey: 'commands.nav.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const },
+        { name: 'lon', labelKey: 'commands.nav.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const },
+      ],
+      buildParams: (values) => ({ lat: parseFloat(values.lat), lon: parseFloat(values.lon), order: 0 }),
     },
   },
   {
@@ -653,14 +688,12 @@ export const COMMANDS: CommandDef[] = [
     labelKey: 'commands.vehicle.rename', labelFallback: 'Rename',
     sublabelKey: 'commands.vehicle.changeName', sublabelFallback: 'Change name',
     icon: Pencil, category: 'vehicle', type: 'input',
-    customExecute: (sendCmd, t, vehicle) => {
-      const newName = window.prompt(
-        t('commands.vehicle.enterName', 'Enter new vehicle name:'),
-        vehicle?.display_name ?? '',
-      );
-      if (newName && newName.trim()) {
-        sendCmd('set_vehicle_name', { vehicle_name: newName.trim() });
-      }
+    inputConfig: {
+      promptKey: 'commands.vehicle.enterName',
+      promptFallback: 'Enter new vehicle name:',
+      paramName: 'vehicle_name', validation: 'text',
+      getDefaultValue: (ctx) => ctx.vehicle?.display_name ?? '',
+      buildParams: (values) => ({ vehicle_name: values.vehicle_name.trim() }),
     },
   },
 

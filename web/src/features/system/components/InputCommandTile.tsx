@@ -2,12 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { GlassPanel } from '@/components/ui';
 import { Loader2, Star } from 'lucide-react';
-import type { CommandDef, TranslateFn } from '../commands';
+import type { CommandDef } from '../commands';
 
 interface InputCommandTileProps {
   def: CommandDef;
-  vehicle?: { display_name: string };
-  onExecute: (command: string, params?: Record<string, unknown>) => void;
+  onRequestDialog: (def: CommandDef) => void;
   loading: boolean;
   lastStatus?: string;
   isFavorite: boolean;
@@ -20,36 +19,14 @@ const hoverStyles = {
   success: 'hover:border-neon-green/30',
 } as const;
 
-export function InputCommandTile({ def, vehicle, onExecute, loading, lastStatus, isFavorite, onToggleFavorite }: InputCommandTileProps) {
+export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, isFavorite, onToggleFavorite }: InputCommandTileProps) {
   const { t } = useTranslation();
   const Icon = def.icon;
   const variant = def.variant ?? 'default';
 
   const handleClick = () => {
     if (loading) return;
-
-    if (def.customExecute) {
-      def.customExecute(onExecute, t as TranslateFn, vehicle);
-      return;
-    }
-
-    if (def.inputConfig) {
-      const { promptKey, promptFallback, paramName, defaultValue, validation, min, max, transform } = def.inputConfig;
-      const value = window.prompt(t(promptKey, promptFallback), defaultValue);
-      if (value == null) return;
-
-      if (validation === 'pin' && !/^\d{4}$/.test(value)) return;
-      if (validation === 'number') {
-        const num = parseInt(value, 10);
-        if (isNaN(num)) return;
-        if (min != null && num < min) return;
-        if (max != null && num > max) return;
-      }
-
-      const finalValue = transform ? transform(value) : value;
-      const params: Record<string, unknown> = { ...def.params, [paramName]: finalValue };
-      onExecute(def.command, params);
-    }
+    onRequestDialog(def);
   };
 
   return (
