@@ -83,5 +83,8 @@ ENGINEERING_GUIDELINES.md
 !.github/prompts/features/
 !.github/prompts/features/*
 !.github/prompts/features/**/*
+!.github/prompts/improve-commands-page.prompt.md
+.github/prompts/features/logs/
 .github/issues/
 scripts/check-loc.js
+docs/signal-audits/005-speed-limit-warning.md
