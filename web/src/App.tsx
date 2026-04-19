@@ -73,6 +73,7 @@ const MediaPlayer = lazy(() => import('./features/vehicle-systems/pages/MediaPla
 
 // Automations
 const AutomationsListPage = lazy(() => import('./features/automations/pages/AutomationsListPage'))
+const AutomationBuilderPage = lazy(() => import('./features/automations/pages/AutomationBuilderPage'))
 
 // Notifications & Alerts
 const Alerts = lazy(() => import('./features/notifications/pages/AlertsPage'))
@@ -138,6 +139,8 @@ export default function App() {
         <Route path="analytics" element={<SafeRoute name="Analytics"><Analytics /></SafeRoute>} />
         <Route path="commands" element={<SafeRoute name="Commands"><Commands /></SafeRoute>} />
         <Route path="automations" element={<SafeRoute name="Automations"><AutomationsListPage /></SafeRoute>} />
+        <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
+        <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="alerts" element={<SafeRoute name="Alerts"><Alerts /></SafeRoute>} />
         <Route path="alert-studio" element={<SafeRoute name="AlertStudio"><AlertStudio /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />

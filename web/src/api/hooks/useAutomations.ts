@@ -6,8 +6,28 @@ import type {
   AutomationHistoryListResponse,
 } from '@/api/types';
 
+/** Shape of the request body for creating/updating an automation. */
+export interface AutomationFormData {
+  name: string;
+  description: string;
+  vehicle_id: number | null;
+  enabled?: boolean;
+  trigger_type: string;
+  trigger_config: Record<string, unknown>;
+  conditions: Record<string, unknown>[];
+  actions: Record<string, unknown>[];
+  cooldown_minutes: number;
+  max_executions_hour: number;
+  stop_on_failure: boolean;
+  notify_on_run: boolean;
+  notify_on_failure: boolean;
+  priority: number;
+  tags: string[];
+}
+
 export const automationKeys = {
   all: ['automations'] as const,
+  detail: (id: number) => ['automations', id] as const,
   history: (limit?: number) => ['automation-history', limit] as const,
 };
 
@@ -77,6 +97,45 @@ export function useTestRunAutomation() {
       request<void>(`/automations/${id}/test-run`, { method: 'POST' }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['automation-history'] });
+    },
+  });
+}
+
+export function useAutomation(id: number | undefined) {
+  return useQuery({
+    queryKey: automationKeys.detail(id!),
+    queryFn: () => request<Automation>(`/automations/${id}`),
+    enabled: id != null && id > 0,
+  });
+}
+
+export function useCreateAutomation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: AutomationFormData) =>
+      request<Automation>(`/automations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: automationKeys.all });
+    },
+  });
+}
+
+export function useUpdateAutomation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: AutomationFormData }) =>
+      request<Automation>(`/automations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: automationKeys.all });
+      qc.invalidateQueries({ queryKey: automationKeys.detail(id) });
     },
   });
 }
