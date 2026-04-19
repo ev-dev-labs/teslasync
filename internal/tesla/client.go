@@ -210,6 +210,26 @@ func (c *Client) GetFleetTelemetryErrors(ctx context.Context, vin string) ([]byt
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
 
+// GetFleetTelemetryErrorVINs calls GET /api/1/partner_accounts/fleet_telemetry_error_vins
+// using a partner token. Returns VINs with telemetry errors across the entire fleet.
+func (c *Client) GetFleetTelemetryErrorVINs(ctx context.Context) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	return c.doRequestWithToken(ctx, http.MethodGet, "/api/1/partner_accounts/fleet_telemetry_error_vins", nil, partnerToken)
+}
+
+// GetPartnerFleetTelemetryErrors calls GET /api/1/partner_accounts/fleet_telemetry_errors
+// using a partner token. Returns detailed error logs across the entire fleet.
+func (c *Client) GetPartnerFleetTelemetryErrors(ctx context.Context) ([]byte, int, error) {
+	partnerToken, err := c.GetPartnerToken(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get partner token: %w", err)
+	}
+	return c.doRequestWithToken(ctx, http.MethodGet, "/api/1/partner_accounts/fleet_telemetry_errors", nil, partnerToken)
+}
+
 // GetNearbyChargingSites returns charging sites near the vehicle's current location.
 // GET /api/1/vehicles/{vin}/nearby_charging_sites
 func (c *Client) GetNearbyChargingSites(ctx context.Context, vin string) ([]byte, int, error) {

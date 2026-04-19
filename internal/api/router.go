@@ -182,6 +182,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
 	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
 	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
+	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
@@ -345,6 +346,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 			// Time-of-Use settings (rate plan / tariff)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tou-settings", energySiteHandler.UpdateTOUSettings)
+		})
+
+		// Tesla Fleet Telemetry Errors (partner-level — all vehicles)
+		r.Route("/tesla/fleet-telemetry", func(r chi.Router) {
+			r.Get("/error-vins", fleetTelemetryErrorHandler.ErrorVINs)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
+			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
 		})
 
 		// Geofences

@@ -1373,3 +1373,26 @@ type TeslaEnergyWCCharging struct {
 	RawJSON        string    `json:"raw_json,omitempty" db:"raw_json"`
 	FetchedAt      time.Time `json:"fetched_at" db:"fetched_at"`
 }
+
+// TeslaFleetTelemetryError represents a fleet telemetry error from the partner endpoint.
+// Persisted for historical tracking and alerting.
+type TeslaFleetTelemetryError struct {
+	ID             int64      `json:"id" db:"id"`
+	VIN            string     `json:"vin" db:"vin"`
+	ErrorCode      *string    `json:"error_code" db:"error_code"`
+	ErrorMessage   *string    `json:"error_message" db:"error_message"`
+	ReportedAt     *time.Time `json:"reported_at" db:"reported_at"`
+	RawJSON        string     `json:"raw_json,omitempty" db:"raw_json"`
+	TeslaUpdatedAt *time.Time `json:"tesla_updated_at" db:"tesla_updated_at"`
+	FetchedAt      time.Time  `json:"fetched_at" db:"fetched_at"`
+}
+
+// TeslaFleetTelemetryErrorVIN tracks a VIN with active or previously active telemetry errors.
+type TeslaFleetTelemetryErrorVIN struct {
+	ID          int64      `json:"id" db:"id"`
+	VIN         string     `json:"vin" db:"vin"`
+	Active      bool       `json:"active" db:"active"`
+	FirstSeenAt time.Time  `json:"first_seen_at" db:"first_seen_at"`
+	LastSeenAt  time.Time  `json:"last_seen_at" db:"last_seen_at"`
+	ResolvedAt  *time.Time `json:"resolved_at" db:"resolved_at"`
+}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
@@ -82,5 +82,63 @@ export function useMQTTStatus() {
     queryKey: telemetryKeys.mqttStatus,
     queryFn: () => request<TelemetryStatus>('/telemetry'),
     refetchInterval: 5_000,
+  });
+}
+
+// ─── Fleet Telemetry Error Types ─────────────────────────────────────────────
+
+export interface FleetTelemetryErrorVIN {
+  id: number;
+  vin: string;
+  active: boolean;
+  first_seen_at: string;
+  last_seen_at: string;
+  resolved_at: string | null;
+}
+
+export interface FleetTelemetryError {
+  id: number;
+  vin: string;
+  error_code: string | null;
+  error_message: string | null;
+  reported_at: string | null;
+  tesla_updated_at: string | null;
+  fetched_at: string;
+}
+
+// ─── Fleet Telemetry Error Hooks ─────────────────────────────────────────────
+
+export function useFleetTelemetryErrorVINs() {
+  return useQuery({
+    queryKey: ['fleet-telemetry-error-vins'],
+    queryFn: () => request<FleetTelemetryErrorVIN[]>('/tesla/fleet-telemetry/error-vins'),
+    staleTime: 60_000,
+  });
+}
+
+export function useFleetTelemetryErrors(vin?: string) {
+  return useQuery({
+    queryKey: ['fleet-telemetry-errors', vin],
+    queryFn: () =>
+      request<FleetTelemetryError[]>(
+        `/tesla/fleet-telemetry/errors${vin ? `?vin=${vin}` : ''}`
+      ),
+    staleTime: 60_000,
+  });
+}
+
+export function useRefreshFleetTelemetryErrorVINs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] }),
+  });
+}
+
+export function useRefreshFleetTelemetryErrors() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] }),
   });
 }
