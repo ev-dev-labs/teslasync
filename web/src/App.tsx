@@ -113,6 +113,7 @@ const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
 const DBHealthDashboard = lazy(() => import('./features/system/pages/DBHealthPage'))
 const StateMachineDebugger = lazy(() => import('./features/system/pages/StateMachineDebuggerPage'))
 const Commands = lazy(() => import('./features/system/pages/CommandsPage'))
+const CommandHistory = lazy(() => import('./features/system/pages/CommandHistoryPage'))
 const Chatbot = lazy(() => import('./features/system/pages/ChatbotPage'))
 const Changelog = lazy(() => import('./features/system/pages/ChangelogPage'))
 const Roadmap = lazy(() => import('./features/system/pages/RoadmapPage'))
@@ -167,6 +168,7 @@ export default function App() {
         <Route path="charging" element={<SafeRoute name="Charging"><Charging /></SafeRoute>} />
         <Route path="analytics" element={<SafeRoute name="Analytics"><Analytics /></SafeRoute>} />
         <Route path="commands" element={<SafeRoute name="Commands"><Commands /></SafeRoute>} />
+        <Route path="command-history" element={<SafeRoute name="CommandHistory"><CommandHistory /></SafeRoute>} />
         <Route path="automations" element={<SafeRoute name="Automations"><AutomationsListPage /></SafeRoute>} />
         <Route path="automations/new" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />
         <Route path="automations/:id/edit" element={<SafeRoute name="AutomationBuilder"><AutomationBuilderPage /></SafeRoute>} />

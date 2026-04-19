@@ -49,6 +49,7 @@ import {
   DatabaseBackup,
   Recycle,
   Database,
+  History,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -88,6 +89,7 @@ const navI18nKeys: Record<string, string> = {
   'Statistics': 'nav.statistics',
   'Alerts': 'nav.alerts',
   'Commands': 'nav.commands',
+  'Command History': 'nav.commandHistory',
   'Geofences': 'nav.geofences',
   'Notifications': 'nav.notifications',
   'Settings': 'nav.settings',
@@ -189,6 +191,7 @@ export const navSections = [
     title: 'Control',
     items: [
       { to: '/commands', icon: Gamepad2, label: 'Commands', color: 'text-fuchsia-400' },
+      { to: '/command-history', icon: History, label: 'Command History', color: 'text-violet-400' },
       { to: '/automations', icon: Zap, label: 'Automations', color: 'text-neon-cyan' },
       { to: '/alerts', icon: Bell, label: 'Alerts', color: 'text-red-400' },
       { to: '/alert-studio', icon: Zap, label: 'Alert Studio', color: 'text-neon-cyan' },

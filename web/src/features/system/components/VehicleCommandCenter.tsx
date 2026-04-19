@@ -110,6 +110,7 @@ export function VehicleCommandCenter({ vehicle, state }: VehicleCommandCenterPro
       qc.invalidateQueries({ queryKey: ['command-vehicle-states'] });
       qc.invalidateQueries({ queryKey: ['vehicle-state'] });
       qc.invalidateQueries({ queryKey: ['command-latest', vehicle.id] });
+      qc.invalidateQueries({ queryKey: ['command-history', String(vehicle.id)] });
       if (data.success) toast.success(`${t('Command sent to')} ${name}`);
       else toast.error(data.message || `${t('Command failed on')} ${name}`);
     },

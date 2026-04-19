@@ -8,6 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
@@ -15,7 +16,7 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { request } from '@/api/client';
-import { Car, Wifi, Power, Loader2, Activity, AlertTriangle } from 'lucide-react';
+import { Car, Wifi, Power, Loader2, Activity, AlertTriangle, History } from 'lucide-react';
 import type { Vehicle, VehicleState } from '../commands';
 import { VehicleCommandCenter } from '../components/VehicleCommandCenter';
 
@@ -57,11 +58,20 @@ export default function CommandsPage() {
       subtitle={t('commands.subtitle', 'Remote control center for your Tesla fleet')}
       loading={isLoading}
       actions={
-        vehicles && vehicles.length > 0 ? (
-          <span className="text-xs text-white/40">
-            <span className="text-neon-green font-medium">{onlineCount}</span>/{vehicles.length} {t('online')}
-          </span>
-        ) : undefined
+        <div className="flex items-center gap-3">
+          <Link
+            to="/command-history"
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors"
+          >
+            <History className="h-3.5 w-3.5" />
+            {t('commands.viewHistory', 'View History')}
+          </Link>
+          {vehicles && vehicles.length > 0 && (
+            <span className="text-xs text-white/40">
+              <span className="text-neon-green font-medium">{onlineCount}</span>/{vehicles.length} {t('online')}
+            </span>
+          )}
+        </div>
       }
     >
       {/* Stats */}

@@ -34,6 +34,7 @@ export function useVehicleCommand() {
     onSuccess: (data, { vehicleId }) => {
       queryClient.invalidateQueries({ queryKey: vehicleKeys.state(vehicleId) });
       queryClient.invalidateQueries({ queryKey: ['command-latest', vehicleId] });
+      queryClient.invalidateQueries({ queryKey: ['command-history', String(vehicleId)] });
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
       if (data.success) {
         toast.success(data.message || 'Command sent successfully');
