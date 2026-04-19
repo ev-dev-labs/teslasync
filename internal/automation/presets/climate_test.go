@@ -143,10 +143,11 @@ func TestRegistryTotalPresetsIncludesClimate(t *testing.T) {
 	security := registry.Presets("security")
 	climate := registry.Presets("climate")
 	charging := registry.Presets("charging")
+	home := registry.Presets("home")
 
-	if len(all) != len(security)+len(climate)+len(charging) {
-		t.Errorf("total presets (%d) != security (%d) + climate (%d) + charging (%d)",
-			len(all), len(security), len(climate), len(charging))
+	if len(all) != len(security)+len(climate)+len(charging)+len(home) {
+		t.Errorf("total presets (%d) != security (%d) + climate (%d) + charging (%d) + home (%d)",
+			len(all), len(security), len(climate), len(charging), len(home))
 	}
 }
 
