@@ -29,6 +29,13 @@ type AutomationHandler struct {
 	eventPublisher *AutomationEventPublisher // optional, enables SSE events
 	auditor        *automation.Auditor       // optional, enables audit trail
 	presetRegistry *presets.Registry         // built-in preset templates
+	mqttPublisher  AutomationMQTTPublisher   // optional, notifies worker on config changes
+}
+
+// AutomationMQTTPublisher publishes automation config change notifications.
+// The worker subscribes to these to reload trigger configurations.
+type AutomationMQTTPublisher interface {
+	PublishReload(action string, automationID int64)
 }
 
 // AutomationHandlerOption configures optional AutomationHandler dependencies.
@@ -47,6 +54,12 @@ func WithAutomationEventPublisher(p *AutomationEventPublisher) AutomationHandler
 // WithAutomationAuditor provides an auditor for recording automation lifecycle events.
 func WithAutomationAuditor(a *automation.Auditor) AutomationHandlerOption {
 	return func(h *AutomationHandler) { h.auditor = a }
+}
+
+// WithAutomationMQTTPublisher provides an MQTT publisher for notifying the
+// automation worker of configuration changes (create/update/delete/toggle).
+func WithAutomationMQTTPublisher(p AutomationMQTTPublisher) AutomationHandlerOption {
+	return func(h *AutomationHandler) { h.mqttPublisher = p }
 }
 
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
@@ -289,6 +302,8 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.auditor.LogCreated(r.Context(), a.ID, a.Name, a.TriggerType, a.Enabled, r.RemoteAddr)
 	}
 
+	h.notifyReload("created", a.ID)
+
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -388,6 +403,8 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		h.auditor.LogUpdated(r.Context(), existing.ID, existing.Name, existing.TriggerType, r.RemoteAddr)
 	}
 
+	h.notifyReload("updated", existing.ID)
+
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -427,6 +444,8 @@ func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if h.auditor != nil {
 		h.auditor.LogDeleted(r.Context(), id, existing.Name, r.RemoteAddr)
 	}
+
+	h.notifyReload("deleted", id)
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -482,6 +501,8 @@ func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.notifyReload("toggled", id)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
 		"enabled": req.Enabled,
@@ -528,6 +549,8 @@ func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 	if h.auditor != nil {
 		h.auditor.LogReEnabled(r.Context(), id, existing.Name, r.RemoteAddr)
 	}
+
+	h.notifyReload("re_enabled", id)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":            id,
@@ -723,6 +746,14 @@ func (h *AutomationHandler) detectConflicts(r *http.Request, candidate *models.A
 		return []condition.Conflict{}
 	}
 	return conflicts
+}
+
+// notifyReload publishes an automation config change to MQTT so the automation
+// worker reloads its trigger configurations. Fire-and-forget — never blocks the response.
+func (h *AutomationHandler) notifyReload(action string, automationID int64) {
+	if h.mqttPublisher != nil {
+		h.mqttPublisher.PublishReload(action, automationID)
+	}
 }
 
 // checkWebhookTokenUniqueness verifies that no other automation uses the same

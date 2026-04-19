@@ -205,6 +205,40 @@ exportWorker:
     port: 8082
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Automation Worker
+#
+# Runs the automation engine: cron/mqtt/geofence/battery/energy/calendar/
+# sunrise triggers, condition evaluation, and action execution.
+# Subscribes to teslasync/automations/reload for config change notifications.
+# Single-replica recommended — in-memory trigger state is not shared across pods.
+# ─────────────────────────────────────────────────────────────────────────────
+automationWorker:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/ev-dev-labs/teslasync-automation-worker
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8083
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+  # -- External automation worker — used when automationWorker.enabled is false.
+  external:
+    host: ""
+    port: 8083
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Vehicle Command Proxy
 #
 # Routes vehicle commands through Tesla's Vehicle Command SDK for end-to-end

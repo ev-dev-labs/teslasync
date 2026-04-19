@@ -192,6 +192,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	automationEventHub := NewEventHub()
 	automationPublisher := NewAutomationEventPublisher(automationEventHub)
 
+	// Wire MQTT publisher for automation config change notifications
+	var automationMQTTPublisher AutomationMQTTPublisher
+	if mqttClient != nil {
+		automationMQTTPublisher = &automationMQTTReloader{client: mqttClient}
+	}
+
 	automationHandler := NewAutomationHandler(db,
 		WithCommandExecutor(action.NewCommandExecutor(
 			database.NewVehicleRepo(db),
@@ -201,6 +207,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		)),
 		WithAutomationEventPublisher(automationPublisher),
 		WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
+		WithAutomationMQTTPublisher(automationMQTTPublisher),
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
