@@ -10,6 +10,7 @@ import { AuthExpiredOverlay } from './components/feedback/AuthExpiredOverlay'
 // Dashboard
 const Dashboard = lazy(() => import('./features/dashboard/pages/DashboardPage'))
 const QuickStats = lazy(() => import('./features/dashboard/pages/QuickStatsPage'))
+const GlancePage = lazy(() => import('./features/dashboard/pages/GlancePage'))
 
 // Vehicles
 const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
@@ -156,6 +157,7 @@ export default function App() {
       <AuthExpiredOverlay />
       <Routes>
       <Route path="quick-stats" element={<SafeRoute name="QuickStats"><QuickStats /></SafeRoute>} />
+      <Route path="glance" element={<SafeRoute name="Glance"><GlancePage /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
