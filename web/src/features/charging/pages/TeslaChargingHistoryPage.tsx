@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Zap, DollarSign, FileText, RefreshCw,
-  MapPin, Receipt, TrendingUp, Gauge,
+  Zap, DollarSign, RefreshCw,
+  MapPin, Receipt, TrendingUp, Gauge, Download,
 } from 'lucide-react';
 import { PageContainer, Grid } from '@/components/layout';
 import { GlassPanel, Button, Select, DataTable, type Column } from '@/components/ui';
@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/feedback';
 import {
   useTeslaChargingHistory,
   useRefreshTeslaChargingHistory,
+  getTeslaChargingInvoiceURL,
   type TeslaChargingHistoryEntry,
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -149,8 +150,17 @@ export default function TeslaChargingHistoryPage() {
       header: t('tesla_charging.col.invoice', 'Invoice'),
       render: (row) => (
         <span className="text-sm">
-          {row.has_invoice ? (
-            <FileText className="h-4 w-4 text-cyan-400" />
+          {row.has_invoice && row.invoice_content_id ? (
+            <a
+              href={getTeslaChargingInvoiceURL(row.invoice_content_id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors"
+              title={t('tesla_charging.downloadInvoice', 'Download invoice')}
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="text-xs">{t('charging.invoice', 'Invoice')}</span>
+            </a>
           ) : (
             <span className="text-white/30">—</span>
           )}

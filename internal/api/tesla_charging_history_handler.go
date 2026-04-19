@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -144,6 +145,37 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 		"summary":  summary,
 		"upserted": upserted,
 	})
+}
+
+// Invoice proxies the PDF invoice download from Tesla.
+func (h *TeslaChargingHistoryHandler) Invoice(w http.ResponseWriter, r *http.Request) {
+	contentID := chi.URLParam(r, "contentID")
+	if contentID == "" {
+		writeError(w, http.StatusBadRequest, "content_id is required")
+		return
+	}
+
+	if !h.teslaClient.HasValidToken() {
+		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		return
+	}
+
+	body, status, err := h.teslaClient.GetChargingInvoice(r.Context(), contentID)
+	if err != nil {
+		log.Error().Err(err).Str("content_id", contentID).Msg("failed to fetch invoice from Tesla")
+		writeError(w, http.StatusBadGateway, "failed to fetch invoice from Tesla")
+		return
+	}
+	if status != http.StatusOK {
+		log.Warn().Int("status", status).Str("content_id", contentID).Msg("tesla invoice API non-200 response")
+		writeError(w, status, "Tesla API error")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="tesla-invoice-%s.pdf"`, contentID))
+	w.WriteHeader(http.StatusOK)
+	w.Write(body) //nolint:errcheck
 }
 
 // --- Tesla API response types ---

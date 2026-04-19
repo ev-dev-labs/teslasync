@@ -166,3 +166,8 @@ export function useRefreshTeslaChargingHistory() {
     onSuccess: () => qc.invalidateQueries({ queryKey: teslaChargingHistoryKeys.all }),
   });
 }
+
+/** Returns the direct URL for downloading a Tesla charging invoice PDF. */
+export function getTeslaChargingInvoiceURL(contentId: string): string {
+  return `/api/v1/tesla/charging/invoice/${contentId}`;
+}

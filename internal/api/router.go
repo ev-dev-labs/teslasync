@@ -304,9 +304,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Tesla Charging History (Supercharger/DC billing records)
-		r.Route("/tesla/charging/history", func(r chi.Router) {
-			r.Get("/", teslaChargingHistoryHandler.List)
-			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
+		r.Route("/tesla/charging", func(r chi.Router) {
+			r.Route("/history", func(r chi.Router) {
+				r.Get("/", teslaChargingHistoryHandler.List)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
+			})
+			r.Get("/invoice/{contentID}", teslaChargingHistoryHandler.Invoice)
 		})
 
 		// Geofences

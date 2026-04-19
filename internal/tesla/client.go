@@ -916,3 +916,9 @@ func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, 
 	path := "/api/1/dx/charging/history?" + params.Encode()
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
+
+// GetChargingInvoice calls GET /api/1/dx/charging/invoice/{contentID} and returns the PDF bytes.
+func (c *Client) GetChargingInvoice(ctx context.Context, contentID string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/dx/charging/invoice/%s", contentID)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
