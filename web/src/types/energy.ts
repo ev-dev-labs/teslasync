@@ -235,3 +235,24 @@ export interface TeslaWCChargingEntry {
   energy_wh: number | null;
   fetched_at: string;
 }
+
+// Tesla Energy Live Status (power flow snapshot)
+
+export interface TeslaEnergyLiveStatus {
+  id: number;
+  energy_site_id: number;
+  solar_power: number | null;
+  battery_power: number | null;
+  load_power: number | null;
+  grid_power: number | null;
+  grid_services_power: number | null;
+  energy_left: number | null;
+  total_pack_energy: number | null;
+  percentage_charged: number | null;
+  grid_status: string | null;
+  backup_capable: boolean | null;
+  storm_mode_active: boolean | null;
+  raw_json?: string;
+  timestamp: string;
+  fetched_at: string;
+}

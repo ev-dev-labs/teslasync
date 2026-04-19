@@ -1184,14 +1184,49 @@ type AutomationHistory struct {
 	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
 }
 
-// TeslaEnergyLiveStatus represents the live status of a Tesla Energy (Powerwall/Solar) site.
+// TeslaEnergyLiveStatus represents a point-in-time power flow snapshot from a Tesla Energy site.
+// Stored in tesla_energy_live_status for historical charting. Power values are in watts.
 type TeslaEnergyLiveStatus struct {
-	SolarPower      float64 `json:"solar_power"`       // watts produced by solar
-	BatteryPower    float64 `json:"battery_power"`     // watts (positive = discharging, negative = charging)
-	BatteryLevel    float64 `json:"battery_level"`     // percent 0-100
-	GridPower       float64 `json:"grid_power"`        // watts (negative = exporting to grid)
-	GridStatus      string  `json:"grid_status"`       // "Active" or "Islanded"
-	StormModeActive bool    `json:"storm_mode_active"`
+	ID                int64     `json:"id" db:"id"`
+	EnergySiteID      int64     `json:"energy_site_id" db:"energy_site_id"`
+	SolarPower        *float64  `json:"solar_power" db:"solar_power"`
+	BatteryPower      *float64  `json:"battery_power" db:"battery_power"`
+	LoadPower         *float64  `json:"load_power" db:"load_power"`
+	GridPower         *float64  `json:"grid_power" db:"grid_power"`
+	GridServicesPower *float64  `json:"grid_services_power" db:"grid_services_power"`
+	EnergyLeft        *float64  `json:"energy_left" db:"energy_left"`
+	TotalPackEnergy   *float64  `json:"total_pack_energy" db:"total_pack_energy"`
+	PercentageCharged *float64  `json:"percentage_charged" db:"percentage_charged"`
+	GridStatus        *string   `json:"grid_status" db:"grid_status"`
+	BackupCapable     *bool     `json:"backup_capable" db:"backup_capable"`
+	StormModeActive   *bool     `json:"storm_mode_active" db:"storm_mode_active"`
+	RawJSON           string    `json:"raw_json,omitempty" db:"raw_json"`
+	Timestamp         time.Time `json:"timestamp" db:"timestamp"`
+	FetchedAt         time.Time `json:"fetched_at" db:"fetched_at"`
+}
+
+// DerefFloat64 safely dereferences a *float64, returning 0 if nil.
+func DerefFloat64(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+// DerefString safely dereferences a *string, returning "" if nil.
+func DerefString(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+// DerefBool safely dereferences a *bool, returning false if nil.
+func DerefBool(p *bool) bool {
+	if p == nil {
+		return false
+	}
+	return *p
 }
 
 // AutomationVariable stores cross-automation key-value state.

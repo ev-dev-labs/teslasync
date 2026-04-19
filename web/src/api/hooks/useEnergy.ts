@@ -15,6 +15,7 @@ import type {
   TeslaEnergyHistoryEntry,
   TeslaBackupEvent,
   TeslaWCChargingEntry,
+  TeslaEnergyLiveStatus,
 } from '@/types/energy';
 
 export function useEnergyStats(vehicleId: string | null, days = 30) {
@@ -234,6 +235,58 @@ export function useRefreshTeslaWCChargingHistory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tesla-wc-charging-history'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tesla Energy Live Status hooks (power flow snapshots)
+// ---------------------------------------------------------------------------
+
+export function useTeslaEnergyLiveStatus(siteId?: number) {
+  return useQuery({
+    queryKey: ['tesla-live-status', siteId],
+    queryFn: () =>
+      request<TeslaEnergyLiveStatus>(`/tesla/energy-sites/${siteId}/live-status`),
+    enabled: !!siteId,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useTeslaEnergyLiveStatusHistory(
+  siteId?: number,
+  since?: string,
+  until?: string,
+  limit?: number,
+) {
+  const params = new URLSearchParams();
+  if (since) params.set('since', since);
+  if (until) params.set('until', until);
+  if (limit) params.set('limit', String(limit));
+
+  return useQuery({
+    queryKey: ['tesla-live-status-history', siteId, since, until, limit],
+    queryFn: () =>
+      request<TeslaEnergyLiveStatus[]>(
+        `/tesla/energy-sites/${siteId}/live-status/history?${params.toString()}`,
+      ),
+    enabled: !!siteId,
+    staleTime: 60_000,
+    select: safeArray,
+  });
+}
+
+export function useRefreshTeslaEnergyLiveStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (siteId: number) =>
+      request<TeslaEnergyLiveStatus>(
+        `/tesla/energy-sites/${siteId}/live-status/refresh`,
+        { method: 'POST' },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tesla-live-status'] });
+      queryClient.invalidateQueries({ queryKey: ['tesla-live-status-history'] });
     },
   });
 }

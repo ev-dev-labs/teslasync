@@ -80,11 +80,11 @@ func (t *EnergyTrigger) Seed(siteID int64, status *models.TeslaEnergyLiveStatus)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.states[siteID] = energyState{
-		SolarPower:      status.SolarPower,
-		BatteryLevel:    status.BatteryLevel,
-		GridPower:       status.GridPower,
-		GridStatus:      status.GridStatus,
-		StormModeActive: status.StormModeActive,
+		SolarPower:      models.DerefFloat64(status.SolarPower),
+		BatteryLevel:    models.DerefFloat64(status.PercentageCharged),
+		GridPower:       models.DerefFloat64(status.GridPower),
+		GridStatus:      models.DerefString(status.GridStatus),
+		StormModeActive: models.DerefBool(status.StormModeActive),
 	}
 }
 
@@ -92,11 +92,11 @@ func (t *EnergyTrigger) Seed(siteID int64, status *models.TeslaEnergyLiveStatus)
 // It evaluates all enabled energy automations for the given site.
 func (t *EnergyTrigger) OnEnergyUpdate(ctx context.Context, siteID int64, status *models.TeslaEnergyLiveStatus) error {
 	current := energyState{
-		SolarPower:      status.SolarPower,
-		BatteryLevel:    status.BatteryLevel,
-		GridPower:       status.GridPower,
-		GridStatus:      status.GridStatus,
-		StormModeActive: status.StormModeActive,
+		SolarPower:      models.DerefFloat64(status.SolarPower),
+		BatteryLevel:    models.DerefFloat64(status.PercentageCharged),
+		GridPower:       models.DerefFloat64(status.GridPower),
+		GridStatus:      models.DerefString(status.GridStatus),
+		StormModeActive: models.DerefBool(status.StormModeActive),
 	}
 
 	t.mu.Lock()

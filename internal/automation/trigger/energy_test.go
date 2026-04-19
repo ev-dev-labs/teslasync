@@ -24,11 +24,11 @@ func makeEnergyAutomation(id int64, name string, cfg EnergyConfig) *models.Autom
 
 func liveStatus(solar, battLevel, gridPower float64, gridStatus string, stormMode bool) *models.TeslaEnergyLiveStatus {
 	return &models.TeslaEnergyLiveStatus{
-		SolarPower:      solar,
-		BatteryLevel:    battLevel,
-		GridPower:       gridPower,
-		GridStatus:      gridStatus,
-		StormModeActive: stormMode,
+		SolarPower:        &solar,
+		PercentageCharged: &battLevel,
+		GridPower:         &gridPower,
+		GridStatus:        &gridStatus,
+		StormModeActive:   &stormMode,
 	}
 }
 

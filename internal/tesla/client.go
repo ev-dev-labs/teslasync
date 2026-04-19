@@ -970,3 +970,10 @@ func (c *Client) GetEnergySiteTelemetryHistory(ctx context.Context, energySiteID
 	path := fmt.Sprintf("/api/1/energy_sites/%d/telemetry_history?%s", energySiteID, params.Encode())
 	return c.doRequest(ctx, http.MethodGet, path, nil)
 }
+
+// GetEnergySiteLiveStatus calls GET /api/1/energy_sites/{id}/live_status.
+// Returns real-time power flow data for a Powerwall/Solar site.
+func (c *Client) GetEnergySiteLiveStatus(ctx context.Context, energySiteID int64) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/energy_sites/%d/live_status", energySiteID)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
