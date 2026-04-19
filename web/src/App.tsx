@@ -13,6 +13,7 @@ const QuickStats = lazy(() => import('./features/dashboard/pages/QuickStatsPage'
 // Vehicles
 const Vehicles = lazy(() => import('./features/vehicles/pages/VehicleListPage'))
 const VehicleDetail = lazy(() => import('./features/vehicles/pages/VehicleDetailPage'))
+const VehicleAccess = lazy(() => import('./features/vehicles/pages/VehicleAccessPage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -137,6 +138,7 @@ export default function App() {
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
         <Route path="vehicles" element={<SafeRoute name="Vehicles"><Vehicles /></SafeRoute>} />
         <Route path="vehicles/:id" element={<SafeRoute name="VehicleDetail"><VehicleDetail /></SafeRoute>} />
+        <Route path="vehicles/:id/access" element={<SafeRoute name="VehicleAccess"><VehicleAccess /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="drives" element={<SafeRoute name="Drives"><Drives /></SafeRoute>} />

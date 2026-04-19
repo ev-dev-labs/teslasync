@@ -1434,3 +1434,31 @@ type TeslaUserProfile struct {
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// TeslaVehicleDriver represents a driver who has access to a vehicle.
+type TeslaVehicleDriver struct {
+	ID          int64     `json:"id" db:"id"`
+	VehicleID   int64     `json:"vehicle_id" db:"vehicle_id"`
+	VIN         string    `json:"-" db:"vin"`
+	ShareUserID *int64    `json:"share_user_id" db:"share_user_id"`
+	DriverEmail *string   `json:"driver_email" db:"driver_email"`
+	DriverName  *string   `json:"driver_name" db:"driver_name"`
+	Role        *string   `json:"role" db:"role"`
+	RawJSON     string    `json:"-" db:"raw_json"`
+	FetchedAt   time.Time `json:"fetched_at" db:"fetched_at"`
+}
+
+// TeslaVehicleInvitation represents a pending share invitation for a vehicle.
+type TeslaVehicleInvitation struct {
+	ID           int64      `json:"id" db:"id"`
+	VehicleID    int64      `json:"vehicle_id" db:"vehicle_id"`
+	VIN          string     `json:"-" db:"vin"`
+	InvitationID string     `json:"invitation_id" db:"invitation_id"`
+	InviteURL    *string    `json:"invite_url" db:"invite_url"`
+	Status       string     `json:"status" db:"status"`
+	ExpiresAt    *time.Time `json:"expires_at" db:"expires_at"`
+	CreatedBy    *string    `json:"created_by" db:"created_by"`
+	RawJSON      string     `json:"-" db:"raw_json"`
+	FetchedAt    time.Time  `json:"fetched_at" db:"fetched_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+}

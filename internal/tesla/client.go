@@ -291,6 +291,37 @@ func (c *Client) GetFleetStatus(ctx context.Context, vins []string) ([]byte, int
 	return c.doRequest(ctx, http.MethodPost, "/api/1/vehicles/fleet_status", bytes.NewReader(body))
 }
 
+// GetVehicleDrivers calls GET /api/1/vehicles/{vin}/drivers to list allowed drivers.
+func (c *Client) GetVehicleDrivers(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/drivers", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// RemoveVehicleDriver calls DELETE /api/1/vehicles/{vin}/drivers to revoke a driver's access.
+func (c *Client) RemoveVehicleDriver(ctx context.Context, vin string, shareUserID int64) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/drivers", vin)
+	body := fmt.Sprintf(`{"share_user_id":%d}`, shareUserID)
+	return c.doRequest(ctx, http.MethodDelete, path, bytes.NewReader([]byte(body)))
+}
+
+// GetVehicleInvitations calls GET /api/1/vehicles/{vin}/invitations to list share invites.
+func (c *Client) GetVehicleInvitations(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/invitations", vin)
+	return c.doRequest(ctx, http.MethodGet, path, nil)
+}
+
+// CreateVehicleInvitation calls POST /api/1/vehicles/{vin}/invitations to create a share invite.
+func (c *Client) CreateVehicleInvitation(ctx context.Context, vin string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/invitations", vin)
+	return c.doRequest(ctx, http.MethodPost, path, nil)
+}
+
+// RevokeVehicleInvitation calls POST /api/1/vehicles/{vin}/invitations/{id}/revoke.
+func (c *Client) RevokeVehicleInvitation(ctx context.Context, vin, invitationID string) ([]byte, int, error) {
+	path := fmt.Sprintf("/api/1/vehicles/%s/invitations/%s/revoke", vin, invitationID)
+	return c.doRequest(ctx, http.MethodPost, path, nil)
+}
+
 // FleetTelemetrySubscription is the configuration payload for fleet telemetry.
 type FleetTelemetrySubscription struct {
 	VINs   []string                       `json:"vins"`

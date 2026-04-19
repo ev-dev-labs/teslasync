@@ -1651,3 +1651,27 @@ export type AutomationSSEEvent =
   | { type: 'automation.failed'; data: AutomationFailedEvent }
   | { type: 'automation.skipped'; data: AutomationSkippedEvent }
   | { type: 'automation.state_changed'; data: AutomationStateChangedEvent }
+
+// === Vehicle Access (Drivers & Invitations) ===
+
+export interface VehicleDriver {
+  id: number
+  vehicle_id: number
+  share_user_id: number | null
+  driver_email: string | null
+  driver_name: string | null
+  role: string | null
+  fetched_at: string
+}
+
+export interface VehicleInvitation {
+  id: number
+  vehicle_id: number
+  invitation_id: string
+  invite_url: string | null
+  status: string
+  expires_at: string | null
+  created_by: string | null
+  fetched_at: string
+  created_at: string
+}
