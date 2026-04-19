@@ -302,6 +302,24 @@ imagePullSecrets:
 
 {{/* ── Vehicle Command Proxy connection helpers ────────────────────────── */}}
 
+{{/* ── Automation Worker connection helpers ─────────────────────────────── */}}
+
+{{- define "teslasync.automationWorker.host" -}}
+{{- if .Values.automationWorker.enabled }}
+{{- printf "%s-automation-worker" (include "teslasync.fullname" .) }}
+{{- else }}
+{{- .Values.automationWorker.external.host }}
+{{- end }}
+{{- end }}
+
+{{- define "teslasync.automationWorker.port" -}}
+{{- if .Values.automationWorker.enabled }}
+{{- toString (.Values.automationWorker.service.port | default 8083) }}
+{{- else }}
+{{- toString (.Values.automationWorker.external.port | default 8083) }}
+{{- end }}
+{{- end }}
+
 {{- define "teslasync.commandProxy.url" -}}
 {{- if .Values.commandProxy.enabled }}
 {{- printf "https://%s-command-proxy:%v" (include "teslasync.fullname" .) (int (.Values.commandProxy.service.port | default 4443)) }}
