@@ -8,6 +8,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 func TestEvaluateTestConditions_Empty(t *testing.T) {
@@ -707,4 +708,52 @@ func searchSubstring(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// ── Undo tests ─────────────────────────────────────────────────────────
+
+func TestReverseCommands_Symmetry(t *testing.T) {
+	// Every entry in reverseCommands should have a corresponding reverse entry
+	// (i.e., reverse(reverse(cmd)) == cmd), except for one-way entries like
+	// dog_mode/camp_mode which map to climate_keeper_off.
+	oneWay := map[string]bool{
+		"dog_mode":  true,
+		"camp_mode": true,
+	}
+
+	for cmd, rev := range reverseCommands {
+		if oneWay[cmd] {
+			continue
+		}
+		reverseOfReverse, ok := reverseCommands[rev]
+		if !ok {
+			t.Errorf("reverseCommands[%q] = %q, but %q has no reverse entry", cmd, rev, rev)
+			continue
+		}
+		if reverseOfReverse != cmd {
+			t.Errorf("reverseCommands[reverseCommands[%q]] = %q, want %q", cmd, reverseOfReverse, cmd)
+		}
+	}
+}
+
+func TestReverseCommands_AllAreKnownTeslaCommands(t *testing.T) {
+	// Both keys and values should be recognized Tesla commands.
+	for cmd, rev := range reverseCommands {
+		if !tesla.IsKnownCommand(cmd) {
+			t.Errorf("reverseCommands key %q is not a known Tesla command", cmd)
+		}
+		if !tesla.IsKnownCommand(rev) {
+			t.Errorf("reverseCommands value %q (reverse of %q) is not a known Tesla command", rev, cmd)
+		}
+	}
+}
+
+func TestUndoLast_NilExecutor_Returns501(t *testing.T) {
+	h := &AutomationHandler{} // no cmdExecutor
+	req := httptest.NewRequest("POST", "/automations/1/undo", nil)
+	rec := httptest.NewRecorder()
+	h.UndoLast(rec, req)
+	if rec.Code != 501 {
+		t.Errorf("status = %d, want 501", rec.Code)
+	}
 }

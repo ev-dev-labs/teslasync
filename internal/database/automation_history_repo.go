@@ -160,6 +160,23 @@ func (r *AutomationHistoryRepo) GetByID(ctx context.Context, id int64) (*models.
 	return h, nil
 }
 
+// GetLatestSuccessful returns the most recent successful or partial execution
+// for the given automation. Returns (nil, nil) when no qualifying row exists.
+func (r *AutomationHistoryRepo) GetLatestSuccessful(ctx context.Context, automationID int64) (*models.AutomationHistory, error) {
+	query := fmt.Sprintf(
+		`SELECT %s FROM automation_history WHERE automation_id = $1 AND status IN ('success','partial') ORDER BY triggered_at DESC LIMIT 1`,
+		automationHistoryColumns,
+	)
+	h, err := scanAutomationHistory(r.db.Pool.QueryRow(ctx, query, automationID))
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get latest successful for automation %d: %w", automationID, err)
+	}
+	return h, nil
+}
+
 // HistoryFilter holds optional query filters for listing execution history.
 type HistoryFilter struct {
 	AutomationID int64     // 0 = all automations
@@ -230,11 +247,11 @@ func (r *AutomationHistoryRepo) GetStats(ctx context.Context, f HistoryFilter) (
 	where, args := buildHistoryWhere(f)
 
 	query := `SELECT
-		COUNT(*) FILTER (WHERE status NOT IN ('running','skipped','cancelled','test')),
+		COUNT(*) FILTER (WHERE status NOT IN ('running','skipped','cancelled','test','undo')),
 		COUNT(*) FILTER (WHERE status = 'success'),
 		COUNT(*) FILTER (WHERE status = 'failed'),
 		COUNT(*) FILTER (WHERE status = 'partial'),
-		COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL AND status != 'test'), 0)
+		COALESCE(AVG(duration_ms) FILTER (WHERE duration_ms IS NOT NULL AND status NOT IN ('test','undo')), 0)
 	FROM automation_history` + where
 
 	s := &HistoryStats{}

@@ -22,15 +22,28 @@ type AutomationHandler struct {
 	repo         *database.AutomationRepo
 	historyRepo  *database.AutomationHistoryRepo
 	fsmTransRepo *database.FSMTransitionRepo
+	cmdExecutor  *action.CommandExecutor // optional, enables undo
+}
+
+// AutomationHandlerOption configures optional AutomationHandler dependencies.
+type AutomationHandlerOption func(*AutomationHandler)
+
+// WithCommandExecutor provides a CommandExecutor for undo support.
+func WithCommandExecutor(e *action.CommandExecutor) AutomationHandlerOption {
+	return func(h *AutomationHandler) { h.cmdExecutor = e }
 }
 
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
-func NewAutomationHandler(db *database.DB) *AutomationHandler {
-	return &AutomationHandler{
+func NewAutomationHandler(db *database.DB, opts ...AutomationHandlerOption) *AutomationHandler {
+	h := &AutomationHandler{
 		repo:         database.NewAutomationRepo(db),
 		historyRepo:  database.NewAutomationHistoryRepo(db),
 		fsmTransRepo: database.NewFSMTransitionRepo(db),
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // automationResponse wraps an Automation with computed fields.
@@ -1034,6 +1047,243 @@ type duplicateTokenError struct{}
 
 func (e *duplicateTokenError) Error() string {
 	return "webhook_token is already in use by another automation"
+}
+
+// ── Undo Last ───────────────────────────────────────────────────────────
+
+// reverseCommands maps Tesla commands to their logical inverse.
+// Commands not in this map are considered irreversible.
+var reverseCommands = map[string]string{
+	"lock":        "unlock",
+	"unlock":      "lock",
+	"climate_on":  "climate_off",
+	"climate_off": "climate_on",
+	"sentry_on":   "sentry_off",
+	"sentry_off":  "sentry_on",
+	"charge_start": "charge_stop",
+	"charge_stop":  "charge_start",
+	"vent_windows":  "close_windows",
+	"close_windows": "vent_windows",
+	"valet_on":     "valet_off",
+	"valet_off":    "valet_on",
+	"guest_mode_on":  "guest_mode_off",
+	"guest_mode_off": "guest_mode_on",
+	"cop_on":   "cop_off",
+	"cop_off":  "cop_on",
+	"bioweapon_on":  "bioweapon_off",
+	"bioweapon_off": "bioweapon_on",
+	"speed_limit_on":  "speed_limit_off",
+	"speed_limit_off": "speed_limit_on",
+	"sunroof_vent":  "sunroof_close",
+	"sunroof_close": "sunroof_vent",
+	"climate_keeper_on":  "climate_keeper_off",
+	"climate_keeper_off": "climate_keeper_on",
+	"dog_mode":  "climate_keeper_off",
+	"camp_mode": "climate_keeper_off",
+}
+
+// undoResponse is the top-level response for the undo endpoint.
+type undoResponse struct {
+	AutomationID      int64              `json:"automation_id"`
+	AutomationName    string             `json:"automation_name"`
+	OriginalHistoryID int64              `json:"original_history_id"`
+	UndoHistoryID     int64              `json:"undo_history_id"`
+	Actions           []undoActionResult `json:"actions"`
+	Reversed          int                `json:"reversed"`
+	Skipped           int                `json:"skipped"`
+	Failed            int                `json:"failed"`
+	Status            string             `json:"status"`
+	Timestamp         time.Time          `json:"timestamp"`
+}
+
+// undoActionResult captures the outcome of reversing a single command.
+type undoActionResult struct {
+	OriginalCommand string `json:"original_command"`
+	ReverseCommand  string `json:"reverse_command,omitempty"`
+	Status          string `json:"status"` // "reversed", "skipped", "failed", "irreversible"
+	Error           string `json:"error,omitempty"`
+	DurationMs      int64  `json:"duration_ms,omitempty"`
+}
+
+// UndoLast reverses the most recent successful or partial execution of an
+// automation by sending the inverse of each reversible command action.
+// Commands without a known reverse (honk, flash, navigate, etc.) are
+// skipped and noted in the response. The undo is logged as a separate
+// history entry with status "undo".
+//
+//	POST /automations/{id}/undo
+func (h *AutomationHandler) UndoLast(w http.ResponseWriter, r *http.Request) {
+	if h.cmdExecutor == nil {
+		writeError(w, http.StatusNotImplemented, "undo requires command execution capability (not configured)")
+		return
+	}
+
+	id, err := urlParamInt64(r, "id")
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid automation ID")
+		return
+	}
+
+	a, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("undo: failed to get automation")
+		writeError(w, http.StatusInternalServerError, "failed to get automation")
+		return
+	}
+	if a == nil {
+		writeError(w, http.StatusNotFound, "automation not found")
+		return
+	}
+
+	// Find the most recent successful or partial execution.
+	lastExec, err := h.historyRepo.GetLatestSuccessful(r.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("automation_id", id).Msg("undo: failed to fetch latest execution")
+		writeError(w, http.StatusInternalServerError, "failed to fetch execution history")
+		return
+	}
+	if lastExec == nil {
+		writeError(w, http.StatusNotFound, "no successful execution found to undo")
+		return
+	}
+
+	// Parse executed actions from the history record.
+	var executedActions []action.ActionResult
+	if err := json.Unmarshal(lastExec.ActionsExecuted, &executedActions); err != nil {
+		log.Error().Err(err).Int64("history_id", lastExec.ID).Msg("undo: failed to parse actions_executed")
+		writeError(w, http.StatusInternalServerError, "failed to parse execution history actions")
+		return
+	}
+
+	// Collect reversible command actions (in reverse order for correct compensation).
+	now := time.Now().UTC()
+	var undoResults []undoActionResult
+	var reversed, skipped, failed int
+
+	for i := len(executedActions) - 1; i >= 0; i-- {
+		ea := executedActions[i]
+
+		// Only reverse successful command actions.
+		if ea.ActionType != "command" {
+			continue
+		}
+		if !ea.Success {
+			continue
+		}
+
+		// Parse the original command config.
+		cmdCfg, parseErr := action.ParseCommandConfig(ea.Config)
+		if parseErr != nil {
+			undoResults = append(undoResults, undoActionResult{
+				OriginalCommand: "unknown",
+				Status:          "skipped",
+				Error:           "could not parse original command: " + parseErr.Error(),
+			})
+			skipped++
+			continue
+		}
+
+		reverseCmd, reversible := reverseCommands[cmdCfg.Command]
+		if !reversible {
+			undoResults = append(undoResults, undoActionResult{
+				OriginalCommand: cmdCfg.Command,
+				Status:          "irreversible",
+			})
+			skipped++
+			continue
+		}
+
+		// Build the reverse command config.
+		reverseCfg, _ := json.Marshal(action.CommandConfig{
+			Type:    "command",
+			Command: reverseCmd,
+		})
+
+		// Execute via the command executor targeting the automation's vehicle.
+		_, execErr := h.cmdExecutor.Execute(r.Context(), a.VehicleID, reverseCfg)
+
+		result := undoActionResult{
+			OriginalCommand: cmdCfg.Command,
+			ReverseCommand:  reverseCmd,
+		}
+
+		if execErr != nil {
+			result.Status = "failed"
+			result.Error = execErr.Error()
+			failed++
+		} else {
+			result.Status = "reversed"
+			reversed++
+		}
+
+		undoResults = append(undoResults, result)
+	}
+
+	// Determine overall status.
+	overallStatus := "success"
+	if reversed == 0 && failed == 0 && skipped > 0 {
+		overallStatus = "skipped"
+	} else if failed > 0 && reversed == 0 {
+		overallStatus = "failed"
+	} else if failed > 0 {
+		overallStatus = "partial"
+	}
+
+	// Log the undo as a history entry.
+	undoActionsJSON, _ := json.Marshal(undoResults)
+	triggerSnapshot, _ := json.Marshal(map[string]interface{}{
+		"type":                "undo",
+		"original_history_id": lastExec.ID,
+	})
+	durationMs := int(time.Since(now).Milliseconds())
+	completedAt := time.Now().UTC()
+
+	hist := &models.AutomationHistory{
+		AutomationID:       a.ID,
+		AutomationName:     a.Name,
+		VehicleID:          a.VehicleID,
+		TriggeredAt:        now,
+		CompletedAt:        &completedAt,
+		DurationMs:         &durationMs,
+		TriggerType:        "undo",
+		TriggerSnapshot:    triggerSnapshot,
+		ConditionsMet:      true,
+		ConditionsSnapshot: json.RawMessage("[]"),
+		ActionsExecuted:    undoActionsJSON,
+		ActionsTotal:       reversed + skipped + failed,
+		ActionsSucceeded:   reversed,
+		ActionsFailed:      failed,
+		Status:             "undo",
+	}
+
+	if err := h.historyRepo.Create(r.Context(), hist); err != nil {
+		log.Error().Err(err).Int64("automation_id", a.ID).Msg("undo: failed to log history")
+		writeError(w, http.StatusInternalServerError, "undo executed but failed to log history")
+		return
+	}
+
+	log.Info().
+		Int64("automation_id", a.ID).
+		Str("automation", a.Name).
+		Int64("original_history_id", lastExec.ID).
+		Int("reversed", reversed).
+		Int("skipped", skipped).
+		Int("failed", failed).
+		Str("status", overallStatus).
+		Msg("automation undo completed")
+
+	writeJSON(w, http.StatusOK, undoResponse{
+		AutomationID:      a.ID,
+		AutomationName:    a.Name,
+		OriginalHistoryID: lastExec.ID,
+		UndoHistoryID:     hist.ID,
+		Actions:           undoResults,
+		Reversed:          reversed,
+		Skipped:           skipped,
+		Failed:            failed,
+		Status:            overallStatus,
+		Timestamp:         now,
+	})
 }
 
 // ── Import / Export ─────────────────────────────────────────────────────

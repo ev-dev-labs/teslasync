@@ -28,6 +28,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 
+	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
@@ -174,7 +176,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	anomalyHandler := NewAnomalyHandler(db)
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
-	automationHandler := NewAutomationHandler(db)
+	automationHandler := NewAutomationHandler(db,
+		WithCommandExecutor(action.NewCommandExecutor(
+			database.NewVehicleRepo(db),
+			database.NewCommandLogRepo(db),
+			database.NewSettingsRepo(db),
+			teslaClient,
+		)),
+	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -354,6 +363,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/test-run", automationHandler.TestRun)
+				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/undo", automationHandler.UndoLast)
 			})
 		})
 
