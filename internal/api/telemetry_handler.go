@@ -2627,8 +2627,8 @@ func (h *TelemetryHandler) trackSafety(ctx context.Context, vehicleID int64, sig
 		snap.AutomaticEmergencyBrakingOff = &b
 	}
 	if v, ok := signals["BlindSpotCollisionWarningChime"]; ok {
-		s := toString(v)
-		snap.BlindSpotCollisionWarning = &s
+		b := toBool(v)
+		snap.BlindSpotCollisionWarning = &b
 	}
 	if v, ok := signals["CruiseFollowDistance"]; ok {
 		s := toString(v)
