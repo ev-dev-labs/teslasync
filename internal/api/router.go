@@ -45,6 +45,7 @@ type RouterOptions struct {
 	GasPriceWorker   *worker.GasPriceWorker  // If set, enables gas price management endpoints
 	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
 	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
+	WebhookTrigger   WebhookProcessor         // If set, enables public webhook receiver endpoint
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -205,6 +206,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Metrics
 	r.Handle("/metrics", MetricsHandler())
+
+	// Public: Automation webhook receiver (no auth — token IS the auth).
+	// Mounted before the /api/v1 subrouter so it is exempt from any
+	// ForwardAuth / auth middleware applied to the main API group.
+	if opt.WebhookTrigger != nil {
+		webhookReceiver := NewWebhookReceiverHandler(opt.WebhookTrigger)
+		r.With(
+			httprate.Limit(60, 1*time.Minute, httprate.WithKeyFuncs(
+				webhookTokenKeyFunc,
+			)),
+		).Post("/api/v1/automations/webhook/{token}", webhookReceiver.Receive)
+	}
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
