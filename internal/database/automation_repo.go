@@ -284,3 +284,21 @@ func (r *AutomationRepo) SetAutoDisabled(ctx context.Context, id int64, reason s
 		id, reason, time.Now().UTC())
 	return err
 }
+
+// ReEnable clears the auto-disabled state, re-enables the automation, and
+// resets the consecutive failure counter. Only affects auto-disabled automations.
+func (r *AutomationRepo) ReEnable(ctx context.Context, id int64) error {
+	tag, err := r.db.Pool.Exec(ctx,
+		`UPDATE automations SET
+			auto_disabled=false, auto_disabled_reason=NULL,
+			enabled=true, consecutive_failures=0, updated_at=$2
+		WHERE id=$1 AND auto_disabled=true`,
+		id, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("re-enable automation %d: %w", id, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("automation %d is not auto-disabled", id)
+	}
+	return nil
+}

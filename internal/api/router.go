@@ -173,6 +173,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	anomalyHandler := NewAnomalyHandler(db)
 	energyFlowHandler := NewEnergyFlowHandler(db)
 	weeklyDigestHandler := NewWeeklyDigestHandler(db)
+	automationHandler := NewAutomationHandler(db)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
 		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -314,6 +315,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 			r.Post("/test", alertHandler.TestRule)
+		})
+
+		// Automations
+		r.Route("/automations", func(r chi.Router) {
+			r.Get("/", automationHandler.List)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", automationHandler.Get)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/", automationHandler.Update)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/", automationHandler.Delete)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/toggle", automationHandler.Toggle)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Patch("/re-enable", automationHandler.ReEnable)
+			})
 		})
 
 		// Analytics
