@@ -6,6 +6,7 @@ export const userKeys = {
   me: ['users', 'me'] as const,
   teslaFeatureConfig: ['tesla-feature-config'] as const,
   teslaRegion: ['tesla-user-region'] as const,
+  teslaOrders: ['tesla-user-orders'] as const,
 };
 
 export function useCurrentUser() {
@@ -71,5 +72,43 @@ export function useRefreshTeslaRegion() {
     mutationFn: () =>
       request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region/refresh', { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaRegion }),
+  });
+}
+
+// ─── Tesla User Orders ───────────────────────────────────────────────────────
+
+export interface TeslaOrder {
+  id: number;
+  order_id: string;
+  model: string;
+  status: string;
+  delivery_date: string | null;
+  vin: string | null;
+  referral_code?: string | null;
+  is_upgradable: boolean;
+  fetched_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TeslaOrdersEnvelope {
+  orders: TeslaOrder[];
+  fetched_at: string | null;
+}
+
+export function useTeslaUserOrders() {
+  return useQuery({
+    queryKey: userKeys.teslaOrders,
+    queryFn: () => request<TeslaOrdersEnvelope>('/tesla/user/orders'),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRefreshTeslaOrders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeslaOrdersEnvelope>('/tesla/user/orders/refresh', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.teslaOrders }),
   });
 }

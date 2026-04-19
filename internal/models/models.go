@@ -1406,3 +1406,19 @@ type TeslaUserConfig struct {
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// TeslaUserOrder represents an active Tesla vehicle order.
+type TeslaUserOrder struct {
+	ID           int64      `json:"id" db:"id"`
+	OrderID      string     `json:"order_id" db:"order_id"`
+	Model        string     `json:"model" db:"model"`
+	Status       string     `json:"status" db:"status"`
+	DeliveryDate *time.Time `json:"delivery_date" db:"delivery_date"`
+	VIN          *string    `json:"vin" db:"vin"`
+	ReferralCode *string    `json:"referral_code,omitempty" db:"referral_code"`
+	IsUpgradable bool       `json:"is_upgradable" db:"is_upgradable"`
+	RawJSON      string     `json:"-" db:"raw_json"`
+	FetchedAt    time.Time  `json:"fetched_at" db:"fetched_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
+}
