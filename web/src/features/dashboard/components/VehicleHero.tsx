@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Thermometer, Lock, Unlock, Shield, Zap, Activity, Navigation,
-  Gauge, Clock, Eye, MapPin, BatteryCharging,
+  Gauge, Clock, Eye, MapPin, BatteryCharging, Monitor,
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Button } from '@/components/ui/Button';
@@ -152,6 +152,11 @@ export function VehicleHero({
               <Link to="/live">
                 <Button variant="secondary" size="sm" icon={<MapPin className="h-3.5 w-3.5" />}>
                   {t('hero.liveMap', 'Live Map')}
+                </Button>
+              </Link>
+              <Link to="/digital-twin">
+                <Button variant="secondary" size="sm" icon={<Monitor className="h-3.5 w-3.5" />}>
+                  {t('hero.digitalTwin', 'Digital Twin')}
                 </Button>
               </Link>
             </div>

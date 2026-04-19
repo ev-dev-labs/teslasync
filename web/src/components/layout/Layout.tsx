@@ -51,6 +51,7 @@ import {
   Recycle,
   Database,
   History,
+  Monitor,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -103,6 +104,7 @@ const navI18nKeys: Record<string, string> = {
   'Temperature Impact': 'nav.temperatureImpact',
   'Route Efficiency': 'nav.routeEfficiency',
   'Automations': 'nav.automations',
+  'Digital Twin': 'nav.digitalTwin',
 }
 
 type SSEState = 'connected' | 'reconnecting' | 'unavailable'
@@ -173,6 +175,7 @@ export const navSections = [
   {
     title: 'Vehicle',
     items: [
+      { to: '/digital-twin', icon: Monitor, label: 'Digital Twin', color: 'text-cyan-400' },
       { to: '/tire-pressure', icon: Gauge, label: 'Tire Pressure', color: 'text-orange-400' },
       { to: '/climate-control', icon: Thermometer, label: 'Climate Control', color: 'text-sky-400' },
       { to: '/drivetrain-health', icon: Cog, label: 'Drivetrain Health', color: 'text-red-400' },

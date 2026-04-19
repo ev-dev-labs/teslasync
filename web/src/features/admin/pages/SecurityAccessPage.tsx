@@ -41,6 +41,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { AlertBanner } from '@/components/feedback/AlertBanner';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { VehicleTwin } from '@/components/vehicles';
 import {
   BarChart,
   Bar,
@@ -55,6 +56,7 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSecurityEvents } from '@/api/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
 import { request } from '@/api/client';
 import { formatDateTime, formatDateShort } from '@/lib/dateFormat';
 import type { SecurityEvent } from '@/types/admin';
@@ -413,6 +415,9 @@ export default function SecurityAccessPage() {
   /* ---- Live vehicle state signals ---- */
   const liveSignals = useMemo(() => buildLiveSignals(latest, t), [latest, t]);
 
+  /* ---- Digital Twin state ---- */
+  const twinState = useMemo(() => buildTwinStateFromAdmin(latest), [latest]);
+
   /* ---- Security event timeline ---- */
   const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
@@ -526,6 +531,15 @@ export default function SecurityAccessPage() {
                 )}
               </p>
             </div>
+          </GlassPanel>
+        </FadeIn>
+      )}
+
+      {/* ---- Visual Digital Twin ---- */}
+      {latest && (
+        <FadeIn>
+          <GlassPanel className="p-4 mb-6 flex items-center justify-center">
+            <VehicleTwin {...twinState} size="sm" interactive />
           </GlassPanel>
         </FadeIn>
       )}
